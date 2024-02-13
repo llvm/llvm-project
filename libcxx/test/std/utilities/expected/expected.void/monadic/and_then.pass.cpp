@@ -58,7 +58,7 @@ static_assert(!has_and_then<const std::expected<int, std::unique_ptr<int>>&&, in
 constexpr void test_val_types() {
   // Test & overload
   {
-    auto l = [] -> std::expected<int, int> { return 2; };
+    auto l = []() -> std::expected<int, int> { return 2; };
     std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = v.and_then(l);
     assert(val == 2);
@@ -66,7 +66,7 @@ constexpr void test_val_types() {
 
   // Test const& overload
   {
-    auto l = [] -> std::expected<int, int> { return 2; };
+    auto l = []() -> std::expected<int, int> { return 2; };
     const std::expected<void, int> v;
     assert(v.and_then(l).value() == 2);
     static_assert(std::is_same_v< decltype(v.and_then(l)), std::expected<int, int>>);
@@ -74,7 +74,7 @@ constexpr void test_val_types() {
 
   // Test && overload
   {
-    auto l = [] -> std::expected<int, int> { return 2; };
+    auto l = []() -> std::expected<int, int> { return 2; };
     std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = std::move(v).and_then(l);
     assert(val == 2);
@@ -82,7 +82,7 @@ constexpr void test_val_types() {
 
   // Test const&& overload
   {
-    auto l = [] -> std::expected<int, int> { return 2; };
+    auto l = []() -> std::expected<int, int> { return 2; };
     const std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = std::move(v).and_then(l);
     assert(val == 2);
@@ -92,7 +92,7 @@ constexpr void test_val_types() {
 constexpr void test_fail() {
   // Test & overload
   {
-    auto f = [] -> std::expected<int, int> {
+    auto f = []() -> std::expected<int, int> {
       assert(false);
       return 0;
     };
@@ -103,7 +103,7 @@ constexpr void test_fail() {
 
   // Test const& overload
   {
-    auto f = [] -> std::expected<int, int> {
+    auto f = []() -> std::expected<int, int> {
       assert(false);
       return 0;
     };
@@ -114,7 +114,7 @@ constexpr void test_fail() {
 
   // Test && overload
   {
-    auto f = [] -> std::expected<int, int> {
+    auto f = []() -> std::expected<int, int> {
       assert(false);
       return 0;
     };
@@ -125,7 +125,7 @@ constexpr void test_fail() {
 
   // Test const&& overload
   {
-    auto f = [] -> std::expected<int, int> {
+    auto f = []() -> std::expected<int, int> {
       assert(false);
       return 0;
     };

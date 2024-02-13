@@ -40,12 +40,11 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
-#include <random>
 #include <optional>
+#include <random>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -55,6 +54,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -279,7 +279,7 @@ static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
     worklist.push_back(succ);
   while (!worklist.empty()) {
     Block *next = worklist.pop_back_val();
-    if (llvm::find(except, next) != except.end())
+    if (llvm::is_contained(except, next))
       continue;
     if (next == to)
       return true;
@@ -1030,13 +1030,6 @@ OneShotAnalysisState::analyzeSingleOp(Operation *op,
   return success();
 }
 
-/// Return true if the given op has a tensor result or a tensor operand.
-static bool hasTensorSemantics(Operation *op) {
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  return hasTensorResult || hasTensorOperand;
-}
-
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
 static void equivalenceAnalysis(SmallVector<Operation *> &ops,
                                 OneShotAnalysisState &state) {
@@ -1182,8 +1175,8 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
     // not handled in the analysis.
     if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
       if (!toTensorOp.getRestrict() && !toTensorOp->getUses().empty()) {
-        op->emitError("to_tensor ops without `restrict` are not supported by "
-                      "One-Shot Analysis");
+        op->emitOpError("to_tensor ops without `restrict` are not supported by "
+                        "One-Shot Analysis");
         return WalkResult::interrupt();
       }
     }
@@ -1195,8 +1188,19 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
                 /*checkConsistencyOnly=*/true)) {
           // This error can happen if certain "mustBufferizeInPlace" interface
           // methods are implemented incorrectly, such that the IR already has
-          // a RaW conflict before making any bufferization decisions.
-          op->emitError("input IR has RaW conflict");
+          // a RaW conflict before making any bufferization decisions. It can
+          // also happen if the bufferization.materialize_in_destination is used
+          // in such a way that a RaW conflict is not avoidable.
+          op->emitOpError("not bufferizable under the given constraints: "
+                          "cannot avoid RaW conflict");
+          return WalkResult::interrupt();
+        }
+
+        if (state.isInPlace(opOperand) &&
+            wouldCreateWriteToNonWritableBuffer(
+                opOperand, state, /*checkConsistencyOnly=*/true)) {
+          op->emitOpError("not bufferizable under the given constraints: would "
+                          "write to read-only buffer");
           return WalkResult::interrupt();
         }
       }
@@ -1323,6 +1327,5 @@ bufferization::runOneShotBufferize(Operation *op,
   }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite,
-                     /*opFilter=*/nullptr, statistics);
+  return bufferizeOp(op, options, statistics);
 }

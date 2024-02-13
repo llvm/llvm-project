@@ -91,6 +91,33 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # stdbit.h entrypoints
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+    libc.src.stdbit.stdc_leading_ones_uc
+    libc.src.stdbit.stdc_leading_ones_us
+    libc.src.stdbit.stdc_leading_ones_ui
+    libc.src.stdbit.stdc_leading_ones_ul
+    libc.src.stdbit.stdc_leading_ones_ull
+    libc.src.stdbit.stdc_trailing_zeros_uc
+    libc.src.stdbit.stdc_trailing_zeros_us
+    libc.src.stdbit.stdc_trailing_zeros_ui
+    libc.src.stdbit.stdc_trailing_zeros_ul
+    libc.src.stdbit.stdc_trailing_zeros_ull
+    libc.src.stdbit.stdc_trailing_ones_uc
+    libc.src.stdbit.stdc_trailing_ones_us
+    libc.src.stdbit.stdc_trailing_ones_ui
+    libc.src.stdbit.stdc_trailing_ones_ul
+    libc.src.stdbit.stdc_trailing_ones_ull
+    libc.src.stdbit.stdc_first_leading_zero_uc
+    libc.src.stdbit.stdc_first_leading_zero_us
+    libc.src.stdbit.stdc_first_leading_zero_ui
+    libc.src.stdbit.stdc_first_leading_zero_ul
+    libc.src.stdbit.stdc_first_leading_zero_ull
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
@@ -136,12 +163,25 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.scanf
     libc.src.stdio.fscanf
 
+    # sys/epoll.h entrypoints
+    libc.src.sys.epoll.epoll_wait
+    libc.src.sys.epoll.epoll_pwait
+    # TODO: Need to check if pwait2 is available before providing.
+    # https://github.com/llvm/llvm-project/issues/80060
+    # libc.src.sys.epoll.epoll_pwait2
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mmap
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -152,9 +192,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
-
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.socket
 
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
@@ -173,6 +210,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
+
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -265,6 +308,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
@@ -322,12 +366,19 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -358,10 +409,30 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
+if(LIBC_COMPILER_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float128 entrypoints
+    libc.src.math.ceilf128
+    libc.src.math.copysignf128
+    libc.src.math.fabsf128
+    libc.src.math.fdimf128
+    libc.src.math.floorf128
+    libc.src.math.fmaxf128
+    libc.src.math.fminf128
+    libc.src.math.frexpf128
+    libc.src.math.roundf128
+    libc.src.math.sqrtf128
+    libc.src.math.truncf128
+  )
+endif()
+
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
+
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
 
     # dirent.h entrypoints
     libc.src.dirent.closedir
@@ -485,6 +556,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.spawn.posix_spawn_file_actions_destroy
     libc.src.spawn.posix_spawn_file_actions_init
 
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
+    libc.src.search.insque
+    libc.src.search.remque
+
     # threads.h entrypoints
     libc.src.threads.call_once
     libc.src.threads.cnd_broadcast
@@ -534,6 +615,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
   )
 endif()
 

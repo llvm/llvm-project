@@ -4,6 +4,7 @@
 
 # Tests for LLVM libc math.h functions.
 
+load("//libc:libc_build_rules.bzl", "libc_support_library")
 load("//libc/test/src/math:libc_math_test_rules.bzl", "math_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -171,7 +172,7 @@ math_test(
     deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
 )
 
-cc_library(
+libc_support_library(
     name = "remquo_test_template",
     hdrs = ["RemQuoTest.h"],
     deps = [
@@ -288,10 +289,11 @@ math_test(
     deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
 )
 
-cc_library(
+libc_support_library(
     name = "ilogb_test_template",
     hdrs = ["ILogbTest.h"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_manipulation_functions",
         "//libc/test/UnitTest:LibcUnitTest",
@@ -313,7 +315,7 @@ math_test(
     deps = [":ilogb_test_template"],
 )
 
-cc_library(
+libc_support_library(
     name = "fdim_test_template",
     hdrs = ["FDimTest.h"],
     deps = [
@@ -340,10 +342,11 @@ math_test(
     deps = [":fdim_test_template"],
 )
 
-cc_library(
+libc_support_library(
     name = "ldexp_test_template",
     hdrs = ["LdExpTest.h"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_normal_float",
         "//libc/test/UnitTest:LibcUnitTest",
@@ -366,7 +369,7 @@ math_test(
     deps = [":ldexp_test_template"],
 )
 
-cc_library(
+libc_support_library(
     name = "rint_test_template",
     hdrs = ["RIntTest.h"],
     deps = [
@@ -402,7 +405,7 @@ math_test(
     ],
 )
 
-cc_library(
+libc_support_library(
     name = "round_to_integer_test_template",
     hdrs = ["RoundToIntegerTest.h"],
     deps = [
@@ -510,7 +513,7 @@ math_test(
     ],
 )
 
-cc_library(
+libc_support_library(
     name = "nextafter_test_template",
     hdrs = ["NextAfterTest.h"],
     deps = [
@@ -539,13 +542,10 @@ math_test(
     deps = [":nextafter_test_template"],
 )
 
-cc_library(
+libc_support_library(
     name = "sdcomp26094",
     hdrs = ["sdcomp26094.h"],
-    deps = [
-        "//libc:__support_cpp_array",
-        "//libc:libc_root",
-    ],
+    deps = ["//libc:__support_cpp_array"],
 )
 
 math_test(
@@ -763,6 +763,13 @@ math_test(
 )
 
 math_test(
+    name = "powf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
     name = "fmod",
     hdrs = ["FModTest.h"],
 )
@@ -778,6 +785,7 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = ["//libc:__support_cpp_limits"],
 )
 
 math_test(
@@ -786,6 +794,7 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = ["//libc:__support_cpp_limits"],
 )
 
 math_test(
@@ -794,4 +803,5 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = ["//libc:__support_cpp_limits"],
 )

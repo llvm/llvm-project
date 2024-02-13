@@ -11,7 +11,7 @@
 #include <numbers>
 
 // Initializing the primary template is ill-formed.
-int log2e{std::numbers::log2e_v<int>}; // expected-error-re@numbers:* {{{{(static_assert|static assertion)}} failed{{.*}}A program that instantiates a primary template of a mathematical constant variable template is ill-formed.}}
+int log2e{std::numbers::log2e_v<int>}; // expected-error-re@numbers:* {{static assertion failed{{.*}}A program that instantiates a primary template of a mathematical constant variable template is ill-formed.}}
 int log10e{std::numbers::log10e_v<int>};
 int pi{std::numbers::pi_v<int>};
 int inv_pi{std::numbers::inv_pi_v<int>};

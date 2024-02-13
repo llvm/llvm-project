@@ -1,5 +1,5 @@
 add_mlir_dialect(Vector vector)
-add_mlir_doc(VectorOps Vector Dialects/ -gen-op-doc)
+add_mlir_doc(VectorOps VectorOps Dialects/ -gen-op-doc)
 
 # Add Vector operations
 set(LLVM_TARGET_DEFINITIONS VectorOps.td)

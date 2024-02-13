@@ -11,10 +11,10 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void *memmove(void *dst, const void *src, size_t count);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMMOVE_H

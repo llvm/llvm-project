@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_ABORT_H
 #define LLVM_LIBC_SRC_STDLIB_ABORT_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[noreturn]] void abort();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_ABORT_H

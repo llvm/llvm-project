@@ -72,7 +72,7 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATE-NEXT:    [[CMP13_NOT:%.*]] = icmp eq i32 [[WIDTH]], 1
 ; ROTATE-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; ROTATE:       for.body.preheader:
-; ROTATE-NEXT:    [[TMP0:%.*]] = add i32 [[WIDTH]], -2
+; ROTATE-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -2
 ; ROTATE-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATE:       for.cond.cleanup:
 ; ROTATE-NEXT:    tail call void @f0()

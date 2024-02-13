@@ -172,10 +172,20 @@ public:
   /// attributes of LLVMFuncOp `funcOp`.
   void processFunctionAttributes(llvm::Function *func, LLVMFuncOp funcOp);
 
+  /// Sets the integer overflow flags (nsw/nuw) attribute for the imported
+  /// operation `op` given the original instruction `inst`. Asserts if the
+  /// operation does not implement the integer overflow flag interface.
+  void setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
+                                   Operation *op) const;
+
   /// Sets the fastmath flags attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
+
+  /// Converts !llvm.linker.options metadata to the llvm.linker.options
+  /// LLVM dialect operation.
+  LogicalResult convertLinkerOptionsMetadata();
 
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
@@ -209,6 +219,18 @@ public:
   /// Adds a debug intrinsics to the list of intrinsics that should be converted
   /// after the function conversion has finished.
   void addDebugIntrinsic(llvm::CallInst *intrinsic);
+
+  /// Converts the LLVM values for an intrinsic to mixed MLIR values and
+  /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
+  /// list `immArgPositions` contains the positions of immargs on the LLVM
+  /// intrinsic, and `immArgAttrNames` list (of the same length) contains the
+  /// corresponding MLIR attribute names.
+  LogicalResult
+  convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
+                            ArrayRef<unsigned> immArgPositions,
+                            ArrayRef<StringLiteral> immArgAttrNames,
+                            SmallVectorImpl<Value> &valuesOut,
+                            SmallVectorImpl<NamedAttribute> &attrsOut);
 
 private:
   /// Clears the accumulated state before processing a new region.

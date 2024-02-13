@@ -1,0 +1,11 @@
+// This test checks that the binaries produces with GNU ld TLS le relaxation are
+// properly processed by BOLT. GNU ld currently emits two non-standard
+// relocations (R_RISCV_TPREL_I and R_RISCV_TPREL_S) in this case.
+
+// RUN: yaml2obj %p/Inputs/tls-le-gnu-ld.yaml &> %t.exe
+// RUN: llvm-bolt %t.exe -o %t.bolt.exe --print-cfg --print-only=_start \
+// RUN:   | FileCheck %s
+
+// CHECK: Binary Function "_start" after building cfg {
+// CHECK:      lw t0, 0x0(tp)
+// CHECK-NEXT: sw t0, 0x0(tp)

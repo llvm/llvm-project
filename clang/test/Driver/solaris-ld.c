@@ -132,11 +132,11 @@
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PIE-GLD %s
-// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -nopie -fuse-ld= \
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -no-pie -fuse-ld= \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-LD %s
-// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -nopie -fuse-ld=gld \
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -no-pie -fuse-ld=gld \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOPIE-GLD %s
@@ -177,6 +177,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE
 // CHECK-RELOCATABLE:     "-L
 // CHECK-RELOCATABLE:     "-r"
+// CHECK-RELOCATABLE-NOT: "-e"
 // CHECK-RELOCATABLE-NOT: "-l
 // CHECK-RELOCATABLE-NOT: /crt{{[^.]+}}.o
 // CHECK-RELOCATABLE-NOT: /values-{{[^.]+}}.o
@@ -190,7 +191,7 @@
 // RUN:        --gcc-toolchain="" \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTS %s
-// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -nopie \
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -no-pie \
 // RUN:        --gcc-toolchain="" \
 // RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTS %s

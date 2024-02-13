@@ -1,4 +1,4 @@
-! RUN: bbc -o - --outline-intrinsics %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - --outline-intrinsics %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK-DAG:         %[[VAL_0:.*]] = arith.constant 10 : index
@@ -10,7 +10,7 @@
 ! CHECK-DAG:         %[[VAL_13:.*]] = arith.constant 2 : i64
 ! CHECK-DAG:         %[[VAL_14:.*]] = arith.constant 7 : i64
 ! CHECK-DAG:         %[[VAL_16:.*]] = arith.constant 4 : i64
-! CHECK-DAG:         %[[VAL_18:.*]] = arith.constant -1 : i32
+! CHECK-DAG:         %[[VAL_18:.*]] = arith.constant 6 : i32
 ! CHECK-DAG:         %[[VAL_19:.*]] = arith.constant 0 : i64
 ! CHECK-DAG:         %[[VAL_20:.*]] = arith.constant 1 : i64
 ! CHECK-DAG:         %[[VAL_21:.*]] = arith.constant 3 : i64
@@ -93,13 +93,13 @@
 ! CHECK:         %[[VAL_78:.*]] = fir.load %[[VAL_77]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_79:.*]] = fir.coordinate_of %[[VAL_26]], %[[VAL_19]] : (!fir.ref<!fir.array<3xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         %[[VAL_80:.*]] = fir.load %[[VAL_79]] : !fir.ref<f32>
-! CHECK:         %[[VAL_81:.*]] = arith.cmpf une, %[[VAL_78]], %[[VAL_80]] : f32
+! CHECK:         %[[VAL_81:.*]] = arith.cmpf une, %[[VAL_78]], %[[VAL_80]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_81]], ^bb10, ^bb11
 ! CHECK:       ^bb10:
-! CHECK:         %[[VAL_82:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_82:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_83:.*]] = fir.convert %[[VAL_82]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_84:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_83]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_85:.*]] = fir.address_of(@_QQcl.6D69736D617463682031) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_85:.*]] = fir.address_of(@_QQclX6D69736D617463682031) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_86:.*]] = fir.convert %[[VAL_85]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_87:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_88:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_84]], %[[VAL_86]], %[[VAL_87]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -114,13 +114,13 @@
 ! CHECK:         %[[VAL_95:.*]] = fir.load %[[VAL_94]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_96:.*]] = fir.coordinate_of %[[VAL_26]], %[[VAL_20]] : (!fir.ref<!fir.array<3xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         %[[VAL_97:.*]] = fir.load %[[VAL_96]] : !fir.ref<f32>
-! CHECK:         %[[VAL_98:.*]] = arith.cmpf une, %[[VAL_95]], %[[VAL_97]] : f32
+! CHECK:         %[[VAL_98:.*]] = arith.cmpf une, %[[VAL_95]], %[[VAL_97]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_98]], ^bb12, ^bb13
 ! CHECK:       ^bb12:
-! CHECK:         %[[VAL_99:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_99:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_100:.*]] = fir.convert %[[VAL_99]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_101:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_100]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_102:.*]] = fir.address_of(@_QQcl.6D69736D617463682032) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_102:.*]] = fir.address_of(@_QQclX6D69736D617463682032) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_103:.*]] = fir.convert %[[VAL_102]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_104:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_105:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_101]], %[[VAL_103]], %[[VAL_104]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -135,13 +135,13 @@
 ! CHECK:         %[[VAL_112:.*]] = fir.load %[[VAL_111]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_113:.*]] = fir.coordinate_of %[[VAL_26]], %[[VAL_13]] : (!fir.ref<!fir.array<3xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         %[[VAL_114:.*]] = fir.load %[[VAL_113]] : !fir.ref<f32>
-! CHECK:         %[[VAL_115:.*]] = arith.cmpf une, %[[VAL_112]], %[[VAL_114]] : f32
+! CHECK:         %[[VAL_115:.*]] = arith.cmpf une, %[[VAL_112]], %[[VAL_114]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_115]], ^bb14, ^bb15
 ! CHECK:       ^bb14:
-! CHECK:         %[[VAL_116:.*]] = fir.address_of(@_QQcl.{{.*}} : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_116:.*]] = fir.address_of(@_QQclX{{.*}} : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_117:.*]] = fir.convert %[[VAL_116]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_118:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_117]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_119:.*]] = fir.address_of(@_QQcl.6D69736D617463682033) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_119:.*]] = fir.address_of(@_QQclX6D69736D617463682033) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_120:.*]] = fir.convert %[[VAL_119]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_121:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_122:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_118]], %[[VAL_120]], %[[VAL_121]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -170,13 +170,13 @@
 ! CHECK:         %[[VAL_138:.*]] = fir.load %[[VAL_77]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_139:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_19]] : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         %[[VAL_140:.*]] = fir.load %[[VAL_139]] : !fir.ref<f32>
-! CHECK:         %[[VAL_141:.*]] = arith.cmpf une, %[[VAL_138]], %[[VAL_140]] : f32
+! CHECK:         %[[VAL_141:.*]] = arith.cmpf une, %[[VAL_138]], %[[VAL_140]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_141]], ^bb19, ^bb20
 ! CHECK:       ^bb19:
-! CHECK:         %[[VAL_142:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_142:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_143:.*]] = fir.convert %[[VAL_142]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_144:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_143]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_145:.*]] = fir.address_of(@_QQcl.6D69736D617463682034) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_145:.*]] = fir.address_of(@_QQclX6D69736D617463682034) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_146:.*]] = fir.convert %[[VAL_145]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_147:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_148:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_144]], %[[VAL_146]], %[[VAL_147]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -190,13 +190,13 @@
 ! CHECK:         %[[VAL_154:.*]] = fir.load %[[VAL_94]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_155:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_16]] : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         %[[VAL_156:.*]] = fir.load %[[VAL_155]] : !fir.ref<f32>
-! CHECK:         %[[VAL_157:.*]] = arith.cmpf une, %[[VAL_154]], %[[VAL_156]] : f32
+! CHECK:         %[[VAL_157:.*]] = arith.cmpf une, %[[VAL_154]], %[[VAL_156]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_157]], ^bb21, ^bb22
 ! CHECK:       ^bb21:
-! CHECK:         %[[VAL_158:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_158:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_159:.*]] = fir.convert %[[VAL_158]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_160:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_159]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_161:.*]] = fir.address_of(@_QQcl.6D69736D617463682035) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_161:.*]] = fir.address_of(@_QQclX6D69736D617463682035) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_162:.*]] = fir.convert %[[VAL_161]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_163:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_164:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_160]], %[[VAL_162]], %[[VAL_163]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -210,13 +210,13 @@
 ! CHECK:         %[[VAL_170:.*]] = fir.load %[[VAL_111]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_171:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_8]] : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         %[[VAL_172:.*]] = fir.load %[[VAL_171]] : !fir.ref<f32>
-! CHECK:         %[[VAL_173:.*]] = arith.cmpf une, %[[VAL_170]], %[[VAL_172]] : f32
+! CHECK:         %[[VAL_173:.*]] = arith.cmpf une, %[[VAL_170]], %[[VAL_172]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_173]], ^bb23, ^bb24
 ! CHECK:       ^bb23:
-! CHECK:         %[[VAL_174:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_174:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_175:.*]] = fir.convert %[[VAL_174]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_176:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_175]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_177:.*]] = fir.address_of(@_QQcl.6D69736D617463682036) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_177:.*]] = fir.address_of(@_QQclX6D69736D617463682036) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_178:.*]] = fir.convert %[[VAL_177]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_179:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_180:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_176]], %[[VAL_178]], %[[VAL_179]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -283,13 +283,13 @@
 ! CHECK:         fir.freemem %[[VAL_195]] : !fir.heap<!fir.array<3xf32>>
 ! CHECK:         %[[VAL_224:.*]] = fir.load %[[VAL_77]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_225:.*]] = fir.load %[[VAL_96]] : !fir.ref<f32>
-! CHECK:         %[[VAL_226:.*]] = arith.cmpf une, %[[VAL_224]], %[[VAL_225]] : f32
+! CHECK:         %[[VAL_226:.*]] = arith.cmpf une, %[[VAL_224]], %[[VAL_225]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_226]], ^bb35, ^bb36
 ! CHECK:       ^bb35:
-! CHECK:         %[[VAL_227:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_227:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_228:.*]] = fir.convert %[[VAL_227]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_229:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_228]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_230:.*]] = fir.address_of(@_QQcl.6D69736D617463682037) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_230:.*]] = fir.address_of(@_QQclX6D69736D617463682037) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_231:.*]] = fir.convert %[[VAL_230]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_232:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_233:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_229]], %[[VAL_231]], %[[VAL_232]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -302,13 +302,13 @@
 ! CHECK:       ^bb36:
 ! CHECK:         %[[VAL_239:.*]] = fir.load %[[VAL_94]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_240:.*]] = fir.load %[[VAL_113]] : !fir.ref<f32>
-! CHECK:         %[[VAL_241:.*]] = arith.cmpf une, %[[VAL_239]], %[[VAL_240]] : f32
+! CHECK:         %[[VAL_241:.*]] = arith.cmpf une, %[[VAL_239]], %[[VAL_240]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_241]], ^bb37, ^bb38
 ! CHECK:       ^bb37:
-! CHECK:         %[[VAL_242:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_242:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_243:.*]] = fir.convert %[[VAL_242]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_244:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_243]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_245:.*]] = fir.address_of(@_QQcl.6D69736D617463682038) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_245:.*]] = fir.address_of(@_QQclX6D69736D617463682038) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_246:.*]] = fir.convert %[[VAL_245]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_247:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_248:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_244]], %[[VAL_246]], %[[VAL_247]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -321,13 +321,13 @@
 ! CHECK:       ^bb38:
 ! CHECK:         %[[VAL_254:.*]] = fir.load %[[VAL_111]] : !fir.ref<f32>
 ! CHECK:         %[[VAL_255:.*]] = fir.load %[[VAL_79]] : !fir.ref<f32>
-! CHECK:         %[[VAL_256:.*]] = arith.cmpf une, %[[VAL_254]], %[[VAL_255]] : f32
+! CHECK:         %[[VAL_256:.*]] = arith.cmpf une, %[[VAL_254]], %[[VAL_255]] {{.*}} : f32
 ! CHECK:         cond_br %[[VAL_256]], ^bb39, ^bb40
 ! CHECK:       ^bb39:
-! CHECK:         %[[VAL_257:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_257:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_258:.*]] = fir.convert %[[VAL_257]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_259:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_258]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_260:.*]] = fir.address_of(@_QQcl.6D69736D617463682039) : !fir.ref<!fir.char<1,10>>
+! CHECK:         %[[VAL_260:.*]] = fir.address_of(@_QQclX6D69736D617463682039) : !fir.ref<!fir.char<1,10>>
 ! CHECK:         %[[VAL_261:.*]] = fir.convert %[[VAL_260]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_262:.*]] = fir.convert %[[VAL_0]] : (index) -> i64
 ! CHECK:         %[[VAL_263:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_259]], %[[VAL_261]], %[[VAL_262]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -385,14 +385,14 @@ end program p
 ! CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 4 : index
-! CHECK-DAG:     %[[VAL_6:.*]] = arith.constant -1 : i32
+! CHECK-DAG:     %[[VAL_6:.*]] = arith.constant 6 : i32
 ! CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:         %[[VAL_8:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>
-! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+! CHECK:         %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_6]], %[[VAL_11]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.address_of(@_QQcl.61203D20) : !fir.ref<!fir.char<1,4>>
+! CHECK:         %[[VAL_13:.*]] = fir.address_of(@_QQclX61203D20) : !fir.ref<!fir.char<1,4>>
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_4]] : (index) -> i64
 ! CHECK:         %[[VAL_16:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_12]], %[[VAL_14]], %[[VAL_15]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1

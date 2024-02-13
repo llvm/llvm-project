@@ -6,8 +6,8 @@
 //===----------------------------------------------------------------------===//
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -42,13 +42,13 @@
 #include <mdspan>
 
 #include "check_assertion.h"
-#include "../../../../../std/containers/views/mdspan/mdspan/CustomTestLayouts.h"
+#include "../../../../../std/containers/views/mdspan/CustomTestLayouts.h"
 
 // We use a funky mapping in this test that doesn't check the dynamic/static extents mismatch itself
 int main(int, char**) {
   constexpr size_t D = std::dynamic_extent;
   std::array<float, 10> data;
-  typename layout_wrapping_integral<4>::template mapping<std::dextents<int, 2>> src_map(
+  layout_wrapping_integral<4>::mapping<std::dextents<int, 2>> src_map(
       std::dextents<int, 2>(5, 2), not_extents_constructible_tag());
   std::mdspan<float, std::dextents<int, 2>, layout_wrapping_integral<4>> arg(data.data(), src_map);
 

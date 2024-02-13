@@ -17,6 +17,7 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_FIRCONTEXT_H
 #define FORTRAN_OPTIMIZER_SUPPORT_FIRCONTEXT_H
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -49,6 +50,19 @@ KindMapping getKindMapping(mlir::ModuleOp mod);
 /// if the operation is a ModuleOp, or from its parent ModuleOp.
 /// If a ModuleOp cannot be reached, the function returns default KindMapping.
 KindMapping getKindMapping(mlir::Operation *op);
+
+/// Set the target CPU for the module. `cpu` must not be deallocated while
+/// module `mod` is still live.
+void setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
+
+/// Get the target CPU string from the Module or return a null reference.
+llvm::StringRef getTargetCPU(mlir::ModuleOp mod);
+
+/// Set the target features for the module.
+void setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features);
+
+/// Get the target features from the Module.
+mlir::LLVM::TargetFeaturesAttr getTargetFeatures(mlir::ModuleOp mod);
 
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`

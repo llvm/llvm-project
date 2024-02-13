@@ -12,4 +12,4 @@
 #include <forward_list>
 
 std::forward_list<int, std::allocator<long> > fl;
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Allocator::value_type must be same type as value_type}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}Allocator::value_type must be same type as value_type}}

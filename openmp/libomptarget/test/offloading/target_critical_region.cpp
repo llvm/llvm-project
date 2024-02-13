@@ -6,6 +6,7 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>

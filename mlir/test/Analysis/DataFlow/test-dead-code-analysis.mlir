@@ -118,6 +118,18 @@ func.func @test_callgraph(%cond: i1, %arg0: i32) -> i32 {
   return %2 : i32
 }
 
+func.func private @bax(%arg0: i32) {
+  return {void_return}
+}
+
+func.func @test_callgraph_void_return(%arg0: i32) -> i32 {
+  // CHECK: call_void_return:
+  // CHECK: op_preds: (all) predecessors:
+  // CHECK:   func.return {void_return}
+  func.call @bax(%arg0) {tag = "call_void_return"}: (i32) -> ()
+  return %arg0 : i32
+}
+
 // CHECK: test_unknown_branch:
 // CHECK:  region #0
 // CHECK:   ^bb0 = live
@@ -244,5 +256,12 @@ func.func @test_call_dead_return(%arg0: i32) -> () {
   // CHECK: op_preds: (all) predecessors:
   // CHECK:   func.return {true}
   %0 = func.call @test_dead_return(%arg0) {tag = "test_dead_return"} : (i32) -> i32
+  return
+}
+
+func.func @test_dca_doesnt_crash() -> () {
+  %0 = scf.execute_region -> tensor<5x16xi16> {
+    llvm.unreachable
+  }  
   return
 }

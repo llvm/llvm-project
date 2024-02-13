@@ -53,7 +53,6 @@ public:
   void run();
 
 private:
-  void copyLocalSymbols();
   void addSectionSymbols();
   void sortSections();
   void resolveShfLinkOrder();
@@ -149,23 +148,24 @@ static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(Defined{nullptr, StringRef(), STB_GLOBAL, stOther, STT_NOTYPE, val,
+  s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
+                     STT_NOTYPE, val,
                      /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
-}
-
-static Defined *addAbsolute(StringRef name) {
-  Symbol *sym = symtab.addSymbol(Defined{nullptr, name, STB_GLOBAL, STV_HIDDEN,
-                                         STT_NOTYPE, 0, 0, nullptr});
-  sym->isUsedInRegularObj = true;
-  return cast<Defined>(sym);
 }
 
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
 void elf::addReservedSymbols() {
   if (config->emachine == EM_MIPS) {
+    auto addAbsolute = [](StringRef name) {
+      Symbol *sym =
+          symtab.addSymbol(Defined{ctx.internalFile, name, STB_GLOBAL,
+                                   STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr});
+      sym->isUsedInRegularObj = true;
+      return cast<Defined>(sym);
+    };
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which by default is relative
     // to GOT. Default offset is 0x7ff0.
@@ -214,7 +214,7 @@ void elf::addReservedSymbols() {
     if (config->emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
+    s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
                        STT_NOTYPE, gotOff, /*size=*/0, Out::elfHeader});
     ElfSym::globalOffsetTable = cast<Defined>(s);
   }
@@ -249,6 +249,64 @@ void elf::addReservedSymbols() {
   ElfSym::etext2 = add("_etext", -1);
   ElfSym::edata1 = add("edata", -1);
   ElfSym::edata2 = add("_edata", -1);
+}
+
+static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
+  if (map.empty())
+    for (auto [i, sec] : llvm::enumerate(sym.file->getSections()))
+      map.try_emplace(sec, i);
+  // Change WEAK to GLOBAL so that if a scanned relocation references sym,
+  // maybeReportUndefined will report an error.
+  uint8_t binding = sym.isWeak() ? uint8_t(STB_GLOBAL) : sym.binding;
+  Undefined(sym.file, sym.getName(), binding, sym.stOther, sym.type,
+            /*discardedSecIdx=*/map.lookup(sym.section))
+      .overwrite(sym);
+}
+
+// If all references to a DSO happen to be weak, the DSO is not added to
+// DT_NEEDED. If that happens, replace ShardSymbol with Undefined to avoid
+// dangling references to an unneeded DSO. Use a weak binding to avoid
+// --no-allow-shlib-undefined diagnostics. Similarly, demote lazy symbols.
+//
+// In addition, demote symbols defined in discarded sections, so that
+// references to /DISCARD/ discarded symbols will lead to errors.
+static void demoteSymbolsAndComputeIsPreemptible() {
+  llvm::TimeTraceScope timeScope("Demote symbols");
+  DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+  for (Symbol *sym : symtab.getSymbols()) {
+    if (auto *d = dyn_cast<Defined>(sym)) {
+      if (d->section && !d->section->isLive())
+        demoteDefined(*d, sectionIndexMap[d->file]);
+    } else {
+      auto *s = dyn_cast<SharedSymbol>(sym);
+      if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
+        uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
+        Undefined(ctx.internalFile, sym->getName(), binding, sym->stOther,
+                  sym->type)
+            .overwrite(*sym);
+        sym->versionId = VER_NDX_GLOBAL;
+      }
+    }
+
+    if (config->hasDynSymTab)
+      sym->isPreemptible = computeIsPreemptible(*sym);
+  }
+}
+
+bool elf::hasMemtag() {
+  return config->emachine == EM_AARCH64 &&
+         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
+}
+
+// Fully static executables don't support MTE globals at this point in time, as
+// we currently rely on:
+//   - A dynamic loader to process relocations, and
+//   - Dynamic entries.
+// This restriction could be removed in future by re-using some of the ideas
+// that ifuncs use in fully static executables.
+bool elf::canHaveMemtagGlobals() {
+  return hasMemtag() &&
+         (config->relocatable || config->shared || needsInterpSection());
 }
 
 static OutputSection *findSection(StringRef name, unsigned partition = 1) {
@@ -345,15 +403,14 @@ template <class ELFT> void elf::createSyntheticSections() {
         std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
     part.dynamic = std::make_unique<DynamicSection<ELFT>>();
 
-    if (config->emachine == EM_AARCH64 &&
-        config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
-      if (!config->relocatable && !config->shared && !needsInterpSection())
-        error("--android-memtag-mode is incompatible with fully-static "
-              "executables (-static)");
+    if (hasMemtag()) {
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
-      part.memtagDescriptors = std::make_unique<MemtagDescriptors>();
-      add(*part.memtagDescriptors);
+      if (canHaveMemtagGlobals()) {
+        part.memtagGlobalDescriptors =
+            std::make_unique<MemtagGlobalDescriptors>();
+        add(*part.memtagGlobalDescriptors);
+      }
     }
 
     if (config->androidPackDynRelocs)
@@ -537,11 +594,6 @@ template <class ELFT> void elf::createSyntheticSections() {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  copyLocalSymbols();
-
-  if (config->copyRelocs)
-    addSectionSymbols();
-
   // Now that we have a complete set of output sections. This function
   // completes section contents. For example, we need to add strings
   // to the string table, and add entries to .got and .plt.
@@ -690,31 +742,33 @@ bool lld::elf::includeInSymtab(const Symbol &b) {
     SectionBase *sec = d->section;
     if (!sec)
       return true;
+    assert(sec->isLive());
 
     if (auto *s = dyn_cast<MergeInputSection>(sec))
       return s->getSectionPiece(d->value).live;
-    return sec->isLive();
+    return true;
   }
   return b.used || !config->gcSections;
 }
 
-// Local symbols are not in the linker's symbol table. This function scans
-// each object file's symbol table to copy local symbols to the output.
-template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
-  if (!in.symTab)
-    return;
+// Scan local symbols to:
+//
+// - demote symbols defined relative to /DISCARD/ discarded input sections so
+//   that relocations referencing them will lead to errors.
+// - copy eligible symbols to .symTab
+static void demoteAndCopyLocalSymbols() {
   llvm::TimeTraceScope timeScope("Add local symbols");
-  if (config->copyRelocs && config->discard != DiscardPolicy::None)
-    markUsedLocalSymbols<ELFT>();
   for (ELFFileBase *file : ctx.objectFiles) {
+    DenseMap<SectionBase *, size_t> sectionIndexMap;
     for (Symbol *b : file->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
-
-      // No reason to keep local undefined symbol in symtab.
       if (!dr)
         continue;
-      if (includeInSymtab(*b) && shouldKeepInSymtab(*dr))
+
+      if (dr->section && !dr->section->isLive())
+        demoteDefined(*dr, sectionIndexMap);
+      else if (in.symTab && includeInSymtab(*b) && shouldKeepInSymtab(*dr))
         in.symTab->addSymbol(b);
     }
   }
@@ -1050,7 +1104,9 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   PhdrEntry *last = nullptr;
   PhdrEntry *lastRO = nullptr;
-
+  auto isLarge = [](OutputSection *osec) {
+    return config->emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
+  };
   for (Partition &part : partitions) {
     for (PhdrEntry *p : part.phdrs) {
       if (p->p_type != PT_LOAD)
@@ -1070,10 +1126,11 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   if (last) {
-    // _edata points to the end of the last mapped initialized section.
+    // _edata points to the end of the last non-large mapped initialized
+    // section.
     OutputSection *edata = nullptr;
     for (OutputSection *os : outputSections) {
-      if (os->type != SHT_NOBITS)
+      if (os->type != SHT_NOBITS && !isLarge(os))
         edata = os;
       if (os == last->lastSec)
         break;
@@ -1464,12 +1521,12 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       osd->osec.sortRank = getSectionRank(osd->osec);
   if (!script->hasSectionsCommand) {
-    // We know that all the OutputSections are contiguous in this case.
-    auto isSection = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
-    std::stable_sort(
-        llvm::find_if(script->sectionCommands, isSection),
-        llvm::find_if(llvm::reverse(script->sectionCommands), isSection).base(),
-        compareSections);
+    // OutputDescs are mostly contiguous, but may be interleaved with
+    // SymbolAssignments in the presence of INSERT commands.
+    auto mid = std::stable_partition(
+        script->sectionCommands.begin(), script->sectionCommands.end(),
+        [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); });
+    std::stable_sort(script->sectionCommands.begin(), mid, compareSections);
   }
 
   // Process INSERT commands and update output section attributes. From this
@@ -1672,6 +1729,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= a32p.createFixes();
     }
 
+    finalizeSynthetic(in.got.get());
     if (in.mipsGot)
       in.mipsGot->updateAllocSize();
 
@@ -1679,8 +1737,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
-      if (part.memtagDescriptors)
-        changed |= part.memtagDescriptors->updateAllocSize();
+      if (part.memtagGlobalDescriptors)
+        changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
     const Defined *changedSym = script->assignAddresses();
@@ -1697,8 +1755,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       }
     }
   }
-  if (!config->relocatable && config->emachine == EM_RISCV)
-    riscvFinalizeRelax(pass);
+  if (!config->relocatable)
+    target->finalizeRelax(pass);
 
   if (config->relocatable)
     for (OutputSection *sec : outputSections)
@@ -1869,7 +1927,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // https://sourceware.org/ml/binutils/2002-03/msg00360.html
     if (mainPart->dynamic->parent) {
       Symbol *s = symtab.addSymbol(Defined{
-          /*file=*/nullptr, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+          ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
           /*value=*/0, /*size=*/0, mainPart->dynamic.get()});
       s->isUsedInRegularObj = true;
     }
@@ -1911,7 +1969,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // define _TLS_MODULE_BASE_ relative to the first TLS section.
       Symbol *s = symtab.find("_TLS_MODULE_BASE_");
       if (s && s->isUndefined()) {
-        s->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL,
+        s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                            STV_HIDDEN, STT_TLS, /*value=*/0, 0,
                            /*section=*/nullptr});
         ElfSym::tlsModuleBase = cast<Defined>(s);
@@ -1926,13 +1984,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (Partition &part : partitions)
         finalizeSynthetic(part.ehFrame.get());
     }
-
-    if (config->hasDynSymTab) {
-      parallelForEach(symtab.getSymbols(), [](Symbol *sym) {
-        sym->isPreemptible = computeIsPreemptible(*sym);
-      });
-    }
   }
+
+  demoteSymbolsAndComputeIsPreemptible();
+
+  if (config->copyRelocs && config->discard != DiscardPolicy::None)
+    markUsedLocalSymbols<ELFT>();
+  demoteAndCopyLocalSymbols();
+
+  if (config->copyRelocs)
+    addSectionSymbols();
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.
@@ -1967,6 +2028,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // to catch more cases. That is too much for us. Our approach resembles
       // the one used in ld.gold, achieves a good balance to be useful but not
       // too smart.
+      //
+      // If a DSO reference is resolved by a SharedSymbol, but the SharedSymbol
+      // is overridden by a hidden visibility Defined (which is later discarded
+      // due to GC), don't report the diagnostic. However, this may indicate an
+      // unintended SharedSymbol.
       for (SharedFile *file : ctx.sharedFiles) {
         bool allNeededIsKnown =
             llvm::all_of(file->dtNeeded, [&](StringRef needed) {
@@ -1974,10 +2040,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
             });
         if (!allNeededIsKnown)
           continue;
-        for (Symbol *sym : file->requiredSymbols)
-          if (sym->isUndefined() && !sym->isWeak())
+        for (Symbol *sym : file->requiredSymbols) {
+          if (sym->dsoDefined)
+            continue;
+          if (sym->isUndefined() && !sym->isWeak()) {
             diagnose("undefined reference due to --no-allow-shlib-undefined: " +
                      toString(*sym) + "\n>>> referenced by " + toString(file));
+          } else if (sym->isDefined() && sym->computeBinding() == STB_LOCAL) {
+            diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
+                     toString(sym->file) + "' is referenced by DSO '" +
+                     toString(file) + "'");
+          }
+        }
       }
     }
   }
@@ -2044,8 +2118,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // With the outputSections available check for GDPLT relocations
   // and add __tls_get_addr symbol if needed.
   if (config->emachine == EM_HEXAGON && hexagonNeedsTLSSymbol(outputSections)) {
-    Symbol *sym = symtab.addSymbol(Undefined{
-        nullptr, "__tls_get_addr", STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
+    Symbol *sym =
+        symtab.addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
+                                   STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
     sym->isPreemptible = true;
     partitions[0].dynSymTab->addSymbol(sym);
   }
@@ -2281,17 +2356,12 @@ static bool needsPtLoad(OutputSection *sec) {
   return true;
 }
 
-// Linker scripts are responsible for aligning addresses. Unfortunately, most
-// linker scripts are designed for creating two PT_LOADs only, one RX and one
-// RW. This means that there is no alignment in the RO to RX transition and we
-// cannot create a PT_LOAD there.
+// Adjust phdr flags according to certain options.
 static uint64_t computeFlags(uint64_t flags) {
   if (config->omagic)
     return PF_R | PF_W | PF_X;
   if (config->executeOnly && (flags & PF_X))
     return flags & ~PF_R;
-  if (config->singleRoRx && !(flags & PF_W))
-    return flags | PF_X;
   return flags;
 }
 
@@ -2379,8 +2449,8 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // different flags or is loaded at a discontiguous address or memory region
-    // using AT or AT> linker script command, respectively.
+    // incompatible flags or is loaded at a discontiguous address or memory
+    // region using AT or AT> linker script command, respectively.
     //
     // As an exception, we don't create a separate load segment for the ELF
     // headers, even if the first "real" output has an AT or AT> attribute.
@@ -2393,13 +2463,22 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
+    // When --no-rosegment is specified, RO and RX sections are compatible.
+    uint32_t incompatible = flags ^ newFlags;
+    if (config->singleRoRx && !(newFlags & PF_W))
+      incompatible &= ~PF_X;
+    if (incompatible)
+      load = nullptr;
+
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
-    if (!(load && newFlags == flags && sec != relroEnd &&
-          sec->memRegion == load->firstSec->memRegion &&
-          (sameLMARegion || load->lastSec == Out::programHeaders) &&
-          (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
-           load->lastSec->type != SHT_NOBITS))) {
+    if (load && sec != relroEnd &&
+        sec->memRegion == load->firstSec->memRegion &&
+        (sameLMARegion || load->lastSec == Out::programHeaders) &&
+        (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
+         load->lastSec->type != SHT_NOBITS)) {
+      load->p_flags |= newFlags;
+    } else {
       load = addHdr(PT_LOAD, newFlags);
       flags = newFlags;
     }

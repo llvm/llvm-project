@@ -12,7 +12,9 @@
 #include "allocator_config.h"
 #include "chunk.h"
 #include "combined.h"
+#include "condition_variable.h"
 #include "mem_map.h"
+#include "size_class_map.h"
 
 #include <algorithm>
 #include <condition_variable>
@@ -164,13 +166,60 @@ template <class TypeParam> struct ScudoCombinedTest : public Test {
 
 template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
 
+namespace scudo {
+struct TestConditionVariableConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <class A>
+  using TSDRegistryT =
+      scudo::TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 28U;
+    typedef scudo::u32 CompactPtrT;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::uptr CompactPtrT;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+    static const bool UseConditionVariable = true;
+#if SCUDO_LINUX
+    using ConditionVariableT = scudo::ConditionVariableLinux;
+#else
+    using ConditionVariableT = scudo::ConditionVariableDummy;
+#endif
+  };
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+} // namespace scudo
+
 #if SCUDO_FUCHSIA
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, FuchsiaConfig)
 #else
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)                          \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConditionVariableConfig)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -180,7 +229,21 @@ template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
   template <class TypeParam>                                                   \
   struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
+    using BaseT = FIXTURE<TypeParam>;                                          \
     void Run();                                                                \
+  };                                                                           \
+  SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
+  template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
+
+// Accessing `TSD->getCache()` requires `TSD::Mutex` which isn't easy to test
+// using thread-safety analysis. Alternatively, we verify the thread safety
+// through a runtime check in ScopedTSD and mark the test body with
+// NO_THREAD_SAFETY_ANALYSIS.
+#define SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(FIXTURE, NAME)                     \
+  template <class TypeParam>                                                   \
+  struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
+    using BaseT = FIXTURE<TypeParam>;                                          \
+    void Run() NO_THREAD_SAFETY_ANALYSIS;                                      \
   };                                                                           \
   SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
   template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
@@ -498,7 +561,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, Stats) {
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
+SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, CacheDrain) {
+  using AllocatorT = typename BaseT::AllocatorT;
   auto *Allocator = this->Allocator.get();
 
   std::vector<void *> V;
@@ -510,16 +574,15 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
   for (auto P : V)
     Allocator->deallocate(P, Origin);
 
-  bool UnlockRequired;
-  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
   EXPECT_TRUE(!TSD->getCache().isEmpty());
   TSD->getCache().drain();
   EXPECT_TRUE(TSD->getCache().isEmpty());
-  if (UnlockRequired)
-    TSD->unlock();
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
+SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, ForceCacheDrain) {
+  using AllocatorT = typename BaseT::AllocatorT;
   auto *Allocator = this->Allocator.get();
 
   std::vector<void *> V;
@@ -534,13 +597,11 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
   // `ForceAll` will also drain the caches.
   Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll);
 
-  bool UnlockRequired;
-  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
   EXPECT_TRUE(TSD->getCache().isEmpty());
   EXPECT_EQ(TSD->getQuarantineCache().getSize(), 0U);
   EXPECT_TRUE(Allocator->getQuarantine()->isEmpty());
-  if (UnlockRequired)
-    TSD->unlock();
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
@@ -841,7 +902,8 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
   }
 
   bool UnlockRequired;
-  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  typename AllocatorT::TSDRegistryT::ScopedTSD TSD(
+      *Allocator->getTSDRegistry());
   TSD->getCache().drain();
 
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);

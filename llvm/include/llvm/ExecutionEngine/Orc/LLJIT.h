@@ -322,7 +322,6 @@ public:
   unique_function<Error(LLJIT &)> PrePlatformSetup;
   PlatformSetupFunction SetUpPlatform;
   unsigned NumCompileThreads = 0;
-  bool EnableDebuggerSupport = false;
 
   /// Called prior to JIT class construcion to fix up defaults.
   Error prepareForConstruction();
@@ -455,12 +454,6 @@ public:
     return impl();
   }
 
-  /// Enable / disable debugger support (off by default).
-  SetterImpl &setEnableDebuggerSupport(bool EnableDebuggerSupport) {
-    impl().EnableDebuggerSupport = EnableDebuggerSupport;
-    return impl();
-  }
-
   /// Set an ExecutorProcessControl object.
   ///
   /// If the platform uses ObjectLinkingLayer by default and no
@@ -590,6 +583,19 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
 /// platforms, that we have no explicit support yet and that don't work well
 /// with the generic IR platform.
 Expected<JITDylibSP> setUpInactivePlatform(LLJIT &J);
+
+/// A Platform-support class that implements initialize / deinitialize by
+/// forwarding to ORC runtime dlopen / dlclose operations.
+class ORCPlatformSupport : public LLJIT::PlatformSupport {
+public:
+  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
+  Error initialize(orc::JITDylib &JD) override;
+  Error deinitialize(orc::JITDylib &JD) override;
+
+private:
+  orc::LLJIT &J;
+  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+};
 
 } // End namespace orc
 } // End namespace llvm

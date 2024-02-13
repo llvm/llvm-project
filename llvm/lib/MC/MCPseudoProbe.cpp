@@ -343,7 +343,7 @@ template <typename T> ErrorOr<T> MCPseudoProbeDecoder::readUnencodedNumber() {
   if (Data + sizeof(T) > End) {
     return std::error_code();
   }
-  T Val = endian::readNext<T, little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little, unaligned>(Data);
   return ErrorOr<T>(Val);
 }
 
@@ -572,9 +572,8 @@ void MCPseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
 }
 
 void MCPseudoProbeDecoder::printProbesForAllAddresses(raw_ostream &OS) {
-  std::vector<uint64_t> Addresses;
-  for (auto Entry : Address2ProbesMap)
-    Addresses.push_back(Entry.first);
+  auto Entries = make_first_range(Address2ProbesMap);
+  SmallVector<uint64_t, 0> Addresses(Entries.begin(), Entries.end());
   llvm::sort(Addresses);
   for (auto K : Addresses) {
     OS << "Address:\t";

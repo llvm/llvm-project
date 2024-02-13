@@ -74,11 +74,16 @@ private:
   SourceRange AttrRange;
   const SourceLocation ScopeLoc;
   // Corresponds to the Kind enum.
+  LLVM_PREFERRED_TYPE(Kind)
   unsigned AttrKind : 16;
   /// Corresponds to the Syntax enum.
+  LLVM_PREFERRED_TYPE(Syntax)
   unsigned SyntaxUsed : 4;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SpellingIndex : 4;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAlignas : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRegularKeywordAttribute : 1;
 
 protected:
@@ -123,9 +128,12 @@ public:
         : SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingNotCalculated),
           IsAlignas(0), IsRegularKeywordAttribute(0) {}
 
+    LLVM_PREFERRED_TYPE(Syntax)
     unsigned SyntaxUsed : 4;
     unsigned SpellingIndex : 4;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsAlignas : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsRegularKeywordAttribute : 1;
   };
 
@@ -169,6 +177,7 @@ public:
                 IsRegularKeywordAttribute);
   }
   const IdentifierInfo *getAttrName() const { return AttrName; }
+  void setAttrName(const IdentifierInfo *AttrNameII) { AttrName = AttrNameII; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
   SourceRange getRange() const { return AttrRange; }
   void setRange(SourceRange R) { AttrRange = R; }
@@ -191,6 +200,15 @@ public:
   bool isCXX11Attribute() const { return SyntaxUsed == AS_CXX11 || IsAlignas; }
 
   bool isC23Attribute() const { return SyntaxUsed == AS_C23; }
+
+  bool isAlignas() const {
+    // FIXME: In the current state, the IsAlignas member variable is only true
+    // with the C++  `alignas` keyword but not `_Alignas`. The following
+    // expression works around the otherwise lost information so it will return
+    // true for `alignas` or `_Alignas` while still returning false for things
+    // like  `__attribute__((aligned))`.
+    return (getParsedKind() == AT_Aligned && isKeywordAttribute());
+  }
 
   /// The attribute is spelled [[]] in either C or C++ mode, including standard
   /// attributes spelled with a keyword, like alignas.
@@ -237,6 +255,19 @@ protected:
     return SpellingIndex != SpellingNotCalculated;
   }
 };
+
+inline bool doesKeywordAttributeTakeArgs(tok::TokenKind Kind) {
+  switch (Kind) {
+  default:
+    return false;
+#define KEYWORD_ATTRIBUTE(NAME, HASARG, ...)                                   \
+  case tok::kw_##NAME:                                                         \
+    return HASARG;
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
+#undef KEYWORD_ATTRIBUTE
+  }
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H

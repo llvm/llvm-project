@@ -114,8 +114,7 @@ define i1 @len_not_known_positive2(i8 %len, i8 %idx) {
 ; CHECK-LABEL: @len_not_known_positive2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_SLT_LEN:%.*]] = icmp slt i8 [[IDX:%.*]], [[LEN:%.*]]
-; CHECK-NEXT:    [[IDX_POS:%.*]] = icmp uge i8 [[IDX]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], [[IDX_POS]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], true
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]

@@ -83,8 +83,7 @@ contains
   subroutine formattedReadProc(*, unit, iotype, vlist, iostat, iomsg)
     !ERROR: Dummy argument 'unit' must be a data object
     !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
-    !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
-    procedure(sin), intent(in) :: unit
+    procedure(real), intent(in) :: unit
     character(len=*), intent(in) :: iotype
     integer, intent(in) :: vlist(:)
     integer, intent(out) :: iostat

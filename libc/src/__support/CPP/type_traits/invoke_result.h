@@ -12,7 +12,7 @@
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/CPP/utility/declval.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 template <class F, class... Args>
 struct invoke_result : cpp::type_identity<decltype(cpp::invoke(
@@ -21,6 +21,6 @@ struct invoke_result : cpp::type_identity<decltype(cpp::invoke(
 template <class F, class... Args>
 using invoke_result_t = typename invoke_result<F, Args...>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_INVOKE_RESULT_H

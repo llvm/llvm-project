@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file | FileCheck %s
 
 func.func @vectorize_dynamic_identity(%arg0: tensor<?xf32>,
                                       %arg1: tensor<?xf32>,
@@ -26,10 +26,12 @@ func.func @vectorize_dynamic_identity(%arg0: tensor<?xf32>,
 // CHECK:           %[[VAL_13:.*]] = arith.addf %[[VAL_8]], %[[VAL_10]] : vector<4xf32>
 // CHECK:           %[[VAL_14:.*]] = vector.mask %[[VAL_7]] { vector.transfer_write %{{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<?xf32> } : vector<4xi1> -> tensor<?xf32>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -60,10 +62,12 @@ func.func @vectorize_dynamic_1d_broadcast(%arg0: tensor<?xf32>,
 // CHECK:           %[[VAL_13:.*]] = arith.addf %[[VAL_7]], %[[VAL_10]] : vector<4xf32>
 // CHECK:           %[[VAL_14:.*]] = vector.mask %{{.*}} { vector.transfer_write %[[VAL_13]], {{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<?xf32> } : vector<4xi1> -> tensor<?xf32>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -98,10 +102,12 @@ func.func @vectorize_dynamic_2d_transpose(%arg0: tensor<?x?xf32>,
 // CHECK:           %[[VAL_16:.*]] = arith.addf %[[VAL_10]], %[[VAL_13]] : vector<4x8xf32>
 // CHECK:           %[[VAL_17:.*]] = vector.mask %[[VAL_12]] { vector.transfer_write %[[VAL_16]], %{{.*}} {in_bounds = [true, true]} : vector<4x8xf32>, tensor<?x?xf32> } : vector<4x8xi1> -> tensor<?x?xf32>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -135,10 +141,12 @@ func.func @vectorize_dynamic_generic_2d_broadcast(%arg0: tensor<?x?xf32>,
 // CHECK:           %[[VAL_16:.*]] = arith.addf %[[VAL_10]], %[[VAL_13]] : vector<4x8xf32>
 // CHECK:           %[[VAL_18:.*]] = vector.mask %[[VAL_12]] { vector.transfer_write %{{.*}} {in_bounds = [true, true]} : vector<4x8xf32>, tensor<?x?xf32> } : vector<4x8xi1> -> tensor<?x?xf32>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -157,10 +165,12 @@ func.func @vectorize_dynamic_reduction(%arg0: tensor<?x?xf32>,
   return %0 : tensor<?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL:   @vectorize_dynamic_reduction(
@@ -195,10 +205,12 @@ func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>,
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [4, 8, 16] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 8, 16] : !transform.any_op
+    transform.yield
+  }
 }
 
 // CHECK-LABEL:   @vectorize_dynamic_transpose_reduction(
@@ -253,10 +265,12 @@ func.func @vectorize_partial_dynamic_identity(%arg0: tensor<8x?xf32>,
 // CHECK:           %[[VAL_16:.*]] = vector.mask %[[VAL_8]] { vector.transfer_write %[[VAL_14]], %[[VAL_2]][%[[VAL_15]], %[[VAL_15]]] {in_bounds = [true, true]} : vector<8x32xf32>, tensor<8x?xf32> } : vector<8x32xi1> -> tensor<8x?xf32>
 
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -280,10 +294,12 @@ func.func @do_not_generate_masks(%arg0: tensor<8x32xf32>,
 // CHECK-LABEL: func.func @do_not_generate_masks
 // CHECK-NOT: vector.mask
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -320,10 +336,12 @@ func.func @vectorize_static_shape_with_mask(%arg0: tensor<8x30xf32>,
 // CHECK:           %[[VAL_14:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_15:.*]] = vector.mask %[[VAL_7]] { vector.transfer_write %[[VAL_13]], %[[VAL_2]][%[[VAL_14]], %[[VAL_14]]] {in_bounds = [true, true]} : vector<8x32xf32>, tensor<8x30xf32> } : vector<8x32xi1> -> tensor<8x30xf32>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -340,10 +358,40 @@ func.func @vectorize_dynamic_fill(%A : tensor<?x?xf32>, %arg0 : f32) -> tensor<?
 //   CHECK: %[[BCAST:.*]] = vector.broadcast %{{.*}} : f32 to vector<8x16xf32>
 //   CHECK: vector.mask %[[MASK]] { vector.transfer_write %[[BCAST]], {{.*}} {in_bounds = [true, true]} : vector<8x16xf32>, tensor<?x?xf32> } : vector<8x16xi1>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [8, 16] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 16] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK: #[[MAP:.*]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK: func @test_masked_vectorize_linalg_transpose
+func.func @test_masked_vectorize_linalg_transpose(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:  %[[D0:.*]] = tensor.dim %arg0, %[[C0]]
+  // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG:  %[[D1:.*]] = tensor.dim %arg0, %[[C1]]
+  // CHECK:      %[[MASK0:.*]] = vector.create_mask %[[D0]], %[[D1]]
+  // CHECK:      %[[LOAD:.*]] = vector.mask %[[MASK0]] { vector.transfer_read %arg0{{.+}} permutation_map = #[[MAP]]{{.+}} }
+  // CHECK-SAME:   vector<4x2xi1> -> vector<2x4xf32>
+  // CHECK:      %[[MASK1:.*]] = vector.create_mask %[[D1]], %[[D0]]
+  // CHECK:      %[[WRITE:.*]] = vector.mask %[[MASK1]] { vector.transfer_write %[[LOAD]], %arg1{{.+}} }
+  // CHECK-SAME:   vector<2x4xi1> -> tensor<?x?xf32>
+  // CHECK:      return %[[WRITE]]
+  %0 = linalg.transpose ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?x?xf32>) permutation = [1, 0]
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.transpose"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -361,10 +409,12 @@ func.func @test_masked_vectorize_linalg_copy(%A : memref<?x?xf32>, %B : memref<?
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -376,16 +426,17 @@ func.func @test_masked_vectorize_pad(
 {
   //  CHECK-DAG: %[[c42:.*]] = arith.constant 4.243000e+01 : f32
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
-  //  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<2x4xf32>
+  //  CHECK-DAG: %[[c0_0:.*]] = arith.constant 0 : index
   //      CHECK: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
-  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
   //      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
-  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_2]], %[[c0_2]]], %[[c42]]
+  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_0]], %[[c0_0]]], %[[c42]]
   // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<2x4xf32>
   // CHECK-SAME: } : vector<2x4xi1> -> vector<2x4xf32>
-  //      CHECK: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_2]], %[[c0_2]]]
+  //  CHECK-DAG: %[[c0_1:.*]] = arith.constant 0 : index
+  //  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<2x4xf32>
+  //      CHECK: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_1]], %[[c0_1]]]
   // CHECK-SAME:   {in_bounds = [true, true]} : vector<2x4xf32>, tensor<2x4xf32>
   %cst = arith.constant 42.43 : f32
   %c0 = arith.constant 0 : index
@@ -396,11 +447,13 @@ func.func @test_masked_vectorize_pad(
   return %1: tensor<2x4xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -415,18 +468,19 @@ func.func @test_masked_vectorize_dynamic_pad(
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   //  CHECK-DAG: %[[res_d0:.+]] = affine.apply #[[MAP]]()
   //  CHECK-DAG: %[[res_d1:.+]] = affine.apply #[[MAP]]()
-  //  CHECK-DAG: %[[empty:.*]] = tensor.empty(%[[res_d0]], %[[res_d1]]) : tensor<?x?xf32>
+  //      CHECK: %[[c0_2:.*]] = arith.constant 0 : index
   //      CHECK: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
-  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
   //      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
   // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_2]], %[[c0_2]]], %[[c42]]
   // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<2x4xf32>
   // CHECK-SAME: } : vector<2x4xi1> -> vector<2x4xf32>
+  //  CHECK-DAG: %[[empty:.*]] = tensor.empty(%[[res_d0]], %[[res_d1]]) : tensor<?x?xf32>
+  //  CHECK-DAG: %[[c0_3:.*]] = arith.constant 0 : index
   //      CHECK: %[[mask_2:.*]] = vector.create_mask %[[res_d0]], %[[res_d1]] : vector<2x4xi1>
   //      CHECK: %[[masked_write:.*]] = vector.mask %[[mask_2]] {
-  // CHECK-SAME: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_2]], %[[c0_2]]]
+  // CHECK-SAME: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_3]], %[[c0_3]]]
   // CHECK-SAME:   {in_bounds = [true, true]} : vector<2x4xf32>, tensor<?x?xf32>
   //      CHECK: return %[[masked_write]] : tensor<?x?xf32>
   %cst = arith.constant 42.43 : f32
@@ -438,11 +492,113 @@ func.func @test_masked_vectorize_dynamic_pad(
   return %1: tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @test_vectorize_pack(%arg0: tensor<32x8x16xf32>, %arg1: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
+  %pack = tensor.pack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %arg1 : tensor<32x8x16xf32> -> tensor<4x1x32x16x2xf32>
+  return %pack : tensor<4x1x32x16x2xf32>
+}
+//  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//      CHECK: %[[read:.*]] = vector.transfer_read %{{.*}}[%[[c0]], %[[c0]], %[[c0]]], %[[cst]]
+// CHECK-SAME:    {in_bounds = [true, true, true]} : tensor<32x8x16xf32>, vector<32x8x16xf32>
+//      CHECK: %[[shape_cast:.*]] = vector.shape_cast %[[read]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
+//      CHECK: %[[transpose:.*]] = vector.transpose %[[shape_cast]], [1, 3, 0, 4, 2] : vector<32x4x2x1x16xf32> to vector<4x1x32x16x2xf32>
+//  CHECK-DAG: %[[c0_1:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<4x1x32x16x2xf32>
+//      CHECK: %[[write:.*]] = vector.transfer_write %[[transpose]], %[[empty]][%[[c0_1]], %[[c0_1]], %[[c0_1]], %[[c0_1]], %[[c0_1]]]
+// CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<4x1x32x16x2xf32>, tensor<4x1x32x16x2xf32>
+//      CHECK: return %[[write]] : tensor<4x1x32x16x2xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 1, 32] : !transform.any_op
+    transform.yield 
+  }
+}
+
+// -----
+
+func.func @test_vectorize_padded_pack(%arg0: tensor<32x7x15xf32>, %arg1: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
+  %pad = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %arg1 : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
+  return %pack : tensor<32x4x1x16x2xf32>
+}
+//  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c32:.*]] = arith.constant 32 : index
+//  CHECK-DAG: %[[c7:.*]] = arith.constant 7 : index
+//  CHECK-DAG: %[[c15:.*]] = arith.constant 15 : index
+//      CHECK: %[[mask:.*]] = vector.create_mask %[[c32]], %[[c7]], %[[c15]] : vector<32x8x16xi1>
+//      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
+// CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0]], %[[c0]], %[[c0]]], %[[cst]]
+// CHECK-SAME:   {in_bounds = [true, true, true]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
+// CHECK-SAME: } : vector<32x8x16xi1> -> vector<32x8x16xf32>
+//      CHECK: %[[shape_cast:.*]] = vector.shape_cast %[[masked_read]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
+//      CHECK: %[[transpose:.*]] = vector.transpose %[[shape_cast]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
+//  CHECK-DAG: %[[c0_1:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<32x4x1x16x2xf32>
+//      CHECK: %[[write:.*]] = vector.transfer_write %[[transpose]], %[[empty]][%[[c0_1]], %[[c0_1]], %[[c0_1]], %[[c0_1]], %[[c0_1]]]
+// CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+//      CHECK: return %[[write]] : tensor<32x4x1x16x2xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [32, 4, 1] : !transform.any_op
+    transform.yield 
+  }
+}
+
+// -----
+
+func.func @test_vectorize_dynamic_pack(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?x16x2xf32>) -> tensor<?x?x16x2xf32> {
+  %pack = tensor.pack %arg0 inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %arg1 : tensor<?x?xf32> -> tensor<?x?x16x2xf32>
+  return %pack : tensor<?x?x16x2xf32>
+}
+//  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+//  CHECK-DAG: %[[d0:.*]] = tensor.dim {{.*}} %[[c0]] : tensor<?x?x16x2xf32>
+//  CHECK-DAG: %[[d1:.*]] = tensor.dim {{.*}} %[[c1]] : tensor<?x?x16x2xf32>
+//  CHECK-DAG: %[[c0_1:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c0_0:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c1_0:.*]] = arith.constant 1 : index
+//  CHECK-DAG: %[[d0_0:.*]] = tensor.dim {{.*}} %[[c0_0]] : tensor<?x?xf32>
+//  CHECK-DAG: %[[d1_0:.*]] = tensor.dim {{.*}} %[[c1_0]] : tensor<?x?xf32>
+//      CHECK: %[[mask:.*]] = vector.create_mask %[[d0_0]], %[[d1_0]] : vector<8x16xi1>
+//      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
+// CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_1]], %[[c0_1]]], %[[cst]]
+// CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<8x16xf32>
+// CHECK-SAME: } : vector<8x16xi1> -> vector<8x16xf32>
+//      CHECK: %[[shape_cast:.*]] = vector.shape_cast %[[masked_read]] : vector<8x16xf32> to vector<4x2x1x16xf32>
+//      CHECK: %[[transpose:.*]] = vector.transpose %[[shape_cast]], [0, 2, 3, 1] : vector<4x2x1x16xf32> to vector<4x1x16x2xf32>
+//  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c16:.*]] = arith.constant 16 : index
+//  CHECK-DAG: %[[c2:.*]] = arith.constant 2 : index
+//  CHECK-DAG: %[[empty:.*]] = tensor.empty(%[[d0]], %[[d1]]) : tensor<?x?x16x2xf32>
+//      CHECK: %[[mask_0:.*]] = vector.create_mask %[[d0]], %[[d1]], %[[c16]], %[[c2]] : vector<4x1x16x2xi1>
+//      CHECK: %[[masked_write:.*]] = vector.mask %[[mask_0]] {
+// CHECK-SAME:   vector.transfer_write %[[transpose]], %[[empty]][%[[c0_2]], %[[c0_2]], %[[c0_2]], %[[c0_2]]]
+// CHECK-SAME:   {in_bounds = [true, true, true, true]} : vector<4x1x16x2xf32>, tensor<?x?x16x2xf32>
+//      CHECK: return %[[masked_write]] : tensor<?x?x16x2xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 1] : !transform.any_op
+    transform.yield 
+  }
 }
 
 // -----
@@ -473,10 +629,12 @@ func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>)
 // CHECK:           %[[C2:.*]] = arith.constant 0 : index
 // CHECK:           vector.mask %[[MASK_C]] { vector.transfer_write %[[MULTI_RED]], %[[C]]{{\[}}%[[C2]], %[[C2]]] {in_bounds = [true, true]} : vector<8x16xf32>, memref<?x?xf32> } : vector<8x16xi1>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %matmul vector_sizes [8, 16, 4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %matmul vector_sizes [8, 16, 4] : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -507,8 +665,10 @@ func.func @matmul_scalable(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<
 // CHECK:           %[[C2:.*]] = arith.constant 0 : index
 // CHECK:           vector.mask %[[MASK_C]] { vector.transfer_write %[[MULTI_RED]], %[[C]]{{\[}}%[[C2]], %[[C2]]] {in_bounds = [true, true]} : vector<8x[16]xf32>, memref<?x?xf32> } : vector<8x[16]xi1>
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.vectorize %matmul vector_sizes [8, [16], 4] : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %matmul vector_sizes [8, [16], 4] : !transform.any_op
+    transform.yield
+  }
 }

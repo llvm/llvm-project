@@ -14,7 +14,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_function
 #if LIBC_HAS_BUILTIN(__is_function)
@@ -28,6 +28,6 @@ struct is_function
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_function_v = is_function<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_FUNCTION_H

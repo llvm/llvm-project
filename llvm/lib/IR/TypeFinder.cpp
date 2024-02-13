@@ -136,6 +136,11 @@ void TypeFinder::incorporateValue(const Value *V) {
       return incorporateMDNode(N);
     if (const auto *MDV = dyn_cast<ValueAsMetadata>(M->getMetadata()))
       return incorporateValue(MDV->getValue());
+    if (const auto *AL = dyn_cast<DIArgList>(M->getMetadata())) {
+      for (auto *Arg : AL->getArgs())
+        incorporateValue(Arg->getValue());
+      return;
+    }
     return;
   }
 
@@ -167,14 +172,6 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
   // Already visited?
   if (!VisitedMetadata.insert(V).second)
     return;
-
-  // The arguments in DIArgList are not exposed as operands, so handle such
-  // nodes specifically here.
-  if (const auto *AL = dyn_cast<DIArgList>(V)) {
-    for (auto *Arg : AL->getArgs())
-      incorporateValue(Arg->getValue());
-    return;
-  }
 
   // Look in operands for types.
   for (Metadata *Op : V->operands()) {

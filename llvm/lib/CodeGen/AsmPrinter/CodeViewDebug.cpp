@@ -56,7 +56,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -143,7 +142,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
 
   // If this is a Unix-style path, just use it as is. Don't try to canonicalize
   // it textually because one of the path components could be a symlink.
-  if (Dir.startswith("/") || Filename.startswith("/")) {
+  if (Dir.starts_with("/") || Filename.starts_with("/")) {
     if (llvm::sys::path::is_absolute(Filename, llvm::sys::path::Style::posix))
       return Filename;
     Filepath = std::string(Dir);
@@ -250,7 +249,10 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
         InlinedAt->getLine(), InlinedAt->getColumn(), SMLoc());
     Site->Inlinee = Inlinee;
     InlinedSubprograms.insert(Inlinee);
-    getFuncIdForSubprogram(Inlinee);
+    auto InlineeIdx = getFuncIdForSubprogram(Inlinee);
+
+    if (InlinedAt->getInlinedAt() == nullptr)
+      CurFn->Inlinees.insert(InlineeIdx);
   }
   return *Site;
 }
@@ -908,10 +910,10 @@ static std::string flattenCommandLine(ArrayRef<std::string> Args,
       i++; // Skip this argument and next one.
       continue;
     }
-    if (Arg.startswith("-object-file-name") || Arg == MainFilename)
+    if (Arg.starts_with("-object-file-name") || Arg == MainFilename)
       continue;
     // Skip fmessage-length for reproduciability.
-    if (Arg.startswith("-fmessage-length"))
+    if (Arg.starts_with("-fmessage-length"))
       continue;
     if (PrintedOneArg)
       OS << " ";
@@ -1194,6 +1196,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.emitInt32(uint32_t(FI.FrameProcOpts));
     endSymbolRecord(FrameProcEnd);
 
+    emitInlinees(FI.Inlinees);
     emitLocalVariableList(FI, FI.Locals);
     emitGlobalVariableList(FI.Globals);
     emitLexicalBlockList(FI.ChildBlocks, FI);
@@ -1393,6 +1396,12 @@ void CodeViewDebug::calculateRanges(
     // We can only handle a register or an offseted load of a register.
     if (Location->Register == 0 || Location->LoadChain.size() > 1)
       continue;
+
+    // Codeview can only express byte-aligned offsets, ensure that we have a
+    // byte-boundaried location.
+    if (Location->FragmentInfo)
+      if (Location->FragmentInfo->OffsetInBits % 8)
+        continue;
 
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
@@ -2580,7 +2589,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
 
     // Virtual function pointer member.
     if ((Member->getFlags() & DINode::FlagArtificial) &&
-        Member->getName().startswith("_vptr$")) {
+        Member->getName().starts_with("_vptr$")) {
       VFPtrRecord VFPR(getTypeIndex(Member->getBaseType()));
       ContinuationBuilder.writeMemberType(VFPR);
       MemberCount++;
@@ -3349,7 +3358,7 @@ void CodeViewDebug::emitConstantSymbolRecord(const DIType *DTy, APSInt &Value,
 
   // Encoded integers shouldn't need more than 10 bytes.
   uint8_t Data[10];
-  BinaryStreamWriter Writer(Data, llvm::support::endianness::little);
+  BinaryStreamWriter Writer(Data, llvm::endianness::little);
   CodeViewRecordIO IO(Writer);
   cantFail(IO.mapEncodedInteger(Value));
   StringRef SRef((char *)Data, Writer.getOffset());
@@ -3586,5 +3595,33 @@ void CodeViewDebug::emitDebugInfoForJumpTables(const FunctionInfo &FI) {
     OS.AddComment("Entries count");
     OS.emitInt32(JumpTable.TableSize);
     endSymbolRecord(JumpTableEnd);
+  }
+}
+
+void CodeViewDebug::emitInlinees(
+    const SmallSet<codeview::TypeIndex, 1> &Inlinees) {
+  // Divide the list of inlinees into chunks such that each chunk fits within
+  // one record.
+  constexpr size_t ChunkSize =
+      (MaxRecordLength - sizeof(SymbolKind) - sizeof(uint32_t)) /
+      sizeof(uint32_t);
+
+  SmallVector<TypeIndex> SortedInlinees{Inlinees.begin(), Inlinees.end()};
+  llvm::sort(SortedInlinees);
+
+  size_t CurrentIndex = 0;
+  while (CurrentIndex < SortedInlinees.size()) {
+    auto Symbol = beginSymbolRecord(SymbolKind::S_INLINEES);
+    auto CurrentChunkSize =
+        std::min(ChunkSize, SortedInlinees.size() - CurrentIndex);
+    OS.AddComment("Count");
+    OS.emitInt32(CurrentChunkSize);
+
+    const size_t CurrentChunkEnd = CurrentIndex + CurrentChunkSize;
+    for (; CurrentIndex < CurrentChunkEnd; ++CurrentIndex) {
+      OS.AddComment("Inlinee");
+      OS.emitInt32(SortedInlinees[CurrentIndex].getIndex());
+    }
+    endSymbolRecord(Symbol);
   }
 }

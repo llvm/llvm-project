@@ -17,6 +17,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -104,10 +105,10 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
       // Special case Apple .sdk folders since the search path is typically a
       // symlink like `iPhoneSimulator14.5.sdk` while the file is instead
       // located in `iPhoneSimulator.sdk` (the real folder).
-      if (NI->endswith(".sdk") && DI->endswith(".sdk")) {
+      if (NI->ends_with(".sdk") && DI->ends_with(".sdk")) {
         StringRef NBasename = path::stem(*NI);
         StringRef DBasename = path::stem(*DI);
-        if (DBasename.startswith(NBasename))
+        if (DBasename.starts_with(NBasename))
           continue;
       }
 
@@ -167,6 +168,12 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
   return std::nullopt;
 }
 
+std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
+                                                  FileEntryRef FE,
+                                                  bool *IsQuoted = nullptr) {
+  return getRelativeIncludeName(CI, FE.getNameAsRequested(), IsQuoted);
+}
+
 struct LocationFileChecker {
   bool operator()(SourceLocation Loc) {
     // If the loc refers to a macro expansion we need to first get the file
@@ -187,11 +194,9 @@ struct LocationFileChecker {
     if (ExternalFileEntries.count(*File))
       return false;
 
-    StringRef FileName = SM.getFileManager().getCanonicalName(*File);
-
     // Try to reduce the include name the same way we tried to include it.
     bool IsQuoted = false;
-    if (auto IncludeName = getRelativeIncludeName(CI, FileName, &IsQuoted))
+    if (auto IncludeName = getRelativeIncludeName(CI, *File, &IsQuoted))
       if (llvm::any_of(KnownFiles,
                        [&IsQuoted, &IncludeName](const auto &KnownFile) {
                          return KnownFile.first.equals(*IncludeName) &&

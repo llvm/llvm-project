@@ -8,17 +8,17 @@ define void @test_trivial_subvector(<2 x i64> %val.0, <2 x i64> %val.1) {
 ; CHECK-SAME: (<2 x i64> [[VAL_0:%.*]], <2 x i64> [[VAL_1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[VAL_0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[VAL_0]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP6]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP7]], i64 [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP7]], i64 [[TMP8]], i32 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP10]], i32 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP4]], i64 1
 ; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <2 x i64> [[TMP13]]
@@ -56,36 +56,36 @@ define void @test_different_type_subvector(<4 x i32> %val.0, <8 x i16> %val.1, <
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[VAL_0]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[TMP6]] to <16 x i8>
 ; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <16 x i8> [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i16> [[VAL_1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP11]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP11]], i32 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP13]], i64 [[TMP11]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <2 x i64> [[TMP14]] to <8 x i16>
 ; CHECK-NEXT:    [[DUMMYUSE_1:%.*]] = freeze <8 x i16> [[TMP15]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <16 x i8> [[VAL_2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP16]], i64 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP12]], i64 [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP12]], i64 [[TMP17]], i32 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[TMP16]], i64 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP19]], i64 3
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP19]], i32 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i64> poison, i64 [[TMP17]], i64 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i64> [[TMP21]], i64 [[TMP19]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <2 x i64> [[TMP22]] to <4 x i32>
 ; CHECK-NEXT:    [[DUMMYUSE_2:%.*]] = freeze <4 x i32> [[TMP23]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <128 x i1> [[VAL_3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x i64> [[TMP24]], i64 0
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP25]], i64 2
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP25]], i32 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i64> [[TMP24]], i64 1
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x i64> [[TMP26]], i64 [[TMP27]], i64 3
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x i64> [[TMP26]], i64 [[TMP27]], i32 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i64> [[TMP29]], i64 [[TMP25]], i64 1
 ; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <2 x i64> [[TMP30]] to <128 x i1>
@@ -168,31 +168,31 @@ define void @test_different_type_subvector_fp(<2 x double> %val.0, <4 x float> %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[VAL_2]] to <2 x double>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> undef, double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> undef, double [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP2]], double [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP2]], double [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[TMP3]], i64 1
 ; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <2 x double> [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x float> [[VAL_1]] to <2 x double>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP4]], double [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP4]], double [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP10]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> poison, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> [[TMP12]], double [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x double> [[TMP13]] to <4 x float>
 ; CHECK-NEXT:    [[DUMMYUSE_1:%.*]] = freeze <4 x float> [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[VAL_0]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[VAL_0]], i64 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP16]], double [[TMP17]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP16]], double [[TMP17]], i32 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> poison, double [[TMP15]], i64 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> [[TMP19]], double [[TMP17]], i64 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <2 x double> [[TMP20]] to <8 x half>
 ; CHECK-NEXT:    [[DUMMYUSE_2:%.*]] = freeze <8 x half> [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x double> [[TMP18]], double 2.075080e-322, i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> [[TMP22]], double 3.162020e-322, i64 1
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x double> [[TMP18]], double 2.075080e-322, i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> [[TMP22]], double 3.162020e-322, i32 1
 ; CHECK-NEXT:    [[DUMMYUSE_3:%.*]] = freeze <4 x i32> <i32 42, i32 0, i32 64, i32 0>
 ; CHECK-NEXT:    ret void
 ;
@@ -224,9 +224,9 @@ define void @test_different_type_subvector_ptrs(<2 x ptr addrspace(1)> %val.0, <
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[VAL_0]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> undef, i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i64> [[TMP6]] to <2 x ptr addrspace(1)>
@@ -234,9 +234,9 @@ define void @test_different_type_subvector_ptrs(<2 x ptr addrspace(1)> %val.0, <
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint <4 x ptr addrspace(3)> [[VAL_1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i32> [[TMP8]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP9]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP11]], i64 [[TMP12]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP11]], i64 [[TMP12]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP14]], i64 [[TMP12]], i64 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i64> [[TMP15]] to <4 x i32>
@@ -265,13 +265,13 @@ define void @test_different_type_subvector_ptralloca(<2 x i64> %val.0, <8 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[VAL_0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr <4 x i32> [[TMP0]] to <4 x ptr addrspace(5)>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x ptr addrspace(5)> undef, ptr addrspace(5) [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x ptr addrspace(5)> undef, ptr addrspace(5) [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP3]], ptr addrspace(5) [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP3]], ptr addrspace(5) [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP1]], i64 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP5]], ptr addrspace(5) [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP5]], ptr addrspace(5) [[TMP6]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP1]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP7]], ptr addrspace(5) [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP7]], ptr addrspace(5) [[TMP8]], i32 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x ptr addrspace(5)> poison, ptr addrspace(5) [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP10]], ptr addrspace(5) [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP11]], ptr addrspace(5) [[TMP6]], i64 2
@@ -282,13 +282,13 @@ define void @test_different_type_subvector_ptralloca(<2 x i64> %val.0, <8 x i16>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i16> [[VAL_1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr <4 x i32> [[TMP16]] to <4 x ptr addrspace(5)>
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP17]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP9]], ptr addrspace(5) [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP9]], ptr addrspace(5) [[TMP18]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP17]], i64 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP19]], ptr addrspace(5) [[TMP20]], i64 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP19]], ptr addrspace(5) [[TMP20]], i32 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP17]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP21]], ptr addrspace(5) [[TMP22]], i64 2
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP21]], ptr addrspace(5) [[TMP22]], i32 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x ptr addrspace(5)> [[TMP17]], i64 3
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP23]], ptr addrspace(5) [[TMP24]], i64 3
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP23]], ptr addrspace(5) [[TMP24]], i32 3
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x ptr addrspace(5)> poison, ptr addrspace(5) [[TMP18]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP26]], ptr addrspace(5) [[TMP20]], i64 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x ptr addrspace(5)> [[TMP27]], ptr addrspace(5) [[TMP22]], i64 2
@@ -299,9 +299,9 @@ define void @test_different_type_subvector_ptralloca(<2 x i64> %val.0, <8 x i16>
 ; CHECK-NEXT:    [[TMP32:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[VAL_2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP33:%.*]] = inttoptr <2 x i32> [[TMP32]] to <2 x ptr addrspace(5)>
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x ptr addrspace(5)> [[TMP33]], i64 0
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP25]], ptr addrspace(5) [[TMP34]], i64 0
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP25]], ptr addrspace(5) [[TMP34]], i32 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <2 x ptr addrspace(5)> [[TMP33]], i64 1
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP35]], ptr addrspace(5) [[TMP36]], i64 1
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <8 x ptr addrspace(5)> [[TMP35]], ptr addrspace(5) [[TMP36]], i32 1
 ; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <2 x ptr addrspace(5)> poison, ptr addrspace(5) [[TMP34]], i64 0
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x ptr addrspace(5)> [[TMP38]], ptr addrspace(5) [[TMP36]], i64 1
 ; CHECK-NEXT:    [[TMP40:%.*]] = ptrtoint <2 x ptr addrspace(5)> [[TMP39]] to <2 x i32>
@@ -332,7 +332,8 @@ define void @test_out_of_bounds_subvec(<2 x i64> %val) {
 ; CHECK-SAME: (<2 x i64> [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[VAL]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[VAL]], i64 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -398,5 +399,89 @@ define void @store_2xi32_into_double(double %foo) {
   %load3 = load double, ptr addrspace(5) %idx8, align 8
   %dummyuser3 = freeze double %load3
 
+  ret void
+}
+
+; Check we handle loading/storing a subvector using non-constant indexes.
+define <4 x i16> @nonconst_indexes(i1 %cond, i32 %otheridx, <4 x i16> %store) #0 {
+; CHECK-LABEL: define <4 x i16> @nonconst_indexes
+; CHECK-SAME: (i1 [[COND:%.*]], i32 [[OTHERIDX:%.*]], <4 x i16> [[STORE:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[FINALLY:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[FINALLY]]
+; CHECK:       finally:
+; CHECK-NEXT:    [[INDEX_1:%.*]] = phi i32 [ 0, [[THEN]] ], [ [[OTHERIDX]], [[ELSE]] ]
+; CHECK-NEXT:    [[INDEX_2:%.*]] = phi i32 [ 2, [[THEN]] ], [ [[OTHERIDX]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[STORE]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i16> undef, i16 [[TMP0]], i32 [[INDEX_1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX_1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[STORE]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i16> [[TMP1]], i16 [[TMP3]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX_1]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[STORE]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i16> [[TMP4]], i16 [[TMP6]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX_1]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[STORE]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i16> [[TMP7]], i16 [[TMP9]], i32 [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[INDEX_2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i16> poison, i16 [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX_2]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i16> [[TMP12]], i16 [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[INDEX_2]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i16> [[TMP15]], i16 [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[INDEX_2]], 3
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <16 x i16> [[TMP10]], i32 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP20]], i64 3
+; CHECK-NEXT:    ret <4 x i16> [[TMP21]]
+;
+entry:
+  %data = alloca [16 x i16], addrspace(5)
+  br i1 %cond, label %then, label %else
+
+then:
+  br label %finally
+
+else:
+  br label %finally
+
+finally:
+  %index.1 = phi i32 [ 0, %then ], [ %otheridx, %else ]
+  %index.2 = phi i32 [ 2, %then ], [ %otheridx, %else ]
+  %ptr.1 = getelementptr inbounds [16 x i16], ptr addrspace(5) %data, i32 0, i32 %index.1
+  %ptr.2 = getelementptr inbounds [16 x i16], ptr addrspace(5) %data, i32 0, i32 %index.2
+  store <4 x i16> %store, ptr addrspace(5) %ptr.1, align 2
+  %load = load <4 x i16>, ptr addrspace(5) %ptr.2, align 2
+  ret <4 x i16> %load
+}
+
+
+; Check the case when the alloca is smaller than the vector size.
+define void @test_smaller_alloca_store(<4 x i32> %store1, <4 x i32> %store2) {
+; CHECK-LABEL: define void @test_smaller_alloca_store
+; CHECK-SAME: (<4 x i32> [[STORE1:%.*]], <4 x i32> [[STORE2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[STORE1]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> undef, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[STORE1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> [[TMP1]], i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[STORE1]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x i32> [[TMP3]], i32 [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[STORE2]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x i32> [[TMP5]], i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[STORE2]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x i32> [[TMP7]], i32 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[STORE2]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x i32> [[TMP9]], i32 [[TMP10]], i32 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %res = alloca <3 x i32>, align 16, addrspace(5)
+  store <4 x i32> %store1, ptr addrspace(5) %res, align 16
+  store <4 x i32> %store2, ptr addrspace(5) %res, align 16
   ret void
 }

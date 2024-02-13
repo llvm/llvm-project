@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=70000000
+
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
 //   constexpr iter_difference_t<I>
@@ -23,6 +26,7 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
@@ -250,6 +254,18 @@ constexpr bool test() {
       auto range = std::ranges::subrange(DiffTypeIterator(a), DiffTypeIterator(a + 6));
       std::same_as<signed char> decltype(auto) ret = std::ranges::count(range, 4);
       assert(ret == 1);
+    }
+  }
+
+  { // check that __bit_iterator optimizations work as expected
+    std::vector<bool> vec(256 + 64);
+    for (ptrdiff_t i = 0; i != 256; ++i) {
+      for (size_t offset = 0; offset != 64; ++offset) {
+        std::fill(vec.begin(), vec.end(), false);
+        std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
+        assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, true) == i);
+        assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, false) == 256 - i);
+      }
     }
   }
 

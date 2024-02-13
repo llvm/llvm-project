@@ -15,13 +15,13 @@
 #include <signal.h>
 
 TEST(LlvmLibcFEnvTest, UpdateEnvTest) {
-  __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
-  __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
+  LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
   fenv_t env;
-  ASSERT_EQ(__llvm_libc::fputil::get_env(&env), 0);
-  __llvm_libc::fputil::set_except(FE_INVALID | FE_INEXACT);
-  ASSERT_EQ(__llvm_libc::feupdateenv(&env), 0);
-  ASSERT_EQ(__llvm_libc::fputil::test_except(FE_INVALID | FE_INEXACT),
+  ASSERT_EQ(LIBC_NAMESPACE::fputil::get_env(&env), 0);
+  LIBC_NAMESPACE::fputil::set_except(FE_INVALID | FE_INEXACT);
+  ASSERT_EQ(LIBC_NAMESPACE::feupdateenv(&env), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID | FE_INEXACT),
             FE_INVALID | FE_INEXACT);
 }

@@ -18,64 +18,44 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+template <class S>
+void test() {
   // With first iterator from another container
-  {{std::string l1("123");
-  std::string l2("123");
-  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l2.cbegin(), l1.cbegin() + 1),
-                             "string::erase(iterator,  iterator) called with an iterator not referring to this string");
-}
-{
-  typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-  S l1("123");
-  S l2("123");
-  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l2.cbegin(), l1.cbegin() + 1),
-                             "string::erase(iterator,  iterator) called with an iterator not referring to this string");
-}
-}
-
-// With second iterator from another container
-{{std::string l1("123");
-std::string l2("123");
-TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l1.cbegin(), l2.cbegin() + 1), "Attempted to compare incomparable iterators");
-}
-{
-  typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-  S l1("123");
-  S l2("123");
-  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l1.cbegin(), l2.cbegin() + 1), "Attempted to compare incomparable iterators");
-}
-}
-
-// With both iterators from another container
-{{std::string l1("123");
-std::string l2("123");
-TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l2.cbegin(), l2.cbegin() + 1),
-                           "string::erase(iterator,  iterator) called with an iterator not referring to this string");
-}
-{
-  typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-  S l1("123");
-  S l2("123");
-  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l2.cbegin(), l2.cbegin() + 1),
-                             "string::erase(iterator,  iterator) called with an iterator not referring to this string");
-}
-}
-
-// With an invalid range
-{
   {
-    std::string l1("123");
+    S l1("123");
+    S l2("123");
     TEST_LIBCPP_ASSERT_FAILURE(
-        l1.erase(l1.cbegin() + 1, l1.cbegin()), "string::erase(first, last) called with invalid range");
+        l1.erase(l2.cbegin(), l1.cbegin() + 1),
+        "string::erase(iterator,  iterator) called with an iterator not referring to this string");
   }
+
+  // With second iterator from another container
   {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
+    S l1("123");
+    S l2("123");
+    TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l1.cbegin(), l2.cbegin() + 1), "Attempted to compare incomparable iterators");
+  }
+
+  // With both iterators from another container
+  {
+    S l1("123");
+    S l2("123");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(l2.cbegin(), l2.cbegin() + 1),
+        "string::erase(iterator,  iterator) called with an iterator not referring to this string");
+  }
+
+  // With an invalid range
+  {
     S l1("123");
     TEST_LIBCPP_ASSERT_FAILURE(
         l1.erase(l1.cbegin() + 1, l1.cbegin()), "string::erase(first, last) called with invalid range");
   }
 }
 
-return 0;
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+
+  return 0;
 }

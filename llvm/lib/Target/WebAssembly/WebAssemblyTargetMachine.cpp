@@ -48,6 +48,12 @@ static cl::opt<bool> WasmDisableExplicitLocals(
              " instruction output for test purposes only."),
     cl::init(false));
 
+static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
+    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
+    cl::desc("webassembly: disables the fix "
+             " irreducible control flow optimization pass"),
+    cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(
@@ -127,6 +133,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
   // 'unreachable' instructions which is meant for that case.
   this->Options.TrapUnreachable = true;
+  this->Options.NoTrapAfterNoreturn = false;
 
   // WebAssembly treats each function as an independent unit. Force
   // -ffunction-sections, effectively, so that we can emit them independently.
@@ -193,7 +200,8 @@ public:
   bool runOnModule(Module &M) override {
     FeatureBitset Features = coalesceFeatures(M);
 
-    std::string FeatureStr = getFeatureString(Features);
+    std::string FeatureStr =
+        getFeatureString(Features, WasmTM->getTargetFeatureString());
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -231,12 +239,17 @@ private:
     return Features;
   }
 
-  std::string getFeatureString(const FeatureBitset &Features) {
+  static std::string getFeatureString(const FeatureBitset &Features,
+                                      StringRef TargetFS) {
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
         Ret += (StringRef("+") + KV.Key + ",").str();
     }
+    SubtargetFeatures TF{TargetFS};
+    for (std::string const &F : TF.getFeatures())
+      if (!SubtargetFeatures::isEnabled(F))
+        Ret += F + ",";
     return Ret;
   }
 
@@ -390,7 +403,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
       TM->Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error(
         "-exception-model=wasm only allowed with at least one of "
-        "-wasm-enable-eh or -wasm-enable-sjj");
+        "-wasm-enable-eh or -wasm-enable-sjlj");
 
   // You can't enable two modes of EH at the same time
   if (WasmEnableEmEH && WasmEnableEH)
@@ -537,7 +550,8 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyNullifyDebugValueLists());
 
   // Eliminate multiple-entry loops.
-  addPass(createWebAssemblyFixIrreducibleControlFlow());
+  if (!WasmDisableFixIrreducibleControlFlowPass)
+    addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.

@@ -26,24 +26,24 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 #include "CustomTestAccessors.h"
 
 template <class H, class M, class A>
 constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
   using MDS = std::mdspan<typename A::element_type, typename M::extents_type, typename M::layout_type, A>;
 
-  if !consteval {
+  if (!std::is_constant_evaluated()) {
     move_counted_handle<typename MDS::element_type>::move_counter() = 0;
   }
   // use formulation of constructor which tests that it is not explicit
   MDS m = {handle, map, acc};
-  if !consteval {
+  if (!std::is_constant_evaluated()) {
     if constexpr (std::is_same_v<H, move_counted_handle<typename MDS::element_type>>) {
       assert((H::move_counter() == 1));
     }
   }
-  static_assert(!noexcept(MDS(handle, map, acc)));
+  LIBCPP_STATIC_ASSERT(!noexcept(MDS(handle, map, acc)));
   assert(m.extents() == map.extents());
   if constexpr (std::equality_comparable<H>)
     assert(m.data_handle() == handle);
@@ -57,10 +57,10 @@ template <class H, class L, class A>
 constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int>()), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D>(7)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D>(7)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<unsigned, 7>()), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<size_t, D, 4, D>(2, 3)), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D, 7, D>(0, 3)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D, 7, D>(0, 3)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int64_t, D, 7, D, 4, D, D>(1, 2, 3, 2)), acc);
 }
 
@@ -87,7 +87,7 @@ constexpr void mixin_accessor() {
 }
 
 template <class E>
-using mapping_t = typename std::layout_right::template mapping<E>;
+using mapping_t = std::layout_right::mapping<E>;
 
 constexpr bool test() {
   mixin_accessor<int>();

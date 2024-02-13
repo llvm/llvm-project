@@ -14,13 +14,13 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h>          // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, munmap, (void *addr, size_t size)) {
-  int ret = __llvm_libc::syscall_impl<int>(SYS_munmap,
-                                           reinterpret_cast<long>(addr), size);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(
+      SYS_munmap, reinterpret_cast<long>(addr), size);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, munmap, (void *addr, size_t size)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

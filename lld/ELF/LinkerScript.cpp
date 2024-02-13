@@ -51,20 +51,24 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
 }
 
 static StringRef getOutputSectionName(const InputSectionBase *s) {
-  if (config->relocatable)
-    return s->name;
-
-  // This is for --emit-relocs. If .text.foo is emitted as .text.bar, we want
-  // to emit .rela.text.foo as .rela.text.bar for consistency (this is not
+  // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
+  // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
   // technically required, but not doing it is odd). This code guarantees that.
   if (auto *isec = dyn_cast<InputSection>(s)) {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
       OutputSection *out = rel->getOutputSection();
+      if (!out) {
+        assert(config->relocatable && (rel->flags & SHF_LINK_ORDER));
+        return s->name;
+      }
       if (s->type == SHT_RELA)
         return saver().save(".rela" + out->name);
       return saver().save(".rel" + out->name);
     }
   }
+
+  if (config->relocatable)
+    return s->name;
 
   // A BssSection created for a common symbol is identified as "COMMON" in
   // linker scripts. It should go to .bss section.
@@ -229,8 +233,8 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, value.type,
-                 symValue, 0, sec);
+  Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
+                 visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = symtab.insert(cmd->name);
   sym->mergeProperties(newSym);
@@ -246,8 +250,8 @@ static void declareSymbol(SymbolAssignment *cmd) {
     return;
 
   uint8_t visibility = cmd->hidden ? STV_HIDDEN : STV_DEFAULT;
-  Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, STT_NOTYPE, 0, 0,
-                 nullptr);
+  Defined newSym(ctx.internalFile, cmd->name, STB_GLOBAL, visibility,
+                 STT_NOTYPE, 0, 0, nullptr);
 
   // If the symbol is already defined, its order is 0 (with absence indicating
   // 0); otherwise it's assigned the order of the SymbolAssignment.
@@ -1167,7 +1171,9 @@ void LinkerScript::adjustOutputSections() {
   //   * The address assignment.
   // The other option is to pick flags that minimize the impact the section
   // will have on the rest of the linker. That is why we copy the flags from
-  // the previous sections. Only a few flags are needed to keep the impact low.
+  // the previous sections. We copy just SHF_ALLOC and SHF_WRITE to keep the
+  // impact low. We do not propagate SHF_EXECINSTR as in some cases this can
+  // lead to executable writeable section.
   uint64_t flags = SHF_ALLOC;
 
   SmallVector<StringRef, 0> defPhdrs;
@@ -1193,8 +1199,8 @@ void LinkerScript::adjustOutputSections() {
     // We do not want to keep any special flags for output section
     // in case it is empty.
     if (isEmpty)
-      sec->flags = flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
-                            SHF_WRITE | SHF_EXECINSTR);
+      sec->flags =
+          flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) | SHF_WRITE);
 
     // The code below may remove empty output sections. We should save the
     // specified program headers (if exist) and propagate them to subsequent

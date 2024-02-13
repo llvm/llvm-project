@@ -369,8 +369,8 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $88, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 20(%ebp), %esi
@@ -805,8 +805,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $192, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $208, %esp
 ; X86-NEXT:    movl 36(%ebp), %esi
 ; X86-NEXT:    movl 16(%ebp), %ebx
 ; X86-NEXT:    movl 32(%ebp), %eax

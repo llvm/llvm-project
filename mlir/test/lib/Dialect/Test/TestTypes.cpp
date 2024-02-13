@@ -21,6 +21,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/TypeSize.h"
 #include <optional>
 
 using namespace mlir;
@@ -258,19 +259,19 @@ void TestTypeWithLayoutType::print(AsmPrinter &printer) const {
   printer << "<" << getKey() << ">";
 }
 
-unsigned
+llvm::TypeSize
 TestTypeWithLayoutType::getTypeSizeInBits(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  return extractKind(params, "size");
+  return llvm::TypeSize::getFixed(extractKind(params, "size"));
 }
 
-unsigned
+uint64_t
 TestTypeWithLayoutType::getABIAlignment(const DataLayout &dataLayout,
                                         DataLayoutEntryListRef params) const {
   return extractKind(params, "alignment");
 }
 
-unsigned TestTypeWithLayoutType::getPreferredAlignment(
+uint64_t TestTypeWithLayoutType::getPreferredAlignment(
     const DataLayout &dataLayout, DataLayoutEntryListRef params) const {
   return extractKind(params, "preferred");
 }
@@ -303,7 +304,7 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
   return success();
 }
 
-unsigned TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
+uint64_t TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
                                              StringRef expectedKind) const {
   for (DataLayoutEntryInterface entry : params) {
     ArrayRef<Attribute> pair =

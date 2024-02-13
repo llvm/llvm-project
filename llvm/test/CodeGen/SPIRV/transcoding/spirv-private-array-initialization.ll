@@ -19,10 +19,8 @@
 
 ; CHECK-SPIRV:     %[[#arr:]] = OpVariable %[[#i32x3_ptr]] Function
 ; CHECK-SPIRV:     %[[#arr2:]] = OpVariable %[[#i32x3_ptr]] Function
-; CHECK-SPIRV:     %[[#arr_i8_ptr:]] = OpBitcast %[[#i8_ptr]] %[[#arr]]
-; CHECK-SPIRV:     OpCopyMemorySized %[[#arr_i8_ptr]] %[[#test_arr]] %[[#twelve]] Aligned 4
-; CHECK-SPIRV:     %[[#arr2_i8_ptr:]] = OpBitcast %[[#i8_ptr]] %[[#arr2]]
-; CHECK-SPIRV:     OpCopyMemorySized %[[#arr2_i8_ptr]] %[[#test_arr2]] %[[#twelve]] Aligned 4
+; CHECK-SPIRV:     OpCopyMemorySized %[[#arr]] %[[#test_arr]] %[[#twelve]] Aligned 4
+; CHECK-SPIRV:     OpCopyMemorySized %[[#arr2]] %[[#test_arr2]] %[[#twelve]] Aligned 4
 
 
 @__const.test.arr = private unnamed_addr addrspace(2) constant [3 x i32] [i32 1, i32 2, i32 3], align 4

@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -36,10 +37,9 @@ struct RemoteAllocGroup {
   RemoteAllocGroup(MemProt Prot, bool FinalizeLifetime)
       : Prot(Prot), FinalizeLifetime(FinalizeLifetime) {}
   RemoteAllocGroup(const AllocGroup &AG) : Prot(AG.getMemProt()) {
-    assert(AG.getMemLifetimePolicy() != orc::MemLifetimePolicy::NoAlloc &&
+    assert(AG.getMemLifetime() != orc::MemLifetime::NoAlloc &&
            "Cannot use no-alloc memory in a remote alloc request");
-    FinalizeLifetime =
-        AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Finalize;
+    FinalizeLifetime = AG.getMemLifetime() == orc::MemLifetime::Finalize;
   }
 
   MemProt Prot;
@@ -114,7 +114,7 @@ struct PointerWrite {
 /// A handle used to represent a loaded dylib in the target process.
 using DylibHandle = ExecutorAddr;
 
-using LookupResult = std::vector<ExecutorAddr>;
+using LookupResult = std::vector<ExecutorSymbolDef>;
 
 } // end namespace tpctypes
 

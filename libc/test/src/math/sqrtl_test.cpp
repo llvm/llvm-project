@@ -10,4 +10,4 @@
 
 #include "src/math/sqrtl.h"
 
-LIST_SQRT_TESTS(long double, __llvm_libc::sqrtl)
+LIST_SQRT_TESTS(long double, LIBC_NAMESPACE::sqrtl)

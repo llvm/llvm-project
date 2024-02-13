@@ -9,7 +9,7 @@
 #include "file.h"
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 constexpr size_t STDOUT_BUFFER_SIZE = 1024;
 uint8_t stdout_buffer[STDOUT_BUFFER_SIZE];
@@ -17,8 +17,8 @@ static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,
                         File::ModeFlags(File::OpenMode::APPEND));
 File *stdout = &StdOut;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 extern "C" {
-FILE *stdout = reinterpret_cast<FILE *>(&__llvm_libc::StdOut);
+FILE *stdout = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::StdOut);
 } // extern "C"

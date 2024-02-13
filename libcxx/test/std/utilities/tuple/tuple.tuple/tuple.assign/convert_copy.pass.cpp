@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Triggers a Clang assertion: llvm.org/PR45879
-// UNSUPPORTED: clang-15
-
 // <tuple>
 
 // template <class... Types> class tuple;

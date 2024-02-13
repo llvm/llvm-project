@@ -92,8 +92,8 @@ public:
   std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
-  void HandleRelativePosition(std::int64_t);
-  void HandleAbsolutePosition(std::int64_t); // for r* in list I/O
+  void HandleRelativePosition(std::int64_t byteOffset);
+  void HandleAbsolutePosition(std::int64_t byteOffset); // for r* in list I/O
   std::optional<DataEdit> GetNextDataEdit(int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   bool BeginReadingRecord();
@@ -124,7 +124,11 @@ public:
   // Vacant after the end of the current record
   std::optional<char32_t> GetCurrentChar(std::size_t &byteCount);
 
-  // For fixed-width fields, return the number of remaining characters.
+  // The "remaining" arguments to CueUpInput(), SkipSpaces(), & NextInField()
+  // are always in units of bytes, not characters; the distinction matters
+  // for internal input from CHARACTER(KIND=2 and 4).
+
+  // For fixed-width fields, return the number of remaining bytes.
   // Skip over leading blanks.
   std::optional<int> CueUpInput(const DataEdit &edit) {
     std::optional<int> remaining;
@@ -134,6 +138,10 @@ public:
     } else {
       if (edit.width.value_or(0) > 0) {
         remaining = *edit.width;
+        if (int bytesPerChar{GetConnectionState().internalIoCharKind};
+            bytesPerChar > 1) {
+          *remaining *= bytesPerChar;
+        }
       }
       SkipSpaces(remaining);
     }
@@ -295,8 +303,8 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  bool inNamelistArray() const { return inNamelistArray_; }
-  void set_inNamelistArray(bool yes = true) { inNamelistArray_ = yes; }
+  bool inNamelistSequence() const { return inNamelistSequence_; }
+  int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
@@ -308,11 +316,14 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  void ResetForNextNamelistItem(bool inNamelistArray) {
+  void ResetForNextNamelistItem(bool inNamelistSequence) {
     remaining_ = 0;
+    if (repeatPosition_) {
+      repeatPosition_->Cancel();
+    }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    inNamelistArray_ = inNamelistArray;
+    inNamelistSequence_ = inNamelistSequence;
   }
 
 private:
@@ -322,7 +333,7 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
-  bool inNamelistArray_{false};
+  bool inNamelistSequence_{false};
 };
 
 template <Direction DIR>
@@ -392,6 +403,7 @@ public:
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  int EndIoStatement();
 
 private:
   IoStatementState ioStatementState_; // points to *this
@@ -467,6 +479,7 @@ class ExternalListIoStatementState : public ExternalIoStatementState<DIR>,
 public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  int EndIoStatement();
 };
 
 template <Direction DIR>
@@ -525,6 +538,7 @@ class ChildListIoStatementState : public ChildIoStatementState<DIR>,
 public:
   using ChildIoStatementState<DIR>::ChildIoStatementState;
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  int EndIoStatement();
 };
 
 template <Direction DIR>

@@ -1,0 +1,169 @@
+# LLVM Documentation CI
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: "Test documentation build"
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'llvm/docs/**'
+      - 'clang/docs/**'
+      - 'clang/include/clang/Basic/AttrDocs.td'
+      - 'clang/include/clang/Driver/ClangOptionDocs.td'
+      - 'clang/include/clang/Basic/DiagnosticDocs.td'
+      - 'clang-tools-extra/docs/**'
+      - 'lldb/docs/**'
+      - 'libunwind/docs/**'
+      - 'libcxx/docs/**'
+      - 'libc/docs/**'
+      - 'lld/docs/**'
+      - 'openmp/docs/**'
+      - 'polly/docs/**'
+      - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+  pull_request:
+    paths:
+      - 'llvm/docs/**'
+      - 'clang/docs/**'
+      - 'clang/include/clang/Basic/AttrDocs.td'
+      - 'clang/include/clang/Driver/ClangOptionDocs.td'
+      - 'clang/include/clang/Basic/DiagnosticDocs.td'
+      - 'clang-tools-extra/docs/**'
+      - 'lldb/docs/**'
+      - 'libunwind/docs/**'
+      - 'libcxx/docs/**'
+      - 'libc/docs/**'
+      - 'lld/docs/**'
+      - 'openmp/docs/**'
+      - 'polly/docs/**'
+      - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+
+jobs:
+  check-docs-build:
+    name: "Test documentation build"
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      # Don't fetch before checking for file changes to force the file changes
+      # action to use the Github API in pull requests. If it's a push to a
+      # branch we can't use the Github API to get the diff, so we need to have
+      # a local checkout beforehand.
+      - name: Fetch LLVM sources (Push)
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Get subprojects that have doc changes
+        id: docs-changed-subprojects
+        uses: tj-actions/changed-files@v39
+        with:
+          files_yaml: |
+            llvm:
+              - 'llvm/docs/**'
+            clang:
+              - 'clang/docs/**'
+              - 'clang/include/clang/Basic/AttrDocs.td'
+              - 'clang/include/clang/Driver/ClangOptionDocs.td'
+              - 'clang/include/clang/Basic/DiagnosticDocs.td'
+            clang-tools-extra:
+              - 'clang-tools-extra/docs/**'
+            lldb:
+              - 'lldb/docs/**'
+            libunwind:
+              - 'libunwind/docs/**'
+            libcxx:
+              - 'libcxx/docs/**'
+            libc:
+              - 'libc/docs/**'
+            lld:
+              - 'lld/docs/**'
+            openmp:
+              - 'openmp/docs/**'
+            polly:
+              - 'polly/docs/**'
+            flang:
+              - 'flang/docs/**'
+              - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - name: Fetch LLVM sources (PR)
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'llvm/docs/requirements.txt'
+      - name: Install python dependencies
+        run: pip install -r llvm/docs/requirements.txt
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          # swig and graphviz are lldb specific dependencies
+          sudo apt-get install -y cmake ninja-build swig graphviz
+      - name: Build LLVM docs
+        if: steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true'
+        run: |
+          cmake -B llvm-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
+      - name: Build Clang docs
+        if: steps.docs-changed-subprojects.outputs.clang_any_changed == 'true'
+        run: |
+          cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
+      - name: Build clang-tools-extra docs
+        if: steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true'
+        run: |
+          cmake -B clang-tools-extra-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C clang-tools-extra-build docs-clang-tools-html docs-clang-tools-man
+      - name: Build LLDB docs
+        if: steps.docs-changed-subprojects.outputs.lldb_any_changed == 'true'
+        run: |
+          cmake -B lldb-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C lldb-build docs-lldb-html docs-lldb-man
+      - name: Build libunwind docs
+        if: steps.docs-changed-subprojects.outputs.libunwind_any_changed == 'true'
+        run: |
+          cmake -B libunwind-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C libunwind-build docs-libunwind-html
+      - name: Build libcxx docs
+        if: steps.docs-changed-subprojects.outputs.libcxx_any_changed == 'true'
+        run: |
+          cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx;libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C libcxx-build docs-libcxx-html
+      - name: Build libc docs
+        if: steps.docs-changed-subprojects.outputs.libc_any_changed == 'true'
+        run: |
+          cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          TZ=UTC ninja -C libc-build docs-libc-html
+      - name: Build LLD docs
+        if: steps.docs-changed-subprojects.outputs.lld_any_changed == 'true'
+        run: |
+          cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C lld-build docs-lld-html
+      - name: Build OpenMP docs
+        if: steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true'
+        run: |
+          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;openmp" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C openmp-build docs-openmp-html
+      - name: Build Polly docs
+        if: steps.docs-changed-subprojects.outputs.polly_any_changed == 'true'
+        run: |
+          cmake -B polly-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="polly" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C polly-build docs-polly-html docs-polly-man
+      - name: Build Flang docs
+        if: steps.docs-changed-subprojects.outputs.flang_any_changed == 'true'
+        # TODO(boomanaiden154): Remove the SPHINX_WARNINGS_AS_ERRORS from the
+        # CMake invocation once the warnings in the flang docs build are fixed.
+        run: |
+          cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF ./llvm
+          TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man

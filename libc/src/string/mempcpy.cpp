@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include <stddef.h> // For size_t.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, mempcpy,
                    (void *__restrict dst, const void *__restrict src,
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(void *, mempcpy,
   return reinterpret_cast<char *>(dst) + count;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

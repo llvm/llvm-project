@@ -61,10 +61,7 @@ define i64 @test_ssub_nonneg_lhs(i64 %x) {
 define i64 @test_ssub_neg_lhs(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov x9, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    subs x8, x8, x0
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mvn x0, x0
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.ssub.sat.i64(i64 -1, i64 %x)
   ret i64 %sat

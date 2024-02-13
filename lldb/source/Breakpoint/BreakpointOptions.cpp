@@ -88,10 +88,9 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
   if (success) {
     size_t num_elems = user_source->GetSize();
     for (size_t i = 0; i < num_elems; i++) {
-      llvm::StringRef elem_string;
-      success = user_source->GetItemAtIndexAsString(i, elem_string);
-      if (success)
-        data_up->user_source.AppendString(elem_string);
+      if (std::optional<llvm::StringRef> maybe_elem_string =
+              user_source->GetItemAtIndexAsString(i))
+        data_up->user_source.AppendString(*maybe_elem_string);
     }
   }
 

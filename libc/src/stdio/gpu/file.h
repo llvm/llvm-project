@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace file {
 
 enum Stream {
@@ -94,4 +94,4 @@ LIBC_INLINE uint64_t read(::FILE *f, void *data, size_t size) {
 }
 
 } // namespace file
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

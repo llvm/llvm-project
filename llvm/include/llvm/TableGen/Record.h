@@ -845,7 +845,8 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
-    LOG2
+    LOG2,
+    REPR
   };
 
 private:
@@ -911,7 +912,6 @@ public:
     LISTREMOVE,
     LISTELEM,
     LISTSLICE,
-    RANGE,
     RANGEC,
     STRCONCAT,
     INTERLEAVE,
@@ -988,6 +988,7 @@ public:
     FILTER,
     IF,
     DAG,
+    RANGE,
     SUBSTR,
     FIND,
     SETDAGARG,
@@ -1640,6 +1641,17 @@ public:
         : Loc(Loc), Condition(Condition), Message(Message) {}
   };
 
+  struct DumpInfo {
+    SMLoc Loc;
+    Init *Message;
+
+    // User-defined constructor to support std::make_unique(). It can be
+    // removed in C++20 when braced initialization is supported.
+    DumpInfo(SMLoc Loc, Init *Message) : Loc(Loc), Message(Message) {}
+  };
+
+  enum RecordKind { RK_Def, RK_AnonymousDef, RK_Class, RK_MultiClass };
+
 private:
   Init *Name;
   // Location where record was instantiated, followed by the location of
@@ -1651,6 +1663,7 @@ private:
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
+  SmallVector<DumpInfo, 0> Dumps;
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
@@ -1665,24 +1678,22 @@ private:
   // Unique record ID.
   unsigned ID;
 
-  bool IsAnonymous;
-  bool IsClass;
+  RecordKind Kind;
 
   void checkName();
 
 public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  bool Anonymous = false, bool Class = false)
+                  RecordKind Kind = RK_Def)
       : Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
-        ID(getNewUID(N->getRecordKeeper())), IsAnonymous(Anonymous),
-        IsClass(Class) {
+        ID(getNewUID(N->getRecordKeeper())), Kind(Kind) {
     checkName();
   }
 
   explicit Record(StringRef N, ArrayRef<SMLoc> locs, RecordKeeper &records,
-                  bool Class = false)
-      : Record(StringInit::get(records, N), locs, records, false, Class) {}
+                  RecordKind Kind = RK_Def)
+      : Record(StringInit::get(records, N), locs, records, Kind) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
   // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
@@ -1691,8 +1702,7 @@ public:
       : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
         Values(O.Values), Assertions(O.Assertions),
         SuperClasses(O.SuperClasses), TrackedRecords(O.TrackedRecords),
-        ID(getNewUID(O.getRecords())), IsAnonymous(O.IsAnonymous),
-        IsClass(O.IsClass) {}
+        ID(getNewUID(O.getRecords())), Kind(O.Kind) {}
 
   static unsigned getNewUID(RecordKeeper &RK);
 
@@ -1732,7 +1742,11 @@ public:
   /// get the corresponding DefInit.
   DefInit *getDefInit();
 
-  bool isClass() const { return IsClass; }
+  bool isClass() const { return Kind == RK_Class; }
+
+  bool isMultiClass() const { return Kind == RK_MultiClass; }
+
+  bool isAnonymous() const { return Kind == RK_AnonymousDef; }
 
   ArrayRef<Init *> getTemplateArgs() const {
     return TemplateArgs;
@@ -1741,6 +1755,7 @@ public:
   ArrayRef<RecordVal> getValues() const { return Values; }
 
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
+  ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
   ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
     return SuperClasses;
@@ -1801,11 +1816,18 @@ public:
     Assertions.push_back(AssertionInfo(Loc, Condition, Message));
   }
 
+  void addDump(SMLoc Loc, Init *Message) {
+    Dumps.push_back(DumpInfo(Loc, Message));
+  }
+
   void appendAssertions(const Record *Rec) {
     Assertions.append(Rec->Assertions);
   }
 
+  void appendDumps(const Record *Rec) { Dumps.append(Rec->Dumps); }
+
   void checkRecordAssertions();
+  void emitRecordDumps();
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
@@ -1850,10 +1872,6 @@ public:
 
   RecordKeeper &getRecords() const {
     return TrackedRecords;
-  }
-
-  bool isAnonymous() const {
-    return IsAnonymous;
   }
 
   void dump() const;
@@ -2136,6 +2154,11 @@ struct LessRecordRegister {
   };
 
   bool operator()(const Record *Rec1, const Record *Rec2) const {
+    int64_t LHSPositionOrder = Rec1->getValueAsInt("PositionOrder");
+    int64_t RHSPositionOrder = Rec2->getValueAsInt("PositionOrder");
+    if (LHSPositionOrder != RHSPositionOrder)
+      return LHSPositionOrder < RHSPositionOrder;
+
     RecordParts LHSParts(StringRef(Rec1->getName()));
     RecordParts RHSParts(StringRef(Rec2->getName()));
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -15,13 +16,12 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace mlir;
-
-using ::testing::StartsWith;
 
 StringLiteral IRWithResources = R"(
 module @TestDialectResources attributes {
@@ -30,7 +30,8 @@ module @TestDialectResources attributes {
 {-#
   dialect_resources: {
     builtin: {
-      resource: "0x2000000001000000020000000300000004000000"
+      resource: "0x2000000001000000020000000300000004000000",
+      resource_2: "0x2000000001000000020000000300000004000000"
     }
   }
 #-}
@@ -65,8 +66,7 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   // FIXME: Parsing external resources does not work on big-endian
   // platforms currently.
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big)
+  if (llvm::endianness::native == llvm::endianness::big)
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
@@ -89,38 +89,62 @@ TEST(Bytecode, MultiModuleWithResource) {
   checkResourceAttribute(*roundTripModule);
 }
 
-TEST(Bytecode, InsufficientAlignmentFailure) {
+namespace {
+/// A custom operation for the purpose of showcasing how discardable attributes
+/// are handled in absence of properties.
+class OpWithoutProperties : public Op<OpWithoutProperties> {
+public:
+  // Begin boilerplate.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpWithoutProperties)
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() {
+    static StringRef attributeNames[] = {StringRef("inherent_attr")};
+    return ArrayRef(attributeNames);
+  };
+  static StringRef getOperationName() {
+    return "test_op_properties.op_without_properties";
+  }
+  // End boilerplate.
+};
+
+// A trivial supporting dialect to register the above operation.
+class TestOpPropertiesDialect : public Dialect {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOpPropertiesDialect)
+  static constexpr StringLiteral getDialectNamespace() {
+    return StringLiteral("test_op_properties");
+  }
+  explicit TestOpPropertiesDialect(MLIRContext *context)
+      : Dialect(getDialectNamespace(), context,
+                TypeID::get<TestOpPropertiesDialect>()) {
+    addOperations<OpWithoutProperties>();
+  }
+};
+} // namespace
+
+constexpr StringLiteral withoutPropertiesAttrsSrc = R"mlir(
+    "test_op_properties.op_without_properties"()
+      {inherent_attr = 42, other_attr = 56} : () -> ()
+)mlir";
+
+TEST(Bytecode, OpWithoutProperties) {
   MLIRContext context;
-  Builder builder(&context);
-  ParserConfig parseConfig(&context);
-  OwningOpRef<Operation *> module =
-      parseSourceString<Operation *>(IRWithResources, parseConfig);
-  ASSERT_TRUE(module);
+  context.getOrLoadDialect<TestOpPropertiesDialect>();
+  ParserConfig config(&context);
+  OwningOpRef<Operation *> op =
+      parseSourceString(withoutPropertiesAttrsSrc, config);
 
-  // Write the module to bytecode
-  std::string buffer;
-  llvm::raw_string_ostream ostream(buffer);
-  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
-  ostream.flush();
+  std::string bytecode;
+  llvm::raw_string_ostream os(bytecode);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(op.get(), os)));
+  std::unique_ptr<Block> block = std::make_unique<Block>();
+  ASSERT_TRUE(succeeded(readBytecodeFile(
+      llvm::MemoryBufferRef(os.str(), "string-buffer"), block.get(), config)));
+  Operation *roundtripped = &block->front();
+  EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
+  EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);
+  EXPECT_TRUE(roundtripped->getDiscardableAttr("other_attr") != Attribute());
 
-  // Create copy of buffer which is insufficiently aligned.
-  constexpr size_t kAlignment = 0x20;
-  size_t buffer_size = buffer.size();
-  buffer.reserve(buffer_size + kAlignment - 1);
-  size_t pad = ~(uintptr_t)buffer.data() + kAlignment / 2 + 1 & kAlignment - 1;
-  buffer.insert(0, pad, ' ');
-  StringRef misaligned_buffer(buffer.data() + pad, buffer_size);
-
-  std::unique_ptr<Diagnostic> diagnostic;
-  context.getDiagEngine().registerHandler([&](Diagnostic &diag) {
-    diagnostic = std::make_unique<Diagnostic>(std::move(diag));
-  });
-
-  // Try to parse it back and check for alignment error.
-  OwningOpRef<Operation *> roundTripModule =
-      parseSourceString<Operation *>(misaligned_buffer, parseConfig);
-  EXPECT_FALSE(roundTripModule);
-  ASSERT_TRUE(diagnostic);
-  EXPECT_THAT(diagnostic->str(),
-              StartsWith("expected bytecode buffer to be aligned to 32"));
+  EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
+              OperationEquivalence::computeHash(roundtripped));
 }

@@ -17,7 +17,6 @@
 #include "PrimType.h"
 #include "Program.h"
 #include "Source.h"
-#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace interp {
@@ -32,7 +31,7 @@ protected:
 
 public:
   /// Compiles the function into the module.
-  llvm::Expected<Function *> compileFunc(const FunctionDecl *FuncDecl);
+  Function *compileFunc(const FunctionDecl *FuncDecl);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}
@@ -49,11 +48,6 @@ protected:
   virtual bool visitExpr(const Expr *E) = 0;
   virtual bool visitDecl(const VarDecl *E) = 0;
 
-  /// Bails out if a given node cannot be compiled.
-  bool bail(const Stmt *S) { return bail(S->getBeginLoc()); }
-  bool bail(const Decl *D) { return bail(D->getBeginLoc()); }
-  bool bail(const SourceLocation &Loc);
-
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
   bool jumpFalse(const LabelTy &Label);
@@ -67,7 +61,8 @@ protected:
   llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
-  unsigned LambdaThisCapture;
+  /// Offset of the This parameter in a lambda record.
+  unsigned LambdaThisCapture = 0;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 
@@ -80,8 +75,6 @@ private:
   LabelTy NextLabel = 0;
   /// Offset of the next local variable.
   unsigned NextLocalOffset = 0;
-  /// Location of a failure.
-  std::optional<SourceLocation> BailLocation;
   /// Label information for linker.
   llvm::DenseMap<LabelTy, unsigned> LabelOffsets;
   /// Location of label relocations.

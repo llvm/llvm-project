@@ -113,7 +113,7 @@ private:
   MachineDominatorTree *MDT;
   MachinePostDominatorTree *MPDT;
   MachineBlockFrequencyInfo *MBFI;
-  uint64_t EntryFreq;
+  BlockFrequency EntryFreq;
   SmallSet<Register, 16> RegsToUpdate;
 
   // Initialize class variables.
@@ -300,7 +300,7 @@ void PPCMIPeephole::UpdateTOCSaves(
     PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
 
     MachineBasicBlock *Entry = &MF->front();
-    uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
+    BlockFrequency CurrBlockFreq = MBFI->getBlockFreq(MI->getParent());
 
     // If the block in which the TOC save resides is in a block that
     // post-dominates Entry, or a block that is hotter than entry (keep in mind
@@ -895,8 +895,9 @@ bool PPCMIPeephole::simplifyCode() {
               LLVM_DEBUG(MI.dump());
               LLVM_DEBUG(dbgs() << "Through instruction:\n");
               LLVM_DEBUG(DefMI->dump());
-              RoundInstr->eraseFromParent();
               addRegToUpdate(ConvReg1);
+              addRegToUpdate(FRSPDefines);
+              ToErase = RoundInstr;
             }
           };
 
@@ -1195,6 +1196,68 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::RLDICR: {
         Simplified |= emitRLDICWhenLoweringJumpTables(MI, ToErase) ||
                       combineSEXTAndSHL(MI, ToErase);
+        break;
+      }
+      case PPC::ANDI_rec:
+      case PPC::ANDI8_rec:
+      case PPC::ANDIS_rec:
+      case PPC::ANDIS8_rec: {
+        Register TrueReg =
+            TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
+        if (!TrueReg.isVirtual() || !MRI->hasOneNonDBGUse(TrueReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(TrueReg);
+        if (!SrcMI)
+          break;
+
+        unsigned SrcOpCode = SrcMI->getOpcode();
+        if (SrcOpCode != PPC::RLDICL && SrcOpCode != PPC::RLDICR)
+          break;
+
+        Register SrcReg, DstReg;
+        SrcReg = SrcMI->getOperand(1).getReg();
+        DstReg = MI.getOperand(1).getReg();
+        const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
+        const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(DstReg);
+        if (DstRC != SrcRC)
+          break;
+
+        uint64_t AndImm = MI.getOperand(2).getImm();
+        if (MI.getOpcode() == PPC::ANDIS_rec ||
+            MI.getOpcode() == PPC::ANDIS8_rec)
+          AndImm <<= 16;
+        uint64_t LZeroAndImm = llvm::countl_zero<uint64_t>(AndImm);
+        uint64_t RZeroAndImm = llvm::countr_zero<uint64_t>(AndImm);
+        uint64_t ImmSrc = SrcMI->getOperand(3).getImm();
+
+        // We can transfer `RLDICL/RLDICR + ANDI_rec/ANDIS_rec` to `ANDI_rec 0`
+        // if all bits to AND are already zero in the input.
+        bool PatternResultZero =
+            (SrcOpCode == PPC::RLDICL && (RZeroAndImm + ImmSrc > 63)) ||
+            (SrcOpCode == PPC::RLDICR && LZeroAndImm > ImmSrc);
+
+        // We can eliminate RLDICL/RLDICR if it's used to clear bits and all
+        // bits cleared will be ANDed with 0 by ANDI_rec/ANDIS_rec.
+        bool PatternRemoveRotate =
+            SrcMI->getOperand(2).getImm() == 0 &&
+            ((SrcOpCode == PPC::RLDICL && LZeroAndImm >= ImmSrc) ||
+             (SrcOpCode == PPC::RLDICR && (RZeroAndImm + ImmSrc > 63)));
+
+        if (!PatternResultZero && !PatternRemoveRotate)
+          break;
+
+        LLVM_DEBUG(dbgs() << "Combining pair: ");
+        LLVM_DEBUG(SrcMI->dump());
+        LLVM_DEBUG(MI.dump());
+        if (PatternResultZero)
+          MI.getOperand(2).setImm(0);
+        MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
+        LLVM_DEBUG(dbgs() << "To: ");
+        LLVM_DEBUG(MI.dump());
+        addRegToUpdate(MI.getOperand(1).getReg());
+        addRegToUpdate(SrcMI->getOperand(0).getReg());
+        Simplified = true;
         break;
       }
       case PPC::RLWINM:

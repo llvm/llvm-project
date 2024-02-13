@@ -36,7 +36,6 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -65,7 +64,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return std::string(ExecutablePath.str());
+    return std::string(ExecutablePath);
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -122,7 +121,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
       GetStableCStr(SavedStrings, Edit.substr(1));
     OS << "### Adding argument " << Str << " at end\n";
     Args.push_back(Str);
-  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.endswith("/") &&
+  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.ends_with("/") &&
              Edit.slice(2, Edit.size() - 1).contains('/')) {
     StringRef MatchPattern = Edit.substr(2).split('/').first;
     StringRef ReplPattern = Edit.substr(2).split('/').second;
@@ -377,7 +376,6 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
-  llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
@@ -403,7 +401,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   // Handle -cc1 integrated tools.
-  if (Args.size() >= 2 && StringRef(Args[1]).startswith("-cc1"))
+  if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
 
   // Handle options that need handling before the real command line parsing in

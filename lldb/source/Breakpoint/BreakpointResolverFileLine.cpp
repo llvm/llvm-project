@@ -30,9 +30,8 @@ BreakpointResolverFileLine::BreakpointResolverFileLine(
       m_location_spec(location_spec), m_skip_prologue(skip_prologue),
       m_removed_prefix_opt(removed_prefix_opt) {}
 
-BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+BreakpointResolverSP BreakpointResolverFileLine::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Status &error) {
   llvm::StringRef filename;
   uint32_t line;
   uint16_t column;
@@ -90,8 +89,8 @@ BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
   if (!location_spec)
     return nullptr;
 
-  return new BreakpointResolverFileLine(bkpt, offset, skip_prologue,
-                                        location_spec);
+  return std::make_shared<BreakpointResolverFileLine>(
+      nullptr, offset, skip_prologue, location_spec);
 }
 
 StructuredData::ObjectSP
@@ -207,7 +206,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
       [path_separator](llvm::StringRef a, llvm::StringRef b,
                        bool case_sensitive) -> std::optional<llvm::StringRef> {
     if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b)) {
-      if (a.empty() || a.endswith(path_separator)) {
+      if (a.empty() || a.ends_with(path_separator)) {
         return a;
       }
     }

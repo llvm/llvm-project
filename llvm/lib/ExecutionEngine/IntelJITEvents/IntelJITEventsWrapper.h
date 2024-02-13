@@ -105,6 +105,6 @@ public:
   }
 };
 
-} //namespace llvm
+} // namespace llvm
 
 #endif //INTEL_JIT_EVENTS_WRAPPER_H

@@ -15,14 +15,14 @@
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, access, (const char *path, int mode)) {
 #ifdef SYS_access
-  int ret = __llvm_libc::syscall_impl<int>(SYS_access, path, mode);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_access, path, mode);
 #elif defined(SYS_faccessat)
   int ret =
-      __llvm_libc::syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
 #else
 #error "access and faccessat syscalls not available."
 #endif
@@ -34,4 +34,4 @@ LLVM_LIBC_FUNCTION(int, access, (const char *path, int mode)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -234,8 +234,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (options.defaultMemorySpace.has_value()) {
-    memorySpace = *options.defaultMemorySpace;
+  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+    memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
   }
@@ -314,7 +314,11 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
       if (matchPattern(value, m_ConstantInt(&intVal))) {
-        newShape[i] = intVal.getSExtValue();
+        int64_t dim = intVal.getSExtValue();
+        if (dim >= 0)
+          newShape[i] = intVal.getSExtValue();
+        else
+          newDynamicSizes.push_back(value);
       } else {
         newDynamicSizes.push_back(value);
       }
@@ -453,6 +457,11 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     }
 
     Value source = cloneOp.getInput();
+    if (source.getType() != cloneOp.getType() &&
+        !memref::CastOp::areCastCompatible({source.getType()},
+                                           {cloneOp.getType()}))
+      return failure();
+
     // Aims to find the dealloc op for the canonical source
     // which otherwise could prevent removal of unnecessary allocs.
     Value canonicalSource = source;
@@ -496,6 +505,9 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // of the source.
     for (Operation *pos = cloneOp->getNextNode(); pos != redundantDealloc;
          pos = pos->getNextNode()) {
+      // Bail if we run out of operations while looking for a deallocation op.
+      if (!pos)
+        return failure();
       auto effectInterface = dyn_cast<MemoryEffectOpInterface>(pos);
       if (!effectInterface)
         continue;
@@ -503,8 +515,10 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<memref::CastOp>(cloneOp, cloneOp.getType(),
-                                                source);
+    if (source.getType() != cloneOp.getType())
+      source = rewriter.create<memref::CastOp>(cloneOp.getLoc(),
+                                               cloneOp.getType(), source);
+    rewriter.replaceOp(cloneOp, source);
     rewriter.eraseOp(redundantDealloc);
     return success();
   }
@@ -537,30 +551,57 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getSourceMutable()[0];
+  return opOperand == getSourceMutable();
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getDestMutable()[0];
+  if (opOperand == getDestMutable()) {
+    assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
+    return true;
+  }
+  return false;
+}
+
+bool MaterializeInDestinationOp::mustBufferizeInPlace(
+    OpOperand &opOperand, const AnalysisState &state) {
+  // The source is only read and not written, so it always bufferizes in-place
+  // by default. The destination is written and is forced to bufferize in-place
+  // (if it is a tensor).
+  return true;
 }
 
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()[0])
+  if (opOperand == getDestMutable()) {
+    assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
+  }
   return {};
 }
 
 LogicalResult
 MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
                                       const BufferizationOptions &options) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
-  if (failed(buffer))
+  bool tensorDest = isa<TensorType>(getDest().getType());
+  Value buffer;
+  if (tensorDest) {
+    FailureOr<Value> maybeBuffer = getBuffer(rewriter, getDest(), options);
+    if (failed(maybeBuffer))
+      return failure();
+    buffer = *maybeBuffer;
+  } else {
+    assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
+    buffer = getDest();
+  }
+  auto srcBuffer = getBuffer(rewriter, getSource(), options);
+  if (failed(srcBuffer))
     return failure();
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
-  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
+  if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))
+    return failure();
+  replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                tensorDest ? ValueRange(buffer) : ValueRange());
   return success();
 }
 
@@ -573,15 +614,37 @@ bool MaterializeInDestinationOp::bufferizesToElementwiseAccess(
 
 LogicalResult MaterializeInDestinationOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
-  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
+  if (getOperation()->getNumResults() == 1) {
+    assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
+    reifiedReturnShapes.resize(1,
+                               SmallVector<OpFoldResult>(getType().getRank()));
+    reifiedReturnShapes[0] =
+        tensor::getMixedSizes(builder, getLoc(), getDest());
+  }
   return success();
 }
 
 Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
                                                         Location loc) {
-  // The subset is the entire destination tensor.
-  return getDest();
+  if (isa<TensorType>(getDest().getType())) {
+    // The subset is the entire destination tensor.
+    return getDest();
+  }
+
+  // The "restrict" attribute is transferred from this op to the newly created
+  // to_tensor op. If this op does not the "restrict" attribute, the subset
+  // extraction cannot be built because there is no guarantee that there is no
+  // pre-existing "restrict" to_tensor op with the same/an aliasing destination.
+  if (!getRestrict())
+    return {};
+
+  // Build a bufferization.to_tensor op.
+  assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
+  assert(getRestrict() &&
+         "expected that ops with memrefs dest have 'restrict'");
+  setRestrict(false);
+  return builder.create<ToTensorOp>(loc, getDest(), /*restrict=*/true,
+                                    getWritable());
 }
 
 bool MaterializeInDestinationOp::isEquivalentSubset(
@@ -596,6 +659,63 @@ MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
 
 OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
+}
+
+bool MaterializeInDestinationOp::operatesOnEquivalentSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
+bool MaterializeInDestinationOp::operatesOnDisjointSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
+LogicalResult MaterializeInDestinationOp::verify() {
+  if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
+    return emitOpError("'dest' must be a tensor or a memref");
+  if (auto destType = dyn_cast<TensorType>(getDest().getType())) {
+    if (getOperation()->getNumResults() != 1)
+      return emitOpError("tensor 'dest' implies exactly one tensor result");
+    if (destType != getResult().getType())
+      return emitOpError("result and 'dest' types must match");
+  }
+  if (isa<BaseMemRefType>(getDest().getType()) &&
+      getOperation()->getNumResults() != 0)
+    return emitOpError("memref 'dest' implies zero results");
+  if (getRestrict() && !isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("'restrict' is valid only for memref destinations");
+  if (getWritable() != isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("'writable' must be specified if and only if the "
+                       "destination is of memref type");
+  return success();
+}
+
+void MaterializeInDestinationOp::build(OpBuilder &builder,
+                                       OperationState &state, Value source,
+                                       Value dest) {
+  auto destTensorType = dyn_cast<TensorType>(dest.getType());
+  build(builder, state, /*result=*/destTensorType ? destTensorType : Type(),
+        source, dest);
+}
+
+bool MaterializeInDestinationOp::isWritable(Value value,
+                                            const AnalysisState &state) {
+  return isa<TensorType>(getDest().getType()) ? true : getWritable();
+}
+
+MutableOperandRange MaterializeInDestinationOp::getDpsInitsMutable() {
+  return getDestMutable();
+}
+
+void MaterializeInDestinationOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (isa<BaseMemRefType>(getDest().getType()))
+    effects.emplace_back(MemoryEffects::Write::get(), getDest(),
+                         SideEffects::DefaultResource::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -764,6 +884,9 @@ LogicalResult DeallocOp::verify() {
   if (getMemrefs().size() != getConditions().size())
     return emitOpError(
         "must have the same number of conditions as memrefs to deallocate");
+  if (getRetained().size() != getUpdatedConditions().size())
+    return emitOpError("must have the same number of updated conditions "
+                       "(results) as retained operands");
   return success();
 }
 
@@ -775,7 +898,7 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
       deallocOp.getConditions() == conditions)
     return failure();
 
-  rewriter.updateRootInPlace(deallocOp, [&]() {
+  rewriter.modifyOpInPlace(deallocOp, [&]() {
     deallocOp.getMemrefsMutable().assign(memrefs);
     deallocOp.getConditionsMutable().assign(conditions);
   });

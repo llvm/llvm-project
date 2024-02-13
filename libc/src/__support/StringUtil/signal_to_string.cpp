@@ -19,7 +19,7 @@
 #include <signal.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 constexpr size_t max_buff_size() {
@@ -77,4 +77,4 @@ cpp::string_view get_signal_string(int sig_num, cpp::span<char> buffer) {
     return internal::build_signal_string(sig_num, buffer);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

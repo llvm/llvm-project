@@ -19,6 +19,26 @@
 
 using namespace llvm;
 
+static const GlobalVariable *
+getKernelDynLDSGlobalFromFunction(const Function &F) {
+  const Module *M = F.getParent();
+  SmallString<64> KernelDynLDSName("llvm.amdgcn.");
+  KernelDynLDSName += F.getName();
+  KernelDynLDSName += ".dynlds";
+  return M->getNamedGlobal(KernelDynLDSName);
+}
+
+static bool hasLDSKernelArgument(const Function &F) {
+  for (const Argument &Arg : F.args()) {
+    Type *ArgTy = Arg.getType();
+    if (auto PtrTy = dyn_cast<PointerType>(ArgTy)) {
+      if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+        return true;
+    }
+  }
+  return false;
+}
+
 AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
                                              const AMDGPUSubtarget &ST)
     : IsEntryFunction(AMDGPU::isEntryFunctionCC(F.getCallingConv())),
@@ -65,6 +85,10 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
   Attribute NSZAttr = F.getFnAttribute("no-signed-zeros-fp-math");
   NoSignedZerosFPMath =
       NSZAttr.isStringAttribute() && NSZAttr.getValueAsString() == "true";
+
+  const GlobalVariable *DynLdsGlobal = getKernelDynLDSGlobalFromFunction(F);
+  if (DynLdsGlobal || hasLDSKernelArgument(F))
+    UsesDynamicLDS = true;
 }
 
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
@@ -139,15 +163,6 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
-static const GlobalVariable *
-getKernelDynLDSGlobalFromFunction(const Function &F) {
-  const Module *M = F.getParent();
-  std::string KernelDynLDSName = "llvm.amdgcn.";
-  KernelDynLDSName += F.getName();
-  KernelDynLDSName += ".dynlds";
-  return M->getNamedGlobal(KernelDynLDSName);
-}
-
 std::optional<uint32_t>
 AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
   // TODO: Would be more consistent with the abs symbols to use a range
@@ -210,3 +225,9 @@ void AMDGPUMachineFunction::setDynLDSAlign(const Function &F,
     }
   }
 }
+
+void AMDGPUMachineFunction::setUsesDynamicLDS(bool DynLDS) {
+  UsesDynamicLDS = DynLDS;
+}
+
+bool AMDGPUMachineFunction::isDynamicLDSUsed() const { return UsesDynamicLDS; }

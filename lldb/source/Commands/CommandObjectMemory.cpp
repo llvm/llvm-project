@@ -348,7 +348,7 @@ public:
   }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "target" for validity as eCommandRequiresTarget ensures
     // it is valid
     Target *target = m_exe_ctx.GetTargetPtr();
@@ -361,7 +361,7 @@ protected:
                                    m_cmd_name.c_str());
       result.AppendWarning("Expressions should be quoted if they contain "
                            "spaces or other special characters.");
-      return false;
+      return;
     }
 
     CompilerType compiler_type;
@@ -372,8 +372,6 @@ protected:
     if (view_as_type_cstr && view_as_type_cstr[0]) {
       // We are viewing memory as a type
 
-      const bool exact_match = false;
-      TypeList type_list;
       uint32_t reference_count = 0;
       uint32_t pointer_count = 0;
       size_t idx;
@@ -441,7 +439,7 @@ protected:
             } else {
               result.AppendErrorWithFormat("invalid type string: '%s'\n",
                                            view_as_type_cstr);
-              return false;
+              return;
             }
             break;
 
@@ -452,18 +450,18 @@ protected:
         }
       }
 
-      llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
       ConstString lookup_type_name(type_str.c_str());
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ModuleSP search_first;
-      if (frame) {
+      if (frame)
         search_first = frame->GetSymbolContext(eSymbolContextModule).module_sp;
-      }
-      target->GetImages().FindTypes(search_first.get(), lookup_type_name,
-                                    exact_match, 1, searched_symbol_files,
-                                    type_list);
+      TypeQuery query(lookup_type_name.GetStringRef(),
+                      TypeQueryOptions::e_find_one);
+      TypeResults results;
+      target->GetImages().FindTypes(search_first.get(), query, results);
+      TypeSP type_sp = results.GetFirstType();
 
-      if (type_list.GetSize() == 0 && lookup_type_name.GetCString()) {
+      if (!type_sp && lookup_type_name.GetCString()) {
         LanguageType language_for_type =
             m_memory_options.m_language_for_type.GetCurrentValue();
         std::set<LanguageType> languages_to_check;
@@ -490,7 +488,7 @@ protected:
               "Mutiple types found matching raw type '%s', please disambiguate "
               "by specifying the language with -x",
               lookup_type_name.GetCString());
-          return false;
+          return;
         }
 
         if (user_defined_types.size() == 1) {
@@ -499,15 +497,14 @@ protected:
       }
 
       if (!compiler_type.IsValid()) {
-        if (type_list.GetSize() == 0) {
+        if (type_sp) {
+          compiler_type = type_sp->GetFullCompilerType();
+        } else {
           result.AppendErrorWithFormat("unable to find any types that match "
                                        "the raw type '%s' for full type '%s'\n",
                                        lookup_type_name.GetCString(),
                                        view_as_type_cstr);
-          return false;
-        } else {
-          TypeSP type_sp(type_list.GetTypeAtIndex(0));
-          compiler_type = type_sp->GetFullCompilerType();
+          return;
         }
       }
 
@@ -517,7 +514,7 @@ protected:
           compiler_type = pointer_type;
         else {
           result.AppendError("unable make a pointer type\n");
-          return false;
+          return;
         }
         --pointer_count;
       }
@@ -527,7 +524,7 @@ protected:
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n",
             view_as_type_cstr);
-        return false;
+        return;
       }
       m_format_options.GetByteSizeValue() = *size;
 
@@ -540,7 +537,7 @@ protected:
     // Look for invalid combinations of settings
     if (error.Fail()) {
       result.AppendError(error.AsCString());
-      return false;
+      return;
     }
 
     lldb::addr_t addr;
@@ -591,7 +588,7 @@ protected:
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid start address expression.");
       result.AppendError(error.AsCString());
-      return false;
+      return;
     }
 
     if (argc == 2) {
@@ -601,19 +598,19 @@ protected:
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
         result.AppendError(error.AsCString());
-        return false;
+        return;
       } else if (end_addr <= addr) {
         result.AppendErrorWithFormat(
             "end address (0x%" PRIx64
             ") must be greater than the start address (0x%" PRIx64 ").\n",
             end_addr, addr);
-        return false;
+        return;
       } else if (m_format_options.GetCountValue().OptionWasSet()) {
         result.AppendErrorWithFormat(
             "specify either the end address (0x%" PRIx64
             ") or the count (--count %" PRIu64 "), not both.\n",
             end_addr, (uint64_t)item_count);
-        return false;
+        return;
       }
 
       total_byte_size = end_addr - addr;
@@ -631,7 +628,7 @@ protected:
           "Please use --force to override this restriction just once.\n");
       result.AppendErrorWithFormat("or set target.max-memory-read-size if you "
                                    "will often need a larger limit.\n");
-      return false;
+      return;
     }
 
     WritableDataBufferSP data_sp;
@@ -645,7 +642,7 @@ protected:
       std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendError("can't get size of type");
-        return false;
+        return;
       }
       bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
 
@@ -659,7 +656,7 @@ protected:
             "can't allocate 0x%" PRIx32
             " bytes for the memory read buffer, specify a smaller size to read",
             (uint32_t)total_byte_size);
-        return false;
+        return;
       }
 
       Address address(addr, nullptr);
@@ -673,7 +670,7 @@ protected:
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
         }
-        return false;
+        return;
       }
 
       if (bytes_read < total_byte_size)
@@ -699,7 +696,7 @@ protected:
             "can't allocate 0x%" PRIx64
             " bytes for the memory read buffer, specify a smaller size to read",
             (uint64_t)((item_byte_size + 1) * item_count));
-        return false;
+        return;
       }
       uint8_t *data_ptr = data_sp->GetBytes();
       auto data_addr = addr;
@@ -715,7 +712,7 @@ protected:
         if (error.Fail()) {
           result.AppendErrorWithFormat(
               "failed to read memory from 0x%" PRIx64 ".\n", addr);
-          return false;
+          return;
         }
 
         if (item_byte_size == read) {
@@ -777,12 +774,12 @@ protected:
             result.GetOutputStream().Printf(
                 "%zi bytes %s to '%s'\n", bytes_written,
                 append ? "appended" : "written", path.c_str());
-            return true;
+            return;
           } else {
             result.AppendErrorWithFormat("Failed to write %" PRIu64
                                          " bytes to '%s'.\n",
                                          (uint64_t)bytes_read, path.c_str());
-            return false;
+            return;
           }
         } else {
           // We are going to write ASCII to the file just point the
@@ -795,7 +792,7 @@ protected:
                                      path.c_str(), append ? "append" : "write");
 
         result.AppendError(llvm::toString(outfile.takeError()));
-        return false;
+        return;
       }
     } else {
       output_stream_p = &result.GetOutputStream();
@@ -823,10 +820,10 @@ protected:
           result.AppendErrorWithFormat(
               "failed to create a value object for: (%s) %s\n",
               view_as_type_cstr, name_strm.GetData());
-          return false;
+          return;
         }
       }
-      return true;
+      return;
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -852,7 +849,7 @@ protected:
         result.AppendErrorWithFormat(
             "reading memory as characters of size %" PRIu64 " is not supported",
             (uint64_t)item_byte_size);
-        return false;
+        return;
       }
     }
 
@@ -863,7 +860,6 @@ protected:
         exe_scope, m_memory_tag_options.GetShowTags().GetCurrentValue());
     m_next_addr = addr + bytes_dumped;
     output_stream_p->EOL();
-    return true;
   }
 
   OptionGroupOptions m_option_group;
@@ -1010,7 +1006,7 @@ protected:
     lldb::addr_t m_base_addr;
     bool m_is_valid = true;
   };
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1019,7 +1015,7 @@ protected:
 
     if (argc != 2) {
       result.AppendError("two addresses needed for memory find");
-      return false;
+      return;
     }
 
     Status error;
@@ -1027,19 +1023,19 @@ protected:
         &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
     if (low_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid low address");
-      return false;
+      return;
     }
     lldb::addr_t high_addr = OptionArgParser::ToAddress(
         &m_exe_ctx, command[1].ref(), LLDB_INVALID_ADDRESS, &error);
     if (high_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid high address");
-      return false;
+      return;
     }
 
     if (high_addr <= low_addr) {
       result.AppendError(
           "starting address must be smaller than ending address");
-      return false;
+      return;
     }
 
     lldb::addr_t found_location = LLDB_INVALID_ADDRESS;
@@ -1051,7 +1047,7 @@ protected:
           m_memory_options.m_string.GetValueAs<llvm::StringRef>().value_or("");
       if (str.empty()) {
         result.AppendError("search string must have non-zero length.");
-        return false;
+        return;
       }
       buffer.CopyData(str);
     } else if (m_memory_options.m_expr.OptionWasSet()) {
@@ -1067,7 +1063,7 @@ protected:
         std::optional<uint64_t> size =
             result_sp->GetCompilerType().GetByteSize(nullptr);
         if (!size)
-          return false;
+          return;
         switch (*size) {
         case 1: {
           uint8_t byte = (uint8_t)value;
@@ -1089,21 +1085,21 @@ protected:
         case 6:
         case 7:
           result.AppendError("unknown type. pass a string instead");
-          return false;
+          return;
         default:
           result.AppendError(
               "result size larger than 8 bytes. pass a string instead");
-          return false;
+          return;
         }
       } else {
         result.AppendError(
             "expression evaluation failed. pass a string instead");
-        return false;
+        return;
       }
     } else {
       result.AppendError(
           "please pass either a block of text, or an expression to evaluate.");
-      return false;
+      return;
     }
 
     size_t count = m_memory_options.m_count.GetCurrentValue();
@@ -1146,7 +1142,6 @@ protected:
     }
 
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-    return true;
   }
 
   lldb::addr_t FastSearch(lldb::addr_t low, lldb::addr_t high, uint8_t *buffer,
@@ -1291,7 +1286,7 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1303,19 +1298,19 @@ protected:
         result.AppendErrorWithFormat(
             "%s takes a destination address when writing file contents.\n",
             m_cmd_name.c_str());
-        return false;
+        return;
       }
       if (argc > 1) {
         result.AppendErrorWithFormat(
             "%s takes only a destination address when writing file contents.\n",
             m_cmd_name.c_str());
-        return false;
+        return;
       }
     } else if (argc < 2) {
       result.AppendErrorWithFormat(
           "%s takes a destination address and at least one value.\n",
           m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     StreamString buffer(
@@ -1333,7 +1328,7 @@ protected:
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression\n");
       result.AppendError(error.AsCString());
-      return false;
+      return;
     }
 
     if (m_memory_options.m_infile) {
@@ -1372,7 +1367,7 @@ protected:
       } else {
         result.AppendErrorWithFormat("Unable to read contents of file.\n");
       }
-      return result.Succeeded();
+      return;
     } else if (item_byte_size == 0) {
       if (m_format_options.GetFormat() == eFormatPointer)
         item_byte_size = buffer.GetAddressByteSize();
@@ -1415,7 +1410,7 @@ protected:
       case eFormatInstruction:
       case eFormatVoid:
         result.AppendError("unsupported format for writing memory");
-        return false;
+        return;
 
       case eFormatDefault:
       case eFormatBytes:
@@ -1426,20 +1421,20 @@ protected:
         // Be careful, getAsInteger with a radix of 16 rejects "0xab" so we
         // have to special case that:
         bool success = false;
-        if (entry.ref().startswith("0x"))
+        if (entry.ref().starts_with("0x"))
           success = !entry.ref().getAsInteger(0, uval64);
         if (!success)
           success = !entry.ref().getAsInteger(16, uval64);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid hex string value.\n", entry.c_str());
-          return false;
+          return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value 0x%" PRIx64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
                                        uval64, (uint64_t)item_byte_size);
-          return false;
+          return;
         }
         buffer.PutMaxHex64(uval64, item_byte_size);
         break;
@@ -1449,7 +1444,7 @@ protected:
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid boolean string value.\n", entry.c_str());
-          return false;
+          return;
         }
         buffer.PutMaxHex64(uval64, item_byte_size);
         break;
@@ -1458,13 +1453,13 @@ protected:
         if (entry.ref().getAsInteger(2, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid binary string value.\n", entry.c_str());
-          return false;
+          return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value 0x%" PRIx64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
                                        uval64, (uint64_t)item_byte_size);
-          return false;
+          return;
         }
         buffer.PutMaxHex64(uval64, item_byte_size);
         break;
@@ -1486,7 +1481,7 @@ protected:
           result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
                                        " failed: %s.\n",
                                        addr, error.AsCString());
-          return false;
+          return;
         }
         break;
       }
@@ -1494,13 +1489,13 @@ protected:
         if (entry.ref().getAsInteger(0, sval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid signed decimal value.\n", entry.c_str());
-          return false;
+          return;
         } else if (!llvm::isIntN(item_byte_size * 8, sval64)) {
           result.AppendErrorWithFormat(
               "Value %" PRIi64 " is too large or small to fit in a %" PRIu64
               " byte signed integer value.\n",
               sval64, (uint64_t)item_byte_size);
-          return false;
+          return;
         }
         buffer.PutMaxHex64(sval64, item_byte_size);
         break;
@@ -1511,13 +1506,13 @@ protected:
           result.AppendErrorWithFormat(
               "'%s' is not a valid unsigned decimal string value.\n",
               entry.c_str());
-          return false;
+          return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIu64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
                                        uval64, (uint64_t)item_byte_size);
-          return false;
+          return;
         }
         buffer.PutMaxHex64(uval64, item_byte_size);
         break;
@@ -1526,13 +1521,13 @@ protected:
         if (entry.ref().getAsInteger(8, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid octal string value.\n", entry.c_str());
-          return false;
+          return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIo64
                                        " is too large to fit in a %" PRIu64
                                        " byte unsigned integer value.\n",
                                        uval64, (uint64_t)item_byte_size);
-          return false;
+          return;
         }
         buffer.PutMaxHex64(uval64, item_byte_size);
         break;
@@ -1541,18 +1536,18 @@ protected:
 
     if (!buffer.GetString().empty()) {
       Status error;
-      if (process->WriteMemory(addr, buffer.GetString().data(),
-                               buffer.GetString().size(),
-                               error) == buffer.GetString().size())
-        return true;
-      else {
+      const char *buffer_data = buffer.GetString().data();
+      const size_t buffer_size = buffer.GetString().size();
+      const size_t write_size =
+          process->WriteMemory(addr, buffer_data, buffer_size, error);
+
+      if (write_size != buffer_size) {
         result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
                                      " failed: %s.\n",
                                      addr, error.AsCString());
-        return false;
+        return;
       }
     }
-    return true;
   }
 
   OptionGroupOptions m_option_group;
@@ -1595,13 +1590,13 @@ public:
   }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
 
     if (argc == 0 || argc > 1) {
       result.AppendErrorWithFormat("%s takes an address expression",
                                    m_cmd_name.c_str());
-      return false;
+      return;
     }
 
     Status error;
@@ -1611,7 +1606,7 @@ protected:
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression");
       result.AppendError(error.AsCString());
-      return false;
+      return;
     }
 
     Stream *output_stream = &result.GetOutputStream();
@@ -1622,7 +1617,7 @@ protected:
 
     if (!memory_history) {
       result.AppendError("no available memory history provider");
-      return false;
+      return;
     }
 
     HistoryThreads thread_list = memory_history->GetHistoryThreads(addr);
@@ -1633,8 +1628,6 @@ protected:
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    return true;
   }
 };
 
@@ -1747,12 +1740,12 @@ protected:
     }
   }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     ProcessSP process_sp = m_exe_ctx.GetProcessSP();
     if (!process_sp) {
       m_prev_end_addr = LLDB_INVALID_ADDRESS;
       result.AppendError("invalid process");
-      return false;
+      return;
     }
 
     Status error;
@@ -1767,7 +1760,7 @@ protected:
         result.AppendError(
             "The \"--all\" option cannot be used when an address "
             "argument is given");
-        return false;
+        return;
       }
 
       auto load_addr_str = command[0].ref();
@@ -1776,7 +1769,7 @@ protected:
       if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
         result.AppendErrorWithFormat("invalid address argument \"%s\": %s\n",
                                      command[0].c_str(), error.AsCString());
-        return false;
+        return;
       }
     } else if (argc > 1 ||
                // When we're repeating the command, the previous end address is
@@ -1792,7 +1785,7 @@ protected:
       result.AppendErrorWithFormat(
           "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      return false;
+      return;
     }
 
     // It is important that we track the address used to request the region as
@@ -1832,11 +1825,10 @@ protected:
       }
 
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
 
     result.AppendErrorWithFormat("%s\n", error.AsCString());
-    return false;
   }
 
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,

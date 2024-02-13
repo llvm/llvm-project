@@ -9,9 +9,9 @@
 #include "src/__support/CPP/string.h"
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::string;
-using __llvm_libc::cpp::string_view;
-using __llvm_libc::cpp::to_string;
+using LIBC_NAMESPACE::cpp::string;
+using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::cpp::to_string;
 
 TEST(LlvmLibcStringTest, InitializeEmpty) {
   const string s;

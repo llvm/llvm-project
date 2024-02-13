@@ -653,6 +653,13 @@ bool HexagonTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
   return Subtarget.getInstrInfo()->isValidAutoIncImm(VT, V);
 }
 
+SDValue HexagonTargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
+  if (DAG.getMachineFunction().getFunction().hasOptSize())
+    return SDValue();
+  else
+    return Op;
+}
+
 SDValue
 HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -669,8 +676,7 @@ HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     --NumOps;  // Ignore the flag operand.
 
   for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-    const InlineAsm::Flag Flags(
-        cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
+    const InlineAsm::Flag Flags(Op.getConstantOperandVal(i));
     unsigned NumVals = Flags.getNumOperandRegisters();
     ++i;  // Skip the ID value.
 
@@ -729,7 +735,7 @@ SDValue HexagonTargetLowering::LowerREADCYCLECOUNTER(SDValue Op,
 SDValue HexagonTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(1);
   // Lower the hexagon_prefetch builtin to DCFETCH, as above.
   if (IntNo == Intrinsic::hexagon_prefetch) {
     SDValue Addr = Op.getOperand(2);
@@ -1176,7 +1182,7 @@ HexagonTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   if (Depth) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(4, dl, MVT::i32);
@@ -1198,7 +1204,7 @@ HexagonTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
                                          HRI.getFrameRegister(), VT);
   while (Depth--)
@@ -1766,6 +1772,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FADD, MVT::f64, Expand);
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
   setOperationAction(ISD::FMUL, MVT::f64, Expand);
+  setOperationAction(ISD::FDIV, MVT::f32, Custom);
 
   setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
@@ -3214,9 +3221,9 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
                     DAG.getConstant(NeedAlign, dl, MVT::i32))
       : BO.first;
   SDValue Base0 =
-      DAG.getMemBasePlusOffset(BaseNoOff, TypeSize::Fixed(BO.second), dl);
+      DAG.getMemBasePlusOffset(BaseNoOff, TypeSize::getFixed(BO.second), dl);
   SDValue Base1 = DAG.getMemBasePlusOffset(
-      BaseNoOff, TypeSize::Fixed(BO.second + LoadLen), dl);
+      BaseNoOff, TypeSize::getFixed(BO.second + LoadLen), dl);
 
   MachineMemOperand *WideMMO = nullptr;
   if (MachineMemOperand *MMO = LN->getMemOperand()) {
@@ -3342,6 +3349,9 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
         errs() << "Error: check for a non-legal type in this operation\n";
 #endif
       llvm_unreachable("Should not custom lower this!");
+
+    case ISD::FDIV:
+      return LowerFDIV(Op, DAG);
     case ISD::CONCAT_VECTORS:       return LowerCONCAT_VECTORS(Op, DAG);
     case ISD::INSERT_SUBVECTOR:     return LowerINSERT_SUBVECTOR(Op, DAG);
     case ISD::INSERT_VECTOR_ELT:    return LowerINSERT_VECTOR_ELT(Op, DAG);

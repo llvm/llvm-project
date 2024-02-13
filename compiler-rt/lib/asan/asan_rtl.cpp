@@ -71,8 +71,17 @@ static void CheckUnwind() {
 }
 
 // -------------------------- Globals --------------------- {{{1
-int asan_inited;
-bool asan_init_is_running;
+static StaticSpinMutex asan_inited_mutex;
+static atomic_uint8_t asan_inited = {0};
+
+static void SetAsanInited() {
+  atomic_store(&asan_inited, 1, memory_order_release);
+}
+
+bool AsanInited() {
+  return atomic_load(&asan_inited, memory_order_acquire) == 1;
+}
+
 bool replace_intrin_cached;
 
 #if !ASAN_FIXED_MAPPING
@@ -381,11 +390,10 @@ void PrintAddressSpaceLayout() {
           kHighShadowBeg > kMidMemEnd);
 }
 
-static void AsanInitInternal() {
-  if (LIKELY(asan_inited)) return;
+static bool AsanInitInternal() {
+  if (LIKELY(AsanInited()))
+    return true;
   SanitizerToolName = "AddressSanitizer";
-  CHECK(!asan_init_is_running && "ASan init calls itself!");
-  asan_init_is_running = true;
 
   CacheBinaryName();
 
@@ -398,9 +406,8 @@ static void AsanInitInternal() {
   // Stop performing init at this point if we are being loaded via
   // dlopen() and the platform supports it.
   if (SANITIZER_SUPPORTS_INIT_FOR_DLOPEN && UNLIKELY(HandleDlopenInit())) {
-    asan_init_is_running = false;
     VReport(1, "AddressSanitizer init is being performed for dlopen().\n");
-    return;
+    return false;
   }
 
   AsanCheckIncompatibleRT();
@@ -460,8 +467,7 @@ static void AsanInitInternal() {
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
   replace_intrin_cached = flags()->replace_intrin;
-  asan_inited = 1;
-  asan_init_is_running = false;
+  SetAsanInited();
 
   if (flags()->atexit)
     Atexit(asan_atexit);
@@ -487,6 +493,8 @@ static void AsanInitInternal() {
     InstallAtExitCheckLeaks();
   }
 
+  InstallAtForkHandler();
+
 #if CAN_SANITIZE_UB
   __ubsan::InitAsPlugin();
 #endif
@@ -505,12 +513,27 @@ static void AsanInitInternal() {
   VReport(1, "AddressSanitizer Init done\n");
 
   WaitForDebugger(flags()->sleep_after_init, "after init");
+
+  return true;
 }
 
 // Initialize as requested from some part of ASan runtime library (interceptors,
 // allocator, etc).
 void AsanInitFromRtl() {
+  if (LIKELY(AsanInited()))
+    return;
+  SpinMutexLock lock(&asan_inited_mutex);
   AsanInitInternal();
+}
+
+bool TryAsanInitFromRtl() {
+  if (LIKELY(AsanInited()))
+    return true;
+  if (!asan_inited_mutex.TryLock())
+    return false;
+  bool result = AsanInitInternal();
+  asan_inited_mutex.Unlock();
+  return result;
 }
 
 #if ASAN_DYNAMIC
@@ -583,7 +606,7 @@ static void UnpoisonFakeStack() {
 using namespace __asan;
 
 void NOINLINE __asan_handle_no_return() {
-  if (asan_init_is_running)
+  if (UNLIKELY(!AsanInited()))
     return;
 
   if (!PlatformUnpoisonStacks())
@@ -613,7 +636,7 @@ void NOINLINE __asan_set_death_callback(void (*callback)(void)) {
 // We use this call as a trigger to wake up ASan from deactivated state.
 void __asan_init() {
   AsanActivate();
-  AsanInitInternal();
+  AsanInitFromRtl();
 }
 
 void __asan_version_mismatch_check() {

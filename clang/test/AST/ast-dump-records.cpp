@@ -301,10 +301,10 @@ class NonTrivial {
 struct CheckFullExpression {
 // CHECK: |-CXXRecordDecl {{.*}} struct CheckFullExpression definition
   NonTrivial value = NonTrivial();
-// CHECK: | |-FieldDecl {{.*}} value 'NonTrivial':'NonTrivial'
-// CHECK-NEXT: | | `-ExprWithCleanups {{.*}} 'NonTrivial':'NonTrivial'
-// CHECK-NEXT: | |   `-CXXBindTemporaryExpr {{.*}} 'NonTrivial':'NonTrivial' (CXXTemporary{{.*}})
-// CHECK-NEXT: | |     `-CXXTemporaryObjectExpr {{.*}} 'NonTrivial':'NonTrivial' 'void ()'
+// CHECK: | |-FieldDecl {{.*}} value 'NonTrivial'
+// CHECK-NEXT: | | `-ExprWithCleanups {{.*}} 'NonTrivial'
+// CHECK-NEXT: | |   `-CXXBindTemporaryExpr {{.*}} 'NonTrivial' (CXXTemporary{{.*}})
+// CHECK-NEXT: | |     `-CXXTemporaryObjectExpr {{.*}} 'NonTrivial' 'void ()'
 };
 
 struct CheckNoCleanup {

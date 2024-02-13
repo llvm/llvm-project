@@ -11,10 +11,10 @@
 
 #include <sched.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sched_setaffinity(pid_t pid, size_t cpuset_size, const cpu_set_t *mask);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_SETAFFINITY_H

@@ -1,0 +1,43 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc __support functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "fpbits_test",
+    srcs = ["fpbits_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_fpbits_str",
+    ],
+)
+
+libc_test(
+    name = "dyadic_float_test",
+    srcs = ["dyadic_float_test.cpp"],
+    copts = ["-frounding-math"],
+    deps = [
+        "//libc:__support_fputil_dyadic_float",
+        "//libc:__support_uint",
+        "//libc:__support_uint128",
+        "//libc/test/UnitTest:fp_test_helpers",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+libc_test(
+    name = "rounding_mode_test",
+    srcs = ["rounding_mode_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_uint128",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)

@@ -13,10 +13,6 @@
 // [simd.mask.class]
 // explicit simd_mask(value_type) noexcept;
 
-// GCC returns __int128 unsigned with garbled data in higher 64 bits.
-// This is likely a bug in GCC implementation. Investigation needed.
-// XFAIL: gcc-13
-
 #include "../test_utils.h"
 #include <experimental/simd>
 

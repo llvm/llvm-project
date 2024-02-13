@@ -248,6 +248,12 @@ private:
   /// the subtree.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
 
+  /// Assumes that \p Cycle is the innermost cycle containing \p Block.
+  /// \p Block will be appended to \p Cycle and all of its parent cycles.
+  /// \p Block will be added to BlockMap with \p Cycle and
+  /// BlockMapTopLevel with \p Cycle's top level parent cycle.
+  void addBlockToCycle(BlockT *Block, CycleT *Cycle);
+
 public:
   GenericCycleInfo() = default;
   GenericCycleInfo(GenericCycleInfo &&) = default;
@@ -255,11 +261,13 @@ public:
 
   void clear();
   void compute(FunctionT &F);
+  void splitCriticalEdge(BlockT *Pred, BlockT *Succ, BlockT *New);
 
   const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
 
   CycleT *getCycle(const BlockT *Block) const;
+  CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
   unsigned getCycleDepth(const BlockT *Block) const;
   CycleT *getTopLevelParentCycle(BlockT *Block);
 

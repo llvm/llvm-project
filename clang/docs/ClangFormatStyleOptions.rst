@@ -392,6 +392,23 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -516,6 +533,23 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -642,6 +676,23 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -767,6 +818,23 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -979,6 +1047,10 @@ the configuration (without a prefix: ``Auto``).
 
 **AlignTrailingComments** (``TrailingCommentsAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlignTrailingComments>`
   Control of trailing comments.
+
+  The alignment stops at closing braces after a line break, and only
+  followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  a semicolon.
 
 
   .. note::
@@ -1211,6 +1283,27 @@ the configuration (without a prefix: ``Auto``).
                                               return;
                                             }
 
+.. _AllowShortCompoundRequirementOnASingleLine:
+
+**AllowShortCompoundRequirementOnASingleLine** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <AllowShortCompoundRequirementOnASingleLine>`
+  Allow short compound requirement on a single line.
+
+  .. code-block:: c++
+
+    true:
+    template <typename T>
+    concept c = requires(T x) {
+      { x + 1 } -> std::same_as<int>;
+    };
+
+    false:
+    template <typename T>
+    concept c = requires(T x) {
+      {
+        x + 1
+      } -> std::same_as<int>;
+    };
+
 .. _AllowShortEnumsOnASingleLine:
 
 **AllowShortEnumsOnASingleLine** (``Boolean``) :versionbadge:`clang-format 11` :ref:`¶ <AllowShortEnumsOnASingleLine>`
@@ -1438,88 +1531,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakAfterReturnType:
 
-**AlwaysBreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlwaysBreakAfterReturnType>`
-  The function declaration return type breaking style to use.
-
-  Possible values:
-
-  * ``RTBS_None`` (in configuration: ``None``)
-    Break after return type automatically.
-    ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int f() { return 1; }
-
-  * ``RTBS_All`` (in configuration: ``All``)
-    Always break after the return type.
-
-    .. code-block:: c++
-
-      class A {
-        int
-        f() {
-          return 0;
-        };
-      };
-      int
-      f();
-      int
-      f() {
-        return 1;
-      }
-
-  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
-    Always break after the return types of top-level functions.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int
-      f();
-      int
-      f() {
-        return 1;
-      }
-
-  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
-    Always break after the return type of function definitions.
-
-    .. code-block:: c++
-
-      class A {
-        int
-        f() {
-          return 0;
-        };
-      };
-      int f();
-      int
-      f() {
-        return 1;
-      }
-
-  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
-    Always break after the return type of top-level definitions.
-
-    .. code-block:: c++
-
-      class A {
-        int f() { return 0; };
-      };
-      int f();
-      int
-      f() {
-        return 1;
-      }
-
-
+**AlwaysBreakAfterReturnType** (``deprecated``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlwaysBreakAfterReturnType>`
+  This option is renamed to ``BreakAfterReturnType``.
 
 .. _AlwaysBreakBeforeMultilineStrings:
 
@@ -1540,50 +1553,8 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlwaysBreakTemplateDeclarations:
 
-**AlwaysBreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
-  The template declaration breaking style to use.
-
-  Possible values:
-
-  * ``BTDS_No`` (in configuration: ``No``)
-    Do not force break before declaration.
-    ``PenaltyBreakTemplateDeclaration`` is taken into account.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-                                   int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
-    Force break after template declaration only when the following
-    declaration spans multiple lines.
-
-    .. code-block:: c++
-
-       template <typename T> T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-  * ``BTDS_Yes`` (in configuration: ``Yes``)
-    Always break after template declaration.
-
-    .. code-block:: c++
-
-       template <typename T>
-       T foo() {
-       }
-       template <typename T>
-       T foo(int aaaaaaaaaaaaaaaaaaaaa,
-             int bbbbbbbbbbbbbbbbbbbbb) {
-       }
-
-
+**AlwaysBreakTemplateDeclarations** (``deprecated``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
+  This option is renamed to ``BreakTemplateDeclarations``.
 
 .. _AttributeMacros:
 
@@ -2021,11 +1992,28 @@ the configuration (without a prefix: ``Auto``).
       };
     }
 
+.. _BreakAdjacentStringLiterals:
+
+**BreakAdjacentStringLiterals** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <BreakAdjacentStringLiterals>`
+  Break between adjacent string literals.
+
+  .. code-block:: c++
+
+     true:
+     return "Code"
+            "\0\52\26\55\55\0"
+            "x013"
+            "\02\xBA";
+     false:
+     return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
-  Break after a group of C++11 attributes before a function
-  declaration/definition name.
+  Break after a group of C++11 attributes before variable or function
+  (including constructor/destructor) declaration/definition names or before
+  control statements, i.e. ``if``, ``switch`` (including ``case`` and
+  ``default`` labels), ``for``, and ``while`` statements.
 
   Possible values:
 
@@ -2034,27 +2022,82 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
+      [[maybe_unused]]
+      const int i;
+      [[gnu::const]] [[maybe_unused]]
+      int j;
+
       [[nodiscard]]
       inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
+
+      [[likely]]
+      if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]]
+      case 1:
+        ++b;
+        break;
+      [[likely]]
+      default:
+        return;
+      }
 
   * ``ABS_Leave`` (in configuration: ``Leave``)
     Leave the line breaking after attributes as is.
 
     .. code-block:: c++
 
+      [[maybe_unused]] const int i;
+      [[gnu::const]] [[maybe_unused]]
+      int j;
+
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
+
+      [[likely]] if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]] case 1:
+        ++b;
+        break;
+      [[likely]]
+      default:
+        return;
+      }
 
   * ``ABS_Never`` (in configuration: ``Never``)
     Never break after attributes.
 
     .. code-block:: c++
 
+      [[maybe_unused]] const int i;
+      [[gnu::const]] [[maybe_unused]] int j;
+
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]] int g();
+
+      [[likely]] if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]] case 1:
+        ++b;
+        break;
+      [[likely]] default:
+        return;
+      }
 
 
 
@@ -2069,6 +2112,117 @@ the configuration (without a prefix: ``Auto``).
      @Partial                       vs.     @Partial @Mock DataLoad loader;
      @Mock
      DataLoad loader;
+
+.. _BreakAfterReturnType:
+
+**BreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakAfterReturnType>`
+  The function declaration return type breaking style to use.
+
+  Possible values:
+
+  * ``RTBS_None`` (in configuration: ``None``)
+    This is **deprecated**. See ``Automatic`` below.
+
+  * ``RTBS_Automatic`` (in configuration: ``Automatic``)
+    Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_ExceptShortType`` (in configuration: ``ExceptShortType``)
+    Same as ``Automatic`` above, except that there is no break after short
+    return types.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int LongName::
+          AnotherLongName();
+
+  * ``RTBS_All`` (in configuration: ``All``)
+    Always break after the return type.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
+    Always break after the return types of top-level functions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Always break after the return type of function definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+  * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Always break after the return type of top-level definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+      int
+      LongName::AnotherLongName();
+
+
 
 .. _BreakArrays:
 
@@ -2810,6 +2964,65 @@ the configuration (without a prefix: ``Auto``).
      false:
      string x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+.. _BreakTemplateDeclarations:
+
+**BreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakTemplateDeclarations>`
+  The template declaration breaking style to use.
+
+  Possible values:
+
+  * ``BTDS_Leave`` (in configuration: ``Leave``)
+    Do not change the line breaking before the declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_No`` (in configuration: ``No``)
+    Do not force break before declaration.
+    ``PenaltyBreakTemplateDeclaration`` is taken into account.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+                                   int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_MultiLine`` (in configuration: ``MultiLine``)
+    Force break after template declaration only when the following
+    declaration spans multiple lines.
+
+    .. code-block:: c++
+
+       template <typename T> T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+  * ``BTDS_Yes`` (in configuration: ``Yes``)
+    Always break after template declaration.
+
+    .. code-block:: c++
+
+       template <typename T>
+       T foo() {
+       }
+       template <typename T>
+       T foo(int aaaaaaaaaaaaaaaaaaaaa,
+             int bbbbbbbbbbbbbbbbbbbbb) {
+       }
+
+
 
 .. _ColumnLimit:
 
@@ -3788,8 +4001,8 @@ the configuration (without a prefix: ``Auto``).
            });
 
   * ``LBI_OuterScope`` (in configuration: ``OuterScope``)
-    Align lambda body relative to the indentation level of the outer scope
-    the lambda signature resides in.
+    For statements within block scope, align lambda body relative to the
+    indentation level of the outer scope the lambda signature resides in.
 
     .. code-block:: c++
 
@@ -3950,6 +4163,25 @@ the configuration (without a prefix: ``Auto``).
      A(); -> y;
      A(z); -> z;
      A(a, b); // will not be expanded.
+
+.. _MainIncludeChar:
+
+**MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
+  When guessing whether a #include is the "main" include, only the include
+  directives that use the specified character are considered.
+
+  Possible values:
+
+  * ``MICD_Quote`` (in configuration: ``Quote``)
+    Main include uses quotes: ``#include "foo.hpp"`` (the default).
+
+  * ``MICD_AngleBracket`` (in configuration: ``AngleBracket``)
+    Main include uses angle brackets: ``#include <foo.hpp>``.
+
+  * ``MICD_Any`` (in configuration: ``Any``)
+    Main include uses either quotes or angle brackets.
+
+
 
 .. _MaxEmptyLinesToKeep:
 
@@ -4114,6 +4346,32 @@ the configuration (without a prefix: ``Auto``).
              }]
      }
 
+.. _ObjCPropertyAttributeOrder:
+
+**ObjCPropertyAttributeOrder** (``List of Strings``) :versionbadge:`clang-format 18` :ref:`¶ <ObjCPropertyAttributeOrder>`
+  The order in which ObjC property attributes should appear.
+
+  Attributes in code will be sorted in the order specified. Any attributes
+  encountered that are not mentioned in this array will be sorted last, in
+  stable order. Comments between attributes will leave the attributes
+  untouched.
+
+  .. warning::
+
+   Using this option could lead to incorrect code formatting due to
+   clang-format's lack of complete semantic information. As such, extra
+   care should be taken to review code changes made by this option.
+
+  .. code-block:: yaml
+
+    ObjCPropertyAttributeOrder: [
+        class, direct,
+        atomic, nonatomic,
+        assign, retain, strong, copy, weak, unsafe_unretained,
+        readonly, readwrite, getter, setter,
+        nullable, nonnull, null_resettable, null_unspecified
+    ]
+
 .. _ObjCSpaceAfterProperty:
 
 **ObjCSpaceAfterProperty** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ObjCSpaceAfterProperty>`
@@ -4240,6 +4498,11 @@ the configuration (without a prefix: ``Auto``).
 
 **PenaltyBreakOpenParenthesis** (``Unsigned``) :versionbadge:`clang-format 14` :ref:`¶ <PenaltyBreakOpenParenthesis>`
   The penalty for breaking after ``(``.
+
+.. _PenaltyBreakScopeResolution:
+
+**PenaltyBreakScopeResolution** (``Unsigned``) :versionbadge:`clang-format 18` :ref:`¶ <PenaltyBreakScopeResolution>`
+  The penalty for breaking after ``::``.
 
 .. _PenaltyBreakString:
 
@@ -4803,6 +5066,11 @@ the configuration (without a prefix: ``Auto``).
        int bar;                           int bar;
      } // namespace b                   } // namespace b
 
+.. _SkipMacroDefinitionBody:
+
+**SkipMacroDefinitionBody** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinitionBody>`
+  Do not format macro definition body.
+
 .. _SortIncludes:
 
 **SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8` :ref:`¶ <SortIncludes>`
@@ -5076,15 +5344,9 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``SBPO_Never`` (in configuration: ``Never``)
-    Never put a space before opening parentheses.
-
-    .. code-block:: c++
-
-       void f() {
-         if(true) {
-           f();
-         }
-       }
+    This is **deprecated** and replaced by ``Custom`` below, with all
+    ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    ``false``.
 
   * ``SBPO_ControlStatements`` (in configuration: ``ControlStatements``)
     Put a space before opening parentheses only after control statement
@@ -5223,6 +5485,15 @@ the configuration (without a prefix: ``Auto``).
        true:                                  false:
        void operator++ (int a);        vs.    void operator++(int a);
        object.operator++ (10);                object.operator++(10);
+
+  * ``bool AfterPlacementOperator`` If ``true``, put a space between operator ``new``/``delete`` and opening
+    parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       new (buf) T;                    vs.    new(buf) T;
+       delete (buf) T;                        delete(buf) T;
 
   * ``bool AfterRequiresInClause`` If ``true``, put space between requires keyword in a requires clause and
     opening parentheses, if there is one.
@@ -5730,7 +6001,7 @@ Examples
 ========
 
 A style similar to the `Linux Kernel style
-<https://www.kernel.org/doc/Documentation/CodingStyle>`_:
+<https://www.kernel.org/doc/html/latest/process/coding-style.html>`_:
 
 .. code-block:: yaml
 

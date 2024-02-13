@@ -3,6 +3,8 @@
 ; SafeStack for unsafe byval arguments.
 ; RUN: llc -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations=false -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,NORMAL
 ; RUN: llc -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,INSTRREF
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations=false -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ; This was built by compiling the following source with SafeStack and
 ; simplifying the result a little.

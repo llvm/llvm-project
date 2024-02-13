@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TODO: Look at performance benefits of comparing words.
 LLVM_LIBC_FUNCTION(void *, memchr, (const void *src, int c, size_t n)) {
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(void *, memchr, (const void *src, int c, size_t n)) {
       static_cast<unsigned char>(c), n);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

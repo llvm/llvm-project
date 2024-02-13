@@ -17,22 +17,23 @@
 #include <errno.h>
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+using LlvmLibcExp2Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
-DECLARE_SPECIAL_CONSTANTS(double)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
-TEST(LlvmLibcExp2Test, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::exp2(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::exp2(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::exp2(neg_inf));
-  EXPECT_FP_EQ_WITH_EXCEPTION(zero, __llvm_libc::exp2(-0x1.0p20), FE_UNDERFLOW);
-  EXPECT_FP_EQ_WITH_EXCEPTION(inf, __llvm_libc::exp2(0x1.0p20), FE_OVERFLOW);
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0, __llvm_libc::exp2(0.0));
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0, __llvm_libc::exp2(-0.0));
+TEST_F(LlvmLibcExp2Test, SpecialNumbers) {
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp2(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp2(neg_inf));
+  EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::exp2(-0x1.0p20),
+                              FE_UNDERFLOW);
+  EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp2(0x1.0p20), FE_OVERFLOW);
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0, LIBC_NAMESPACE::exp2(0.0));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0, LIBC_NAMESPACE::exp2(-0.0));
 }
 
-TEST(LlvmLibcExp2Test, TrickyInputs) {
+TEST_F(LlvmLibcExp2Test, TrickyInputs) {
   constexpr int N = 16;
   constexpr uint64_t INPUTS[N] = {
       0x3FD79289C6E6A5C0,
@@ -53,16 +54,16 @@ TEST(LlvmLibcExp2Test, TrickyInputs) {
       0xbc971547652b82fe, // x=-0x1.71547652b82fep-54
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                   __llvm_libc::exp2(x), 0.5);
+                                   LIBC_NAMESPACE::exp2(x), 0.5);
   }
 }
 
-TEST(LlvmLibcExp2Test, InDoubleRange) {
+TEST_F(LlvmLibcExp2Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = __llvm_libc::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = __llvm_libc::fputil::FPBits<double>(4.0).uintval();
+  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
+  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
@@ -80,8 +81,8 @@ TEST(LlvmLibcExp2Test, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
-      double result = __llvm_libc::exp2(x);
+      LIBC_NAMESPACE::libc_errno = 0;
+      double result = LIBC_NAMESPACE::exp2(x);
       ++cc;
       if (isnan(result) || isinf(result))
         continue;

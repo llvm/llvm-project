@@ -11,10 +11,10 @@
 
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void srand(unsigned int seed);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_SRAND_H

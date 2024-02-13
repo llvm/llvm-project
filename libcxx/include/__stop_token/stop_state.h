@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
 
 struct __stop_callback_base : __intrusive_node_base<__stop_callback_base> {
   using __callback_fn_t = void(__stop_callback_base*) noexcept;
@@ -229,7 +229,7 @@ struct __intrusive_shared_ptr_traits<__stop_state> {
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_THREADS)
 
 _LIBCPP_END_NAMESPACE_STD
 

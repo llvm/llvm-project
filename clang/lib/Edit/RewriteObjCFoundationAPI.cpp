@@ -643,7 +643,7 @@ static bool shouldNotRewriteImmediateMessageArgs(const ObjCMessageExpr *Msg,
 static bool rewriteToCharLiteral(const ObjCMessageExpr *Msg,
                                    const CharacterLiteral *Arg,
                                    const NSAPI &NS, Commit &commit) {
-  if (Arg->getKind() != CharacterLiteral::Ascii)
+  if (Arg->getKind() != CharacterLiteralKind::Ascii)
     return false;
   if (NS.isNSNumberLiteralSelector(NSAPI::NSNumberWithChar,
                                    Msg->getSelector())) {
@@ -697,11 +697,7 @@ static bool getLiteralInfo(SourceRange literalRange,
 
   struct Suff {
     static bool has(StringRef suff, StringRef &text) {
-      if (text.endswith(suff)) {
-        text = text.substr(0, text.size()-suff.size());
-        return true;
-      }
-      return false;
+      return text.consume_back(suff);
     }
   };
 
@@ -739,9 +735,9 @@ static bool getLiteralInfo(SourceRange literalRange,
   Info.F = UpperF ? "F" : "f";
 
   Info.Hex = Info.Octal = false;
-  if (text.startswith("0x"))
+  if (text.starts_with("0x"))
     Info.Hex = true;
-  else if (!isFloat && !isIntZero && text.startswith("0"))
+  else if (!isFloat && !isIntZero && text.starts_with("0"))
     Info.Octal = true;
 
   SourceLocation B = literalRange.getBegin();

@@ -10,4 +10,4 @@
 
 #include "src/math/ldexpf.h"
 
-LIST_LDEXP_TESTS(float, __llvm_libc::ldexpf)
+LIST_LDEXP_TESTS(float, LIBC_NAMESPACE::ldexpf)

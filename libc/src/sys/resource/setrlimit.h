@@ -11,10 +11,10 @@
 
 #include <sys/resource.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int setrlimit(int resource, const struct rlimit *lim);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_RESOURCE_SETRLIMIT_H

@@ -11,7 +11,7 @@
 
 // TODO: Split this file if it becomes too big.
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 class Class {};
 union Union {};
@@ -157,7 +157,7 @@ struct A {
 
 struct B : public A {
   virtual ~B() {}
-  virtual void apply() { state = B_APPLY_CALLED; }
+  virtual void apply() override { state = B_APPLY_CALLED; }
 };
 
 void free_function() {}
@@ -432,4 +432,4 @@ TEST(LlvmLibcTypeTraitsTest, true_type) { EXPECT_TRUE((true_type::value)); }
 
 // TODO void_t
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp

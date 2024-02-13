@@ -22,46 +22,30 @@ TEST_CONSTEXPR_CXX20 void test(const S& lhs, const typename S::value_type* rhs, 
   assert((lhs < rhs) == x);
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S(""), "", false);
+  test(S(""), "abcde", true);
+  test(S(""), "abcdefghij", true);
+  test(S(""), "abcdefghijklmnopqrst", true);
+  test(S("abcde"), "", false);
+  test(S("abcde"), "abcde", false);
+  test(S("abcde"), "abcdefghij", true);
+  test(S("abcde"), "abcdefghijklmnopqrst", true);
+  test(S("abcdefghij"), "", false);
+  test(S("abcdefghij"), "abcde", false);
+  test(S("abcdefghij"), "abcdefghij", false);
+  test(S("abcdefghij"), "abcdefghijklmnopqrst", true);
+  test(S("abcdefghijklmnopqrst"), "", false);
+  test(S("abcdefghijklmnopqrst"), "abcde", false);
+  test(S("abcdefghijklmnopqrst"), "abcdefghij", false);
+  test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", false);
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S(""), "", false);
-    test(S(""), "abcde", true);
-    test(S(""), "abcdefghij", true);
-    test(S(""), "abcdefghijklmnopqrst", true);
-    test(S("abcde"), "", false);
-    test(S("abcde"), "abcde", false);
-    test(S("abcde"), "abcdefghij", true);
-    test(S("abcde"), "abcdefghijklmnopqrst", true);
-    test(S("abcdefghij"), "", false);
-    test(S("abcdefghij"), "abcde", false);
-    test(S("abcdefghij"), "abcdefghij", false);
-    test(S("abcdefghij"), "abcdefghijklmnopqrst", true);
-    test(S("abcdefghijklmnopqrst"), "", false);
-    test(S("abcdefghijklmnopqrst"), "abcde", false);
-    test(S("abcdefghijklmnopqrst"), "abcdefghij", false);
-    test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", false);
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S(""), "", false);
-    test(S(""), "abcde", true);
-    test(S(""), "abcdefghij", true);
-    test(S(""), "abcdefghijklmnopqrst", true);
-    test(S("abcde"), "", false);
-    test(S("abcde"), "abcde", false);
-    test(S("abcde"), "abcdefghij", true);
-    test(S("abcde"), "abcdefghijklmnopqrst", true);
-    test(S("abcdefghij"), "", false);
-    test(S("abcdefghij"), "abcde", false);
-    test(S("abcdefghij"), "abcdefghij", false);
-    test(S("abcdefghij"), "abcdefghijklmnopqrst", true);
-    test(S("abcdefghijklmnopqrst"), "", false);
-    test(S("abcdefghijklmnopqrst"), "abcde", false);
-    test(S("abcdefghijklmnopqrst"), "abcdefghij", false);
-    test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", false);
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return true;

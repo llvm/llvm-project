@@ -19,7 +19,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 using namespace clang;

@@ -11,7 +11,7 @@ define void @PR1101(i32 %N) {
 ; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb3: Trip multiple is 5
+; CHECK-NEXT:  Loop %bb3: Trip multiple is 5
 ;
 entry:
   br label %bb3

@@ -11,10 +11,10 @@
 
 #include <setjmp.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void longjmp(__jmp_buf *buf, int val);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SETJMP_LONGJMP_H

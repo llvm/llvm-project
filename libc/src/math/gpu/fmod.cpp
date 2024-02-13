@@ -9,10 +9,10 @@
 #include "src/math/fmod.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, fmod, (double x, double y)) {
   return __builtin_fmod(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -468,6 +468,41 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
   };
 }
 
+std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
+                                                    orc::SymbolMap Symbols) {
+  unsigned PointerSize;
+  endianness Endianness =
+      TT.isLittleEndian() ? endianness::little : endianness::big;
+  switch (TT.getArch()) {
+  case Triple::aarch64:
+  case llvm::Triple::riscv64:
+  case Triple::x86_64:
+    PointerSize = 8;
+    break;
+  case llvm::Triple::arm:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::x86:
+    PointerSize = 4;
+    break;
+  default:
+    llvm::report_fatal_error("unhandled target architecture");
+  }
+
+  static std::atomic<uint64_t> Counter = {0};
+  auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
+  auto G = std::make_unique<LinkGraph>(
+      "<Absolute Symbols " + std::to_string(Index) + ">", TT, PointerSize,
+      Endianness, /*GetEdgeKindName=*/nullptr);
+  for (auto &[Name, Def] : Symbols) {
+    auto &Sym =
+        G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,
+                             Linkage::Strong, Scope::Default, /*IsLive=*/true);
+    Sym.setCallable(Def.getFlags().isCallable());
+  }
+
+  return G;
+}
+
 void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
   switch (G->getTargetTriple().getObjectFormat()) {
   case Triple::MachO:

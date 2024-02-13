@@ -56,9 +56,9 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   /// Does this instruction set its full destination register to zero?
@@ -120,11 +120,17 @@ public:
   /// Returns whether the instruction is in Q form (128 bit operands)
   static bool isQForm(const MachineInstr &MI);
 
+  /// Returns whether the instruction can be compatible with non-zero BTYPE.
+  static bool hasBTISemantics(const MachineInstr &MI);
+
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
+
+  /// Returns true if MI is one of the TCRETURN* instructions.
+  static bool isTailCallReturnInst(const MachineInstr &MI);
 
   /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.
@@ -159,7 +165,7 @@ public:
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, bool &OffsetIsScalable,
-                                    unsigned &Width,
+                                    TypeSize &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
@@ -169,12 +175,15 @@ public:
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
-  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, unsigned &Width,
+  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, TypeSize &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
-                           unsigned NumLoads, unsigned NumBytes) const override;
+                           int64_t Offset2, bool OffsetIsScalable2,
+                           unsigned ClusterSize,
+                           unsigned NumBytes) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, MCRegister DestReg,
@@ -238,6 +247,10 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
@@ -327,8 +340,8 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator Iter,
-                          DebugLoc &DL) const override;
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
 
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;
@@ -376,6 +389,13 @@ public:
   bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
                              unsigned Scale) const;
 
+  // Decrement the SP, issuing probes along the way. `TargetReg` is the new top
+  // of the stack. `FrameSetup` is passed as true, if the allocation is a part
+  // of constructing the activation frame of a function.
+  MachineBasicBlock::iterator probedStackAlloc(MachineBasicBlock::iterator MBBI,
+                                               Register TargetReg,
+                                               bool FrameSetup) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
@@ -385,6 +405,8 @@ protected:
   /// registers as machine operands.
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+  std::optional<DestSourcePair>
+  isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;

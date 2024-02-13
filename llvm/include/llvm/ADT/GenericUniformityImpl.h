@@ -33,6 +33,12 @@
 /// the propagation of the impact of divergent control flow on the divergence of
 /// values (sync dependencies).
 ///
+/// NOTE: In general, no interface exists for a transform to update
+/// (Machine)UniformityInfo. Additionally, (Machine)CycleAnalysis is a
+/// transitive dependence, but it also does not provide an interface for
+/// updating itself. Given that, transforms should not preserve uniformity in
+/// their getAnalysisUsage() callback.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GENERICUNIFORMITYIMPL_H
@@ -48,8 +54,6 @@
 #include <set>
 
 #define DEBUG_TYPE "uniformity"
-
-using namespace llvm;
 
 namespace llvm {
 

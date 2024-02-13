@@ -46,7 +46,8 @@ inline int GetRank(const ConstantSubscripts &s) {
   return static_cast<int>(s.size());
 }
 
-std::size_t TotalElementCount(const ConstantSubscripts &);
+// Returns the number of elements of shape, if no overflow occurs.
+std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape);
 
 // Validate dimension re-ordering like ORDER in RESHAPE.
 // On success, return a vector that can be used as dimOrder in
@@ -125,7 +126,8 @@ public:
   constexpr Result result() const { return result_; }
 
   constexpr DynamicType GetType() const { return result_.GetType(); }
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &,
+      const parser::CharBlock *derivedTypeRename = nullptr) const;
 
 protected:
   std::vector<Element> Reshape(const ConstantSubscripts &) const;

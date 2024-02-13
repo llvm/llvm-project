@@ -490,20 +490,6 @@ void buildAffineLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
                          function_ref<void(OpBuilder &, Location, ValueRange)>
                              bodyBuilderFn = nullptr);
 
-/// Replace `loop` with a new loop where `newIterOperands` are appended with
-/// new initialization values and `newYieldedValues` are added as new yielded
-/// values. The returned ForOp has `newYieldedValues.size()` new result values.
-/// Additionally, if `replaceLoopResults` is true, all uses of
-/// `loop.getResults()` are replaced with the first `loop.getNumResults()`
-/// return values  of the original loop respectively. The original loop is
-/// deleted and the new loop returned.
-/// Prerequisite: `newIterOperands.size() == newYieldedValues.size()`.
-AffineForOp replaceForOpWithNewYields(OpBuilder &b, AffineForOp loop,
-                                      ValueRange newIterOperands,
-                                      ValueRange newYieldedValues,
-                                      ValueRange newIterArgs,
-                                      bool replaceLoopResults = true);
-
 /// AffineBound represents a lower or upper bound in the for operation.
 /// This class does not own the underlying operands. Instead, it refers
 /// to the operands stored in the AffineForOp. Its life span should not exceed
@@ -513,27 +499,28 @@ public:
   AffineForOp getAffineForOp() { return op; }
   AffineMap getMap() { return map; }
 
-  unsigned getNumOperands() { return opEnd - opStart; }
-  Value getOperand(unsigned idx) { return op.getOperand(opStart + idx); }
+  unsigned getNumOperands() { return operands.size(); }
+  Value getOperand(unsigned idx) {
+    return op.getOperand(operands.getBeginOperandIndex() + idx);
+  }
 
   using operand_iterator = AffineForOp::operand_iterator;
   using operand_range = AffineForOp::operand_range;
 
-  operand_iterator operandBegin() { return op.operand_begin() + opStart; }
-  operand_iterator operandEnd() { return op.operand_begin() + opEnd; }
+  operand_iterator operandBegin() { return operands.begin(); }
+  operand_iterator operandEnd() { return operands.end(); }
   operand_range getOperands() { return {operandBegin(), operandEnd()}; }
 
 private:
   // 'affine.for' operation that contains this bound.
   AffineForOp op;
-  // Start and end positions of this affine bound operands in the list of
-  // the containing 'affine.for' operation operands.
-  unsigned opStart, opEnd;
+  // Operands of the affine map.
+  OperandRange operands;
   // Affine map for this bound.
   AffineMap map;
 
-  AffineBound(AffineForOp op, unsigned opStart, unsigned opEnd, AffineMap map)
-      : op(op), opStart(opStart), opEnd(opEnd), map(map) {}
+  AffineBound(AffineForOp op, OperandRange operands, AffineMap map)
+      : op(op), operands(operands), map(map) {}
 
   friend class AffineForOp;
 };

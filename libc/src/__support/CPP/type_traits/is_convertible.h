@@ -12,7 +12,7 @@
 #include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_convertible
 namespace detail {
@@ -40,6 +40,6 @@ template <class From, class To>
 LIBC_INLINE_VAR constexpr bool is_convertible_v =
     is_convertible<From, To>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H

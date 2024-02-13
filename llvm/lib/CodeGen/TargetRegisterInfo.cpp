@@ -21,11 +21,11 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -499,7 +499,7 @@ bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
   return true;
 }
 
-unsigned
+TypeSize
 TargetRegisterInfo::getRegSizeInBits(Register Reg,
                                      const MachineRegisterInfo &MRI) const {
   const TargetRegisterClass *RC{};
@@ -508,16 +508,15 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
     RC = getMinimalPhysRegClass(Reg);
-  } else {
-    LLT Ty = MRI.getType(Reg);
-    unsigned RegSize = Ty.isValid() ? Ty.getSizeInBits() : 0;
-    // If Reg is not a generic register, query the register class to
-    // get its size.
-    if (RegSize)
-      return RegSize;
-    // Since Reg is not a generic register, it must have a register class.
-    RC = MRI.getRegClass(Reg);
+    assert(RC && "Unable to deduce the register class");
+    return getRegSizeInBits(*RC);
   }
+  LLT Ty = MRI.getType(Reg);
+  if (Ty.isValid())
+    return Ty.getSizeInBits();
+
+  // Since Reg is not a generic register, it may have a register class.
+  RC = MRI.getRegClass(Reg);
   assert(RC && "Unable to deduce the register class");
   return getRegSizeInBits(*RC);
 }

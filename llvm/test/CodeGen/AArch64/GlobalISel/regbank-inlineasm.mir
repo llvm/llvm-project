@@ -57,7 +57,7 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: inlineasm_virt_reg_output
-    ; CHECK: INLINEASM &"mov ${0:w}, 7", 0 /* attdialect */, 1310730 /* regdef:PPR2_with_psub_in_PNR_p8to15_and_PPR2_with_psub1_in_PPR_3b */, def %0
+    ; CHECK: INLINEASM &"mov ${0:w}, 7", 0 /* attdialect */, 1310730 /* regdef:PPR2_with_psub_in_PNR_3b_and_PPR2_with_psub1_in_PPR_p8to15 */, def %0
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY %0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -75,7 +75,7 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: inlineasm_virt_mixed_types
-    ; CHECK: INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 1310730 /* regdef:PPR2_with_psub_in_PNR_p8to15_and_PPR2_with_psub1_in_PPR_3b */, def %0, 2162698 /* regdef:WSeqPairsClass_with_subo32_in_GPR32common */, def %1
+    ; CHECK: INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 1310730 /* regdef:PPR2_with_psub_in_PNR_3b_and_PPR2_with_psub1_in_PPR_p8to15 */, def %0, 2162698 /* regdef:WSeqPairsClass */, def %1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY %0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY %1
     ; CHECK-NEXT: $d0 = COPY [[COPY1]](s64)

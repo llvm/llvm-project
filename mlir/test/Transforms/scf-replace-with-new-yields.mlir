@@ -15,7 +15,4 @@ func.func @doubleup(%lb: index, %ub: index, %step: index, %extra_arg: f32) -> f3
 //       CHECK:     %[[DOUBLE:.+]] = arith.addf %[[INIT1]], %[[INIT1]]
 //       CHECK:     %[[DOUBLE2:.+]] = arith.addf %[[DOUBLE]], %[[DOUBLE]]
 //       CHECK:     scf.yield %[[DOUBLE]], %[[DOUBLE2]]
-//       CHECK:   %[[OLDLOOP:.+]] = scf.for
-//  CHECK-SAME:       iter_args(%[[INIT:.+]] = %[[ARG]])
-//       CHECK:     scf.yield %[[INIT]]
 //       CHECK:   return %[[NEWLOOP]]#0

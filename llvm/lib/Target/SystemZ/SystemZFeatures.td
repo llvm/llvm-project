@@ -32,6 +32,16 @@ def FeatureSoftFloat : SystemZFeature<
   "Use software emulation for floating point"
 >;
 
+def FeatureBackChain : SystemZFeature<
+  "backchain", "BackChain", (all_of FeatureBackChain),
+  "Store the address of the caller's frame into the callee's stack frame"
+>;
+
+def FeatureUnalignedSymbols : SystemZFeature<
+  "unaligned-symbols", "UnalignedSymbols", (all_of FeatureUnalignedSymbols),
+  "Don't apply the ABI minimum alignment to external symbols."
+>;
+
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture

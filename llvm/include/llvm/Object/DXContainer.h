@@ -27,8 +27,6 @@
 namespace llvm {
 namespace object {
 
-namespace DirectX {
-
 namespace detail {
 template <typename T>
 std::enable_if_t<std::is_arithmetic<T>::value, void> swapBytes(T &value) {
@@ -40,82 +38,85 @@ std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
   value.swapBytes();
 }
 } // namespace detail
-class PSVRuntimeInfo {
 
-  // This class provides a view into the underlying resource array. The Resource
-  // data is little-endian encoded and may not be properly aligned to read
-  // directly from. The dereference operator creates a copy of the data and byte
-  // swaps it as appropriate.
-  template <typename T> struct ViewArray {
+// This class provides a view into the underlying resource array. The Resource
+// data is little-endian encoded and may not be properly aligned to read
+// directly from. The dereference operator creates a copy of the data and byte
+// swaps it as appropriate.
+template <typename T> struct ViewArray {
+  StringRef Data;
+  uint32_t Stride = sizeof(T); // size of each element in the list.
+
+  ViewArray() = default;
+  ViewArray(StringRef D, size_t S) : Data(D), Stride(S) {}
+
+  using value_type = T;
+  static constexpr uint32_t MaxStride() {
+    return static_cast<uint32_t>(sizeof(value_type));
+  }
+
+  struct iterator {
     StringRef Data;
-    uint32_t Stride = sizeof(T); // size of each element in the list.
+    uint32_t Stride; // size of each element in the list.
+    const char *Current;
 
-    ViewArray() = default;
-    ViewArray(StringRef D, size_t S) : Data(D), Stride(S) {}
+    iterator(const ViewArray &A, const char *C)
+        : Data(A.Data), Stride(A.Stride), Current(C) {}
+    iterator(const iterator &) = default;
 
-    using value_type = T;
-    static constexpr uint32_t MaxStride() {
-      return static_cast<uint32_t>(sizeof(value_type));
+    value_type operator*() {
+      // Explicitly zero the structure so that unused fields are zeroed. It is
+      // up to the user to know if the fields are used by verifying the PSV
+      // version.
+      value_type Val;
+      std::memset(&Val, 0, sizeof(value_type));
+      if (Current >= Data.end())
+        return Val;
+      memcpy(static_cast<void *>(&Val), Current, std::min(Stride, MaxStride()));
+      if (sys::IsBigEndianHost)
+        detail::swapBytes(Val);
+      return Val;
     }
 
-    struct iterator {
-      StringRef Data;
-      uint32_t Stride; // size of each element in the list.
-      const char *Current;
+    iterator operator++() {
+      if (Current < Data.end())
+        Current += Stride;
+      return *this;
+    }
 
-      iterator(const ViewArray &A, const char *C)
-          : Data(A.Data), Stride(A.Stride), Current(C) {}
-      iterator(const iterator &) = default;
+    iterator operator++(int) {
+      iterator Tmp = *this;
+      ++*this;
+      return Tmp;
+    }
 
-      value_type operator*() {
-        // Explicitly zero the structure so that unused fields are zeroed. It is
-        // up to the user to know if the fields are used by verifying the PSV
-        // version.
-        value_type Val;
-        std::memset(&Val, 0, sizeof(value_type));
-        if (Current >= Data.end())
-          return Val;
-        memcpy(static_cast<void *>(&Val), Current,
-               std::min(Stride, MaxStride()));
-        if (sys::IsBigEndianHost)
-          detail::swapBytes(Val);
-        return Val;
-      }
+    iterator operator--() {
+      if (Current > Data.begin())
+        Current -= Stride;
+      return *this;
+    }
 
-      iterator operator++() {
-        if (Current < Data.end())
-          Current += Stride;
-        return *this;
-      }
+    iterator operator--(int) {
+      iterator Tmp = *this;
+      --*this;
+      return Tmp;
+    }
 
-      iterator operator++(int) {
-        iterator Tmp = *this;
-        ++*this;
-        return Tmp;
-      }
-
-      iterator operator--() {
-        if (Current > Data.begin())
-          Current -= Stride;
-        return *this;
-      }
-
-      iterator operator--(int) {
-        iterator Tmp = *this;
-        --*this;
-        return Tmp;
-      }
-
-      bool operator==(const iterator I) { return I.Current == Current; }
-      bool operator!=(const iterator I) { return !(*this == I); }
-    };
-
-    iterator begin() const { return iterator(*this, Data.begin()); }
-
-    iterator end() const { return iterator(*this, Data.end()); }
-
-    size_t size() const { return Data.size() / Stride; }
+    bool operator==(const iterator I) { return I.Current == Current; }
+    bool operator!=(const iterator I) { return !(*this == I); }
   };
+
+  iterator begin() const { return iterator(*this, Data.begin()); }
+
+  iterator end() const { return iterator(*this, Data.end()); }
+
+  size_t size() const { return Data.size() / Stride; }
+
+  bool isEmpty() const { return Data.empty(); }
+};
+
+namespace DirectX {
+class PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
   using SigElementArray = ViewArray<dxbc::PSV::v0::SignatureElement>;
@@ -232,6 +233,36 @@ public:
   }
 };
 
+class Signature {
+  ViewArray<dxbc::ProgramSignatureElement> Parameters;
+  uint32_t StringTableOffset;
+  StringRef StringTable;
+
+public:
+  ViewArray<dxbc::ProgramSignatureElement>::iterator begin() const {
+    return Parameters.begin();
+  }
+
+  ViewArray<dxbc::ProgramSignatureElement>::iterator end() const {
+    return Parameters.end();
+  }
+
+  StringRef getName(uint32_t Offset) const {
+    assert(Offset >= StringTableOffset &&
+           Offset < StringTableOffset + StringTable.size() &&
+           "Offset out of range.");
+    // Name offsets are from the start of the signature data, not from the start
+    // of the string table. The header encodes the start offset of the sting
+    // table, so we convert the offset here.
+    uint32_t TableOffset = Offset - StringTableOffset;
+    return StringTable.slice(TableOffset, StringTable.find('\0', TableOffset));
+  }
+
+  bool isEmpty() const { return Parameters.isEmpty(); }
+
+  Error initialize(StringRef Part);
+};
+
 } // namespace DirectX
 
 class DXContainer {
@@ -248,6 +279,9 @@ private:
   std::optional<uint64_t> ShaderFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
+  DirectX::Signature InputSignature;
+  DirectX::Signature OutputSignature;
+  DirectX::Signature PatchConstantSignature;
 
   Error parseHeader();
   Error parsePartOffsets();
@@ -255,6 +289,7 @@ private:
   Error parseShaderFlags(StringRef Part);
   Error parseHash(StringRef Part);
   Error parsePSVInfo(StringRef Part);
+  Error parseSignature(StringRef Part, DirectX::Signature &Array);
   friend class PartIterator;
 
 public:
@@ -340,6 +375,14 @@ public:
   const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
     return PSVInfo;
   };
+
+  const DirectX::Signature &getInputSignature() const { return InputSignature; }
+  const DirectX::Signature &getOutputSignature() const {
+    return OutputSignature;
+  }
+  const DirectX::Signature &getPatchConstantSignature() const {
+    return PatchConstantSignature;
+  }
 };
 
 } // namespace object

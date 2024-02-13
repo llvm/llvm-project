@@ -21,7 +21,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 int convert(Writer *writer, const FormatSection &to_conv) {
@@ -58,6 +58,8 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'o':
   case 'x':
   case 'X':
+  case 'b':
+  case 'B':
     return convert_int(writer, to_conv);
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
   case 'f':
@@ -86,4 +88,4 @@ int convert(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

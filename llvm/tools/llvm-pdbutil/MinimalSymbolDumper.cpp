@@ -213,6 +213,9 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, Rust, "rust");
     RETURN_CASE(SourceLanguage, ObjC, "objc");
     RETURN_CASE(SourceLanguage, ObjCpp, "objc++");
+    RETURN_CASE(SourceLanguage, AliasObj, "aliasobj");
+    RETURN_CASE(SourceLanguage, Go, "go");
+    RETURN_CASE(SourceLanguage, OldSwift, "swift");
   }
   return formatUnknownEnum(Lang);
 }
@@ -282,6 +285,7 @@ static std::string formatMachineType(CPUType Cpu) {
     RETURN_CASE(CPUType, Thumb, "thumb");
     RETURN_CASE(CPUType, ARMNT, "arm nt");
     RETURN_CASE(CPUType, D3D11_Shader, "d3d11 shader");
+    RETURN_CASE(CPUType, Unknown, "unknown");
   }
   return formatUnknownEnum(Cpu);
 }
@@ -875,9 +879,24 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
+  const char *Format;
+  switch (CVR.kind()) {
+  case S_CALLEES:
+    Format = "callee: {0}";
+    break;
+  case S_CALLERS:
+    Format = "caller: {0}";
+    break;
+  case S_INLINEES:
+    Format = "inlinee: {0}";
+    break;
+  default:
+    return llvm::make_error<CodeViewError>(
+        "Unknown CV Record type for a CallerSym object!");
+  }
   AutoIndent Indent(P, 7);
   for (const auto &I : Caller.Indices) {
-    P.formatLine("callee: {0}", idIndex(I));
+    P.formatLine(Format, idIndex(I));
   }
   return Error::success();
 }

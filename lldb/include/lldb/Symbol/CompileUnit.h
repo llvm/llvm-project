@@ -91,7 +91,7 @@ public:
   /// \param[in] user_data
   ///     User data where the SymbolFile parser can store data.
   ///
-  /// \param[in] file_spec
+  /// \param[in] support_file_sp
   ///     The file specification for the source file of this compile
   ///     unit.
   ///
@@ -112,10 +112,13 @@ public:
   ///     the compile unit is optimized will be made when
   ///     CompileUnit::GetIsOptimized() is called.
   ///
+  /// \param[in] support_files
+  ///     An rvalue list of already parsed support files.
   /// \see lldb::LanguageType
   CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-              const FileSpec &file_spec, lldb::user_id_t uid,
-              lldb::LanguageType language, lldb_private::LazyBool is_optimized);
+              lldb::SupportFileSP support_file_sp, lldb::user_id_t uid,
+              lldb::LanguageType language, lldb_private::LazyBool is_optimized,
+              SupportFileList &&support_files = {});
 
   /// Add a function to this compile unit.
   ///
@@ -223,8 +226,15 @@ public:
                          const FileSpec *file_spec_ptr, bool exact,
                          LineEntry *line_entry);
 
+  /// Return the primary source spec associated with this compile unit.
+  const FileSpec &GetPrimaryFile() const {
+    return m_primary_support_file_sp->GetSpecOnly();
+  }
+
   /// Return the primary source file associated with this compile unit.
-  const FileSpec &GetPrimaryFile() const { return m_file_spec; }
+  lldb::SupportFileSP GetPrimarySupportFile() const {
+    return m_primary_support_file_sp;
+  }
 
   /// Get the line table for the compile unit.
   ///
@@ -265,7 +275,13 @@ public:
   ///
   /// \return
   ///     A support file list object.
-  const FileSpecList &GetSupportFiles();
+  const SupportFileList &GetSupportFiles();
+
+  /// Used by plugins that parse the support file list.
+  SupportFileList &GetSupportFileList() {
+    m_flags.Set(flagsParsedSupportFiles);
+    return m_support_files;
+  }
 
   /// Get the compile unit's imported module list.
   ///
@@ -330,9 +346,6 @@ public:
   /// \param[in] line_table
   ///     A line table object pointer that this object now owns.
   void SetLineTable(LineTable *line_table);
-
-  void SetSupportFiles(const FileSpecList &support_files);
-  void SetSupportFiles(FileSpecList &&support_files);
 
   void SetDebugMacros(const DebugMacrosSP &debug_macros);
 
@@ -410,10 +423,9 @@ protected:
   /// compile unit.
   std::vector<SourceModule> m_imported_modules;
   /// The primary file associated with this compile unit.
-  FileSpec m_file_spec;
-  /// Files associated with this compile unit's line table and
-  /// declarations.
-  FileSpecList m_support_files;
+  lldb::SupportFileSP m_primary_support_file_sp;
+  /// Files associated with this compile unit's line table and declarations.
+  SupportFileList m_support_files;
   /// Line table that will get parsed on demand.
   std::unique_ptr<LineTable> m_line_table_up;
   /// Debug macros that will get parsed on demand.

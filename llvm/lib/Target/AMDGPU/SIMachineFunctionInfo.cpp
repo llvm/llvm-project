@@ -37,7 +37,7 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F), GWSResourcePSV(getTM(STI)),
+    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
       UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
@@ -243,10 +243,45 @@ Register SIMachineFunctionInfo::addLDSKernelId() {
   return ArgInfo.LDSKernelId.getRegister();
 }
 
+SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
+    const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
+    unsigned AllocSizeDWord, int KernArgIdx, int PaddingSGPRs) {
+  assert(!ArgInfo.PreloadKernArgs.count(KernArgIdx) &&
+         "Preload kernel argument allocated twice.");
+  NumUserSGPRs += PaddingSGPRs;
+  // If the available register tuples are aligned with the kernarg to be
+  // preloaded use that register, otherwise we need to use a set of SGPRs and
+  // merge them.
+  Register PreloadReg =
+      TRI.getMatchingSuperReg(getNextUserSGPR(), AMDGPU::sub0, RC);
+  if (PreloadReg &&
+      (RC == &AMDGPU::SReg_32RegClass || RC == &AMDGPU::SReg_64RegClass)) {
+    ArgInfo.PreloadKernArgs[KernArgIdx].Regs.push_back(PreloadReg);
+    NumUserSGPRs += AllocSizeDWord;
+  } else {
+    for (unsigned I = 0; I < AllocSizeDWord; ++I) {
+      ArgInfo.PreloadKernArgs[KernArgIdx].Regs.push_back(getNextUserSGPR());
+      NumUserSGPRs++;
+    }
+  }
+
+  // Track the actual number of SGPRs that HW will preload to.
+  UserSGPRInfo.allocKernargPreloadSGPRs(AllocSizeDWord + PaddingSGPRs);
+  return &ArgInfo.PreloadKernArgs[KernArgIdx].Regs;
+}
+
 void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
                                              uint64_t Size, Align Alignment) {
   // Skip if it is an entry function or the register is already added.
   if (isEntryFunction() || WWMSpills.count(VGPR))
+    return;
+
+  // Skip if this is a function with the amdgpu_cs_chain or
+  // amdgpu_cs_chain_preserve calling convention and this is a scratch register.
+  // We never need to allocate a spill for these because we don't even need to
+  // restore the inactive lanes for them (they're scratchier than the usual
+  // scratch registers).
+  if (isChainFunction() && SIRegisterInfo::isChainScratchRegister(VGPR))
     return;
 
   WWMSpills.insert(std::make_pair(
@@ -277,6 +312,33 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
   return false;
 }
 
+void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
+    MachineFunction &MF) {
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned I = 0, E = SpillPhysVGPRs.size(); I < E; ++I) {
+    Register Reg = SpillPhysVGPRs[I];
+    Register NewReg =
+        TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    if (!NewReg || NewReg >= Reg)
+      break;
+
+    MRI.replaceRegWith(Reg, NewReg);
+
+    // Update various tables with the new VGPR.
+    SpillPhysVGPRs[I] = NewReg;
+    WWMReservedRegs.remove(Reg);
+    WWMReservedRegs.insert(NewReg);
+    WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
+    WWMSpills.erase(Reg);
+
+    for (MachineBasicBlock &MBB : MF) {
+      MBB.removeLiveIn(Reg);
+      MBB.sortUniqueLiveIns();
+    }
+  }
+}
+
 bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
     MachineFunction &MF, int FI, unsigned LaneIndex) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -294,13 +356,17 @@ bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
 }
 
 bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
-    MachineFunction &MF, int FI, unsigned LaneIndex) {
+    MachineFunction &MF, int FI, unsigned LaneIndex, bool IsPrologEpilog) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register LaneVGPR;
   if (!LaneIndex) {
-    LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    // Find the highest available register if called before RA to ensure the
+    // lowest registers are available for allocation. The LaneVGPR, in that
+    // case, will be shifted back to the lowest range after VGPR allocation.
+    LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF,
+                                       !IsPrologEpilog);
     if (LaneVGPR == AMDGPU::NoRegister) {
       // We have no VGPRs left for spilling SGPRs. Reset because we will not
       // partially spill the SGPR to VGPRs.
@@ -314,8 +380,9 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
       MBB.addLiveIn(LaneVGPR);
       MBB.sortUniqueLiveIns();
     }
+    SpillPhysVGPRs.push_back(LaneVGPR);
   } else {
-    LaneVGPR = WWMReservedRegs.back();
+    LaneVGPR = SpillPhysVGPRs.back();
   }
 
   SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
@@ -323,12 +390,12 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
   return true;
 }
 
-bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
-                                                        int FI,
-                                                        bool IsPrologEpilog) {
+bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(
+    MachineFunction &MF, int FI, bool SpillToPhysVGPRLane,
+    bool IsPrologEpilog) {
   std::vector<SIRegisterInfo::SpilledReg> &SpillLanes =
-      IsPrologEpilog ? SGPRSpillsToPhysicalVGPRLanes[FI]
-                     : SGPRSpillsToVirtualVGPRLanes[FI];
+      SpillToPhysVGPRLane ? SGPRSpillsToPhysicalVGPRLanes[FI]
+                          : SGPRSpillsToVirtualVGPRLanes[FI];
 
   // This has already been allocated.
   if (!SpillLanes.empty())
@@ -348,14 +415,15 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
   assert(ST.getRegisterInfo()->spillSGPRToVGPR() &&
          "not spilling SGPRs to VGPRs");
 
-  unsigned &NumSpillLanes =
-      IsPrologEpilog ? NumPhysicalVGPRSpillLanes : NumVirtualVGPRSpillLanes;
+  unsigned &NumSpillLanes = SpillToPhysVGPRLane ? NumPhysicalVGPRSpillLanes
+                                                : NumVirtualVGPRSpillLanes;
 
   for (unsigned I = 0; I < NumLanes; ++I, ++NumSpillLanes) {
     unsigned LaneIndex = (NumSpillLanes % WaveSize);
 
-    bool Allocated = IsPrologEpilog
-                         ? allocatePhysicalVGPRForSGPRSpills(MF, FI, LaneIndex)
+    bool Allocated = SpillToPhysVGPRLane
+                         ? allocatePhysicalVGPRForSGPRSpills(MF, FI, LaneIndex,
+                                                             IsPrologEpilog)
                          : allocateVirtualVGPRForSGPRSpills(MF, FI, LaneIndex);
     if (!Allocated) {
       NumSpillLanes -= I;
@@ -484,14 +552,10 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
     return *ScavengeFI;
-  if (isEntryFunction()) {
-    ScavengeFI = MFI.CreateFixedObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
-  } else {
-    ScavengeFI = MFI.CreateStackObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
-        TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
-  }
+
+  ScavengeFI =
+      MFI.CreateStackObject(TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
+                            TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
   return *ScavengeFI;
 }
 
@@ -570,6 +634,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
     return true;
   };
 
+  // TODO: Need to serialize kernarg preloads.
   bool Any = false;
   Any |= convertArg(AI.PrivateSegmentBuffer, ArgInfo.PrivateSegmentBuffer);
   Any |= convertArg(AI.DispatchPtr, ArgInfo.DispatchPtr);
@@ -692,7 +757,7 @@ bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
         for (const auto &CI : IA->ParseConstraints()) {
           for (StringRef Code : CI.Codes) {
             Code.consume_front("{");
-            if (Code.startswith("a"))
+            if (Code.starts_with("a"))
               return true;
           }
         }

@@ -16,8 +16,8 @@ TEST(LlvmLibcIsAlNum, DefaultLocale) {
   for (int c = -255; c < 255; ++c) {
     if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
         ('0' <= c && c <= '9'))
-      EXPECT_NE(__llvm_libc::isalnum(c), 0);
+      EXPECT_NE(LIBC_NAMESPACE::isalnum(c), 0);
     else
-      EXPECT_EQ(__llvm_libc::isalnum(c), 0);
+      EXPECT_EQ(LIBC_NAMESPACE::isalnum(c), 0);
   }
 }

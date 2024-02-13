@@ -28,7 +28,7 @@ add_header_library(
 add_header_library(
   linux_platform_errors
   HDRS
-    linux_platform_errors
+    linux_platform_errors.h
   DEPENDS
     .linux_extension_errors
     .posix_errors
@@ -38,7 +38,7 @@ add_header_library(
 add_header_library(
   minimal_platform_errors
   HDRS
-    minimal_platform_errors
+    minimal_platform_errors.h
   DEPENDS
     .stdc_errors
 )
@@ -73,7 +73,7 @@ add_header_library(
 add_header_library(
   linux_platform_signals
   HDRS
-    linux_platform_signals
+    linux_platform_signals.h
   DEPENDS
     .linux_extension_signals
     .posix_signals
@@ -83,7 +83,7 @@ add_header_library(
 add_header_library(
   minimal_platform_signals
   HDRS
-    minimal_platform_signals
+    minimal_platform_signals.h
   DEPENDS
     .stdc_signals
 )

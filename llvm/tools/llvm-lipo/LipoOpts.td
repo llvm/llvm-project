@@ -58,3 +58,6 @@ def replace
 def output : Option<["-", "--"], "output", KIND_SEPARATE>,
              HelpText<"Create output file with specified name">;
 def o : JoinedOrSeparate<["-"], "o">, Alias<output>;
+
+def fat64 : Option<["-", "--"], "fat64", KIND_FLAG>,
+            HelpText<"Use 64 bits Universal Mach-O format">;

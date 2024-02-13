@@ -136,6 +136,13 @@ public:
   u64 operator[](uptr RingPos) const {
     return atomic_load_relaxed(&Ring[RingPos & RingMask]);
   }
+
+  // This is done for the purpose of fork safety in multithreaded programs and
+  // does not fully disable StackDepot. In particular, find() still works and
+  // only insert() is blocked.
+  void disable() NO_THREAD_SAFETY_ANALYSIS { RingEndMu.lock(); }
+
+  void enable() NO_THREAD_SAFETY_ANALYSIS { RingEndMu.unlock(); }
 };
 
 } // namespace scudo

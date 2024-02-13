@@ -131,8 +131,8 @@ void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(ComparisonBegin, CallBegin),
       Negated ? "!" : "");
-  Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-      CallEnd.getLocWithOffset(1), ComparisonEnd.getLocWithOffset(1)));
+  Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+      CallEnd.getLocWithOffset(1), ComparisonEnd));
 }
 
 } // namespace clang::tidy::readability

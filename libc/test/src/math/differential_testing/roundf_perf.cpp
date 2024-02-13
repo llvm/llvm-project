@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, __llvm_libc::roundf, ::roundf,
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::roundf, ::roundf,
                                 "roundf_perf.log")

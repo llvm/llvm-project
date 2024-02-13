@@ -1,5 +1,4 @@
-! RUN: %flang_fc1 -emit-fir %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="FIR" %s
-! RUN: %flang_fc1 -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !CHECK-LABEL: vec_insert_testf32i64
@@ -9,18 +8,6 @@ subroutine vec_insert_testf32i64(v, x, i8)
   vector(real(4)) :: r
   integer(8) :: i8
   r = vec_insert(v, x, i8)
-
-! FIR: %[[v:.*]] = fir.load %arg{{[0-9]}} : !fir.ref<f32>
-! FIR: %[[x:.*]] = fir.load %arg{{[0-9]}} : !fir.ref<!fir.vector<4:f32>>
-! FIR: %[[i8:.*]] = fir.load %arg{{[0-9]}} : !fir.ref<i64>
-! FIR: %[[vr:.*]] = fir.convert %[[x]] : (!fir.vector<4:f32>) -> vector<4xf32>
-! FIR: %[[c:.*]] = arith.constant 4 : i64
-! FIR: %[[urem:.*]] = llvm.urem %[[i8]], %[[c]] : i64
-! FIR: %[[c3:.*]] = arith.constant 3 : i64
-! FIR: %[[sub:.*]] = llvm.sub %[[c3]], %[[urem]] : i64
-! FIR: %[[r:.*]] = vector.insertelement %[[v]], %[[vr]][%[[sub]] : i64] : vector<4xf32>
-! FIR: %[[r_conv:.*]] = fir.convert %[[r]] : (vector<4xf32>) -> !fir.vector<4:f32>
-! FIR: fir.store %[[r_conv]] to %{{[0-9]}} : !fir.ref<!fir.vector<4:f32>>
 
 ! LLVMIR: %[[v:.*]] = load float, ptr %{{[0-9]}}, align 4
 ! LLVMIR: %[[x:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
@@ -38,18 +25,6 @@ subroutine vec_insert_testi64i8(v, x, i1, i2, i4, i8)
   vector(integer(8)) :: r
   integer(1) :: i1
   r = vec_insert(v, x, i1)
-
-! FIR: %[[v:.*]] = fir.load %arg{{[0-9]}} : !fir.ref<i64>
-! FIR: %[[x:.*]] = fir.load %arg{{[0-9]}} : !fir.ref<!fir.vector<2:i64>>
-! FIR: %[[i1:.*]] = fir.load %arg{{[0-9]}} : !fir.ref<i8>
-! FIR: %[[vr:.*]] = fir.convert %[[x]] : (!fir.vector<2:i64>) -> vector<2xi64>
-! FIR: %[[c:.*]] = arith.constant 2 : i8
-! FIR: %[[urem:.*]] = llvm.urem %[[i1]], %[[c]] : i8
-! FIR: %[[c1:.*]] = arith.constant 1 : i8
-! FIR: %[[sub:.*]] = llvm.sub %[[c1]], %[[urem]] : i8
-! FIR: %[[r:.*]] = vector.insertelement %[[v]], %[[vr]][%[[sub]] : i8] : vector<2xi64>
-! FIR: %[[r_conv:.*]] = fir.convert %[[r]] : (vector<2xi64>) -> !fir.vector<2:i64>
-! FIR: fir.store %[[r_conv]] to %{{[0-9]}} : !fir.ref<!fir.vector<2:i64>>
 
 ! LLVMIR: %[[v:.*]] = load i64, ptr %{{[0-9]}}, align 8
 ! LLVMIR: %[[x:.*]] = load <2 x i64>, ptr %{{[0-9]}}, align 16

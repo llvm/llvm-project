@@ -1,7 +1,7 @@
 ; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --match-full-lines
   
 ; Make sure the promoted zext doesn't get a debug location associated.
-; CHECK: %promoted = zext i8 %t to i64
+; CHECK: %promoted1 = zext i8 %t to i64
 
 define void @patatino(ptr %p, ptr %q, i32 %b, ptr %addr) !dbg !6 {
 entry:

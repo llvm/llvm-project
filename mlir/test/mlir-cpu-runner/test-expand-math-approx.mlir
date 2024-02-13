@@ -591,10 +591,104 @@ func.func @roundeven() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// Sinh.
+// -------------------------------------------------------------------------- //
+
+func.func @sinh_f32(%a : f32) {
+  %r = math.sinh %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @sinh_4xf32(%a : vector<4xf32>) {
+  %r = math.sinh %a : vector<4xf32>
+  vector.print %r : vector<4xf32>
+  return
+}
+
+func.func @sinh_8xf32(%a : vector<8xf32>) {
+  %r = math.sinh %a : vector<8xf32>
+  vector.print %r : vector<8xf32>
+  return
+}
+
+func.func @sinh() {
+  // CHECK: 1.60192
+  %f0 = arith.constant 1.25 : f32
+  call @sinh_f32(%f0) : (f32) -> ()
+
+  // CHECK: 0.252612, 0.822317, 1.1752, 1.60192
+  %v1 = arith.constant dense<[0.25, 0.75, 1.0, 1.25]> : vector<4xf32>
+  call @sinh_4xf32(%v1) : (vector<4xf32>) -> ()
+
+  // CHECK: 0.100167, 0.201336, 0.30452, 0.410752, 0.521095, 0.636654, 0.758584, 0.888106
+  %v2 = arith.constant dense<[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]> : vector<8xf32>
+  call @sinh_8xf32(%v2) : (vector<8xf32>) -> ()
+
+  // CHECK: -0.100167, -0.201336, -0.30452, -0.410752, -0.521095, -0.636654, -0.758584, -0.888106
+  %v3 = arith.constant dense<[-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8]> : vector<8xf32>
+  call @sinh_8xf32(%v3) : (vector<8xf32>) -> ()
+
+  // CHECK: nan
+  %nan = arith.constant 0x7fc00000 : f32
+  call @sinh_f32(%nan) : (f32) -> ()
+
+ return
+}
+
+// -------------------------------------------------------------------------- //
+// Cosh.
+// -------------------------------------------------------------------------- //
+
+func.func @cosh_f32(%a : f32) {
+  %r = math.cosh %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @cosh_4xf32(%a : vector<4xf32>) {
+  %r = math.cosh %a : vector<4xf32>
+  vector.print %r : vector<4xf32>
+  return
+}
+
+func.func @cosh_8xf32(%a : vector<8xf32>) {
+  %r = math.cosh %a : vector<8xf32>
+  vector.print %r : vector<8xf32>
+  return
+}
+
+func.func @cosh() {
+  // CHECK: 1.88842
+  %f0 = arith.constant 1.25 : f32
+  call @cosh_f32(%f0) : (f32) -> ()
+
+  // CHECK: 1.03141, 1.29468, 1.54308, 1.88842
+  %v1 = arith.constant dense<[0.25, 0.75, 1.0, 1.25]> : vector<4xf32>
+  call @cosh_4xf32(%v1) : (vector<4xf32>) -> ()
+
+  // CHECK: 1.005, 1.02007, 1.04534, 1.08107, 1.12763, 1.18547, 1.25517, 1.33743
+  %v2 = arith.constant dense<[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]> : vector<8xf32>
+  call @cosh_8xf32(%v2) : (vector<8xf32>) -> ()
+
+  // CHECK: 1.005, 1.02007, 1.04534, 1.08107, 1.12763, 1.18547, 1.25517, 1.33743
+  %v3 = arith.constant dense<[-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8]> : vector<8xf32>
+  call @cosh_8xf32(%v3) : (vector<8xf32>) -> ()
+
+  // CHECK: nan
+  %nan = arith.constant 0x7fc00000 : f32
+  call @cosh_f32(%nan) : (f32) -> ()
+
+ return
+}
+
 func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
   call @powf() : () -> ()
   call @roundeven() : () -> ()
+  call @sinh() : () -> ()
+  call @cosh() : () -> ()
   return
 }

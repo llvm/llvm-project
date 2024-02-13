@@ -10,6 +10,7 @@ define hidden i64 @f1() align 2 {
 ; TUNIT-LABEL: define {{[^@]+}}@f1
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] align 2 {
 ; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[REF_TMP1:%.*]] = alloca i8, i32 0, align 8
 ; TUNIT-NEXT:    ret i64 undef
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -17,6 +18,7 @@ define hidden i64 @f1() align 2 {
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] align 2 {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[REF_TMP:%.*]] = alloca [[A:%.*]], align 8
+; CGSCC-NEXT:    [[REF_TMP1:%.*]] = alloca i8, i32 0, align 8
 ; CGSCC-NEXT:    [[CALL2:%.*]] = call i64 @f2() #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i64 [[CALL2]]
 ;

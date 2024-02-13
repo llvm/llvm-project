@@ -1625,6 +1625,40 @@ SmallVector has grown a few other minor advantages over std::vector, causing
    and is no longer "private to the implementation". A name like
    ``SmallVectorHeader`` might be more appropriate.
 
+.. _dss_pagedvector:
+
+llvm/ADT/PagedVector.h
+^^^^^^^^^^^^^^^^^^^^^^
+
+``PagedVector<Type, PageSize>`` is a random access container that allocates
+``PageSize`` elements of type ``Type`` when the first element of a page is
+accessed via the ``operator[]``.  This is useful for cases where the number of
+elements is known in advance; their actual initialization is expensive; and
+they are sparsely used. This utility uses page-granular lazy initialization
+when the element is accessed. When the number of used pages is small
+significant memory savings can be achieved.
+
+The main advantage is that a ``PagedVector`` allows to delay the actual
+allocation of the page until it's needed, at the extra cost of one pointer per
+page and one extra indirection when accessing elements with their positional
+index.
+
+In order to minimise the memory footprint of this container, it's important to
+balance the PageSize so that it's not too small (otherwise the overhead of the
+pointer per page might become too high) and not too big (otherwise the memory
+is wasted if the page is not fully used).
+
+Moreover, while retaining the order of the elements based on their insertion
+index, like a vector, iterating over the elements via ``begin()`` and ``end()``
+is not provided in the API, due to the fact accessing the elements in order
+would allocate all the iterated pages, defeating memory savings and the purpose
+of the ``PagedVector``.
+
+Finally a ``materialized_begin()`` and ``materialized_end`` iterators are
+provided to access the elements associated to the accessed pages, which could
+speed up operations that need to iterate over initialized elements in a
+non-ordered manner.
+
 .. _dss_vector:
 
 <vector>
@@ -2289,6 +2323,10 @@ construct, but cheap to compare against.  The DenseMapInfo is responsible for
 defining the appropriate comparison and hashing methods for each alternate key
 type used.
 
+DenseMap.h also contains a SmallDenseMap variant, that similar to
+:ref:`SmallVector <dss_smallvector>` performs no heap allocation until the
+number of elements in the template parameter N are exceeded.
+
 .. _dss_valuemap:
 
 llvm/IR/ValueMap.h
@@ -2709,24 +2747,6 @@ pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
   Instruction* pinst = &*i; // Grab pointer to instruction reference
   const Instruction& inst = *j;
 
-However, the iterators you'll be working with in the LLVM framework are special:
-they will automatically convert to a ptr-to-instance type whenever they need to.
-Instead of dereferencing the iterator and then taking the address of the result,
-you can simply assign the iterator to the proper pointer type and you get the
-dereference and address-of operation as a result of the assignment (behind the
-scenes, this is a result of overloading casting mechanisms).  Thus the second
-line of the last example,
-
-.. code-block:: c++
-
-  Instruction *pinst = &*i;
-
-is semantically equivalent to
-
-.. code-block:: c++
-
-  Instruction *pinst = i;
-
 It's also possible to turn a class pointer into the corresponding iterator, and
 this is a constant time operation (very efficient).  The following code snippet
 illustrates use of the conversion constructors provided by LLVM iterators.  By
@@ -2740,18 +2760,6 @@ obtaining it via iteration over some structure:
     ++it; // After this line, it refers to the instruction after *inst
     if (it != inst->getParent()->end()) errs() << *it << "\n";
   }
-
-Unfortunately, these implicit conversions come at a cost; they prevent these
-iterators from conforming to standard iterator conventions, and thus from being
-usable with standard algorithms and containers.  For example, they prevent the
-following code, where ``B`` is a ``BasicBlock``, from compiling:
-
-.. code-block:: c++
-
-  llvm::SmallVector<llvm::Instruction *, 16>(B->begin(), B->end());
-
-Because of this, these implicit conversions may be removed some day, and
-``operator*`` changed to return a pointer instead of a reference.
 
 .. _iterate_complex:
 
@@ -3523,8 +3531,8 @@ Important Public Members of the ``Module`` class
 * | ``Module::global_iterator`` - Typedef for global variable list iterator
   | ``Module::const_global_iterator`` - Typedef for const_iterator.
   | ``Module::insertGlobalVariable()`` - Inserts a global variable to the list.
-  | ``Module::removeGlobalVariable()`` - Removes a global variable frome the list.
-  | ``Module::eraseGlobalVariable()`` - Removes a global variable frome the list and deletes it.
+  | ``Module::removeGlobalVariable()`` - Removes a global variable from the list.
+  | ``Module::eraseGlobalVariable()`` - Removes a global variable from the list and deletes it.
   | ``global_begin()``, ``global_end()``, ``global_size()``, ``global_empty()``
 
   These are forwarding methods that make it easy to access the contents of a

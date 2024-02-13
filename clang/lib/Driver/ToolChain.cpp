@@ -315,7 +315,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
 
   for (const auto &DS : DriverSuffixes) {
     StringRef Suffix(DS.Suffix);
-    if (ProgName.endswith(Suffix)) {
+    if (ProgName.ends_with(Suffix)) {
       Pos = ProgName.size() - Suffix.size();
       return &DS;
     }
@@ -345,7 +345,7 @@ static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   // added via -target as implicit first argument.
   const DriverSuffix *DS = FindDriverSuffix(ProgName, Pos);
 
-  if (!DS && ProgName.endswith(".exe")) {
+  if (!DS && ProgName.ends_with(".exe")) {
     // Try again after stripping the executable suffix:
     // clang++.exe -> clang++
     ProgName = ProgName.drop_back(StringRef(".exe").size());
@@ -606,7 +606,7 @@ std::string ToolChain::getCompilerRTPath() const {
   } else {
     llvm::sys::path::append(Path, "lib", getOSLibName());
   }
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string ToolChain::getCompilerRTBasename(const ArgList &Args,
@@ -659,7 +659,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     SmallString<128> P(LibPath);
     llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
-      return std::string(P.str());
+      return std::string(P);
   }
 
   // Fall back to the old expected compiler-rt name if the new one does not
@@ -668,7 +668,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
   SmallString<128> Path(getCompilerRTPath());
   llvm::sys::path::append(Path, CRTBasename);
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
@@ -783,7 +783,7 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
     llvm::sys::path::append(Path, "lib");
     for (auto &S : SS)
       llvm::sys::path::append(Path, S);
-    Paths.push_back(std::string(Path.str()));
+    Paths.push_back(std::string(Path));
   };
 
   AddPath({getTriple().str()});
@@ -1319,7 +1319,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
-      getTriple().isAArch64() || getTriple().isRISCV())
+      getTriple().isAArch64() || getTriple().isRISCV() ||
+      getTriple().isLoongArch64())
     Res |= SanitizerKind::CFIICall;
   if (getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().isAArch64(64) || getTriple().isRISCV())

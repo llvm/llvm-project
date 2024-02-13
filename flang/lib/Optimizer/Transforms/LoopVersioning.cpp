@@ -11,7 +11,7 @@
 /// This pass looks for loops iterating over assumed-shape arrays, that can
 /// be optimized by "guessing" that the stride is element-sized.
 ///
-/// This is done by createing two versions of the same loop: one which assumes
+/// This is done by creating two versions of the same loop: one which assumes
 /// that the elements are contiguous (stride == size of element), and one that
 /// is the original generic loop.
 ///
@@ -49,8 +49,10 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -104,26 +106,24 @@ struct ArgsUsageInLoop {
   // Debug dump of the structure members assuming that
   // the information has been collected for the given loop.
   void dump(fir::DoLoopOp loop) const {
-    // clang-format off
-    LLVM_DEBUG(
-        mlir::OpPrintingFlags printFlags;
-        printFlags.skipRegions();
-        llvm::dbgs() << "Arguments usage info for loop:\n";
-        loop.print(llvm::dbgs(), printFlags);
-        llvm::dbgs() << "\nUsed args:\n";
-        for (auto &use : usageInfo) {
-          mlir::Value v = use.first;
-          v.print(llvm::dbgs(), printFlags);
-          llvm::dbgs() << "\n";
-        }
-        llvm::dbgs() << "\nCannot transform args:\n";
-        for (mlir::Value arg : cannotTransform) {
-          arg.print(llvm::dbgs(), printFlags);
-          llvm::dbgs() << "\n";
-        }
-        llvm::dbgs() << "====\n"
-    );
-    // clang-format on
+    LLVM_DEBUG({
+      mlir::OpPrintingFlags printFlags;
+      printFlags.skipRegions();
+      llvm::dbgs() << "Arguments usage info for loop:\n";
+      loop.print(llvm::dbgs(), printFlags);
+      llvm::dbgs() << "\nUsed args:\n";
+      for (auto &use : usageInfo) {
+        mlir::Value v = use.first;
+        v.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\n";
+      }
+      llvm::dbgs() << "\nCannot transform args:\n";
+      for (mlir::Value arg : cannotTransform) {
+        arg.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\n";
+      }
+      llvm::dbgs() << "====\n";
+    });
   }
 
   // Erase usageInfo and cannotTransform entries for a set
@@ -144,16 +144,6 @@ struct ArgsUsageInLoop {
   }
 };
 } // namespace
-
-/// @c replaceOuterUses - replace uses outside of @c op with result of @c
-/// outerOp
-static void replaceOuterUses(mlir::Operation *op, mlir::Operation *outerOp) {
-  const mlir::Operation *outerParent = outerOp->getParentOp();
-  op->replaceUsesWithIf(outerOp, [&](mlir::OpOperand &operand) {
-    mlir::Operation *owner = operand.getOwner();
-    return outerParent == owner->getParentOp();
-  });
-}
 
 static fir::SequenceType getAsSequenceType(mlir::Value *v) {
   mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v->getType()));
@@ -252,6 +242,12 @@ void LoopVersioningPass::runOnOperation() {
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
+  std::optional<mlir::DataLayout> dl =
+      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+  if (!dl)
+    mlir::emitError(module.getLoc(),
+                    "data layout attribute is required to perform " DEBUG_TYPE
+                    "pass");
   for (auto &arg : args) {
     // Optional arguments must be checked for IsPresent before
     // looking for the bounds. They are unsupported for the time being.
@@ -267,11 +263,13 @@ void LoopVersioningPass::runOnOperation() {
           seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent()) {
         size_t typeSize = 0;
         mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(arg.getType());
-        if (elementType.isa<mlir::FloatType>() ||
-            elementType.isa<mlir::IntegerType>())
-          typeSize = elementType.getIntOrFloatBitWidth() / 8;
-        else if (auto cty = elementType.dyn_cast<fir::ComplexType>())
-          typeSize = 2 * cty.getEleType(kindMap).getIntOrFloatBitWidth() / 8;
+        if (mlir::isa<mlir::FloatType>(elementType) ||
+            mlir::isa<mlir::IntegerType>(elementType) ||
+            mlir::isa<fir::ComplexType>(elementType)) {
+          auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignment(
+              arg.getLoc(), elementType, *dl, kindMap);
+          typeSize = llvm::alignTo(eleSize, eleAlign);
+        }
         if (typeSize)
           argsOfInterest.push_back({arg, typeSize, rank, {}});
         else
@@ -292,6 +290,8 @@ void LoopVersioningPass::runOnOperation() {
   // immediately nested in a loop.
   llvm::DenseMap<fir::DoLoopOp, ArgsUsageInLoop> argsInLoops;
 
+  auto &domInfo = getAnalysis<mlir::DominanceInfo>();
+
   // Traverse the loops in post-order and see
   // if those arguments are used inside any loop.
   func.walk([&](fir::DoLoopOp loop) {
@@ -309,11 +309,14 @@ void LoopVersioningPass::runOnOperation() {
       for (auto a : argsOfInterest) {
         if (a.arg == normaliseVal(operand)) {
           // Use the reboxed value, not the block arg when re-creating the loop.
-          // TODO: should we check that the operand dominates the loop?
-          // If this might be a case, we should record such operands in
-          // argsInLoop.cannotTransform, so that they disable the transformation
-          // for the parent loops as well.
           a.arg = operand;
+
+          // Check that the operand dominates the loop?
+          // If this is the case, record such operands in argsInLoop.cannot-
+          // Transform, so that they disable the transformation for the parent
+          /// loops as well.
+          if (!domInfo.dominates(a.arg, loop))
+            argsInLoop.cannotTransform.insert(a.arg);
 
           // No support currently for sliced arrays.
           // This means that we cannot transform properly
@@ -338,15 +341,13 @@ void LoopVersioningPass::runOnOperation() {
   });
 
   // Dump loops info after initial collection.
-  // clang-format off
-  LLVM_DEBUG(
-      llvm::dbgs() << "Initial usage info:\n";
-      for (fir::DoLoopOp loop : originalLoops) {
-        auto &argsInLoop = argsInLoops[loop];
-        argsInLoop.dump(loop);
-      }
-  );
-  // clang-format on
+  LLVM_DEBUG({
+    llvm::dbgs() << "Initial usage info:\n";
+    for (fir::DoLoopOp loop : originalLoops) {
+      auto &argsInLoop = argsInLoops[loop];
+      argsInLoop.dump(loop);
+    }
+  });
 
   // Clear argument usage for parent loops if an inner loop
   // contains a non-transformable usage.
@@ -376,15 +377,13 @@ void LoopVersioningPass::runOnOperation() {
     });
   }
 
-  // clang-format off
-  LLVM_DEBUG(
-      llvm::dbgs() << "Final usage info:\n";
-      for (fir::DoLoopOp loop : originalLoops) {
-        auto &argsInLoop = argsInLoops[loop];
-        argsInLoop.dump(loop);
-      }
-  );
-  // clang-format on
+  LLVM_DEBUG({
+    llvm::dbgs() << "Final usage info:\n";
+    for (fir::DoLoopOp loop : originalLoops) {
+      auto &argsInLoop = argsInLoops[loop];
+      argsInLoop.dump(loop);
+    }
+  });
 
   // Reduce the collected information to a list of loops
   // with attached arguments usage information.
@@ -538,7 +537,7 @@ void LoopVersioningPass::runOnOperation() {
 
     // Add the original loop in the else-side of the if operation.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    replaceOuterUses(op.op, ifOp);
+    op.op->replaceAllUsesWith(ifOp);
     op.op->remove();
     builder.insert(op.op);
     // Rely on "cloned loop has results, so original loop also has results".

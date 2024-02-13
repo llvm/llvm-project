@@ -259,6 +259,8 @@ TYPE_PARSER(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
+    "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
+                   parenthesized(Parser<OmpObjectList>{}))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
     "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
@@ -268,13 +270,16 @@ TYPE_PARSER(
                   parenthesized(Parser<OmpObjectList>{}))) ||
     "GRAINSIZE" >> construct<OmpClause>(construct<OmpClause::Grainsize>(
                        parenthesized(scalarIntExpr))) ||
+    "HAS_DEVICE_ADDR" >>
+        construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
+            parenthesized(Parser<OmpObjectList>{}))) ||
     "HINT" >> construct<OmpClause>(
                   construct<OmpClause::Hint>(parenthesized(constantExpr))) ||
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
-                           parenthesized(nonemptyList(name)))) ||
+                           parenthesized(Parser<OmpObjectList>{}))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
                          parenthesized(Parser<OmpObjectList>{}))) ||
     "LINEAR" >> construct<OmpClause>(construct<OmpClause::Linear>(

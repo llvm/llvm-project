@@ -12,7 +12,7 @@
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_integral
 template <typename T> struct is_integral {
@@ -34,6 +34,6 @@ public:
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_integral_v = is_integral<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_INTEGRAL_H

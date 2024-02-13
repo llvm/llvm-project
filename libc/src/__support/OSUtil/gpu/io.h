@@ -12,10 +12,10 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void write_to_stderr(cpp::string_view msg);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_IO_H

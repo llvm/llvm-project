@@ -17,12 +17,12 @@
 #include <stdlib.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace {
 
 bool getcwd_syscall(char *buf, size_t size) {
-  int ret = __llvm_libc::syscall_impl<int>(SYS_getcwd, buf, size);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_getcwd, buf, size);
   if (ret < 0) {
     libc_errno = -ret;
     return false;
@@ -63,4 +63,4 @@ LLVM_LIBC_FUNCTION(char *, getcwd, (char *buf, size_t size)) {
   return buf;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

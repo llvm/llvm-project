@@ -178,6 +178,8 @@ variable and type on the CMake command line:
 
   $ cmake -DVARIABLE:TYPE=value path/to/llvm/source
 
+.. _cmake_frequently_used_variables:
+
 Frequently-used CMake variables
 -------------------------------
 
@@ -275,7 +277,7 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_STANDARD**:STRING
   Sets the C++ standard to conform to when building LLVM.  Possible values are
-  17 and 20.  LLVM Requires C++ 17 or higher.  This defaults to 17.
+  17 and 20.  LLVM Requires C++17 or higher.  This defaults to 17.
 
 **CMAKE_INSTALL_BINDIR**:PATH
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
@@ -320,6 +322,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   (off) irrespective of whether normal (`NDEBUG`-based) assertions are
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
+
+**LLVM_ADDITIONAL_BUILD_TYPES**:LIST
+  Adding a semicolon separated list of additional build types to this flag
+  allows for them to be specified as values in CMAKE_BUILD_TYPE without
+  encountering a fatal error during the configuration process.
 
 **LLVM_UNREACHABLE_OPTIMIZE**:BOOL
   This flag controls the behavior of `llvm_unreachable()` in release build
@@ -384,7 +391,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
- **LLVM_INDIVIDUAL_TEST_COVERAGE**: BOOL
+**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
   Enable individual test case coverage. When set to ON, code coverage data for
   each test case will be generated and stored in a separate directory under the
   config.test_exec_root path. This feature allows code coverage analysis of each
@@ -427,6 +434,9 @@ enabled sub-projects. Nearly all of these variable names begin with
   'install-xcode-toolchain'. This target will create a directory at
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
+
+**LLVM_<target>_LINKER_FLAGS**:STRING
+  Defines the set of linker flags that should be applied to a <target>.
 
 **LLVM_DEFAULT_TARGET_TRIPLE**:STRING
   LLVM target to use for code generation when no target is explicitly specified.
@@ -733,6 +743,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   directory contains executables with the expected names, no separate
   native versions of those executables will be built.
 
+**LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE**:BOOL
+  Defaults to ``OFF``. If set to ``ON``, CMake's default logic for library IDs
+  on Darwin in the build tree will be used. Otherwise the install-time library
+  IDs will be used in the build tree as well. Mainly useful when other CMake
+  library ID control variables (e.g., ``CMAKE_INSTALL_NAME_DIR``) are being
+  set to non-standard values.
+
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use
@@ -744,6 +761,19 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
+
+**LLVM_RAM_PER_COMPILE_JOB**:STRING
+  Calculates the amount of Ninja compile jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
+  will be between one and amount of logical cores.
+
+**LLVM_RAM_PER_LINK_JOB**:STRING
+  Calculates the amount of Ninja link jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_LINK_JOBS. Link jobs will 
+  be between one and amount of logical cores. Link jobs will not run 
+  exclusively therefore you should add an offset of one or two compile jobs 
+  to be sure its not terminated in your memory restricted environment. On ELF
+  platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This
@@ -1090,10 +1120,10 @@ And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 When you are done developing your pass, you may wish to integrate it
 into the LLVM source tree. You can achieve it in two easy steps:
 
-#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transform`` directory.
+#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transforms`` directory.
 
 #. Adding ``add_subdirectory(<pass name>)`` line into
-   ``<LLVM root>/lib/Transform/CMakeLists.txt``.
+   ``<LLVM root>/lib/Transforms/CMakeLists.txt``.
 
 Compiler/Platform-specific topics
 =================================

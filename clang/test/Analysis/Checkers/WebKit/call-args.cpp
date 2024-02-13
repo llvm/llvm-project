@@ -10,6 +10,12 @@ namespace simple {
     consume_refcntbl(provide());
     // expected-warning@-1{{Call argument is uncounted and unsafe}}
   }
+
+  // Test that the checker works with [[clang::suppress]].
+  void foo_suppressed() {
+    [[clang::suppress]]
+    consume_refcntbl(provide()); // no-warning
+  }
 }
 
 namespace multi_arg {
@@ -259,22 +265,6 @@ namespace param_forwarding_method {
       methodclass::consume_ref_countable_ptr(downcast(param));
        methodclass::consume_ref_countable_ptr(bitwise_cast(param));
      }
-  }
-}
-
-namespace make_ref {
-  void makeRef(RefCountable*) {}
-  void makeRefPtr(RefCountable*) {}
-  void makeWeakPtr(RefCountable*) {}
-  void makeWeakPtr(RefCountable&) {}
-
-  void foo() {
-    makeRef(provide());
-    makeRefPtr(provide());
-    RefPtr<RefCountable> a(provide());
-    Ref<RefCountable> b(provide());
-    makeWeakPtr(provide());
-    makeWeakPtr(*provide());
   }
 }
 

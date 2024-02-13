@@ -90,4 +90,5 @@ add_header_library(
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.arg_list
+  ${use_system_file}
 )

@@ -1077,11 +1077,10 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) nounwin
 ; KNL-LABEL: test_extractelement_v64i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
+; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL-NEXT:    vpminub %xmm1, %xmm0, %xmm1
-; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1113,11 +1112,10 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) nounwind
 ; KNL-LABEL: extractelement_v64i1_alt:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
+; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL-NEXT:    vpminub %xmm1, %xmm0, %xmm1
-; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -2177,7 +2175,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    movzwl %ax, %eax
 ; KNL-NEXT:    vmovd %eax, %xmm1
 ; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; KNL-NEXT:    vucomiss %xmm2, %xmm1
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    andl $1, %eax
@@ -2219,7 +2217,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-NEXT:    movzwl %ax, %eax
 ; SKX-NEXT:    vmovd %eax, %xmm1
 ; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SKX-NEXT:    vucomiss %xmm2, %xmm1
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    kmovd %eax, %k0

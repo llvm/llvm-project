@@ -13,19 +13,19 @@
 
 #include <stddef.h> // For size_t.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
-  char **env_ptr = reinterpret_cast<char **>(__llvm_libc::app.envPtr);
+  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
 
   if (name == nullptr || env_ptr == nullptr)
     return nullptr;
 
-  __llvm_libc::cpp::string_view env_var_name(name);
+  LIBC_NAMESPACE::cpp::string_view env_var_name(name);
   if (env_var_name.size() == 0)
     return nullptr;
   for (char **env = env_ptr; *env != nullptr; env++) {
-    __llvm_libc::cpp::string_view cur(*env);
+    LIBC_NAMESPACE::cpp::string_view cur(*env);
     if (!cur.starts_with(env_var_name))
       continue;
 
@@ -41,4 +41,4 @@ LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

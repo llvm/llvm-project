@@ -387,3 +387,20 @@
 // RUN:   | FileCheck --check-prefix=XARCH-DEVICE %s
 // XARCH-DEVICE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-O3"
 // XARCH-DEVICE-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-O3"
+
+//
+// Check that `-gpulibc` includes the LLVM C libraries for the GPU.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
+// RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
+// RUN:      --offload-arch=sm_52 -gpulibc -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
+// LIBC-GPU: "-lcgpu"{{.*}}"-lmgpu"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
+// RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
+// RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NO-LIBC-GPU %s
+// NO-LIBC-GPU-NOT: "-lcgpu"{{.*}}"-lmgpu"

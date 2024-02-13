@@ -17,7 +17,8 @@
 // involved test, look at fork_test.
 
 TEST(LlvmLibcwait4Test, NoHangTest) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   int status;
-  ASSERT_THAT(__llvm_libc::wait4(-1, &status, WNOHANG, nullptr), Fails(ECHILD));
+  ASSERT_THAT(LIBC_NAMESPACE::wait4(-1, &status, WNOHANG, nullptr),
+              Fails(ECHILD));
 }

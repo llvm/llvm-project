@@ -409,11 +409,13 @@ static void computeFunctionSummary(
         auto &ValueInfo = CallGraphEdges[Index.getOrInsertValueInfo(
             cast<GlobalValue>(CalledValue))];
         ValueInfo.updateHotness(Hotness);
+        if (CB->isTailCall())
+          ValueInfo.setHasTailCall(true);
         // Add the relative block frequency to CalleeInfo if there is no profile
         // information.
         if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
           uint64_t BBFreq = BFI->getBlockFreq(&BB).getFrequency();
-          uint64_t EntryFreq = BFI->getEntryFreq();
+          uint64_t EntryFreq = BFI->getEntryFreq().getFrequency();
           ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
         }
       } else {

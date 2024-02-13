@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, __llvm_libc::log2f, ::log2f,
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::log2f, ::log2f,
                                 "log2f_perf.log")

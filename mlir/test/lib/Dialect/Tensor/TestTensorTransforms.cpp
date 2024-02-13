@@ -84,9 +84,9 @@ struct TestTensorTransforms
           "the extract_slice of collapse_shape pattern"),
       llvm::cl::init(false)};
 
-  Option<bool> testSimplifyPackPatterns{
-      *this, "test-simplify-pack-patterns",
-      llvm::cl::desc("Test patterns to simplify tensor.pack"),
+  Option<bool> testSimplifyPackUnpackPatterns{
+      *this, "test-simplify-pack-unpack-patterns",
+      llvm::cl::desc("Test patterns to simplify tensor.pack and tensor.unpack"),
       llvm::cl::init(false)};
 
   Option<bool> testTrackingListener{
@@ -137,9 +137,9 @@ applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
-static void applySimplifyPackPatterns(Operation *rootOp) {
+static void applySimplifyPackUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
-  tensor::populateSimplifyTensorPack(patterns);
+  tensor::populateSimplifyPackAndUnpackPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -354,15 +354,16 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
                                                       /*payloadRoot=*/nullptr);
   MLIRContext *context = rootOp->getContext();
   OpBuilder builder(context);
-  auto transformOp = builder.create<transform::NamedSequenceOp>(
-      rootOp->getLoc(),
-      /*sym_name=*/"test_sequence",
-      /*function_type=*/
-      TypeAttr::get(FunctionType::get(context, TypeRange{}, TypeRange{})),
-      /*sym_visibility*/ StringAttr::get(context, "public"),
-      /*arg_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()),
-      /*res_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()));
-  DummyTrackingListener listener(transformState, transformOp);
+  OwningOpRef<transform::NamedSequenceOp> transformOp =
+      builder.create<transform::NamedSequenceOp>(
+          rootOp->getLoc(),
+          /*sym_name=*/"test_sequence",
+          /*function_type=*/
+          TypeAttr::get(FunctionType::get(context, TypeRange{}, TypeRange{})),
+          /*sym_visibility*/ StringAttr::get(context, "public"),
+          /*arg_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()),
+          /*res_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()));
+  DummyTrackingListener listener(transformState, transformOp.get());
   Operation *replacement = listener.getReplacementOp(replaced, replacements);
   if (!replacement) {
     replaced->emitError("listener could not find replacement op");
@@ -375,8 +376,8 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
 
 void TestTensorTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
-  if (testSimplifyPackPatterns)
-    applySimplifyPackPatterns(rootOp);
+  if (testSimplifyPackUnpackPatterns)
+    applySimplifyPackUnpackPatterns(rootOp);
   if (testFoldConstantExtractSlice)
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)

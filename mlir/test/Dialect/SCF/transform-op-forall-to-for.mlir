@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file --verify-diagnostics | FileCheck %s
 
 func.func private @callee(%i: index, %j: index)
 
@@ -14,10 +14,12 @@ func.func @two_iters(%ub1: index, %ub2: index) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %0 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  transform.loop.forall_to_for %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.loop.forall_to_for %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -34,11 +36,13 @@ func.func @repeated(%ub1: index, %ub2: index) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %0 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{expected a single payload op}}
-  transform.loop.forall_to_for %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{expected a single payload op}}
+    transform.loop.forall_to_for %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -53,11 +57,13 @@ func.func @repeated(%ub1: index, %ub2: index) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %0 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{op expects as many results (1) as payload has induction variables (2)}}
-  transform.loop.forall_to_for %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{op expects as many results (1) as payload has induction variables (2)}}
+    transform.loop.forall_to_for %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -65,9 +71,11 @@ transform.sequence failures(propagate) {
 // expected-note @below {{payload op}}
 func.func private @callee(%i: index, %j: index)
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{expected the payload to be scf.forall}}
-  transform.loop.forall_to_for %0 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{expected the payload to be scf.forall}}
+    transform.loop.forall_to_for %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

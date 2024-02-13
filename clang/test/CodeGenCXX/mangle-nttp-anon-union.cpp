@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -emit-llvm %s -o - -triple=x86_64-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 -emit-llvm %s -o - -triple=x86_64-linux-gnu | llvm-cxxfilt -n | FileCheck %s --check-prefix DEMANGLED
+// RUN: %clang_cc1 -std=c++20 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-linux-gnu | llvm-cxxfilt -n | FileCheck %s --check-prefix DEMANGLED
 
 template<typename T>
 struct wrapper1 {

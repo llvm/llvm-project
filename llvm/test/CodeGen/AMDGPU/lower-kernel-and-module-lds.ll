@@ -15,7 +15,7 @@
 
 ;.
 ; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 8, !absolute_symbol !0
-; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
 ; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t poison, align 16, !absolute_symbol !0
 ; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t poison, align 16, !absolute_symbol !0
 ; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t poison, align 2, !absolute_symbol !0
@@ -99,4 +99,4 @@ define void @f0() {
 ; CHECK: attributes #3 = { "amdgpu-lds-size"="4" }
 ; CHECK: attributes #4 = { "amdgpu-lds-size"="9" }
 
-; CHECK: !0 = !{i64 0, i64 1}
+; CHECK: !0 = !{i32 0, i32 1}

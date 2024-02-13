@@ -1,4 +1,4 @@
-// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))'
+// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' 2>&1 | FileCheck %s
 
 // CHECK: test_y(1)#0 <-> test_x(1)#0: MayAlias
 func.func @_QPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "y"}) {

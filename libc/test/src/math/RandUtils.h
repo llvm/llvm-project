@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testutils {
 
 // Wrapper for std::rand.
 int rand();
 
 } // namespace testutils
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

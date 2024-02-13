@@ -11,7 +11,7 @@
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-ALIEN: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-ALIEN: declare extern_weak void @llvm.objc.release(ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr returned)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.initWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.loadWeakRetained(ptr)
@@ -24,7 +24,7 @@
 // ARC-NATIVE: declare ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-NATIVE: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-NATIVE: declare void @llvm.objc.release(ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr returned)
+// ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.initWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.loadWeakRetained(ptr)
@@ -1358,11 +1358,11 @@ struct AggDtor getAggDtor(void);
 // CHECK-LABEL: define{{.*}} void @test71
 void test71(void) {
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T]])
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T2:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T2]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T2]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T2]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T2]])
   getAggDtor();

@@ -18,7 +18,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 using namespace clang;
@@ -92,6 +91,9 @@ public:
 
         const auto *Arg = CE->getArg(ArgIdx);
 
+        if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
+          Arg = defaultArg->getExpr();
+
         std::pair<const clang::Expr *, bool> ArgOrigin =
             tryToFindPtrOrigin(Arg, true);
 
@@ -126,6 +128,16 @@ public:
     // of object on LHS.
     if (auto *MemberOp = dyn_cast<CXXOperatorCallExpr>(CE)) {
       // Note: assignemnt to built-in type isn't derived from CallExpr.
+      if (MemberOp->getOperator() ==
+          OO_Equal) { // Ignore assignment to Ref/RefPtr.
+        auto *callee = MemberOp->getDirectCallee();
+        if (auto *calleeDecl = dyn_cast<CXXMethodDecl>(callee)) {
+          if (const CXXRecordDecl *classDecl = calleeDecl->getParent()) {
+            if (isRefCounted(classDecl))
+              return true;
+          }
+        }
+      }
       if (MemberOp->isAssignmentOp())
         return false;
     }
@@ -149,7 +161,7 @@ public:
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "makeWeakPtr" || name == "downcast" || name == "bitwise_cast" ||
+        name == "dynamicDowncast" || name == "downcast" || name == "bitwise_cast" ||
         name == "is" || name == "equal" || name == "hash" ||
         name == "isType"
         // FIXME: Most/all of these should be implemented via attributes.

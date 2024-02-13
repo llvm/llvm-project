@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=si-optimize-exec-masking-pre-ra,greedy -verify-machineinstrs -o - %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=si-optimize-exec-masking-pre-ra,greedy -verify-machineinstrs -o - %s
 
 # This sample can trigger a "Non-empty but used interval" assert in regalloc if
 # SIOptimizeExecMaskingPreRA does not update live intervals correctly.

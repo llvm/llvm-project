@@ -56,16 +56,9 @@ add_libc_unittest(
     libc_time_unittests
   SRCS
     gettimeofday_test.cpp
-  HDRS
-    TmHelper.h
-    TmMatcher.h
-  CXX_STANDARD
-    20
   DEPENDS
     libc.include.time
     libc.src.time.gettimeofday
-    libc.src.time.nanosleep
-    libc.src.errno.errno
 )
 
 add_libc_unittest(
@@ -78,6 +71,7 @@ add_libc_unittest(
     TmMatcher.h
   DEPENDS
     libc.src.time.gmtime
+    libc.src.__support.CPP.limits
 )
 
 add_libc_unittest(
@@ -105,6 +99,7 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.mktime
+    libc.src.__support.CPP.limits
 )
 
 # Sleeping is not supported on older NVPTX architectures.

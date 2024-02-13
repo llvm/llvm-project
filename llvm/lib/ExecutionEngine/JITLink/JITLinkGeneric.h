@@ -13,7 +13,6 @@
 #ifndef LIB_EXECUTIONENGINE_JITLINK_JITLINKGENERIC_H
 #define LIB_EXECUTIONENGINE_JITLINK_JITLINKGENERIC_H
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -134,8 +133,7 @@ private:
     LLVM_DEBUG(dbgs() << "Fixing up blocks:\n");
 
     for (auto &Sec : G.sections()) {
-      bool NoAllocSection =
-          Sec.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc;
+      bool NoAllocSection = Sec.getMemLifetime() == orc::MemLifetime::NoAlloc;
 
       for (auto *B : Sec.blocks()) {
         LLVM_DEBUG(dbgs() << "  " << *B << ":\n");
@@ -163,12 +161,11 @@ private:
 
           // If B is a block in a Standard or Finalize section then make sure
           // that no edges point to symbols in NoAlloc sections.
-          assert(
-              (NoAllocSection || !E.getTarget().isDefined() ||
-               E.getTarget().getBlock().getSection().getMemLifetimePolicy() !=
-                   orc::MemLifetimePolicy::NoAlloc) &&
-              "Block in allocated section has edge pointing to no-alloc "
-              "section");
+          assert((NoAllocSection || !E.getTarget().isDefined() ||
+                  E.getTarget().getBlock().getSection().getMemLifetime() !=
+                      orc::MemLifetime::NoAlloc) &&
+                 "Block in allocated section has edge pointing to no-alloc "
+                 "section");
 
           // Dispatch to LinkerImpl for fixup.
           if (auto Err = impl().applyFixup(G, *B, E))

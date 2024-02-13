@@ -168,7 +168,7 @@ static void emitPropertyEnum(std::string PropertyName,
 }
 
 void lldb_private::EmitPropertyDefs(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Property definitions for LLDB.", OS);
+  emitSourceFileHeader("Property definitions for LLDB.", OS, Records);
 
   std::vector<Record *> Properties =
       Records.getAllDerivedDefinitions("Property");
@@ -179,7 +179,7 @@ void lldb_private::EmitPropertyDefs(RecordKeeper &Records, raw_ostream &OS) {
 
 void lldb_private::EmitPropertyEnumDefs(RecordKeeper &Records,
                                         raw_ostream &OS) {
-  emitSourceFileHeader("Property definition enum for LLDB.", OS);
+  emitSourceFileHeader("Property definition enum for LLDB.", OS, Records);
 
   std::vector<Record *> Properties =
       Records.getAllDerivedDefinitions("Property");

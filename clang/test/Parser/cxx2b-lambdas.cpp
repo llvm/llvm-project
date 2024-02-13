@@ -66,3 +66,15 @@ void static_captures() {
     }
   };
 }
+
+constexpr auto static_capture_constexpr() {
+  char n = 'n';
+  return [n] static { return n; }(); // expected-error {{a static lambda cannot have any captures}}
+}
+static_assert(static_capture_constexpr()); // expected-error {{static assertion expression is not an integral constant expression}}
+
+constexpr auto capture_constexpr() {
+  char n = 'n';
+  return [n] { return n; }();
+}
+static_assert(capture_constexpr());

@@ -943,12 +943,12 @@ PrintCompletion(FILE *output_file,
   }
 }
 
-static void
-DisplayCompletions(::EditLine *editline, FILE *output_file,
-                   llvm::ArrayRef<CompletionResult::Completion> results) {
+void Editline::DisplayCompletions(
+    Editline &editline, llvm::ArrayRef<CompletionResult::Completion> results) {
   assert(!results.empty());
 
-  fprintf(output_file, "\n" ANSI_CLEAR_BELOW "Available completions:\n");
+  fprintf(editline.m_output_file,
+          "\n" ANSI_CLEAR_BELOW "Available completions:\n");
   const size_t page_size = 40;
   bool all = false;
 
@@ -960,7 +960,7 @@ DisplayCompletions(::EditLine *editline, FILE *output_file,
   const size_t max_len = longest->GetCompletion().size();
 
   if (results.size() < page_size) {
-    PrintCompletion(output_file, results, max_len);
+    PrintCompletion(editline.m_output_file, results, max_len);
     return;
   }
 
@@ -969,17 +969,31 @@ DisplayCompletions(::EditLine *editline, FILE *output_file,
     size_t remaining = results.size() - cur_pos;
     size_t next_size = all ? remaining : std::min(page_size, remaining);
 
-    PrintCompletion(output_file, results.slice(cur_pos, next_size), max_len);
+    PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
+                    max_len);
 
     cur_pos += next_size;
 
     if (cur_pos >= results.size())
       break;
 
-    fprintf(output_file, "More (Y/n/a): ");
-    char reply = 'n';
-    int got_char = el_getc(editline, &reply);
-    fprintf(output_file, "\n");
+    fprintf(editline.m_output_file, "More (Y/n/a): ");
+    // The type for the output and the type for the parameter are different,
+    // to allow interoperability with older versions of libedit. The container
+    // for the reply must be as wide as what our implementation is using,
+    // but libedit may use a narrower type depending on the build
+    // configuration.
+    EditLineGetCharType reply = L'n';
+    int got_char = el_wgetc(editline.m_editline,
+                            reinterpret_cast<EditLineCharType *>(&reply));
+    // Check for a ^C or other interruption.
+    if (editline.m_editor_status == EditorStatus::Interrupted) {
+      editline.m_editor_status = EditorStatus::Editing;
+      fprintf(editline.m_output_file, "^C\n");
+      break;
+    }
+
+    fprintf(editline.m_output_file, "\n");
     if (got_char == -1 || reply == 'n')
       break;
     if (reply == 'a')
@@ -1050,7 +1064,7 @@ unsigned char Editline::TabCommand(int ch) {
     return CC_REDISPLAY;
   }
 
-  DisplayCompletions(m_editline, m_output_file, results);
+  DisplayCompletions(*this, results);
 
   DisplayInput();
   MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);

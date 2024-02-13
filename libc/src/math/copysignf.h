@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_COPYSIGNF_H
 #define LLVM_LIBC_SRC_MATH_COPYSIGNF_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 float copysignf(float x, float y);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_COPYSIGNF_H

@@ -20,6 +20,8 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -32,8 +34,8 @@ int main(int, char**) {
   // If joinable() is true, calls request_stop() and then join().
   // request_stop is called
   {
-    std::optional<std::jthread> jt([] {});
-    bool called = false;
+    std::optional<std::jthread> jt = support::make_test_jthread([] {});
+    bool called                    = false;
     std::stop_callback cb(jt->get_stop_token(), [&called] { called = true; });
     jt.reset();
     assert(called);
@@ -48,10 +50,10 @@ int main(int, char**) {
     constexpr auto numberOfThreads = 10u;
     jts.reserve(numberOfThreads);
     for (auto i = 0u; i < numberOfThreads; ++i) {
-      jts.emplace_back([&calledTimes] {
+      jts.emplace_back(support::make_test_jthread([&calledTimes] {
         std::this_thread::sleep_for(std::chrono::milliseconds{2});
         calledTimes.fetch_add(1, std::memory_order_relaxed);
-      });
+      }));
     }
     jts.clear();
 

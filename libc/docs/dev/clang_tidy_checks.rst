@@ -2,6 +2,12 @@
 
 LLVM libc clang-tidy checks
 ===========================
+
+
+.. warning::
+  This page is severely out of date. Much of the information it contains may be
+  incorrect. Please only remove this warning once the page has been updated.
+
 These are the clang-tidy checks designed to help enforce implementation
 standards.
 The configuration file is ``src/.clang-tidy``.
@@ -30,19 +36,19 @@ implementation-in-namespace
 ---------------------------
 
 It is part of our implementation standards that all implementation pieces live
-under the ``__llvm_libc`` namespace. This prevents pollution of the global
+under the ``LIBC_NAMESPACE`` namespace. This prevents pollution of the global
 namespace. Without a formal check to ensure this, an implementation might
 compile and pass unit tests, but not produce a usable libc function.
 
 This check that ensures any function call resolves to a function within the
-``__llvm_libc`` namespace.
+``LIBC_NAMESPACE`` namespace.
 
 .. code-block:: c++
 
     // Correct: implementation inside the correct namespace.
-    namespace __llvm_libc {
+    namespace LIBC_NAMESPACE {
         void LLVM_LIBC_ENTRYPOINT(strcpy)(char *dest, const char *src) {}
-        // Namespaces within __llvm_libc namespace are allowed.
+        // Namespaces within LIBC_NAMESPACE namespace are allowed.
         namespace inner{
             int localVar = 0;
         }
@@ -67,7 +73,7 @@ creates some uncertainty about which library a call resolves to especially when
 a public header with non-namespaced functions like ``string.h`` is included.
 
 This check ensures any function call resolves to a function within the
-__llvm_libc namespace.
+LIBC_NAMESPACE namespace.
 
 There are exceptions for the following functions: 
 ``__errno_location`` so that ``errno`` can be set;
@@ -76,10 +82,10 @@ are always external and can be intercepted.
 
 .. code-block:: c++
 
-    namespace __llvm_libc {
+    namespace LIBC_NAMESPACE {
 
     // Allow calls with the fully qualified name.
-    __llvm_libc::strlen("hello");
+    LIBC_NAMESPACE::strlen("hello");
 
     // Allow calls to compiler provided functions.
     (void)__builtin_abs(-1);
@@ -93,4 +99,4 @@ are always external and can be intercepted.
     // Allow calling into specific global functions (explained above)
     ::malloc(10);
 
-    } // namespace __llvm_libc
+    } // namespace LIBC_NAMESPACE

@@ -9,11 +9,13 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -42,20 +44,6 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
                                                   appendUnderscore);
 }
 
-/// Update the early outlining parent name
-void updateEarlyOutliningParentName(mlir::func::FuncOp funcOp,
-                                    bool appendUnderscore) {
-  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
-          funcOp.getOperation())) {
-    auto oldName = earlyOutlineOp.getParentName();
-    if (oldName != "") {
-      auto dName = fir::NameUniquer::deconstruct(oldName);
-      std::string newName = mangleExternalName(dName, appendUnderscore);
-      earlyOutlineOp.setParentName(newName);
-    }
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -74,8 +62,9 @@ public:
   matchAndRewrite(mlir::func::FuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::LogicalResult ret = success();
-    rewriter.startRootUpdate(op);
-    auto result = fir::NameUniquer::deconstruct(op.getSymName());
+    rewriter.startOpModification(op);
+    llvm::StringRef oldName = op.getSymName();
+    auto result = fir::NameUniquer::deconstruct(oldName);
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
       auto newSymbol =
           rewriter.getStringAttr(mangleExternalName(result, appendUnderscore));
@@ -86,10 +75,11 @@ public:
 
       op.setSymNameAttr(newSymbol);
       mlir::SymbolTable::setSymbolName(op, newSymbol);
-    }
 
-    updateEarlyOutliningParentName(op, appendUnderscore);
-    rewriter.finalizeRootUpdate(op);
+      op->setAttr(fir::getInternalFuncNameAttrName(),
+                  mlir::StringAttr::get(op->getContext(), oldName));
+    }
+    rewriter.finalizeOpModification(op);
     return ret;
   }
 
@@ -108,7 +98,7 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     auto result = fir::NameUniquer::deconstruct(
         op.getSymref().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
@@ -116,7 +106,7 @@ public:
       op.setSymrefAttr(mlir::SymbolRefAttr::get(op.getContext(), newName));
       SymbolTable::setSymbolName(op, newName);
     }
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return success();
   }
 

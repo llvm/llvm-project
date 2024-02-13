@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -200,9 +201,17 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  auto iface =
-      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  return iface ? iface.getAllocaBlock() : getEntryBlock();
+  if (auto ompOutlineableIface =
+          getRegion()
+              .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
+    return ompOutlineableIface.getAllocaBlock();
+  }
+  if (auto accRecipeIface =
+          getRegion().getParentOfType<mlir::acc::RecipeInterface>()) {
+    return accRecipeIface.getAllocaBlock(getRegion());
+  }
+
+  return getEntryBlock();
 }
 
 mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
@@ -262,19 +271,24 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
 
 /// Create a global variable in the (read-only) data section. A global variable
 /// must have a unique name to identify and reference it.
-fir::GlobalOp fir::FirOpBuilder::createGlobal(mlir::Location loc,
-                                              mlir::Type type,
-                                              llvm::StringRef name,
-                                              mlir::StringAttr linkage,
-                                              mlir::Attribute value,
-                                              bool isConst, bool isTarget) {
+fir::GlobalOp fir::FirOpBuilder::createGlobal(
+    mlir::Location loc, mlir::Type type, llvm::StringRef name,
+    mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
+    bool isTarget, fir::CUDADataAttributeAttr cudaAttr) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
     return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto glob =
-      create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value, linkage);
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  if (cudaAttr) {
+    auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                            module.getContext());
+    attrs.push_back(mlir::NamedAttribute(
+        fir::GlobalOp::getCudaAttrAttrName(globalOpName), cudaAttr));
+  }
+  auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
+                                    linkage, attrs);
   restoreInsertionPoint(insertPt);
   return glob;
 }
@@ -282,7 +296,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(mlir::Location loc,
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage) {
+    mlir::StringAttr linkage, fir::CUDADataAttributeAttr cudaAttr) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
@@ -299,22 +313,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   return glob;
 }
 
-fir::DispatchTableOp fir::FirOpBuilder::createDispatchTableOp(
-    mlir::Location loc, llvm::StringRef name, llvm::StringRef parentName) {
-  auto module = getModule();
-  auto insertPt = saveInsertionPoint();
-  if (auto dt = module.lookupSymbol<fir::DispatchTableOp>(name))
-    return dt;
-  setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto dt = create<fir::DispatchTableOp>(loc, name, mlir::Type{}, parentName);
-  restoreInsertionPoint(insertPt);
-  return dt;
-}
-
-mlir::Value
-fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
-                                        mlir::Value val,
-                                        bool allowCharacterConversion) {
+mlir::Value fir::FirOpBuilder::convertWithSemantics(
+    mlir::Location loc, mlir::Type toTy, mlir::Value val,
+    bool allowCharacterConversion, bool allowRebox) {
   assert(toTy && "store location must be typed");
   auto fromTy = val.getType();
   if (fromTy == toTy)
@@ -372,13 +373,15 @@ fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
     return create<fir::EmboxProcOp>(loc, toTy, proc);
   }
 
-  if (((fir::isPolymorphicType(fromTy) &&
-        (fir::isAllocatableType(fromTy) || fir::isPointerType(fromTy)) &&
-        fir::isPolymorphicType(toTy)) ||
-       (fir::isPolymorphicType(fromTy) && toTy.isa<fir::BoxType>())) &&
-      !(fir::isUnlimitedPolymorphicType(fromTy) && fir::isAssumedType(toTy)))
-    return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
-                                /*slice=*/mlir::Value{});
+  // Legacy: remove when removing non HLFIR lowering path.
+  if (allowRebox)
+    if (((fir::isPolymorphicType(fromTy) &&
+          (fir::isAllocatableType(fromTy) || fir::isPointerType(fromTy)) &&
+          fir::isPolymorphicType(toTy)) ||
+         (fir::isPolymorphicType(fromTy) && toTy.isa<fir::BoxType>())) &&
+        !(fir::isUnlimitedPolymorphicType(fromTy) && fir::isAssumedType(toTy)))
+      return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
+                                  /*slice=*/mlir::Value{});
 
   return createConvert(loc, toTy, val);
 }
@@ -969,13 +972,13 @@ std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
     llvm::SmallString<32> str;
     llvm::MD5::stringifyResult(result, str);
     std::string hashName = prefix.str();
-    hashName.append(".").append(str.c_str());
+    hashName.append("X").append(str.c_str());
     return fir::NameUniquer::doGenerated(hashName);
   }
   // "Short" identifiers use a reversible hex string
   std::string nm = prefix.str();
   return fir::NameUniquer::doGenerated(
-      nm.append(".").append(llvm::toHex(name)));
+      nm.append("X").append(llvm::toHex(name)));
 }
 
 mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
@@ -1273,6 +1276,15 @@ static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
   return true;
 }
 
+static bool mayHaveFinalizer(fir::RecordType recordType,
+                             fir::FirOpBuilder &builder) {
+  if (auto typeInfo = builder.getModule().lookupSymbol<fir::TypeInfoOp>(
+          recordType.getName()))
+    return !typeInfo.getNoFinal();
+  // No info, be pessimistic.
+  return true;
+}
+
 void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        const fir::ExtendedValue &lhs,
@@ -1289,7 +1301,8 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
                         fir::getBase(rhs).getType().isa<fir::BaseBoxType>();
   auto recTy = baseTy.dyn_cast<fir::RecordType>();
   assert(recTy && "must be a record type");
-  if (hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
+  if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
+      hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
     auto from = fir::getBase(builder.createBox(loc, rhs));
     // The runtime entry point may modify the LHS descriptor if it is
@@ -1304,12 +1317,6 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
     else
       fir::runtime::genAssign(builder, loc, toMutableBox, from);
     return;
-  }
-
-  // Finalize LHS on intrinsic assignment.
-  if (needFinalization) {
-    mlir::Value box = builder.createBox(loc, lhs);
-    fir::runtime::genDerivedTypeDestroy(builder, loc, box);
   }
 
   // Otherwise, the derived type has compile time constant size and for which
@@ -1514,4 +1521,15 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
   mlir::Value cPtrAddr =
       fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
   return builder.create<fir::LoadOp>(loc, cPtrAddr);
+}
+
+mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxType) {
+  auto boxTy{boxType.dyn_cast<fir::BoxProcType>()};
+  if (!boxTy)
+    fir::emitFatalError(loc, "Procedure pointer must be of BoxProcType");
+  auto boxEleTy{fir::unwrapRefType(boxTy.getEleTy())};
+  mlir::Value initVal{builder.create<fir::ZeroOp>(loc, boxEleTy)};
+  return builder.create<fir::EmboxProcOp>(loc, boxTy, initVal);
 }

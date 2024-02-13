@@ -366,6 +366,9 @@ struct OperationFormat {
   /// Indicate whether attribute are stored in properties.
   bool useProperties;
 
+  /// Indicate whether prop-dict is used in the format
+  bool hasPropDict;
+
   /// The Operation class name
   StringRef opCppClassName;
 
@@ -895,6 +898,8 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     body << attr->getVar()->name << "Attr";
   } else if (isa<AttrDictDirective>(param)) {
     body << "result.attributes";
+  } else if (isa<PropDictDirective>(param)) {
+    body << "result";
   } else if (auto *operand = dyn_cast<OperandVariable>(param)) {
     StringRef name = operand->getVar()->name;
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
@@ -1415,7 +1420,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
     genCustomDirectiveParser(customDir, body, useProperties, opCppClassName);
   } else if (isa<OperandsDirective>(element)) {
-    body << "  ::llvm::SMLoc allOperandLoc = parser.getCurrentLocation();\n"
+    body << "  [[maybe_unused]] ::llvm::SMLoc allOperandLoc ="
+         << " parser.getCurrentLocation();\n"
          << "  if (parser.parseOperandList(allOperands))\n"
          << "    return ::mlir::failure();\n";
 
@@ -1807,9 +1813,14 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
       body << "  }\n";
     }
   }
-  body << "  _odsPrinter.printOptionalAttrDict"
-       << (withKeyword ? "WithKeyword" : "")
-       << "((*this)->getAttrs(), elidedAttrs);\n";
+  if (fmt.hasPropDict)
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "(llvm::to_vector((*this)->getDiscardableAttrs()), elidedAttrs);\n";
+  else
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getAttrs(), elidedAttrs);\n";
 }
 
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
@@ -1852,6 +1863,9 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 
   } else if (isa<AttrDictDirective>(element)) {
     body << "getOperation()->getAttrDictionary()";
+
+  } else if (isa<PropDictDirective>(element)) {
+    body << "getProperties()";
 
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     body << op.getGetterName(operand->getVar()->name) << "()";
@@ -2009,6 +2023,16 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
           "  }\n";
 }
 
+/// Generate a check that a DefaultValuedAttr has a value that is non-default.
+static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
+                                    AttributeVariable &attrElement) {
+  FmtContext fctx;
+  Attribute attr = attrElement.getVar()->attr;
+  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+  body << " && " << op.getGetterName(attrElement.getVar()->name) << "Attr() != "
+       << tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue());
+}
+
 /// Generate the check for the anchor of an optional group.
 static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
                                           const Operator &op,
@@ -2042,12 +2066,7 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
         if (attr.hasDefaultValue()) {
           // Consider a default-valued attribute as present if it's not the
           // default value.
-          FmtContext fctx;
-          fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
-          body << " && " << op.getGetterName(element->getVar()->name)
-               << "Attr() != "
-               << tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                        attr.getDefaultValue());
+          genNonDefaultValueCheck(body, op, *element);
           return;
         }
         llvm_unreachable("attribute must be optional or default-valued");
@@ -2158,7 +2177,6 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 
   // Emit the OIList
   if (auto *oilist = dyn_cast<OIListElement>(element)) {
-    genLiteralPrinter(" ", body, shouldEmitSpace, lastWasPunctuation);
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -2170,8 +2188,14 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       for (VariableElement *var : vars) {
         TypeSwitch<FormatElement *>(var)
             .Case([&](AttributeVariable *attrEle) {
-              body << " || " << op.getGetterName(attrEle->getVar()->name)
+              body << " || (" << op.getGetterName(attrEle->getVar()->name)
                    << "Attr()";
+              Attribute attr = attrEle->getVar()->attr;
+              if (attr.hasDefaultValue()) {
+                // Don't print default-valued attributes.
+                genNonDefaultValueCheck(body, op, *attrEle);
+              }
+              body << ")";
             })
             .Case([&](OperandVariable *ele) {
               if (ele->getVar()->isVariadic()) {
@@ -2544,6 +2568,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
 
   // Collect the set of used attributes in the format.
   fmt.usedAttributes = seenAttrs.takeVector();
+
+  // Set whether prop-dict is used in the format
+  fmt.hasPropDict = hasPropDict;
   return success();
 }
 
@@ -3127,9 +3154,9 @@ OpFormatParser::parsePropDictDirective(SMLoc loc, Context context) {
 LogicalResult OpFormatParser::verifyCustomDirectiveArguments(
     SMLoc loc, ArrayRef<FormatElement *> arguments) {
   for (FormatElement *argument : arguments) {
-    if (!isa<AttrDictDirective, AttributeVariable, OperandVariable,
-             PropertyVariable, RefDirective, RegionVariable, SuccessorVariable,
-             StringElement, TypeDirective>(argument)) {
+    if (!isa<AttrDictDirective, PropDictDirective, AttributeVariable,
+             OperandVariable, PropertyVariable, RefDirective, RegionVariable,
+             SuccessorVariable, StringElement, TypeDirective>(argument)) {
       // TODO: FormatElement should have location info attached.
       return emitError(loc, "only variables and types may be used as "
                             "parameters to a custom directive");

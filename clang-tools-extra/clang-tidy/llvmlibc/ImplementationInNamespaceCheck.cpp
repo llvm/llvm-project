@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImplementationInNamespaceCheck.h"
+#include "NamespaceConstants.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
-
-const static StringRef RequiredNamespaceStart = "__llvm_libc";
-const static StringRef RequiredNamespaceMacroName = "LIBC_NAMESPACE";
 
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -31,7 +29,6 @@ void ImplementationInNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<Decl>("child_of_translation_unit");
-  MatchedDecl->dump();
   const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl);
   if (NS == nullptr || NS->isAnonymousNamespace()) {
     diag(MatchedDecl->getLocation(),

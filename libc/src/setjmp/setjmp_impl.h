@@ -13,10 +13,10 @@
 // public header setjmp.h which is also included. here.
 #include <setjmp.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int setjmp(__jmp_buf *buf);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SETJMP_SETJMP_IMPL_H

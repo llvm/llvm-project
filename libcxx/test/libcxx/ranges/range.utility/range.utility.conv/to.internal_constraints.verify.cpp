@@ -63,32 +63,32 @@ void test() {
 
   { // No default constructor.
     using C = Container</*HasDefaultCtr=*/false>;
-    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}ranges::to: unable to convert to the given container type}}
+    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{static assertion failed{{.*}}ranges::to: unable to convert to the given container type}}
   }
 
   { // No single-argument constructor.
     using C = Container</*HasDefaultCtr=*/true, /*HasSingleArgCtr=*/false>;
-    (void)std::ranges::to<C>(in, 1); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}ranges::to: unable to convert to the given container type}}
+    (void)std::ranges::to<C>(in, 1); //expected-error-re@*:* {{static assertion failed{{.*}}ranges::to: unable to convert to the given container type}}
   }
 
   { // No `insert` and no `push_back`.
     using C = Container</*HasDefaultCtr=*/true, /*HasSingleArgCtr=*/true,
                         /*HasInsert=*/false, /*HasInsertWithRightSignature=*/false,
                         /*HasPushBack=*/false, /*HasPushBackWithRightSignature=*/false>;
-    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}ranges::to: unable to convert to the given container type}}
+    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{static assertion failed{{.*}}ranges::to: unable to convert to the given container type}}
   }
 
   { // No `push_back`, `insert` has a wrong signature.
     using C = Container</*HasDefaultCtr=*/true, /*HasSingleArgCtr=*/true,
                         /*HasInsert=*/true, /*HasInsertWithRightSignature=*/false,
                         /*HasPushBack=*/false, /*HasPushBackWithRightSignature=*/false>;
-    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}ranges::to: unable to convert to the given container type}}
+    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{static assertion failed{{.*}}ranges::to: unable to convert to the given container type}}
   }
 
   { // No `insert`, `push_back` has a wrong signature.
     using C = Container</*HasDefaultCtr=*/true, /*HasSingleArgCtr=*/true,
                         /*HasInsert=*/false, /*HasInsertWithRightSignature=*/false,
                         /*HasPushBack=*/true, /*HasPushBackWithRightSignature=*/false>;
-    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}ranges::to: unable to convert to the given container type}}
+    (void)std::ranges::to<C>(in); //expected-error-re@*:* {{static assertion failed{{.*}}ranges::to: unable to convert to the given container type}}
   }
 }

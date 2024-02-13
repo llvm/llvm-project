@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(size_t, fread,
                    (void *__restrict buffer, size_t size, size_t nmemb,
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(size_t, fread,
   return result / size;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -10,7 +10,7 @@
 
 #include "src/time/clock.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   if (!GPU_CLOCKS_PER_SEC)
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   return clock_t(ticks * (CLOCKS_PER_SEC / GPU_CLOCKS_PER_SEC));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

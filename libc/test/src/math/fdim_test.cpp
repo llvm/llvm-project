@@ -16,16 +16,18 @@
 
 using LlvmLibcFDimTest = FDimTestTemplate<double>;
 
-TEST_F(LlvmLibcFDimTest, NaNArg_fdim) { test_na_n_arg(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, NaNArg_fdim) { test_na_n_arg(&LIBC_NAMESPACE::fdim); }
 
-TEST_F(LlvmLibcFDimTest, InfArg_fdim) { test_inf_arg(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, InfArg_fdim) { test_inf_arg(&LIBC_NAMESPACE::fdim); }
 
 TEST_F(LlvmLibcFDimTest, NegInfArg_fdim) {
-  test_neg_inf_arg(&__llvm_libc::fdim);
+  test_neg_inf_arg(&LIBC_NAMESPACE::fdim);
 }
 
-TEST_F(LlvmLibcFDimTest, BothZero_fdim) { test_both_zero(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, BothZero_fdim) {
+  test_both_zero(&LIBC_NAMESPACE::fdim);
+}
 
 TEST_F(LlvmLibcFDimTest, InDoubleRange_fdim) {
-  test_in_range(&__llvm_libc::fdim);
+  test_in_range(&LIBC_NAMESPACE::fdim);
 }

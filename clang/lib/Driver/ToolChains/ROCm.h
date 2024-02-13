@@ -77,6 +77,9 @@ private:
   const Driver &D;
   bool HasHIPRuntime = false;
   bool HasDeviceLibrary = false;
+  bool HasHIPStdParLibrary = false;
+  bool HasRocThrustLibrary = false;
+  bool HasRocPrimLibrary = false;
 
   // Default version if not detected or specified.
   const unsigned DefaultVersionMajor = 3;
@@ -96,6 +99,13 @@ private:
   std::vector<std::string> RocmDeviceLibPathArg;
   // HIP runtime path specified by --hip-path.
   StringRef HIPPathArg;
+  // HIP Standard Parallel Algorithm acceleration library specified by
+  // --hipstdpar-path
+  StringRef HIPStdParPathArg;
+  // rocThrust algorithm library specified by --hipstdpar-thrust-path
+  StringRef HIPRocThrustPathArg;
+  // rocPrim algorithm library specified by --hipstdpar-prim-path
+  StringRef HIPRocPrimPathArg;
   // HIP version specified by --hip-version.
   StringRef HIPVersionArg;
   // Wheter -nogpulib is specified.
@@ -179,6 +189,9 @@ public:
 
   /// Check whether we detected a valid ROCm device library.
   bool hasDeviceLibrary() const { return HasDeviceLibrary; }
+
+  /// Check whether we detected a valid HIP STDPAR Acceleration library.
+  bool hasHIPStdParLibrary() const { return HasHIPStdParLibrary; }
 
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;

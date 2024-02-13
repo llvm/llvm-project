@@ -6,7 +6,7 @@
 ! CHECK: @with_empty_equiv_ = common global [8 x i8] zeroinitializer
 ! CHECK: @x_ = global { float, float } { float 1.0{{.*}}, float 2.0{{.*}} }
 ! CHECK: @y_ = common global [12 x i8] zeroinitializer
-! CHECK: @z_ = global { i32, [4 x i8], float } { i32 42, [4 x i8] undef, float 3.000000e+00 }
+! CHECK: @z_ = global { i32, [4 x i8], float } { i32 42, [4 x i8] zeroinitializer, float 3.000000e+00 }
 
 ! CHECK-LABEL: _QPs0
 subroutine s0

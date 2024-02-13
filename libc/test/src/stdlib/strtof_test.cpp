@@ -14,13 +14,12 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
-using __llvm_libc::fputil::testing::ForceRoundingModeTest;
-using __llvm_libc::fputil::testing::RoundingMode;
+using LIBC_NAMESPACE::fputil::testing::ForceRoundingModeTest;
+using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
-class LlvmLibcStrToFTest : public __llvm_libc::testing::Test,
+class LlvmLibcStrToFTest : public LIBC_NAMESPACE::testing::Test,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
@@ -41,15 +40,15 @@ public:
     //  This is so that the result can be compared in parts.
     char *str_end = nullptr;
 
-    __llvm_libc::fputil::FPBits<float> expected_fp =
-        __llvm_libc::fputil::FPBits<float>(expectedRawData);
+    LIBC_NAMESPACE::fputil::FPBits<float> expected_fp =
+        LIBC_NAMESPACE::fputil::FPBits<float>(expectedRawData);
 
-    libc_errno = 0;
-    float result = __llvm_libc::strtof(inputString, &str_end);
+    LIBC_NAMESPACE::libc_errno = 0;
+    float result = LIBC_NAMESPACE::strtof(inputString, &str_end);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
-    EXPECT_FP_EQ(result, static_cast<float>(expected_fp));
-    EXPECT_EQ(libc_errno, expectedErrno);
+    EXPECT_FP_EQ(result, expected_fp.get_val());
+    ASSERT_ERRNO_EQ(expectedErrno);
   }
 };
 

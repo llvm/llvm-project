@@ -12,7 +12,7 @@
 #include "src/sys/wait/wait4.h"
 #include "src/sys/wait/wait4Impl.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(pid_t, wait4,
                    (pid_t pid, int *wait_status, int options,
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(pid_t, wait4,
   return result.value();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

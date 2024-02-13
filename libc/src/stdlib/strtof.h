@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOF_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOF_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 float strtof(const char *__restrict str, char **__restrict str_end);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRTOF_H

@@ -364,6 +364,21 @@ ExprDependence clang::computeDependence(PackExpansionExpr *E) {
          ExprDependence::TypeValueInstantiation;
 }
 
+ExprDependence clang::computeDependence(PackIndexingExpr *E) {
+  ExprDependence D = E->getIndexExpr()->getDependence();
+  ArrayRef<Expr *> Exprs = E->getExpressions();
+  if (Exprs.empty())
+    D |= (E->getPackIdExpression()->getDependence() |
+          ExprDependence::TypeValueInstantiation) &
+         ~ExprDependence::UnexpandedPack;
+  else if (!E->getIndexExpr()->isInstantiationDependent()) {
+    std::optional<unsigned> Index = E->getSelectedIndex();
+    assert(Index && *Index < Exprs.size() && "pack index out of bound");
+    D |= Exprs[*Index]->getDependence();
+  }
+  return D;
+}
+
 ExprDependence clang::computeDependence(SubstNonTypeTemplateParmExpr *E) {
   return E->getReplacement()->getDependence();
 }
@@ -484,6 +499,10 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
 
   //    - an identifier associated by name lookup with one or more declarations
   //      declared with a dependent type
+  //    - an identifier associated by name lookup with an entity captured by
+  //    copy ([expr.prim.lambda.capture])
+  //      in a lambda-expression that has an explicit object parameter whose
+  //      type is dependent ([dcl.fct]),
   //
   // [The "or more" case is not modeled as a DeclRefExpr. There are a bunch
   // more bullets here that we handle by treating the declaration as having a
@@ -492,6 +511,11 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
     Deps |= ExprDependence::TypeValueInstantiation;
   else if (Type->isInstantiationDependentType())
     Deps |= ExprDependence::Instantiation;
+
+  //    - an identifier associated by name lookup with an entity captured by
+  //    copy ([expr.prim.lambda.capture])
+  if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    Deps |= ExprDependence::Type;
 
   //    - a conversion-function-id that specifies a dependent type
   if (Decl->getDeclName().getNameKind() ==
@@ -594,6 +618,8 @@ ExprDependence clang::computeDependence(PredefinedExpr *E) {
 ExprDependence clang::computeDependence(CallExpr *E,
                                         llvm::ArrayRef<Expr *> PreArgs) {
   auto D = E->getCallee()->getDependence();
+  if (E->getType()->isDependentType())
+    D |= ExprDependence::Type;
   for (auto *A : llvm::ArrayRef(E->getArgs(), E->getNumArgs())) {
     if (A)
       D |= A->getDependence();

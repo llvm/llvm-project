@@ -76,10 +76,7 @@
 // RUN:             | FileCheck -check-prefix=G_STANDALONE %s
 
 // FreeBSD.
-// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd11.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_GDB \
-// RUN:                         -check-prefix=G_DWARF2 %s
-// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd12.0 2>&1 \
+// RUN: %clang -### -c -g %s -target x86_64-pc-freebsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB \
 // RUN:                         -check-prefix=G_DWARF4 %s
 
@@ -188,15 +185,11 @@
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -gline-tables-only %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-tables-only %s -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLTO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-apple-darwin16 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_DWARF4 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target i686-pc-openbsd 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s --target=i386-pc-solaris 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
@@ -207,15 +200,11 @@
 // RUN:             | FileCheck -check-prefix=GLIO_ONLY %s
 // RUN: %clang -### -c -gline-directives-only %s -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLIO_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-directives-only %s -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck -check-prefix=GLIO_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-apple-darwin16 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_DWARF4 %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target i686-pc-openbsd 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g %s --target=i386-pc-solaris 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY %s

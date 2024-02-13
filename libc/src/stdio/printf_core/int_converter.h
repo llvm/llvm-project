@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
 #include "src/__support/integer_to_string.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -20,7 +19,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These functions only work on characters that are already known to be in the
@@ -34,14 +33,17 @@ using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
 using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
 using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
 using DecFmt = IntegerToString<uintmax_t>;
+using BinFmt = IntegerToString<uintmax_t, radix::Bin>;
 
 LIBC_INLINE constexpr size_t num_buf_size() {
-  constexpr auto max = [](size_t a, size_t b) -> size_t {
-    return (a < b) ? b : a;
-  };
-  return max(HexFmt::buffer_size(),
-             max(HexFmtUppercase::buffer_size(),
-                 max(OctFmt::buffer_size(), DecFmt::buffer_size())));
+  cpp::array<size_t, 5> sizes{
+      HexFmt::buffer_size(), HexFmtUppercase::buffer_size(),
+      OctFmt::buffer_size(), DecFmt::buffer_size(), BinFmt::buffer_size()};
+
+  auto result = sizes[0];
+  for (size_t i = 1; i < sizes.size(); i++)
+    result = cpp::max(result, sizes[i]);
+  return result;
 }
 
 LIBC_INLINE cpp::optional<cpp::string_view>
@@ -53,6 +55,8 @@ num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
       return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
     return OctFmt::format_to(bufref, num);
+  } else if (to_lower(conv_name) == 'b') {
+    return BinFmt::format_to(bufref, num);
   } else {
     return DecFmt::format_to(bufref, num);
   }
@@ -113,10 +117,15 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   size_t prefix_len;
   char prefix[2];
   if ((to_lower(to_conv.conv_name) == 'x') &&
-      ((flags & FormatFlags::ALTERNATE_FORM) != 0)) {
+      ((flags & FormatFlags::ALTERNATE_FORM) != 0) && num != 0) {
     prefix_len = 2;
     prefix[0] = '0';
     prefix[1] = a + ('x' - 'a');
+  } else if ((to_lower(to_conv.conv_name) == 'b') &&
+             ((flags & FormatFlags::ALTERNATE_FORM) != 0) && num != 0) {
+    prefix_len = 2;
+    prefix[0] = '0';
+    prefix[1] = a + ('b' - 'a');
   } else {
     prefix_len = (sign_char == 0 ? 0 : 1);
     prefix[0] = sign_char;
@@ -158,8 +167,20 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
                               prefix_len);
   }
 
+  // The standard says that alternate form for the o conversion "increases
+  // the precision, if and only if necessary, to force the first digit of the
+  // result to be a zero (if the value and precision are both 0, a single 0 is
+  // printed)"
+  // This if checks the following conditions:
+  // 1) is this an o conversion in alternate form?
+  // 2) does this number has a leading zero?
+  //    2a) ... because there are additional leading zeroes?
+  //    2b) ... because it is just "0", unless it will not write any digits.
+  const bool has_leading_zero =
+      (zeroes > 0) || ((num == 0) && (digits_written != 0));
   if ((to_conv.conv_name == 'o') &&
-      ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0) && zeroes < 1) {
+      ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0) &&
+      !has_leading_zero) {
     zeroes = 1;
     --spaces;
   }
@@ -189,6 +210,6 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H

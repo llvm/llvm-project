@@ -8,22 +8,22 @@
 
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
-// CHECK: call double @__nv_sin(double
+// CHECK: call noundef double @__nv_sin(double
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
-// CHECK: call float @__nv_sinf(float
+// CHECK: call noundef float @__nv_sinf(float
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
-// CHECK: call double @__nv_sin(double
+// CHECK: call noundef double @__nv_sin(double
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
-// CHECK: call double @__nv_cos(double
+// CHECK: call noundef double @__nv_cos(double
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
-// CHECK: call float @__nv_sinf(float
+// CHECK: call noundef float @__nv_sinf(float
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
-// CHECK: call float @__nv_cosf(float
+// CHECK: call noundef float @__nv_cosf(float
 // CHECK-NOT: _Z.sin
 // CHECK-NOT: _Z.cos
 

@@ -122,13 +122,12 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
   assert(llvm::all_of(outputTypes,
                       [](Type t) { return llvm::isa<ShapedType>(t); }));
 
-  // TODO: atm all operands go through getElementTypeOrSelf,
-  // reconsider when we have evidence we need to.
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
   for (auto containers : {inputTypes, outputTypes}) {
     for (auto t : containers) {
-      argTypes.push_back(getElementTypeOrSelf(t));
+      argTypes.push_back(
+          isa<MemRefType, RankedTensorType>(t) ? getElementTypeOrSelf(t) : t);
 
       // TODO: Pass in a proper location here.
       argLocs.push_back(opBuilder.getUnknownLoc());
@@ -545,16 +544,17 @@ private:
 
 namespace {
 
-struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
+struct EraseSelfCopy : OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
-    if (!copyOp.hasBufferSemantics())
-      return rewriter.notifyMatchFailure(copyOp,
-                                         "does not have buffer semantics");
-    if (copyOp.getInputs().front() != copyOp.getOutputs().front())
+    if (copyOp.getInputs() != copyOp.getOutputs())
       return rewriter.notifyMatchFailure(copyOp, "not a self copy");
-    rewriter.eraseOp(copyOp);
+    if (copyOp.hasPureBufferSemantics())
+      rewriter.eraseOp(copyOp);
+    else
+      rewriter.replaceOp(copyOp, copyOp.getInputs());
+
     return success();
   }
 };
@@ -563,7 +563,7 @@ struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<EraseSelfCopyOnBuffers>(context);
+  results.add<EraseSelfCopy>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -716,11 +716,16 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
           rewriter, loc, addMap, {std::get<0>(p), std::get<1>(p)}));
     }
 
+    RankedTensorType srcPadType = srcPadOp.getSourceType();
     SmallVector<OpFoldResult, 4> newSizes;
-    for (int i = 0, e = srcPadOp.getSourceType().getRank(); i < e; ++i) {
-      newSizes.push_back(
-          rewriter.create<tensor::DimOp>(loc, srcPadOp.getSource(), i)
-              .getResult());
+    for (int i = 0, e = srcPadType.getRank(); i < e; ++i) {
+      if (srcPadType.isDynamicDim(i)) {
+        newSizes.push_back(
+            rewriter.create<tensor::DimOp>(loc, srcPadOp.getSource(), i)
+                .getResult());
+      } else {
+        newSizes.push_back(rewriter.getIndexAttr(srcPadType.getDimSize(i)));
+      }
     }
 
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
@@ -765,26 +770,12 @@ static FailureOr<FillOp> foldFillPackIntoFillOp(RewriterBase &rewriter,
     if (!isEqualConstantIntOrValue(paddingValue, fillOp.value()))
       return failure();
 
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(fillOp);
-
   Value packOpDest = packOp.getDest();
   if (!packOpDest.hasOneUse())
     return failure();
-  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
-    packOpDest = tensor::PackOp::createDestinationTensor(
-        rewriter, fillOp.getLoc(), fillOp.getDpsInitOperand(0)->get(),
-        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
-        packOp.getOuterDimsPerm());
-  } else {
-    DominanceInfo dom(fillOp);
-    if (!dom.properlyDominates(packOpDest, fillOp))
-      return failure();
-  }
 
-  Value fillDest = packOpDest;
-  return clone(rewriter, fillOp, packOpDest.getType(),
-               {fillOp.value(), fillDest});
+  return rewriter.create<linalg::FillOp>(packOp.getLoc(), fillOp.getInputs(),
+                                         packOp.getDest());
 }
 
 /// Wrapper pattern that applies foldFillPackIntoFillOp method.
@@ -803,14 +794,36 @@ public:
   }
 };
 
+/// Fold fill with copy.
+struct FoldFillWithCopy : OpRewritePattern<linalg::CopyOp> {
+  using OpRewritePattern<linalg::CopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto fillOp = copyOp.getInputs().front().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<FillOp>(copyOp, copyOp.getResultTypes(),
+                                          fillOp.getInputs(),
+                                          copyOp.getOutputs());
+      return success();
+    }
+    if (auto fillOp = copyOp.getOutputs().front().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<linalg::CopyOp>(copyOp, copyOp.getInputs(),
+                                                  fillOp.getOutputs());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldFillWithTensorExtract, FoldFillWithPack, FoldFillWithPad,
-              FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-              FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-              FoldInsertPadIntoFill>(context);
+  results
+      .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
+           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+           FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -825,7 +838,9 @@ static void buildGenericRegion(
   SmallVector<Location, 4> blockArgLocs;
   for (ValueRange container : {inputs, outputs}) {
     for (Value v : container) {
-      blockArgTypes.push_back(getElementTypeOrSelf(v));
+      Type t = v.getType();
+      blockArgTypes.push_back(
+          isa<MemRefType, RankedTensorType>(t) ? getElementTypeOrSelf(t) : t);
       blockArgLocs.push_back(v.getLoc());
     }
   }
@@ -1072,24 +1087,25 @@ LogicalResult GenericOp::verify() { return success(); }
 
 namespace {
 
-/// Remove generic operations (on tensors) that are just copying
+/// Remove any linalg operation (on tensors) that are just copying
 /// the values from inputs to the results. Requirements are
 /// 1) All iterator types are parallel
 /// 2) The body contains just a yield operation with the yielded values being
 ///    the arguments corresponding to the operands.
-struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+template <typename OpTy>
+struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(GenericOp genericOp,
+  LogicalResult matchAndRewrite(OpTy linalgOp,
                                 PatternRewriter &rewriter) const override {
     // Check all indexing maps are identity.
-    if (llvm::any_of(genericOp.getIndexingMapsArray(),
+    if (llvm::any_of(linalgOp.getIndexingMapsArray(),
                      [](AffineMap map) { return !map.isIdentity(); }))
       return failure();
 
     // Check that the body of the linalg operation is just a linalg.yield
     // operation.
-    Block &body = genericOp.getRegion().front();
+    Block &body = linalgOp->getRegion(0).front();
     if (!llvm::hasSingleElement(body))
       return failure();
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
@@ -1097,18 +1113,18 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       return failure();
 
     // In the buffer case, we need to check exact buffer equality.
-    if (genericOp.hasBufferSemantics()) {
-      if (genericOp.getNumDpsInputs() == 1 && genericOp.getNumDpsInits() == 1 &&
-          genericOp.getDpsInputOperand(0)->get() ==
-              genericOp.getDpsInitOperand(0)->get()) {
-        rewriter.eraseOp(genericOp);
+    if (linalgOp.hasPureBufferSemantics()) {
+      if (linalgOp.getNumDpsInputs() == 1 && linalgOp.getNumDpsInits() == 1 &&
+          linalgOp.getDpsInputOperand(0)->get() ==
+              linalgOp.getDpsInitOperand(0)->get()) {
+        rewriter.eraseOp(linalgOp);
         return success();
       }
       return failure();
     }
 
     // Mixed semantics is not supported yet.
-    if (!genericOp.hasTensorSemantics())
+    if (!linalgOp.hasPureTensorSemantics())
       return failure();
 
     // Get the argument number of the returned values. That is the operand
@@ -1119,8 +1135,8 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
       unsigned argumentNumber = yieldArg.getArgNumber();
-      Value returnedArg = genericOp->getOperand(argumentNumber);
-      Type resultType = genericOp->getResult(yieldVal.index()).getType();
+      Value returnedArg = linalgOp->getOperand(argumentNumber);
+      Type resultType = linalgOp->getResult(yieldVal.index()).getType();
       // The input can have a different type than the result, e.g. a dynamic
       // input dimension can be turned into a static output dimension.
       Type returnType = returnedArg.getType();
@@ -1130,21 +1146,21 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
         if (sparse_tensor::getSparseTensorEncoding(returnType) ||
             sparse_tensor::getSparseTensorEncoding(resultType))
           returnedArg = rewriter.create<sparse_tensor::ConvertOp>(
-              genericOp.getLoc(), resultType, returnedArg);
+              linalgOp.getLoc(), resultType, returnedArg);
         else {
           if (!tensor::CastOp::areCastCompatible(returnedArg.getType(),
                                                  resultType))
             return failure();
           returnedArg = rewriter.create<tensor::CastOp>(
-              genericOp.getLoc(), resultType, returnedArg);
+              linalgOp.getLoc(), resultType, returnedArg);
         }
       }
       returnedArgs.push_back(returnedArg);
     }
 
-    if (returnedArgs.size() != genericOp->getNumResults())
+    if (returnedArgs.size() != linalgOp->getNumResults())
       return failure();
-    rewriter.replaceOp(genericOp, returnedArgs);
+    rewriter.replaceOp(linalgOp, returnedArgs);
     return success();
   }
 };
@@ -1153,7 +1169,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 
 void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<EraseIdentityGenericOp>(context);
+  results.add<EraseIdentityLinalgOp<GenericOp>>(context);
 }
 
 LogicalResult GenericOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
@@ -1758,9 +1774,9 @@ ArrayAttr TransposeOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
   return builder.getAffineMapArrayAttr(
-      {builder.getMultiDimIdentityMap(rank),
-       AffineMap::getPermutationMap(
-           llvm::to_vector_of<unsigned>(getPermutation()), getContext())});
+      {inversePermutation(AffineMap::getPermutationMap(
+           llvm::to_vector_of<unsigned>(getPermutation()), getContext())),
+       builder.getMultiDimIdentityMap(rank)});
 }
 
 void TransposeOp::getEffects(
@@ -1892,6 +1908,11 @@ void BroadcastOp::getEffects(
                         getDpsInits());
 }
 
+void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<EraseIdentityLinalgOp<BroadcastOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
@@ -1926,7 +1947,9 @@ static LogicalResult verifyYield(linalg::YieldOp op, LinalgOp linalgOp) {
   for (OpOperand &opOperand : op->getOpOperands()) {
     OpOperand *outputOperand =
         linalgOp.getDpsInitOperand(opOperand.getOperandNumber());
-    Type elementType = getElementTypeOrSelf(outputOperand->get().getType());
+    Type elementType = outputOperand->get().getType();
+    if (isa<MemRefType, RankedTensorType>(elementType))
+      elementType = getElementTypeOrSelf(outputOperand->get().getType());
     if (opOperand.get().getType() != elementType)
       return op.emitOpError("type of yield operand ")
              << (opOperand.getOperandNumber() + 1) << " ("
@@ -2026,7 +2049,8 @@ static LogicalResult appendMangledType(llvm::raw_string_ostream &ss, Type t) {
     if (failed(appendMangledType(ss, vec.getElementType())))
       return failure();
     return success();
-  } else if (t.isSignlessIntOrIndexOrFloat()) {
+  }
+  if (t.isSignlessIntOrIndexOrFloat()) {
     ss << t;
     return success();
   }
@@ -2174,7 +2198,7 @@ static void populateMap(LinalgOp linalgOp, MutableArrayRef<OpOperand> operands,
     for (unsigned i = 0; i < sourceShape.size(); i++) {
       if (sourceType.isDynamicDim(i))
         continue;
-      if (auto affineDimExpr = sourceMap.getResult(i).dyn_cast<AffineDimExpr>())
+      if (auto affineDimExpr = dyn_cast<AffineDimExpr>(sourceMap.getResult(i)))
         affineExprToSize.try_emplace(affineDimExpr, sourceShape[i]);
     }
   }
@@ -2240,7 +2264,7 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
 
   LogicalResult matchAndRewrite(LinalgOp linalgOp,
                                 PatternRewriter &rewriter) const override {
-    if (!linalgOp.hasTensorSemantics())
+    if (!linalgOp.hasPureTensorSemantics())
       return failure();
 
     // Maps must be projected permutations.
@@ -2359,7 +2383,7 @@ SoftmaxOp::getTiledImplementation(OpBuilder &builder,
       getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides));
 
   SmallVector<Type, 4> resultTypes;
-  if (hasTensorSemantics())
+  if (hasPureTensorSemantics())
     resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
@@ -2387,8 +2411,23 @@ LogicalResult SoftmaxOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
 LogicalResult
 SoftmaxOp::reifyResultShapes(OpBuilder &b,
                              ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  return cast<LinalgOp>(getOperation())
-      .reifyResultShapes(b, reifiedReturnShapes);
+  SmallVector<OpFoldResult> shapes;
+  Location loc = getOperation()->getLoc();
+  IRRewriter rewriter(b);
+  auto inputShapedType = llvm::cast<ShapedType>(getInputOperandType());
+  auto outputShapedType = llvm::cast<ShapedType>(getOutputOperandType());
+  for (int64_t dim : llvm::seq<int64_t>(0, getOutputOperandRank())) {
+    if (!outputShapedType.isDynamicDim(dim)) {
+      // Static dim: Return IntegerAttr.
+      shapes.push_back(b.getIndexAttr(inputShapedType.getDimSize(dim)));
+    } else {
+      // Dynamic dim: Return Value.
+      OpFoldResult ofr = createOrFoldDimOp(b, loc, getInput(), dim);
+      shapes.push_back(getValueOrCreateConstantIndexOp(b, loc, ofr));
+    }
+  }
+  reifiedReturnShapes.emplace_back(std::move(shapes));
+  return success();
 }
 
 void SoftmaxOp::getEffects(

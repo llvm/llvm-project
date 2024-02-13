@@ -88,9 +88,20 @@ static cl::opt<bool> InlineEnableCostBenefitAnalysis(
     "inline-enable-cost-benefit-analysis", cl::Hidden, cl::init(false),
     cl::desc("Enable the cost-benefit analysis for the inliner"));
 
+// InlineSavingsMultiplier overrides per TTI multipliers iff it is
+// specified explicitly in command line options. This option is exposed
+// for tuning and testing.
 static cl::opt<int> InlineSavingsMultiplier(
     "inline-savings-multiplier", cl::Hidden, cl::init(8),
     cl::desc("Multiplier to multiply cycle savings by during inlining"));
+
+// InlineSavingsProfitableMultiplier overrides per TTI multipliers iff it is
+// specified explicitly in command line options. This option is exposed
+// for tuning and testing.
+static cl::opt<int> InlineSavingsProfitableMultiplier(
+    "inline-savings-profitable-multiplier", cl::Hidden, cl::init(4),
+    cl::desc("A multiplier on top of cycle savings to decide whether the "
+             "savings won't justify the cost"));
 
 static cl::opt<int>
     InlineSizeAllowance("inline-size-allowance", cl::Hidden, cl::init(100),
@@ -325,8 +336,8 @@ protected:
 
   /// Called at the end of processing a switch instruction, with the given
   /// number of case clusters.
-  virtual void onFinalizeSwitch(unsigned JumpTableSize,
-                                unsigned NumCaseCluster) {}
+  virtual void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                                bool DefaultDestUndefined) {}
 
   /// Called to account for any other instruction not specifically accounted
   /// for.
@@ -684,18 +695,20 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       }
     } else
       // Otherwise simply add the cost for merely making the call.
-      addCost(CallPenalty);
+      addCost(TTI.getInlineCallPenalty(CandidateCall.getCaller(), Call,
+                                       CallPenalty));
   }
 
-  void onFinalizeSwitch(unsigned JumpTableSize,
-                        unsigned NumCaseCluster) override {
+  void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                        bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      addCost(2 * InstrCost);
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
       int64_t JTCost =
           static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
-
       addCost(JTCost);
       return;
     }
@@ -815,6 +828,32 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     return true;
   }
 
+  // A helper function to choose between command line override and default.
+  unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const {
+    if (InlineSavingsMultiplier.getNumOccurrences())
+      return InlineSavingsMultiplier;
+    return TTI.getInliningCostBenefitAnalysisSavingsMultiplier();
+  }
+
+  // A helper function to choose between command line override and default.
+  unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const {
+    if (InlineSavingsProfitableMultiplier.getNumOccurrences())
+      return InlineSavingsProfitableMultiplier;
+    return TTI.getInliningCostBenefitAnalysisProfitableMultiplier();
+  }
+
+  void OverrideCycleSavingsAndSizeForTesting(APInt &CycleSavings, int &Size) {
+    if (std::optional<int> AttrCycleSavings = getStringFnAttrAsInt(
+            CandidateCall, "inline-cycle-savings-for-test")) {
+      CycleSavings = *AttrCycleSavings;
+    }
+
+    if (std::optional<int> AttrRuntimeCost = getStringFnAttrAsInt(
+            CandidateCall, "inline-runtime-cost-for-test")) {
+      Size = *AttrRuntimeCost;
+    }
+  }
+
   // Determine whether we should inline the given call site, taking into account
   // both the size cost and the cycle savings.  Return std::nullopt if we don't
   // have sufficient profiling information to determine.
@@ -881,32 +920,58 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // Compute the total savings for the call site.
     auto *CallerBB = CandidateCall.getParent();
     BlockFrequencyInfo *CallerBFI = &(GetBFI(*(CallerBB->getParent())));
-    CycleSavings += getCallsiteCost(this->CandidateCall, DL);
+    CycleSavings += getCallsiteCost(TTI, this->CandidateCall, DL);
     CycleSavings *= *CallerBFI->getBlockProfileCount(CallerBB);
 
-    // Remove the cost of the cold basic blocks.
+    // Remove the cost of the cold basic blocks to model the runtime cost more
+    // accurately. Both machine block placement and function splitting could
+    // place cold blocks further from hot blocks.
     int Size = Cost - ColdSize;
 
     // Allow tiny callees to be inlined regardless of whether they meet the
     // savings threshold.
     Size = Size > InlineSizeAllowance ? Size - InlineSizeAllowance : 1;
 
+    OverrideCycleSavingsAndSizeForTesting(CycleSavings, Size);
     CostBenefit.emplace(APInt(128, Size), CycleSavings);
 
-    // Return true if the savings justify the cost of inlining.  Specifically,
-    // we evaluate the following inequality:
+    // Let R be the ratio of CycleSavings to Size.  We accept the inlining
+    // opportunity if R is really high and reject if R is really low.  If R is
+    // somewhere in the middle, we fall back to the cost-based analysis.
     //
-    //  CycleSavings      PSI->getOrCompHotCountThreshold()
-    // -------------- >= -----------------------------------
-    //       Size              InlineSavingsMultiplier
+    // Specifically, let R = CycleSavings / Size, we accept the inlining
+    // opportunity if:
     //
-    // Note that the left hand side is specific to a call site.  The right hand
-    // side is a constant for the entire executable.
-    APInt LHS = CycleSavings;
-    LHS *= InlineSavingsMultiplier;
-    APInt RHS(128, PSI->getOrCompHotCountThreshold());
-    RHS *= Size;
-    return LHS.uge(RHS);
+    //             PSI->getOrCompHotCountThreshold()
+    // R > -------------------------------------------------
+    //     getInliningCostBenefitAnalysisSavingsMultiplier()
+    //
+    // and reject the inlining opportunity if:
+    //
+    //                PSI->getOrCompHotCountThreshold()
+    // R <= ----------------------------------------------------
+    //      getInliningCostBenefitAnalysisProfitableMultiplier()
+    //
+    // Otherwise, we fall back to the cost-based analysis.
+    //
+    // Implementation-wise, use multiplication (CycleSavings * Multiplier,
+    // HotCountThreshold * Size) rather than division to avoid precision loss.
+    APInt Threshold(128, PSI->getOrCompHotCountThreshold());
+    Threshold *= Size;
+
+    APInt UpperBoundCycleSavings = CycleSavings;
+    UpperBoundCycleSavings *= getInliningCostBenefitAnalysisSavingsMultiplier();
+    if (UpperBoundCycleSavings.uge(Threshold))
+      return true;
+
+    APInt LowerBoundCycleSavings = CycleSavings;
+    LowerBoundCycleSavings *=
+        getInliningCostBenefitAnalysisProfitableMultiplier();
+    if (LowerBoundCycleSavings.ult(Threshold))
+      return false;
+
+    // Otherwise, fall back to the cost-based analysis.
+    return std::nullopt;
   }
 
   InlineResult finalizeAnalysis() override {
@@ -1013,7 +1078,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     // Give out bonuses for the callsite, as the instructions setting them up
     // will be gone after inlining.
-    addCost(-getCallsiteCost(this->CandidateCall, DL));
+    addCost(-getCallsiteCost(TTI, this->CandidateCall, DL));
 
     // If this function uses the coldcc calling convention, prefer not to inline
     // it.
@@ -1089,6 +1154,7 @@ private:
   // heuristics in the ML inliner.
   static constexpr int JTCostMultiplier = 4;
   static constexpr int CaseClusterCostMultiplier = 2;
+  static constexpr int SwitchDefaultDestCostMultiplier = 2;
   static constexpr int SwitchCostMultiplier = 2;
 
   // FIXME: These are taken from the heuristic-based cost visitor: we should
@@ -1167,8 +1233,11 @@ private:
     }
   }
 
-  void onFinalizeSwitch(unsigned JumpTableSize,
-                        unsigned NumCaseCluster) override {
+  void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
+                        bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      increment(InlineCostFeatureIndex::switch_default_dest_penalty,
+                SwitchDefaultDestCostMultiplier * InstrCost);
 
     if (JumpTableSize) {
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
@@ -1252,7 +1321,7 @@ private:
 
   InlineResult onAnalysisStart() override {
     increment(InlineCostFeatureIndex::callsite_cost,
-              -1 * getCallsiteCost(this->CandidateCall, DL));
+              -1 * getCallsiteCost(TTI, this->CandidateCall, DL));
 
     set(InlineCostFeatureIndex::cold_cc_penalty,
         (F.getCallingConv() == CallingConv::Cold));
@@ -1365,7 +1434,7 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
       continue;
     }
 
-    APInt TypeSize(IntPtrWidth, DL.getTypeAllocSize(GTI.getIndexedType()));
+    APInt TypeSize(IntPtrWidth, GTI.getSequentialElementStride(DL));
     Offset += OpC->getValue().sextOrTrunc(IntPtrWidth) * TypeSize;
   }
   return true;
@@ -2397,7 +2466,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize, PSI, BFI);
 
-  onFinalizeSwitch(JumpTableSize, NumCaseCluster);
+  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUndefined());
   return false;
 }
 
@@ -2755,9 +2824,8 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    for (unsigned TIdx = 0, TSize = TI->getNumSuccessors(); TIdx != TSize;
-         ++TIdx)
-      BBWorklist.insert(TI->getSuccessor(TIdx));
+    for (BasicBlock *Succ : successors(BB))
+      BBWorklist.insert(Succ);
 
     onBlockAnalyzed(BB);
   }
@@ -2824,7 +2892,8 @@ static bool functionsHaveCompatibleAttributes(
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
 
-int llvm::getCallsiteCost(const CallBase &Call, const DataLayout &DL) {
+int llvm::getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
+                          const DataLayout &DL) {
   int64_t Cost = 0;
   for (unsigned I = 0, E = Call.arg_size(); I != E; ++I) {
     if (Call.isByValArgument(I)) {
@@ -2854,7 +2923,8 @@ int llvm::getCallsiteCost(const CallBase &Call, const DataLayout &DL) {
   }
   // The call instruction also disappears after inlining.
   Cost += InstrCost;
-  Cost += CallPenalty;
+  Cost += TTI.getInlineCallPenalty(Call.getCaller(), Call, CallPenalty);
+
   return std::min<int64_t>(Cost, INT_MAX);
 }
 

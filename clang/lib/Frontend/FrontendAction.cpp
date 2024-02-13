@@ -510,8 +510,8 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   }
 
   // Check whether we can build this module at all.
-  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(),
-                                           CI.getDiagnostics(), M))
+  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(), *M,
+                                           CI.getDiagnostics()))
     return nullptr;
 
   // Inform the preprocessor that includes from within the input buffer should
@@ -621,7 +621,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadPreprocessorOnly, ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr, CI.getCodeGenOpts().DebugTypeExtRefs);
+        /*HeaderSearchOptions=*/nullptr);
     if (!AST)
       return false;
 
@@ -689,8 +689,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-        CI.getHeaderSearchOptsPtr(),
-        CI.getCodeGenOpts().DebugTypeExtRefs);
+        CI.getHeaderSearchOptsPtr());
 
     if (!AST)
       return false;
@@ -742,7 +741,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.
   for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
-    if (auto FE = CI.getFileManager().getFile(F, /*openFile*/true))
+    if (auto FE = CI.getFileManager().getOptionalFileRef(F, /*openFile*/true))
       CI.getSourceManager().setFileIsTransient(*FE);
     else
       CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
@@ -830,8 +829,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
       // Relative searches begin from CWD.
       auto Dir = CI.getFileManager().getOptionalDirectoryRef(".");
-      SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 1> CWD;
-      CWD.push_back({nullptr, *Dir});
+      SmallVector<std::pair<OptionalFileEntryRef, DirectoryEntryRef>, 1> CWD;
+      CWD.push_back({std::nullopt, *Dir});
       OptionalFileEntryRef FE =
           HS.LookupFile(FileName, SourceLocation(),
                         /*Angled*/ Input.getKind().getHeaderUnitKind() ==

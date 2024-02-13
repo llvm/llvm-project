@@ -142,6 +142,12 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+// TODO: Remove this option
+static cl::opt<bool> EnableSimplifyDemandedUseFPClass(
+    "instcombine-simplify-demanded-fp-class",
+    cl::desc("Enable demanded floating-point class optimizations"),
+    cl::init(false));
+
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -173,14 +179,14 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
 }
 
 std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
-    IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts, APInt &UndefElts2,
-    APInt &UndefElts3,
+    IntrinsicInst &II, APInt DemandedElts, APInt &PoisonElts,
+    APInt &PoisonElts2, APInt &PoisonElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
     return TTI.simplifyDemandedVectorEltsIntrinsic(
-        *this, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+        *this, II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
         SimplifyAndSetOp);
   }
   return std::nullopt;
@@ -345,15 +351,19 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 
   // Fold the constants together in the destination type:
   // (op (cast (op X, C2)), C1) --> (op (cast X), FoldedC)
+  const DataLayout &DL = IC.getDataLayout();
   Type *DestTy = C1->getType();
-  Constant *CastC2 = ConstantExpr::getCast(CastOpcode, C2, DestTy);
-  Constant *FoldedC =
-      ConstantFoldBinaryOpOperands(AssocOpcode, C1, CastC2, IC.getDataLayout());
+  Constant *CastC2 = ConstantFoldCastOperand(CastOpcode, C2, DestTy, DL);
+  if (!CastC2)
+    return false;
+  Constant *FoldedC = ConstantFoldBinaryOpOperands(AssocOpcode, C1, CastC2, DL);
   if (!FoldedC)
     return false;
 
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
+  BinOp1->dropPoisonGeneratingFlags();
+  Cast->dropPoisonGeneratingFlags();
   return true;
 }
 
@@ -406,6 +416,14 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
     if (I.isCommutative() && getComplexity(I.getOperand(0)) <
         getComplexity(I.getOperand(1)))
       Changed = !I.swapOperands();
+
+    if (I.isCommutative()) {
+      if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
+        replaceOperand(I, 0, Pair->first);
+        replaceOperand(I, 1, Pair->second);
+        Changed = true;
+      }
+    }
 
     BinaryOperator *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
     BinaryOperator *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
@@ -606,7 +624,7 @@ static Value *getIdentityValue(Instruction::BinaryOps Opcode, Value *V) {
 /// allow more factorization opportunities.
 static Instruction::BinaryOps
 getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
-                          Value *&LHS, Value *&RHS) {
+                          Value *&LHS, Value *&RHS, BinaryOperator *OtherOp) {
   assert(Op && "Expected a binary operator");
   LHS = Op->getOperand(0);
   RHS = Op->getOperand(1);
@@ -618,6 +636,13 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
       return Instruction::Mul;
     }
     // TODO: We can add other conversions e.g. shr => div etc.
+  }
+  if (Instruction::isBitwiseLogicOp(TopOpcode)) {
+    if (OtherOp && OtherOp->getOpcode() == Instruction::AShr &&
+        match(Op, m_LShr(m_NonNegative(), m_Value()))) {
+      // lshr nneg C, X --> ashr nneg C, X
+      return Instruction::AShr;
+    }
   }
   return Op->getOpcode();
 }
@@ -721,6 +746,93 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   return RetVal;
 }
 
+// If `I` has one Const operand and the other matches `(ctpop (not x))`,
+// replace `(ctpop (not x))` with `(sub nuw nsw BitWidth(x), (ctpop x))`.
+// This is only useful is the new subtract can fold so we only handle the
+// following cases:
+//    1) (add/sub/disjoint_or C, (ctpop (not x))
+//        -> (add/sub/disjoint_or C', (ctpop x))
+//    1) (cmp pred C, (ctpop (not x))
+//        -> (cmp pred C', (ctpop x))
+Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
+  unsigned Opc = I->getOpcode();
+  unsigned ConstIdx = 1;
+  switch (Opc) {
+  default:
+    return nullptr;
+    // (ctpop (not x)) <-> (sub nuw nsw BitWidth(x) - (ctpop x))
+    // We can fold the BitWidth(x) with add/sub/icmp as long the other operand
+    // is constant.
+  case Instruction::Sub:
+    ConstIdx = 0;
+    break;
+  case Instruction::ICmp:
+    // Signed predicates aren't correct in some edge cases like for i2 types, as
+    // well since (ctpop x) is known [0, log2(BitWidth(x))] almost all signed
+    // comparisons against it are simplfied to unsigned.
+    if (cast<ICmpInst>(I)->isSigned())
+      return nullptr;
+    break;
+  case Instruction::Or:
+    if (!match(I, m_DisjointOr(m_Value(), m_Value())))
+      return nullptr;
+    [[fallthrough]];
+  case Instruction::Add:
+    break;
+  }
+
+  Value *Op;
+  // Find ctpop.
+  if (!match(I->getOperand(1 - ConstIdx),
+             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+    return nullptr;
+
+  Constant *C;
+  // Check other operand is ImmConstant.
+  if (!match(I->getOperand(ConstIdx), m_ImmConstant(C)))
+    return nullptr;
+
+  Type *Ty = Op->getType();
+  Constant *BitWidthC = ConstantInt::get(Ty, Ty->getScalarSizeInBits());
+  // Need extra check for icmp. Note if this check is true, it generally means
+  // the icmp will simplify to true/false.
+  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality() &&
+      !ConstantExpr::getICmp(ICmpInst::ICMP_UGT, C, BitWidthC)->isZeroValue())
+    return nullptr;
+
+  // Check we can invert `(not x)` for free.
+  bool Consumes = false;
+  if (!isFreeToInvert(Op, Op->hasOneUse(), Consumes) || !Consumes)
+    return nullptr;
+  Value *NotOp = getFreelyInverted(Op, Op->hasOneUse(), &Builder);
+  assert(NotOp != nullptr &&
+         "Desync between isFreeToInvert and getFreelyInverted");
+
+  Value *CtpopOfNotOp = Builder.CreateIntrinsic(Ty, Intrinsic::ctpop, NotOp);
+
+  Value *R = nullptr;
+
+  // Do the transformation here to avoid potentially introducing an infinite
+  // loop.
+  switch (Opc) {
+  case Instruction::Sub:
+    R = Builder.CreateAdd(CtpopOfNotOp, ConstantExpr::getSub(C, BitWidthC));
+    break;
+  case Instruction::Or:
+  case Instruction::Add:
+    R = Builder.CreateSub(ConstantExpr::getAdd(C, BitWidthC), CtpopOfNotOp);
+    break;
+  case Instruction::ICmp:
+    R = Builder.CreateICmp(cast<ICmpInst>(I)->getSwappedPredicate(),
+                           CtpopOfNotOp, ConstantExpr::getSub(BitWidthC, C));
+    break;
+  default:
+    llvm_unreachable("Unhandled Opcode");
+  }
+  assert(R != nullptr);
+  return replaceInstUsesWith(*I, R);
+}
+
 // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
 //   IFF
 //    1) the logic_shifts match
@@ -745,6 +857,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
 //   -> (arithmetic_shift Binop1((not X), Y), Amt)
 
 Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
+  const DataLayout &DL = I.getModule()->getDataLayout();
   auto IsValidBinOpc = [](unsigned Opc) {
     switch (Opc) {
     default:
@@ -793,9 +906,10 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
 
     // Otherwise, need mask that meets the below requirement.
     // (logic_shift (inv_logic_shift Mask, ShAmt), ShAmt) == Mask
-    return ConstantExpr::get(
-               ShOpc, ConstantExpr::get(GetInvShift(ShOpc), CMask, CShift),
-               CShift) == CMask;
+    Constant *MaskInvShift =
+        ConstantFoldBinaryOpOperands(GetInvShift(ShOpc), CMask, CShift, DL);
+    return ConstantFoldBinaryOpOperands(ShOpc, MaskInvShift, CShift, DL) ==
+           CMask;
   };
 
   auto MatchBinOp = [&](unsigned ShOpnum) -> Instruction * {
@@ -865,7 +979,8 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
     if (!CanDistributeBinops(I.getOpcode(), BinOpc, ShOpc, CMask, CShift))
       return nullptr;
 
-    Constant *NewCMask = ConstantExpr::get(GetInvShift(ShOpc), CMask, CShift);
+    Constant *NewCMask =
+        ConstantFoldBinaryOpOperands(GetInvShift(ShOpc), CMask, CShift, DL);
     Value *NewBinOp2 = Builder.CreateBinOp(
         static_cast<Instruction::BinaryOps>(BinOpc), X, NewCMask);
     Value *NewBinOp1 = Builder.CreateBinOp(I.getOpcode(), Y, NewBinOp2);
@@ -914,7 +1029,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
-    bool IsZExt = isa<ZExtOperator>(CastOp);
+    bool IsZExt = isa<ZExtInst>(CastOp);
     Constant *C;
 
     if (IsTrueArm) {
@@ -956,9 +1071,9 @@ Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
   Instruction::BinaryOps LHSOpcode, RHSOpcode;
 
   if (Op0)
-    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
+    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B, Op1);
   if (Op1)
-    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
+    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D, Op0);
 
   // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
   // a common term.
@@ -1082,6 +1197,70 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
+static std::optional<std::pair<Value *, Value *>>
+matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
+  if (LHS->getParent() != RHS->getParent())
+    return std::nullopt;
+
+  if (LHS->getNumIncomingValues() < 2)
+    return std::nullopt;
+
+  if (!equal(LHS->blocks(), RHS->blocks()))
+    return std::nullopt;
+
+  Value *L0 = LHS->getIncomingValue(0);
+  Value *R0 = RHS->getIncomingValue(0);
+
+  for (unsigned I = 1, E = LHS->getNumIncomingValues(); I != E; ++I) {
+    Value *L1 = LHS->getIncomingValue(I);
+    Value *R1 = RHS->getIncomingValue(I);
+
+    if ((L0 == L1 && R0 == R1) || (L0 == R1 && R0 == L1))
+      continue;
+
+    return std::nullopt;
+  }
+
+  return std::optional(std::pair(L0, R0));
+}
+
+std::optional<std::pair<Value *, Value *>>
+InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
+  Instruction *LHSInst = dyn_cast<Instruction>(LHS);
+  Instruction *RHSInst = dyn_cast<Instruction>(RHS);
+  if (!LHSInst || !RHSInst || LHSInst->getOpcode() != RHSInst->getOpcode())
+    return std::nullopt;
+  switch (LHSInst->getOpcode()) {
+  case Instruction::PHI:
+    return matchSymmetricPhiNodesPair(cast<PHINode>(LHS), cast<PHINode>(RHS));
+  case Instruction::Select: {
+    Value *Cond = LHSInst->getOperand(0);
+    Value *TrueVal = LHSInst->getOperand(1);
+    Value *FalseVal = LHSInst->getOperand(2);
+    if (Cond == RHSInst->getOperand(0) && TrueVal == RHSInst->getOperand(2) &&
+        FalseVal == RHSInst->getOperand(1))
+      return std::pair(TrueVal, FalseVal);
+    return std::nullopt;
+  }
+  case Instruction::Call: {
+    // Match min(a, b) and max(a, b)
+    MinMaxIntrinsic *LHSMinMax = dyn_cast<MinMaxIntrinsic>(LHSInst);
+    MinMaxIntrinsic *RHSMinMax = dyn_cast<MinMaxIntrinsic>(RHSInst);
+    if (LHSMinMax && RHSMinMax &&
+        LHSMinMax->getPredicate() ==
+            ICmpInst::getSwappedPredicate(RHSMinMax->getPredicate()) &&
+        ((LHSMinMax->getLHS() == RHSMinMax->getLHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getRHS()) ||
+         (LHSMinMax->getLHS() == RHSMinMax->getRHS() &&
+          LHSMinMax->getRHS() == RHSMinMax->getLHS())))
+      return std::pair(LHSMinMax->getLHS(), LHSMinMax->getRHS());
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1179,6 +1358,8 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       break;
     case Instruction::Xor:
       replaceInstUsesWith(cast<Instruction>(*U), I);
+      // Add to worklist for DCE.
+      addToWorklist(cast<Instruction>(U));
       break;
     default:
       llvm_unreachable("Got unexpected user - out of sync with "
@@ -1298,21 +1479,6 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   // Bool selects with constant operands can be folded to logical ops.
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
-
-  // If it's a bitcast involving vectors, make sure it has the same number of
-  // elements on both sides.
-  if (auto *BC = dyn_cast<BitCastInst>(&Op)) {
-    VectorType *DestTy = dyn_cast<VectorType>(BC->getDestTy());
-    VectorType *SrcTy = dyn_cast<VectorType>(BC->getSrcTy());
-
-    // Verify that either both or neither are vectors.
-    if ((SrcTy == nullptr) != (DestTy == nullptr))
-      return nullptr;
-
-    // If vectors, verify that they have the same number of elements.
-    if (SrcTy && SrcTy->getElementCount() != DestTy->getElementCount())
-      return nullptr;
-  }
 
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
@@ -1704,8 +1870,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
-  if (match(LHS, m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))) &&
-      match(RHS, m_Shuffle(m_Value(V2), m_Undef(), m_SpecificMask(Mask))) &&
+  if (match(LHS, m_Shuffle(m_Value(V1), m_Poison(), m_Mask(Mask))) &&
+      match(RHS, m_Shuffle(m_Value(V2), m_Poison(), m_SpecificMask(Mask))) &&
       V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
@@ -1746,9 +1912,9 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   Constant *C;
   auto *InstVTy = dyn_cast<FixedVectorType>(Inst.getType());
   if (InstVTy &&
-      match(&Inst,
-            m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
-                      m_ImmConstant(C))) &&
+      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+                                                m_Mask(Mask))),
+                             m_ImmConstant(C))) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <=
           InstVTy->getNumElements()) {
     assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
@@ -1763,8 +1929,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     ArrayRef<int> ShMask = Mask;
     unsigned SrcVecNumElts =
         cast<FixedVectorType>(V1->getType())->getNumElements();
-    UndefValue *UndefScalar = UndefValue::get(C->getType()->getScalarType());
-    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, UndefScalar);
+    PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
+    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, PoisonScalar);
     bool MayChange = true;
     unsigned NumElts = InstVTy->getNumElements();
     for (unsigned I = 0; I < NumElts; ++I) {
@@ -1777,29 +1943,29 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
         // 2. The shuffle needs an element of the constant vector that can't
         //    be mapped to a new constant vector.
         // 3. This is a widening shuffle that copies elements of V1 into the
-        //    extended elements (extending with undef is allowed).
-        if (!CElt || (!isa<UndefValue>(NewCElt) && NewCElt != CElt) ||
+        //    extended elements (extending with poison is allowed).
+        if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
             I >= SrcVecNumElts) {
           MayChange = false;
           break;
         }
         NewVecC[ShMask[I]] = CElt;
       }
-      // If this is a widening shuffle, we must be able to extend with undef
-      // elements. If the original binop does not produce an undef in the high
+      // If this is a widening shuffle, we must be able to extend with poison
+      // elements. If the original binop does not produce a poison in the high
       // lanes, then this transform is not safe.
-      // Similarly for undef lanes due to the shuffle mask, we can only
-      // transform binops that preserve undef.
-      // TODO: We could shuffle those non-undef constant values into the
-      //       result by using a constant vector (rather than an undef vector)
+      // Similarly for poison lanes due to the shuffle mask, we can only
+      // transform binops that preserve poison.
+      // TODO: We could shuffle those non-poison constant values into the
+      //       result by using a constant vector (rather than an poison vector)
       //       as operand 1 of the new binop, but that might be too aggressive
       //       for target-independent shuffle creation.
       if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybeUndef =
+        Constant *MaybePoison =
             ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, UndefScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, UndefScalar, DL);
-        if (!MaybeUndef || !match(MaybeUndef, m_Undef())) {
+                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
+                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
+        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
           MayChange = false;
           break;
         }
@@ -1807,9 +1973,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     }
     if (MayChange) {
       Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with undef elements
+      // It may not be safe to execute a binop on a vector with poison elements
       // because the entire instruction can be folded to undef or create poison
       // that did not exist in the original code.
+      // TODO: The shift case should not be necessary.
       if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
@@ -1898,8 +2065,8 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
     Constant *WideC;
     if (!Op0->hasOneUse() || !match(Op1, m_Constant(WideC)))
       return nullptr;
-    Constant *NarrowC = ConstantExpr::getTrunc(WideC, X->getType());
-    if (ConstantExpr::getCast(CastOpc, NarrowC, BO.getType()) != WideC)
+    Constant *NarrowC = getLosslessTrunc(WideC, X->getType(), CastOpc);
+    if (!NarrowC)
       return nullptr;
     Y = NarrowC;
   }
@@ -2098,6 +2265,137 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   return nullptr;
 }
 
+Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                           BuilderTy *Builder,
+                                           bool &DoesConsume, unsigned Depth) {
+  static Value *const NonNull = reinterpret_cast<Value *>(uintptr_t(1));
+  // ~(~(X)) -> X.
+  Value *A, *B;
+  if (match(V, m_Not(m_Value(A)))) {
+    DoesConsume = true;
+    return A;
+  }
+
+  Constant *C;
+  // Constants can be considered to be not'ed values.
+  if (match(V, m_ImmConstant(C)))
+    return ConstantExpr::getNot(C);
+
+  if (Depth++ >= MaxAnalysisRecursionDepth)
+    return nullptr;
+
+  // The rest of the cases require that we invert all uses so don't bother
+  // doing the analysis if we know we can't use the result.
+  if (!WillInvertAllUses)
+    return nullptr;
+
+  // Compares can be inverted if all of their uses are being modified to use
+  // the ~V.
+  if (auto *I = dyn_cast<CmpInst>(V)) {
+    if (Builder != nullptr)
+      return Builder->CreateCmp(I->getInversePredicate(), I->getOperand(0),
+                                I->getOperand(1));
+    return NonNull;
+  }
+
+  // If `V` is of the form `A + B` then `-1 - V` can be folded into
+  // `(-1 - B) - A` if we are willing to invert all of the uses.
+  if (match(V, m_Add(m_Value(A), m_Value(B)))) {
+    if (auto *BV = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSub(BV, A) : NonNull;
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSub(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // If `V` is of the form `A ^ ~B` then `~(A ^ ~B)` can be folded
+  // into `A ^ B` if we are willing to invert all of the uses.
+  if (match(V, m_Xor(m_Value(A), m_Value(B)))) {
+    if (auto *BV = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateXor(A, BV) : NonNull;
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateXor(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // If `V` is of the form `B - A` then `-1 - V` can be folded into
+  // `A + (-1 - B)` if we are willing to invert all of the uses.
+  if (match(V, m_Sub(m_Value(A), m_Value(B)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateAdd(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // If `V` is of the form `(~A) s>> B` then `~((~A) s>> B)` can be folded
+  // into `A s>> B` if we are willing to invert all of the uses.
+  if (match(V, m_AShr(m_Value(A), m_Value(B)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  Value *Cond;
+  // LogicOps are special in that we canonicalize them at the cost of an
+  // instruction.
+  bool IsSelect = match(V, m_Select(m_Value(Cond), m_Value(A), m_Value(B))) &&
+                  !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
+  // Selects/min/max with invertible operands are freely invertible
+  if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B)))) {
+    if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder*/ nullptr,
+                               DoesConsume, Depth))
+      return nullptr;
+    if (Value *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                            DoesConsume, Depth)) {
+      if (Builder != nullptr) {
+        Value *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                            DoesConsume, Depth);
+        assert(NotB != nullptr &&
+               "Unable to build inverted value for known freely invertable op");
+        if (auto *II = dyn_cast<IntrinsicInst>(V))
+          return Builder->CreateBinaryIntrinsic(
+              getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
+        return Builder->CreateSelect(Cond, NotA, NotB);
+      }
+      return NonNull;
+    }
+  }
+
+  if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    SmallVector<std::pair<Value *, BasicBlock *>, 8> IncomingValues;
+    for (Use &U : PN->operands()) {
+      BasicBlock *IncomingBlock = PN->getIncomingBlock(U);
+      Value *NewIncomingVal = getFreelyInvertedImpl(
+          U.get(), /*WillInvertAllUses=*/false,
+          /*Builder=*/nullptr, DoesConsume, MaxAnalysisRecursionDepth - 1);
+      if (NewIncomingVal == nullptr)
+        return nullptr;
+      // Make sure that we can safely erase the original PHI node.
+      if (NewIncomingVal == V)
+        return nullptr;
+      if (Builder != nullptr)
+        IncomingValues.emplace_back(NewIncomingVal, IncomingBlock);
+    }
+    if (Builder != nullptr) {
+      IRBuilderBase::InsertPointGuard Guard(*Builder);
+      Builder->SetInsertPoint(PN);
+      PHINode *NewPN =
+          Builder->CreatePHI(PN->getType(), PN->getNumIncomingValues());
+      for (auto [Val, Pred] : IncomingValues)
+        NewPN->addIncoming(Val, Pred);
+      return NewPN;
+    }
+    return NonNull;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2113,10 +2411,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // compile-time.
   if (auto *GEPFVTy = dyn_cast<FixedVectorType>(GEPType)) {
     auto VWidth = GEPFVTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
-                                              UndefElts)) {
+                                              PoisonElts)) {
       if (V != &GEP)
         return replaceInstUsesWith(GEP, V);
       return &GEP;
@@ -2169,6 +2467,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
   if (MadeChange)
     return &GEP;
+
+  // Canonicalize constant GEPs to i8 type.
+  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+    APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
+    if (GEP.accumulateConstantOffset(DL, Offset))
+      return replaceInstUsesWith(
+          GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
+                                    GEP.isInBounds()));
+  }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
@@ -2287,37 +2594,81 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         DL.getIndexSizeInBits(AS)) {
       uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
 
-      bool Matched = false;
-      uint64_t C;
-      Value *V = nullptr;
       if (TyAllocSize == 1) {
-        V = GEP.getOperand(1);
-        Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_AShr(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == 1ULL << C)
-          Matched = true;
-      } else if (match(GEP.getOperand(1),
-                       m_SDiv(m_Value(V), m_ConstantInt(C)))) {
-        if (TyAllocSize == C)
-          Matched = true;
+        // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y),
+        // but only if the result pointer is only used as if it were an integer,
+        // or both point to the same underlying object (otherwise provenance is
+        // not necessarily retained).
+        Value *X = GEP.getPointerOperand();
+        Value *Y;
+        if (match(GEP.getOperand(1),
+                  m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+            GEPType == Y->getType()) {
+          bool HasSameUnderlyingObject =
+              getUnderlyingObject(X) == getUnderlyingObject(Y);
+          bool Changed = false;
+          GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            bool ShouldReplace = HasSameUnderlyingObject ||
+                                 isa<ICmpInst>(U.getUser()) ||
+                                 isa<PtrToIntInst>(U.getUser());
+            Changed |= ShouldReplace;
+            return ShouldReplace;
+          });
+          return Changed ? &GEP : nullptr;
+        }
+      } else {
+        // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
+        Value *V;
+        if ((has_single_bit(TyAllocSize) &&
+             match(GEP.getOperand(1),
+                   m_Exact(m_AShr(m_Value(V),
+                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+            match(GEP.getOperand(1),
+                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+              Builder.getInt8Ty(), GEP.getPointerOperand(), V);
+          NewGEP->setIsInBounds(GEP.isInBounds());
+          return NewGEP;
+        }
       }
-
-      // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
-      // only if both point to the same underlying object (otherwise provenance
-      // is not necessarily retained).
-      Value *Y;
-      Value *X = GEP.getOperand(0);
-      if (Matched &&
-          match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
-          getUnderlyingObject(X) == getUnderlyingObject(Y))
-        return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
-
   // We do not handle pointer-vector geps here.
   if (GEPType->isVectorTy())
     return nullptr;
+
+  if (GEP.getNumIndices() == 1) {
+    // Try to replace ADD + GEP with GEP + GEP.
+    Value *Idx1, *Idx2;
+    if (match(GEP.getOperand(1),
+              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
+      //   %idx = add i64 %idx1, %idx2
+      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
+      // as:
+      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
+      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
+      auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
+                                       GEP.getPointerOperand(), Idx1);
+      return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
+                                       Idx2);
+    }
+    ConstantInt *C;
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
+                                     m_Value(Idx1), m_ConstantInt(C))))))) {
+      // %add = add nsw i32 %idx1, idx2
+      // %sidx = sext i32 %add to i64
+      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      // as:
+      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
+      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      auto *NewPtr = Builder.CreateGEP(
+          GEP.getResultElementType(), GEP.getPointerOperand(),
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
+      return GetElementPtrInst::Create(
+          GEP.getResultElementType(), NewPtr,
+          Builder.CreateSExt(C, GEP.getOperand(1)->getType()));
+    }
+  }
 
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
@@ -2412,6 +2763,26 @@ static bool isAllocSiteRemovable(Instruction *AI,
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
         if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), TLI, AI))
           return false;
+
+        // Do not fold compares to aligned_alloc calls, as they may have to
+        // return null in case the required alignment cannot be satisfied,
+        // unless we can prove that both alignment and size are valid.
+        auto AlignmentAndSizeKnownValid = [](CallBase *CB) {
+          // Check if alignment and size of a call to aligned_alloc is valid,
+          // that is alignment is a power-of-2 and the size is a multiple of the
+          // alignment.
+          const APInt *Alignment;
+          const APInt *Size;
+          return match(CB->getArgOperand(0), m_APInt(Alignment)) &&
+                 match(CB->getArgOperand(1), m_APInt(Size)) &&
+                 Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
+        };
+        auto *CB = dyn_cast<CallBase>(AI);
+        LibFunc TheLibFunc;
+        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
+            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
+            !AlignmentAndSizeKnownValid(CB))
+          return false;
         Users.emplace_back(I);
         continue;
       }
@@ -2501,9 +2872,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
   SmallVector<DbgVariableIntrinsic *, 8> DVIs;
+  SmallVector<DPValue *, 8> DPVs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI);
+    findDbgUsers(DVIs, &MI, &DPVs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -2543,6 +2915,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         for (auto *DVI : DVIs)
           if (DVI->isAddressOfVariable())
             ConvertDebugDeclareToDebugValue(DVI, SI, *DIB);
+        for (auto *DPV : DPVs)
+          if (DPV->isAddressOfVariable())
+            ConvertDebugDeclareToDebugValue(DPV, SI, *DIB);
       } else {
         // Casts, GEP, or anything else: we're about to delete this instruction,
         // so it can not have any valid uses.
@@ -2581,9 +2956,15 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     // If there is a dead store to `%a` in @trivially_inlinable_no_op, the
     // "arg0" dbg.value may be stale after the call. However, failing to remove
     // the DW_OP_deref dbg.value causes large gaps in location coverage.
+    //
+    // FIXME: the Assignment Tracking project has now likely made this
+    // redundant (and it's sometimes harmful).
     for (auto *DVI : DVIs)
       if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
         DVI->eraseFromParent();
+    for (auto *DPV : DPVs)
+      if (DPV->isAddressOfVariable() || DPV->getExpression()->startsWithDeref())
+        DPV->eraseFromParent();
 
     return eraseInstFromFunction(MI);
   }
@@ -2730,8 +3111,25 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  // Nothing for now.
-  return nullptr;
+  if (!EnableSimplifyDemandedUseFPClass)
+    return nullptr;
+
+  Value *RetVal = RI.getReturnValue();
+  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+    return nullptr;
+
+  Function *F = RI.getFunction();
+  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
+  if (ReturnClass == fcNone)
+    return nullptr;
+
+  KnownFPClass KnownClass;
+  Value *Simplified =
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+  if (!Simplified)
+    return nullptr;
+
+  return ReturnInst::Create(RI.getContext(), Simplified);
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
@@ -2827,9 +3225,15 @@ void InstCombinerImpl::handleUnreachableFrom(
     }
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
+    // RemoveDIs: erase debug-info on this instruction manually.
+    Inst.dropDbgValues();
     eraseInstFromFunction(Inst);
     MadeIRChange = true;
   }
+
+  // RemoveDIs: to match behaviour in dbg.value mode, drop debug-info on
+  // terminator too.
+  BB->getTerminator()->dropDbgValues();
 
   // Handle potentially dead successors.
   for (BasicBlock *Succ : successors(BB))
@@ -2916,6 +3320,7 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return nullptr;
   }
 
+  DC.registerBranch(&BI);
   return nullptr;
 }
 
@@ -2932,6 +3337,64 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       Case.setValue(cast<ConstantInt>(NewCase));
     }
     return replaceOperand(SI, 0, Op0);
+  }
+
+  ConstantInt *SubLHS;
+  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
+    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
+    for (auto Case : SI.cases()) {
+      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
+      assert(isa<ConstantInt>(NewCase) &&
+             "Result of expression should be constant");
+      Case.setValue(cast<ConstantInt>(NewCase));
+    }
+    return replaceOperand(SI, 0, Op0);
+  }
+
+  uint64_t ShiftAmt;
+  if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
+      all_of(SI.cases(), [&](const auto &Case) {
+        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
+      })) {
+    // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
+    OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
+    if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
+        Shl->hasOneUse()) {
+      Value *NewCond = Op0;
+      if (!Shl->hasNoUnsignedWrap() && !Shl->hasNoSignedWrap()) {
+        // If the shift may wrap, we need to mask off the shifted bits.
+        unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+        NewCond = Builder.CreateAnd(
+            Op0, APInt::getLowBitsSet(BitWidth, BitWidth - ShiftAmt));
+      }
+      for (auto Case : SI.cases()) {
+        const APInt &CaseVal = Case.getCaseValue()->getValue();
+        APInt ShiftedCase = Shl->hasNoSignedWrap() ? CaseVal.ashr(ShiftAmt)
+                                                   : CaseVal.lshr(ShiftAmt);
+        Case.setValue(ConstantInt::get(SI.getContext(), ShiftedCase));
+      }
+      return replaceOperand(SI, 0, NewCond);
+    }
+  }
+
+  // Fold switch(zext/sext(X)) into switch(X) if possible.
+  if (match(Cond, m_ZExtOrSExt(m_Value(Op0)))) {
+    bool IsZExt = isa<ZExtInst>(Cond);
+    Type *SrcTy = Op0->getType();
+    unsigned NewWidth = SrcTy->getScalarSizeInBits();
+
+    if (all_of(SI.cases(), [&](const auto &Case) {
+          const APInt &CaseVal = Case.getCaseValue()->getValue();
+          return IsZExt ? CaseVal.isIntN(NewWidth)
+                        : CaseVal.isSignedIntN(NewWidth);
+        })) {
+      for (auto &Case : SI.cases()) {
+        APInt TruncatedCase = Case.getCaseValue()->getValue().trunc(NewWidth);
+        Case.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
+      }
+      return replaceOperand(SI, 0, Op0);
+    }
   }
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
@@ -3030,6 +3493,17 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   if (OvID == Intrinsic::smul_with_overflow &&
       WO->getLHS()->getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateAnd(WO->getLHS(), WO->getRHS());
+
+  // extractvalue (umul_with_overflow X, X), 1 -> X u> 2^(N/2)-1
+  if (OvID == Intrinsic::umul_with_overflow && WO->getLHS() == WO->getRHS()) {
+    unsigned BitWidth = WO->getLHS()->getType()->getScalarSizeInBits();
+    // Only handle even bitwidths for performance reasons.
+    if (BitWidth % 2 == 0)
+      return new ICmpInst(
+          ICmpInst::ICMP_UGT, WO->getLHS(),
+          ConstantInt::get(WO->getLHS()->getType(),
+                           APInt::getLowBitsSet(BitWidth, BitWidth / 2)));
+  }
 
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly
@@ -3653,19 +4127,27 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // *all* uses if the operand is an invoke/callbr and the use is in a phi on
   // the normal/default destination. This is why the domination check in the
   // replacement below is still necessary.
-  Instruction *MoveBefore;
+  BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
     MoveBefore =
-        &*FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
   } else {
-    MoveBefore = cast<Instruction>(Op)->getInsertionPointAfterDef();
-    if (!MoveBefore)
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
       return false;
+    MoveBefore = *MoveBeforeOpt;
   }
 
+  // Don't move to the position of a debug intrinsic.
+  if (isa<DbgInfoIntrinsic>(MoveBefore))
+    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
+  // Re-point iterator to come after any debug-info records, if we're
+  // running in "RemoveDIs" mode
+  MoveBefore.setHeadBit(false);
+
   bool Changed = false;
-  if (&FI != MoveBefore) {
-    FI.moveBefore(*MoveBefore->getParent(), MoveBefore->getIterator());
+  if (&FI != &*MoveBefore) {
+    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
     Changed = true;
   }
 
@@ -3877,8 +4359,28 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
-  findDbgUsers(DbgUsers, I);
+  SmallVector<DPValue *, 2> DPValues;
+  findDbgUsers(DbgUsers, I, &DPValues);
+  if (!DbgUsers.empty())
+    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  if (!DPValues.empty())
+    tryToSinkInstructionDPValues(I, InsertPos, SrcBlock, DestBlock, DPValues);
 
+  // PS: there are numerous flaws with this behaviour, not least that right now
+  // assignments can be re-ordered past other assignments to the same variable
+  // if they use different Values. Creating more undef assignements can never be
+  // undone. And salvaging all users outside of this block can un-necessarily
+  // alter the lifetime of the live-value that the variable refers to.
+  // Some of these things can be resolved by tolerating debug use-before-defs in
+  // LLVM-IR, however it depends on the instruction-referencing CodeGen backend
+  // being used for more architectures.
+
+  return true;
+}
+
+void InstCombinerImpl::tryToSinkInstructionDbgValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
   // For all debug values in the destination block, the sunk instruction
   // will still be available, so they do not need to be dropped.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
@@ -3925,7 +4427,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // Perform salvaging without the clones, then sink the clones.
   if (!DIIClones.empty()) {
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage);
+    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, {});
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
@@ -3933,8 +4435,132 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }
+}
 
-  return true;
+void InstCombinerImpl::tryToSinkInstructionDPValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DPValue *> &DPValues) {
+  // Implementation of tryToSinkInstructionDbgValues, but for the DPValue of
+  // variable assignments rather than dbg.values.
+
+  // Fetch all DPValues not already in the destination.
+  SmallVector<DPValue *, 2> DPValuesToSalvage;
+  for (auto &DPV : DPValues)
+    if (DPV->getParent() != DestBlock)
+      DPValuesToSalvage.push_back(DPV);
+
+  // Fetch a second collection, of DPValues in the source block that we're going
+  // to sink.
+  SmallVector<DPValue *> DPValuesToSink;
+  for (DPValue *DPV : DPValuesToSalvage)
+    if (DPV->getParent() == SrcBlock)
+      DPValuesToSink.push_back(DPV);
+
+  // Sort DPValues according to their position in the block. This is a partial
+  // order: DPValues attached to different instructions will be ordered by the
+  // instruction order, but DPValues attached to the same instruction won't
+  // have an order.
+  auto Order = [](DPValue *A, DPValue *B) -> bool {
+    return B->getInstruction()->comesBefore(A->getInstruction());
+  };
+  llvm::stable_sort(DPValuesToSink, Order);
+
+  // If there are two assignments to the same variable attached to the same
+  // instruction, the ordering between the two assignments is important. Scan
+  // for this (rare) case and establish which is the last assignment.
+  using InstVarPair = std::pair<const Instruction *, DebugVariable>;
+  SmallDenseMap<InstVarPair, DPValue *> FilterOutMap;
+  if (DPValuesToSink.size() > 1) {
+    SmallDenseMap<InstVarPair, unsigned> CountMap;
+    // Count how many assignments to each variable there is per instruction.
+    for (DPValue *DPV : DPValuesToSink) {
+      DebugVariable DbgUserVariable =
+          DebugVariable(DPV->getVariable(), DPV->getExpression(),
+                        DPV->getDebugLoc()->getInlinedAt());
+      CountMap[std::make_pair(DPV->getInstruction(), DbgUserVariable)] += 1;
+    }
+
+    // If there are any instructions with two assignments, add them to the
+    // FilterOutMap to record that they need extra filtering.
+    SmallPtrSet<const Instruction *, 4> DupSet;
+    for (auto It : CountMap) {
+      if (It.second > 1) {
+        FilterOutMap[It.first] = nullptr;
+        DupSet.insert(It.first.first);
+      }
+    }
+
+    // For all instruction/variable pairs needing extra filtering, find the
+    // latest assignment.
+    for (const Instruction *Inst : DupSet) {
+      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+        DebugVariable DbgUserVariable =
+            DebugVariable(DPV.getVariable(), DPV.getExpression(),
+                          DPV.getDebugLoc()->getInlinedAt());
+        auto FilterIt =
+            FilterOutMap.find(std::make_pair(Inst, DbgUserVariable));
+        if (FilterIt == FilterOutMap.end())
+          continue;
+        if (FilterIt->second != nullptr)
+          continue;
+        FilterIt->second = &DPV;
+      }
+    }
+  }
+
+  // Perform cloning of the DPValues that we plan on sinking, filter out any
+  // duplicate assignments identified above.
+  SmallVector<DPValue *, 2> DPVClones;
+  SmallSet<DebugVariable, 4> SunkVariables;
+  for (DPValue *DPV : DPValuesToSink) {
+    if (DPV->Type == DPValue::LocationType::Declare)
+      continue;
+
+    DebugVariable DbgUserVariable =
+        DebugVariable(DPV->getVariable(), DPV->getExpression(),
+                      DPV->getDebugLoc()->getInlinedAt());
+
+    // For any variable where there were multiple assignments in the same place,
+    // ignore all but the last assignment.
+    if (!FilterOutMap.empty()) {
+      InstVarPair IVP = std::make_pair(DPV->getInstruction(), DbgUserVariable);
+      auto It = FilterOutMap.find(IVP);
+
+      // Filter out.
+      if (It != FilterOutMap.end() && It->second != DPV)
+        continue;
+    }
+
+    if (!SunkVariables.insert(DbgUserVariable).second)
+      continue;
+
+    if (DPV->isDbgAssign())
+      continue;
+
+    DPVClones.emplace_back(DPV->clone());
+    LLVM_DEBUG(dbgs() << "CLONE: " << *DPVClones.back() << '\n');
+  }
+
+  // Perform salvaging without the clones, then sink the clones.
+  if (DPVClones.empty())
+    return;
+
+  salvageDebugInfoForDbgValues(*I, {}, DPValuesToSalvage);
+
+  // The clones are in reverse order of original appearance. Assert that the
+  // head bit is set on the iterator as we _should_ have received it via
+  // getFirstInsertionPt. Inserting like this will reverse the clone order as
+  // we'll repeatedly insert at the head, such as:
+  //   DPV-3 (third insertion goes here)
+  //   DPV-2 (second insertion goes here)
+  //   DPV-1 (first insertion goes here)
+  //   Any-Prior-DPVs
+  //   InsertPtInst
+  assert(InsertPos.getHeadBit());
+  for (DPValue *DPVClone : DPVClones) {
+    InsertPos->getParent()->insertDPValueBefore(DPVClone, InsertPos);
+    LLVM_DEBUG(dbgs() << "SINK: " << *DPVClone << '\n');
+  }
 }
 
 bool InstCombinerImpl::run() {
@@ -4091,7 +4717,7 @@ bool InstCombinerImpl::run() {
           if (isa<PHINode>(I)) // PHI -> Non-PHI
             InsertPos = InstParent->getFirstInsertionPt();
           else // Non-PHI -> PHI
-            InsertPos = InstParent->getFirstNonPHI()->getIterator();
+            InsertPos = InstParent->getFirstNonPHIIt();
         }
 
         Result->insertInto(InstParent, InsertPos);
@@ -4323,8 +4949,7 @@ static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI, unsigned MaxIterations, bool VerifyFixpoint,
-    LoopInfo *LI) {
+    ProfileSummaryInfo *PSI, LoopInfo *LI, const InstCombineOptions &Opts) {
   auto &DL = F.getParent()->getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -4350,8 +4975,8 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > MaxIterations && !VerifyFixpoint) {
-      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << MaxIterations
+    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
@@ -4370,10 +4995,10 @@ static bool combineInstructionsOverFunction(
       break;
 
     MadeIRChange = true;
-    if (Iteration > MaxIterations) {
+    if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(MaxIterations) + " iterations");
+          Twine(Opts.MaxIterations) + " iterations");
     }
   }
 
@@ -4424,8 +5049,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, Options.MaxIterations,
-                                       Options.VerifyFixpoint, LI))
+                                       BFI, PSI, LI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -4474,9 +5098,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       nullptr;
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI,
-                                         InstCombineDefaultMaxIterations,
-                                         /*VerifyFixpoint */ false, LI);
+                                         BFI, PSI, LI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

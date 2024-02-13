@@ -30,9 +30,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
@@ -381,6 +381,8 @@ private:
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
+  bool Disjoint : 1;
+  bool NonNeg : 1;
   bool NoNaNs : 1;
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
@@ -401,10 +403,11 @@ private:
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
-      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NoNaNs(false),
-        NoInfs(false), NoSignedZeros(false), AllowReciprocal(false),
-        AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
+      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false),
+        Disjoint(false), NonNeg(false), NoNaNs(false), NoInfs(false),
+        NoSignedZeros(false), AllowReciprocal(false), AllowContract(false),
+        ApproximateFuncs(false), AllowReassociation(false), NoFPExcept(false),
+        Unpredictable(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -421,6 +424,8 @@ public:
   void setNoUnsignedWrap(bool b) { NoUnsignedWrap = b; }
   void setNoSignedWrap(bool b) { NoSignedWrap = b; }
   void setExact(bool b) { Exact = b; }
+  void setDisjoint(bool b) { Disjoint = b; }
+  void setNonNeg(bool b) { NonNeg = b; }
   void setNoNaNs(bool b) { NoNaNs = b; }
   void setNoInfs(bool b) { NoInfs = b; }
   void setNoSignedZeros(bool b) { NoSignedZeros = b; }
@@ -435,6 +440,8 @@ public:
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
   bool hasNoSignedWrap() const { return NoSignedWrap; }
   bool hasExact() const { return Exact; }
+  bool hasDisjoint() const { return Disjoint; }
+  bool hasNonNeg() const { return NonNeg; }
   bool hasNoNaNs() const { return NoNaNs; }
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
@@ -451,6 +458,8 @@ public:
     NoUnsignedWrap &= Flags.NoUnsignedWrap;
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
+    Disjoint &= Flags.Disjoint;
+    NonNeg &= Flags.NonNeg;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
     NoSignedZeros &= Flags.NoSignedZeros;
@@ -920,8 +929,14 @@ public:
   /// Helper method returns the integer value of a ConstantSDNode operand.
   inline uint64_t getConstantOperandVal(unsigned Num) const;
 
+  /// Helper method returns the zero-extended integer value of a ConstantSDNode.
+  inline uint64_t getAsZExtVal() const;
+
   /// Helper method returns the APInt of a ConstantSDNode operand.
   inline const APInt &getConstantOperandAPInt(unsigned Num) const;
+
+  /// Helper method returns the APInt value of a ConstantSDNode.
+  inline const APInt &getAsAPIntVal() const;
 
   const SDValue &getOperand(unsigned Num) const {
     assert(Num < NumOperands && "Invalid child # of SDNode!");
@@ -1636,8 +1651,16 @@ uint64_t SDNode::getConstantOperandVal(unsigned Num) const {
   return cast<ConstantSDNode>(getOperand(Num))->getZExtValue();
 }
 
+uint64_t SDNode::getAsZExtVal() const {
+  return cast<ConstantSDNode>(this)->getZExtValue();
+}
+
 const APInt &SDNode::getConstantOperandAPInt(unsigned Num) const {
   return cast<ConstantSDNode>(getOperand(Num))->getAPIntValue();
+}
+
+const APInt &SDNode::getAsAPIntVal() const {
+  return cast<ConstantSDNode>(this)->getAPIntValue();
 }
 
 class ConstantFPSDNode : public SDNode {
@@ -3076,53 +3099,53 @@ namespace ISD {
 
   /// Returns true if the specified node is a non-extending and unindexed load.
   inline bool isNormalLoad(const SDNode *N) {
-    const LoadSDNode *Ld = dyn_cast<LoadSDNode>(N);
+    auto *Ld = dyn_cast<LoadSDNode>(N);
     return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-      Ld->getAddressingMode() == ISD::UNINDEXED;
+           Ld->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Returns true if the specified node is a non-extending load.
   inline bool isNON_EXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD;
   }
 
   /// Returns true if the specified node is a EXTLOAD.
   inline bool isEXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::EXTLOAD;
   }
 
   /// Returns true if the specified node is a SEXTLOAD.
   inline bool isSEXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::SEXTLOAD;
   }
 
   /// Returns true if the specified node is a ZEXTLOAD.
   inline bool isZEXTLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::ZEXTLOAD;
   }
 
   /// Returns true if the specified node is an unindexed load.
   inline bool isUNINDEXEDLoad(const SDNode *N) {
-    return isa<LoadSDNode>(N) &&
-      cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
+    auto *Ld = dyn_cast<LoadSDNode>(N);
+    return Ld && Ld->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Returns true if the specified node is a non-truncating
   /// and unindexed store.
   inline bool isNormalStore(const SDNode *N) {
-    const StoreSDNode *St = dyn_cast<StoreSDNode>(N);
+    auto *St = dyn_cast<StoreSDNode>(N);
     return St && !St->isTruncatingStore() &&
-      St->getAddressingMode() == ISD::UNINDEXED;
+           St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Returns true if the specified node is an unindexed store.
   inline bool isUNINDEXEDStore(const SDNode *N) {
-    return isa<StoreSDNode>(N) &&
-      cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
+    auto *St = dyn_cast<StoreSDNode>(N);
+    return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

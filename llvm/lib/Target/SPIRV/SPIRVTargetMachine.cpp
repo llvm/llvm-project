@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils.h"
 #include <optional>
 
 using namespace llvm;
@@ -42,6 +43,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -90,7 +92,7 @@ namespace {
 class SPIRVPassConfig : public TargetPassConfig {
 public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM), TM(TM) {}
 
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
@@ -109,6 +111,9 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
+
+private:
+  const SPIRVTargetMachine &TM;
 };
 } // namespace
 
@@ -148,9 +153,23 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+    // Once legalized, we need to structurize the CFG to follow the spec.
+    // This is done through the following 8 steps.
+    // TODO(#75801): add the remaining steps.
+
+    // 1.  Simplify loop for subsequent transformations. After this steps, loops
+    // have the following properties:
+    //  - loops have a single entry edge (pre-header to loop header).
+    //  - all loop exits are dominated by the loop pre-header.
+    //  - loops have a single back-edge.
+    addPass(createLoopSimplifyPass());
+  }
+
   TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
-  addPass(createSPIRVPrepareFunctionsPass());
+  addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVStripConvergenceIntrinsicsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {

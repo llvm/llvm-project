@@ -197,27 +197,16 @@ define void @cttz_zeroundef_i64() {
 }
 
 define void @ctpop_i32() {
-; CHECK-SDAG-LABEL: ctpop_i32:
-; CHECK-SDAG:       // %bb.0:
-; CHECK-SDAG-NEXT:    adrp x8, :got:var32
-; CHECK-SDAG-NEXT:    ldr x8, [x8, :got_lo12:var32]
-; CHECK-SDAG-NEXT:    ldr w9, [x8]
-; CHECK-SDAG-NEXT:    fmov d0, x9
-; CHECK-SDAG-NEXT:    cnt v0.8b, v0.8b
-; CHECK-SDAG-NEXT:    uaddlv h0, v0.8b
-; CHECK-SDAG-NEXT:    str s0, [x8]
-; CHECK-SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: ctpop_i32:
-; CHECK-GISEL:       // %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, :got:var32
-; CHECK-GISEL-NEXT:    ldr x8, [x8, :got_lo12:var32]
-; CHECK-GISEL-NEXT:    ldr w9, [x8]
-; CHECK-GISEL-NEXT:    fmov d0, x9
-; CHECK-GISEL-NEXT:    cnt v0.8b, v0.8b
-; CHECK-GISEL-NEXT:    uaddlv h0, v0.8b
-; CHECK-GISEL-NEXT:    str s0, [x8]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: ctpop_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, :got:var32
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var32]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    str s0, [x8]
+; CHECK-NEXT:    ret
   %val0_tmp = load i32, ptr @var32
   %val4_tmp = call i32 @llvm.ctpop.i32(i32 %val0_tmp)
   store volatile i32 %val4_tmp, ptr @var32
@@ -244,7 +233,7 @@ define void @ctpop_i64() {
 ; CHECK-GISEL-NEXT:    fmov d0, x9
 ; CHECK-GISEL-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GISEL-NEXT:    uaddlv h0, v0.8b
-; CHECK-GISEL-NEXT:    fmov w9, s0
+; CHECK-GISEL-NEXT:    mov w9, v0.s[0]
 ; CHECK-GISEL-NEXT:    str x9, [x8]
 ; CHECK-GISEL-NEXT:    ret
   %val0_tmp = load i64, ptr @var64

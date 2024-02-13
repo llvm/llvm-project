@@ -15,12 +15,12 @@
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
 #ifdef SYS_dup2
   // If dup2 syscall is available, we make use of directly.
-  int ret = __llvm_libc::syscall_impl<int>(SYS_dup2, oldfd, newfd);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_dup2, oldfd, newfd);
 #elif defined(SYS_dup3)
   // If dup2 syscall is not available, we try using the dup3 syscall. However,
   // dup3 fails if oldfd is the same as newfd. So, we handle that case
@@ -28,11 +28,11 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
   if (oldfd == newfd) {
     // Check if oldfd is actually a valid file descriptor.
 #if SYS_fcntl
-    int ret = __llvm_libc::syscall_impl<int>(SYS_fcntl, oldfd, F_GETFD);
+    int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl, oldfd, F_GETFD);
 #elif defined(SYS_fcntl64)
     // Same as fcntl but can handle large offsets
     static_assert(sizeof(off_t) == 8);
-    int ret = __llvm_libc::syscall_impl<int>(SYS_fcntl64, oldfd, F_GETFD);
+    int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl64, oldfd, F_GETFD);
 #else
 #error "SYS_fcntl and SYS_fcntl64 syscalls not available."
 #endif
@@ -41,7 +41,7 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
     libc_errno = -ret;
     return -1;
   }
-  int ret = __llvm_libc::syscall_impl<int>(SYS_dup3, oldfd, newfd, 0);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_dup3, oldfd, newfd, 0);
 #else
 #error "dup2 and dup3 syscalls not available."
 #endif
@@ -52,4 +52,4 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

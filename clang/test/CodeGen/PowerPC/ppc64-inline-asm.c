@@ -47,6 +47,6 @@ void testZ(void *addr) {
 void testZwOff(void *addr, long long off) {
   asm volatile ("dcbz %y0\n" :: "Z"(*(unsigned char *)(addr + off)) : "memory");
 // CHECK-LABEL: void @testZwOff(ptr noundef %addr, i64 noundef %off)
-// CHECK: %[[VAL:[^ ]+]] = getelementptr i8, ptr %addr, i64 %off
+// CHECK: %[[VAL:[^ ]+]] = getelementptr inbounds i8, ptr %addr, i64 %off
 // CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(ptr elementtype(i8) %[[VAL]])
 }

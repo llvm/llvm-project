@@ -16,5 +16,5 @@ define void @f2(i64 %lhs, i64 %rhs, i64* %addr) {
   ret void
 }
 
-; CHECK: Requested regalloc eviction advisor analysis could be created. Using default
-; DEFAULT-NOT: Requested regalloc eviction advisor analysis could be created. Using default
+; CHECK: Requested regalloc eviction advisor analysis could not be created. Using default
+; DEFAULT-NOT: Requested regalloc eviction advisor analysis could not be created. Using default

@@ -82,8 +82,8 @@ struct Foo { int a; };
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 1
+          "character": 4,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input1.h"
       },

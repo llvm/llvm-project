@@ -126,8 +126,8 @@ uint32_t DIEBuilder::allocDIE(const DWARFUnit &DU, const DWARFDie &DDie,
 void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   std::optional<uint32_t> UnitId = getUnitId(DU);
   if (!UnitId) {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: "
-           << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+              << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
     return;
   }
 
@@ -178,8 +178,9 @@ void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   getState().CloneUnitCtxMap[*UnitId].IsConstructed = true;
 }
 
-DIEBuilder::DIEBuilder(DWARFContext *DwarfContext, bool IsDWO)
-    : DwarfContext(DwarfContext), IsDWO(IsDWO) {}
+DIEBuilder::DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
+                       bool IsDWO)
+    : BC(BC), DwarfContext(DwarfContext), IsDWO(IsDWO) {}
 
 static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   unsigned int CUNum = IsDWO ? DwarfContext->getNumDWOCompileUnits()
@@ -189,15 +190,10 @@ static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   return CUNum;
 }
 
-void DIEBuilder::buildTypeUnits(const bool Init) {
+void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
+                                const bool Init) {
   if (Init)
     BuilderState.reset(new State());
-
-  unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
-  getState().CloneUnitCtxMap.resize(CUNum);
-  DWARFContext::unit_iterator_range CU4TURanges =
-      IsDWO ? DwarfContext->dwo_types_section_units()
-            : DwarfContext->types_section_units();
 
   const DWARFUnitIndex &TUIndex = DwarfContext->getTUIndex();
   if (!TUIndex.getRows().empty()) {
@@ -208,6 +204,11 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
                                        true);
     }
   }
+  const unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  getState().CloneUnitCtxMap.resize(CUNum);
+  DWARFContext::unit_iterator_range CU4TURanges =
+      IsDWO ? DwarfContext->dwo_types_section_units()
+            : DwarfContext->types_section_units();
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
@@ -230,8 +231,11 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
     registerUnit(*DU.get(), false);
   }
 
-  for (DWARFUnit *DU : getState().DWARF5TUVector)
+  for (DWARFUnit *DU : getState().DWARF5TUVector) {
     constructFromUnit(*DU);
+    if (StrOffsetWriter)
+      StrOffsetWriter->finalizeSection(*DU, *this);
+  }
 }
 
 void DIEBuilder::buildCompileUnits(const bool Init) {
@@ -263,13 +267,11 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
 }
 void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
   BuilderState.reset(new State());
-  // Initializing to full size because there could be cross CU references with
-  // different abbrev offsets. LLVM happens to output CUs that have cross CU
-  // references with the same abbrev table. So destinations end up in the first
-  // set, even if they themselves don't have src cross cu ref. We could have
-  // cases where this is not the case. In which case this container needs to be
-  // big enough for all.
-  getState().CloneUnitCtxMap.resize(DwarfContext->getNumCompileUnits());
+  // Allocating enough for current batch being processed.
+  // In real use cases we either processing a batch of CUs with no cross
+  // references, or if they do have them it is due to LTO. With clang they will
+  // share the same abbrev table. In either case this vector will not grow.
+  getState().CloneUnitCtxMap.resize(CUs.size());
   getState().Type = ProcessingType::CUs;
   for (DWARFUnit *CU : CUs)
     registerUnit(*CU, false);
@@ -278,11 +280,13 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
     constructFromUnit(*DU);
 }
 
-void DIEBuilder::buildBoth() {
+void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
-  buildTypeUnits(false);
-  buildCompileUnits(false);
+  buildTypeUnits(nullptr, false);
+  getState().Type = ProcessingType::CUs;
+  registerUnit(U, false);
+  constructFromUnit(U);
 }
 
 DIE *DIEBuilder::constructDIEFast(DWARFDie &DDie, DWARFUnit &U,
@@ -472,19 +476,21 @@ DWARFDie DIEBuilder::resolveDIEReference(
           allocDIE(*RefCU, RefDie, getState().DIEAlloc, *UnitId);
         return RefDie;
       }
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: invalid referenced DIE "
-                "at offset: "
-             << Twine::utohexstr(RefOffset) << ".\n";
+      BC.errs()
+          << "BOLT-WARNING: [internal-dwarf-error]: invalid referenced DIE "
+             "at offset: "
+          << Twine::utohexstr(RefOffset) << ".\n";
 
     } else {
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: could not parse "
-                "referenced DIE at offset: "
-             << Twine::utohexstr(RefOffset) << ".\n";
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: could not parse "
+                   "referenced DIE at offset: "
+                << Twine::utohexstr(RefOffset) << ".\n";
     }
   } else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: could not find referenced "
-              "CU. Referenced DIE offset: "
-           << Twine::utohexstr(RefOffset) << ".\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: could not find referenced "
+           "CU. Referenced DIE offset: "
+        << Twine::utohexstr(RefOffset) << ".\n";
   }
   return DWARFDie();
 }
@@ -513,8 +519,8 @@ void DIEBuilder::cloneDieReferenceAttribute(
   if (!DieInfo.Die) {
     assert(Ref > InputDIE.getOffset());
     (void)Ref;
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
-              "unallocated DIE. Should be alloc!\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
+                 "unallocated DIE. Should be alloc!\n";
     // We haven't cloned this DIE yet. Just create an empty one and
     // store it. It'll get really cloned when we process it.
     DieInfo.Die = DIE::get(getState().DIEAlloc, dwarf::Tag(RefDie.getTag()));
@@ -577,8 +583,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
          Description.Op[0] != Encoding::Size1))
-      outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
-                "encoding.\n";
+      BC.outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
+                   "encoding.\n";
 
     if ((Description.Op.size() == 1 &&
          Description.Op[0] == Encoding::BaseTypeRef) ||
@@ -613,9 +619,9 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
             Offset = Stage == CloneExpressionStage::INIT ? RefOffset
                                                          : Clone->getOffset();
           else
-            errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
-                      "doesn't point to "
-                      "DW_TAG_base_type.\n";
+            BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
+                         "doesn't point to "
+                         "DW_TAG_base_type.\n";
         }
       }
       uint8_t ULEB[16];
@@ -649,8 +655,9 @@ void DIEBuilder::cloneBlockAttribute(
                                    U.getVersion())) {
     Block = new (getState().DIEAlloc) DIEBlock;
   } else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unexpected Form value in "
-              "cloneBlockAttribute\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: Unexpected Form value in "
+           "cloneBlockAttribute\n";
     return;
   }
   Attr = Loc ? static_cast<DIEValueList *>(Loc)
@@ -717,9 +724,9 @@ void DIEBuilder::cloneScalarAttribute(
   else if (auto OptionalValue = Val.getAsSectionOffset())
     Value = *OptionalValue;
   else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
-              "attribute form. Dropping "
-              "attribute.\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
+                 "attribute form. Dropping "
+                 "attribute.\n";
     return;
   }
 
@@ -740,9 +747,9 @@ void DIEBuilder::cloneLoclistAttrubute(
   else if (auto OptionalValue = Val.getAsSectionOffset())
     Value = OptionalValue;
   else
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
-              "attribute form. Dropping "
-              "attribute.\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
+                 "attribute form. Dropping "
+                 "attribute.\n";
 
   if (!Value.has_value())
     return;
@@ -805,10 +812,10 @@ void DIEBuilder::cloneAttribute(
     cloneRefsigAttribute(Die, AttrSpec, Val);
     break;
   default:
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported attribute "
-              "form " +
-                  dwarf::FormEncodingString(AttrSpec.Form).str() +
-                  " in cloneAttribute. Dropping.";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported attribute "
+                 "form " +
+                     dwarf::FormEncodingString(AttrSpec.Form).str() +
+                     " in cloneAttribute. Dropping.";
   }
 }
 void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
@@ -892,6 +899,10 @@ void DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
                 });
   }
   getState().UnitIDMap[getHash(DU)] = getState().DUList.size();
+  // This handles the case where we do have cross cu references, but CUs do not
+  // share the same abbrev table.
+  if (getState().DUList.size() == getState().CloneUnitCtxMap.size())
+    getState().CloneUnitCtxMap.emplace_back();
   getState().DUList.push_back(&DU);
 }
 

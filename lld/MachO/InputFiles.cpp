@@ -320,7 +320,7 @@ static std::optional<size_t> getRecordSize(StringRef segname, StringRef name) {
 static Error parseCallGraph(ArrayRef<uint8_t> data,
                             std::vector<CallGraphEntry> &callGraph) {
   TimeTraceScope timeScope("Parsing call graph section");
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   while (!reader.empty()) {
     uint32_t fromIndex, toIndex;
     uint64_t count;
@@ -1522,13 +1522,22 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 }
 
 std::string ObjFile::sourceFile() const {
+  const char *unitName = compileUnit->getUnitDIE().getShortName();
+  // DWARF allows DW_AT_name to be absolute, in which case nothing should be
+  // prepended. As for the styles, debug info can contain paths from any OS, not
+  // necessarily an OS we're currently running on. Moreover different
+  // compilation units can be compiled on different operating systems and linked
+  // together later.
+  if (sys::path::is_absolute(unitName, llvm::sys::path::Style::posix) ||
+      sys::path::is_absolute(unitName, llvm::sys::path::Style::windows))
+    return unitName;
   SmallString<261> dir(compileUnit->getCompilationDir());
   StringRef sep = sys::path::get_separator();
   // We don't use `path::append` here because we want an empty `dir` to result
   // in an absolute path. `append` would give us a relative path for that case.
-  if (!dir.endswith(sep))
+  if (!dir.ends_with(sep))
     dir += sep;
-  return (dir + compileUnit->getUnitDIE().getShortName()).str();
+  return (dir + unitName).str();
 }
 
 lld::DWARFCache *ObjFile::getDwarf() {
@@ -1895,10 +1904,10 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       continue;
 
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:
-    case SymbolKind::ObjectiveCClass:
-    case SymbolKind::ObjectiveCClassEHType:
-    case SymbolKind::ObjectiveCInstanceVariable:
+    case EncodeKind::GlobalSymbol:
+    case EncodeKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClassEHType:
+    case EncodeKind::ObjectiveCInstanceVariable:
       normalSymbols.push_back(symbol);
     }
   }
@@ -1906,19 +1915,19 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   // TODO(compnerd) filter out symbols based on the target platform
   for (const auto *symbol : normalSymbols) {
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:
+    case EncodeKind::GlobalSymbol:
       addSymbol(*symbol, symbol->getName());
       break;
-    case SymbolKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
       addSymbol(*symbol, objc::klass + symbol->getName());
       addSymbol(*symbol, objc::metaclass + symbol->getName());
       break;
-    case SymbolKind::ObjectiveCClassEHType:
+    case EncodeKind::ObjectiveCClassEHType:
       addSymbol(*symbol, objc::ehtype + symbol->getName());
       break;
-    case SymbolKind::ObjectiveCInstanceVariable:
+    case EncodeKind::ObjectiveCInstanceVariable:
       addSymbol(*symbol, objc::ivar + symbol->getName());
       break;
     }
@@ -2291,9 +2300,16 @@ void BitcodeFile::parse() {
   // Convert LTO Symbols to LLD Symbols in order to perform resolution. The
   // "winning" symbol will then be marked as Prevailing at LTO compilation
   // time.
-  symbols.clear();
-  for (const lto::InputFile::Symbol &objSym : obj->symbols())
-    symbols.push_back(createBitcodeSymbol(objSym, *this));
+  symbols.resize(obj->symbols().size());
+
+  // Process defined symbols first. See the comment at the end of
+  // ObjFile<>::parseSymbols.
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (!it.value().isUndefined())
+      symbols[it.index()] = createBitcodeSymbol(it.value(), *this);
+  for (auto it : llvm::enumerate(obj->symbols()))
+    if (it.value().isUndefined())
+      symbols[it.index()] = createBitcodeSymbol(it.value(), *this);
 }
 
 void BitcodeFile::parseLazy() {

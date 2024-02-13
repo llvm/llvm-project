@@ -52,11 +52,11 @@ using namespace llvm::object;
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 static bool isDebugSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).startswith(".debug") || Sec.Name == ".gdb_index";
+  return StringRef(Sec.Name).starts_with(".debug") || Sec.Name == ".gdb_index";
 }
 
 static bool isDWOSection(const SectionBase &Sec) {
-  return StringRef(Sec.Name).endswith(".dwo");
+  return StringRef(Sec.Name).ends_with(".dwo");
 }
 
 static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
@@ -103,7 +103,7 @@ static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
        ELF::SHF_MASKOS | ELF::SHF_MASKPROC | ELF::SHF_TLS |
        ELF::SHF_INFO_LINK) &
       ~ELF::SHF_EXCLUDE &
-      ~(EMachine == EM_X86_64 ? ELF::SHF_X86_64_LARGE : 0UL);
+      ~(EMachine == EM_X86_64 ? (uint64_t)ELF::SHF_X86_64_LARGE : 0UL);
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 
@@ -180,9 +180,11 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
   case FileFormat::Binary:
-    return std::make_unique<BinaryWriter>(Obj, Out);
+    return std::make_unique<BinaryWriter>(Obj, Out, Config);
   case FileFormat::IHex:
-    return std::make_unique<IHexWriter>(Obj, Out);
+    return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
+  case FileFormat::SREC:
+    return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
@@ -214,7 +216,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
 
 static bool isCompressable(const SectionBase &Sec) {
   return !(Sec.Flags & ELF::SHF_COMPRESSED) &&
-         StringRef(Sec.Name).startswith(".debug");
+         StringRef(Sec.Name).starts_with(".debug");
 }
 
 static Error replaceDebugSections(
@@ -248,7 +250,7 @@ static bool isAArch64MappingSymbol(const Symbol &Sym) {
   StringRef Name = Sym.Name;
   if (!Name.consume_front("$x") && !Name.consume_front("$d"))
     return false;
-  return Name.empty() || Name.startswith(".");
+  return Name.empty() || Name.starts_with(".");
 }
 
 static bool isArmMappingSymbol(const Symbol &Sym) {
@@ -259,7 +261,7 @@ static bool isArmMappingSymbol(const Symbol &Sym) {
   if (!Name.consume_front("$a") && !Name.consume_front("$d") &&
       !Name.consume_front("$t"))
     return false;
-  return Name.empty() || Name.startswith(".");
+  return Name.empty() || Name.starts_with(".");
 }
 
 // Check if the symbol should be preserved because it is required by ABI.
@@ -329,6 +331,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
 
+    if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
+      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
+                           Config.SymbolsPrefixRemove) == 0)
+        Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
+
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
   });
@@ -361,7 +368,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
 
     if ((Config.DiscardMode == DiscardType::All ||
          (Config.DiscardMode == DiscardType::Locals &&
-          StringRef(Sym.Name).startswith(".L"))) &&
+          StringRef(Sym.Name).starts_with(".L"))) &&
         Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
         Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
       return true;
@@ -448,7 +455,9 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
         return true;
       if (&Sec == Obj.SectionNames)
         return false;
-      if (StringRef(Sec.Name).startswith(".gnu.warning"))
+      if (StringRef(Sec.Name).starts_with(".gnu.warning"))
+        return false;
+      if (StringRef(Sec.Name).starts_with(".gnu_debuglink"))
         return false;
       // We keep the .ARM.attribute section to maintain compatibility
       // with Debian derived distributions. This is a bug in their
@@ -662,7 +671,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) {
       OwnedDataSection &NewSection =
           Obj.addSection<OwnedDataSection>(Name, Data);
-      if (Name.startswith(".note") && Name != ".note.GNU-stack")
+      if (Name.starts_with(".note") && Name != ".note.GNU-stack")
         NewSection.Type = SHT_NOTE;
       return Error::success();
     };

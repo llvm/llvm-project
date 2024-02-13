@@ -386,7 +386,7 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
 }
 
 static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
-                               bool EmitMD5, bool HasSource,
+                               bool EmitMD5, bool HasAnySource,
                                std::optional<MCDwarfLineStr> &LineStr) {
   assert(!DwarfFile.Name.empty());
   if (LineStr)
@@ -401,7 +401,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
     MCOS->emitBinaryData(
         StringRef(reinterpret_cast<const char *>(Cksum.data()), Cksum.size()));
   }
-  if (HasSource) {
+  if (HasAnySource) {
     if (LineStr)
       LineStr->emitRef(MCOS, DwarfFile.Source.value_or(StringRef()));
     else {
@@ -452,7 +452,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   uint64_t Entries = 2;
   if (HasAllMD5)
     Entries += 1;
-  if (HasSource)
+  if (HasAnySource)
     Entries += 1;
   MCOS->emitInt8(Entries);
   MCOS->emitULEB128IntValue(dwarf::DW_LNCT_path);
@@ -464,7 +464,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
     MCOS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
     MCOS->emitULEB128IntValue(dwarf::DW_FORM_data16);
   }
-  if (HasSource) {
+  if (HasAnySource) {
     MCOS->emitULEB128IntValue(dwarf::DW_LNCT_LLVM_source);
     MCOS->emitULEB128IntValue(LineStr ? dwarf::DW_FORM_line_strp
                                       : dwarf::DW_FORM_string);
@@ -479,9 +479,9 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   assert((!RootFile.Name.empty() || MCDwarfFiles.size() >= 1) &&
          "No root file and no .file directives");
   emitOneV5FileEntry(MCOS, RootFile.Name.empty() ? MCDwarfFiles[1] : RootFile,
-                     HasAllMD5, HasSource, LineStr);
+                     HasAllMD5, HasAnySource, LineStr);
   for (unsigned i = 1; i < MCDwarfFiles.size(); ++i)
-    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasAllMD5, HasSource, LineStr);
+    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasAllMD5, HasAnySource, LineStr);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -598,7 +598,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
     trackMD5Usage(Checksum.has_value());
-    HasSource = (Source != std::nullopt);
+    HasAnySource |= Source.has_value();
   }
   if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
     return 0;
@@ -623,11 +623,6 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   // It is an error to see the same number more than once.
   if (!File.Name.empty())
     return make_error<StringError>("file number already allocated",
-                                   inconvertibleErrorCode());
-
-  // If any files have embedded source, they all must.
-  if (HasSource != (Source != std::nullopt))
-    return make_error<StringError>("inconsistent use of embedded source",
                                    inconvertibleErrorCode());
 
   if (Directory.empty()) {
@@ -662,8 +657,8 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
   File.Checksum = Checksum;
   trackMD5Usage(Checksum.has_value());
   File.Source = Source;
-  if (Source)
-    HasSource = true;
+  if (Source.has_value())
+    HasAnySource = true;
 
   // return the allocated FileNumber.
   return FileNumber;
@@ -1216,7 +1211,7 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
   // The dwarf label's name does not have the symbol name's leading
   // underbar if any.
   StringRef Name = Symbol->getName();
-  if (Name.startswith("_"))
+  if (Name.starts_with("_"))
     Name = Name.substr(1, Name.size()-1);
 
   // Get the dwarf file number to be used for the dwarf label.
@@ -1940,8 +1935,9 @@ void MCDwarfFrameEmitter::encodeAdvanceLoc(MCContext &Context,
   if (AddrDelta == 0)
     return;
 
-  support::endianness E =
-      Context.getAsmInfo()->isLittleEndian() ? support::little : support::big;
+  llvm::endianness E = Context.getAsmInfo()->isLittleEndian()
+                           ? llvm::endianness::little
+                           : llvm::endianness::big;
 
   if (isUIntN(6, AddrDelta)) {
     uint8_t Opcode = dwarf::DW_CFA_advance_loc | AddrDelta;

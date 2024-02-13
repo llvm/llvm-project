@@ -15,7 +15,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
@@ -167,6 +166,7 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::XROS:
     // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
       if (triple_ref.getVendor() != llvm::Triple::Apple) {
         return nullptr;
@@ -606,8 +606,8 @@ void DynamicLoaderDarwinKernel::KextImageInfo::SetProcessStopId(
   m_load_process_stop_id = stop_id;
 }
 
-bool DynamicLoaderDarwinKernel::KextImageInfo::
-operator==(const KextImageInfo &rhs) {
+bool DynamicLoaderDarwinKernel::KextImageInfo::operator==(
+    const KextImageInfo &rhs) const {
   if (m_uuid.IsValid() || rhs.GetUUID().IsValid()) {
     return m_uuid == rhs.GetUUID();
   }
@@ -798,8 +798,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       Status kernel_search_error;
       if (IsKernel() &&
           (!m_module_sp || !m_module_sp->GetSymbolFileFileSpec())) {
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec,
-                                                 kernel_search_error, true)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(
+                module_spec, kernel_search_error, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());

@@ -52,6 +52,9 @@ using SymbolRef = common::Reference<const Symbol>;
 
 class ActualArgument {
 public:
+  ENUM_CLASS(Attr, PassedObject, PercentVal, PercentRef);
+  using Attrs = common::EnumSet<Attr, Attr_enumSize>;
+
   // Dummy arguments that are TYPE(*) can be forwarded as actual arguments.
   // Since that's the only thing one may do with them in Fortran, they're
   // represented in expressions as a special case of an actual argument.
@@ -118,9 +121,13 @@ public:
   bool isAlternateReturn() const {
     return std::holds_alternative<common::Label>(u_);
   }
-  bool isPassedObject() const { return isPassedObject_; }
+  bool isPassedObject() const { return attrs_.test(Attr::PassedObject); }
   ActualArgument &set_isPassedObject(bool yes = true) {
-    isPassedObject_ = yes;
+    if (yes) {
+      attrs_ = attrs_ + Attr::PassedObject;
+    } else {
+      attrs_ = attrs_ - Attr::PassedObject;
+    }
     return *this;
   }
 
@@ -141,7 +148,18 @@ public:
   // Wrap this argument in parentheses
   void Parenthesize();
 
-  // TODO: Mark legacy %VAL and %REF arguments
+  // Legacy %VAL.
+  bool isPercentVal() const { return attrs_.test(Attr::PercentVal); };
+  ActualArgument &set_isPercentVal() {
+    attrs_ = attrs_ + Attr::PercentVal;
+    return *this;
+  }
+  // Legacy %REF.
+  bool isPercentRef() const { return attrs_.test(Attr::PercentRef); };
+  ActualArgument &set_isPercentRef() {
+    attrs_ = attrs_ + Attr::PercentRef;
+    return *this;
+  }
 
 private:
   // Subtlety: There is a distinction that must be maintained here between an
@@ -153,7 +171,7 @@ private:
       common::Label>
       u_;
   std::optional<parser::CharBlock> keyword_;
-  bool isPassedObject_{false};
+  Attrs attrs_;
   common::Intent dummyIntent_{common::Intent::Default};
   std::optional<parser::CharBlock> sourceLocation_;
 };
@@ -268,7 +286,17 @@ public:
   FunctionRef(ProcedureDesignator &&p, ActualArguments &&a)
       : ProcedureRef{std::move(p), std::move(a)} {}
 
-  std::optional<DynamicType> GetType() const { return proc_.GetType(); }
+  std::optional<DynamicType> GetType() const {
+    if (auto type{proc_.GetType()}) {
+      // TODO: Non constant explicit length parameters of PDTs result should
+      // likely be dropped too. This is not as easy as for characters since some
+      // long lived DerivedTypeSpec pointer would need to be created here. It is
+      // not clear if this is causing any issue so far since the storage size of
+      // PDTs is independent of length parameters.
+      return type->DropNonConstantCharacterLength();
+    }
+    return std::nullopt;
+  }
 };
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

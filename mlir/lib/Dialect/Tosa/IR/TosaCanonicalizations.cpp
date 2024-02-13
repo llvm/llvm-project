@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -25,6 +26,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -66,7 +68,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
     return failure();
-  rewriter.updateRootInPlace(op, [&]() {
+  rewriter.modifyOpInPlace(op, [&]() {
     op.getOperation()->setOperands(
         {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
   });
@@ -771,7 +773,9 @@ OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
     ShapedType inputTy = llvm::cast<ShapedType>(getInput().getType());         \
     if (!inputTy.hasRank())                                                    \
       return {};                                                               \
-    if (inputTy.getDimSize(getAxis()) == 1)                                    \
+    if (inputTy != getType())                                                  \
+      return {};                                                               \
+    if (inputTy.getRank() == 0 || inputTy.getDimSize(getAxis()) == 1)          \
       return getInput();                                                       \
     return {};                                                                 \
   }
@@ -874,7 +878,8 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
     return operandAttr;
 
   // If the dim-length is 1, tosa.reverse is a no-op.
-  if (operandTy.hasRank() && operandTy.getDimSize(axis) == 1)
+  if (operandTy.hasRank() &&
+      (operandTy.getRank() == 0 || operandTy.getDimSize(axis) == 1))
     return operand;
 
   return {};
@@ -1032,4 +1037,22 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
 
   getOperation()->setOperands(concatOperands);
   return getResult();
+}
+
+OpFoldResult tosa::ReciprocalOp::fold(FoldAdaptor adaptor) {
+  auto input = adaptor.getInput1();
+
+  auto inputAttr = llvm::dyn_cast_if_present<DenseElementsAttr>(input);
+  // Fold splat inputs only.
+  if (!inputAttr || !inputAttr.isSplat())
+    return {};
+
+  auto shapeType = llvm::cast<ShapedType>(getType());
+  if (auto floatType = llvm::dyn_cast<FloatType>(inputAttr.getElementType())) {
+    auto floatVal = inputAttr.getSplatValue<APFloat>();
+    return DenseElementsAttr::get(shapeType,
+                                  ReciprocalOp::calcOneElement(floatVal));
+  }
+
+  return {};
 }

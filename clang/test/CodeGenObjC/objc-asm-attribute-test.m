@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin %s -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-objc-root-class -emit-llvm -triple x86_64-apple-darwin %s -o - | FileCheck %s
 
 __attribute__((objc_runtime_name("MySecretNamespace.Protocol")))
 @protocol Protocol
@@ -10,6 +10,10 @@ __attribute__((objc_runtime_name("MySecretNamespace.Protocol2")))
 @protocol Protocol2
 - (void) MethodP2;
 + (void) ClsMethodP2;
+
+@optional
+@property(retain) id optionalProp;
+
 @end
 
 __attribute__((objc_runtime_name("MySecretNamespace.Protocol3")))
@@ -56,6 +60,10 @@ id Test16877359(void) {
 // CHECK: @"OBJC_IVAR_$_MySecretNamespace.Message.MyIVAR" ={{.*}} global i64 0
 // CHECK: @"OBJC_CLASS_$_MySecretNamespace.Message" ={{.*}} global %struct._class_t
 // CHECK: @"OBJC_METACLASS_$_MySecretNamespace.Message" ={{.*}} global %struct._class_t
+
+// CHECK: @OBJC_PROP_NAME_ATTR_ = private unnamed_addr constant [13 x i8] c"optionalProp\00"
+// CHECK-NEXT: @OBJC_PROP_NAME_ATTR_.11 = private unnamed_addr constant [7 x i8] c"T@,?,&\00"
+// CHECK: @"_OBJC_$_PROP_LIST_MySecretNamespace.Protocol2" ={{.*}} [%struct._prop_t { ptr @OBJC_PROP_NAME_ATTR_, ptr @OBJC_PROP_NAME_ATTR_.11 }]
 
 // CHECK: private unnamed_addr constant [42 x i8] c"T@\22MySecretNamespace.Message\22,&,V_msgProp\00"
 // CHECK: private unnamed_addr constant [76 x i8] c"T@\22MySecretNamespace.Message<MySecretNamespace.Protocol3>\22,&,V_msgProtoProp\00"

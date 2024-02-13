@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
@@ -56,6 +56,6 @@ inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMSET_H

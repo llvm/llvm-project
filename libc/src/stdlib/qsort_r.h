@@ -11,7 +11,7 @@
 
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This qsort_r uses the glibc argument ordering instead of the BSD argument
 // ordering (which puts arg before the function pointer). Putting arg after the
@@ -21,6 +21,6 @@ namespace __llvm_libc {
 void qsort_r(void *array, size_t array_size, size_t elem_size,
              int (*compare)(const void *, const void *, void *), void *arg);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_QSORT_R_H

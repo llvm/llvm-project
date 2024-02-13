@@ -87,6 +87,7 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
         return eleType.isa<fir::BaseBoxType>() || !fir::hasDynamicSize(eleType);
       })
       .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
+      .Case<fir::VectorType>([](auto) { return true; })
       .Default([](mlir::Type) { return false; });
 }
 

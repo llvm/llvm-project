@@ -53,7 +53,8 @@ DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
         process->GetTarget().GetArchitecture().GetTriple();
     if (triple_ref.getOS() == llvm::Triple::FreeBSD ||
         triple_ref.getOS() == llvm::Triple::Linux ||
-        triple_ref.getOS() == llvm::Triple::NetBSD)
+        triple_ref.getOS() == llvm::Triple::NetBSD ||
+        triple_ref.getOS() == llvm::Triple::OpenBSD)
       create = true;
   }
 
@@ -337,29 +338,20 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     };
 
     ModuleSP interpreter = LoadInterpreterModule();
-    if (!interpreter) {
-      FileSpecList containingModules;
+    FileSpecList containingModules;
+    if (interpreter)
+      containingModules.Append(interpreter->GetFileSpec());
+    else
       containingModules.Append(
           m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
 
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    } else {
-      FileSpecList containingModules;
-      containingModules.Append(interpreter->GetFileSpec());
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    }
+    dyld_break = target.CreateBreakpoint(
+        &containingModules, /*containingSourceFiles=*/nullptr,
+        DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
+        /*m_offset=*/0,
+        /*skip_prologue=*/eLazyBoolNo,
+        /*internal=*/true,
+        /*request_hardware=*/false);
   }
 
   if (dyld_break->GetNumResolvedLocations() != 1) {
@@ -420,6 +412,11 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
   if (!m_rendezvous.Resolve())
     return;
 
+  // The rendezvous class doesn't enumerate the main module, so track that
+  // ourselves here.
+  ModuleSP executable = GetTargetExecutable();
+  m_loaded_modules[executable] = m_rendezvous.GetLinkMapAddress();
+
   DYLDRendezvous::iterator I;
   DYLDRendezvous::iterator E;
 
@@ -441,6 +438,14 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
       m_initial_modules_added = true;
     }
     for (; I != E; ++I) {
+      // Don't load a duplicate copy of ld.so if we have already loaded it
+      // earlier in LoadInterpreterModule. If we instead loaded then unloaded it
+      // later, the section information for ld.so would be removed. That
+      // information is required for placing breakpoints on Arm/Thumb systems.
+      if ((m_interpreter_module.lock() != nullptr) &&
+          (I->base_addr == m_interpreter_base))
+        continue;
+
       ModuleSP module_sp =
           LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
       if (!module_sp.get())
@@ -453,15 +458,6 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           m_interpreter_module = module_sp;
         } else if (module_sp == interpreter_sp) {
           // Module already loaded.
-          continue;
-        } else {
-          // If this is a duplicate instance of ld.so, unload it.  We may end
-          // up with it if we load it via a different path than before
-          // (symlink vs real path).
-          // TODO: remove this once we either fix library matching or avoid
-          // loading the interpreter when setting the rendezvous breakpoint.
-          UnloadSections(module_sp);
-          loaded_modules.Remove(module_sp);
           continue;
         }
       }
@@ -727,41 +723,66 @@ lldb::addr_t
 DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
                                            const lldb::ThreadSP thread,
                                            lldb::addr_t tls_file_addr) {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   auto it = m_loaded_modules.find(module_sp);
-  if (it == m_loaded_modules.end())
+  if (it == m_loaded_modules.end()) {
+    LLDB_LOGF(
+        log, "GetThreadLocalData error: module(%s) not found in loaded modules",
+        module_sp->GetObjectName().AsCString());
     return LLDB_INVALID_ADDRESS;
+  }
 
   addr_t link_map = it->second;
-  if (link_map == LLDB_INVALID_ADDRESS)
+  if (link_map == LLDB_INVALID_ADDRESS || link_map == 0) {
+    LLDB_LOGF(log,
+              "GetThreadLocalData error: invalid link map address=0x%" PRIx64,
+              link_map);
     return LLDB_INVALID_ADDRESS;
+  }
 
   const DYLDRendezvous::ThreadInfo &metadata = m_rendezvous.GetThreadInfo();
-  if (!metadata.valid)
+  if (!metadata.valid) {
+    LLDB_LOGF(log,
+              "GetThreadLocalData error: fail to read thread info metadata");
     return LLDB_INVALID_ADDRESS;
+  }
+
+  LLDB_LOGF(log,
+            "GetThreadLocalData info: link_map=0x%" PRIx64
+            ", thread info metadata: "
+            "modid_offset=0x%" PRIx32 ", dtv_offset=0x%" PRIx32
+            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32 "\n",
+            link_map, metadata.modid_offset, metadata.dtv_offset,
+            metadata.tls_offset, metadata.dtv_slot_size);
 
   // Get the thread pointer.
   addr_t tp = thread->GetThreadPointer();
-  if (tp == LLDB_INVALID_ADDRESS)
+  if (tp == LLDB_INVALID_ADDRESS) {
+    LLDB_LOGF(log, "GetThreadLocalData error: fail to read thread pointer");
     return LLDB_INVALID_ADDRESS;
+  }
 
   // Find the module's modid.
   int modid_size = 4; // FIXME(spucci): This isn't right for big-endian 64-bit
   int64_t modid = ReadUnsignedIntWithSizeInBytes(
       link_map + metadata.modid_offset, modid_size);
-  if (modid == -1)
+  if (modid == -1) {
+    LLDB_LOGF(log, "GetThreadLocalData error: fail to read modid");
     return LLDB_INVALID_ADDRESS;
+  }
 
   // Lookup the DTV structure for this thread.
   addr_t dtv_ptr = tp + metadata.dtv_offset;
   addr_t dtv = ReadPointer(dtv_ptr);
-  if (dtv == LLDB_INVALID_ADDRESS)
+  if (dtv == LLDB_INVALID_ADDRESS) {
+    LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");
     return LLDB_INVALID_ADDRESS;
+  }
 
   // Find the TLS block for this module.
   addr_t dtv_slot = dtv + metadata.dtv_slot_size * modid;
   addr_t tls_block = ReadPointer(dtv_slot + metadata.tls_offset);
 
-  Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log,
             "DynamicLoaderPOSIXDYLD::Performed TLS lookup: "
             "module=%s, link_map=0x%" PRIx64 ", tp=0x%" PRIx64
@@ -769,9 +790,10 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
             module_sp->GetObjectName().AsCString(""), link_map, tp,
             (int64_t)modid, tls_block);
 
-  if (tls_block == LLDB_INVALID_ADDRESS)
+  if (tls_block == LLDB_INVALID_ADDRESS) {
+    LLDB_LOGF(log, "GetThreadLocalData error: fail to read tls_block");
     return LLDB_INVALID_ADDRESS;
-  else
+  } else
     return tls_block + tls_file_addr;
 }
 

@@ -107,9 +107,7 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveSparcCodeModel(
                             CM, getEffectiveRelocModel(RM), is64bit, JIT),
                         OL),
-      TLOF(std::make_unique<SparcELFTargetObjectFile>()),
-      Subtarget(TT, std::string(CPU), std::string(FS), *this, is64bit),
-      is64Bit(is64bit) {
+      TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
   initAsmInfo();
 }
 
@@ -118,10 +116,13 @@ SparcTargetMachine::~SparcTargetMachine() = default;
 const SparcSubtarget *
 SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
@@ -139,8 +140,8 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<SparcSubtarget>(TargetTriple, CPU, FS, *this,
-                                          this->is64Bit);
+    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this,
+                                         this->is64Bit);
   }
   return I.get();
 }
@@ -189,18 +190,9 @@ void SparcPassConfig::addPreEmitPass(){
     addPass(&BranchRelaxationPassID);
 
   addPass(createSparcDelaySlotFillerPass());
-
-  if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())
-  {
-    addPass(new InsertNOPLoad());
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->detectRoundChange()) {
-    addPass(new DetectRoundChange());
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT())
-  {
-    addPass(new FixAllFDIVSQRT());
-  }
+  addPass(new InsertNOPLoad());
+  addPass(new DetectRoundChange());
+  addPass(new FixAllFDIVSQRT());
 }
 
 void SparcV8TargetMachine::anchor() { }

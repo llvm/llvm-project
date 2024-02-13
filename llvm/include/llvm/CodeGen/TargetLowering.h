@@ -27,17 +27,16 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -66,6 +65,8 @@ namespace llvm {
 class AssumptionCache;
 class CCState;
 class CCValAssign;
+enum class ComplexDeinterleavingOperation;
+enum class ComplexDeinterleavingRotation;
 class Constant;
 class FastISel;
 class FunctionLoweringInfo;
@@ -368,8 +369,8 @@ public:
   }
 
   /// Return the in-memory pointer type for the given address space, defaults to
-  /// the pointer type from the data layout.  FIXME: The default needs to be
-  /// removed once all the code is updated.
+  /// the pointer type from the data layout.
+  /// FIXME: The default needs to be removed once all the code is updated.
   virtual MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
   }
@@ -465,6 +466,10 @@ public:
     return true;
   }
 
+  /// Return true if the @llvm.experimental.cttz.elts intrinsic should be
+  /// expanded using generic code in SelectionDAGBuilder.
+  virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
+
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
   virtual bool shouldReassociateReduction(unsigned RedOpc, EVT VT) const {
@@ -500,11 +505,17 @@ public:
     return TypePromoteInteger;
   }
 
-  // Return true if the half type should be passed around as i16, but promoted
-  // to float around arithmetic. The default behavior is to pass around as
-  // float and convert around loads/stores/bitcasts and other places where
-  // the size matters.
+  // Return true if the half type should be promoted using soft promotion rules
+  // where each operation is promoted to f32 individually, then converted to
+  // fp16. The default behavior is to promote chains of operations, keeping
+  // intermediate results in f32 precision and range.
   virtual bool softPromoteHalfType() const { return false; }
+
+  // Return true if, for soft-promoted half, the half type should be passed
+  // passed to and returned from functions as f32. The default behavior is to
+  // pass as i16. If soft-promoted half is not used, this function is ignored
+  // and values are always passed and returned as f32.
+  virtual bool useFPRegsForHalfType() const { return false; }
 
   // There are two general methods for expanding a BUILD_VECTOR node:
   //  1. Use SCALAR_TO_VECTOR on the defined scalar values and then shuffle
@@ -826,6 +837,24 @@ public:
                                                    SDValue IntPow2) const {
     // Default to avoiding fdiv which is often very expensive.
     return N->getOpcode() == ISD::FDIV;
+  }
+
+  // Given:
+  //    (icmp eq/ne (and X, C0), (shift X, C1))
+  // or
+  //    (icmp eq/ne X, (rotate X, CPow2))
+
+  // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
+  // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
+  // Do we prefer the shift to be shift-right, shift-left, or rotate.
+  // Note: Its only valid to convert the rotate version to the shift version iff
+  // the shift-amt (`C1`) is a power of 2 (including 0).
+  // If ShiftOpc (current Opcode) is returned, do nothing.
+  virtual unsigned preferedOpcodeForCmpEqPiecesOfOperand(
+      EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
+      const APInt &ShiftOrRotateAmt,
+      const std::optional<APInt> &AndMask) const {
+    return ShiftOpc;
   }
 
   /// These two forms are equivalent:
@@ -1967,12 +1996,6 @@ public:
   /// Should be used only when getIRStackGuard returns nullptr.
   virtual Function *getSSPStackGuardCheck(const Module &M) const;
 
-  /// \returns true if a constant G_UBFX is legal on the target.
-  virtual bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                                      LLT Ty2) const {
-    return false;
-  }
-
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
                                             bool UseTLS) const;
@@ -2149,27 +2172,13 @@ public:
   /// This function should either return a nullptr, or a pointer to an IR-level
   ///   Instruction*. Even complex fence sequences can be represented by a
   ///   single Instruction* through an intrinsic to be lowered later.
-  /// Backends should override this method to produce target-specific intrinsic
-  ///   for their fences.
-  /// FIXME: Please note that the default implementation here in terms of
-  ///   IR-level fences exists for historical/compatibility reasons and is
-  ///   *unsound* ! Fences cannot, in general, be used to restore sequential
-  ///   consistency. For example, consider the following example:
-  /// atomic<int> x = y = 0;
-  /// int r1, r2, r3, r4;
-  /// Thread 0:
-  ///   x.store(1);
-  /// Thread 1:
-  ///   y.store(1);
-  /// Thread 2:
-  ///   r1 = x.load();
-  ///   r2 = y.load();
-  /// Thread 3:
-  ///   r3 = y.load();
-  ///   r4 = x.load();
-  ///  r1 = r3 = 1 and r2 = r4 = 0 is impossible as long as the accesses are all
-  ///  seq_cst. But if they are lowered to monotonic accesses, no amount of
-  ///  IR-level fences can prevent it.
+  ///
+  /// The default implementation emits an IR fence before any release (or
+  ///   stronger) operation that stores, and after any acquire (or stronger)
+  ///   operation. This is generally a correct implementation, but backends may
+  ///   override if they wish to use alternative schemes (e.g. the PowerPC
+  ///   standard ABI uses a fence before a seq_cst load instead of after a
+  ///   seq_cst store).
   /// @{
   virtual Instruction *emitLeadingFence(IRBuilderBase &Builder,
                                         Instruction *Inst,
@@ -2704,6 +2713,12 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
+  /// Return the prefered common base offset.
+  virtual int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
+                                                 int64_t MaxOffset) const {
+    return 0;
+  }
+
   /// Return true if the specified immediate is legal icmp immediate, that is
   /// the target has icmp instructions which can compare a register against the
   /// immediate without having to materialize the immediate into a register.
@@ -2844,6 +2859,12 @@ public:
                               LLVMContext &Ctx) const {
     return isTruncateFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
                           getApproximateEVTForLLT(ToTy, DL, Ctx));
+  }
+
+  /// Return true if truncating the specific node Val to type VT2 is free.
+  virtual bool isTruncateFree(SDValue Val, EVT VT2) const {
+    // Fallback to type matching.
+    return isTruncateFree(Val.getValueType(), VT2);
   }
 
   virtual bool isProfitableToHoist(Instruction *I) const { return true; }
@@ -3241,6 +3262,14 @@ public:
   /// amount is not profitable.
   virtual bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const {
     return false;
+  }
+
+  // Should we fold (select_cc seteq (and x, y), 0, 0, A) -> (and (sra (shl x))
+  // A) where y has a single bit set?
+  virtual bool shouldFoldSelectWithSingleBitTest(EVT VT,
+                                                 const APInt &AndMask) const {
+    unsigned ShCt = AndMask.getBitWidth() - 1;
+    return !shouldAvoidTransformToShift(VT, ShCt);
   }
 
   /// Does this target require the clearing of high-order bits in a register
@@ -3826,9 +3855,10 @@ public:
     return false;
   }
 
-  /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.  This
-  /// uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
-  /// generalized for targets with other types of implicit widening casts.
+  /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.
+  /// This uses isTruncateFree/isZExtFree and ANY_EXTEND for the widening cast,
+  /// but it could be generalized for targets with other types of implicit
+  /// widening casts.
   bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
                         const APInt &DemandedBits,
                         TargetLoweringOpt &TLO) const;
@@ -4403,8 +4433,14 @@ public:
     }
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
-                                SDValue Target, ArgListTy &&ArgsList) {
+                                SDValue Target, ArgListTy &&ArgsList,
+                                AttributeSet ResultAttrs = {}) {
       RetTy = ResultType;
+      IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
+      RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
+      RetZExt = ResultAttrs.hasAttribute(Attribute::ZExt);
+      NoMerge = ResultAttrs.hasAttribute(Attribute::NoMerge);
+
       Callee = Target;
       CallConv = CC;
       NumFixedArgs = ArgsList.size();
@@ -4677,25 +4713,6 @@ public:
     return Chain;
   }
 
-  /// Should SelectionDAG lower an atomic store of the given kind as a normal
-  /// StoreSDNode (as opposed to an AtomicSDNode)?  NOTE: The intention is to
-  /// eventually migrate all targets to the using StoreSDNodes, but porting is
-  /// being done target at a time.
-  virtual bool lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const {
-    assert(SI.isAtomic() && "violated precondition");
-    return false;
-  }
-
-  /// Should SelectionDAG lower an atomic load of the given kind as a normal
-  /// LoadSDNode (as opposed to an AtomicSDNode)?  NOTE: The intention is to
-  /// eventually migrate all targets to the using LoadSDNodes, but porting is
-  /// being done target at a time.
-  virtual bool lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const {
-    assert(LI.isAtomic() && "violated precondition");
-    return false;
-  }
-
-
   /// This callback is invoked by the type legalizer to legalize nodes with an
   /// illegal operand type but legal result types.  It replaces the
   /// LowerOperation callback in the type Legalizer.  The reason we can not do
@@ -4849,6 +4866,15 @@ public:
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
 
+  using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
+  using ConstraintGroup = SmallVector<ConstraintPair>;
+  /// Given an OpInfo with list of constraints codes as strings, return a
+  /// sorted Vector of pairs of constraint codes and their types in priority of
+  /// what we'd prefer to lower them as. This may contain immediates that
+  /// cannot be lowered, but it is meant to be a machine agnostic order of
+  /// preferences.
+  ConstraintGroup getConstraintPreferences(AsmOperandInfo &OpInfo) const;
+
   /// Given a physical register constraint (e.g.  {edx}), return the register
   /// number and the register class for the register.
   ///
@@ -4882,7 +4908,7 @@ public:
 
   /// Lower the specified operand into the Ops vector.  If it is invalid, don't
   /// add anything to Ops.
-  virtual void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  virtual void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 
@@ -4906,6 +4932,10 @@ public:
                     SmallVectorImpl<SDNode *> &Created) const;
   SDValue BuildUDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
                     SmallVectorImpl<SDNode *> &Created) const;
+  // Build sdiv by power-of-2 with conditional move instructions
+  SDValue buildSDIVPow2WithCMov(SDNode *N, const APInt &Divisor,
+                                SelectionDAG &DAG,
+                                SmallVectorImpl<SDNode *> &Created) const;
 
   /// Targets may override this function to provide custom SDIV lowering for
   /// power-of-2 denominators.  If the target returns an empty SDValue, LLVM
@@ -5262,6 +5292,24 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  /// forceExpandWideMUL - Unconditionally expand a MUL into either a libcall or
+  /// brute force via a wide multiplication. The expansion works by
+  /// attempting to do a multiplication on a wider type twice the size of the
+  /// original operands. LL and LH represent the lower and upper halves of the
+  /// first operand. RL and RH represent the lower and upper halves of the
+  /// second operand. The upper and lower halves of the result are stored in Lo
+  /// and Hi.
+  void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
+                          EVT WideVT, const SDValue LL, const SDValue LH,
+                          const SDValue RL, const SDValue RH, SDValue &Lo,
+                          SDValue &Hi) const;
+
+  /// Same as above, but creates the upper halves of each operand by
+  /// sign/zero-extending the operands.
+  void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
+                          const SDValue LHS, const SDValue RHS, SDValue &Lo,
+                          SDValue &Hi) const;
 
   /// Expand a VECREDUCE_* into an explicit calculation. If Count is specified,
   /// only the first Count elements of the vector are used.

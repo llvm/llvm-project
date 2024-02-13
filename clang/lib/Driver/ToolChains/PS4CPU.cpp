@@ -146,11 +146,10 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_shared))
     CmdArgs.push_back("--shared");
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   const bool UseLTO = D.isUsingLTO();
@@ -209,11 +208,9 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("--lto=full");
   }
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
-  Args.AddAllArgs(CmdArgs, options::OPT_s);
-  Args.AddAllArgs(CmdArgs, options::OPT_t);
-  Args.AddAllArgs(CmdArgs, options::OPT_r);
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_T_Group, options::OPT_s,
+                   options::OPT_t, options::OPT_r});
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -295,7 +292,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
         << Twine(Platform, " system libraries").str() << SDKLibDir << Whence;
     return;
   }
-  getFilePaths().push_back(std::string(SDKLibDir.str()));
+  getFilePaths().push_back(std::string(SDKLibDir));
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
@@ -361,6 +358,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
   }
 
   CC1Args.push_back("-fno-use-init-array");
+
+  // Default to -fvisibility-global-new-delete=source for PS5.
+  if (getTriple().isPS5() &&
+      !DriverArgs.hasArg(options::OPT_fvisibility_global_new_delete_EQ,
+                         options::OPT_fvisibility_global_new_delete_hidden))
+    CC1Args.push_back("-fvisibility-global-new-delete=source");
 
   const Arg *A =
       DriverArgs.getLastArg(options::OPT_fvisibility_from_dllstorageclass,

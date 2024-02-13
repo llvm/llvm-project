@@ -12,10 +12,6 @@
 // GCC does not support the -fexperimental-library flag
 // UNSUPPORTED: gcc
 
-// Clang on AIX currently pretends that it is Clang 15, even though it is not (as of writing
-// this, LLVM 15 hasn't even been branched yet).
-// UNSUPPORTED: clang-15 && buildhost=aix
-
 // ADDITIONAL_COMPILE_FLAGS: -fexperimental-library
 
 #include <version>
@@ -30,4 +26,8 @@
 
 #ifdef _LIBCPP_HAS_NO_INCOMPLETE_TZDB
 #  error "-fexperimental-library should enable the chrono TZDB"
+#endif
+
+#ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
+#  error "-fexperimental-library should enable the syncstream header"
 #endif

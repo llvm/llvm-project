@@ -20,32 +20,35 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
   // without changing the directory to make sure it exists. Next, we change
   // directory and open the same file to make sure that the "fchdir" operation
   // succeeded.
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_DIR = "testdata";
-  constexpr const char *TEST_FILE = "testdata/fchdir.test";
-  constexpr const char *TEST_FILE_BASE = "fchdir.test";
-  libc_errno = 0;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *FILENAME = "testdata";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "testdata/fchdir.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME2);
+  constexpr const char *FILENAME3 = "fchdir.test";
+  auto TEST_FILE_BASE = libc_make_test_file_path(FILENAME3);
+  LIBC_NAMESPACE::libc_errno = 0;
 
-  int dir_fd = __llvm_libc::open(TEST_DIR, O_DIRECTORY);
+  int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
   ASSERT_GT(dir_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
-  int file_fd = __llvm_libc::open(TEST_FILE, O_PATH);
+  ASSERT_ERRNO_SUCCESS();
+  int file_fd = LIBC_NAMESPACE::open(TEST_FILE, O_PATH);
   ASSERT_GT(file_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
-  ASSERT_THAT(__llvm_libc::close(file_fd), Succeeds(0));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::close(file_fd), Succeeds(0));
 
-  ASSERT_THAT(__llvm_libc::fchdir(dir_fd), Succeeds(0));
-  file_fd = __llvm_libc::open(TEST_FILE_BASE, O_PATH);
+  ASSERT_THAT(LIBC_NAMESPACE::fchdir(dir_fd), Succeeds(0));
+  file_fd = LIBC_NAMESPACE::open(TEST_FILE_BASE, O_PATH);
   ASSERT_GT(file_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
-  ASSERT_THAT(__llvm_libc::close(file_fd), Succeeds(0));
-  ASSERT_THAT(__llvm_libc::close(dir_fd), Succeeds(0));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::close(file_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));
 }
 
 TEST(LlvmLibcChdirTest, ChangeToNonExistentDir) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  libc_errno = 0;
-  ASSERT_EQ(__llvm_libc::fchdir(0), -1);
-  ASSERT_NE(libc_errno, 0);
-  libc_errno = 0;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  LIBC_NAMESPACE::libc_errno = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::fchdir(0), -1);
+  ASSERT_ERRNO_FAILURE();
+  LIBC_NAMESPACE::libc_errno = 0;
 }

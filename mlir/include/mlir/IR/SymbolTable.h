@@ -55,6 +55,23 @@ public:
   /// after insertion as attribute.
   StringAttr insert(Operation *symbol, Block::iterator insertPt = {});
 
+  /// Renames the given op or the op refered to by the given name to the given
+  /// new name and updates the symbol table and all usages of the symbol
+  /// accordingly. Fails if the updating of the usages fails.
+  LogicalResult rename(StringAttr from, StringAttr to);
+  LogicalResult rename(Operation *op, StringAttr to);
+  LogicalResult rename(StringAttr from, StringRef to);
+  LogicalResult rename(Operation *op, StringRef to);
+
+  /// Renames the given op or the op refered to by the given name to the a name
+  /// that is unique within this and the provided other symbol tables and
+  /// updates the symbol table and all usages of the symbol accordingly. Returns
+  /// the new name or failure if the renaming fails.
+  FailureOr<StringAttr> renameToUnique(StringAttr from,
+                                       ArrayRef<SymbolTable *> others);
+  FailureOr<StringAttr> renameToUnique(Operation *op,
+                                       ArrayRef<SymbolTable *> others);
+
   /// Return the name of the attribute used for symbol names.
   static StringRef getSymbolAttrName() { return "sym_name"; }
 
@@ -85,6 +102,24 @@ public:
     /// table, while retaining the ability to observe all uses.
     Nested,
   };
+
+  /// Generate a unique symbol name. Iteratively increase uniquingCounter
+  /// and use it as a suffix for symbol names until uniqueChecker does not
+  /// detect any conflict.
+  template <unsigned N, typename UniqueChecker>
+  static SmallString<N> generateSymbolName(StringRef name,
+                                           UniqueChecker uniqueChecker,
+                                           unsigned &uniquingCounter) {
+    SmallString<N> nameBuffer(name);
+    unsigned originalLength = nameBuffer.size();
+    do {
+      nameBuffer.resize(originalLength);
+      nameBuffer += '_';
+      nameBuffer += std::to_string(uniquingCounter++);
+    } while (uniqueChecker(nameBuffer));
+
+    return nameBuffer;
+  }
 
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.

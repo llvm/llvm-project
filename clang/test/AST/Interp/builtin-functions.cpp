@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify
-// RUN: %clang_cc1 -Wno-string-plus-int -verify=ref %s -Wno-constant-evaluated
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -verify=ref %s -Wno-constant-evaluated
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -verify=ref %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
 
 
 namespace strcmp {
@@ -23,23 +23,17 @@ namespace strcmp {
   static_assert(__builtin_strcmp("abab\0banana", "abab") == 0, "");
   static_assert(__builtin_strcmp("abab", "abab\0banana") == 0, "");
   static_assert(__builtin_strcmp("abab\0banana", "abab\0canada") == 0, "");
-  static_assert(__builtin_strcmp(0, "abab") == 0, ""); // expected-error {{not an integral constant}} \
-                                                       // expected-note {{dereferenced null}} \
-                                                       // expected-note {{in call to}} \
-                                                       // ref-error {{not an integral constant}} \
-                                                       // ref-note {{dereferenced null}}
-  static_assert(__builtin_strcmp("abab", 0) == 0, ""); // expected-error {{not an integral constant}} \
-                                                       // expected-note {{dereferenced null}} \
-                                                       // expected-note {{in call to}} \
-                                                       // ref-error {{not an integral constant}} \
-                                                       // ref-note {{dereferenced null}}
+  static_assert(__builtin_strcmp(0, "abab") == 0, ""); // both-error {{not an integral constant}} \
+                                                       // both-note {{dereferenced null}} \
+                                                       // expected-note {{in call to}}
+  static_assert(__builtin_strcmp("abab", 0) == 0, ""); // both-error {{not an integral constant}} \
+                                                       // both-note {{dereferenced null}} \
+                                                       // expected-note {{in call to}}
 
   static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar) == -1, "");
-  static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar + 6) == 0, ""); // expected-error {{not an integral constant}} \
-                                                                        // expected-note {{dereferenced one-past-the-end}} \
-                                                                        // expected-note {{in call to}} \
-                                                                        // ref-error {{not an integral constant}} \
-                                                                        // ref-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar + 6) == 0, ""); // both-error {{not an integral constant}} \
+                                                                        // both-note {{dereferenced one-past-the-end}} \
+                                                                        // expected-note {{in call to}}
 }
 
 /// Copied from constant-expression-cxx11.cpp
@@ -69,41 +63,27 @@ constexpr const char *a = "foo\0quux";
   static_assert(check(b), "");
   static_assert(check(c), "");
 
-  constexpr int over1 = __builtin_strlen(a + 9); // expected-error {{constant expression}} \
-                                                 // expected-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}} \
-                                                 // ref-error {{constant expression}} \
-                                                 // ref-note {{one-past-the-end}}
-  constexpr int over2 = __builtin_strlen(b + 9); // expected-error {{constant expression}} \
-                                                 // expected-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}} \
-                                                 // ref-error {{constant expression}} \
-                                                 // ref-note {{one-past-the-end}}
-  constexpr int over3 = __builtin_strlen(c + 9); // expected-error {{constant expression}} \
-                                                 // expected-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}} \
-                                                 // ref-error {{constant expression}} \
-                                                 // ref-note {{one-past-the-end}}
+  constexpr int over1 = __builtin_strlen(a + 9); // both-error {{constant expression}} \
+                                                 // both-note {{one-past-the-end}} \
+                                                 // expected-note {{in call to}}
+  constexpr int over2 = __builtin_strlen(b + 9); // both-error {{constant expression}} \
+                                                 // both-note {{one-past-the-end}} \
+                                                 // expected-note {{in call to}}
+  constexpr int over3 = __builtin_strlen(c + 9); // both-error {{constant expression}} \
+                                                 // both-note {{one-past-the-end}} \
+                                                 // expected-note {{in call to}}
 
-  constexpr int under1 = __builtin_strlen(a - 1); // expected-error {{constant expression}} \
-                                                  // expected-note {{cannot refer to element -1}} \
-                                                  // ref-error {{constant expression}} \
-                                                  // ref-note {{cannot refer to element -1}}
-  constexpr int under2 = __builtin_strlen(b - 1); // expected-error {{constant expression}} \
-                                                  // expected-note {{cannot refer to element -1}} \
-                                                  // ref-error {{constant expression}} \
-                                                  // ref-note {{cannot refer to element -1}}
-  constexpr int under3 = __builtin_strlen(c - 1); // expected-error {{constant expression}} \
-                                                  // expected-note {{cannot refer to element -1}} \
-                                                  // ref-error {{constant expression}} \
-                                                  // ref-note {{cannot refer to element -1}}
+  constexpr int under1 = __builtin_strlen(a - 1); // both-error {{constant expression}} \
+                                                  // both-note {{cannot refer to element -1}}
+  constexpr int under2 = __builtin_strlen(b - 1); // both-error {{constant expression}} \
+                                                  // both-note {{cannot refer to element -1}}
+  constexpr int under3 = __builtin_strlen(c - 1); // both-error {{constant expression}} \
+                                                  // both-note {{cannot refer to element -1}}
 
   constexpr char d[] = { 'f', 'o', 'o' }; // no nul terminator.
-  constexpr int bad = __builtin_strlen(d); // expected-error {{constant expression}} \
-                                           // expected-note {{one-past-the-end}} \
-                                           // expected-note {{in call to}} \
-                                           // ref-error {{constant expression}} \
-                                           // ref-note {{one-past-the-end}}
+  constexpr int bad = __builtin_strlen(d); // both-error {{constant expression}} \
+                                           // both-note {{one-past-the-end}} \
+                                           // expected-note {{in call to}}
 }
 
 namespace nan {
@@ -115,8 +95,7 @@ namespace nan {
   // expected-error@-2 {{must be initialized by a constant expression}}
 #endif
 
-  constexpr double NaN3 = __builtin_nan("foo"); // expected-error {{must be initialized by a constant expression}} \
-                                                // ref-error {{must be initialized by a constant expression}}
+  constexpr double NaN3 = __builtin_nan("foo"); // both-error {{must be initialized by a constant expression}}
   constexpr float NaN4 = __builtin_nanf("");
   //constexpr long double NaN5 = __builtin_nanf128("");
 
@@ -126,10 +105,11 @@ namespace nan {
 
   /// FIXME: Current interpreter misses diagnostics.
   constexpr char f2[] = {'0', 'x', 'A', 'E'}; /// No trailing 0 byte.
-  constexpr double NaN7 = __builtin_nan(f2); // ref-error {{must be initialized by a constant expression}} \
-                                             // expected-error {{must be initialized by a constant expression}} \
+  constexpr double NaN7 = __builtin_nan(f2); // both-error {{must be initialized by a constant expression}} \
                                              // expected-note {{read of dereferenced one-past-the-end pointer}} \
                                              // expected-note {{in call to}}
+  static_assert(!__builtin_issignaling(__builtin_nan("")), "");
+  static_assert(__builtin_issignaling(__builtin_nans("")), "");
 }
 
 namespace fmin {
@@ -153,6 +133,17 @@ namespace inf {
 
   static_assert(__builtin_isnormal(1.0), "");
   static_assert(!__builtin_isnormal(__builtin_inf()), "");
+
+#ifndef __AVR__
+  static_assert(__builtin_issubnormal(0x1p-1070), "");
+#endif
+  static_assert(!__builtin_issubnormal(__builtin_inf()), "");
+
+  static_assert(__builtin_iszero(0.0), "");
+  static_assert(!__builtin_iszero(__builtin_inf()), "");
+
+  static_assert(__builtin_issignaling(__builtin_nans("")), "");
+  static_assert(!__builtin_issignaling(__builtin_inf()), "");
 }
 
 namespace isfpclass {
@@ -258,5 +249,105 @@ namespace SourceLocation {
   constexpr void f() {
     constexpr B c = {};
     static_assert(c.a.n == __LINE__ - 1, "");
+  }
+}
+
+#define BITSIZE(x) (sizeof(x) * 8)
+namespace popcount {
+  static_assert(__builtin_popcount(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
+  static_assert(__builtin_popcount(0) == 0, "");
+  static_assert(__builtin_popcountl(~0ul) == __CHAR_BIT__ * sizeof(unsigned long), "");
+  static_assert(__builtin_popcountl(0) == 0, "");
+  static_assert(__builtin_popcountll(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
+  static_assert(__builtin_popcountll(0) == 0, "");
+
+  /// From test/Sema/constant-builtins-2.c
+  char popcount1[__builtin_popcount(0) == 0 ? 1 : -1];
+  char popcount2[__builtin_popcount(0xF0F0) == 8 ? 1 : -1];
+  char popcount3[__builtin_popcount(~0) == BITSIZE(int) ? 1 : -1];
+  char popcount4[__builtin_popcount(~0L) == BITSIZE(int) ? 1 : -1];
+  char popcount5[__builtin_popcountl(0L) == 0 ? 1 : -1];
+  char popcount6[__builtin_popcountl(0xF0F0L) == 8 ? 1 : -1];
+  char popcount7[__builtin_popcountl(~0L) == BITSIZE(long) ? 1 : -1];
+  char popcount8[__builtin_popcountll(0LL) == 0 ? 1 : -1];
+  char popcount9[__builtin_popcountll(0xF0F0LL) == 8 ? 1 : -1];
+  char popcount10[__builtin_popcountll(~0LL) == BITSIZE(long long) ? 1 : -1];
+}
+
+namespace parity {
+  /// From test/Sema/constant-builtins-2.c
+  char parity1[__builtin_parity(0) == 0 ? 1 : -1];
+  char parity2[__builtin_parity(0xb821) == 0 ? 1 : -1];
+  char parity3[__builtin_parity(0xb822) == 0 ? 1 : -1];
+  char parity4[__builtin_parity(0xb823) == 1 ? 1 : -1];
+  char parity5[__builtin_parity(0xb824) == 0 ? 1 : -1];
+  char parity6[__builtin_parity(0xb825) == 1 ? 1 : -1];
+  char parity7[__builtin_parity(0xb826) == 1 ? 1 : -1];
+  char parity8[__builtin_parity(~0) == 0 ? 1 : -1];
+  char parity9[__builtin_parityl(1L << (BITSIZE(long) - 1)) == 1 ? 1 : -1];
+  char parity10[__builtin_parityll(1LL << (BITSIZE(long long) - 1)) == 1 ? 1 : -1];
+}
+
+namespace clrsb {
+  char clrsb1[__builtin_clrsb(0) == BITSIZE(int) - 1 ? 1 : -1];
+  char clrsb2[__builtin_clrsbl(0L) == BITSIZE(long) - 1 ? 1 : -1];
+  char clrsb3[__builtin_clrsbll(0LL) == BITSIZE(long long) - 1 ? 1 : -1];
+  char clrsb4[__builtin_clrsb(~0) == BITSIZE(int) - 1 ? 1 : -1];
+  char clrsb5[__builtin_clrsbl(~0L) == BITSIZE(long) - 1 ? 1 : -1];
+  char clrsb6[__builtin_clrsbll(~0LL) == BITSIZE(long long) - 1 ? 1 : -1];
+  char clrsb7[__builtin_clrsb(1) == BITSIZE(int) - 2 ? 1 : -1];
+  char clrsb8[__builtin_clrsb(~1) == BITSIZE(int) - 2 ? 1 : -1];
+  char clrsb9[__builtin_clrsb(1 << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+  char clrsb10[__builtin_clrsb(~(1 << (BITSIZE(int) - 1))) == 0 ? 1 : -1];
+  char clrsb11[__builtin_clrsb(0xf) == BITSIZE(int) - 5 ? 1 : -1];
+  char clrsb12[__builtin_clrsb(~0x1f) == BITSIZE(int) - 6 ? 1 : -1];
+}
+
+namespace bitreverse {
+  char bitreverse1[__builtin_bitreverse8(0x01) == 0x80 ? 1 : -1];
+  char bitreverse2[__builtin_bitreverse16(0x3C48) == 0x123C ? 1 : -1];
+  char bitreverse3[__builtin_bitreverse32(0x12345678) == 0x1E6A2C48 ? 1 : -1];
+  char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
+}
+
+namespace expect {
+  constexpr int a() {
+    return 12;
+  }
+  static_assert(__builtin_expect(a(),1) == 12, "");
+  static_assert(__builtin_expect_with_probability(a(), 1, 1.0) == 12, "");
+}
+
+namespace rotateleft {
+  char rotateleft1[__builtin_rotateleft8(0x01, 5) == 0x20 ? 1 : -1];
+  char rotateleft2[__builtin_rotateleft16(0x3210, 11) == 0x8190 ? 1 : -1];
+  char rotateleft3[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
+  char rotateleft4[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
+}
+
+namespace rotateright {
+  char rotateright1[__builtin_rotateright8(0x01, 5) == 0x08 ? 1 : -1];
+  char rotateright2[__builtin_rotateright16(0x3210, 11) == 0x4206 ? 1 : -1];
+  char rotateright3[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
+  char rotateright4[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
+}
+
+namespace ffs {
+  char ffs1[__builtin_ffs(0) == 0 ? 1 : -1];
+  char ffs2[__builtin_ffs(1) == 1 ? 1 : -1];
+  char ffs3[__builtin_ffs(0xfbe71) == 1 ? 1 : -1];
+  char ffs4[__builtin_ffs(0xfbe70) == 5 ? 1 : -1];
+  char ffs5[__builtin_ffs(1U << (BITSIZE(int) - 1)) == BITSIZE(int) ? 1 : -1];
+  char ffs6[__builtin_ffsl(0x10L) == 5 ? 1 : -1];
+  char ffs7[__builtin_ffsll(0x100LL) == 9 ? 1 : -1];
+}
+
+namespace EhReturnDataRegno {
+  void test11(int X) {
+    switch (X) {
+      case __builtin_eh_return_data_regno(0):  // constant foldable.
+      break;
+    }
+    __builtin_eh_return_data_regno(X);  // both-error {{argument to '__builtin_eh_return_data_regno' must be a constant integer}}
   }
 }

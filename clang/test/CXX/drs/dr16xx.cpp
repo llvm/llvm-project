@@ -1,12 +1,14 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus < 201103L
-// expected-error@+1 {{variadic macro}}
+#if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
 #if __cplusplus >= 201103L
@@ -25,9 +27,7 @@ namespace std {
 
 namespace dr1601 { // dr1601: 10
 enum E : char { e };
-#if __cplusplus < 201103L
-    // expected-error@-2 {{enumeration types with a fixed underlying type are a C++11 extension}}
-#endif
+// cxx98-error@-1 {{enumeration types with a fixed underlying type are a C++11 extension}}
 void f(char);
 void f(int);
 void g() {
@@ -53,26 +53,30 @@ namespace dr1631 {  // dr1631: 3.7
   void f(int, A);
 
   void test() {
-    f({0}, {{1}}); // expected-warning {{braces around scalar init}}
+    f({0}, {{1}});
+    // since-cxx11-warning@-1 {{braces around scalar initializer}}
   }
 
   namespace with_error {
     void f(B, int);           // TODO: expected- note {{candidate function}}
-    void f(int, A);           // expected-note {{candidate function}}
-    void f(int, A, int = 0);  // expected-note {{candidate function}}
+    void f(int, A);           // #dr1631-f
+    void f(int, A, int = 0);  // #dr1631-f-int
     
     void test() {
-      f({0}, {{1}});        // expected-error{{call to 'f' is ambiguous}}
+      f({0}, {{1}});
+      // since-cxx11-error@-1 {{call to 'f' is ambiguous}}
+      //   since-cxx11-note@#dr1631-f {{candidate function}}
+      //   since-cxx11-note@#dr1631-f-int {{candidate function}}
     }
   }
 #endif
 }
 
-namespace dr1638 { // dr1638: yes
+namespace dr1638 { // dr1638: 3.1
 #if __cplusplus >= 201103L
   template<typename T> struct A {
-    enum class E; // expected-note {{previous}}
-    enum class F : T; // expected-note 2{{previous}}
+    enum class E; // #dr1638-E
+    enum class F : T; // #dr1638-F
   };
 
   template<> enum class A<int>::E;
@@ -83,16 +87,26 @@ namespace dr1638 { // dr1638: yes
   template<> enum class A<short>::E : int;
   template<> enum class A<short>::E : int {};
 
-  template<> enum class A<short>::F; // expected-error {{different underlying type}}
-  template<> enum class A<char>::E : char; // expected-error {{different underlying type}}
-  template<> enum class A<char>::F : int; // expected-error {{different underlying type}}
+  template<> enum class A<short>::F;
+  // since-cxx11-error@-1 {{enumeration redeclared with different underlying type 'int' (was 'short')}}
+  //   since-cxx11-note@#dr1638-F {{previous declaration is here}}
+  template<> enum class A<char>::E : char;
+  // since-cxx11-error@-1 {{enumeration redeclared with different underlying type 'char' (was 'int')}}
+  //   since-cxx11-note@#dr1638-E {{previous declaration is here}}
+  template<> enum class A<char>::F : int;
+  // since-cxx11-error@-1 {{enumeration redeclared with different underlying type 'int' (was 'char')}}
+  //   since-cxx11-note@#dr1638-F {{previous declaration is here}}
 
-  enum class A<unsigned>::E; // expected-error {{template specialization requires 'template<>'}} expected-error {{nested name specifier}}
-  template enum class A<unsigned>::E; // expected-error {{enumerations cannot be explicitly instantiated}}
-  enum class A<unsigned>::E *e; // expected-error {{must use 'enum' not 'enum class'}}
+  enum class A<unsigned>::E;
+  // since-cxx11-error@-1 {{template specialization requires 'template<>'}}
+  template enum class A<unsigned>::E;
+  // since-cxx11-error@-1 {{enumerations cannot be explicitly instantiated}}
+  enum class A<unsigned>::E *e;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
 
   struct B {
-    friend enum class A<unsigned>::E; // expected-error {{must use 'enum' not 'enum class'}}
+    friend enum class A<unsigned>::E;
+    // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
   };
 #endif
 }
@@ -100,37 +114,50 @@ namespace dr1638 { // dr1638: yes
 namespace dr1645 { // dr1645: 3.9
 #if __cplusplus >= 201103L
   struct A {
-    constexpr A(int, float = 0); // expected-note {{candidate}}
-    explicit A(int, int = 0); // expected-note 2{{candidate}}
-    A(int, int, int = 0) = delete; // expected-note {{candidate}}
+    constexpr A(int, float = 0); // #dr1645-int-float
+    explicit A(int, int = 0); // #dr1645-int-int
+    A(int, int, int = 0) = delete; // #dr1645-int-int-int
   };
 
   struct B : A {
-    using A::A; // expected-note 4{{inherited here}}
+    using A::A; // #dr1645-using
   };
 
-  constexpr B a(0); // expected-error {{ambiguous}}
-  constexpr B b(0, 0); // expected-error {{ambiguous}}
+  constexpr B a(0);
+  // since-cxx11-error@-1 {{call to constructor of 'const B' is ambiguous}}
+  //   since-cxx11-note@#dr1645-int-float {{candidate inherited constructor}}
+  //   since-cxx11-note@#dr1645-using {{constructor from base class 'A' inherited here}}
+  //   since-cxx11-note@#dr1645-int-int {{candidate inherited constructor}}
+  //   since-cxx11-note@#dr1645-using {{constructor from base class 'A' inherited here}}
+  constexpr B b(0, 0);
+  // since-cxx11-error@-1 {{call to constructor of 'const B' is ambiguous}}
+  //   since-cxx11-note@#dr1645-int-int {{candidate inherited constructor}}
+  //   since-cxx11-note@#dr1645-using {{constructor from base class 'A' inherited here}}
+  //   since-cxx11-note@#dr1645-int-int-int {{candidate inherited constructor has been explicitly deleted}}
+  //   since-cxx11-note@#dr1645-using {{constructor from base class 'A' inherited here}}
 #endif
 }
 
 namespace dr1652 { // dr1652: 3.6
   int a, b;
-  int arr[&a + 1 == &b ? 1 : 2]; // expected-error 2{{variable length array}}
-                                 // expected-note@-1 {{points past the end}}
+  int arr[&a + 1 == &b ? 1 : 2];
+  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  //   expected-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  // expected-error@-3 {{variable length array declaration not allowed at file scope}}
 }
 
 namespace dr1653 { // dr1653: 4 c++17
   void f(bool b) {
     ++b;
+    // cxx98-14-warning@-1 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
+    // since-cxx17-error@-2 {{SO C++17 does not allow incrementing expression of type bool}}
     b++;
-#if __cplusplus <= 201402L
-    // expected-warning@-3 {{deprecated}} expected-warning@-2 {{deprecated}}
-#else
-    // expected-error@-5 {{incrementing expression of type bool}} expected-error@-4 {{incrementing expression of type bool}}
-#endif
-    --b; // expected-error {{cannot decrement expression of type bool}}
-    b--; // expected-error {{cannot decrement expression of type bool}}
+    // cxx98-14-warning@-1 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
+    // since-cxx17-error@-2 {{SO C++17 does not allow incrementing expression of type bool}}
+    --b;
+    // expected-error@-1 {{cannot decrement expression of type bool}}
+    b--;
+    // expected-error@-1 {{cannot decrement expression of type bool}}
     b += 1; // ok
     b -= 1; // ok
   }
@@ -138,71 +165,88 @@ namespace dr1653 { // dr1653: 4 c++17
 
 namespace dr1658 { // dr1658: 5
   namespace DefCtor {
-    class A { A(); }; // expected-note 0-2{{here}}
-    class B { ~B(); }; // expected-note 0-2{{here}}
+    class A { A(); }; // #dr1658-A1
+    class B { ~B(); }; // #dr1658-B1
 
     // The stars align! An abstract class does not construct its virtual bases.
     struct C : virtual A { C(); virtual void foo() = 0; };
-    C::C() = default; // ok, not deleted, expected-error 0-1{{extension}}
+    C::C() = default; // ok, not deleted
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
     struct D : virtual B { D(); virtual void foo() = 0; };
-    D::D() = default; // ok, not deleted, expected-error 0-1{{extension}}
+    D::D() = default; // ok, not deleted
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
 
     // In all other cases, we are not so lucky.
-    struct E : A { E(); virtual void foo() = 0; };
-#if __cplusplus < 201103L
-    E::E() = default; // expected-error {{private default constructor}} expected-error {{extension}} expected-note {{here}}
-#else
-    E::E() = default; // expected-error {{would delete}} expected-note@-4{{inaccessible default constructor}}
-#endif
-    struct F : virtual A { F(); };
-#if __cplusplus < 201103L
-    F::F() = default; // expected-error {{private default constructor}} expected-error {{extension}} expected-note {{here}}
-#else
-    F::F() = default; // expected-error {{would delete}} expected-note@-4{{inaccessible default constructor}}
-#endif
+    struct E : A { E(); virtual void foo() = 0; }; // #dr1658-E1
+    E::E() = default; // #dr1658-E1-ctor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}} 
+    // cxx98-error@-2 {{base class 'A' has private default constructor}}
+    //   cxx98-note@-3 {{in defaulted default constructor for 'dr1658::DefCtor::E' first required here}}
+    //   cxx98-note@#dr1658-A1 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-E1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-E1 {{default constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
+    struct F : virtual A { F(); }; // #dr1658-F1
+    F::F() = default; // #dr1658-F1-ctor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@-2 {{inherited virtual base class 'A' has private default constructor}} 
+    //   cxx98-note@-3 {{in defaulted default constructor for 'dr1658::DefCtor::F' first required here}}
+    //   cxx98-note@#dr1658-A1 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-F1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-F1 {{default constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
 
-    struct G : B { G(); virtual void foo() = 0; };
-#if __cplusplus < 201103L
-    G::G() = default; // expected-error@-2 {{private destructor}} expected-error {{extension}} expected-note {{here}}
-#else
-    G::G() = default; // expected-error {{would delete}} expected-note@-4{{inaccessible destructor}}
-#endif
-    struct H : virtual B { H(); };
-#if __cplusplus < 201103L
-    H::H() = default; // expected-error@-2 {{private destructor}} expected-error {{extension}} expected-note {{here}}
-#else
-    H::H() = default; // expected-error {{would delete}} expected-note@-4{{inaccessible destructor}}
-#endif
+    struct G : B { G(); virtual void foo() = 0; }; // #dr1658-G1
+    G::G() = default; // #dr1658-G1-ctor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@#dr1658-G1 {{base class 'B' has private destructor}}
+    //   cxx98-note@#dr1658-G1-ctor {{in defaulted default constructor for 'dr1658::DefCtor::G' first required here}}
+    //   cxx98-note@#dr1658-B1 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-G1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-G1 {{default constructor of 'G' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+    struct H : virtual B { H(); }; // #dr1658-H1
+    H::H() = default; // #dr1658-H1-ctor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@#dr1658-H1 {{base class 'B' has private destructor}}
+    //   cxx98-note@#dr1658-H1-ctor {{in defaulted default constructor for 'dr1658::DefCtor::H' first required here}}
+    //   cxx98-note@#dr1658-B1 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-H1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-H1 {{default constructor of 'H' is implicitly deleted because base class 'B' has an inaccessible destructor}}
   }
 
   namespace Dtor {
-    class B { ~B(); }; // expected-note 0-2{{here}}
+    class B { ~B(); }; // #dr1658-B2
 
     struct D : virtual B { ~D(); virtual void foo() = 0; };
-    D::~D() = default; // ok, not deleted, expected-error 0-1{{extension}}
+    D::~D() = default; // ok, not deleted
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
 
-    struct G : B { ~G(); virtual void foo() = 0; };
-#if __cplusplus < 201103L
-    G::~G() = default; // expected-error@-2 {{private destructor}} expected-error {{extension}} expected-note {{here}}
-#else
-    G::~G() = default; // expected-error {{would delete}} expected-note@-4{{inaccessible destructor}}
-#endif
-    struct H : virtual B { ~H(); };
-#if __cplusplus < 201103L
-    H::~H() = default; // expected-error@-2 {{private destructor}} expected-error {{extension}} expected-note {{here}}
-#else
-    H::~H() = default; // expected-error {{would delete}} expected-note@-4{{inaccessible destructor}}
-#endif
+    struct G : B { ~G(); virtual void foo() = 0; }; // #dr1658-G2
+    G::~G() = default; // #dr1658-G2-dtor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@#dr1658-G2 {{base class 'B' has private destructor}}
+    //   cxx98-note@#dr1658-G2-dtor {{in defaulted destructor for 'dr1658::Dtor::G' first required here}}
+    //   cxx98-note@#dr1658-B2 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-G2-dtor {{defaulting this destructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-G2 {{destructor of 'G' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+    struct H : virtual B { ~H(); }; // #dr1658-H2
+    H::~H() = default; // #dr1658-H2-dtor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@#dr1658-H2 {{base class 'B' has private destructor}}
+    //   cxx98-note@#dr1658-H2-dtor {{in defaulted destructor for 'dr1658::Dtor::H' first required here}}
+    //   cxx98-note@#dr1658-B2 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-H2-dtor {{defaulting this destructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-H2 {{destructor of 'H' is implicitly deleted because base class 'B' has an inaccessible destructor}}
   }
 
   namespace MemInit {
-    struct A { A(int); }; // expected-note {{here}}
+    struct A { A(int); }; // #dr1658-A3
     struct B : virtual A {
       B() {}
       virtual void f() = 0;
     };
     struct C : virtual A {
-      C() {} // expected-error {{must explicitly initialize}}
+      C() {}
+      // expected-error@-1 {{constructor for 'dr1658::MemInit::C' must explicitly initialize the base class 'A' which does not have a default constructor}}
+      //   expected-note@#dr1658-A3 {{'dr1658::MemInit::A' declared here}}
     };
   }
 
@@ -220,28 +264,51 @@ namespace dr1658 { // dr1658: 5
   }
 
   namespace CopyCtor {
-    class A { A(const A&); A(A&&); }; // expected-note 0-4{{here}} expected-error 0-1{{extension}}
+    class A { A(const A&); A(A&&); }; // #dr1658-A5
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
 
-    struct C : virtual A { C(const C&); C(C&&); virtual void foo() = 0; }; // expected-error 0-1{{extension}}
-    C::C(const C&) = default; // expected-error 0-1{{extension}}
-    C::C(C&&) = default; // expected-error 0-2{{extension}}
+    struct C : virtual A { C(const C&); C(C&&); virtual void foo() = 0; };
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
+    C::C(const C&) = default;
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    C::C(C&&) = default;
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
+    // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
 
-    struct E : A { E(const E&); E(E&&); virtual void foo() = 0; }; // expected-error 0-1{{extension}}
-#if __cplusplus < 201103L
-    E::E(const E&) = default; // expected-error {{private copy constructor}} expected-error {{extension}} expected-note {{here}}
-    E::E(E&&) = default; // expected-error {{private move constructor}} expected-error 2{{extension}} expected-note {{here}}
-#else
-    E::E(const E&) = default; // expected-error {{would delete}} expected-note@-5{{inaccessible copy constructor}}
-    E::E(E&&) = default; // expected-error {{would delete}} expected-note@-6{{inaccessible move constructor}}
-#endif
-    struct F : virtual A { F(const F&); F(F&&); }; // expected-error 0-1{{extension}}
-#if __cplusplus < 201103L
-    F::F(const F&) = default; // expected-error {{private copy constructor}} expected-error {{extension}} expected-note {{here}}
-    F::F(F&&) = default; // expected-error {{private move constructor}} expected-error 2{{extension}} expected-note {{here}}
-#else
-    F::F(const F&) = default; // expected-error {{would delete}} expected-note@-5{{inaccessible copy constructor}}
-    F::F(F&&) = default; // expected-error {{would delete}} expected-note@-6{{inaccessible move constructor}}
-#endif
+    struct E : A { E(const E&); E(E&&); virtual void foo() = 0; }; // #dr1658-E5
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
+    E::E(const E&) = default; // #dr1658-E5-copy-ctor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@-2 {{base class 'A' has private copy constructor}}
+    //   cxx98-note@-3 {{in defaulted copy constructor for 'dr1658::CopyCtor::E' first required here}}
+    //   cxx98-note@#dr1658-A5 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-E5-copy-ctor {{defaulting this copy constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-E5 {{copy constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible copy constructor}}
+    E::E(E&&) = default; // #dr1658-E5-move-ctor
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
+    // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@-3 {{base class 'A' has private move constructor}}
+    //   cxx98-note@-4 {{in defaulted move constructor for 'dr1658::CopyCtor::E' first required here}}
+    //   cxx98-note@#dr1658-A5 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-E5-move-ctor {{defaulting this move constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-E5 {{move constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible move constructor}}
+    struct F : virtual A { F(const F&); F(F&&); }; // #dr1658-F5
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
+    F::F(const F&) = default; // #dr1658-F5-copy-ctor
+    // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@-2 {{inherited virtual base class 'A' has private copy constructor}}
+    //   cxx98-note@-3 {{in defaulted copy constructor for 'dr1658::CopyCtor::F' first required here}}
+    //   cxx98-note@#dr1658-A5 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-F5-copy-ctor {{defaulting this copy constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-F5 {{copy constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible copy constructor}}
+    F::F(F&&) = default; // #dr1658-F5-move-ctor
+    // cxx98-error@-1 {{rvalue references are a C++11 extension}}
+    // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
+    // cxx98-error@-3 {{inherited virtual base class 'A' has private move constructor}}
+    //   cxx98-note@-4 {{in defaulted move constructor for 'dr1658::CopyCtor::F' first required here}}
+    //   cxx98-note@#dr1658-A5 {{implicitly declared private here}}
+    // since-cxx11-error@#dr1658-F5-move-ctor {{defaulting this move constructor would delete it after its first declaration}}
+    //   since-cxx11-note@#dr1658-F5 {{move constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible move constructor}}
   }
 
   // assignment case is superseded by dr2180
@@ -274,31 +341,38 @@ namespace dr1672 { // dr1672: 7
 
 namespace dr1684 { // dr1684: 3.6
 #if __cplusplus >= 201103L
-  struct NonLiteral { // expected-note {{because}}
+  struct NonLiteral { // #dr1684-struct
     NonLiteral();
-    constexpr int f() { return 0; } // expected-warning 0-1{{will not be implicitly 'const'}}
+    constexpr int f() { return 0; }
+    // cxx11-warning@-1 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const' to avoid a change in behavior}}
   };
   constexpr int f(NonLiteral &) { return 0; }
-  constexpr int f(NonLiteral) { return 0; } // expected-error {{not a literal type}}
+  constexpr int f(NonLiteral) { return 0; }
+  // since-cxx11-error@-1 {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
+  //   since-cxx11-note@#dr1684-struct {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
 #endif
 }
 
 namespace dr1687 { // dr1687: 7
   template<typename T> struct To {
-    operator T(); // expected-note 2{{first operand was implicitly converted to type 'int *'}}
-    // expected-note@-1 {{second operand was implicitly converted to type 'double'}}
-#if __cplusplus > 201703L
-    // expected-note@-3 2{{operand was implicitly converted to type 'dr1687::E}}
-#endif
+    operator T(); // #dr1687-op-T
   };
 
-  int *a = To<int*>() + 100.0; // expected-error {{invalid operands to binary expression ('To<int *>' and 'double')}}
-  int *b = To<int*>() + To<double>(); // expected-error {{invalid operands to binary expression ('To<int *>' and 'To<double>')}}
+  int *a = To<int*>() + 100.0;
+  // expected-error@-1 {{invalid operands to binary expression ('To<int *>' and 'double')}}
+  //   expected-note@#dr1687-op-T {{first operand was implicitly converted to type 'int *'}}
+  //   since-cxx20-note@#dr1687-op-T {{second operand was implicitly converted to type 'dr1687::E2'}}
+  int *b = To<int*>() + To<double>();
+  // expected-error@-1 {{invalid operands to binary expression ('To<int *>' and 'To<double>')}}
+  //   expected-note@#dr1687-op-T {{first operand was implicitly converted to type 'int *'}}
+  //   expected-note@#dr1687-op-T {{second operand was implicitly converted to type 'double'}}
 
-#if __cplusplus > 201703L
+#if __cplusplus >= 202002L
   enum E1 {};
   enum E2 {};
-  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<E1>' and 'To<E2>')}}
+  auto c = To<E1>() <=> To<E2>();
+  // since-cxx20-error@-1 {{invalid operands to binary expression ('To<E1>' and 'To<E2>')}}
+  //   since-cxx20-note@#dr1687-op-T {{operand was implicitly converted to type 'dr1687::E}}
 #endif
 }
 
@@ -325,12 +399,14 @@ namespace dr1691 { // dr1691: 9
       void f(E);
     }
     enum M::E : int {};
-    void g(M::E); // expected-note {{declared here}}
+    void g(M::E); // #dr1691-g
   }
   void test() {
     N::M::E e;
     f(e); // ok
-    g(e); // expected-error {{use of undeclared}}
+    g(e);
+    // since-cxx11-error@-1 {{use of undeclared identifier 'g'; did you mean 'N::g'?}}
+    //   since-cxx11-note@#dr1691-g {{'N::g' declared here}}
   }
 #endif
 }
@@ -356,7 +432,9 @@ namespace dr1696 { // dr1696: 7
     extern struct A a;
     struct A {
       const A &x = { A{a, a} };
-      const A &y = { A{} }; // expected-error {{default member initializer for 'y' needed within definition of enclosing class 'A' outside of member functions}} expected-note {{here}}
+      const A &y = { A{} };
+      // since-cxx14-error@-1 {{default member initializer for 'y' needed within definition of enclosing class 'A' outside of member functions}}
+      //   since-cxx14-note@-2 {{default member initializer declared here}}
     };
     A a{a, a};
 #endif
@@ -365,16 +443,20 @@ namespace dr1696 { // dr1696: 7
   struct A { A(); ~A(); };
 #if __cplusplus >= 201103L
   struct B {
-    A &&a; // expected-note {{declared here}}
-    B() : a{} {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+    A &&a; // #dr1696-a
+    B() : a{} {}
+    // since-cxx11-error@-1 {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+    //   since-cxx11-note@#dr1696-a {{reference member declared here}}
   } b;
 #endif
 
   struct C {
     C();
-    const A &a; // expected-note {{declared here}}
+    const A &a; // #dr1696-C-a
   };
-  C::C() : a(A()) {} // expected-error {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  C::C() : a(A()) {}
+  // expected-error@-1 {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  //   expected-note@#dr1696-C-a {{reference member declared here}}
 
 #if __cplusplus >= 201103L
   // This is OK in C++14 onwards, per DR1815, though we don't support that yet:
@@ -383,51 +465,62 @@ namespace dr1696 { // dr1696: 7
   //   D1 d1 = {A()};
   // ... which lifetime-extends the A temporary.
   struct D1 {
-#if __cplusplus < 201402L
-    // expected-error@-2 {{binds to a temporary}}
-#endif
-    const A &a = A(); // expected-note {{default member init}}
+  // cxx11-error@-1 {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  //   cxx11-note@#dr1696-d1 {{in implicit default constructor for 'dr1696::D1' first required here}}
+  //   cxx11-note@#dr1696-D1-a {{initializing field 'a' with default member initializer}}
+    const A &a = A(); // #dr1696-D1-a
   };
-  D1 d1 = {};
-#if __cplusplus < 201402L
-    // expected-note@-2 {{first required here}}
-#else
-    // expected-warning-re@-4 {{sorry, lifetime extension {{.*}} not supported}}
-#endif
+  D1 d1 = {}; // #dr1696-d1
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}}
+  //   since-cxx14-note@#dr1696-D1-a {{initializing field 'a' with default member initializer}}
 
   struct D2 {
-    const A &a = A(); // expected-note {{default member init}}
-    D2() {} // expected-error {{binds to a temporary}}
+    const A &a = A(); // #dr1696-D2-a
+    D2() {}
+    // since-cxx11-error@-1 {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+    //   since-cxx11-note@#dr1696-D2-a {{initializing field 'a' with default member initializer}}
   };
 
-  struct D3 { // expected-error {{binds to a temporary}}
-    const A &a = A(); // expected-note {{default member init}}
+  struct D3 {
+  // since-cxx11-error@-1 {{reference member 'a' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  //   since-cxx11-note@#dr1696-d3 {{in implicit default constructor for 'dr1696::D3' first required here}}
+  //   since-cxx11-note@#dr1696-D3-a {{initializing field 'a' with default member initializer}}
+    const A &a = A(); // #dr1696-D3-a
   };
-  D3 d3; // expected-note {{first required here}}
+  D3 d3; // #dr1696-d3
 
   struct haslist1 {
-    std::initializer_list<int> il; // expected-note {{'std::initializer_list' member}}
-    haslist1(int i) : il{i, 2, 3} {} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+    std::initializer_list<int> il; // #dr1696-il-1
+    haslist1(int i) : il{i, 2, 3} {}
+    // since-cxx11-error@-1 {{backing array for 'std::initializer_list' member 'il' is a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+    //   since-cxx11-note@#dr1696-il-1 {{'std::initializer_list' member declared here}}
   };
 
   struct haslist2 {
-    std::initializer_list<int> il; // expected-note {{'std::initializer_list' member}}
+    std::initializer_list<int> il; // #dr1696-il-2
     haslist2();
   };
-  haslist2::haslist2() : il{1, 2} {} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+  haslist2::haslist2() : il{1, 2} {}
+  // since-cxx11-error@-1 {{backing array for 'std::initializer_list' member 'il' is a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  //   since-cxx11-note@#dr1696-il-2 {{'std::initializer_list' member declared here}}
 
   struct haslist3 {
     std::initializer_list<int> il = {1, 2, 3};
   };
 
-  struct haslist4 { // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
-    std::initializer_list<int> il = {1, 2, 3}; // expected-note {{default member initializer}}
+  struct haslist4 {
+  // since-cxx11-error@-1 {{backing array for 'std::initializer_list' member 'il' is a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  //   since-cxx11-note@#dr1696-hl4 {{in implicit default constructor for 'dr1696::haslist4' first required here}}
+  //   since-cxx11-note@#dr1696-il-4 {{initializing field 'il' with default member initializer}}
+    std::initializer_list<int> il = {1, 2, 3}; // #dr1696-il-4
   };
-  haslist4 hl4; // expected-note {{in implicit default constructor}}
+  haslist4 hl4; // #dr1696-hl4
 
   struct haslist5 {
-    std::initializer_list<int> il = {1, 2, 3}; // expected-note {{default member initializer}}
-    haslist5() {} // expected-error {{backing array for 'std::initializer_list' member 'il' is a temporary object}}
+    std::initializer_list<int> il = {1, 2, 3}; // #dr1696-il-5
+    haslist5() {}
+    // since-cxx11-error@-1 {{backing array for 'std::initializer_list' member 'il' is a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+    //   since-cxx11-note@#dr1696-il-5 {{nitializing field 'il' with default member initializer}}
   };
 #endif
 }

@@ -325,9 +325,8 @@ define i4 @ptr_N_and_step_signed_positive_unsigned_checks_only(ptr %src, ptr %lo
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_UGE_0:%.*]] = icmp uge i16 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[STEP_UGE_0]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP:%.*]], [[N]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 1
@@ -381,9 +380,8 @@ define i4 @ptr_N_signed_positive(ptr %src, ptr %lower, ptr %upper, i16 %N, i16 %
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i16 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP:%.*]], [[N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 [[STEP]]
@@ -432,9 +430,8 @@ define i4 @ptr_N_could_be_negative(ptr %src, ptr %lower, ptr %upper, i8 %N, i8 %
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i8 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i8 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i8 [[STEP:%.*]], [[N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[STEP]]
@@ -485,9 +482,8 @@ define i4 @ptr_src_uge_end(ptr %src, ptr %lower, ptr %upper, i8 %N, i8 %step) {
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i8 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i8 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i8 [[STEP:%.*]], [[N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[STEP]]
@@ -534,16 +530,14 @@ define i4 @ptr_N_unsigned_positive(ptr %src, ptr %lower, ptr %upper, i16 %N, i16
 ; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i16 [[N:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult ptr [[SRC]], [[LOWER:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge ptr [[SRC_END]], [[UPPER:%.*]]
-; CHECK-NEXT:    [[N_NEG:%.*]] = icmp ult i16 [[N]], 0
 ; CHECK-NEXT:    [[OR_PRECOND_0:%.*]] = or i1 [[CMP_SRC_START]], [[CMP_SRC_END]]
-; CHECK-NEXT:    [[OR_PRECOND_1:%.*]] = or i1 [[OR_PRECOND_0]], [[N_NEG]]
+; CHECK-NEXT:    [[OR_PRECOND_1:%.*]] = or i1 [[OR_PRECOND_0]], false
 ; CHECK-NEXT:    br i1 [[OR_PRECOND_1]], label [[TRAP_BB:%.*]], label [[STEP_CHECK:%.*]]
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i16 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP:%.*]], [[N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 [[STEP]]
@@ -596,9 +590,8 @@ define i4 @ptr_N_signed_positive_assume(ptr %src, ptr %lower, ptr %upper, i16 %N
 ; CHECK:       trap.bb:
 ; CHECK-NEXT:    ret i4 2
 ; CHECK:       step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i16 [[STEP:%.*]], 0
-; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP]], [[N]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i16 [[STEP:%.*]], [[N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 [[STEP]]

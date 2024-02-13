@@ -16,12 +16,12 @@
 #include <stdio.h>
 
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
-#define PRINTF_STDOUT __llvm_libc::stdout
+#define PRINTF_STDOUT LIBC_NAMESPACE::stdout
 #else // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define PRINTF_STDOUT ::stdout
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -35,4 +35,4 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   return ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

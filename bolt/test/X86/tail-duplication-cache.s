@@ -11,7 +11,7 @@
 # RUN:    --print-finalized --tail-duplication=cache -o %t.out2 \
 # RUN:    | FileCheck --check-prefix="CHECK2" %s
 
-# A test where the tail is duplicated to eliminate an uncoditional jump
+# A test where the tail is duplicated to eliminate an unconditional jump
 # FDATA: 1 main #.BB0_br# 1 main #.BB4# 0 100
 # FDATA: 1 main #.BB0_br# 1 main #.BB1# 0 100
 # FDATA: 1 main #.BB1_br# 1 main #.BB3# 0 50
