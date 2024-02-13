@@ -59,6 +59,7 @@ void ScalarEnumerationTraits<XCOFF::DwarfSectionSubtypeFlags>::enumeration(
   ECase(SSUBTYP_DWFRAME);
   ECase(SSUBTYP_DWMAC);
 #undef ECase
+  IO.enumFallback<Hex32>(Value);
 }
 
 void ScalarEnumerationTraits<XCOFF::StorageClass>::enumeration(
@@ -249,7 +250,7 @@ void MappingTraits<XCOFFYAML::Section>::mapping(IO &IO,
   IO.mapOptional("NumberOfRelocations", Sec.NumberOfRelocations);
   IO.mapOptional("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
   IO.mapOptional("Flags", NC->Flags);
-  IO.mapOptional("DwarfSectionSubtype", Sec.DwarfSectionSubtype);
+  IO.mapOptional("DwarfSectionSubtype", Sec.SectionSubtype);
   IO.mapOptional("SectionData", Sec.SectionData);
   IO.mapOptional("Relocations", Sec.Relocations);
 }

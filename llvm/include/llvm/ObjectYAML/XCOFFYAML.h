@@ -79,7 +79,7 @@ struct Section {
   llvm::yaml::Hex16 NumberOfRelocations;
   llvm::yaml::Hex16 NumberOfLineNumbers; // Line number counts. Not supported yet.
   uint32_t Flags;
-  std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtype;
+  std::optional<XCOFF::DwarfSectionSubtypeFlags> SectionSubtype;
   yaml::BinaryRef SectionData;
   std::vector<Relocation> Relocations;
 };

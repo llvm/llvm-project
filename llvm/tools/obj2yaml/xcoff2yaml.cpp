@@ -96,11 +96,11 @@ Error XCOFFDumper::dumpSections(ArrayRef<Shdr> Sections) {
     YamlSec.FileOffsetToLineNumbers = S.FileOffsetToLineNumberInfo;
     YamlSec.Flags = S.Flags;
     if (YamlSec.Flags & XCOFF::STYP_DWARF) {
-      YamlSec.DwarfSectionSubtype =
-          static_cast<XCOFF::DwarfSectionSubtypeFlags>(
-              S.Flags &
-              XCOFFSectionHeader<
-                  XCOFFSectionHeader32>::SectionDwarfSubflagsTypeMask);
+      unsigned mask = Obj.is64Bit()
+                          ? XCOFFSectionHeader64::SectionFlagsSubtypeMask
+                          : XCOFFSectionHeader32::SectionFlagsSubtypeMask;
+      YamlSec.SectionSubtype =
+          static_cast<XCOFF::DwarfSectionSubtypeFlags>(S.Flags & mask);
     }
 
     // Dump section data.

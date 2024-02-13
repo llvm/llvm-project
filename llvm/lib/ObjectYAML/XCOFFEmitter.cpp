@@ -210,7 +210,23 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
         return false;
       }
     }
+    if (InitSections[I].SectionSubtype) {
+      uint32_t DwarfSubtype =
+          static_cast<uint32_t>(*InitSections[I].SectionSubtype);
+      if (InitSections[I].Flags != XCOFF::STYP_DWARF) {
+        ErrHandler("a DwarfSectionSubtype is only allowed for a dwarf section");
+        return false;
+      }
+      unsigned mask = Is64Bit ? XCOFFSectionHeader64::SectionFlagsSubtypeMask
+                              : XCOFFSectionHeader32::SectionFlagsSubtypeMask;
+      if (DwarfSubtype & ~mask) {
+        ErrHandler("the low-order bits of DwarfSectionSubtype must be 0");
+        return false;
+      }
+      InitSections[I].Flags |= DwarfSubtype;
+    }
   }
+
   return initRelocations(CurrentOffset);
 }
 
@@ -513,12 +529,9 @@ void XCOFFWriter::writeSectionHeaders() {
   for (uint16_t I = 0, E = Obj.Sections.size(); I < E; ++I) {
     XCOFFYAML::Section DerivedSec = InitSections[I];
     writeName(DerivedSec.SectionName, W);
-    int32_t DwarfSubtype = 0; 
-    if (YamlSec.DwarfSectionSubtype)
-      DwarfSubtype = static_cast<int32_t>(*YamlSec.DwarfSectionSubtype); 
 
-    // Virtual address is the same as physical address.
     if (Is64Bit) {
+      // Virtual address is the same as physical address.
       W.write<uint64_t>(DerivedSec.Address); // Physical address
       W.write<uint64_t>(DerivedSec.Address); // Virtual address
       W.write<uint64_t>(DerivedSec.Size);
@@ -527,7 +540,7 @@ void XCOFFWriter::writeSectionHeaders() {
       W.write<uint64_t>(DerivedSec.FileOffsetToLineNumbers);
       W.write<uint32_t>(DerivedSec.NumberOfRelocations);
       W.write<uint32_t>(DerivedSec.NumberOfLineNumbers);
-      W.write<int32_t>(DerivedSec.Flags | DwarfSubtype);
+      W.write<int32_t>(DerivedSec.Flags);
       W.OS.write_zeros(4);
     } else {
       // Virtual address is the same as physical address.
@@ -539,7 +552,7 @@ void XCOFFWriter::writeSectionHeaders() {
       W.write<uint32_t>(DerivedSec.FileOffsetToLineNumbers);
       W.write<uint16_t>(DerivedSec.NumberOfRelocations);
       W.write<uint16_t>(DerivedSec.NumberOfLineNumbers);
-      W.write<int32_t>(DerivedSec.Flags | DwarfSubtype);
+      W.write<int32_t>(DerivedSec.Flags);
     }
   }
 }

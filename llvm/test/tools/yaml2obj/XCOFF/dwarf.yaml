@@ -1,0 +1,108 @@
+## Test that we can generate and read DWARF section headers
+# RUN: yaml2obj %s -o %t32
+# RUN: llvm-readobj --section-headers %t32 | \
+# RUN    FileCheck -check-prefixes=HDRS,HDRS32 %s
+# RUN: obj2yaml %t32 | FileCheck -check-prefix=YAML %s
+
+# RUN: yaml2obj -DMAGIC=0x01F7 -DSectionOrLength=SectionOrLengthLo %s -o %t64
+# RUN: llvm-readobj --section-headers %t64 | \
+# RUN    FileCheck -check-prefixes=HDRS,HDRS64 %s
+# RUN: obj2yaml %t64 | FileCheck -check-prefix=YAML %s
+
+# YAML:         - Name:            .dwabrev
+# YAML:         Flags:           [ STYP_DWARF ]
+# YAML-NEXT:    DwarfSectionSubtype: SSUBTYP_DWABREV
+# YAML:         - Name:            .dwinfo
+# YAML:         Flags:           [ STYP_DWARF ]
+# YAML-NEXT:    DwarfSectionSubtype: SSUBTYP_DWINFO
+# YAML:         - Name:            .dwline
+# YAML:         Flags:           [ STYP_DWARF ]
+# YAML-NEXT:    DwarfSectionSubtype: SSUBTYP_DWLINE
+
+# HDRS32:       Format: aixcoff-rs6000
+# HDRS64:       Format: aix5coff64-rs6000
+# HDRS:         Arch: powerpc
+# HDRS-NEXT:    AddressSize: 32bit
+# HDRS-NEXT:    Sections [
+# HDRS-NEXT:      Section {
+# HDRS:             Index: 1
+# HDRS-NEXT:        Name: .data
+# HDRS:             Type: STYP_DATA (0x40)
+# HDRS-NEXT:      }
+# HDRS-NEXT:      Section {
+# HDRS-NEXT:        Index: 2
+# HDRS-NEXT:        Name: .dwabrev
+# HDRS:             Type: STYP_DWARF (0x10)
+# HDRS-NEXT:        DwarfSubType: SSUBTYP_DWABREV (0x60000)
+# HDRS-NEXT:      }
+# HDRS-NEXT:      Section {
+# HDRS-NEXT:        Index: 3
+# HDRS-NEXT:        Name: .dwinfo
+# HDRS:             Type: STYP_DWARF (0x10)
+# HDRS-NEXT:        DwarfSubType: SSUBTYP_DWINFO (0x10000)
+# HDRS-NEXT:      }
+# HDRS-NEXT:      Section {
+# HDRS-NEXT:        Index: 4
+# HDRS-NEXT:        Name: .dwline
+# HDRS:             Type: STYP_DWARF (0x10)
+# HDRS-NEXT:        DwarfSubType: SSUBTYP_DWLINE (0x20000)
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x01DF]]
+  NumberOfSections: 4
+  CreationTime:    0
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DATA ]
+    SectionData:     '00000001'
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DwarfSectionSubtype: SSUBTYP_DWABREV
+    SectionData:     01110125
+  - Name:            .dwinfo
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DwarfSectionSubtype: SSUBTYP_DWINFO
+    SectionData:     00000080
+  - Name:            .dwline
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DwarfSectionSubtype: SSUBTYP_DWLINE
+    SectionData:     00000021
+Symbols:
+  - Name:            .file
+    Value:           0x0
+    Section:         N_DEBUG
+    Type:            0x3
+    StorageClass:    C_FILE
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type:            AUX_FILE
+        FileNameOrString: d2.c
+        FileStringType:  XFT_FN
+      - Type:            AUX_FILE
+        FileNameOrString: LLVM version 17.0.6
+        FileStringType:  XFT_CV
+  - Name:            foo
+    Value:           0x0
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        SymbolType:      XTY_SD
+        SymbolAlignment: 2
+        StorageMappingClass: XMC_RW
+        [[SectionOrLength=SectionOrLength]]: 4
+StringTable:     {}
+...

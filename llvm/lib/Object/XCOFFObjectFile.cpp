@@ -64,6 +64,11 @@ template <typename T> uint16_t XCOFFSectionHeader<T>::getSectionType() const {
   return DerivedXCOFFSectionHeader.Flags & SectionFlagsTypeMask;
 }
 
+template <typename T> int32_t XCOFFSectionHeader<T>::getSectionSubtype() const {
+  const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
+  return DerivedXCOFFSectionHeader.Flags & SectionFlagsSubtypeMask;
+}
+
 template <typename T>
 bool XCOFFSectionHeader<T>::isReservedSectionType() const {
   return getSectionType() & SectionFlagsReservedMask;
@@ -757,8 +762,8 @@ size_t XCOFFObjectFile::getFileHeaderSize() const {
 }
 
 size_t XCOFFObjectFile::getSectionHeaderSize() const {
-  return is64Bit() ? sizeof(XCOFFSectionHeader64) :
-                     sizeof(XCOFFSectionHeader32);
+  return is64Bit() ? sizeof(XCOFFSectionHeader64)
+                   : sizeof(XCOFFSectionHeader32);
 }
 
 bool XCOFFObjectFile::is64Bit() const {

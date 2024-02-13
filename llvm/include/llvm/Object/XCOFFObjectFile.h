@@ -153,16 +153,21 @@ struct XCOFFAuxiliaryHeader64 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader64> {
 };
 
 template <typename T> struct XCOFFSectionHeader {
-  // Least significant 3 bits are reserved.
+  // The section flags definitions are the same in both 32- and 64-bit objects.
+  //  Least significant 3 bits are reserved.
   static constexpr unsigned SectionFlagsReservedMask = 0x7;
 
   // The low order 16 bits of section flags denotes the section type.
   static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
-  static constexpr unsigned SectionDwarfSubflagsTypeMask = 0xffff0000u;
+
+  // The high order 16 bits of section flags denotes the section subtype.
+  // For now, this is only used for dwarf sections.
+  static constexpr unsigned SectionFlagsSubtypeMask = 0xffff0000u;
 
 public:
   StringRef getName() const;
   uint16_t getSectionType() const;
+  int32_t getSectionSubtype() const;
   bool isReservedSectionType() const;
 };
 

@@ -1,0 +1,104 @@
+## Test that we can generate and read DWARF section headers
+# RUN: not yaml2obj --docnum=1 %s -o %t 2>&1 | FileCheck -check-prefix=ERR1 %s
+
+# ERR1: the low-order bits of DwarfSectionSubtype must be 0
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+  NumberOfSections: 2
+  CreationTime:    0
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DATA ]
+    SectionData:     '00000001'
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DwarfSectionSubtype: 0x12345
+    SectionData:     01110125
+Symbols:
+  - Name:            .file
+    Value:           0x0
+    Section:         N_DEBUG
+    Type:            0x3
+    StorageClass:    C_FILE
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type:            AUX_FILE
+        FileNameOrString: d2.c
+        FileStringType:  XFT_FN
+      - Type:            AUX_FILE
+        FileNameOrString: LLVM version 17
+        FileStringType:  XFT_CV
+  - Name:            foo
+    Value:           0x0
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        SymbolType:      XTY_SD
+        SymbolAlignment: 2
+        StorageMappingClass: XMC_RW
+        SectionOrLength: 4
+StringTable:     {}
+...
+
+# RUN: not yaml2obj --docnum=2 %s -o %t 2>&1 | FileCheck -check-prefix=ERR2 %s
+
+# ERR2: a DwarfSectionSubtype is only allowed for a dwarf section
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+  NumberOfSections: 2
+  CreationTime:    0
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DATA ]
+    DwarfSectionSubtype: SSUBTYP_DWABREV
+    SectionData:     '00000001'
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    SectionData:     01110125
+Symbols:
+  - Name:            .file
+    Value:           0x0
+    Section:         N_DEBUG
+    Type:            0x3
+    StorageClass:    C_FILE
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type:            AUX_FILE
+        FileNameOrString: d2.c
+        FileStringType:  XFT_FN
+      - Type:            AUX_FILE
+        FileNameOrString: LLVM version 17
+        FileStringType:  XFT_CV
+  - Name:            foo
+    Value:           0x0
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        SymbolType:      XTY_SD
+        SymbolAlignment: 2
+        StorageMappingClass: XMC_RW
+        SectionOrLength: 4
+StringTable:     {}
+...
