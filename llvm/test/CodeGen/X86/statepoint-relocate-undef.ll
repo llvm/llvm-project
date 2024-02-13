@@ -9,7 +9,7 @@ declare void @f()
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
 
-;; Check that llvm doesn't crash if relcoate with undef base/derived ptr survives until isel
+;; Check that llvm doesn't crash if relocate with undef base/derived ptr survives until isel
 define void @test_gcrelocate_undef(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_gcrelocate_undef:
 ; CHECK:       # %bb.0:
