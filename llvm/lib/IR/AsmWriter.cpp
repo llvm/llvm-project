@@ -304,6 +304,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AnyReg:        Out << "anyregcc"; break;
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
+  case CallingConv::PreserveNone:  Out << "preserve_nonecc"; break;
   case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
@@ -1140,6 +1141,9 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
 void SlotTracker::processDPValueMetadata(const DPValue &DPV) {
   CreateMetadataSlot(DPV.getVariable());
   CreateMetadataSlot(DPV.getDebugLoc());
+  if (DPV.isDbgAssign()) {
+    CreateMetadataSlot(DPV.getAssignID());
+  }
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
@@ -4088,12 +4092,6 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
-  } else if (const Instruction *I = dyn_cast<Instruction>(&V)) {
-    if (I->DbgMarker) {
-      // In the new, experimental DPValue representation of debug-info, print
-      // out which instructions have DPMarkers and where they are.
-      Out << "; dbgmarker @ " << I->DbgMarker;
-    }
   }
 }
 
@@ -4571,7 +4569,22 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
 void AssemblyWriter::printDPValue(const DPValue &Value) {
   // There's no formal representation of a DPValue -- print purely as a
   // debugging aid.
-  Out << "  DPValue { ";
+  Out << "  DPValue ";
+
+  switch (Value.getType()) {
+  case DPValue::LocationType::Value:
+    Out << "value";
+    break;
+  case DPValue::LocationType::Declare:
+    Out << "declare";
+    break;
+  case DPValue::LocationType::Assign:
+    Out << "assign";
+    break;
+  default:
+    llvm_unreachable("Tried to print a DPValue with an invalid LocationType!");
+  }
+  Out << " { ";
   auto WriterCtx = getContext();
   WriteAsOperandInternal(Out, Value.getRawLocation(), WriterCtx, true);
   Out << ", ";
@@ -4579,6 +4592,14 @@ void AssemblyWriter::printDPValue(const DPValue &Value) {
   Out << ", ";
   WriteAsOperandInternal(Out, Value.getExpression(), WriterCtx, true);
   Out << ", ";
+  if (Value.isDbgAssign()) {
+    WriteAsOperandInternal(Out, Value.getAssignID(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, Value.getRawAddress(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, Value.getAddressExpression(), WriterCtx, true);
+    Out << ", ";
+  }
   WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
   Out << " marker @" << Value.getMarker();
   Out << " }";

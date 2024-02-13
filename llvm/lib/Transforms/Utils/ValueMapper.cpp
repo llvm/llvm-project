@@ -544,6 +544,16 @@ void Mapper::remapDPValue(DPValue &V) {
   V.setVariable(cast<DILocalVariable>(MappedVar));
   V.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
 
+  bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
+
+  if (V.isDbgAssign()) {
+    auto *NewAddr = mapValue(V.getAddress());
+    if (!IgnoreMissingLocals && !NewAddr)
+      V.setKillAddress();
+    else if (NewAddr)
+      V.setAddress(NewAddr);
+  }
+
   // Find Value operands and remap those.
   SmallVector<Value *, 4> Vals, NewVals;
   for (Value *Val : V.location_ops())
@@ -554,8 +564,6 @@ void Mapper::remapDPValue(DPValue &V) {
   // If there are no changes to the Value operands, finished.
   if (Vals == NewVals)
     return;
-
-  bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
 
   // Otherwise, do some replacement.
   if (!IgnoreMissingLocals &&
@@ -1048,9 +1056,13 @@ void Mapper::remapFunction(Function &F) {
       A.mutateType(TypeMapper->remapType(A.getType()));
 
   // Remap the instructions.
-  for (BasicBlock &BB : F)
-    for (Instruction &I : BB)
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
       remapInstruction(&I);
+      for (DPValue &DPV : I.getDbgValueRange())
+        remapDPValue(DPV);
+    }
+  }
 }
 
 void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,

@@ -2622,8 +2622,8 @@ bool GVNPass::processInstruction(Instruction *I) {
 
     // Remember how many outgoing edges there are to every successor.
     SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-    for (unsigned i = 0, n = SI->getNumSuccessors(); i != n; ++i)
-      ++SwitchEdges[SI->getSuccessor(i)];
+    for (BasicBlock *Succ : successors(Parent))
+      ++SwitchEdges[Succ];
 
     for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
          i != e; ++i) {

@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs < %s | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+xventanacondops < %s | FileCheck %s -check-prefix=RV64XVENTANACONDOPS
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+xtheadcondmov < %s | FileCheck %s -check-prefix=RV64XTHEADCONDMOV
-; RUN: llc -mtriple=riscv32 -target-abi=ilp32f -mattr=+f,+zbs,+experimental-zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
-; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+experimental-zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
+; RUN: llc -mtriple=riscv32 -target-abi=ilp32f -mattr=+f,+zbs,+zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
+; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
 
 define i64 @zero1(i64 %rs1, i1 zeroext %rc) {
 ; RV32I-LABEL: zero1:

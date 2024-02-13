@@ -59,7 +59,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       if (isnan(x) || isinf(x))
         continue;
       if (isnan(y) || isinf(y))

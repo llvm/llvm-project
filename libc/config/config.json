@@ -13,7 +13,7 @@
       "doc": "Disable handling of %n in printf format string."
     },
     "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
-      "value": true,
+      "value": false,
       "doc": "Use large table for better printf long double performance."
     }
   },

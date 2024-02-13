@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -46,6 +45,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -909,10 +909,9 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
-    const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(N);
-    for (unsigned i = 0, e = N->getValueType(0).getVectorNumElements();
-         i != e; ++i)
-      ID.AddInteger(SVN->getMaskElt(i));
+    ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
+    for (int M : Mask)
+      ID.AddInteger(M);
     break;
   }
   case ISD::TargetBlockAddress:
@@ -2881,12 +2880,6 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   }
   }
 
-  // Fallback - this is a splat if all demanded elts are the same constant.
-  if (computeKnownBits(V, DemandedElts, Depth).isConstant()) {
-    UndefElts = ~DemandedElts;
-    return true;
-  }
-
   return false;
 }
 
@@ -3115,6 +3108,33 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     for (auto [I, SrcOp] : enumerate(Op->ops())) {
       Known.insertBits(computeKnownBits(SrcOp, Depth + 1), ScalarSize * I);
     }
+    break;
+  }
+  case ISD::STEP_VECTOR: {
+    const APInt &Step = Op.getConstantOperandAPInt(0);
+
+    if (Step.isPowerOf2())
+      Known.Zero.setLowBits(Step.logBase2());
+
+    const Function &F = getMachineFunction().getFunction();
+
+    if (!isUIntN(BitWidth, Op.getValueType().getVectorMinNumElements()))
+      break;
+    const APInt MinNumElts =
+        APInt(BitWidth, Op.getValueType().getVectorMinNumElements());
+
+    bool Overflow;
+    const APInt MaxNumElts = getVScaleRange(&F, BitWidth)
+                                 .getUnsignedMax()
+                                 .umul_ov(MinNumElts, Overflow);
+    if (Overflow)
+      break;
+
+    const APInt MaxValue = (MaxNumElts - 1).umul_ov(Step, Overflow);
+    if (Overflow)
+      break;
+
+    Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
   case ISD::BUILD_VECTOR:
@@ -3909,9 +3929,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::USUBSAT: {
-    // The result of usubsat will never be larger than the LHS.
-    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::usub_sat(Known, Known2);
     break;
   }
   case ISD::UMIN: {
@@ -5233,22 +5253,8 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
          "Floating point type expected");
 
   // If the value is a constant, we can obviously see if it is a zero or not.
-  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
-    return !C->isZero();
-
-  // Return false if we find any zero in a vector.
-  if (Op->getOpcode() == ISD::BUILD_VECTOR ||
-      Op->getOpcode() == ISD::SPLAT_VECTOR) {
-    for (const SDValue &OpVal : Op->op_values()) {
-      if (OpVal.isUndef())
-        return false;
-      if (auto *C = dyn_cast<ConstantFPSDNode>(OpVal))
-        if (C->isZero())
-          return false;
-    }
-    return true;
-  }
-  return false;
+  return ISD::matchUnaryFpPredicate(
+      Op, [](ConstantFPSDNode *C) { return !C->isZero(); });
 }
 
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {

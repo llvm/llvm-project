@@ -101,6 +101,7 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #endif
 
 #define TEST_SHORT_WCHAR
+#define TEST_ABI_MICROSOFT
 
 #define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 

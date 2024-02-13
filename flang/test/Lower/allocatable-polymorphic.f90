@@ -345,7 +345,7 @@ contains
 ! CHECK: %[[TYPE_DESC_ADDR:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK: %[[P_CAST:.*]] = fir.convert %[[P_DECL]]#1 : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[TYPE_NONE:.*]] = fir.convert %[[TYPE_DESC_ADDR]] : (!fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.ref<none>
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[P_CAST]], %[[TYPE_NONE]], %{{.*}}, %1{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[P_CAST]], %[[TYPE_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 ! CHECK: %[[TYPE_DESC_ADDR:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK: %[[C1_CAST:.*]] = fir.convert %[[C1_DECL]]#1 : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
@@ -421,7 +421,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_type_with_polymorphic_pointer_component()
 ! CHECK: %[[TYPE_PTR:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>> {bindc_name = "a", uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa"}
-! CHECK: %[[TYPE_PTR_DECL:.*]]:2 = hlfir.declare %39 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>)
+! CHECK: %[[TYPE_PTR_DECL:.*]]:2 = hlfir.declare %[[TYPE_PTR]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>)
 ! CHECK: %[[TYPE_PTR_CONV:.*]] = fir.convert %[[TYPE_PTR_DECL]]#1 : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: fir.call @_FortranAPointerAllocate(%[[TYPE_PTR_CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: %[[TYPE_PTR_LOAD:.*]] = fir.load %[[TYPE_PTR_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>>

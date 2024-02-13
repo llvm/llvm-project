@@ -2567,43 +2567,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
   }
 
-  case TargetOpcode::G_BSWAP: {
-    // Handle vector types for G_BSWAP directly.
-    Register DstReg = I.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-
-    // We should only get vector types here; everything else is handled by the
-    // importer right now.
-    if (!DstTy.isVector() || DstTy.getSizeInBits() > 128) {
-      LLVM_DEBUG(dbgs() << "Dst type for G_BSWAP currently unsupported.\n");
-      return false;
-    }
-
-    // Only handle 4 and 2 element vectors for now.
-    // TODO: 16-bit elements.
-    unsigned NumElts = DstTy.getNumElements();
-    if (NumElts != 4 && NumElts != 2) {
-      LLVM_DEBUG(dbgs() << "Unsupported number of elements for G_BSWAP.\n");
-      return false;
-    }
-
-    // Choose the correct opcode for the supported types. Right now, that's
-    // v2s32, v4s32, and v2s64.
-    unsigned Opc = 0;
-    unsigned EltSize = DstTy.getElementType().getSizeInBits();
-    if (EltSize == 32)
-      Opc = (DstTy.getNumElements() == 2) ? AArch64::REV32v8i8
-                                          : AArch64::REV32v16i8;
-    else if (EltSize == 64)
-      Opc = AArch64::REV64v16i8;
-
-    // We should always get something by the time we get here...
-    assert(Opc != 0 && "Didn't get an opcode for G_BSWAP?");
-
-    I.setDesc(TII.get(Opc));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
@@ -3057,34 +3020,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_INDEXED_STORE:
     return selectIndexedStore(cast<GIndexedStore>(I), MRI);
 
-  case TargetOpcode::G_SMULH:
-  case TargetOpcode::G_UMULH: {
-    // Reject the various things we don't support yet.
-    if (unsupportedBinOp(I, RBI, MRI, TRI))
-      return false;
-
-    const Register DefReg = I.getOperand(0).getReg();
-    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
-
-    if (RB.getID() != AArch64::GPRRegBankID) {
-      LLVM_DEBUG(dbgs() << "G_[SU]MULH on bank: " << RB << ", expected: GPR\n");
-      return false;
-    }
-
-    if (Ty != LLT::scalar(64)) {
-      LLVM_DEBUG(dbgs() << "G_[SU]MULH has type: " << Ty
-                        << ", expected: " << LLT::scalar(64) << '\n');
-      return false;
-    }
-
-    unsigned NewOpc = I.getOpcode() == TargetOpcode::G_SMULH ? AArch64::SMULHrr
-                                                             : AArch64::UMULHrr;
-    I.setDesc(TII.get(NewOpc));
-
-    // Now that we selected an opcode, we need to constrain the register
-    // operands to use appropriate classes.
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR:
     if (MRI.getType(I.getOperand(0).getReg()).isVector())
@@ -4600,8 +4535,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   if (Ty.isVector())
     return nullptr;
   unsigned OpSize = Ty.getSizeInBits();
-  if (OpSize != 32 && OpSize != 64)
-    return nullptr;
+  assert(OpSize == 16 || OpSize == 32 || OpSize == 64);
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
@@ -4620,9 +4554,11 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
       std::swap(LHS, RHS);
     }
   }
-  unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
-                              {AArch64::FCMPSri, AArch64::FCMPDri}};
-  unsigned CmpOpc = CmpOpcTbl[ShouldUseImm][OpSize == 64];
+  unsigned CmpOpcTbl[2][3] = {
+      {AArch64::FCMPHrr, AArch64::FCMPSrr, AArch64::FCMPDrr},
+      {AArch64::FCMPHri, AArch64::FCMPSri, AArch64::FCMPDri}};
+  unsigned CmpOpc =
+      CmpOpcTbl[ShouldUseImm][OpSize == 16 ? 0 : (OpSize == 32 ? 1 : 2)];
 
   // Partially build the compare. Decide if we need to add a use for the
   // third operand based off whether or not we're comparing against 0.0.
@@ -4889,18 +4825,21 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   // TODO: emit CMN as an optimization.
   auto &MRI = *MIB.getMRI();
   LLT OpTy = MRI.getType(LHS);
-  assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
   unsigned CCmpOpc;
   std::optional<ValueAndVReg> C;
   if (CmpInst::isIntPredicate(CC)) {
+    assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
     C = getIConstantVRegValWithLookThrough(RHS, MRI);
     if (C && C->Value.ult(32))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
     else
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
   } else {
+    assert(OpTy.getSizeInBits() == 16 || OpTy.getSizeInBits() == 32 ||
+           OpTy.getSizeInBits() == 64);
     switch (OpTy.getSizeInBits()) {
     case 16:
+      assert(STI.hasFullFP16() && "Expected Full FP16 for fp16 comparisons");
       CCmpOpc = AArch64::FCCMPHrr;
       break;
     case 32:
@@ -5610,7 +5549,7 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
 
 bool AArch64InstructionSelector::selectIndexedExtLoad(
     MachineInstr &MI, MachineRegisterInfo &MRI) {
-  auto &ExtLd = cast<GIndexedExtLoad>(MI);
+  auto &ExtLd = cast<GIndexedAnyExtLoad>(MI);
   Register Dst = ExtLd.getDstReg();
   Register WriteBack = ExtLd.getWritebackReg();
   Register Base = ExtLd.getBaseReg();
@@ -5697,10 +5636,6 @@ bool AArch64InstructionSelector::selectIndexedExtLoad(
 
 bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
                                                    MachineRegisterInfo &MRI) {
-  // TODO: extending loads.
-  if (isa<GIndexedExtLoad>(MI))
-    return false;
-
   auto &Ld = cast<GIndexedLoad>(MI);
   Register Dst = Ld.getDstReg();
   Register WriteBack = Ld.getWritebackReg();
@@ -5709,6 +5644,9 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
   assert(MRI.getType(Dst).getSizeInBits() <= 128 &&
          "Unexpected type for indexed load");
   unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
+
+  if (MemSize < MRI.getType(Dst).getSizeInBytes())
+    return selectIndexedExtLoad(MI, MRI);
 
   unsigned Opc = 0;
   if (Ld.isPre()) {

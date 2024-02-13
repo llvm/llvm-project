@@ -101,12 +101,30 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
 
 namespace {
 
+static DPValue *createDebugValue(DIBuilder &DIB, Value *NewValue,
+                                 DILocalVariable *Variable,
+                                 DIExpression *Expression, const DILocation *DI,
+                                 DPValue *InsertBefore) {
+  (void)DIB;
+  return DPValue::createDPValue(NewValue, Variable, Expression, DI,
+                                *InsertBefore);
+}
+static DbgValueInst *createDebugValue(DIBuilder &DIB, Value *NewValue,
+                                      DILocalVariable *Variable,
+                                      DIExpression *Expression,
+                                      const DILocation *DI,
+                                      Instruction *InsertBefore) {
+  return static_cast<DbgValueInst *>(DIB.insertDbgValueIntrinsic(
+      NewValue, Variable, Expression, DI, InsertBefore));
+}
+
 /// Helper for updating assignment tracking debug info when promoting allocas.
 class AssignmentTrackingInfo {
   /// DbgAssignIntrinsics linked to the alloca with at most one per variable
   /// fragment. (i.e. not be a comprehensive set if there are multiple
   /// dbg.assigns for one variable fragment).
   SmallVector<DbgVariableIntrinsic *> DbgAssigns;
+  SmallVector<DPValue *> DPVAssigns;
 
 public:
   void init(AllocaInst *AI) {
@@ -115,16 +133,21 @@ public:
       if (Vars.insert(DebugVariable(DAI)).second)
         DbgAssigns.push_back(DAI);
     }
+    for (DPValue *DPV : at::getDPVAssignmentMarkers(AI)) {
+      if (Vars.insert(DebugVariable(DPV)).second)
+        DPVAssigns.push_back(DPV);
+    }
   }
 
   /// Update assignment tracking debug info given for the to-be-deleted store
   /// \p ToDelete that stores to this alloca.
-  void updateForDeletedStore(
-      StoreInst *ToDelete, DIBuilder &DIB,
-      SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete) const {
+  void
+  updateForDeletedStore(StoreInst *ToDelete, DIBuilder &DIB,
+                        SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete,
+                        SmallSet<DPValue *, 8> *DPVAssignsToDelete) const {
     // There's nothing to do if the alloca doesn't have any variables using
     // assignment tracking.
-    if (DbgAssigns.empty())
+    if (DbgAssigns.empty() && DPVAssigns.empty())
       return;
 
     // Insert a dbg.value where the linked dbg.assign is and remember to delete
@@ -134,13 +157,17 @@ public:
     // dbg.assign for each variable fragment for the untracked store handling
     // (after this loop).
     SmallSet<DebugVariableAggregate, 2> VarHasDbgAssignForStore;
-    for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(ToDelete)) {
-      VarHasDbgAssignForStore.insert(DebugVariableAggregate(DAI));
-      DbgAssignsToDelete->insert(DAI);
-      DIB.insertDbgValueIntrinsic(DAI->getValue(), DAI->getVariable(),
-                                  DAI->getExpression(), DAI->getDebugLoc(),
-                                  DAI);
-    }
+    auto InsertValueForAssign = [&](auto *DbgAssign, auto *&AssignList) {
+      VarHasDbgAssignForStore.insert(DebugVariableAggregate(DbgAssign));
+      AssignList->insert(DbgAssign);
+      createDebugValue(DIB, DbgAssign->getValue(), DbgAssign->getVariable(),
+                       DbgAssign->getExpression(), DbgAssign->getDebugLoc(),
+                       DbgAssign);
+    };
+    for (auto *Assign : at::getAssignmentMarkers(ToDelete))
+      InsertValueForAssign(Assign, DbgAssignsToDelete);
+    for (auto *Assign : at::getDPVAssignmentMarkers(ToDelete))
+      InsertValueForAssign(Assign, DPVAssignsToDelete);
 
     // It's possible for variables using assignment tracking to have no
     // dbg.assign linked to this store. These are variables in DbgAssigns that
@@ -150,11 +177,13 @@ public:
     // cannot be represented using assignment tracking (non-const offset or
     // size) or one that is trackable but has had its DIAssignID attachment
     // dropped accidentally.
-    for (auto *DAI : DbgAssigns) {
-      if (VarHasDbgAssignForStore.contains(DebugVariableAggregate(DAI)))
-        continue;
-      ConvertDebugDeclareToDebugValue(DAI, ToDelete, DIB);
-    }
+    auto ConvertUnlinkedAssignToValue = [&](auto *Assign) {
+      if (VarHasDbgAssignForStore.contains(DebugVariableAggregate(Assign)))
+        return;
+      ConvertDebugDeclareToDebugValue(Assign, ToDelete, DIB);
+    };
+    for_each(DbgAssigns, ConvertUnlinkedAssignToValue);
+    for_each(DPVAssigns, ConvertUnlinkedAssignToValue);
   }
 
   /// Update assignment tracking debug info given for the newly inserted PHI \p
@@ -165,10 +194,15 @@ public:
     // debug-phi.
     for (auto *DAI : DbgAssigns)
       ConvertDebugDeclareToDebugValue(DAI, NewPhi, DIB);
+    for (auto *DPV : DPVAssigns)
+      ConvertDebugDeclareToDebugValue(DPV, NewPhi, DIB);
   }
 
-  void clear() { DbgAssigns.clear(); }
-  bool empty() { return DbgAssigns.empty(); }
+  void clear() {
+    DbgAssigns.clear();
+    DPVAssigns.clear();
+  }
+  bool empty() { return DbgAssigns.empty() && DPVAssigns.empty(); }
 };
 
 struct AllocaInfo {
@@ -229,11 +263,15 @@ struct AllocaInfo {
       }
     }
     DbgUserVec AllDbgUsers;
-    findDbgUsers(AllDbgUsers, AI, &DPUsers);
+    SmallVector<DPValue *> AllDPUsers;
+    findDbgUsers(AllDbgUsers, AI, &AllDPUsers);
     std::copy_if(AllDbgUsers.begin(), AllDbgUsers.end(),
                  std::back_inserter(DbgUsers), [](DbgVariableIntrinsic *DII) {
                    return !isa<DbgAssignIntrinsic>(DII);
                  });
+    std::copy_if(AllDPUsers.begin(), AllDPUsers.end(),
+                 std::back_inserter(DPUsers),
+                 [](DPValue *DPV) { return !DPV->isDbgAssign(); });
     AssignmentTracking.init(AI);
   }
 };
@@ -341,6 +379,7 @@ struct PromoteMem2Reg {
   /// A set of dbg.assigns to delete because they've been demoted to
   /// dbg.values. Call cleanUpDbgAssigns to delete them.
   SmallSet<DbgAssignIntrinsic *, 8> DbgAssignsToDelete;
+  SmallSet<DPValue *, 8> DPVAssignsToDelete;
 
   /// The set of basic blocks the renamer has already visited.
   SmallPtrSet<BasicBlock *, 16> Visited;
@@ -390,6 +429,9 @@ private:
     for (auto *DAI : DbgAssignsToDelete)
       DAI->eraseFromParent();
     DbgAssignsToDelete.clear();
+    for (auto *DPV : DPVAssignsToDelete)
+      DPV->eraseFromParent();
+    DPVAssignsToDelete.clear();
   }
 };
 
@@ -462,10 +504,12 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
 /// false there were some loads which were not dominated by the single store
 /// and thus must be phi-ed with undef. We fall back to the standard alloca
 /// promotion algorithm in that case.
-static bool rewriteSingleStoreAlloca(
-    AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI, const DataLayout &DL,
-    DominatorTree &DT, AssumptionCache *AC,
-    SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete) {
+static bool
+rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
+                         const DataLayout &DL, DominatorTree &DT,
+                         AssumptionCache *AC,
+                         SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete,
+                         SmallSet<DPValue *, 8> *DPVAssignsToDelete) {
   StoreInst *OnlyStore = Info.OnlyStore;
   bool StoringGlobalVal = !isa<Instruction>(OnlyStore->getOperand(0));
   BasicBlock *StoreBB = OnlyStore->getParent();
@@ -525,8 +569,8 @@ static bool rewriteSingleStoreAlloca(
 
   DIBuilder DIB(*AI->getModule(), /*AllowUnresolved*/ false);
   // Update assignment tracking info for the store we're going to delete.
-  Info.AssignmentTracking.updateForDeletedStore(Info.OnlyStore, DIB,
-                                                DbgAssignsToDelete);
+  Info.AssignmentTracking.updateForDeletedStore(
+      Info.OnlyStore, DIB, DbgAssignsToDelete, DPVAssignsToDelete);
 
   // Record debuginfo for the store and remove the declaration's
   // debuginfo.
@@ -570,10 +614,12 @@ static bool rewriteSingleStoreAlloca(
 ///      use(t);
 ///    *A = 42;
 ///  }
-static bool promoteSingleBlockAlloca(
-    AllocaInst *AI, const AllocaInfo &Info, LargeBlockInfo &LBI,
-    const DataLayout &DL, DominatorTree &DT, AssumptionCache *AC,
-    SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete) {
+static bool
+promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
+                         LargeBlockInfo &LBI, const DataLayout &DL,
+                         DominatorTree &DT, AssumptionCache *AC,
+                         SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete,
+                         SmallSet<DPValue *, 8> *DPVAssignsToDelete) {
   // The trickiest case to handle is when we have large blocks. Because of this,
   // this code is optimized assuming that large blocks happen.  This does not
   // significantly pessimize the small block case.  This uses LargeBlockInfo to
@@ -637,8 +683,8 @@ static bool promoteSingleBlockAlloca(
   while (!AI->use_empty()) {
     StoreInst *SI = cast<StoreInst>(AI->user_back());
     // Update assignment tracking info for the store we're going to delete.
-    Info.AssignmentTracking.updateForDeletedStore(SI, DIB, DbgAssignsToDelete);
-
+    Info.AssignmentTracking.updateForDeletedStore(SI, DIB, DbgAssignsToDelete,
+                                                  DPVAssignsToDelete);
     // Record debuginfo for the store before removing it.
     auto DbgUpdateForStore = [&](auto &Container) {
       for (auto *DbgItem : Container) {
@@ -710,7 +756,7 @@ void PromoteMem2Reg::run() {
     // it that are directly dominated by the definition with the value stored.
     if (Info.DefiningBlocks.size() == 1) {
       if (rewriteSingleStoreAlloca(AI, Info, LBI, SQ.DL, DT, AC,
-                                   &DbgAssignsToDelete)) {
+                                   &DbgAssignsToDelete, &DPVAssignsToDelete)) {
         // The alloca has been processed, move on.
         RemoveFromAllocasList(AllocaNum);
         ++NumSingleStore;
@@ -722,7 +768,7 @@ void PromoteMem2Reg::run() {
     // linear sweep over the block to eliminate it.
     if (Info.OnlyUsedInOneBlock &&
         promoteSingleBlockAlloca(AI, Info, LBI, SQ.DL, DT, AC,
-                                 &DbgAssignsToDelete)) {
+                                 &DbgAssignsToDelete, &DPVAssignsToDelete)) {
       // The alloca has been processed, move on.
       RemoveFromAllocasList(AllocaNum);
       continue;
@@ -1128,8 +1174,8 @@ NextIteration:
 
       // Record debuginfo for the store before removing it.
       IncomingLocs[AllocaNo] = SI->getDebugLoc();
-      AllocaATInfo[AllocaNo].updateForDeletedStore(SI, DIB,
-                                                   &DbgAssignsToDelete);
+      AllocaATInfo[AllocaNo].updateForDeletedStore(SI, DIB, &DbgAssignsToDelete,
+                                                   &DPVAssignsToDelete);
       auto ConvertDbgDeclares = [&](auto &Container) {
         for (auto *DbgItem : Container)
           if (DbgItem->isAddressOfVariable())

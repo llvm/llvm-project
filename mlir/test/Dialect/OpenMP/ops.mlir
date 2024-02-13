@@ -479,6 +479,36 @@ func.func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : ind
   return
 }
 
+// CHECK-LABEL: omp_distribute
+func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>) -> () {
+  // CHECK: omp.distribute
+  "omp.distribute" () ({
+    omp.terminator
+  }) {} : () -> ()
+  // CHECK: omp.distribute
+  omp.distribute {
+    omp.terminator
+  }
+  // CHECK: omp.distribute dist_schedule_static
+  omp.distribute dist_schedule_static {
+    omp.terminator
+  }
+  // CHECK: omp.distribute dist_schedule_static chunk_size(%{{.+}} : i32)
+  omp.distribute dist_schedule_static chunk_size(%chunk_size : i32) {
+    omp.terminator
+  }
+  // CHECK: omp.distribute order(concurrent)
+  omp.distribute order(concurrent) {
+    omp.terminator
+  }
+  // CHECK: omp.distribute allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
+  omp.distribute allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    omp.terminator
+  }
+return
+}
+
+
 // CHECK-LABEL: omp_target
 func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 
@@ -610,11 +640,13 @@ func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
 func.func @parallel_reduction() {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 -> {{.+}} : !llvm.ptr)
-  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr) {
+  // CHECK: omp.parallel reduction(@add_f32 {{.+}} -> {{.+}} : !llvm.ptr)
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction %{{.+}}, %{{.+}}
-    omp.reduction %1, %0 : f32, !llvm.ptr
+    %2 = llvm.load %prv : !llvm.ptr -> f32
+    // CHECK: llvm.fadd %{{.*}}, %{{.*}} : f32
+    %3 = llvm.fadd %1, %2 : f32
+    llvm.store %3, %prv : f32, !llvm.ptr
     omp.terminator
   }
   return
@@ -624,13 +656,14 @@ func.func @parallel_reduction() {
 func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr) {
+  // CHECK: omp.parallel reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     // CHECK: omp.wsloop for (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}})
     omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
       %1 = arith.constant 2.0 : f32
-      // CHECK: omp.reduction %{{.+}}, %{{.+}} : f32, !llvm.ptr
-      omp.reduction %1, %0 : f32, !llvm.ptr
+      %2 = llvm.load %prv : !llvm.ptr -> f32
+      // CHECK: llvm.fadd %{{.+}}, %{{.+}} : f32
+      llvm.fadd %1, %2 : f32
       // CHECK: omp.yield
       omp.yield
     }
@@ -769,11 +802,14 @@ func.func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
 // CHECK-LABEL: func @parallel_reduction2
 func.func @parallel_reduction2() {
   %0 = memref.alloca() : memref<1xf32>
-  // CHECK: omp.parallel reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
-  omp.parallel reduction(@add2_f32 -> %0 : memref<1xf32>) {
+  // CHECK: omp.parallel reduction(@add2_f32 %{{.+}} -> %{{.+}} : memref<1xf32>)
+  omp.parallel reduction(@add2_f32 %0 -> %prv : memref<1xf32>) {
     %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction
-    omp.reduction %1, %0 : f32, memref<1xf32>
+    %2 = arith.constant 0 : index
+    %3 = memref.load %prv[%2] : memref<1xf32>
+    // CHECK: llvm.fadd
+    %4 = llvm.fadd %1, %3 : f32
+    memref.store %4, %prv[%2] : memref<1xf32>
     omp.terminator
   }
   return
@@ -783,13 +819,14 @@ func.func @parallel_reduction2() {
 func.func @parallel_wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add2_f32 -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add2_f32 -> %0 : !llvm.ptr) {
+  // CHECK: omp.parallel reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+  omp.parallel reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
     // CHECK: omp.wsloop for (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}})
     omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
       %1 = arith.constant 2.0 : f32
-      // CHECK: omp.reduction %{{.+}}, %{{.+}} : f32, !llvm.ptr
-      omp.reduction %1, %0 : f32, !llvm.ptr
+      %2 = llvm.load %prv : !llvm.ptr -> f32
+      // CHECK: llvm.fadd %{{.+}}, %{{.+}} : f32
+      %3 = llvm.fadd %1, %2 : f32
       // CHECK: omp.yield
       omp.yield
     }
@@ -2094,3 +2131,17 @@ func.func @omp_target_update_data (%if_cond : i1, %device : si32, %map1: memref<
     return
 }
 
+// CHECK-LABEL: omp_targets_is_allocatable
+// CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
+func.func @omp_targets_is_allocatable(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
+  // CHECK: %[[MAP0:.*]] = omp.map_info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}  
+  %mapv1 = omp.map_info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map_info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP0]] : !llvm.ptr) -> !llvm.ptr {name = ""}
+  %mapv2 = omp.map_info var_ptr(%arg1 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>)   map_clauses(tofrom) capture(ByRef) members(%mapv1 : !llvm.ptr) -> !llvm.ptr {name = ""}  
+  // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
+  omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
+    ^bb0(%arg2: !llvm.ptr, %arg3 : !llvm.ptr):
+      omp.terminator
+  }
+  return
+}

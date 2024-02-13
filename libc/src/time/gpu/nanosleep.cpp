@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   // slept will be somewhere between zero and twice the requested amount. Here
   // we will sleep again if we undershot the time.
   while (cur < end) {
-    LIBC_INLINE_ASM("nanosleep.u32 %0;" ::"r"(nsecs));
+    __nvvm_nanosleep(static_cast<uint32_t>(nsecs));
     cur = gpu::fixed_frequency_clock();
     nsecs -= nsecs > cur - start ? cur - start : 0;
   }

@@ -544,3 +544,311 @@ body:             |
     %ext:_(s32) = G_ANYEXT %sel
     $w0 = COPY %ext(s32)
 ...
+---
+# select test(failed,registers) select icmp_ugt t,f_t_f --> umax(t,f)
+name:            select_failed_icmp_ugt_t_f_t_f_umax_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_failed_icmp_ugt_t_f_t_f_umax_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: %t:_(s8) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f:_(s8) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %y:_(s8) = G_TRUNC [[COPY2]](s64)
+    ; CHECK-NEXT: %z:_(s8) = G_TRUNC [[COPY3]](s64)
+    ; CHECK-NEXT: %c:_(s8) = G_ICMP intpred(ugt), %t(s8), %y
+    ; CHECK-NEXT: %sel:_(s8) = exact G_SELECT %c(s8), %f, %z
+    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s8)
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %t:_(s8) = G_TRUNC %0
+    %f:_(s8) = G_TRUNC %1
+    %y:_(s8) = G_TRUNC %2
+    %z:_(s8) = G_TRUNC %3
+    %c:_(s8) = G_ICMP intpred(ugt), %t(s8), %y(s8)
+    %sel:_(s8) = exact G_SELECT %c, %f, %z
+    %ext:_(s32) = G_ANYEXT %sel
+    $w0 = COPY %ext(s32)
+...
+---
+# test select icmp_ugt t,f_t_f --> umax(t,f)
+name:            select_icmp_ugt_t_f_t_f_umax_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_ugt_t_f_t_f_umax_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_UMAX %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(ugt), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_uge t,f_t_f --> umax(t,f)
+name:            select_icmp_uge_t_f_t_f_umax_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_uge_t_f_t_f_umax_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_UMAX %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(uge), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_sgt t,f_t_f --> smax(t,f)
+name:            select_icmp_sgt_t_f_t_f_smax_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_sgt_t_f_t_f_smax_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_SMAX %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(sgt), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_sge t,f_t_f --> smax(t,f)
+name:            select_icmp_sge_t_f_t_f_smax_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_sge_t_f_t_f_smax_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_SMAX %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(sge), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_ult t,f_t_f --> umin(t,f)
+name:            select_icmp_ult_t_f_t_f_umin_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_ult_t_f_t_f_umin_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_UMIN %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(ult), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_ule t,f_t_f --> umin(t,f)
+name:            select_icmp_ule_t_f_t_f_umin_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_ule_t_f_t_f_umin_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_UMIN %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(ule), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_slt t,f_t_f --> smin(t,f)
+name:            select_icmp_slt_t_f_t_f_smin_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_slt_t_f_t_f_smin_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_SMIN %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(slt), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# test select icmp_sle t,f_t_f --> smin(t,f)
+name:            select_icmp_sle_t_f_t_f_smin_t_f
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: select_icmp_sle_t_f_t_f_smin_t_f
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = G_SMIN %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(sle), %t(<4 x s32>), %f(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+# multi use test select icmp_sle t,f_t_f --> smin(t,f) failed
+name:            multi_use_select_icmp_sle_t_f_t_f_smin_t_f_failed
+body:             |
+  bb.1:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: multi_use_select_icmp_sle_t_f_t_f_smin_t_f_failed
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %t1:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: %f1:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<4 x s32>) = G_BUILD_VECTOR %t1(s32), %t1(s32), %t1(s32), %t1(s32)
+    ; CHECK-NEXT: %f:_(<4 x s32>) = G_BUILD_VECTOR %f1(s32), %f1(s32), %f1(s32), %f1(s32)
+    ; CHECK-NEXT: %c:_(<4 x s32>) = G_ICMP intpred(sle), %t(<4 x s32>), %f
+    ; CHECK-NEXT: $q1 = COPY %c(<4 x s32>)
+    ; CHECK-NEXT: %sel:_(<4 x s32>) = exact G_SELECT %c(<4 x s32>), %t, %f
+    ; CHECK-NEXT: $q0 = COPY %sel(<4 x s32>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %t1:_(s32) = G_TRUNC %0
+    %f1:_(s32) = G_TRUNC %1
+    %t:_(<4 x s32>) = G_BUILD_VECTOR %t1, %t1, %t1, %t1
+    %f:_(<4 x s32>) = G_BUILD_VECTOR %f1, %f1, %f1, %f1
+    %c:_(<4 x s32>) = G_ICMP intpred(sle), %t(<4 x s32>), %f(<4 x s32>)
+    $q1 = COPY %c(<4 x s32>)
+    %sel:_(<4 x s32>) = exact G_SELECT %c, %t, %f
+    $q0 = COPY %sel(<4 x s32>)
+...
+---
+name:            dont_combine_pointer_type
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: dont_combine_pointer_type
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[C]](p0) :: (load (p0))
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[LOAD]](p0), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[LOAD]], [[C]]
+    ; CHECK-NEXT: G_STORE [[SELECT]](p0), [[COPY]](p0) :: (store (p0))
+    ; CHECK-NEXT: $x0 = COPY [[C]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(p0) = COPY $x0
+    %2:_(p0) = G_CONSTANT i64 0
+    %1:_(p0) = G_LOAD %2(p0) :: (load (p0))
+    %3:_(s1) = G_ICMP intpred(ugt), %1(p0), %2
+    %4:_(p0) = G_SELECT %3(s1), %1, %2
+    G_STORE %4(p0), %0(p0) :: (store (p0))
+    $x0 = COPY %2(p0)
+    RET_ReallyLR implicit $x0
+
+...

@@ -258,7 +258,7 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   // TODO: this could be generalized to handle `linalg.generic` with buffer
   // operands too but requires allocation for intermediates. Punt on this for
   // now.
-  if (!genericOp.hasTensorSemantics()) {
+  if (!genericOp.hasPureTensorSemantics()) {
     return rewriter.notifyMatchFailure(
         genericOp, "only operations with tensor semantics are handled");
   }

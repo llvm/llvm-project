@@ -587,7 +587,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   %i3 = add nsw <8 x i32> %wide.masked.gather52, %wide.masked.gather
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i3, <8 x ptr> %i2, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-  %i4 = or <8 x i64> %vec.ind, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %i4 = or disjoint <8 x i64> %vec.ind, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
   %i5 = shl nsw <8 x i64> %i4, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   %i6 = getelementptr inbounds i32, ptr %B, <8 x i64> %i5
   %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
@@ -595,7 +595,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   %i8 = add nsw <8 x i32> %wide.masked.gather54, %wide.masked.gather53
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i8, <8 x ptr> %i7, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-  %i9 = or <8 x i64> %vec.ind, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
+  %i9 = or disjoint <8 x i64> %vec.ind, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   %i10 = shl nsw <8 x i64> %i9, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   %i11 = getelementptr inbounds i32, ptr %B, <8 x i64> %i10
   %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
@@ -603,7 +603,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   %i13 = add nsw <8 x i32> %wide.masked.gather56, %wide.masked.gather55
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i13, <8 x ptr> %i12, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-  %i14 = or <8 x i64> %vec.ind, <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
+  %i14 = or disjoint <8 x i64> %vec.ind, <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
   %i15 = shl nsw <8 x i64> %i14, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   %i16 = getelementptr inbounds i32, ptr %B, <8 x i64> %i15
   %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)

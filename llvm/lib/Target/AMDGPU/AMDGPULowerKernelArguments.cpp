@@ -106,7 +106,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
+  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -202,6 +202,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
+      // TODO: Update this for GFX12 which does have scalar sub-dword loads.
       //
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.

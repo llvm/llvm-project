@@ -89,6 +89,25 @@ S s(q); // #dr1736-s
 #endif
 }
 
+namespace dr1738 { // dr1738: sup P0136R1
+#if __cplusplus >= 201103L
+struct A {
+  template <typename T>
+  A(int, T) {}
+};
+
+struct B : A {
+  using A::A;
+};
+
+// FIXME: this is well-formed since P0136R1
+template B::B(int, double);
+// since-cxx11-error@-1 {{explicit instantiation of 'B' does not refer to a function template, variable template, member function, member class, or static data member}}
+#endif
+}
+
+// dr1748 is in dr1748.cpp
+
 namespace dr1753 { // dr1753: 11
   typedef int T;
   struct A { typedef int T; };
@@ -159,6 +178,8 @@ namespace dr1762 { // dr1762: 14
 #endif
 }
 
+// dr1772 is in dr177x.cpp
+
 namespace dr1778 { // dr1778: 9
   // Superseded by P1286R2.
 #if __cplusplus >= 201103L
@@ -173,6 +194,8 @@ namespace dr1778 { // dr1778: 9
   static_assert(noexcept(D()), "");
 #endif
 }
+
+// dr1779 is in dr177x.cpp
 
 namespace dr1794 { // dr1794: yes
                    // NB: dup 1710

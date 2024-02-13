@@ -203,6 +203,7 @@ template <> struct DominatingValue<RValue> {
 
     llvm::Value *Value;
     llvm::Type *ElementType;
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned K : 3;
     unsigned Align : 29;
     saved_type(llvm::Value *v, llvm::Type *e, Kind k, unsigned a = 0)
@@ -650,9 +651,11 @@ public:
   struct LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
-    /// The kind of cleanup to push: a value from the CleanupKind enumeration.
+    /// The kind of cleanup to push.
+    LLVM_PREFERRED_TYPE(CleanupKind)
     unsigned Kind : 31;
     /// Whether this is a conditional cleanup.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsConditional : 1;
 
     size_t getSize() const { return Size; }
@@ -3073,6 +3076,25 @@ public:
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
+  void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
+                           llvm::Value *Index, QualType IndexType,
+                           QualType IndexedType, bool Accessed);
+
+  // Find a struct's flexible array member. It may be embedded inside multiple
+  // sub-structs, but must still be the last field.
+  const FieldDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
+                                                const RecordDecl *RD,
+                                                StringRef Name,
+                                                uint64_t &Offset);
+
+  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
+  /// \p nullptr if either the attribute or the field doesn't exist.
+  const FieldDecl *FindCountedByField(const FieldDecl *FD);
+
+  /// Build an expression accessing the "counted_by" field.
+  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
+                                      const FieldDecl *FAMDecl,
+                                      const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -4872,6 +4894,9 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
+
+  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
+                                           llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux-gnu -verify %s
-// RUN: %clang_cc1 -fsyntax-only -triple powerpc64le-linux-gnu -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple aarch64-linux-gnu -verify %s
 
 extern void a(const char *);
 
@@ -27,11 +27,13 @@ int main(void) {
   (void)__builtin_cpu_supports("x86-64-v4");
   (void)__builtin_cpu_supports("x86-64-v5"); // expected-error {{invalid cpu feature string for builtin}}
 #else
-  if (__builtin_cpu_supports("vsx")) // expected-error {{use of unknown builtin}}
+  if (__builtin_cpu_supports("aes")) // expected-error {{builtin is not supported on this target}}
     a("vsx");
 
-  if (__builtin_cpu_is("pwr9")) // expected-error {{use of unknown builtin}}
+  if (__builtin_cpu_is("cortex-x3")) // expected-error {{builtin is not supported on this target}}
     a("pwr9");
+
+  __builtin_cpu_init(); // expected-error {{builtin is not supported on this target}}
 #endif
 
   return 0;

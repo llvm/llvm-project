@@ -57,7 +57,7 @@ template <uint32_t lane_size = gpu::LANE_SIZE> struct alignas(64) Packet {
 };
 
 /// The maximum number of parallel ports that the RPC interface can support.
-constexpr uint64_t MAX_PORT_COUNT = 512;
+constexpr uint64_t MAX_PORT_COUNT = 4096;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used
@@ -109,14 +109,16 @@ template <bool Invert, typename Packet> struct Process {
 
   /// Retrieve the inbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) const {
-    return gpu::broadcast_value(lane_mask,
-                                inbox[index].load(cpp::MemoryOrder::RELAXED));
+    return gpu::broadcast_value(
+        lane_mask,
+        inbox[index].load(cpp::MemoryOrder::RELAXED, cpp::MemoryScope::SYSTEM));
   }
 
   /// Retrieve the outbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) const {
     return gpu::broadcast_value(lane_mask,
-                                outbox[index].load(cpp::MemoryOrder::RELAXED));
+                                outbox[index].load(cpp::MemoryOrder::RELAXED,
+                                                   cpp::MemoryScope::SYSTEM));
   }
 
   /// Signal to the other process that this one is finished with the buffer.
@@ -126,7 +128,8 @@ template <bool Invert, typename Packet> struct Process {
   LIBC_INLINE uint32_t invert_outbox(uint32_t index, uint32_t current_outbox) {
     uint32_t inverted_outbox = !current_outbox;
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    outbox[index].store(inverted_outbox, cpp::MemoryOrder::RELAXED);
+    outbox[index].store(inverted_outbox, cpp::MemoryOrder::RELAXED,
+                        cpp::MemoryScope::SYSTEM);
     return inverted_outbox;
   }
 
@@ -241,7 +244,8 @@ template <bool Invert, typename Packet> struct Process {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
     return bits[slot].fetch_or(static_cast<uint32_t>(cond) << bit,
-                               cpp::MemoryOrder::RELAXED) &
+                               cpp::MemoryOrder::RELAXED,
+                               cpp::MemoryScope::DEVICE) &
            (1u << bit);
   }
 
@@ -251,7 +255,8 @@ template <bool Invert, typename Packet> struct Process {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
     return bits[slot].fetch_and(~0u ^ (static_cast<uint32_t>(cond) << bit),
-                                cpp::MemoryOrder::RELAXED) &
+                                cpp::MemoryOrder::RELAXED,
+                                cpp::MemoryScope::DEVICE) &
            (1u << bit);
   }
 };
@@ -514,7 +519,7 @@ LIBC_INLINE void Port<T, S>::recv_n(void **dst, uint64_t *size, A &&alloc) {
 template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
   // Repeatedly perform a naive linear scan for a port that can be opened to
   // send data.
-  for (uint32_t index = 0;; ++index) {
+  for (uint32_t index = gpu::get_cluster_id();; ++index) {
     // Start from the beginning if we run out of ports to check.
     if (index >= process.port_count)
       index = 0;

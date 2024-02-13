@@ -1,4 +1,3 @@
-
 name: Build CI Container
 
 permissions:
@@ -19,9 +18,41 @@ on:
       - '.github/workflows/containers/github-action-ci/**'
 
 jobs:
-  build-ci-container:
+  # TODO(boomanaiden154): Switch this back to a single stage build when we can
+  # run this on the self-hosted runners and don't have to do it this way to
+  # avoid timeouts.
+  build-ci-container-stage1:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci/
+      - name: Change podman Root Direcotry
+        run: |
+          mkdir -p ~/.config/containers
+          sudo mkdir -p /mnt/podman
+          sudo chown `whoami`:`whoami` /mnt/podman
+          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
+          podman info
+      - name: Build container stage1
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build -t stage1-toolchain --target stage1-toolchain -f stage1.Dockerfile .
+      - name: Save container image
+        run: |
+          podman save stage1-toolchain > stage1-toolchain.tar
+      - name: Upload container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-toolchain
+          path: stage1-toolchain.tar
+          retention-days: 1
+  build-ci-container-stage2:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    needs: build-ci-container-stage1
     permissions:
       packages: write
     steps:
@@ -38,10 +69,27 @@ jobs:
         with:
           sparse-checkout: .github/workflows/containers/github-action-ci/
 
+      - name: Change podman Root Direcotry
+        run: |
+          mkdir -p ~/.config/containers
+          sudo mkdir -p /mnt/podman
+          sudo chown `whoami`:`whoami` /mnt/podman
+          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
+          podman info
+
+      - name: Download stage1-toolchain
+        uses: actions/download-artifact@v4
+        with:
+          name: stage1-toolchain
+
+      - name: Load stage1-toolchain
+        run: |
+          podman load -i stage1-toolchain.tar
+
       - name: Build Container
         working-directory: ./.github/workflows/containers/github-action-ci/
         run: |
-          podman build -t ${{ steps.vars.outputs.container-name-tag }} .
+          podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage2.Dockerfile .
           podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
 
       - name: Test Container

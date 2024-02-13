@@ -32,11 +32,11 @@ def Test0 : GICombineRule<
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/uint8_t(-2), /*Imm*/GIMT_Encode8(42),
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 0: @77
 // CHECK-NEXT:     GIM_Reject,

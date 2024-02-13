@@ -1890,28 +1890,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CallAndMessageUnInitRefArg:
-
-alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""""
-Check for logical errors for function calls and Objective-C
-message expressions (e.g., uninitialized arguments, null function pointers, and pointer to undefined variables).
-
-.. code-block:: c
-
- void test(void) {
-   int t;
-   int &p = t;
-   int &s = p;
-   int &q = s;
-   foo(q); // warn
- }
-
- void test(void) {
-   int x;
-   foo(&x); // warn
- }
-
 .. _alpha-core-CastSize:
 
 alpha.core.CastSize (C)

@@ -670,8 +670,7 @@ public:
 
   std::pair<size_t, bool>
   ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
-                    uint32_t max_length = 0, bool honor_array = true,
-                    lldb::Format item_format = lldb::eFormatCharArray);
+                    bool honor_array);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);

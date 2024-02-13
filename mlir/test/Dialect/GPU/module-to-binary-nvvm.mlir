@@ -22,4 +22,16 @@ module attributes {gpu.container_module} {
       llvm.return
     }
   }
+
+  // CHECK-LABEL:gpu.binary @kernel_module3 <#gpu.select_object<1 : i64>>
+  // CHECK:[#gpu.object<#nvvm.target<chip = "sm_70">, offload = "{{.*}}">, #gpu.object<#nvvm.target<chip = "sm_80">, offload = "{{.*}}">]
+  gpu.module @kernel_module3 <#gpu.select_object<1>> [
+      #nvvm.target<chip = "sm_70">,
+      #nvvm.target<chip = "sm_80">] {
+    llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr,
+        %arg2: !llvm.ptr, %arg3: i64, %arg4: i64,
+        %arg5: i64) attributes {gpu.kernel} {
+      llvm.return
+    }
+  }
 }

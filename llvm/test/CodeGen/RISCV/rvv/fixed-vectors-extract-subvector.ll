@@ -652,25 +652,45 @@ define void @extract_v2i1_nxv2i1_0(<vscale x 2 x i1> %x, ptr %y) {
 }
 
 define void @extract_v2i1_nxv2i1_2(<vscale x 2 x i1> %x, ptr %y) {
-; CHECK-LABEL: extract_v2i1_nxv2i1_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
-; CHECK-NEXT:    vmv.v.v v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v9, 0
-; CHECK-NEXT:    vsm.v v8, (a0)
-; CHECK-NEXT:    ret
+; CHECK-V-LABEL: extract_v2i1_nxv2i1_2:
+; CHECK-V:       # %bb.0:
+; CHECK-V-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; CHECK-V-NEXT:    vmv.v.i v8, 0
+; CHECK-V-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-V-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-V-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-V-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-V-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-V-NEXT:    vmv.v.i v8, 0
+; CHECK-V-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-V-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-V-NEXT:    vmv.v.i v9, 0
+; CHECK-V-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
+; CHECK-V-NEXT:    vmv.v.v v9, v8
+; CHECK-V-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-V-NEXT:    vmsne.vi v8, v9, 0
+; CHECK-V-NEXT:    vsm.v v8, (a0)
+; CHECK-V-NEXT:    ret
+;
+; CHECK-KNOWNVLEN128-LABEL: extract_v2i1_nxv2i1_2:
+; CHECK-KNOWNVLEN128:       # %bb.0:
+; CHECK-KNOWNVLEN128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-KNOWNVLEN128-NEXT:    vmv.v.i v8, 0
+; CHECK-KNOWNVLEN128-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-KNOWNVLEN128-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-KNOWNVLEN128-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-KNOWNVLEN128-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-KNOWNVLEN128-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-KNOWNVLEN128-NEXT:    vmv.v.i v8, 0
+; CHECK-KNOWNVLEN128-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-KNOWNVLEN128-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-KNOWNVLEN128-NEXT:    vmv.v.i v9, 0
+; CHECK-KNOWNVLEN128-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
+; CHECK-KNOWNVLEN128-NEXT:    vmv.v.v v9, v8
+; CHECK-KNOWNVLEN128-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-KNOWNVLEN128-NEXT:    vmsne.vi v8, v9, 0
+; CHECK-KNOWNVLEN128-NEXT:    vsm.v v8, (a0)
+; CHECK-KNOWNVLEN128-NEXT:    ret
   %c = call <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %x, i64 2)
   store <2 x i1> %c, ptr %y
   ret void

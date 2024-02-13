@@ -28,6 +28,31 @@ class PfmIssueCounter<string resource_name, string counter>
   string ResourceName = resource_name;
 }
 
+// Definition of a validation event. A validation event represents a specific
+// event that can be measured using performance counters that is interesting
+// in regard to the snippet state.
+class ValidationEvent <int event_number> {
+  int EventNumber = event_number;
+}
+
+def InstructionRetired  : ValidationEvent<0>;
+def L1DCacheLoadMiss : ValidationEvent<1>;
+def L1DCacheStoreMiss : ValidationEvent<2>;
+def L1ICacheLoadMiss : ValidationEvent<3>;
+def DataTLBLoadMiss : ValidationEvent<4>;
+def DataTLBStoreMiss : ValidationEvent<5>;
+def InstructionTLBLoadMiss : ValidationEvent<6>;
+
+
+// PfmValidationCounter provides a mapping between the events that are
+// are interesting in regards to the snippet execution environment and
+// a concrete performance counter name that can be looked up in libpfm.
+class PfmValidationCounter<ValidationEvent event_type, string counter>
+    : PfmCounter<counter> {
+  // The name of the event that the validation counter detects.
+  ValidationEvent EventType = event_type;
+}
+
 def NoPfmCounter : PfmCounter <""> {}
 
 // Set of PfmCounters for measuring sched model characteristics.
@@ -38,6 +63,9 @@ class ProcPfmCounters {
   PfmCounter UopsCounter = NoPfmCounter;
   // Processors can define how to measure issued uops by defining IssueCounters.
   list<PfmIssueCounter> IssueCounters = [];
+  // Processor can list mappings between validation events and real counters
+  // to measure the specified events.
+  list<PfmValidationCounter> ValidationCounters = [];
 }
 
 // A binding of a set of counters to a CPU.

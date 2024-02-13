@@ -862,7 +862,7 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   if (Mapping.Offset == 0)
     return IRB.CreateIntToPtr(Shadow, PtrTy);
   // (Mem >> Scale) + Offset
-  return IRB.CreateGEP(Int8Ty, ShadowBase, Shadow);
+  return IRB.CreatePtrAdd(ShadowBase, Shadow);
 }
 
 int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
@@ -1357,7 +1357,7 @@ Value *HWAddressSanitizer::readRegister(IRBuilder<> &IRB, StringRef Name) {
 bool HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
-    IRBuilder<> IRB(LP->getNextNode());
+    IRBuilder<> IRB(LP->getNextNonDebugInstruction());
     IRB.CreateCall(
         HwasanHandleVfork,
         {readRegister(IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp"
@@ -1387,7 +1387,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     auto N = I++;
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
-    IRBuilder<> IRB(AI->getNextNode());
+    IRBuilder<> IRB(AI->getNextNonDebugInstruction());
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1425,17 +1425,22 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       return User != AILong && User != AICast && !isLifetimeIntrinsic(User);
     });
 
-    for (auto *DDI : Info.DbgVariableIntrinsics) {
+    // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
+    // abstracted over whether they're intrinsic-stored or DPValue stored.
+    auto AnnotateDbgRecord = [&](auto *DPtr) {
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense
       // to put it at the beginning of the expression.
       SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
                                          retagMask(N)};
-      for (size_t LocNo = 0; LocNo < DDI->getNumVariableLocationOps(); ++LocNo)
-        if (DDI->getVariableLocationOp(LocNo) == AI)
-          DDI->setExpression(DIExpression::appendOpsToArg(DDI->getExpression(),
-                                                          NewOps, LocNo));
-    }
+      for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
+        if (DPtr->getVariableLocationOp(LocNo) == AI)
+          DPtr->setExpression(DIExpression::appendOpsToArg(
+              DPtr->getExpression(), NewOps, LocNo));
+    };
+
+    llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
+    llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
@@ -1450,10 +1455,10 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
+        !SInfo.CallsReturnTwice &&
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   &LI, ClMaxLifetimes) &&
-        !SInfo.CallsReturnTwice;
+                                   &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
@@ -1532,8 +1537,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   assert(!ShadowBase);
 
-  Instruction *InsertPt = &*F.getEntryBlock().begin();
-  IRBuilder<> EntryIRB(InsertPt);
+  BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
+  IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
                    Mapping.WithFrameRecord &&
@@ -1552,12 +1557,12 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   // entry block back into the entry block so that they aren't treated as
   // dynamic allocas.
   if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
-    InsertPt = &*F.getEntryBlock().begin();
+    InsertPt = F.getEntryBlock().begin();
     for (Instruction &I :
          llvm::make_early_inc_range(*EntryIRB.GetInsertBlock())) {
       if (auto *AI = dyn_cast<AllocaInst>(&I))
         if (isa<ConstantInt>(AI->getArraySize()))
-          I.moveBefore(InsertPt);
+          I.moveBefore(F.getEntryBlock(), InsertPt);
     }
   }
 

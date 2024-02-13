@@ -110,13 +110,13 @@ module @transforms attributes { transform.with_named_sequence } {
   // This is a rewriter sequence.
   transform.named_sequence @print_elemwise(
       %elemwise_binary: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand
+    transform.debug.emit_remark_at
       %elemwise_binary, "elementwise binary" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_matmul(
       %matmul: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
     transform.yield
   }
 }
@@ -205,7 +205,7 @@ transform.named_sequence @__transform_main(
     %root: !transform.any_op {transform.readonly}) {
   // Collect groups of operations that match the criteria specified in the
   // named sequence.
-  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root 
+  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
   %elemwise = transform.merge_handles %el1, %el2 : !transform.any_op
 

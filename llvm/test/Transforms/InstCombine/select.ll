@@ -3658,3 +3658,17 @@ loop:
 exit:
   ret i32 %rem
 }
+
+; (X == C) ? X : Y -> (X == C) ? C : Y
+; Fixed #77553
+define i32 @src_select_xxory_eq0_xorxy_y(i32 %x, i32 %y) {
+; CHECK-LABEL: @src_select_xxory_eq0_xorxy_y(
+; CHECK-NEXT:    [[XOR0:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[XOR0]], i32 0, i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %xor = xor i32 %x, %y
+  %xor0 = icmp eq i32 %xor, 0
+  %cond = select i1 %xor0, i32 %xor, i32 %y
+  ret i32 %cond
+}

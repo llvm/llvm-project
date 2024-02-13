@@ -29,12 +29,12 @@ convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr);
 
 /// Maps arithmetic overflow enum values to LLVM enum values.
 LLVM::IntegerOverflowFlags
-convertArithOveflowFlagsToLLVM(arith::IntegerOverflowFlags arithFlags);
+convertArithOverflowFlagsToLLVM(arith::IntegerOverflowFlags arithFlags);
 
 /// Creates an LLVM overflow attribute from a given arithmetic overflow
 /// attribute.
 LLVM::IntegerOverflowFlagsAttr
-convertArithOveflowAttrToLLVM(arith::IntegerOverflowFlagsAttr flagsAttr);
+convertArithOverflowAttrToLLVM(arith::IntegerOverflowFlagsAttr flagsAttr);
 
 // Attribute converter that populates a NamedAttrList by removing the fastmath
 // attribute from the source operation attributes, and replacing it with an
@@ -80,7 +80,7 @@ public:
     if (arithAttr) {
       StringRef targetAttrName = TargetOp::getIntegerOverflowAttrName();
       convertedAttr.set(targetAttrName,
-                        convertArithOveflowAttrToLLVM(arithAttr));
+                        convertArithOverflowAttrToLLVM(arithAttr));
     }
   }
 

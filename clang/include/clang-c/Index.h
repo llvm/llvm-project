@@ -1685,7 +1685,12 @@ enum CXCursorKind {
    */
   CXCursor_CXXParenListInitExpr = 155,
 
-  CXCursor_LastExpr = CXCursor_CXXParenListInitExpr,
+  /**
+   *  Represents a C++26 pack indexing expression.
+   */
+  CXCursor_PackIndexingExpr = 156,
+
+  CXCursor_LastExpr = CXCursor_PackIndexingExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,
@@ -2981,6 +2986,7 @@ enum CXCallingConv {
   CXCallingConv_SwiftAsync = 17,
   CXCallingConv_AArch64SVEPCS = 18,
   CXCallingConv_M68kRTD = 19,
+  CXCallingConv_PreserveNone = 20,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

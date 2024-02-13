@@ -710,7 +710,7 @@ unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned LanaiInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register LanaiInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   if (MI.getOpcode() == Lanai::LDW_RI)
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
@@ -721,7 +721,7 @@ unsigned LanaiInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+Register LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                    int &FrameIndex) const {
   if (MI.getOpcode() == Lanai::LDW_RI) {
     unsigned Reg;
@@ -739,7 +739,7 @@ unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
   return 0;
 }
 
-unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   if (MI.getOpcode() == Lanai::SW_RI)
     if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&

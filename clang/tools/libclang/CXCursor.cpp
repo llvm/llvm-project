@@ -567,6 +567,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_SizeOfPackExpr;
     break;
 
+  case Stmt::PackIndexingExprClass:
+    K = CXCursor_PackIndexingExpr;
+    break;
+
   case Stmt::DeclRefExprClass:
     if (const ImplicitParamDecl *IPD = dyn_cast_or_null<ImplicitParamDecl>(
             cast<DeclRefExpr>(S)->getDecl())) {
@@ -1466,6 +1470,9 @@ enum CXTemplateArgumentKind clang_Cursor_getTemplateArgumentKind(CXCursor C,
     return CXTemplateArgumentKind_NullPtr;
   case TemplateArgument::Integral:
     return CXTemplateArgumentKind_Integral;
+  case TemplateArgument::StructuralValue:
+    // FIXME: Expose these values.
+    return CXTemplateArgumentKind_Invalid;
   case TemplateArgument::Template:
     return CXTemplateArgumentKind_Template;
   case TemplateArgument::TemplateExpansion:

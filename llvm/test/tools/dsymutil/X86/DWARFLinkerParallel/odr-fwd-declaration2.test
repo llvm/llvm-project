@@ -4,7 +4,7 @@
        Inputs/odr-fwd-declaration2/$FILE.o done
 */
 
-// RUN: dsymutil --linker=llvm -f \
+// RUN: dsymutil --linker=parallel -f \
 // RUN: -oso-prepend-path=%p/../../Inputs/odr-fwd-declaration2 \
 // RUN: -y %p/../dummy-debug-map.map -o %t1.out
 // RUN: llvm-dwarfdump -v %t1.out -debug-info | FileCheck %s

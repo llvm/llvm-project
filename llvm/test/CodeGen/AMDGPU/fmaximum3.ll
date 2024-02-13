@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}test_fmaximum3_olt_0_f32:
 ; GCN: buffer_load_b32 [[REGC:v[0-9]+]]

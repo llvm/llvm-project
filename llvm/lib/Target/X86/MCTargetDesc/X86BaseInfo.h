@@ -818,6 +818,8 @@ enum : uint64_t {
   /// Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
+  /// LEGACY - encoding using REX/REX2 or w/o opcode prefix.
+  LEGACY = 0 << EncodingShift,
   /// VEX - encoding using 0xC4/0xC5
   VEX = 1 << EncodingShift,
   /// XOP - Opcode prefix used by XOP instructions.
@@ -1258,6 +1260,10 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
   if (Encoding == X86II::EVEX)
     return true;
 
+  unsigned Opcode = Desc.Opcode;
+  // MOV32r0 is always expanded to XOR32rr
+  if (Opcode == X86::MOV32r0)
+    return true;
   // To be conservative, egpr is not used for all pseudo instructions
   // because we are not sure what instruction it will become.
   // FIXME: Could we improve it in X86ExpandPseudo?
@@ -1266,7 +1272,6 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
 
   // MAP OB/TB in legacy encoding space can always use egpr except
   // XSAVE*/XRSTOR*.
-  unsigned Opcode = Desc.Opcode;
   switch (Opcode) {
   default:
     break;

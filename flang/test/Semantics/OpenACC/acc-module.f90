@@ -60,6 +60,13 @@ contains
   subroutine sub10()
   end subroutine
 
+  subroutine sub11()
+    !$acc routine device_type(nvidia) gang device_type(*) seq
+  end subroutine
+
+  subroutine sub12()
+    !$acc routine device_type(host) bind(sub7) device_type(multicore) bind(sub8)
+  end subroutine
 end module
 
 !Expect: acc_mod.mod
@@ -106,5 +113,11 @@ end module
 ! end
 ! subroutine sub10()
 ! !$acc routine seq
+! end
+! subroutinesub11()
+! !$acc routine device_type(nvidia) gang device_type(*) seq
+! end
+! subroutinesub12()
+! !$acc routine device_type(host) bind(sub7) device_type(multicore) bind(sub8)
 ! end
 ! end

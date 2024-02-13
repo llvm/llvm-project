@@ -647,12 +647,30 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
   ASSERT_TRUE((bool)Database);
   ASSERT_TRUE(ErrorMsg.empty());
+  std::vector<CompileCommand> Result = Database->getCompileCommands("source");
+  ASSERT_EQ(1ul, Result.size());
+  ASSERT_EQ(".", Result[0].Directory);
+  ASSERT_THAT(Result[0].CommandLine,
+              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
+  EXPECT_EQ(2, Argc);
+}
+
+TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsHeader) {
+  const char *Argv[] = {"1",  "2",          "--",    "-xc++-header",
+                        "-c", "somefile.h", "-DDEF3"};
+  int Argc = std::size(Argv);
+  std::string ErrorMsg;
+  std::unique_ptr<FixedCompilationDatabase> Database =
+      FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
+  ASSERT_TRUE((bool)Database);
+  ASSERT_TRUE(ErrorMsg.empty());
   std::vector<CompileCommand> Result =
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
   ASSERT_THAT(Result[0].CommandLine,
-              ElementsAre(EndsWith("clang-tool"), "-c", "-DDEF3", "source"));
+              ElementsAre(EndsWith("clang-tool"), "-xc++-header", "-c",
+                          "-DDEF3", "source"));
   EXPECT_EQ(2, Argc);
 }
 

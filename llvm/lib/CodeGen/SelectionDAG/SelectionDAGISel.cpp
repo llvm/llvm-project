@@ -48,7 +48,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -61,6 +60,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -2697,9 +2697,14 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE static bool CheckChildSame(
 
 /// CheckPatternPredicate - Implements OP_CheckPatternPredicate.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckPatternPredicate(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-                      const SelectionDAGISel &SDISel, bool TwoBytePredNo) {
-  unsigned PredNo = MatcherTable[MatcherIndex++];
+CheckPatternPredicate(unsigned Opcode, const unsigned char *MatcherTable,
+                      unsigned &MatcherIndex, const SelectionDAGISel &SDISel) {
+  bool TwoBytePredNo =
+      Opcode == SelectionDAGISel::OPC_CheckPatternPredicateTwoByte;
+  unsigned PredNo =
+      TwoBytePredNo || Opcode == SelectionDAGISel::OPC_CheckPatternPredicate
+          ? MatcherTable[MatcherIndex++]
+          : Opcode - SelectionDAGISel::OPC_CheckPatternPredicate0;
   if (TwoBytePredNo)
     PredNo |= MatcherTable[MatcherIndex++] << 8;
   return SDISel.CheckPatternPredicate(PredNo);
@@ -2707,9 +2712,13 @@ CheckPatternPredicate(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 
 /// CheckNodePredicate - Implements OP_CheckNodePredicate.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckNodePredicate(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-                   const SelectionDAGISel &SDISel, SDNode *N) {
-  return SDISel.CheckNodePredicate(N, MatcherTable[MatcherIndex++]);
+CheckNodePredicate(unsigned Opcode, const unsigned char *MatcherTable,
+                   unsigned &MatcherIndex, const SelectionDAGISel &SDISel,
+                   SDNode *N) {
+  unsigned PredNo = Opcode == SelectionDAGISel::OPC_CheckPredicate
+                        ? MatcherTable[MatcherIndex++]
+                        : Opcode - SelectionDAGISel::OPC_CheckPredicate0;
+  return SDISel.CheckNodePredicate(N, PredNo);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -2851,13 +2860,27 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
                         Table[Index-1] - SelectionDAGISel::OPC_CheckChild0Same);
     return Index;
   case SelectionDAGISel::OPC_CheckPatternPredicate:
+  case SelectionDAGISel::OPC_CheckPatternPredicate0:
+  case SelectionDAGISel::OPC_CheckPatternPredicate1:
   case SelectionDAGISel::OPC_CheckPatternPredicate2:
-    Result = !::CheckPatternPredicate(
-        Table, Index, SDISel,
-        Table[Index - 1] == SelectionDAGISel::OPC_CheckPatternPredicate2);
+  case SelectionDAGISel::OPC_CheckPatternPredicate3:
+  case SelectionDAGISel::OPC_CheckPatternPredicate4:
+  case SelectionDAGISel::OPC_CheckPatternPredicate5:
+  case SelectionDAGISel::OPC_CheckPatternPredicate6:
+  case SelectionDAGISel::OPC_CheckPatternPredicate7:
+  case SelectionDAGISel::OPC_CheckPatternPredicateTwoByte:
+    Result = !::CheckPatternPredicate(Opcode, Table, Index, SDISel);
     return Index;
   case SelectionDAGISel::OPC_CheckPredicate:
-    Result = !::CheckNodePredicate(Table, Index, SDISel, N.getNode());
+  case SelectionDAGISel::OPC_CheckPredicate0:
+  case SelectionDAGISel::OPC_CheckPredicate1:
+  case SelectionDAGISel::OPC_CheckPredicate2:
+  case SelectionDAGISel::OPC_CheckPredicate3:
+  case SelectionDAGISel::OPC_CheckPredicate4:
+  case SelectionDAGISel::OPC_CheckPredicate5:
+  case SelectionDAGISel::OPC_CheckPredicate6:
+  case SelectionDAGISel::OPC_CheckPredicate7:
+    Result = !::CheckNodePredicate(Opcode, Table, Index, SDISel, N.getNode());
     return Index;
   case SelectionDAGISel::OPC_CheckOpcode:
     Result = !::CheckOpcode(Table, Index, N.getNode());
@@ -3336,13 +3359,28 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
 
     case OPC_CheckPatternPredicate:
+    case OPC_CheckPatternPredicate0:
+    case OPC_CheckPatternPredicate1:
     case OPC_CheckPatternPredicate2:
-      if (!::CheckPatternPredicate(MatcherTable, MatcherIndex, *this,
-                                   Opcode == OPC_CheckPatternPredicate2))
+    case OPC_CheckPatternPredicate3:
+    case OPC_CheckPatternPredicate4:
+    case OPC_CheckPatternPredicate5:
+    case OPC_CheckPatternPredicate6:
+    case OPC_CheckPatternPredicate7:
+    case OPC_CheckPatternPredicateTwoByte:
+      if (!::CheckPatternPredicate(Opcode, MatcherTable, MatcherIndex, *this))
         break;
       continue;
+    case SelectionDAGISel::OPC_CheckPredicate0:
+    case SelectionDAGISel::OPC_CheckPredicate1:
+    case SelectionDAGISel::OPC_CheckPredicate2:
+    case SelectionDAGISel::OPC_CheckPredicate3:
+    case SelectionDAGISel::OPC_CheckPredicate4:
+    case SelectionDAGISel::OPC_CheckPredicate5:
+    case SelectionDAGISel::OPC_CheckPredicate6:
+    case SelectionDAGISel::OPC_CheckPredicate7:
     case OPC_CheckPredicate:
-      if (!::CheckNodePredicate(MatcherTable, MatcherIndex, *this,
+      if (!::CheckNodePredicate(Opcode, MatcherTable, MatcherIndex, *this,
                                 N.getNode()))
         break;
       continue;
@@ -3358,8 +3396,18 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       continue;
     }
-    case OPC_CheckComplexPat: {
-      unsigned CPNum = MatcherTable[MatcherIndex++];
+    case OPC_CheckComplexPat:
+    case OPC_CheckComplexPat0:
+    case OPC_CheckComplexPat1:
+    case OPC_CheckComplexPat2:
+    case OPC_CheckComplexPat3:
+    case OPC_CheckComplexPat4:
+    case OPC_CheckComplexPat5:
+    case OPC_CheckComplexPat6:
+    case OPC_CheckComplexPat7: {
+      unsigned CPNum = Opcode == OPC_CheckComplexPat
+                           ? MatcherTable[MatcherIndex++]
+                           : Opcode - OPC_CheckComplexPat0;
       unsigned RecNo = MatcherTable[MatcherIndex++];
       assert(RecNo < RecordedNodes.size() && "Invalid CheckComplexPat");
 

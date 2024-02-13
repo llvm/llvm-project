@@ -20,23 +20,23 @@ namespace fputil {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T abs(T x) {
   FPBits<T> bits(x);
-  bits.set_sign(0);
-  return T(bits);
+  bits.set_sign(Sign::POS);
+  return bits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmin(T x, T y) {
-  FPBits<T> bitx(x), bity(y);
+  const FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan()) {
     return y;
   } else if (bity.is_nan()) {
     return x;
-  } else if (bitx.get_sign() != bity.get_sign()) {
+  } else if (bitx.sign() != bity.sign()) {
     // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with negative sign.
-    return (bitx.get_sign() ? x : y);
+    return (bitx.is_neg()) ? x : y;
   } else {
     return (x < y ? x : y);
   }
@@ -50,11 +50,11 @@ LIBC_INLINE T fmax(T x, T y) {
     return y;
   } else if (bity.is_nan()) {
     return x;
-  } else if (bitx.get_sign() != bity.get_sign()) {
+  } else if (bitx.sign() != bity.sign()) {
     // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with positive sign.
-    return (bitx.get_sign() ? y : x);
+    return (bitx.is_neg() ? y : x);
   } else {
     return (x > y ? x : y);
   }

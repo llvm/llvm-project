@@ -3,6 +3,9 @@
 
 REQUIRES: asserts
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
+RUN:   --infer-stale-profile=0 --profile-ignore-hash=1 --profile-use-dfs=0 \
+RUN:   2>&1 | FileCheck %s -check-prefix=CHECK0
 # Testing "usqrt"
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=usqrt --infer-stale-profile=1 \
@@ -11,6 +14,10 @@ RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 --debug-only=bolt-prof 2>&1 |
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=SolveCubic --infer-stale-profile=1 \
 RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 --debug-only=bolt-prof 2>&1 | FileCheck %s -check-prefix=CHECK2
+
+CHECK0: BOLT-INFO: 2 out of 7 functions in the binary (28.6%) have non-empty execution profile
+CHECK0: BOLT-WARNING: 2 (100.0% of all profiled) functions have invalid (possibly stale) profile
+CHECK0: BOLT-WARNING: 1192 out of 1192 samples in the binary (100.0%) belong to functions with invalid (possibly stale) profile
 
 # Function "usqrt" has stale profile, since the number of blocks in the profile
 # (nblocks=6) does not match the size of the CFG in the binary. The entry
@@ -51,6 +58,8 @@ CHECK1:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 300), .LFT[[#BB1:]
 CHECK1:    .LFT[[#BB1:]] (2 instructions, align : 1)
 # Check the overall inference stats.
 CHECK1:  2 out of 7 functions in the binary (28.6%) have non-empty execution profile
+CHECK1:  BOLT-WARNING: 2 (100.0% of all profiled) functions have invalid (possibly stale) profile
+CHECK1:  BOLT-WARNING: 1192 out of 1192 samples in the binary (100.0%) belong to functions with invalid (possibly stale) profile
 CHECK1:  inferred profile for 2 (100.00% of profiled, 100.00% of stale) functions responsible for {{.*}} samples ({{.*}} out of {{.*}})
 
 

@@ -288,7 +288,8 @@ void ScriptParser::readDefsym(StringRef name) {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  auto *cmd = make<SymbolAssignment>(name, e, 0, getCurrentLocation());
+  auto *cmd = make<SymbolAssignment>(
+      name, e, 0, getCurrentMB().getBufferIdentifier().str());
   script->sectionCommands.push_back(cmd);
 }
 

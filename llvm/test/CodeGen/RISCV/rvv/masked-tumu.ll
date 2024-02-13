@@ -6,11 +6,11 @@
 
 declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
   <vscale x 1 x i64>,
-  <vscale x 1 x i64>*,
+  ptr,
   <vscale x 1 x i1>,
   iXLen,
   iXLen)
-define <vscale x 1 x i64> @intrinsic_vle_mask_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64>* %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
+define <vscale x 1 x i64> @intrinsic_vle_mask_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vle_mask_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, tu, mu
@@ -19,7 +19,7 @@ define <vscale x 1 x i64> @intrinsic_vle_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
     <vscale x 1 x i64> %0,
-    <vscale x 1 x i64>* %1,
+    ptr %1,
     <vscale x 1 x i1> %2,
     iXLen %3, iXLen 0)
 
@@ -28,11 +28,11 @@ entry:
 
 declare { <vscale x 1 x i64>, iXLen } @llvm.riscv.vleff.mask.nxv1i64(
   <vscale x 1 x i64>,
-  <vscale x 1 x i64>*,
+  ptr,
   <vscale x 1 x i1>,
   iXLen,
   iXLen)
-define <vscale x 1 x i64> @intrinsic_vleff_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64>* %1, <vscale x 1 x i1> %2, iXLen %3, iXLen* %4) nounwind {
+define <vscale x 1 x i64> @intrinsic_vleff_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3, iXLen* %4) nounwind {
 ; RV32-LABEL: intrinsic_vleff_mask_v_nxv1i64_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli zero, a1, e64, m1, tu, mu
@@ -51,7 +51,7 @@ define <vscale x 1 x i64> @intrinsic_vleff_mask_v_nxv1i64_nxv1i64(<vscale x 1 x 
 entry:
   %a = call { <vscale x 1 x i64>, iXLen } @llvm.riscv.vleff.mask.nxv1i64(
     <vscale x 1 x i64> %0,
-    <vscale x 1 x i64>* %1,
+    ptr %1,
     <vscale x 1 x i1> %2,
     iXLen %3, iXLen 0)
   %b = extractvalue { <vscale x 1 x i64>, iXLen } %a, 0
@@ -63,12 +63,12 @@ entry:
 
 declare <vscale x 1 x i64> @llvm.riscv.vlse.mask.nxv1i64(
   <vscale x 1 x i64>,
-  <vscale x 1 x i64>*,
+  ptr,
   iXLen,
   <vscale x 1 x i1>,
   iXLen,
   iXLen)
-define <vscale x 1 x i64> @intrinsic_vlse_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64>* %1, iXLen %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+define <vscale x 1 x i64> @intrinsic_vlse_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, iXLen %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vlse_mask_v_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
@@ -77,7 +77,7 @@ define <vscale x 1 x i64> @intrinsic_vlse_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vlse.mask.nxv1i64(
     <vscale x 1 x i64> %0,
-    <vscale x 1 x i64>* %1,
+    ptr %1,
     iXLen %2,
     <vscale x 1 x i1> %3,
     iXLen %4, iXLen 0)
@@ -87,16 +87,16 @@ entry:
 
 declare <vscale x 1 x i8> @llvm.riscv.vluxei.mask.nxv1i8.nxv1iXLen(
   <vscale x 1 x i8>,
-  <vscale x 1 x i8>*,
+  ptr,
   <vscale x 1 x iXLen>,
   <vscale x 1 x i1>,
   iXLen,
   iXLen)
-define <vscale x 1 x i8> @intrinsic_vluxei_mask_v_nxv1i8_nxv1i8_nxv1iXLen(<vscale x 1 x i8> %0, <vscale x 1 x i8>* %1, <vscale x 1 x iXLen> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+define <vscale x 1 x i8> @intrinsic_vluxei_mask_v_nxv1i8_nxv1i8_nxv1iXLen(<vscale x 1 x i8> %0, ptr %1, <vscale x 1 x iXLen> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vluxei.mask.nxv1i8.nxv1iXLen(
     <vscale x 1 x i8> %0,
-    <vscale x 1 x i8>* %1,
+    ptr %1,
     <vscale x 1 x iXLen> %2,
     <vscale x 1 x i1> %3,
     iXLen %4, iXLen 0)

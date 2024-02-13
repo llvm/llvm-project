@@ -40,7 +40,11 @@ static void logImpossibleToMatch(const Pattern &pattern) {
 
 /// Log IR after pattern application.
 static Operation *getDumpRootOp(Operation *op) {
-  return op->getParentWithTrait<mlir::OpTrait::IsIsolatedFromAbove>();
+  Operation *isolatedParent =
+      op->getParentWithTrait<mlir::OpTrait::IsIsolatedFromAbove>();
+  if (isolatedParent)
+    return isolatedParent;
+  return op;
 }
 static void logSucessfulPatternApplication(Operation *op) {
   llvm::dbgs() << "// *** IR Dump After Pattern Application ***\n";

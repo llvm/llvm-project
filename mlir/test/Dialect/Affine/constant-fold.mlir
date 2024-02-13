@@ -64,7 +64,7 @@ func.func @affine_min(%variable: index) -> (index, index) {
 // -----
 
 func.func @affine_apply_poison_division_zero() {
-  // This is just for mlir::context to load ub dailect
+  // This is just for mlir::context to load ub dialect
   %ub = ub.poison : index
   %c16 = arith.constant 16 : index
   %0 = affine.apply affine_map<(d0)[s0] -> (d0 mod (s0 - s0))>(%c16)[%c16]
@@ -81,3 +81,12 @@ func.func @affine_apply_poison_division_zero() {
 // CHECK-NEXT: %[[alloc:.*]] = memref.alloc(%[[poison]], %[[poison]], %[[poison]])
 // CHECK-NEXT: %[[load:.*]] = affine.load %[[alloc]][%[[poison]], %[[poison]], %[[poison]]] : memref<?x?x?xi1>
 // CHECK-NEXT: affine.store %[[load]], %alloc[%[[poison]], %[[poison]], %[[poison]]] : memref<?x?x?xi1>
+
+// -----
+
+// Check that this doesn't crash because the ub dialect is automatically loaded
+func.func @affine_apply_poison_division_zero_2() -> index {
+  %c16 = arith.constant 16 : index
+  %0 = affine.apply affine_map<(d0)[s0] -> (d0 mod (s0 - s0))>(%c16)[%c16]
+  return %0 : index
+}

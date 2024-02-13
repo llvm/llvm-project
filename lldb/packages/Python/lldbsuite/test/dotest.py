@@ -442,8 +442,6 @@ def parseOptionsAndInitTestdirs():
             os.path.realpath(os.path.abspath(x)) for x in args.args
         ]
 
-    lldbtest_config.codesign_identity = args.codesign_identity
-
 
 def registerFaulthandler():
     try:

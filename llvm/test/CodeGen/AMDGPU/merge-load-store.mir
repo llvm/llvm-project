@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s
 
 # Check that SILoadStoreOptimizer honors memory dependencies between moved
 # instructions.

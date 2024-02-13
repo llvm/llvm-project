@@ -628,28 +628,28 @@ namespace {
 /// to the form used in overload-candidate information.
 DeductionFailureInfo
 clang::MakeDeductionFailureInfo(ASTContext &Context,
-                                Sema::TemplateDeductionResult TDK,
+                                TemplateDeductionResult TDK,
                                 TemplateDeductionInfo &Info) {
   DeductionFailureInfo Result;
   Result.Result = static_cast<unsigned>(TDK);
   Result.HasDiagnostic = false;
   switch (TDK) {
-  case Sema::TDK_Invalid:
-  case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_CUDATargetMismatch:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::InstantiationDepth:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::CUDATargetMismatch:
     Result.Data = nullptr;
     break;
 
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_InvalidExplicitArguments:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::InvalidExplicitArguments:
     Result.Data = Info.Param.getOpaqueValue();
     break;
 
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested: {
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested: {
     // FIXME: Should allocate from normal heap so that we can free this later.
     auto *Saved = new (Context) DFIDeducedMismatchArgs;
     Saved->FirstArg = Info.FirstArg;
@@ -660,7 +660,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
 
-  case Sema::TDK_NonDeducedMismatch: {
+  case TemplateDeductionResult::NonDeducedMismatch: {
     // FIXME: Should allocate from normal heap so that we can free this later.
     DFIArguments *Saved = new (Context) DFIArguments;
     Saved->FirstArg = Info.FirstArg;
@@ -669,10 +669,10 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
 
-  case Sema::TDK_IncompletePack:
+  case TemplateDeductionResult::IncompletePack:
     // FIXME: It's slightly wasteful to allocate two TemplateArguments for this.
-  case Sema::TDK_Inconsistent:
-  case Sema::TDK_Underqualified: {
+  case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::Underqualified: {
     // FIXME: Should allocate from normal heap so that we can free this later.
     DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
     Saved->Param = Info.Param;
@@ -682,7 +682,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
 
-  case Sema::TDK_SubstitutionFailure:
+  case TemplateDeductionResult::SubstitutionFailure:
     Result.Data = Info.takeSugared();
     if (Info.hasSFINAEDiagnostic()) {
       PartialDiagnosticAt *Diag = new (Result.Diagnostic) PartialDiagnosticAt(
@@ -692,7 +692,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     }
     break;
 
-  case Sema::TDK_ConstraintsNotSatisfied: {
+  case TemplateDeductionResult::ConstraintsNotSatisfied: {
     CNSInfo *Saved = new (Context) CNSInfo;
     Saved->TemplateArgs = Info.takeSugared();
     Saved->Satisfaction = Info.AssociatedConstraintsSatisfaction;
@@ -700,9 +700,9 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
 
-  case Sema::TDK_Success:
-  case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     llvm_unreachable("not a deduction failure");
   }
 
@@ -710,29 +710,29 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
 }
 
 void DeductionFailureInfo::Destroy() {
-  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
-  case Sema::TDK_Success:
-  case Sema::TDK_Invalid:
-  case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
-  case Sema::TDK_InvalidExplicitArguments:
-  case Sema::TDK_CUDATargetMismatch:
-  case Sema::TDK_NonDependentConversionFailure:
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::InstantiationDepth:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
+  case TemplateDeductionResult::InvalidExplicitArguments:
+  case TemplateDeductionResult::CUDATargetMismatch:
+  case TemplateDeductionResult::NonDependentConversionFailure:
     break;
 
-  case Sema::TDK_IncompletePack:
-  case Sema::TDK_Inconsistent:
-  case Sema::TDK_Underqualified:
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested:
-  case Sema::TDK_NonDeducedMismatch:
+  case TemplateDeductionResult::IncompletePack:
+  case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::Underqualified:
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested:
+  case TemplateDeductionResult::NonDeducedMismatch:
     // FIXME: Destroy the data?
     Data = nullptr;
     break;
 
-  case Sema::TDK_SubstitutionFailure:
+  case TemplateDeductionResult::SubstitutionFailure:
     // FIXME: Destroy the template argument list?
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
@@ -741,7 +741,7 @@ void DeductionFailureInfo::Destroy() {
     }
     break;
 
-  case Sema::TDK_ConstraintsNotSatisfied:
+  case TemplateDeductionResult::ConstraintsNotSatisfied:
     // FIXME: Destroy the template argument list?
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
@@ -751,8 +751,8 @@ void DeductionFailureInfo::Destroy() {
     break;
 
   // Unhandled
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     break;
   }
 }
@@ -764,33 +764,33 @@ PartialDiagnosticAt *DeductionFailureInfo::getSFINAEDiagnostic() {
 }
 
 TemplateParameter DeductionFailureInfo::getTemplateParameter() {
-  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
-  case Sema::TDK_Success:
-  case Sema::TDK_Invalid:
-  case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
-  case Sema::TDK_SubstitutionFailure:
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested:
-  case Sema::TDK_NonDeducedMismatch:
-  case Sema::TDK_CUDATargetMismatch:
-  case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_ConstraintsNotSatisfied:
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::InstantiationDepth:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
+  case TemplateDeductionResult::SubstitutionFailure:
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested:
+  case TemplateDeductionResult::NonDeducedMismatch:
+  case TemplateDeductionResult::CUDATargetMismatch:
+  case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::ConstraintsNotSatisfied:
     return TemplateParameter();
 
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_InvalidExplicitArguments:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::InvalidExplicitArguments:
     return TemplateParameter::getFromOpaqueValue(Data);
 
-  case Sema::TDK_IncompletePack:
-  case Sema::TDK_Inconsistent:
-  case Sema::TDK_Underqualified:
+  case TemplateDeductionResult::IncompletePack:
+  case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::Underqualified:
     return static_cast<DFIParamWithArguments*>(Data)->Param;
 
   // Unhandled
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     break;
   }
 
@@ -798,35 +798,35 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
 }
 
 TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
-  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
-  case Sema::TDK_Success:
-  case Sema::TDK_Invalid:
-  case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_IncompletePack:
-  case Sema::TDK_InvalidExplicitArguments:
-  case Sema::TDK_Inconsistent:
-  case Sema::TDK_Underqualified:
-  case Sema::TDK_NonDeducedMismatch:
-  case Sema::TDK_CUDATargetMismatch:
-  case Sema::TDK_NonDependentConversionFailure:
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::InstantiationDepth:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::IncompletePack:
+  case TemplateDeductionResult::InvalidExplicitArguments:
+  case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::Underqualified:
+  case TemplateDeductionResult::NonDeducedMismatch:
+  case TemplateDeductionResult::CUDATargetMismatch:
+  case TemplateDeductionResult::NonDependentConversionFailure:
     return nullptr;
 
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested:
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested:
     return static_cast<DFIDeducedMismatchArgs*>(Data)->TemplateArgs;
 
-  case Sema::TDK_SubstitutionFailure:
+  case TemplateDeductionResult::SubstitutionFailure:
     return static_cast<TemplateArgumentList*>(Data);
 
-  case Sema::TDK_ConstraintsNotSatisfied:
+  case TemplateDeductionResult::ConstraintsNotSatisfied:
     return static_cast<CNSInfo*>(Data)->TemplateArgs;
 
   // Unhandled
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     break;
   }
 
@@ -834,31 +834,31 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
 }
 
 const TemplateArgument *DeductionFailureInfo::getFirstArg() {
-  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
-  case Sema::TDK_Success:
-  case Sema::TDK_Invalid:
-  case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
-  case Sema::TDK_InvalidExplicitArguments:
-  case Sema::TDK_SubstitutionFailure:
-  case Sema::TDK_CUDATargetMismatch:
-  case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_ConstraintsNotSatisfied:
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::InstantiationDepth:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
+  case TemplateDeductionResult::InvalidExplicitArguments:
+  case TemplateDeductionResult::SubstitutionFailure:
+  case TemplateDeductionResult::CUDATargetMismatch:
+  case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
 
-  case Sema::TDK_IncompletePack:
-  case Sema::TDK_Inconsistent:
-  case Sema::TDK_Underqualified:
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested:
-  case Sema::TDK_NonDeducedMismatch:
+  case TemplateDeductionResult::IncompletePack:
+  case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::Underqualified:
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested:
+  case TemplateDeductionResult::NonDeducedMismatch:
     return &static_cast<DFIArguments*>(Data)->FirstArg;
 
   // Unhandled
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     break;
   }
 
@@ -866,31 +866,31 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
 }
 
 const TemplateArgument *DeductionFailureInfo::getSecondArg() {
-  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
-  case Sema::TDK_Success:
-  case Sema::TDK_Invalid:
-  case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_IncompletePack:
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
-  case Sema::TDK_InvalidExplicitArguments:
-  case Sema::TDK_SubstitutionFailure:
-  case Sema::TDK_CUDATargetMismatch:
-  case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_ConstraintsNotSatisfied:
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::InstantiationDepth:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::IncompletePack:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
+  case TemplateDeductionResult::InvalidExplicitArguments:
+  case TemplateDeductionResult::SubstitutionFailure:
+  case TemplateDeductionResult::CUDATargetMismatch:
+  case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
 
-  case Sema::TDK_Inconsistent:
-  case Sema::TDK_Underqualified:
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested:
-  case Sema::TDK_NonDeducedMismatch:
+  case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::Underqualified:
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested:
+  case TemplateDeductionResult::NonDeducedMismatch:
     return &static_cast<DFIArguments*>(Data)->SecondArg;
 
   // Unhandled
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     break;
   }
 
@@ -898,9 +898,9 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
 }
 
 std::optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
-  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested:
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested:
     return static_cast<DFIDeducedMismatchArgs*>(Data)->CallArgIndex;
 
   default:
@@ -1259,6 +1259,40 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if ((OldTemplate == nullptr) != (NewTemplate == nullptr))
     return true;
 
+  // Is the function New an overload of the function Old?
+  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
+  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
+
+  // Compare the signatures (C++ 1.3.10) of the two functions to
+  // determine whether they are overloads. If we find any mismatch
+  // in the signature, they are overloads.
+
+  // If either of these functions is a K&R-style function (no
+  // prototype), then we consider them to have matching signatures.
+  if (isa<FunctionNoProtoType>(OldQType.getTypePtr()) ||
+      isa<FunctionNoProtoType>(NewQType.getTypePtr()))
+    return false;
+
+  const auto *OldType = cast<FunctionProtoType>(OldQType);
+  const auto *NewType = cast<FunctionProtoType>(NewQType);
+
+  // The signature of a function includes the types of its
+  // parameters (C++ 1.3.10), which includes the presence or absence
+  // of the ellipsis; see C++ DR 357).
+  if (OldQType != NewQType && OldType->isVariadic() != NewType->isVariadic())
+    return true;
+
+  // For member-like friends, the enclosing class is part of the signature.
+  if ((New->isMemberLikeConstrainedFriend() ||
+       Old->isMemberLikeConstrainedFriend()) &&
+      !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
+    return true;
+
+  // Compare the parameter lists.
+  // This can only be done once we have establish that friend functions
+  // inhabit the same context, otherwise we might tried to instantiate
+  // references to non-instantiated entities during constraint substitution.
+  // GH78101.
   if (NewTemplate) {
     // C++ [temp.over.link]p4:
     //   The signature of a function template consists of its function
@@ -1296,34 +1330,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       return true;
   }
 
-  // Is the function New an overload of the function Old?
-  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
-  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
-
-  // Compare the signatures (C++ 1.3.10) of the two functions to
-  // determine whether they are overloads. If we find any mismatch
-  // in the signature, they are overloads.
-
-  // If either of these functions is a K&R-style function (no
-  // prototype), then we consider them to have matching signatures.
-  if (isa<FunctionNoProtoType>(OldQType.getTypePtr()) ||
-      isa<FunctionNoProtoType>(NewQType.getTypePtr()))
-    return false;
-
-  const FunctionProtoType *OldType = cast<FunctionProtoType>(OldQType);
-  const FunctionProtoType *NewType = cast<FunctionProtoType>(NewQType);
-
-  // The signature of a function includes the types of its
-  // parameters (C++ 1.3.10), which includes the presence or absence
-  // of the ellipsis; see C++ DR 357).
-  if (OldQType != NewQType && OldType->isVariadic() != NewType->isVariadic())
-    return true;
-
-  // For member-like friends, the enclosing class is part of the signature.
-  if ((New->isMemberLikeConstrainedFriend() ||
-       Old->isMemberLikeConstrainedFriend()) &&
-      !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
-    return true;
   const auto *OldMethod = dyn_cast<CXXMethodDecl>(Old);
   const auto *NewMethod = dyn_cast<CXXMethodDecl>(New);
 
@@ -1784,26 +1790,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     Changed = true;
   }
 
-  // Drop the 'arm_preserves_za' if not present in the target type (we can do
-  // that because it is merely a hint).
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-    if (ExtInfo.AArch64SMEAttributes &
-        FunctionType::SME_PStateZAPreservedMask) {
-      unsigned ToFlags = 0;
-      if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
-        ToFlags = ToFPT->getExtProtoInfo().AArch64SMEAttributes;
-      if (!(ToFlags & FunctionType::SME_PStateZAPreservedMask)) {
-        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask,
-                                   false);
-        QualType QT = Context.getFunctionType(
-            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
-        FromFn = QT->getAs<FunctionType>();
-        Changed = true;
-      }
-    }
-  }
-
   // Drop 'noexcept' if not present in target type.
   if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
     const auto *ToFPT = cast<FunctionProtoType>(ToFn);
@@ -2191,7 +2177,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              From->isIntegerConstantExpr(S.getASTContext())) {
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType;
-  } else if (ToType->isFixedPointType() || FromType->isFixedPointType()) {
+  } else if ((ToType->isFixedPointType() &&
+              FromType->isConvertibleToFixedPointType()) ||
+             (FromType->isFixedPointType() &&
+              ToType->isConvertibleToFixedPointType())) {
     SCS.Second = ICK_Fixed_Point_Conversion;
     FromType = ToType;
   } else {
@@ -5678,10 +5667,15 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   assert(FromType->isRecordType());
 
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
-  // [class.dtor]p2: A destructor can be invoked for a const, volatile or
-  //                 const volatile object.
+  // C++98 [class.dtor]p2:
+  //   A destructor can be invoked for a const, volatile or const volatile
+  //   object.
+  // C++98 [over.match.funcs]p4:
+  //   For static member functions, the implicit object parameter is considered
+  //   to match any object (since if the function is selected, the object is
+  //   discarded).
   Qualifiers Quals = Method->getMethodQualifiers();
-  if (isa<CXXDestructorDecl>(Method)) {
+  if (isa<CXXDestructorDecl>(Method) || Method->isStatic()) {
     Quals.addConst();
     Quals.addVolatile();
   }
@@ -6213,7 +6207,15 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
 
     if (Notes.empty()) {
       // It's a constant expression.
-      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      Expr *E = Result.get();
+      if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
+        // We expect a ConstantExpr to have a value associated with it
+        // by this point.
+        assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
+               "ConstantExpr has no value associated with it");
+      } else {
+        E = ConstantExpr::Create(Context, Result.get(), Value);
+      }
       if (!PreNarrowingValue.isAbsent())
         Value = std::move(PreNarrowingValue);
       return E;
@@ -7546,12 +7548,14 @@ void Sema::AddMethodTemplateCandidate(
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
           MethodTmpl, ExplicitTemplateArgs, Args, Specialization, Info,
           PartialOverloading, /*AggregateDeductionCandidate=*/false, ObjectType,
-          ObjectClassification, [&](ArrayRef<QualType> ParamTypes) {
+          ObjectClassification,
+          [&](ArrayRef<QualType> ParamTypes) {
             return CheckNonDependentConversions(
                 MethodTmpl, ParamTypes, Args, CandidateSet, Conversions,
                 SuppressUserConversions, ActingContext, ObjectType,
                 ObjectClassification, PO);
-          })) {
+          });
+      Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate =
         CandidateSet.addCandidate(Conversions.size(), Conversions);
     Candidate.FoundDecl = FoundDecl;
@@ -7564,7 +7568,7 @@ void Sema::AddMethodTemplateCandidate(
         cast<CXXMethodDecl>(Candidate.Function)->isStatic() ||
         ObjectType.isNull();
     Candidate.ExplicitCallArguments = Args.size();
-    if (Result == TDK_NonDependentConversionFailure)
+    if (Result == TemplateDeductionResult::NonDependentConversionFailure)
       Candidate.FailureKind = ovl_fail_bad_conversion;
     else {
       Candidate.FailureKind = ovl_fail_bad_deduction;
@@ -7624,7 +7628,8 @@ void Sema::AddTemplateOverloadCandidate(
   //   functions. In such a case, the candidate functions generated from each
   //   function template are combined with the set of non-template candidate
   //   functions.
-  TemplateDeductionInfo Info(CandidateSet.getLocation());
+  TemplateDeductionInfo Info(CandidateSet.getLocation(),
+                             FunctionTemplate->getTemplateDepth());
   FunctionDecl *Specialization = nullptr;
   ConversionSequenceList Conversions;
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
@@ -7636,7 +7641,8 @@ void Sema::AddTemplateOverloadCandidate(
             return CheckNonDependentConversions(
                 FunctionTemplate, ParamTypes, Args, CandidateSet, Conversions,
                 SuppressUserConversions, nullptr, QualType(), {}, PO);
-          })) {
+          });
+      Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate =
         CandidateSet.addCandidate(Conversions.size(), Conversions);
     Candidate.FoundDecl = FoundDecl;
@@ -7652,7 +7658,7 @@ void Sema::AddTemplateOverloadCandidate(
         isa<CXXMethodDecl>(Candidate.Function) &&
         !isa<CXXConstructorDecl>(Candidate.Function);
     Candidate.ExplicitCallArguments = Args.size();
-    if (Result == TDK_NonDependentConversionFailure)
+    if (Result == TemplateDeductionResult::NonDependentConversionFailure)
       Candidate.FailureKind = ovl_fail_bad_conversion;
     else {
       Candidate.FailureKind = ovl_fail_bad_deduction;
@@ -7719,13 +7725,23 @@ bool Sema::CheckNonDependentConversions(
   unsigned Offset =
       Method && Method->hasCXXExplicitFunctionObjectParameter() ? 1 : 0;
 
-  for (unsigned I = 0, N = std::min(ParamTypes.size(), Args.size()); I != N;
-       ++I) {
+  for (unsigned I = 0, N = std::min(ParamTypes.size() - Offset, Args.size());
+       I != N; ++I) {
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
-      unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? 0
-                             : (ThisConversions + I);
+      unsigned ConvIdx;
+      if (PO == OverloadCandidateParamOrder::Reversed) {
+        ConvIdx = Args.size() - 1 - I;
+        assert(Args.size() + ThisConversions == 2 &&
+               "number of args (including 'this') must be exactly 2 for "
+               "reversed order");
+        // For members, there would be only one arg 'Args[0]' whose ConvIdx
+        // would also be 0. 'this' got ConvIdx = 1 previously.
+        assert(!HasThisConversion || (ConvIdx == 0 && I == 0));
+      } else {
+        // For members, 'this' got ConvIdx = 0 previously.
+        ConvIdx = ThisConversions + I;
+      }
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
                                 SuppressUserConversions,
@@ -8029,7 +8045,8 @@ void Sema::AddTemplateConversionCandidate(
   CXXConversionDecl *Specialization = nullptr;
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
           FunctionTemplate, ObjectType, ObjectClassification, ToType,
-          Specialization, Info)) {
+          Specialization, Info);
+      Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate = CandidateSet.addCandidate();
     Candidate.FoundDecl = FoundDecl;
     Candidate.Function = FunctionTemplate->getTemplatedDecl();
@@ -10121,11 +10138,23 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   return M->getFunctionObjectParameterReferenceType();
 }
 
-static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2) {
+// As a Clang extension, allow ambiguity among F1 and F2 if they represent
+// represent the same entity.
+static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
+                           const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-
+  auto PT1 = F1->getPrimaryTemplate();
+  auto PT2 = F2->getPrimaryTemplate();
+  if (PT1 && PT2) {
+    if (declaresSameEntity(PT1, PT2) ||
+        declaresSameEntity(PT1->getInstantiatedFromMemberTemplate(),
+                           PT2->getInstantiatedFromMemberTemplate()))
+      return true;
+  }
+  // TODO: It is not clear whether comparing parameters is necessary (i.e.
+  // different functions with same params). Consider removing this (as no test
+  // fail w/o it).
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
@@ -10329,14 +10358,14 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
+          allowAmbiguity(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against a reversed function with the same
-        // parameter types, if we have a better conversion for one argument and
-        // a worse conversion for the other, the implicit conversion sequences
-        // are treated as being equally good.
+        // When comparing a function against a reversed function, if we have a
+        // better conversion for one argument and a worse conversion for the
+        // other, the implicit conversion sequences are treated as being equally
+        // good.
         //
         // This prevents a comparison function from being considered ambiguous
         // with a reversed form that is written in the same way.
@@ -10630,7 +10659,8 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
 
 bool OverloadCandidate::NotValidBecauseConstraintExprHasError() const {
   return FailureKind == ovl_fail_bad_deduction &&
-         DeductionFailure.Result == Sema::TDK_ConstraintsNotSatisfied &&
+         static_cast<TemplateDeductionResult>(DeductionFailure.Result) ==
+             TemplateDeductionResult::ConstraintsNotSatisfied &&
          static_cast<CNSInfo *>(DeductionFailure.Data)
              ->Satisfaction.ContainsErrors;
 }
@@ -11333,11 +11363,13 @@ static bool CheckArityMismatch(Sema &S, OverloadCandidate *Cand,
   if (NumArgs < MinParams) {
     assert((Cand->FailureKind == ovl_fail_too_few_arguments) ||
            (Cand->FailureKind == ovl_fail_bad_deduction &&
-            Cand->DeductionFailure.Result == Sema::TDK_TooFewArguments));
+            Cand->DeductionFailure.getResult() ==
+                TemplateDeductionResult::TooFewArguments));
   } else {
     assert((Cand->FailureKind == ovl_fail_too_many_arguments) ||
            (Cand->FailureKind == ovl_fail_bad_deduction &&
-            Cand->DeductionFailure.Result == Sema::TDK_TooManyArguments));
+            Cand->DeductionFailure.getResult() ==
+                TemplateDeductionResult::TooManyArguments));
   }
 
   return false;
@@ -11420,11 +11452,18 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
   (ParamD = Param.dyn_cast<NonTypeTemplateParmDecl*>()) ||
   (ParamD = Param.dyn_cast<TemplateTemplateParmDecl*>());
-  switch (DeductionFailure.Result) {
-  case Sema::TDK_Success:
-    llvm_unreachable("TDK_success while diagnosing bad deduction");
+  switch (DeductionFailure.getResult()) {
+  case TemplateDeductionResult::Success:
+    llvm_unreachable(
+        "TemplateDeductionResult::Success while diagnosing bad deduction");
+  case TemplateDeductionResult::NonDependentConversionFailure:
+    llvm_unreachable("TemplateDeductionResult::NonDependentConversionFailure "
+                     "while diagnosing bad deduction");
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::AlreadyDiagnosed:
+    return;
 
-  case Sema::TDK_Incomplete: {
+  case TemplateDeductionResult::Incomplete: {
     assert(ParamD && "no parameter found for incomplete deduction result");
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_incomplete_deduction)
@@ -11433,7 +11472,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_IncompletePack: {
+  case TemplateDeductionResult::IncompletePack: {
     assert(ParamD && "no parameter found for incomplete deduction result");
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_incomplete_deduction_pack)
@@ -11444,7 +11483,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_Underqualified: {
+  case TemplateDeductionResult::Underqualified: {
     assert(ParamD && "no parameter found for bad qualifiers deduction result");
     TemplateTypeParmDecl *TParam = cast<TemplateTypeParmDecl>(ParamD);
 
@@ -11469,7 +11508,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_Inconsistent: {
+  case TemplateDeductionResult::Inconsistent: {
     assert(ParamD && "no parameter found for inconsistent deduction result");
     int which = 0;
     if (isa<TemplateTypeParmDecl>(ParamD))
@@ -11514,7 +11553,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_InvalidExplicitArguments:
+  case TemplateDeductionResult::InvalidExplicitArguments:
     assert(ParamD && "no parameter found for invalid explicit arguments");
     if (ParamD->getDeclName())
       S.Diag(Templated->getLocation(),
@@ -11536,7 +11575,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
 
-  case Sema::TDK_ConstraintsNotSatisfied: {
+  case TemplateDeductionResult::ConstraintsNotSatisfied: {
     // Format the template argument list into the argument string.
     SmallString<128> TemplateArgString;
     TemplateArgumentList *Args = DeductionFailure.getTemplateArgumentList();
@@ -11553,18 +11592,18 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         static_cast<CNSInfo*>(DeductionFailure.Data)->Satisfaction);
     return;
   }
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
     DiagnoseArityMismatch(S, Found, Templated, NumArgs);
     return;
 
-  case Sema::TDK_InstantiationDepth:
+  case TemplateDeductionResult::InstantiationDepth:
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_instantiation_depth);
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
 
-  case Sema::TDK_SubstitutionFailure: {
+  case TemplateDeductionResult::SubstitutionFailure: {
     // Format the template argument list into the argument string.
     SmallString<128> TemplateArgString;
     if (TemplateArgumentList *Args =
@@ -11614,8 +11653,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_DeducedMismatchNested: {
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::DeducedMismatchNested: {
     // Format the template argument list into the argument string.
     SmallString<128> TemplateArgString;
     if (TemplateArgumentList *Args =
@@ -11631,11 +11670,12 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         << (*DeductionFailure.getCallArgIndex() + 1)
         << *DeductionFailure.getFirstArg() << *DeductionFailure.getSecondArg()
         << TemplateArgString
-        << (DeductionFailure.Result == Sema::TDK_DeducedMismatchNested);
+        << (DeductionFailure.getResult() ==
+            TemplateDeductionResult::DeducedMismatchNested);
     break;
   }
 
-  case Sema::TDK_NonDeducedMismatch: {
+  case TemplateDeductionResult::NonDeducedMismatch: {
     // FIXME: Provide a source location to indicate what we couldn't match.
     TemplateArgument FirstTA = *DeductionFailure.getFirstArg();
     TemplateArgument SecondTA = *DeductionFailure.getSecondArg();
@@ -11676,11 +11716,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   }
   // TODO: diagnose these individually, then kill off
   // note_ovl_candidate_bad_deduction, which is uselessly vague.
-  case Sema::TDK_MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
     S.Diag(Templated->getLocation(), diag::note_ovl_candidate_bad_deduction);
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
-  case Sema::TDK_CUDATargetMismatch:
+  case TemplateDeductionResult::CUDATargetMismatch:
     S.Diag(Templated->getLocation(),
            diag::note_cuda_ovl_candidate_target_mismatch);
     return;
@@ -11691,8 +11731,9 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 static void DiagnoseBadDeduction(Sema &S, OverloadCandidate *Cand,
                                  unsigned NumArgs,
                                  bool TakingCandidateAddress) {
-  unsigned TDK = Cand->DeductionFailure.Result;
-  if (TDK == Sema::TDK_TooFewArguments || TDK == Sema::TDK_TooManyArguments) {
+  TemplateDeductionResult TDK = Cand->DeductionFailure.getResult();
+  if (TDK == TemplateDeductionResult::TooFewArguments ||
+      TDK == TemplateDeductionResult::TooManyArguments) {
     if (CheckArityMismatch(S, Cand, NumArgs))
       return;
   }
@@ -12026,38 +12067,38 @@ static SourceLocation GetLocationForCandidate(const OverloadCandidate *Cand) {
 }
 
 static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
-  switch ((Sema::TemplateDeductionResult)DFI.Result) {
-  case Sema::TDK_Success:
-  case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_AlreadyDiagnosed:
+  switch (static_cast<TemplateDeductionResult>(DFI.Result)) {
+  case TemplateDeductionResult::Success:
+  case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::AlreadyDiagnosed:
     llvm_unreachable("non-deduction failure while diagnosing bad deduction");
 
-  case Sema::TDK_Invalid:
-  case Sema::TDK_Incomplete:
-  case Sema::TDK_IncompletePack:
+  case TemplateDeductionResult::Invalid:
+  case TemplateDeductionResult::Incomplete:
+  case TemplateDeductionResult::IncompletePack:
     return 1;
 
-  case Sema::TDK_Underqualified:
-  case Sema::TDK_Inconsistent:
+  case TemplateDeductionResult::Underqualified:
+  case TemplateDeductionResult::Inconsistent:
     return 2;
 
-  case Sema::TDK_SubstitutionFailure:
-  case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_ConstraintsNotSatisfied:
-  case Sema::TDK_DeducedMismatchNested:
-  case Sema::TDK_NonDeducedMismatch:
-  case Sema::TDK_MiscellaneousDeductionFailure:
-  case Sema::TDK_CUDATargetMismatch:
+  case TemplateDeductionResult::SubstitutionFailure:
+  case TemplateDeductionResult::DeducedMismatch:
+  case TemplateDeductionResult::ConstraintsNotSatisfied:
+  case TemplateDeductionResult::DeducedMismatchNested:
+  case TemplateDeductionResult::NonDeducedMismatch:
+  case TemplateDeductionResult::MiscellaneousDeductionFailure:
+  case TemplateDeductionResult::CUDATargetMismatch:
     return 3;
 
-  case Sema::TDK_InstantiationDepth:
+  case TemplateDeductionResult::InstantiationDepth:
     return 4;
 
-  case Sema::TDK_InvalidExplicitArguments:
+  case TemplateDeductionResult::InvalidExplicitArguments:
     return 5;
 
-  case Sema::TDK_TooManyArguments:
-  case Sema::TDK_TooFewArguments:
+  case TemplateDeductionResult::TooManyArguments:
+  case TemplateDeductionResult::TooFewArguments:
     return 6;
   }
   llvm_unreachable("Unhandled deduction result");
@@ -12785,11 +12826,10 @@ private:
     //   overloaded functions considered.
     FunctionDecl *Specialization = nullptr;
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
-    if (Sema::TemplateDeductionResult Result
-          = S.DeduceTemplateArguments(FunctionTemplate,
-                                      &OvlExplicitTemplateArgs,
-                                      TargetFunctionType, Specialization,
-                                      Info, /*IsAddressOfFunction*/true)) {
+    if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
+            FunctionTemplate, &OvlExplicitTemplateArgs, TargetFunctionType,
+            Specialization, Info, /*IsAddressOfFunction*/ true);
+        Result != TemplateDeductionResult::Success) {
       // Make a note of the failed deduction for diagnostics.
       FailedCandidates.addCandidate()
           .set(CurAccessFunPair, FunctionTemplate->getTemplatedDecl(),
@@ -13280,10 +13320,10 @@ FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
     //   overloaded functions considered.
     FunctionDecl *Specialization = nullptr;
     TemplateDeductionInfo Info(ovl->getNameLoc());
-    if (TemplateDeductionResult Result
-          = DeduceTemplateArguments(FunctionTemplate, &ExplicitTemplateArgs,
-                                    Specialization, Info,
-                                    /*IsAddressOfFunction*/true)) {
+    if (TemplateDeductionResult Result = DeduceTemplateArguments(
+            FunctionTemplate, &ExplicitTemplateArgs, Specialization, Info,
+            /*IsAddressOfFunction*/ true);
+        Result != TemplateDeductionResult::Success) {
       // Make a note of the failed deduction for diagnostics.
       if (FailedTSC)
         FailedTSC->addCandidate().set(
@@ -14298,12 +14338,17 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted:
+    // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
+    // object whose method was called. Later in NoteCandidates size of ArgsArray
+    // is passed further and it eventually ends up compared to number of
+    // function candidate parameters which never includes the object parameter,
+    // so slice ArgsArray to make sure apples are compared to apples.
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
                                        << Input->getSourceRange()),
-        *this, OCD_AllCandidates, ArgsArray, UnaryOperator::getOpcodeStr(Opc),
-        OpLoc);
+        *this, OCD_AllCandidates, ArgsArray.drop_front(),
+        UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
   }
 
@@ -14526,7 +14571,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
+                allowAmbiguity(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],
@@ -15040,7 +15085,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
         SmallVector<Expr *, 2> MethodArgs;
 
-        // Handle 'this' parameter if the selected function is not static.
+        // Initialize the object parameter.
         if (Method->isExplicitObjectMemberFunction()) {
           ExprResult Res =
               InitializeExplicitObjectArgument(*this, Args[0], Method);
@@ -15048,7 +15093,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
             return ExprError();
           Args[0] = Res.get();
           ArgExpr = Args;
-        } else if (Method->isInstance()) {
+        } else {
           ExprResult Arg0 = PerformImplicitObjectArgumentInitialization(
               Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
           if (Arg0.isInvalid())
@@ -15076,15 +15121,9 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(Context);
 
-        CallExpr *TheCall;
-        if (Method->isInstance())
-          TheCall = CXXOperatorCallExpr::Create(
-              Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK,
-              RLoc, CurFPFeatureOverrides());
-        else
-          TheCall =
-              CallExpr::Create(Context, FnExpr.get(), MethodArgs, ResultTy, VK,
-                               RLoc, CurFPFeatureOverrides());
+        CallExpr *TheCall = CXXOperatorCallExpr::Create(
+            Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK, RLoc,
+            CurFPFeatureOverrides());
 
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
@@ -15464,7 +15503,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   }
 
   if (isa<CXXConstructorDecl, CXXDestructorDecl>(CurContext) &&
-      TheCall->getDirectCallee()->isPure()) {
+      TheCall->getDirectCallee()->isPureVirtual()) {
     const FunctionDecl *MD = TheCall->getDirectCallee();
 
     if (isa<CXXThisExpr>(MemExpr->getBase()->IgnoreParenCasts()) &&
@@ -15712,15 +15751,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   bool IsError = false;
 
-  // Initialize the implicit object parameter if needed.
-  // Since C++23, this could also be a call to a static call operator
-  // which we emit as a regular CallExpr.
+  // Initialize the object parameter.
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
     // FIXME: we should do that during the definition of the lambda when we can.
     DiagnoseInvalidExplicitObjectParameterInLambda(Method);
     PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
-  } else if (Method->isInstance()) {
+  } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
         Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);
     if (ObjRes.isInvalid())
@@ -15754,14 +15791,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
   ResultTy = ResultTy.getNonLValueExprType(Context);
 
-  CallExpr *TheCall;
-  if (Method->isInstance())
-    TheCall = CXXOperatorCallExpr::Create(Context, OO_Call, NewFn.get(),
-                                          MethodArgs, ResultTy, VK, RParenLoc,
-                                          CurFPFeatureOverrides());
-  else
-    TheCall = CallExpr::Create(Context, NewFn.get(), MethodArgs, ResultTy, VK,
-                               RParenLoc, CurFPFeatureOverrides());
+  CallExpr *TheCall = CXXOperatorCallExpr::Create(
+      Context, OO_Call, NewFn.get(), MethodArgs, ResultTy, VK, RParenLoc,
+      CurFPFeatureOverrides());
 
   if (CheckCallReturnType(Method->getReturnType(), LParenLoc, TheCall, Method))
     return true;

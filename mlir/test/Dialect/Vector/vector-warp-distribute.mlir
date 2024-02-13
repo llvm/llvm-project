@@ -899,6 +899,25 @@ func.func @vector_extractelement_1d(%laneid: index, %pos: index) -> (f32) {
 
 // -----
 
+// Index-typed values cannot be shuffled at the moment.
+
+// CHECK-PROP-LABEL: func.func @vector_extractelement_1d_index(
+//       CHECK-PROP:   vector.warp_execute_on_lane_0(%{{.*}})[32] -> (index) {
+//       CHECK-PROP:     "some_def"
+//       CHECK-PROP:     vector.extractelement
+//       CHECK-PROP:     vector.yield {{.*}} : index
+//       CHECK-PROP:   }
+func.func @vector_extractelement_1d_index(%laneid: index, %pos: index) -> (index) {
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (index) {
+    %0 = "some_def"() : () -> (vector<96xindex>)
+    %1 = vector.extractelement %0[%pos : index] : vector<96xindex>
+    vector.yield %1 : index
+  }
+  return %r : index
+}
+
+// -----
+
 // CHECK-PROP:   func @lane_dependent_warp_propagate_read
 //  CHECK-PROP-SAME:   %[[ID:.*]]: index
 func.func @lane_dependent_warp_propagate_read(
@@ -1248,12 +1267,12 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 
 // -----
 
-// Check that we don't propagate transfer_reads that have dependencies on
-// values inside the warp_execute_on_lane_0.
-// In this case, propagating would create transfer_read that depends on the
-// extractelment defined in the body.
+// Make sure that all operands of the transfer_read op are properly propagated.
+// The vector.extractelement op cannot be propagated because index-typed
+// shuffles are not supported at the moment.
 
-// CHECK-PROP-LABEL: func @transfer_read_no_prop(
+// CHECK-PROP: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-PROP-LABEL: func @transfer_read_prop_operands(
 //  CHECK-PROP-SAME:     %[[IN2:[^ :]*]]: vector<1x2xindex>,
 //  CHECK-PROP-SAME:     %[[AR1:[^ :]*]]: memref<1x4x2xi32>,
 //  CHECK-PROP-SAME:     %[[AR2:[^ :]*]]: memref<1x4x1024xf32>)
@@ -1264,10 +1283,11 @@ func.func @vector_insert_2d_broadcast(%laneid: index) -> (vector<4x96xf32>) {
 //       CHECK-PROP:     %[[EXTRACT:.*]] = vector.extract %[[GATHER]][0] : vector<64xi32> from vector<1x64xi32>
 //       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] : vector<64xi32> to vector<64xindex>
 //       CHECK-PROP:     %[[EXTRACTELT:.*]] = vector.extractelement %[[CAST]][{{.*}}: i32] : vector<64xindex>
-//       CHECK-PROP:     %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[EXTRACTELT]], %[[C0]]],
-//       CHECK-PROP:     vector.yield %[[TRANSFERREAD]] : vector<64xf32>
-//       CHECK-PROP:   return %[[W]]
-func.func @transfer_read_no_prop(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi32>, %ar2 : memref<1x4x1024xf32>)-> vector<2xf32> {
+//       CHECK-PROP:     vector.yield %[[EXTRACTELT]] : index
+//       CHECK-PROP:   %[[APPLY:.*]] = affine.apply #[[$MAP]]()[%[[THREADID]]]
+//       CHECK-PROP:   %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[W]], %[[APPLY]]],
+//       CHECK-PROP:   return %[[TRANSFERREAD]]
+func.func @transfer_read_prop_operands(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi32>, %ar2 : memref<1x4x1024xf32>)-> vector<2xf32> {
   %0 = gpu.thread_id  x
   %c0_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
