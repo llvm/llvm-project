@@ -137,6 +137,7 @@ struct COFFShortExport {
 
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
+                         ArrayRef<COFFShortExport> NativeExports,
                          COFF::MachineTypes Machine, bool MinGW);
 
 } // namespace object

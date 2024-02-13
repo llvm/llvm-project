@@ -625,6 +625,7 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
+                         ArrayRef<COFFShortExport> NativeExports,
                          MachineTypes Machine, bool MinGW) {
 
   MachineTypes NativeMachine =
@@ -642,66 +643,73 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
   std::vector<uint8_t> NullThunk;
   Members.push_back(OF.createNullThunk(NullThunk));
 
-  for (const COFFShortExport &E : Exports) {
-    if (E.Private)
-      continue;
+  auto addExports = [&](ArrayRef<COFFShortExport> Exp,
+                        MachineTypes M) -> Error {
+    for (const COFFShortExport &E : Exp) {
+      if (E.Private)
+        continue;
 
-    ImportType ImportType = IMPORT_CODE;
-    if (E.Data)
-      ImportType = IMPORT_DATA;
-    if (E.Constant)
-      ImportType = IMPORT_CONST;
+      ImportType ImportType = IMPORT_CODE;
+      if (E.Data)
+        ImportType = IMPORT_DATA;
+      if (E.Constant)
+        ImportType = IMPORT_CONST;
 
-    StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
-    std::string Name;
+      StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
+      std::string Name;
 
-    if (E.ExtName.empty()) {
-      Name = std::string(SymbolName);
-    } else {
-      Expected<std::string> ReplacedName =
-          replace(SymbolName, E.Name, E.ExtName);
-      if (!ReplacedName)
-        return ReplacedName.takeError();
-      Name.swap(*ReplacedName);
-    }
-
-    if (!E.AliasTarget.empty() && Name != E.AliasTarget) {
-      Members.push_back(
-          OF.createWeakExternal(E.AliasTarget, Name, false, Machine));
-      Members.push_back(
-          OF.createWeakExternal(E.AliasTarget, Name, true, Machine));
-      continue;
-    }
-
-    ImportNameType NameType;
-    std::string ExportName;
-    if (E.Noname) {
-      NameType = IMPORT_ORDINAL;
-    } else if (!E.ExportAs.empty()) {
-      NameType = IMPORT_NAME_EXPORTAS;
-      ExportName = E.ExportAs;
-    } else {
-      NameType = getNameType(SymbolName, E.Name, Machine, MinGW);
-    }
-
-    // On ARM64EC, use EXPORTAS to import demangled name for mangled symbols.
-    if (ImportType == IMPORT_CODE && isArm64EC(Machine)) {
-      if (std::optional<std::string> MangledName =
-              getArm64ECMangledFunctionName(Name)) {
-        if (ExportName.empty()) {
-          NameType = IMPORT_NAME_EXPORTAS;
-          ExportName.swap(Name);
-        }
-        Name = std::move(*MangledName);
-      } else if (ExportName.empty()) {
-        NameType = IMPORT_NAME_EXPORTAS;
-        ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
+      if (E.ExtName.empty()) {
+        Name = std::string(SymbolName);
+      } else {
+        Expected<std::string> ReplacedName =
+            replace(SymbolName, E.Name, E.ExtName);
+        if (!ReplacedName)
+          return ReplacedName.takeError();
+        Name.swap(*ReplacedName);
       }
-    }
 
-    Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
-                                           NameType, ExportName, Machine));
-  }
+      if (!E.AliasTarget.empty() && Name != E.AliasTarget) {
+        Members.push_back(OF.createWeakExternal(E.AliasTarget, Name, false, M));
+        Members.push_back(OF.createWeakExternal(E.AliasTarget, Name, true, M));
+        continue;
+      }
+
+      ImportNameType NameType;
+      std::string ExportName;
+      if (E.Noname) {
+        NameType = IMPORT_ORDINAL;
+      } else if (!E.ExportAs.empty()) {
+        NameType = IMPORT_NAME_EXPORTAS;
+        ExportName = E.ExportAs;
+      } else {
+        NameType = getNameType(SymbolName, E.Name, M, MinGW);
+      }
+
+      // On ARM64EC, use EXPORTAS to import demangled name for mangled symbols.
+      if (ImportType == IMPORT_CODE && isArm64EC(M)) {
+        if (std::optional<std::string> MangledName =
+                getArm64ECMangledFunctionName(Name)) {
+          if (ExportName.empty()) {
+            NameType = IMPORT_NAME_EXPORTAS;
+            ExportName.swap(Name);
+          }
+          Name = std::move(*MangledName);
+        } else if (ExportName.empty()) {
+          NameType = IMPORT_NAME_EXPORTAS;
+          ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
+        }
+      }
+
+      Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
+                                             NameType, ExportName, M));
+    }
+    return Error::success();
+  };
+
+  if (Error e = addExports(Exports, Machine))
+    return e;
+  if (Error e = addExports(NativeExports, NativeMachine))
+    return e;
 
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
                       MinGW ? object::Archive::K_GNU : object::Archive::K_COFF,
