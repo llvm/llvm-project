@@ -24,6 +24,7 @@ _Static_assert(!!1, "");
 int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // all-error {{not an integral constant expression}}
 
+const int DiscardedPtrToIntCast = ((intptr_t)((void*)0), 0); // all-warning {{left operand of comma operator has no effect}}
 
 const int b = 3;
 _Static_assert(b == 3, ""); // pedantic-ref-warning {{not an integer constant expression}} \
