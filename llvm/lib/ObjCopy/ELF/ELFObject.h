@@ -172,6 +172,9 @@ public:
   friend class SectionWriter;                                                  \
   friend class IHexSectionWriterBase;                                          \
   friend class IHexSectionWriter;                                              \
+  friend class SRECSectionWriter;                                              \
+  friend class SRECSectionWriterBase;                                          \
+  friend class SRECSizeCalculator;                                             \
   template <class ELFT> friend class ELFSectionWriter;                         \
   template <class ELFT> friend class ELFSectionSizer;
 
@@ -371,23 +374,136 @@ public:
       : Writer(Obj, Out), GapFill(Config.GapFill), PadTo(Config.PadTo) {}
 };
 
-class IHexWriter : public Writer {
-  struct SectionCompare {
-    bool operator()(const SectionBase *Lhs, const SectionBase *Rhs) const;
-  };
+// A base class for writing ascii hex formats such as srec and ihex.
+class ASCIIHexWriter : public Writer {
+public:
+  ASCIIHexWriter(Object &Obj, raw_ostream &OS, StringRef OutputFile)
+      : Writer(Obj, OS), OutputFileName(OutputFile) {}
+  Error finalize() override;
 
-  std::set<const SectionBase *, SectionCompare> Sections;
+protected:
+  StringRef OutputFileName;
   size_t TotalSize = 0;
+  std::vector<const SectionBase *> Sections;
 
-  Error checkSection(const SectionBase &Sec);
+  Error checkSection(const SectionBase &S) const;
+  virtual Expected<size_t>
+  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const = 0;
+};
+
+class IHexWriter : public ASCIIHexWriter {
+public:
+  Error write() override;
+  IHexWriter(Object &Obj, raw_ostream &Out, StringRef OutputFile)
+      : ASCIIHexWriter(Obj, Out, OutputFile) {}
+
+private:
   uint64_t writeEntryPointRecord(uint8_t *Buf);
   uint64_t writeEndOfFileRecord(uint8_t *Buf);
+  Expected<size_t>
+  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const override;
+};
 
+class SRECWriter : public ASCIIHexWriter {
 public:
-  ~IHexWriter() {}
-  Error finalize() override;
+  SRECWriter(Object &Obj, raw_ostream &OS, StringRef OutputFile)
+      : ASCIIHexWriter(Obj, OS, OutputFile) {}
   Error write() override;
-  IHexWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
+
+private:
+  size_t writeHeader(uint8_t *Buf);
+  size_t writeTerminator(uint8_t *Buf, uint8_t Type);
+  Expected<size_t>
+  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const override;
+};
+
+using SRecLineData = SmallVector<char, 64>;
+struct SRecord {
+  uint8_t Type;
+  uint32_t Address;
+  ArrayRef<uint8_t> Data;
+  SRecLineData toString() const;
+  uint8_t getCount() const;
+  // Get address size in characters.
+  uint8_t getAddressSize() const;
+  uint8_t getChecksum() const;
+  size_t getSize() const;
+  static SRecord getHeader(StringRef FileName);
+  static uint8_t getType(uint32_t Address);
+
+  enum Type : uint8_t {
+    // Vendor specific text comment.
+    S0 = 0,
+    // Data that starts at a 16 bit address.
+    S1 = 1,
+    // Data that starts at a 24 bit address.
+    S2 = 2,
+    // Data that starts at a 32 bit address.
+    S3 = 3,
+    // Reserved.
+    S4 = 4,
+    // 16 bit count of S1/S2/S3 records (optional).
+    S5 = 5,
+    // 32 bit count of S1/S2/S3 records (optional).
+    S6 = 6,
+    // Terminates a series of S3 records.
+    S7 = 7,
+    // Terminates a series of S2 records.
+    S8 = 8,
+    // Terminates a series of S1 records.
+    S9 = 9
+  };
+};
+
+class SRECSectionWriterBase : public BinarySectionWriter {
+public:
+  explicit SRECSectionWriterBase(WritableMemoryBuffer &Buf,
+                                 uint64_t StartOffset)
+      : BinarySectionWriter(Buf), Offset(StartOffset), HeaderSize(StartOffset) {
+  }
+
+  using BinarySectionWriter::visit;
+
+  void writeRecords(uint32_t Entry);
+  uint64_t getBufferOffset() const { return Offset; }
+  Error visit(const Section &S) override;
+  Error visit(const OwnedDataSection &S) override;
+  Error visit(const StringTableSection &S) override;
+  Error visit(const DynamicRelocationSection &S) override;
+  uint8_t getType() const { return Type; };
+
+protected:
+  // Offset in the output buffer.
+  uint64_t Offset;
+  // Sections start after the header.
+  uint64_t HeaderSize;
+  // Type of records to write.
+  uint8_t Type = SRecord::S1;
+  std::vector<SRecord> Records;
+
+  void writeSection(const SectionBase &S, ArrayRef<uint8_t> Data);
+  virtual void writeRecord(SRecord &Record, uint64_t Off) = 0;
+};
+
+// An SRECSectionWriterBase that visits sections but does not write anything.
+// This class is only used to calculate the size of the output file.
+class SRECSizeCalculator : public SRECSectionWriterBase {
+public:
+  SRECSizeCalculator(WritableMemoryBuffer &EmptyBuffer, uint64_t Offset)
+      : SRECSectionWriterBase(EmptyBuffer, Offset) {}
+
+protected:
+  void writeRecord(SRecord &Record, uint64_t Off) override {}
+};
+
+class SRECSectionWriter : public SRECSectionWriterBase {
+public:
+  SRECSectionWriter(WritableMemoryBuffer &Buf, uint64_t Offset)
+      : SRECSectionWriterBase(Buf, Offset) {}
+  Error visit(const StringTableSection &Sec) override;
+
+protected:
+  void writeRecord(SRecord &Record, uint64_t Off) override;
 };
 
 class SectionBase {

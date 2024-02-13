@@ -147,6 +147,31 @@ enum struct alignas(64) B {};
 #endif
 } // namespace dr2354
 
+namespace dr2356 { // dr2356: 4
+#if __cplusplus >= 201103L
+struct A {
+  A();
+  A(A &&);                        // #1
+  template<typename T> A(T &&);   // #2
+};
+struct B : A {
+  using A::A;
+  B(const B &);                   // #3
+  B(B &&) = default;              // #4, implicitly deleted
+  // since-cxx11-warning@-1 {{explicitly defaulted move constructor is implicitly deleted}}
+  //   since-cxx11-note@#dr2356-X {{move constructor of 'B' is implicitly deleted because field 'x' has a deleted move constructor}}
+  //   since-cxx11-note@#dr2356-X {{'X' has been explicitly marked deleted here}}
+  //   since-cxx11-note@-4 {{replace 'default' with 'delete'}}
+
+  struct X { X(X &&) = delete; } x; // #dr2356-X
+};
+extern B b1;
+B b2 = static_cast<B&&>(b1);      // calls #3: #1, #2, and #4 are not viable
+struct C { operator B&&(); };
+B b3 = C();                       // calls #3
+#endif
+}
+
 #if __cplusplus >= 201402L
 namespace dr2358 { // dr2358: 16
   void f2() {

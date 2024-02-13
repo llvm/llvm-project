@@ -298,6 +298,55 @@ If you don't get any reports, no action is required from you. Your changes are w
         return True
 
 
+class PRMergeOnBehalfInformation:
+    COMMENT_TAG = "<!--LLVM MERGE ON BEHALF INFORMATION COMMENT-->\n"
+
+    def __init__(
+        self, token: str, repo: str, pr_number: int, author: str, reviewer: str
+    ):
+        self.repo = github.Github(token).get_repo(repo)
+        self.pr = self.repo.get_issue(pr_number).as_pull_request()
+        self.author = author
+        self.reviewer = reviewer
+
+    def can_merge(self, user: str) -> bool:
+        try:
+            return self.repo.get_collaborator_permission(user) in ["admin", "write"]
+        # There is a UnknownObjectException for this scenario, but this method
+        # does not use it.
+        except github.GithubException as e:
+            # 404 means the author was not found in the collaborator list, so we
+            # know they don't have push permissions. Anything else is a real API
+            # issue, raise it so it is visible.
+            if e.status != 404:
+                raise e
+            return False
+
+    def run(self) -> bool:
+        # Check this first because it only costs 1 API point.
+        if self.can_merge(self.author):
+            return
+
+        # A review can be approved more than once, only comment the first time.
+        for comment in self.pr.as_issue().get_comments():
+            if self.COMMENT_TAG in comment.body:
+                return
+
+        # This text is using Markdown formatting.
+        if self.can_merge(self.reviewer):
+            comment = f"""\
+{self.COMMENT_TAG}
+@{self.reviewer} the PR author does not have permission to merge their own PRs yet. Please merge on their behalf."""
+        else:
+            comment = f"""\
+{self.COMMENT_TAG}
+@{self.reviewer} the author of this PR does not have permission to merge and neither do you.
+Please find someone who has merge permissions who can merge it on the author's behalf. This could be one of the other reviewers or you can ask on [Discord](https://discord.com/invite/xS7Z362)."""
+
+        self.pr.as_issue().create_comment(comment)
+        return True
+
+
 def setup_llvmbot_git(git_dir="."):
     """
     Configure the git repo in `git_dir` with the llvmbot account so
@@ -343,6 +392,7 @@ class ReleaseWorkflow:
         branch_repo_name: str,
         branch_repo_token: str,
         llvm_project_dir: str,
+        requested_by: str,
     ) -> None:
         self._token = token
         self._repo_name = repo
@@ -353,6 +403,7 @@ class ReleaseWorkflow:
         else:
             self._branch_repo_token = self.token
         self._llvm_project_dir = llvm_project_dir
+        self._requested_by = requested_by
 
     @property
     def token(self) -> str:
@@ -381,6 +432,10 @@ class ReleaseWorkflow:
     @property
     def llvm_project_dir(self) -> str:
         return self._llvm_project_dir
+
+    @property
+    def requested_by(self) -> str:
+        return self._requested_by
 
     @property
     def repo(self) -> github.Repository.Repository:
@@ -536,7 +591,7 @@ class ReleaseWorkflow:
 
         self.issue_remove_cherry_pick_failed_label()
         return self.create_pull_request(
-            self.branch_repo_owner, self.repo_name, branch_name
+            self.branch_repo_owner, self.repo_name, branch_name, commits
         )
 
     def check_if_pull_request_exists(
@@ -545,7 +600,9 @@ class ReleaseWorkflow:
         pulls = repo.get_pulls(head=head)
         return pulls.totalCount != 0
 
-    def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
+    def create_pull_request(
+        self, owner: str, repo_name: str, branch: str, commits: List[str]
+    ) -> bool:
         """
         Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
@@ -567,9 +624,15 @@ class ReleaseWorkflow:
             print("PR already exists...")
             return True
         try:
+            commit_message = repo.get_commit(commits[-1]).commit.message
+            message_lines = commit_message.splitlines()
+            title = "{}: {}".format(release_branch_for_issue, message_lines[0])
+            body = "Backport {}\n\nRequested by: @{}".format(
+                " ".join(commits), self.requested_by
+            )
             pull = repo.create_pull(
-                title=f"PR for {issue_ref}",
-                body="resolves {}".format(issue_ref),
+                title=title,
+                body=body,
                 base=release_branch_for_issue,
                 head=head,
                 maintainer_can_modify=False,
@@ -651,6 +714,17 @@ pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information"
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
 
+pr_merge_on_behalf_information_parser = subparsers.add_parser(
+    "pr-merge-on-behalf-information"
+)
+pr_merge_on_behalf_information_parser.add_argument(
+    "--issue-number", type=int, required=True
+)
+pr_merge_on_behalf_information_parser.add_argument("--author", type=str, required=True)
+pr_merge_on_behalf_information_parser.add_argument(
+    "--reviewer", type=str, required=True
+)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -683,6 +757,12 @@ llvmbot_git_config_parser = subparsers.add_parser(
     "setup-llvmbot-git",
     help="Set the default user and email for the git repo in LLVM_PROJECT_DIR to llvmbot",
 )
+release_workflow_parser.add_argument(
+    "--requested-by",
+    type=str,
+    required=True,
+    help="The user that requested this backport",
+)
 
 args = parser.parse_args()
 
@@ -704,6 +784,11 @@ elif args.command == "pr-buildbot-information":
         args.token, args.repo, args.issue_number, args.author
     )
     pr_buildbot_information.run()
+elif args.command == "pr-merge-on-behalf-information":
+    pr_merge_on_behalf_information = PRMergeOnBehalfInformation(
+        args.token, args.repo, args.issue_number, args.author, args.reviewer
+    )
+    pr_merge_on_behalf_information.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
@@ -712,6 +797,7 @@ elif args.command == "release-workflow":
         args.branch_repo,
         args.branch_repo_token,
         args.llvm_project_dir,
+        args.requested_by,
     )
     if not release_workflow.release_branch_for_issue:
         release_workflow.issue_notify_no_milestone(sys.stdin.readlines())
