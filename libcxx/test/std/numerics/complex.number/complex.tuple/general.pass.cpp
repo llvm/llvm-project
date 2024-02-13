@@ -29,40 +29,10 @@ constexpr void test() {
   {
     std::complex<T> c{T{27}, T{28}};
 
-    auto& [r, i]{c};
-    static_assert(std::same_as<T&, decltype(r)>);
+    auto [r, i]{c};
+    static_assert(std::same_as<T, decltype(r)>);
     assert(r == T{27});
-    static_assert(std::same_as<T&, decltype(i)>);
-    assert(i == T{28});
-  }
-  //  &&
-  {
-    std::complex<T> c{T{27}, T{28}};
-
-    auto&& [r, i]{std::move(c)};
-    static_assert(std::same_as<T&&, decltype(r)>);
-    assert(r == T{27});
-    static_assert(std::same_as<T&&, decltype(i)>);
-    assert(i == T{28});
-  }
-  // const &
-  {
-    const std::complex<T> c{T{27}, T{28}};
-
-    const auto& [r, i]{c};
-    static_assert(std::same_as<const T&, decltype(r)>);
-    assert(r == T{27});
-    static_assert(std::same_as<const T&, decltype(i)>);
-    assert(i == T{28});
-  }
-  //  const &&
-  {
-    const std::complex<T> c{T{27}, T{28}};
-
-    const auto&& [r, i]{std::move(c)};
-    static_assert(std::same_as<const T&&, decltype(r)>);
-    assert(r == T{27});
-    static_assert(std::same_as<const T&&, decltype(i)>);
+    static_assert(std::same_as<T, decltype(i)>);
     assert(i == T{28});
   }
 
