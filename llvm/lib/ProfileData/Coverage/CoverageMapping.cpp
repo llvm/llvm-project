@@ -351,9 +351,8 @@ public:
         return NodeIDs(Branches.size(), 0, 0);
       if (BranchIdx >= Branches.size())
         return NodeIDs(0, 0, 0);
-      const auto *B = Branches[BranchIdx++];
-      return NodeIDs(B->MCDCParams.ID, B->MCDCParams.FalseID,
-                     B->MCDCParams.TrueID);
+      const auto &B = Branches[BranchIdx++]->getBranchParams();
+      return NodeIDs(B.ID, B.FalseID, B.TrueID);
     };
   }
 };
@@ -367,6 +366,7 @@ class MCDCRecordProcessor : MCDCTVIdxBuilder {
 
   /// Decision Region to which the ExecutedTestVectorBitmap applies.
   const CounterMappingRegion &Region;
+  const mcdc::DecisionParameters &DecisionParams;
 
   /// Array of branch regions corresponding each conditions in the boolean
   /// expression.
@@ -399,9 +399,9 @@ public:
                       const CounterMappingRegion &Region,
                       ArrayRef<const CounterMappingRegion *> Branches)
       : MCDCTVIdxBuilder(BranchProvider(Branches).getFetcher()), Bitmap(Bitmap),
-        Region(Region), Branches(Branches),
-        NumConditions(Region.MCDCParams.NumConditions),
-        BitmapIdx(Region.MCDCParams.BitmapIdx * CHAR_BIT),
+        Region(Region), DecisionParams(Region.getDecisionParams()),
+        Branches(Branches), NumConditions(DecisionParams.NumConditions),
+        BitmapIdx(DecisionParams.BitmapIdx * CHAR_BIT),
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
@@ -515,9 +515,10 @@ public:
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
     for (const auto *B : Branches) {
-      NextIDsMap[B->MCDCParams.ID - 1] = {int(B->MCDCParams.FalseID) - 1,
-                                          int(B->MCDCParams.TrueID) - 1};
-      PosToID[I] = B->MCDCParams.ID - 1;
+      const auto &BranchParams = B->getBranchParams();
+      NextIDsMap[BranchParams.ID - 1] = {int(BranchParams.FalseID) - 1,
+                                         int(BranchParams.TrueID) - 1};
+      PosToID[I] = BranchParams.ID - 1;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
@@ -530,9 +531,9 @@ public:
     findIndependencePairs();
 
     // Record Test vectors, executed vectors, and independence pairs.
-    MCDCRecord Res(Region, ExecVectors, IndependencePairs, Folded, PosToID,
-                   CondLoc);
-    return Res;
+    return MCDCRecord(Region, std::move(ExecVectors),
+                      std::move(IndependencePairs), std::move(Folded),
+                      std::move(PosToID), std::move(CondLoc));
   }
 };
 
@@ -637,10 +638,12 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
   // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
   // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
-    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion &&
-        MaxBitmapIdx <= Region.MCDCParams.BitmapIdx) {
-      MaxBitmapIdx = Region.MCDCParams.BitmapIdx;
-      NumConditions = Region.MCDCParams.NumConditions;
+    if (Region.Kind != CounterMappingRegion::MCDCDecisionRegion)
+      continue;
+    const auto &DecisionParams = Region.getDecisionParams();
+    if (MaxBitmapIdx <= DecisionParams.BitmapIdx) {
+      MaxBitmapIdx = DecisionParams.BitmapIdx;
+      NumConditions = DecisionParams.NumConditions;
     }
   }
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
@@ -660,6 +663,7 @@ private:
     const CounterMappingRegion *DecisionRegion;
 
     /// They are reflected from DecisionRegion for convenience.
+    mcdc::DecisionParameters DecisionParams;
     LineColPair DecisionStartLoc;
     LineColPair DecisionEndLoc;
 
@@ -669,7 +673,7 @@ private:
 
     /// IDs that are stored in MCDCBranches
     /// Complete when all IDs (1 to NumConditions) are met.
-    DenseSet<CounterMappingRegion::MCDCConditionID> ConditionIDs;
+    DenseSet<mcdc::ConditionID> ConditionIDs;
 
     /// Set of IDs of Expansion(s) that are relevant to DecisionRegion
     /// and its children (via expansions).
@@ -678,7 +682,9 @@ private:
     DenseSet<unsigned> ExpandedFileIDs;
 
     DecisionRecord(const CounterMappingRegion &Decision)
-        : DecisionRegion(&Decision), DecisionStartLoc(Decision.startLoc()),
+        : DecisionRegion(&Decision),
+          DecisionParams(Decision.getDecisionParams()),
+          DecisionStartLoc(Decision.startLoc()),
           DecisionEndLoc(Decision.endLoc()) {
       assert(Decision.Kind == CounterMappingRegion::MCDCDecisionRegion);
     }
@@ -706,17 +712,17 @@ private:
     Result addBranch(const CounterMappingRegion &Branch) {
       assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
 
-      auto ConditionID = Branch.MCDCParams.ID;
+      auto ConditionID = Branch.getBranchParams().ID;
       assert(ConditionID > 0 && "ConditionID should begin with 1");
 
       if (ConditionIDs.contains(ConditionID) ||
-          ConditionID > DecisionRegion->MCDCParams.NumConditions)
+          ConditionID > DecisionParams.NumConditions)
         return NotProcessed;
 
       if (!this->dominates(Branch))
         return NotProcessed;
 
-      assert(MCDCBranches.size() < DecisionRegion->MCDCParams.NumConditions);
+      assert(MCDCBranches.size() < DecisionParams.NumConditions);
 
       // Put `ID=1` in front of `MCDCBranches` for convenience
       // even if `MCDCBranches` is not topological.
@@ -729,9 +735,8 @@ private:
       ConditionIDs.insert(ConditionID);
 
       // `Completed` when `MCDCBranches` is full
-      return (MCDCBranches.size() == DecisionRegion->MCDCParams.NumConditions
-                  ? Completed
-                  : Processed);
+      return (MCDCBranches.size() == DecisionParams.NumConditions ? Completed
+                                                                  : Processed);
     }
 
     /// Record Expansion if it is relevant to this Decision.
@@ -906,7 +911,7 @@ Error CoverageMapping::loadFunctionRecord(
     }
 
     // Save the MC/DC Record so that it can be visualized later.
-    Function.pushMCDCRecord(*Record);
+    Function.pushMCDCRecord(std::move(*Record));
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
