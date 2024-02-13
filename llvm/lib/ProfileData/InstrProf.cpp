@@ -544,11 +544,12 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  StringSet<> Names;
-  Names.insert(PGOFuncName);
-  Names.insert(InstrProfSymtab::getCanonicalName(PGOFuncName));
-  for (const auto &NameEntry : Names) {
-    StringRef Name = NameEntry.getKey();
+  SmallVector<StringRef, 2> Names;
+  Names.push_back(PGOFuncName);
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName != PGOFuncName)
+    Names.push_back(CanonicalFuncName);
+  for (StringRef Name : Names) {
     if (Error E = addFuncName(Name))
       return E;
     MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
