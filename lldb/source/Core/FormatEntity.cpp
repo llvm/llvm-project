@@ -658,6 +658,25 @@ static char ConvertValueObjectStyleToChar(
   return '\0';
 }
 
+static bool DumpValueWithPrintf(Stream &s, llvm::StringRef format,
+                                ValueObject &target) {
+  auto type_info = target.GetTypeInfo();
+  if (type_info & eTypeIsInteger) {
+    if (type_info & eTypeIsSigned) {
+      if (auto integer = target.GetValueAsSigned()) {
+        s.Printf(format.data(), *integer);
+        return true;
+      }
+    } else {
+      if (auto integer = target.GetValueAsUnsigned()) {
+        s.Printf(format.data(), *integer);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 static bool DumpValue(Stream &s, const SymbolContext *sc,
                       const ExecutionContext *exe_ctx,
                       const FormatEntity::Entry &entry, ValueObject *valobj) {
@@ -884,25 +903,13 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
   if (!is_array_range) {
     if (!entry.printf_format.empty()) {
-      auto type_info = target->GetTypeInfo();
-      if (type_info & eTypeIsInteger) {
-        if (type_info & eTypeIsSigned) {
-          bool success = false;
-          auto integer = target->GetValueAsSigned(0, &success);
-          if (success) {
-            LLDB_LOGF(log, "dumping using printf format");
-            s.Printf(entry.printf_format.c_str(), integer);
-            return true;
-          }
-        } else {
-          bool success = false;
-          auto integer = target->GetValueAsUnsigned(0, &success);
-          if (success) {
-            LLDB_LOGF(log, "dumping using printf format");
-            s.Printf(entry.printf_format.c_str(), integer);
-            return true;
-          }
-        }
+      if (DumpValueWithPrintf(s, entry.printf_format, *target)) {
+        LLDB_LOGF(log, "dumping using printf format");
+        return true;
+      } else {
+        LLDB_LOG(log,
+                 "unsupported printf format '{0}' - for type info flags {1}",
+                 entry.printf_format, target->GetTypeInfo());
       }
     }
     LLDB_LOGF(log, "dumping ordinary printable output");
