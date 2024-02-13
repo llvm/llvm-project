@@ -1361,9 +1361,9 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   return 0;
 }
 
-// Frame indexes representing locations of CSRs which are given a fixed location
-// by save/restore libcalls or Zcmp Push/Pop.
-static const std::pair<unsigned, int> FixedCSRFIMap[] = {
+// Offsets which need to be scale by XLen representing locations of CSRs which
+// are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
+static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
     {/*ra*/ RISCV::X1, -1},   {/*s0*/ RISCV::X8, -2},
     {/*s1*/ RISCV::X9, -3},   {/*s2*/ RISCV::X18, -4},
     {/*s3*/ RISCV::X19, -5},  {/*s4*/ RISCV::X20, -6},
