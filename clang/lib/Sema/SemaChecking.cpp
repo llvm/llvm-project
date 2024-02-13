@@ -19150,7 +19150,7 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   return false;
 }
 
-bool Sema::IsLayoutCompatible(QualType T1, QualType T2) {
+bool Sema::IsLayoutCompatible(QualType T1, QualType T2) const {
   return isLayoutCompatible(getASTContext(), T1, T2);
 }
 
