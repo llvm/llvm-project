@@ -252,7 +252,7 @@ public:
 
   CompilerType GetTypeForDecl(clang::TagDecl *decl);
 
-  CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
+  CompilerType GetTypeForDecl(const clang::ObjCInterfaceDecl *objc_decl);
 
   CompilerType GetTypeForDecl(clang::ValueDecl *value_decl);
 
@@ -332,6 +332,14 @@ public:
                                 lldb::LanguageType language,
                                 ClangASTMetadata *metadata = nullptr,
                                 bool exports_symbols = false);
+
+  clang::NamedDecl *CreateRecordDecl(clang::DeclContext *decl_ctx,
+                                     OptionalClangModuleID owning_module,
+                                     lldb::AccessType access_type,
+                                     llvm::StringRef name, int kind,
+                                     lldb::LanguageType language,
+                                     ClangASTMetadata *metadata = nullptr,
+                                     bool exports_symbols = false);
 
   class TemplateParameterInfos {
   public:
@@ -476,7 +484,16 @@ public:
                                clang::DeclContext *decl_ctx,
                                OptionalClangModuleID owning_module,
                                bool isForwardDecl, bool isInternal,
-                               ClangASTMetadata *metadata = nullptr);
+                               ClangASTMetadata *metadata = nullptr) {
+    clang::ObjCInterfaceDecl *d = CreateObjCDecl(
+        name, decl_ctx, owning_module, isForwardDecl, isInternal, metadata);
+    return GetTypeForDecl(d);
+  }
+
+  clang::ObjCInterfaceDecl *
+  CreateObjCDecl(llvm::StringRef name, clang::DeclContext *decl_ctx,
+                 OptionalClangModuleID owning_module, bool isForwardDecl,
+                 bool isInternal, ClangASTMetadata *metadata = nullptr);
 
   // Returns a mask containing bits from the TypeSystemClang::eTypeXXX
   // enumerations
@@ -518,12 +535,23 @@ public:
                                size_t element_count, bool is_vector);
 
   // Enumeration Types
+  clang::EnumDecl *CreateEnumerationDecl(llvm::StringRef name,
+                                         clang::DeclContext *decl_ctx,
+                                         OptionalClangModuleID owning_module,
+                                         const Declaration &decl,
+                                         const CompilerType &integer_qual_type,
+                                         bool is_scoped);
+
   CompilerType CreateEnumerationType(llvm::StringRef name,
                                      clang::DeclContext *decl_ctx,
                                      OptionalClangModuleID owning_module,
                                      const Declaration &decl,
                                      const CompilerType &integer_qual_type,
-                                     bool is_scoped);
+                                     bool is_scoped) {
+    clang::EnumDecl *enum_decl = CreateEnumerationDecl(
+        name, decl_ctx, owning_module, decl, integer_qual_type, is_scoped);
+    return GetType(getASTContext().getTagDeclType(enum_decl));
+  }
 
   // Integer type functions
 
@@ -545,6 +573,15 @@ public:
   void CompleteTagDecl(clang::TagDecl *);
 
   void CompleteObjCInterfaceDecl(clang::ObjCInterfaceDecl *);
+
+  /// Creates a redeclaration for the declaration specified by the given type.
+  /// The redeclaration will be at the end of the redeclaration chain. The
+  /// passed declaration has to be created via a TypeSystemClang interface.
+  ///
+  /// \param type The type which declaration should be redeclared. Has to be
+  /// an Objective-C interface type (or Objective-C type), RecordType or
+  /// EnumType.
+  void CreateRedeclaration(CompilerType ct);
 
   bool LayoutRecordType(
       const clang::RecordDecl *record_decl, uint64_t &size, uint64_t &alignment,
@@ -1228,6 +1265,18 @@ private:
   /// Maps CXXRecordDecl to their most recent added method/field's
   /// AccessSpecifier.
   CXXRecordDeclAccessMap m_cxx_record_decl_access;
+
+  /// The information we need to redeclare a class template but that we can't
+  /// gather from the forward declaration.
+  struct ClassTemplateRedeclInfo {
+    TemplateParameterInfos m_template_args;
+  };
+  typedef llvm::DenseMap<const clang::Decl *, ClassTemplateRedeclInfo>
+      ClassTemplateRedeclInfoMap;
+  // FIXME: This is in theory redundant. Instead we should change the way we
+  // create ClassTemplateSpecializationDecls in TypeSystemClang so that we can
+  // just pass the data from the forward declaration.
+  ClassTemplateRedeclInfoMap m_class_template_redecl_infos;
 
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the

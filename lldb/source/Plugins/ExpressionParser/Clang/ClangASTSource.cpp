@@ -281,8 +281,11 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   if (!m_ast_importer_sp->CompleteTagDecl(tag_decl)) {
     // We couldn't complete the type.  Maybe there's a definition somewhere
     // else that can be completed.
-    if (TagDecl *alternate = FindCompleteType(tag_decl))
+    if (TagDecl *alternate = FindCompleteType(tag_decl)) {
+      assert(alternate->getDefinition() != nullptr &&
+             "Trying to complete a TagDecl from an incomplete origin");
       m_ast_importer_sp->CompleteTagDeclWithOrigin(tag_decl, alternate);
+    }
   }
 
   LLDB_LOG(log, "      [CTD] After:\n{0}", ClangUtil::DumpDecl(tag_decl));

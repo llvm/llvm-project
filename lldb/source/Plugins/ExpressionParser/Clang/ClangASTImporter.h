@@ -175,6 +175,8 @@ public:
 
   bool CompleteTagDecl(clang::TagDecl *decl);
 
+  /// This function assumes origin has been completed (i.e., has a valid
+  /// definition).
   bool CompleteTagDeclWithOrigin(clang::TagDecl *decl, clang::TagDecl *origin);
 
   bool CompleteObjCInterfaceDecl(clang::ObjCInterfaceDecl *interface_decl);
