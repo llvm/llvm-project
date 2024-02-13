@@ -26,7 +26,7 @@ for x in range(0, numentries):
 print("ret void")
 print("}")
 
-print("attributes #0 = { \"toc-data\" }")
+print('attributes #0 = { "toc-data" }')
 
 # 32-bit assembly check
 # ASM32:  la 4, a0[TD](2)
