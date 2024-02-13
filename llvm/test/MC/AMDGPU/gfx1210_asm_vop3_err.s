@@ -234,3 +234,23 @@ v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX1210-ERR-NEXT:{{^}}v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
 // GFX1210-ERR-NEXT:{{^}}                                ^
+
+v_cvt_sr_bf8_f16 v1, v2, v3 clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2, v3 clamp
+// GFX1210-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_bf8_f16 v1, v2, v3 mul:2
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2, v3 mul:2
+// GFX1210-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_fp8_f16 v1, v2, v3 clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2, v3 clamp
+// GFX1210-ERR-NEXT:{{^}}                            ^
+
+v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1210-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
+// GFX1210-ERR-NEXT:{{^}}                            ^
