@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/Coverage/MCDCTypes.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
@@ -249,19 +250,6 @@ struct CounterMappingRegion {
     MCDCBranchRegion
   };
 
-  using MCDCConditionID = unsigned int;
-  struct MCDCParameters {
-    /// Byte Index of Bitmap Coverage Object for a Decision Region.
-    unsigned BitmapIdx = 0;
-
-    /// Number of Conditions used for a Decision Region.
-    unsigned NumConditions = 0;
-
-    /// IDs used to represent a branch region and other branch regions
-    /// evaluated based on True and False branches.
-    MCDCConditionID ID = 0, TrueID = 0, FalseID = 0;
-  };
-
   /// Primary Counter that is also used for Branch Regions (TrueCount).
   Counter Count;
 
@@ -269,7 +257,7 @@ struct CounterMappingRegion {
   Counter FalseCount;
 
   /// Parameters used for Modified Condition/Decision Coverage
-  MCDCParameters MCDCParams;
+  mcdc::Parameters MCDCParams;
 
   unsigned FileID = 0;
   unsigned ExpandedFileID = 0;
@@ -285,7 +273,7 @@ struct CounterMappingRegion {
         ColumnEnd(ColumnEnd), Kind(Kind) {}
 
   CounterMappingRegion(Counter Count, Counter FalseCount,
-                       MCDCParameters MCDCParams, unsigned FileID,
+                       mcdc::Parameters MCDCParams, unsigned FileID,
                        unsigned ExpandedFileID, unsigned LineStart,
                        unsigned ColumnStart, unsigned LineEnd,
                        unsigned ColumnEnd, RegionKind Kind)
@@ -294,7 +282,7 @@ struct CounterMappingRegion {
         ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
         Kind(Kind) {}
 
-  CounterMappingRegion(MCDCParameters MCDCParams, unsigned FileID,
+  CounterMappingRegion(mcdc::Parameters MCDCParams, unsigned FileID,
                        unsigned LineStart, unsigned ColumnStart,
                        unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
       : MCDCParams(MCDCParams), FileID(FileID), LineStart(LineStart),
@@ -334,15 +322,16 @@ struct CounterMappingRegion {
   makeBranchRegion(Counter Count, Counter FalseCount, unsigned FileID,
                    unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
                    unsigned ColumnEnd) {
-    return CounterMappingRegion(Count, FalseCount, MCDCParameters(), FileID, 0,
-                                LineStart, ColumnStart, LineEnd, ColumnEnd,
+    return CounterMappingRegion(Count, FalseCount, mcdc::Parameters(), FileID,
+                                0, LineStart, ColumnStart, LineEnd, ColumnEnd,
                                 BranchRegion);
   }
 
   static CounterMappingRegion
-  makeBranchRegion(Counter Count, Counter FalseCount, MCDCParameters MCDCParams,
-                   unsigned FileID, unsigned LineStart, unsigned ColumnStart,
-                   unsigned LineEnd, unsigned ColumnEnd) {
+  makeBranchRegion(Counter Count, Counter FalseCount,
+                   mcdc::Parameters MCDCParams, unsigned FileID,
+                   unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
+                   unsigned ColumnEnd) {
     return CounterMappingRegion(Count, FalseCount, MCDCParams, FileID, 0,
                                 LineStart, ColumnStart, LineEnd, ColumnEnd,
                                 MCDCParams.ID == 0 ? BranchRegion
@@ -350,7 +339,7 @@ struct CounterMappingRegion {
   }
 
   static CounterMappingRegion
-  makeDecisionRegion(MCDCParameters MCDCParams, unsigned FileID,
+  makeDecisionRegion(mcdc::Parameters MCDCParams, unsigned FileID,
                      unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
                      unsigned ColumnEnd) {
     return CounterMappingRegion(MCDCParams, FileID, LineStart, ColumnStart,
