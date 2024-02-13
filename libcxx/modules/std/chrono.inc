@@ -222,7 +222,9 @@ export namespace std {
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
 #  endif
+#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     using std::chrono::time_zone;
+#  endif
 #  if 0
 
     // [time.zone.zonedtraits], class template zoned_traits
@@ -237,8 +239,10 @@ export namespace std {
     using std::chrono::leap_second;
 #  endif
 
+#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     // [time.zone.link], class time_zone_link
     using std::chrono::time_zone_link;
+#  endif
 
 #  if 0
     // [time.format], formatting

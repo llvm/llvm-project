@@ -39,7 +39,7 @@ class time_zone_link {
 public:
   struct __constructor_tag;
   _LIBCPP_NODISCARD_EXT
-  _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(string_view __name, string_view __target, __constructor_tag&&)
+  _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(__constructor_tag&&, string_view __name, string_view __target)
       : __name_{__name}, __target_{__target} {}
 
   _LIBCPP_HIDE_FROM_ABI time_zone_link(time_zone_link&&)            = default;

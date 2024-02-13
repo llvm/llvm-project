@@ -21,8 +21,8 @@
 #include "test_macros.h"
 
 // These types have "private" constructors.
-extern  std::chrono::time_zone tz;
-extern  std::chrono::time_zone_link link;
+extern std::chrono::time_zone tz;
+extern std::chrono::time_zone_link link;
 
 void test() {
   std::chrono::tzdb_list& list = std::chrono::get_tzdb_list();

@@ -562,7 +562,7 @@ static void __parse_link(tzdb& __tzdb, istream& __input) {
   string __name = chrono::__parse_string(__input);
   chrono::__skip_line(__input);
 
-  __tzdb.links.emplace_back(std::move(__name), std::move(__target), time_zone_link::__constructor_tag{});
+  __tzdb.links.emplace_back(time_zone_link::__constructor_tag{}, std::move(__name), std::move(__target));
 }
 
 static void __parse_tzdata(tzdb& __db, __tz::__rules_storage_type& __rules, istream& __input) {

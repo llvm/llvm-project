@@ -44,8 +44,6 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI tzdb_list::const_iterator tzdb_l
   return __impl_->cend();
 }
 
-[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI tzdb_list::__impl& tzdb_list::__implementation() { return *__impl_; }
-
 } // namespace chrono
 
 _LIBCPP_END_NAMESPACE_STD

@@ -43,9 +43,9 @@ public:
 
   // The "constructor".
   //
-  // The default constructor is private to avoid the constructor from being an
-  // ABI interface. Instead use an __ugly_named function as an ABI interface,
-  // since users should not depend on __ugly_names.
+  // The default constructor is private to avoid the constructor from being
+  // part of the ABI. Instead use an __ugly_named function as an ABI interface,
+  // since that gives us the ability to change it in the future.
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI static time_zone __create(unique_ptr<__impl>&& __p);
 
   _LIBCPP_EXPORTED_FROM_ABI ~time_zone();
@@ -55,9 +55,9 @@ public:
 
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name(); }
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const __impl& __implementation() const noexcept;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const __impl& __implementation() const noexcept { return *__impl_; }
 
-  // private:
+private:
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string_view __name() const noexcept;
   unique_ptr<__impl> __impl_;
 };

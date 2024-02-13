@@ -28,6 +28,9 @@
 
 #include "test_macros.h"
 
+// It's impossible to actually obtain a non-const reference to a
+// time_zone_link, and as a result the move constructor can never be exercised
+// in runtime code. We still check the property pedantically.
 LIBCPP_STATIC_ASSERT(!std::copy_constructible<std::chrono::time_zone_link>);
 LIBCPP_STATIC_ASSERT(!std::is_copy_assignable_v<std::chrono::time_zone_link>);
 static_assert(std::move_constructible<std::chrono::time_zone_link>);

@@ -59,7 +59,7 @@ public:
   _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator cbegin() const noexcept;
   _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator cend() const noexcept;
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI __impl& __implementation();
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __impl& __implementation() { return *__impl_; }
 
 private:
   __impl* __impl_;

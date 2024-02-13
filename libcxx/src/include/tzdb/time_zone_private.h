@@ -26,7 +26,7 @@ class time_zone::__impl {
 public:
   explicit _LIBCPP_HIDE_FROM_ABI __impl(string&& __name) : __name_(std::move(__name)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view __name() const noexcept { return __name_; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI vector<__tz::__continuation>& __continuations() { return __continuations_; }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const vector<__tz::__continuation>& __continuations() const {
