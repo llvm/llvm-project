@@ -678,6 +678,22 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
 
   Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  CHECK_PARSE("BreakAfterReturnType: None", AlwaysBreakAfterReturnType,
+              FormatStyle::RTBS_None);
+  CHECK_PARSE("BreakAfterReturnType: Automatic", AlwaysBreakAfterReturnType,
+              FormatStyle::RTBS_Automatic);
+  CHECK_PARSE("BreakAfterReturnType: ExceptShortType",
+              AlwaysBreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("BreakAfterReturnType: All", AlwaysBreakAfterReturnType,
+              FormatStyle::RTBS_All);
+  CHECK_PARSE("BreakAfterReturnType: TopLevel", AlwaysBreakAfterReturnType,
+              FormatStyle::RTBS_TopLevel);
+  CHECK_PARSE("BreakAfterReturnType: AllDefinitions",
+              AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
+  CHECK_PARSE("BreakAfterReturnType: TopLevelDefinitions",
+              AlwaysBreakAfterReturnType,
+              FormatStyle::RTBS_TopLevelDefinitions);
+  // For backward compatibility:
   CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,
               FormatStyle::RTBS_None);
   CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic",
