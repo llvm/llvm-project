@@ -588,7 +588,7 @@ TEST(LlvmLibcUIntClassTest, ConstexprInitTests) {
     d <<= e;                                                                   \
     LL_UInt320 q1 = y / d;                                                     \
     LL_UInt320 r1 = y % d;                                                     \
-    LL_UInt320 r2 = *y.div_uint32_times_pow_2(x, e);                           \
+    LL_UInt320 r2 = *y.div_uint_half_times_pow_2(x, e);                        \
     EXPECT_EQ(q1, y);                                                          \
     EXPECT_EQ(r1, r2);                                                         \
   } while (0)
@@ -677,5 +677,20 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
 }
 
 #endif // __SIZEOF_INT128__
+
+TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
+  using LL_UInt96 = cpp::BigInt<96, false, uint32_t>;
+
+  LL_UInt96 a(1);
+
+  ASSERT_EQ(static_cast<int>(a), 1);
+  a = (a << 32) + 2;
+  ASSERT_EQ(static_cast<int>(a), 2);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(0x1'0000'0002));
+  a = (a << 32) + 3;
+  ASSERT_EQ(static_cast<int>(a), 3);
+  ASSERT_EQ(static_cast<int>(a >> 32), 2);
+  ASSERT_EQ(static_cast<int>(a >> 64), 1);
+}
 
 } // namespace LIBC_NAMESPACE
