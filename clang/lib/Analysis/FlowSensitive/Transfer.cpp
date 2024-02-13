@@ -535,7 +535,19 @@ public:
         return;
 
       copyRecord(*LocSrc, *LocDst, Env);
-      Env.setStorageLocation(*S, *LocDst);
+
+      // If the expr is a glvalue, we can reasonably assume the operator is
+      // returning T& and thus we can assign it `LocDst`.
+      if (S->isGLValue()) {
+        Env.setStorageLocation(*S, *LocDst);
+      } else if (S->getType()->isRecordType()) {
+        // Make sure that we have a `RecordValue` for this expression so that
+        // `Environment::getResultObjectLocation()` is able to return a location
+        // for it.
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
+      }
+
       return;
     }
 
