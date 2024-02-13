@@ -6,6 +6,7 @@ include "spec/linux.td"
 include "spec/gnu_ext.td"
 include "spec/bsd_ext.td"
 include "spec/llvm_libc_ext.td"
+include "spec/stdc_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{
