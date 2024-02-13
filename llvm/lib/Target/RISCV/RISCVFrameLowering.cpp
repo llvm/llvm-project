@@ -1225,16 +1225,10 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
       RVFI->setBranchRelaxationScratchFrameIndex(FI);
   }
 
-  if (MFI.getCalleeSavedInfo().empty() || RVFI->useSaveRestoreLibCalls(MF) ||
-      RVFI->isPushable(MF)) {
-    RVFI->setCalleeSavedStackSize(0);
-    return;
-  }
-
-  unsigned Size = 0;
+  unsigned Size = RVFI->getReservedSpillsSize();
   for (const auto &Info : MFI.getCalleeSavedInfo()) {
     int FrameIdx = Info.getFrameIdx();
-    if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
+    if (FrameIdx < 0 || MFI.getStackID(FrameIdx) != TargetStackID::Default)
       continue;
 
     Size += MFI.getObjectSize(FrameIdx);
