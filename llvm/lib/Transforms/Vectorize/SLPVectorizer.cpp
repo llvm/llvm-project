@@ -190,7 +190,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> VectorizeNonPowerOf2(
     "slp-vectorize-non-power-of-2", cl::init(false), cl::Hidden,
-    cl::desc("Try to vectorize with non-power-of-2 with number of elements."));
+    cl::desc("Try to vectorize with non-power-of-2 number of elements."));
 
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
