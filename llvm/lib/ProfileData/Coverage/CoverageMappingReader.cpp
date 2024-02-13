@@ -308,6 +308,10 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
             return Err;
+          if (ID == 0)
+            return make_error<CoverageMapError>(
+                coveragemap_error::malformed,
+                "MCDCConditionID shouldn't be zero");
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
@@ -371,10 +375,9 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
 
     auto CMR = CounterMappingRegion(
         C, C2,
-        CounterMappingRegion::MCDCParameters{
-            static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
-            static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-            static_cast<unsigned>(FID)},
+        mcdc::Parameters{static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
+                         static_cast<unsigned>(ID), static_cast<unsigned>(TID),
+                         static_cast<unsigned>(FID)},
         InferredFileID, ExpandedFileID, LineStart, ColumnStart,
         LineStart + NumLines, ColumnEnd, Kind);
     if (CMR.startLoc() > CMR.endLoc())
