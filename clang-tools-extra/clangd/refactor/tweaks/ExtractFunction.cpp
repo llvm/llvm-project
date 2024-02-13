@@ -105,7 +105,7 @@ bool isRootStmt(const Node *N) {
   if (N->Selected == SelectionTree::Partial)
     return false;
   // A DeclStmt can be an unselected RootStmt since VarDecls claim the entire
-  // selection range in selectionTree. Additionally, an CXXOperatorCallExpr of a
+  // selection range in selectionTree. Additionally, a CXXOperatorCallExpr of a
   // binary operation can be unselected because it's children claim the entire
   // selection range in the selection tree (e.g. <<).
   if (N->Selected == SelectionTree::Unselected && !N->ASTNode.get<DeclStmt>() &&
