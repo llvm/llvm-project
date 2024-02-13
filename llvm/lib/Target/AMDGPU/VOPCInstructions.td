@@ -1165,6 +1165,8 @@ class VOPC_DPPe_Common<bits<8> op> : Enc64 {
 class VOPC_DPP_Base<bits<8> op, string OpName, VOPProfile P>
     : VOP_DPP_Base<OpName, P, P.InsDPP16, " " #P.AsmDPP16>,
       VOPC_DPPe_Common<op> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+
   bits<2> src0_modifiers;
   bits<8> src0;
   bits<2> src1_modifiers;
@@ -1194,6 +1196,8 @@ class VOPC_DPP_Base<bits<8> op, string OpName, VOPProfile P>
 class VOPC_DPP8_Base<bits<8> op, string OpName, VOPProfile P>
     : VOP_DPP8_Base<OpName, P, P.InsDPP8, " " #P.AsmDPP8>,
       VOPC_DPPe_Common<op> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+
   bits<8> src0;
   bits<24> dpp8;
   bits<9> fi;
