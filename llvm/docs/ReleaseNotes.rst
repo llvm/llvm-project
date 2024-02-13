@@ -163,13 +163,13 @@ Changes to the MIPS Backend
 
 Changes to the PowerPC Backend
 ------------------------------
+
 * LLJIT's JIT linker now defaults to JITLink on 64-bit ELFv2 targets.
 * Initial-exec TLS model is supported on AIX.
 * Implemented new resource based scheduling model of POWER7 and POWER8.
 * ``frexp`` libcall now references correct symbol name for ``fp128``.
 * Optimized materialization of 64-bit immediates, code generation of
   ``vec_promote`` and atomics.
-
 * Global constant strings are pooled in the TOC under one entry to reduce the
   number of entries in the TOC.
 * Added a number of missing Power10 extended mnemonics.
@@ -352,6 +352,7 @@ Changes to the LLVM tools
 
 * llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
   ELF input and binary output files only.
+
 * Supported parsing XCOFF auxiliary symbols in obj2yaml.
 
 * ``llvm-ranlib`` now supports ``-X`` on AIX to specify the type of object file
