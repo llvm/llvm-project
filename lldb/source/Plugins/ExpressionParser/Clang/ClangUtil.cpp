@@ -10,6 +10,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "clang/AST/DeclObjC.h"
 
 using namespace clang;
 using namespace lldb_private;
@@ -63,6 +64,16 @@ clang::TagDecl *ClangUtil::GetAsTagDecl(const CompilerType &type) {
     return nullptr;
 
   return qual_type->getAsTagDecl();
+}
+
+clang::Decl *ClangUtil::GetFirstDecl(clang::Decl *d) {
+  if (!d)
+    return nullptr;
+  if (auto *td = llvm::dyn_cast<clang::TagDecl>(d))
+    return td->getFirstDecl();
+  if (auto *od = llvm::dyn_cast<clang::ObjCInterfaceDecl>(d))
+    return od->getFirstDecl();
+  return d;
 }
 
 std::string ClangUtil::DumpDecl(const clang::Decl *d) {

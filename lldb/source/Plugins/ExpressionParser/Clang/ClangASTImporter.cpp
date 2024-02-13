@@ -286,6 +286,7 @@ public:
     // Filter out decls that we can't complete later.
     if (!isa<TagDecl>(to) && !isa<ObjCInterfaceDecl>(to))
       return;
+
     RecordDecl *from_record_decl = dyn_cast<RecordDecl>(from);
     // We don't need to complete injected class name decls.
     if (from_record_decl && from_record_decl->isInjectedClassName())
@@ -525,6 +526,9 @@ bool ClangASTImporter::LayoutRecordType(
         &base_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &vbase_offsets) {
+
+  record_decl = llvm::cast<RecordDecl>(record_decl->getFirstDecl());
+
   RecordDeclToLayoutMap::iterator pos =
       m_record_decl_to_layout_map.find(record_decl);
   bool success = false;
@@ -548,6 +552,7 @@ bool ClangASTImporter::LayoutRecordType(
 
 void ClangASTImporter::SetRecordLayout(clang::RecordDecl *decl,
                                         const LayoutInfo &layout) {
+  decl = llvm::cast<RecordDecl>(decl->getFirstDecl());
   m_record_decl_to_layout_map.insert(std::make_pair(decl, layout));
 }
 
@@ -573,7 +578,10 @@ bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
 
 bool ClangASTImporter::CompleteTagDeclWithOrigin(clang::TagDecl *decl,
                                                  clang::TagDecl *origin_decl) {
-  SetDeclOrigin(decl, origin_decl);
+  if (!origin_decl->getDefinition())
+    return false;
+
+  SetDeclOrigin(decl, origin_decl->getFirstDecl());
   return CompleteTagDecl(decl);
 }
 
