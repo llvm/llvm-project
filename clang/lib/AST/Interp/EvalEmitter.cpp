@@ -36,7 +36,7 @@ EvalEmitter::~EvalEmitter() {
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E) {
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E))
+  if (!this->visitExpr(E) && EvalResult.empty())
     EvalResult.setInvalid();
 
   return std::move(this->EvalResult);
@@ -45,7 +45,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E) {
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD) {
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD))
+  if (!this->visitDecl(VD) && EvalResult.empty())
     EvalResult.setInvalid();
 
   return std::move(this->EvalResult);

@@ -38,9 +38,9 @@ static int testRoundtripEncoding(MlirContext ctx) {
       mlirSparseTensorEncodingAttrGetDimToLvl(originalAttr);
   // CHECK: (d0, d1)[s0] -> (s0, d0, d1)
   mlirAffineMapDump(dimToLvl);
-  // CHECK: level_type: 4
-  // CHECK: level_type: 8
-  // CHECK: level_type: 8
+  // CHECK: level_type: 65536
+  // CHECK: level_type: 131072
+  // CHECK: level_type: 131072
   MlirAffineMap lvlToDim =
       mlirSparseTensorEncodingAttrGetLvlToDim(originalAttr);
   int lvlRank = mlirSparseTensorEncodingGetLvlRank(originalAttr);

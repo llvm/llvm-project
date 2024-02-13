@@ -139,18 +139,19 @@ public:
   }
 };
 
-class TwoOutFourLevel : public SparseLevel {
+class NOutOfMLevel : public SparseLevel {
 public:
-  TwoOutFourLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
-                  Value crdBuffer)
+  NOutOfMLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
+               Value crdBuffer)
       : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, Value p,
                         Value max) const override {
-    assert(max == nullptr && isUnique() && "2:4 level can not be non-unique.");
-    // Each 2:4 blk has exactly two specified elements.
-    Value posLo = MULI(p, C_IDX(2));
-    return {posLo, ADDI(posLo, C_IDX(2))};
+    assert(max == nullptr && isUnique() && "n:m level can not be non-unique.");
+    // Each n:m blk has exactly n specified elements.
+    auto n = getN(lt);
+    Value posLo = MULI(p, C_IDX(n));
+    return {posLo, ADDI(posLo, C_IDX(n))};
   }
 };
 
@@ -773,9 +774,6 @@ public:
 // SparseIterator derived classes implementation.
 //===----------------------------------------------------------------------===//
 
-SparseEmitStrategy SparseIterator::emitStrategy =
-    SparseEmitStrategy::kFunctional;
-
 void SparseIterator::genInit(OpBuilder &b, Location l,
                              const SparseIterator *p) {
   if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
@@ -1294,36 +1292,47 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
     Value crd = genToCoordinates(b, l, t, lvl);
     return std::make_unique<SingletonLevel>(tid, lvl, lt, sz, crd);
   }
-  case LevelFormat::TwoOutOfFour: {
+  case LevelFormat::NOutOfM: {
     Value crd = genToCoordinates(b, l, t, lvl);
-    return std::make_unique<TwoOutFourLevel>(tid, lvl, lt, sz, crd);
+    return std::make_unique<NOutOfMLevel>(tid, lvl, lt, sz, crd);
   }
   }
   llvm_unreachable("unrecognizable level format");
 }
 
 std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>
-sparse_tensor::makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl) {
+sparse_tensor::makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
+                                       SparseEmitStrategy strategy) {
   auto stl = std::make_unique<DenseLevel>(tid, lvl, sz, /*encoded=*/false);
   auto it = std::make_unique<TrivialIterator>(*stl);
+  it->setSparseEmitStrategy(strategy);
   return std::make_pair(std::move(stl), std::move(it));
 }
 
 std::unique_ptr<SparseIterator>
-sparse_tensor::makeSimpleIterator(const SparseTensorLevel &stl) {
+sparse_tensor::makeSimpleIterator(const SparseTensorLevel &stl,
+                                  SparseEmitStrategy strategy) {
+  std::unique_ptr<SparseIterator> ret;
   if (!isUniqueLT(stl.getLT())) {
     // We always dedupliate the non-unique level, but we should optimize it away
     // if possible.
-    return std::make_unique<DedupIterator>(stl);
+    ret = std::make_unique<DedupIterator>(stl);
+  } else {
+    ret = std::make_unique<TrivialIterator>(stl);
   }
-  return std::make_unique<TrivialIterator>(stl);
+  ret->setSparseEmitStrategy(strategy);
+  return ret;
 }
 
 std::unique_ptr<SparseIterator>
 sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
-                                       Value offset, Value stride, Value size) {
+                                       Value offset, Value stride, Value size,
+                                       SparseEmitStrategy strategy) {
 
-  return std::make_unique<FilterIterator>(std::move(sit), offset, stride, size);
+  auto ret =
+      std::make_unique<FilterIterator>(std::move(sit), offset, stride, size);
+  ret->setSparseEmitStrategy(strategy);
+  return ret;
 }
 
 static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
@@ -1335,38 +1344,42 @@ static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
     OpBuilder &b, Location l, const SparseIterator *parent, Value loopBound,
-    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride) {
+    std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride,
+    SparseEmitStrategy strategy) {
 
   // Try unwrap the NonEmptySubSectIterator from a filter parent.
   parent = tryUnwrapFilter(parent);
-  auto it = std::make_unique<NonEmptySubSectIterator>(
-      b, l, parent, std::move(delegate), size);
+  std::unique_ptr<SparseIterator> it =
+      std::make_unique<NonEmptySubSectIterator>(b, l, parent,
+                                                std::move(delegate), size);
 
   if (stride != 1) {
     // TODO: We can safely skip bound checking on sparse levels, but for dense
     // iteration space, we need the bound to infer the dense loop range.
-    return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
-                                            C_IDX(stride), /*size=*/loopBound);
+    it = std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
+                                          C_IDX(stride), /*size=*/loopBound);
   }
+  it->setSparseEmitStrategy(strategy);
   return it;
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeTraverseSubSectIterator(
     OpBuilder &b, Location l, const SparseIterator &subSectIter,
     const SparseIterator &parent, std::unique_ptr<SparseIterator> &&wrap,
-    Value loopBound, unsigned stride) {
+    Value loopBound, unsigned stride, SparseEmitStrategy strategy) {
 
   // This must be a subsection iterator or a filtered subsection iterator.
   auto &subSect =
       llvm::cast<NonEmptySubSectIterator>(*tryUnwrapFilter(&subSectIter));
 
-  auto it = std::make_unique<SubSectIterator>(
+  std::unique_ptr<SparseIterator> it = std::make_unique<SubSectIterator>(
       subSect, *tryUnwrapFilter(&parent), std::move(wrap));
 
   if (stride != 1) {
-    return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
-                                            C_IDX(stride), /*size=*/loopBound);
+    it = std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
+                                          C_IDX(stride), /*size=*/loopBound);
   }
+  it->setSparseEmitStrategy(strategy);
   return it;
 }
 

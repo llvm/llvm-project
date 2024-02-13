@@ -380,6 +380,7 @@ private:
   /// tensor.
   bool hasOutput;
   bool isSparseOut;
+  SparseEmitStrategy emitStrategy;
 
   //
   // Fields which have `numTensor` many entries.
