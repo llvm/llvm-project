@@ -455,9 +455,9 @@ class SampleProfileMatcher {
     Unknown = 32,
   };
 
-  // For each function, store every callsite a matching state into this map, of
-  // which each entry is a pair of callsite location and MatchState. This is
-  // used for profile stalness computation and report.
+  // For each function, store every callsite and its matching state into this
+  // map, of which each entry is a pair of callsite location and MatchState.
+  // This is used for profile staleness computation and report.
   StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
       FuncCallsiteMatchStates;
 
@@ -2416,9 +2416,9 @@ void SampleProfileMatcher::computeCallsiteMatchStates(
 
   for (const auto &I : IRAnchors) {
     // In post-match, use the matching result to remap the current IR callsite.
-    const auto &Loc = MapIRLocToProfileLoc(I.first);
+    const auto &ProfileLoc = MapIRLocToProfileLoc(I.first);
     const auto &IRCalleeName = I.second;
-    const auto &It = ProfileAnchors.find(Loc);
+    const auto &It = ProfileAnchors.find(ProfileLoc);
     if (It == ProfileAnchors.end())
       continue;
     const auto &Callees = It->second;
@@ -2434,7 +2434,7 @@ void SampleProfileMatcher::computeCallsiteMatchStates(
       IsCallsiteMatched = true;
 
     if (IsCallsiteMatched) {
-      auto R = CallsiteMatchStates.emplace(Loc, MatchState::Matched);
+      auto R = CallsiteMatchStates.emplace(ProfileLoc, MatchState::Matched);
       // When there is an existing state, we know it's in post-match phrase.
       // Update the matching state accordingly.
       if (!R.second) {
@@ -2584,8 +2584,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
       errs() << "(" << NumStaleProfileFunc << "/" << TotalProfiledFunc << ")"
              << " of functions' profile are invalid and "
              << " (" << MismatchedFunctionSamples << "/" << TotalFunctionSamples
-             << ")"
-             << " of samples are discarded due to function hash mismatch.\n";
+             << ") of samples are discarded due to function hash mismatch.\n";
     }
     errs() << "(" << (NumMismatchedCallsites + NumRecoveredCallsites) << "/"
            << TotalProfiledCallsites << ")"
