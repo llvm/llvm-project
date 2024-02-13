@@ -22,7 +22,8 @@
 #define accum _Accum
 #define sat _Sat
 
-// Default values: from ISO/IEC TR 18037:2008 standard - Annex A.3 - Typical desktop processor.
+// Default values: from ISO/IEC TR 18037:2008 standard - Annex A.3 - Typical
+// desktop processor.
 
 #ifdef __SFRACT_FBIT__
 #define SFRACT_FBIT __SFRACT_FBIT__
