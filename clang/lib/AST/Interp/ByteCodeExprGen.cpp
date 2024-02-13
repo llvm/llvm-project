@@ -2119,6 +2119,19 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
   return this->emitInitPtr(E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Bool);
+  return this->emitConstBool(E->isSatisfied(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
+    const ConceptSpecializationExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Bool);
+  return this->emitConstBool(E->isSatisfied(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
