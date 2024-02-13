@@ -89,8 +89,9 @@ TargetInfo *elf::getTarget() {
     return getSPARCV9TargetInfo();
   case EM_X86_64:
     return getX86_64TargetInfo();
+  default:
+    fatal("unsupported e_machine value: " + Twine(config->emachine));
   }
-  llvm_unreachable("unknown target machine");
 }
 
 ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
