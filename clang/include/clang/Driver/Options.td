@@ -5339,7 +5339,7 @@ def print_rocm_search_dirs : Flag<["-", "--"], "print-rocm-search-dirs">,
   HelpText<"Print the paths used for finding ROCm installation">,
   Visibility<[ClangOption, CLOption]>;
 def print_runtime_dir : Flag<["-", "--"], "print-runtime-dir">,
-  HelpText<"Print the directory pathname containing clangs runtime libraries">,
+  HelpText<"Print the directory pathname containing Clang's runtime libraries">,
   Visibility<[ClangOption, CLOption]>;
 def print_diagnostic_options : Flag<["-", "--"], "print-diagnostic-options">,
   HelpText<"Print all of Clang's warning options">,
