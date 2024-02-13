@@ -4000,7 +4000,21 @@ public:
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
                                             StmtResult StrBlock) {
-    llvm_unreachable("Not yet implemented!");
+    getSema().ActOnOpenACCConstruct(K, BeginLoc);
+    // TODO OpenACC: Include clauses.
+    StmtResult Construct =
+        getSema().ActOnStartOpenACCStmtDirective(K, BeginLoc, EndLoc);
+
+    if (!Construct.isUsable())
+      return Construct;
+
+    if (StrBlock.isUsable()) {
+      Construct = getSema().ActOnOpenACCAssociatedStmt(
+          cast<OpenACCComputeConstruct>(Construct.get()), StrBlock.get());
+    }
+
+    getSema().ActOnEndOpenACCStmtDirective(Construct);
+    return Construct;
   }
 
 private:

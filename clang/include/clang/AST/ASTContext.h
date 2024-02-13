@@ -3381,6 +3381,8 @@ public:
 
   StringRef getCUIDHash() const;
 
+  void setOpenACCStructuredBlock(OpenACCComputeConstruct *C, Stmt *S);
+
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
