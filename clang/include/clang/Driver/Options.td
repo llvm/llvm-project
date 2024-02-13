@@ -8466,8 +8466,8 @@ def _SLASH_ZW : CLJoined<"ZW">;
 // clang-dxc Options
 //===----------------------------------------------------------------------===//
 
-def dxc_Group : OptionGroup<"<clang-dxc options>">, Visibility<[DXCOption]>,
-  HelpText<"dxc compatibility options">;
+def dxc_Group : OptionGroup<"clang-dxc options">, Visibility<[DXCOption]>,
+  HelpText<"dxc compatibility options.">;
 class DXCFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
   Group<dxc_Group>, Visibility<[DXCOption]>;
 class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
