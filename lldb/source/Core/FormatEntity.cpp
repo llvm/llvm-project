@@ -663,13 +663,17 @@ static bool DumpValueWithPrintf(Stream &s, llvm::StringRef format,
   auto type_info = target.GetTypeInfo();
   if (type_info & eTypeIsInteger) {
     if (type_info & eTypeIsSigned) {
-      if (auto integer = target.GetValueAsSigned()) {
-        s.Printf(format.data(), *integer);
+      bool success = false;
+      auto integer = target.GetValueAsSigned(0, &success);
+      if (success) {
+        s.Printf(format.data(), integer);
         return true;
       }
     } else {
-      if (auto integer = target.GetValueAsUnsigned()) {
-        s.Printf(format.data(), *integer);
+      bool success = false;
+      auto integer = target.GetValueAsUnsigned(0, &success);
+      if (success) {
+        s.Printf(format.data(), integer);
         return true;
       }
     }
