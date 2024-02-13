@@ -628,7 +628,7 @@ static LogicalResult verifyDependVarList(Operation *op,
       return op->emitOpError() << "expected as many depend values"
                                   " as depend variables";
   } else {
-    if (depends)
+    if (depends && !depends->empty())
       return op->emitOpError() << "unexpected depend values";
     return success();
   }
@@ -1032,19 +1032,31 @@ LogicalResult DataOp::verify() {
 }
 
 LogicalResult EnterDataOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult ExitDataOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult UpdateDataOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult TargetOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 //===----------------------------------------------------------------------===//

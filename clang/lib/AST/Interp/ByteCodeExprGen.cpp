@@ -2059,6 +2059,66 @@ bool ByteCodeExprGen<Emitter>::VisitExpressionTraitExpr(
   return this->emitConstBool(E->getValue(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
+  if (DiscardResult)
+    return true;
+  assert(!Initializing);
+
+  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(E->getGuidDecl());
+  if (!GlobalIndex)
+    return false;
+  if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    return false;
+
+  const Record *R = this->getRecord(E->getType());
+  assert(R);
+
+  const APValue &V = E->getGuidDecl()->getAsAPValue();
+  if (V.getKind() == APValue::None)
+    return true;
+
+  assert(V.isStruct());
+  assert(V.getStructNumBases() == 0);
+  // FIXME: This could be useful in visitAPValue, too.
+  for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I) {
+    const APValue &F = V.getStructField(I);
+    const Record::Field *RF = R->getField(I);
+
+    if (F.isInt()) {
+      PrimType T = classifyPrim(RF->Decl->getType());
+      if (!this->visitAPValue(F, T, E))
+        return false;
+      if (!this->emitInitField(T, RF->Offset, E))
+        return false;
+    } else if (F.isArray()) {
+      assert(RF->Desc->isPrimitiveArray());
+      const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
+      PrimType ElemT = classifyPrim(ArrType->getElementType());
+      assert(ArrType);
+
+      if (!this->emitDupPtr(E))
+        return false;
+      if (!this->emitGetPtrField(RF->Offset, E))
+        return false;
+
+      for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
+        if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
+          return false;
+        if (!this->emitInitElem(ElemT, A, E))
+          return false;
+      }
+
+      if (!this->emitPopPtr(E))
+        return false;
+    } else {
+      assert(false && "I don't think this should be possible");
+    }
+  }
+
+  return this->emitInitPtr(E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
