@@ -8039,9 +8039,6 @@ public:
                                      SourceLocation RParenLoc, bool Failed);
   void DiagnoseStaticAssertDetails(const Expr *E);
 
-  FriendDecl *CheckFriendTypeDecl(SourceLocation LocStart,
-                                  SourceLocation FriendLoc,
-                                  TypeSourceInfo *TSInfo);
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                             MultiTemplateParamsArg TemplateParams);
   NamedDecl *ActOnFriendFunctionDecl(Scope *S, Declarator &D,
