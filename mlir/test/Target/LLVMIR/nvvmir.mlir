@@ -81,16 +81,14 @@ llvm.func @llvm_nvvm_barrier0() {
 }
 
 // CHECK-LABEL: @llvm_nvvm_barrier(
-// CHECK-SAME: i32 %[[barId:.*]])
-llvm.func @llvm_nvvm_barrier(%numberOfThreads : i32) {
+// CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
+llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
   // CHECK: call void @llvm.nvvm.barrier0()
   nvvm.barrier 
-  // CHECK: call void @llvm.nvvm.barrier.n(i32 3)
-  nvvm.barrier resource = 3
-  // CHECK: call void @llvm.nvvm.barrier(i32 0, i32 %[[barId]])
-  nvvm.barrier number_of_threads = %numberOfThreads
-  // CHECK: call void @llvm.nvvm.barrier(i32 4, i32 %[[barId]])
-  nvvm.barrier resource = 4 number_of_threads = %numberOfThreads
+  // CHECK: call void @llvm.nvvm.barrier.n(i32 %[[barId]])
+  nvvm.barrier id = %barID
+  // CHECK: call void @llvm.nvvm.barrier(i32 %[[barId]], i32 %[[numThreads]])
+  nvvm.barrier id = %barID number_of_threads = %numberOfThreads
   llvm.return
 }
 
@@ -525,6 +523,13 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+
+// -----
+
+llvm.func @kernel_func(%numberOfThreads : i32) {
+  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
+  nvvm.barrier number_of_threads = %numberOfThreads
+}
 
 // -----
 // expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}

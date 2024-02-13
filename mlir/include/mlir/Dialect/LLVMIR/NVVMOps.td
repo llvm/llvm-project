@@ -377,24 +377,23 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_BarrierOp : NVVM_Op<"barrier"> {
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
   let arguments = (ins     
-    DefaultValuedAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<15>]>, "0">:$barrierResource,
+    Optional<I32>:$barrierId,
     Optional<I32>:$numberOfThreads);
   string llvmBuilder = [{
-    auto syncThreads = builder.getInt32($barrierResource);
-    if ($numberOfThreads) {
+    if ($numberOfThreads && $barrierId) {
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
-                { syncThreads, $numberOfThreads});
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
     } else {
-      if($barrierResource == 0)
-        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
-      else
-        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
-                { syncThreads});
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
     }
   }];
-  let assemblyFormat = "(`resource` `=` $barrierResource^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
 }
 
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
