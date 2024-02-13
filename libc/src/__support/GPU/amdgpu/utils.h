@@ -152,14 +152,7 @@ LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }
 /// Returns a fixed-frequency timestamp. The actual frequency is dependent on
 /// the card and can only be queried via the driver.
 LIBC_INLINE uint64_t fixed_frequency_clock() {
-  if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_sendmsg_rtnl))
-    return __builtin_amdgcn_s_sendmsg_rtnl(0x83);
-  else if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_memrealtime))
-    return __builtin_amdgcn_s_memrealtime();
-  else if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_memtime))
-    return __builtin_amdgcn_s_memtime();
-  else
-    return 0;
+  return __builtin_readsteadycounter();
 }
 
 /// Terminates execution of the associated wavefront.

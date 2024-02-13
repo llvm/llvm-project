@@ -23,14 +23,15 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   uint64_t tick_rate = TICKS_PER_SEC / GPU_CLOCKS_PER_SEC;
 
   uint64_t start = gpu::fixed_frequency_clock();
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
   uint64_t end = start + (nsecs + tick_rate - 1) / tick_rate;
   uint64_t cur = gpu::fixed_frequency_clock();
   // The NVPTX architecture supports sleeping and guaruntees the actual time
   // slept will be somewhere between zero and twice the requested amount. Here
   // we will sleep again if we undershot the time.
   while (cur < end) {
-    __nvvm_nanosleep(static_cast<uint32_t>(nsecs));
+    if (__nvvm_reflect("__CUDA_ARCH") >= 700)
+      LIBC_INLINE_ASM("nanosleep.u32 %0;" ::"r"(nsecs));
     cur = gpu::fixed_frequency_clock();
     nsecs -= nsecs > cur - start ? cur - start : 0;
   }
