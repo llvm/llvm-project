@@ -153,7 +153,7 @@ def : GCNPat <
   (DS_PARAM_LOAD timm:$attr, timm:$attrchan, 0, 1)
 >;
 
-} // End SubtargetPredicate = isGFX12Only
+} // End SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
 // GFX11
@@ -188,5 +188,19 @@ multiclass DSDIR_Real_gfx12<bits<2> op> {
   }
 }
 
-defm DS_PARAM_LOAD : DSDIR_Real_gfx12<0x0>;
-defm DS_DIRECT_LOAD : DSDIR_Real_gfx12<0x1>;
+multiclass DSDIR_Real_gfx13<bits<2> op> {
+  defvar ps = !cast<DSDIR_Pseudo>(NAME);
+  def _gfx13 : DSDIR_Real<ps, ps.InOperandList,
+                          VDSDIR_getAsm<ps.is_direct>.ret,
+                          SIEncodingFamily.GFX13>,
+               VDSDIRe<op, ps.is_direct> {
+    let AssemblerPredicate = isGFX13Plus;
+    let DecoderNamespace = "GFX13";
+  }
+}
+
+multiclass DSDIR_Real_gfx12_gfx13<bits<2> op> :
+  DSDIR_Real_gfx12<op>, DSDIR_Real_gfx13<op>;
+
+defm DS_PARAM_LOAD : DSDIR_Real_gfx12_gfx13<0x0>;
+defm DS_DIRECT_LOAD : DSDIR_Real_gfx12_gfx13<0x1>;
