@@ -560,12 +560,16 @@ setCUDAAttributes(mlir::func::FuncOp func,
 
       if (!details->cudaClusterDims().empty()) {
         assert(details->cudaClusterDims().size() == 3 && "expect 3 values");
-        auto xAttr = mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[0]);
-        auto yAttr = mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[1]);
-        auto zAttr = mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
+        auto xAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[0]);
+        auto yAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[1]);
+        auto zAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
         func.getOperation()->setAttr(
             fir::getCUDAClusterDimsAttrName(),
-            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr, zAttr));
+            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
+                                          zAttr));
       }
     }
   }
