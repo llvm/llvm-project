@@ -390,6 +390,13 @@ public:
   /// and having the thread call the SystemRuntime again.
   virtual bool ThreadHasQueueInformation() const { return false; }
 
+  /// GetStackFrameCount can be expensive.  Stacks can get very deep, and they
+  /// require memory reads for each frame.  So only use GetStackFrameCount when 
+  /// you need to know the depth of the stack.  When iterating over frames, its
+  /// better to generate the frames one by one with GetFrameAtIndex, and when
+  /// that returns NULL, you are at the end of the stack.  That way your loop
+  /// will only do the work it needs to, without forcing lldb to realize
+  /// StackFrames you weren't going to look at.
   virtual uint32_t GetStackFrameCount() {
     return GetStackFrameList()->GetNumFrames();
   }
