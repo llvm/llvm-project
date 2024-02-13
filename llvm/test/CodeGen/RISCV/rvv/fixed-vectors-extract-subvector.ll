@@ -857,6 +857,16 @@ define void @extract_v8i1_nxv32i1_16(<vscale x 32 x i1> %x, ptr %y) {
   ret void
 }
 
+define <1 x i64> @extract_v1i64_v2i64_1(<2 x i64> %x) {
+; CHECK-LABEL: extract_v1i64_v2i64_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    ret
+  %v = call <1 x i64> @llvm.vector.extract.v1i64.v2i64(<2 x i64> %x, i64 1)
+  ret <1 x i64> %v
+}
+
 declare <2 x i1> @llvm.vector.extract.v2i1.v64i1(<64 x i1> %vec, i64 %idx)
 declare <8 x i1> @llvm.vector.extract.v8i1.v64i1(<64 x i1> %vec, i64 %idx)
 
