@@ -342,10 +342,27 @@ public:
       assert(names.size() == args_in.size());
     }
 
-    TemplateParameterInfos(TemplateParameterInfos const &) = delete;
     TemplateParameterInfos(TemplateParameterInfos &&) = delete;
 
-    TemplateParameterInfos &operator=(TemplateParameterInfos const &) = delete;
+    TemplateParameterInfos(const TemplateParameterInfos &o)
+        : names(o.names), args(o.args), pack_name(o.pack_name) {
+      if (o.packed_args)
+        packed_args = std::make_unique<TemplateParameterInfos>(*o.packed_args);
+    }
+
+    TemplateParameterInfos &operator=(const TemplateParameterInfos &o) {
+      auto tmp = TemplateParameterInfos(o);
+      swap(tmp);
+      return *this;
+    }
+
+    void swap(TemplateParameterInfos &other) noexcept {
+      std::swap(names, other.names);
+      std::swap(args, other.args);
+      std::swap(pack_name, other.pack_name);
+      std::swap(packed_args, other.packed_args);
+    }
+
     TemplateParameterInfos &operator=(TemplateParameterInfos &&) = delete;
 
     ~TemplateParameterInfos() = default;
