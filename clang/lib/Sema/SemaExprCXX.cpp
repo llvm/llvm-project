@@ -5924,7 +5924,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     return false;
   }
   case BTT_IsLayoutCompatible: {
-    return Self.SemaIsLayoutCompatible(LhsT, RhsT);
+    return Self.IsLayoutCompatible(LhsT, RhsT);
   }
     default: llvm_unreachable("not a BTT");
   }
