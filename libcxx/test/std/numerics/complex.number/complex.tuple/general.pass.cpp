@@ -24,11 +24,19 @@
 template <typename T>
 constexpr void test() {
   // Structured binding
-
   {
     std::complex<T> c{T{27}, T{28}};
 
     auto [r, i]{c};
+    static_assert(std::same_as<T, decltype(r)>);
+    assert(r == T{27});
+    static_assert(std::same_as<T, decltype(i)>);
+    assert(i == T{28});
+  }
+  {
+    std::complex<T> c{T{27}, T{28}};
+
+    auto& [r, i]{c};
     static_assert(std::same_as<T, decltype(r)>);
     assert(r == T{27});
     static_assert(std::same_as<T, decltype(i)>);
