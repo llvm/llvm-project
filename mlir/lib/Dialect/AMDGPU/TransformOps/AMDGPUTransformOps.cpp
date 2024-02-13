@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
@@ -32,9 +31,9 @@
 #include "llvm/ADT/ArrayRef.h"
 
 using namespace mlir;
-using namespace mlir::linalg;
 using namespace mlir::amdgpu;
 using namespace mlir::transform;
+using namespace mlir::func;
 
 #define DEBUG_TYPE "amdgpu-transforms"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -42,18 +41,17 @@ using namespace mlir::transform;
 #define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 
 DiagnosedSilenceableFailure
-transform::ApplyOptimizeSharedMemoryReadsAndWritesOp::applyToOne(
-    transform::TransformRewriter &rewriter, ::mlir::func::FuncOp funcOp,
-    ::mlir::transform::ApplyToEachResultList &results,
-    ::mlir::transform::TransformState &state) {
-  mlir::amdgpu::optimizeSharedMemoryReadsAndWritesOp(funcOp);
+ApplyOptimizeSharedMemoryReadsAndWritesOp::applyToOne(
+    TransformRewriter &rewriter, FuncOp funcOp, ApplyToEachResultList &results,
+    TransformState &state) {
+  optimizeSharedMemoryReadsAndWritesOp(funcOp);
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::ApplyOptimizeSharedMemoryReadsAndWritesOp::getEffects(
+void ApplyOptimizeSharedMemoryReadsAndWritesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
-  transform::modifiesPayload(effects);
+  onlyReadsHandle(getTarget(), effects);
+  modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -62,8 +60,7 @@ void transform::ApplyOptimizeSharedMemoryReadsAndWritesOp::getEffects(
 
 namespace {
 class AMDGPUTransformDialectExtension
-    : public transform::TransformDialectExtension<
-          AMDGPUTransformDialectExtension> {
+    : public TransformDialectExtension<AMDGPUTransformDialectExtension> {
 public:
   AMDGPUTransformDialectExtension() {
     declareGeneratedDialect<arith::ArithDialect>();
