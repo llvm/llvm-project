@@ -672,7 +672,8 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
 
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
 // expr" policy instead.
-std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl,
+std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
+                                        const Decl *CurrentDecl,
                                         bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
@@ -788,7 +789,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl,
 
     FD->printQualifiedName(POut, Policy);
 
-    if (IK == Function) {
+    if (IK == PredefinedIdentKind::Function) {
       POut.flush();
       Out << Proto;
       return std::string(Name);

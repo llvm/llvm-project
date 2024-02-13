@@ -2033,7 +2033,12 @@ public:
     return getIdentKindName(getIdentKind());
   }
 
+<<<<<<< HEAD
   static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl,
+=======
+  static std::string ComputeName(PredefinedIdentKind IK,
+                                 const Decl *CurrentDecl,
+>>>>>>> 936e29f623d6 (Fixed more mreging issues.)
                                  bool ForceElaboratedPrinting = false);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
