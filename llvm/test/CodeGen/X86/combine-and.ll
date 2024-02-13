@@ -644,7 +644,7 @@ define <8 x i64> @neg_scalar_broadcast_v8i64(i64 %a0, <2 x i64> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vpbroadcastq %rdi, %zmm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
 ; AVX512-NEXT:    vpermq %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq

@@ -545,8 +545,8 @@ void GroupMatcher::optimize() {
     if (T != E)
       F = ++T;
   }
-  optimizeRules<GroupMatcher>(Matchers, MatcherStorage).swap(Matchers);
-  optimizeRules<SwitchMatcher>(Matchers, MatcherStorage).swap(Matchers);
+  Matchers = optimizeRules<GroupMatcher>(Matchers, MatcherStorage);
+  Matchers = optimizeRules<SwitchMatcher>(Matchers, MatcherStorage);
 }
 
 //===- SwitchMatcher ------------------------------------------------------===//
@@ -1399,9 +1399,8 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  unsigned OpcodeValue = 0;
   for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
-    OpcodeValues[I] = OpcodeValue++;
+    OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 
 MatchTableRecord InstructionOpcodeMatcher::getValue() const {

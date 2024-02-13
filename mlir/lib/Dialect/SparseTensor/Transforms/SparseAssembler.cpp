@@ -132,29 +132,29 @@ void convVals(OpBuilder &builder, Location loc, TypeRange types,
 namespace {
 
 // A rewriting rules that converts public entry methods that use sparse tensors
-// as input parameters and/or output return values into wrapper functions
-// that [dis]assemble the individual tensors that constitute the actual
-// storage used externally into MLIR sparse tensors.
+// as input parameters and/or output return values into wrapper methods that
+// [dis]assemble the individual tensors that constitute the actual storage used
+// externally into MLIR sparse tensors before calling the original method.
 //
 // In particular, each sparse tensor input
 //
 // void foo(..., t, ...) { }
 //
-// adds the following strucuture in a wrapper
+// makes the original foo() internal and adds the following wrapper method
 //
-// void spiface_foo(..., t1..tn, ...) {
+// void foo(..., t1..tn, ...) {
 //   t = assemble t1..tn
-//   foo(..., t, ...)
+//   _internal_foo(..., t, ...)
 // }
 //
 // and likewise, each output tensor
 //
 // ... T ... bar(...) { return ..., t, ...; }
 //
-// adds the following structure in a wrapper
+// makes the original bar() internal and adds the following wrapper method
 //
-// ... T1..TN ... spiface_bar(..., t1'..tn') {
-//   ..., t, ... = bar(...)
+// ... T1..TN ... bar(..., t1'..tn') {
+//   ..., t, ... = _internal_bar(...)
 //   t1..tn = disassemble t, t1'..tn'
 //   return ..., t1..tn, ...
 // }
@@ -168,9 +168,8 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
-    // Only a rewrite an entry with the c-interface requested.
-    if (!funcOp->getAttrOfType<UnitAttr>(
-            LLVM::LLVMDialect::getEmitCWrapperAttrName()))
+    // Only rewrite public entry methods.
+    if (funcOp.isPrivate())
       return failure();
 
     // Translate sparse tensor types to external types.
@@ -180,29 +179,29 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     convTypes(funcOp.getArgumentTypes(), inputTypes);
     convTypes(funcOp.getResultTypes(), outputTypes, &extraTypes);
 
-    // Only sparse inputs or outputs need a wrapper function.
+    // Only sparse inputs or outputs need a wrapper method.
     if (inputTypes.size() == funcOp.getArgumentTypes().size() &&
         outputTypes.size() == funcOp.getResultTypes().size())
       return failure();
 
-    // Start the new wrapper function. Together with the c-interface mangling,
-    // a sparse external entry point eventually will have a name like:
-    //    _mlir_ciface_spiface_XXX(...)
+    // Modify the original method into an internal, private method.
+    auto orgName = funcOp.getName();
+    std::string wrapper = llvm::formatv("_internal_{0}", orgName).str();
+    funcOp.setName(wrapper);
+    funcOp.setPrivate();
+
+    // Start the new public wrapper method with original name.
     Location loc = funcOp.getLoc();
     ModuleOp modOp = funcOp->getParentOfType<ModuleOp>();
     MLIRContext *context = modOp.getContext();
     OpBuilder moduleBuilder(modOp.getBodyRegion());
-    std::string wrapper = llvm::formatv("spiface_{0}", funcOp.getName()).str();
     unsigned extra = inputTypes.size();
     inputTypes.append(extraTypes);
     auto func = moduleBuilder.create<func::FuncOp>(
-        loc, wrapper, FunctionType::get(context, inputTypes, outputTypes));
+        loc, orgName, FunctionType::get(context, inputTypes, outputTypes));
     func.setPublic();
-    func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                  UnitAttr::get(context));
 
-    // Construct new wrapper function body.
-    auto org = SymbolRefAttr::get(context, funcOp.getName());
+    // Construct new wrapper method body.
     OpBuilder::InsertionGuard insertionGuard(rewriter);
     Block *body = func.addEntryBlock();
     rewriter.setInsertionPointToStart(body);
@@ -212,7 +211,8 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     convVals(rewriter, loc, funcOp.getArgumentTypes(), body->getArguments(),
              ValueRange(), inputs, 0, /*isIn=*/true);
 
-    // Call original function.
+    // Call original, now internal method.
+    auto org = SymbolRefAttr::get(context, wrapper);
     auto call = rewriter.create<func::CallOp>(loc, funcOp.getResultTypes(), org,
                                               inputs);
 
@@ -222,8 +222,13 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
              body->getArguments(), outputs, extra, /*isIn=*/false);
     rewriter.create<func::ReturnOp>(loc, outputs);
 
-    // Strip the c-interface attribute from the original function.
-    funcOp->removeAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName());
+    // Finally, migrate a potential c-interface property.
+    if (funcOp->getAttrOfType<UnitAttr>(
+            LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(context));
+      funcOp->removeAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName());
+    }
     return success();
   }
 };

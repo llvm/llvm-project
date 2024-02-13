@@ -822,11 +822,15 @@ def FeatureStdExtSsstateen
 
 def FeatureStdExtSsstrict
     : SubtargetFeature<"ssstrict", "HasStdExtSsstrict", "true",
-                       "'Ssstrict' (No non-conforming extensions are present.", []>;
+                       "'Ssstrict' (No non-conforming extensions are present)", []>;
 
 def FeatureStdExtSstc
     : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
                        "'Sstc' (Supervisor-mode timer interrupts)", []>;
+
+def FeaturesSsqosid
+    : SubtargetFeature<"experimental-ssqosid", "HasStdExtSsqosid", "true",
+                       "'Ssqosid' (Quality-of-Service (QoS) Identifiers)", []>;
 
 def FeatureStdExtShtvala
     : SubtargetFeature<"shtvala", "HasStdExtShtvala", "true",
@@ -849,15 +853,15 @@ def FeatureStdExtSsu64xl
     : SubtargetFeature<"ssu64xl", "HasStdExtSsu64xl", "true",
                        "'Ssu64xl' (UXLEN=64 supported)", []>;
 
-def FeaturesStdExtSvade
+def FeatureStdExtSvade
     : SubtargetFeature<"svade", "HasStdExtSvade", "true",
                        "'Svade' (Raise exceptions on improper A/D bits)", []>;
 
-def FeaturesStdExtSvadu
+def FeatureStdExtSvadu
     : SubtargetFeature<"svadu", "HasStdExtSvadu", "true",
                        "'Svadu' (Hardware A/D updates)", []>;
 
-def FeaturesStdExtSvbare
+def FeatureStdExtSvbare
     : SubtargetFeature<"svbare", "HasStdExtSvbare", "true",
                        "'Svbare' $(satp mode Bare supported)", []>;
 
@@ -875,6 +879,40 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : SubtargetFeature<"svpbmt", "HasStdExtSvpbmt", "true",
                        "'Svpbmt' (Page-Based Memory Types)">;
+
+// Pointer Masking extensions
+
+// A supervisor-level extension that provides pointer masking for the next lower
+// privilege mode (U-mode), and for VS- and VU-modes if the H extension is
+// present.
+def FeatureStdExtSsnpm
+    : SubtargetFeature<"experimental-ssnpm", "HasStdExtSsnpm", "true",
+                       "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+
+// A machine-level extension that provides pointer masking for the next lower
+// privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
+def FeatureStdExtSmnpm
+    : SubtargetFeature<"experimental-smnpm", "HasStdExtSmnpm", "true",
+                       "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+
+// A machine-level extension that provides pointer masking for M-mode.
+def FeatureStdExtSmmpm
+    : SubtargetFeature<"experimental-smmpm", "HasStdExtSmmpm", "true",
+                       "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+
+// An extension that indicates that there is pointer-masking support available
+// in supervisor mode, with some facility provided in the supervisor execution
+// environment to control pointer masking.
+def FeatureStdExtSspm
+    : SubtargetFeature<"experimental-sspm", "HasStdExtSspm", "true",
+                       "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+
+// An extension that indicates that there is pointer-masking support available
+// in user mode, with some facility provided in the application execution
+// environment to control pointer masking.
+def FeatureStdExtSupm
+    : SubtargetFeature<"experimental-supm", "HasStdExtSupm", "true",
+                       "'Supm' (Indicates User-mode Pointer Masking)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -1189,3 +1227,8 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+def FeatureForcedSWShadowStack : SubtargetFeature<
+    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
+    "Implement shadow stack with software.">;
+def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

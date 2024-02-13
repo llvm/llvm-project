@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -19,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
@@ -522,6 +524,43 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
                 mlir::StringAttr::get(&mlirContext, name));
 }
 
+static void
+setCUDAAttributes(mlir::func::FuncOp func,
+                  const Fortran::semantics::Symbol *sym,
+                  std::optional<Fortran::evaluate::characteristics::Procedure>
+                      characteristic) {
+  if (characteristic && characteristic->cudaSubprogramAttrs) {
+    func.getOperation()->setAttr(
+        fir::getCUDAAttrName(),
+        fir::getCUDAProcAttribute(func.getContext(),
+                                  *characteristic->cudaSubprogramAttrs));
+  }
+
+  if (sym) {
+    if (auto details =
+            sym->GetUltimate()
+                .detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      if (!details->cudaLaunchBounds().empty()) {
+        assert(details->cudaLaunchBounds().size() >= 2 &&
+               "expect at least 2 values");
+        mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
+        auto maxTPBAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
+        auto minBPMAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
+        mlir::IntegerAttr ubAttr;
+        if (details->cudaLaunchBounds().size() > 2)
+          ubAttr =
+              mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDALaunchBoundsAttrName(),
+            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                           minBPMAttr, ubAttr));
+      }
+    }
+  }
+}
+
 /// Declare drives the different actions to be performed while analyzing the
 /// signature and building/finding the mlir::func::FuncOp.
 template <typename T>
@@ -557,6 +596,8 @@ void Fortran::lower::CallInterface<T>::declare() {
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
       side().setFuncAttrs(func);
+
+      setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
   }
 }
@@ -915,31 +956,6 @@ private:
     }
   }
 
-  // Define when an explicit argument must be passed in a fir.box.
-  bool dummyRequiresBox(
-      const Fortran::evaluate::characteristics::DummyDataObject &obj,
-      bool isBindC) {
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attrs;
-    constexpr ShapeAttrs shapeRequiringBox = {
-        ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
-        ShapeAttr::AssumedRank, ShapeAttr::Coarray};
-    if ((obj.type.attrs() & shapeRequiringBox).any())
-      // Need to pass shape/coshape info in fir.box.
-      return true;
-    if (obj.type.type().IsPolymorphic() && !obj.type.type().IsAssumedType())
-      // Need to pass dynamic type info in fir.box.
-      return true;
-    if (const Fortran::semantics::DerivedTypeSpec *derived =
-            Fortran::evaluate::GetDerivedTypeSpec(obj.type.type()))
-      if (const Fortran::semantics::Scope *scope = derived->scope())
-        // Need to pass length type parameters in fir.box if any.
-        return scope->IsDerivedTypeWithLengthParameter();
-    if (isBindC && obj.type.type().IsAssumedLengthCharacter())
-      return true; // Fortran 2018 18.3.6 point 2 (5)
-    return false;
-  }
-
   mlir::Type
   translateDynamicType(const Fortran::evaluate::DynamicType &dynamicType) {
     Fortran::common::TypeCategory cat = dynamicType.category();
@@ -993,6 +1009,10 @@ private:
       TODO(loc, "VOLATILE in procedure interface");
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
+    if (obj.cudaDataAttr)
+      attrs.emplace_back(
+          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
+          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
@@ -1022,7 +1042,7 @@ private:
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
-    } else if (dummyRequiresBox(obj, isBindC)) {
+    } else if (obj.IsPassedByDescriptor(isBindC)) {
       // Pass as fir.box or fir.class
       if (isValueAttr &&
           !getConverter().getLoweringOptions().getLowerToHighLevelFIR())

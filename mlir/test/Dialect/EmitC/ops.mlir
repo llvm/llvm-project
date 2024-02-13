@@ -15,6 +15,8 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
 emitc.func @func(%arg0 : i32) {
   emitc.call_opaque "foo"(%arg0) : (i32) -> ()
   emitc.return
@@ -29,6 +31,8 @@ emitc.func @call() -> i32 {
   %0 = emitc.call @return_i32() : () -> (i32)
   emitc.return %0 : i32
 }
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
 
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32

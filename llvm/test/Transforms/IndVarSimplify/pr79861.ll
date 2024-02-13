@@ -12,7 +12,9 @@ define void @or_disjoint() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, [[ENTRY:%.*]] ], [ [[IV_DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
-; CHECK-NEXT:    call void @use(i64 [[OR]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i64 [[OR]], i64 [[ADD]]
+; CHECK-NEXT:    call void @use(i64 [[SEL]])
 ; CHECK-NEXT:    [[IV_DEC]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_DEC]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT:%.*]], label [[LOOP]]
@@ -44,7 +46,7 @@ define void @add_nowrap_flags(i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i64 [[IV]], 123
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[IV]], 123
 ; CHECK-NEXT:    call void @use(i64 [[ADD1]])
 ; CHECK-NEXT:    [[IV_INC]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_INC]], [[N]]
@@ -75,14 +77,15 @@ define void @expander_or_disjoint(i64 %n) {
 ; CHECK-LABEL: define void @expander_or_disjoint(
 ; CHECK-SAME: i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[N]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[IV]], [[OR]]
 ; CHECK-NEXT:    call void @use(i64 [[ADD]])
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_INC]], [[OR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

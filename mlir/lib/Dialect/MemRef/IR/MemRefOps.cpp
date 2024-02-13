@@ -2760,8 +2760,8 @@ static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
 /// marked as dropped in `droppedDims`.
 static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
                                   const llvm::SmallBitVector &droppedDims) {
-  assert(t1.getRank() == droppedDims.size() && "incorrect number of bits");
-  assert(t1.getRank() - t2.getRank() == droppedDims.count() &&
+  assert(size_t(t1.getRank()) == droppedDims.size() && "incorrect number of bits");
+  assert(size_t(t1.getRank() - t2.getRank()) == droppedDims.count() &&
          "incorrect number of dropped dims");
   int64_t t1Offset, t2Offset;
   SmallVector<int64_t> t1Strides, t2Strides;

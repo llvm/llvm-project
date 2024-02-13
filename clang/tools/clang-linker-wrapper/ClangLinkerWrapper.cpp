@@ -241,6 +241,70 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
   return *Path;
 }
 
+/// Returns the hashed value for a constant string.
+std::string getHash(StringRef Str) {
+  llvm::MD5 Hasher;
+  llvm::MD5::MD5Result Hash;
+  Hasher.update(Str);
+  Hasher.final(Hash);
+  return llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
+}
+
+/// Renames offloading entry sections in a relocatable link so they do not
+/// conflict with a later link job.
+Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
+  llvm::Triple Triple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+  if (Triple.isOSWindows())
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Relocatable linking is not supported on COFF targets");
+
+  Expected<std::string> ObjcopyPath =
+      findProgram("llvm-objcopy", {getMainExecutable("llvm-objcopy")});
+  if (!ObjcopyPath)
+    return ObjcopyPath.takeError();
+
+  // Use the linker output file to get a unique hash. This creates a unique
+  // identifier to rename the sections to that is deterministic to the contents.
+  auto BufferOrErr = DryRun ? MemoryBuffer::getMemBuffer("")
+                            : MemoryBuffer::getFileOrSTDIN(Output);
+  if (!BufferOrErr)
+    return createStringError(inconvertibleErrorCode(), "Failed to open %s",
+                             Output.str().c_str());
+  std::string Suffix = "_" + getHash((*BufferOrErr)->getBuffer());
+
+  SmallVector<StringRef> ObjcopyArgs = {
+      *ObjcopyPath,
+      Output,
+  };
+
+  // Remove the old .llvm.offloading section to prevent further linking.
+  ObjcopyArgs.emplace_back("--remove-section");
+  ObjcopyArgs.emplace_back(".llvm.offloading");
+  for (StringRef Prefix : {"omp", "cuda", "hip"}) {
+    auto Section = (Prefix + "_offloading_entries").str();
+    // Rename the offloading entires to make them private to this link unit.
+    ObjcopyArgs.emplace_back("--rename-section");
+    ObjcopyArgs.emplace_back(
+        Args.MakeArgString(Section + "=" + Section + Suffix));
+
+    // Rename the __start_ / __stop_ symbols appropriately to iterate over the
+    // newly renamed section containing the offloading entries.
+    ObjcopyArgs.emplace_back("--redefine-sym");
+    ObjcopyArgs.emplace_back(Args.MakeArgString("__start_" + Section + "=" +
+                                                "__start_" + Section + Suffix));
+    ObjcopyArgs.emplace_back("--redefine-sym");
+    ObjcopyArgs.emplace_back(Args.MakeArgString("__stop_" + Section + "=" +
+                                                "__stop_" + Section + Suffix));
+  }
+
+  if (Error Err = executeCommands(*ObjcopyPath, ObjcopyArgs))
+    return Err;
+
+  return Error::success();
+}
+
 /// Runs the wrapped linker job with the newly created input.
 Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("Execute host linker");
@@ -265,6 +329,10 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
     LinkerArgs.push_back(Arg);
   if (Error Err = executeCommands(LinkerPath, LinkerArgs))
     return Err;
+
+  if (Args.hasArg(OPT_relocatable))
+    return relocateOffloadSection(Args, ExecutableName);
+
   return Error::success();
 }
 
@@ -910,7 +978,8 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   case OFK_OpenMP:
     if (Error Err = offloading::wrapOpenMPBinaries(
             M, BuffersToWrap,
-            offloading::getOffloadEntryArray(M, "omp_offloading_entries")))
+            offloading::getOffloadEntryArray(M, "omp_offloading_entries"),
+            /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   case OFK_Cuda:
@@ -1355,12 +1424,6 @@ Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, bool IsArchive,
 Expected<SmallVector<SmallVector<OffloadFile>>>
 getDeviceInput(const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("ExtractDeviceCode");
-
-  // If the user is requesting a reloctable link we ignore the device code. The
-  // actual linker will merge the embedded device code sections so they can be
-  // linked when the executable is finally created.
-  if (Args.hasArg(OPT_relocatable))
-    return SmallVector<SmallVector<OffloadFile>>{};
 
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;

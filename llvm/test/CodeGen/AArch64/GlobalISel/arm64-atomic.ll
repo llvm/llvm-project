@@ -2146,8 +2146,7 @@ define i8 @atomicrmw_and_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov w8, #-1 ; =0xffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor w0, w8, w1
+; CHECK-OUTLINE-O1-NEXT:    mvn w0, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr1_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -3202,8 +3201,7 @@ define i16 @atomicrmw_and_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov w8, #-1 ; =0xffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor w0, w8, w1
+; CHECK-OUTLINE-O1-NEXT:    mvn w0, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr2_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -4255,8 +4253,7 @@ define i32 @atomicrmw_and_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov w8, #-1 ; =0xffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor w0, w8, w1
+; CHECK-OUTLINE-O1-NEXT:    mvn w0, w1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr4_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
@@ -5276,8 +5273,7 @@ define i64 @atomicrmw_and_i64(ptr %ptr, i64 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
 ; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
 ; CHECK-OUTLINE-O1-NEXT:    mov x2, x0
-; CHECK-OUTLINE-O1-NEXT:    mov x8, #-1 ; =0xffffffffffffffff
-; CHECK-OUTLINE-O1-NEXT:    eor x0, x8, x1
+; CHECK-OUTLINE-O1-NEXT:    mvn x0, x1
 ; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
 ; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_ldclr8_rel
 ; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload

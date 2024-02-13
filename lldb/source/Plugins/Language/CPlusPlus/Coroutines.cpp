@@ -125,24 +125,24 @@ lldb::ValueObjectSP lldb_private::formatters::
   return lldb::ValueObjectSP();
 }
 
-bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
-    Update() {
+lldb::ChildCacheState
+lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   m_resume_ptr_sp.reset();
   m_destroy_ptr_sp.reset();
   m_promise_ptr_sp.reset();
 
   ValueObjectSP valobj_sp = m_backend.GetNonSyntheticValue();
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   lldb::addr_t frame_ptr_addr = GetCoroFramePtrFromHandle(valobj_sp);
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
   auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
   if (!ast_ctx)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   // Create the `resume` and `destroy` children.
   lldb::TargetSP target_sp = m_backend.GetTargetSP();
@@ -165,7 +165,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   CompilerType promise_type(
       valobj_sp->GetCompilerType().GetTypeTemplateArgument(0));
   if (!promise_type)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   // Try to infer the promise_type if it was type-erased
   if (promise_type.IsVoidType()) {
@@ -180,7 +180,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   // If we don't know the promise type, we don't display the `promise` member.
   // `CreateValueObjectFromAddress` below would fail for `void` types.
   if (promise_type.IsVoidType()) {
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   // Add the `promise` member. We intentionally add `promise` as a pointer type
@@ -194,7 +194,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   if (error.Success())
     m_promise_ptr_sp = promisePtr->Clone(ConstString("promise"));
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::

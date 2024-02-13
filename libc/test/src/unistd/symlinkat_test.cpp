@@ -34,7 +34,7 @@ TEST(LlvmLibcSymlinkatTest, CreateAndUnlink) {
   //   2. Create a link to that file.
   //   3. Open the link to check that the link was created.
   //   4. Cleanup the file and its link.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int write_fd =
       LIBC_NAMESPACE::open(TEST_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();

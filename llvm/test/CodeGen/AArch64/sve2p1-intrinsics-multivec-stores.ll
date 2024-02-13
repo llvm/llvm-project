@@ -124,33 +124,33 @@ define void @st2q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 }
 
 
-define void @st2q_si_i8_off16(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, <vscale x 16 x i8>* %addr) {
+define void @st2q_si_i8_off16(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st2q_si_i8_off16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -16
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -16
   call void @llvm.aarch64.sve.st2q.nxv16i8(<vscale x 16 x i8> %v0,
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st2q_si_i8_off14(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, <vscale x 16 x i8>* %addr) {
+define void @st2q_si_i8_off14(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st2q_si_i8_off14:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 14
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 14
   call void @llvm.aarch64.sve.st2q.nxv16i8(<vscale x 16 x i8> %v0,
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
@@ -165,7 +165,7 @@ define void @st2q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
   call void @llvm.aarch64.sve.st2q.nxv8i16(<vscale x 8 x i16> %v0,
                                           <vscale x 8 x i16> %v1,
                                           <vscale x 8 x i1> %pred,
-                                          i8* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -180,7 +180,7 @@ define void @st2q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
   call void @llvm.aarch64.sve.st2q.nxv4i32(<vscale x 4 x i32> %v0,
                                           <vscale x 4 x i32> %v1,
                                           <vscale x 4 x i1> %pred,
-                                          i32* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -195,7 +195,7 @@ define void @st2q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
   call void @llvm.aarch64.sve.st2q.nxv2i64(<vscale x 2 x i64> %v0,
                                           <vscale x 2 x i64> %v1,
                                           <vscale x 2 x i1> %pred,
-                                          i64* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -210,7 +210,7 @@ define void @st2q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
   call void @llvm.aarch64.sve.st2q.nxv8f16(<vscale x 8 x half> %v0,
                                           <vscale x 8 x half> %v1,
                                           <vscale x 8 x i1> %pred,
-                                          half* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -225,7 +225,7 @@ define void @st2q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
   call void @llvm.aarch64.sve.st2q.nxv4f32(<vscale x 4 x float> %v0,
                                           <vscale x 4 x float> %v1,
                                           <vscale x 4 x i1> %pred,
-                                          float* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -240,7 +240,7 @@ define void @st2q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
   call void @llvm.aarch64.sve.st2q.nxv2f64(<vscale x 2 x double> %v0,
                                           <vscale x 2 x double> %v1,
                                           <vscale x 2 x i1> %pred,
-                                          double* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -255,7 +255,7 @@ define void @st2q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
   call void @llvm.aarch64.sve.st2q.nxv8bf16(<vscale x 8 x bfloat> %v0,
                                           <vscale x 8 x bfloat> %v1,
                                           <vscale x 8 x i1> %pred,
-                                          bfloat* %gep)
+                                          ptr %gep)
   ret void
 }
 
@@ -399,7 +399,7 @@ define void @st3q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
   ret void
 }
 
-define void @st3q_si_i8_off24(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, <vscale x 16 x i8>* %addr) {
+define void @st3q_si_i8_off24(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i8_off24:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -407,16 +407,16 @@ define void @st3q_si_i8_off24(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -24
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -24
   call void @llvm.aarch64.sve.st3q.nxv16i8(<vscale x 16 x i8> %v0,
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i8> %v2,
                                            <vscale x 16 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_i8_off21(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, <vscale x 16 x i8>* %addr) {
+define void @st3q_si_i8_off21(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i8_off21:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -424,16 +424,16 @@ define void @st3q_si_i8_off21(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 21
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv16i8(<vscale x 16 x i8> %v0,
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i8> %v2,
                                            <vscale x 16 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2,  <vscale x 8 x i1> %pred, <vscale x 8 x i16>* %addr) {
+define void @st3q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2,  <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -441,16 +441,16 @@ define void @st3q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 21
+  %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv8i16(<vscale x 8 x i16> %v0,
                                            <vscale x 8 x i16> %v1,
                                            <vscale x 8 x i16> %v2,
                                            <vscale x 8 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i1> %pred, <vscale x 4 x i32>* %addr) {
+define void @st3q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -458,16 +458,16 @@ define void @st3q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 21
+  %base = getelementptr <vscale x 4 x i32>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv4i32(<vscale x 4 x i32> %v0,
                                            <vscale x 4 x i32> %v1,
                                            <vscale x 4 x i32> %v2,
                                            <vscale x 4 x i1> %pred,
-                                           i32* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1,<vscale x 2 x i64> %v2, <vscale x 2 x i1> %pred, <vscale x 2 x i64>* %addr) {
+define void @st3q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1,<vscale x 2 x i64> %v2, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -475,16 +475,16 @@ define void @st3q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1,<vscale 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 21
+  %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv2i64(<vscale x 2 x i64> %v0,
                                            <vscale x 2 x i64> %v1,
                                            <vscale x 2 x i64> %v2,
                                            <vscale x 2 x i1> %pred,
-                                           i64* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x i1> %pred, <vscale x 8 x half>* %addr) {
+define void @st3q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -492,16 +492,16 @@ define void @st3q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 21
+  %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv8f16(<vscale x 8 x half> %v0,
                                            <vscale x 8 x half> %v1,
                                            <vscale x 8 x half> %v2,
                                            <vscale x 8 x i1> %pred,
-                                           half* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x i1> %pred, <vscale x 4 x float>* %addr) {
+define void @st3q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -509,16 +509,16 @@ define void @st3q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 21
+  %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv4f32(<vscale x 4 x float> %v0,
                                            <vscale x 4 x float> %v1,
                                            <vscale x 4 x float> %v2,
                                            <vscale x 4 x i1> %pred,
-                                           float* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x i1> %pred, <vscale x 2 x double>* %addr) {
+define void @st3q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -526,16 +526,16 @@ define void @st3q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 21
+  %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv2f64(<vscale x 2 x double> %v0,
                                            <vscale x 2 x double> %v1,
                                            <vscale x 2 x double> %v2,
                                            <vscale x 2 x i1> %pred,
-                                           double* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st3q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x i1> %pred, <vscale x 8 x bfloat>* %addr) {
+define void @st3q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
@@ -543,12 +543,12 @@ define void @st3q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 21
+  %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 21
   call void @llvm.aarch64.sve.st3q.nxv8bf16(<vscale x 8 x bfloat> %v0,
                                             <vscale x 8 x bfloat> %v1,
                                             <vscale x 8 x bfloat> %v2,
                                             <vscale x 8 x i1> %pred,
-                                            bfloat* %base)
+                                            ptr %base)
   ret void
 }
 
@@ -707,7 +707,7 @@ define void @st4q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
   ret void
 }
 
-define void @st4q_si_i8_off32(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, <vscale x 16 x i8>* %addr) {
+define void @st4q_si_i8_off32(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i8_off32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -716,17 +716,17 @@ define void @st4q_si_i8_off32(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -32
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -32
   call void @llvm.aarch64.sve.st4q.nxv16i8(<vscale x 16 x i8> %v0,
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i8> %v2,
                                            <vscale x 16 x i8> %v3,
                                            <vscale x 16 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_i8_off28(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, <vscale x 16 x i8>* %addr) {
+define void @st4q_si_i8_off28(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i8_off28:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -735,17 +735,17 @@ define void @st4q_si_i8_off28(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 28
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv16i8(<vscale x 16 x i8> %v0,
                                            <vscale x 16 x i8> %v1,
                                            <vscale x 16 x i8> %v2,
                                            <vscale x 16 x i8> %v3,
                                            <vscale x 16 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2, <vscale x 8 x i16> %v3,  <vscale x 8 x i1> %pred, <vscale x 8 x i16>* %addr) {
+define void @st4q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2, <vscale x 8 x i16> %v3,  <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -754,17 +754,17 @@ define void @st4q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 28
+  %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv8i16(<vscale x 8 x i16> %v0,
                                            <vscale x 8 x i16> %v1,
                                            <vscale x 8 x i16> %v2,
                                            <vscale x 8 x i16> %v3,
                                            <vscale x 8 x i1> %pred,
-                                           i8* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i32> %v3, <vscale x 4 x i1> %pred, <vscale x 4 x i32>* %addr) {
+define void @st4q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i32> %v3, <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -773,17 +773,17 @@ define void @st4q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base1 = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 28
+  %base1 = getelementptr <vscale x 4 x i32>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv4i32(<vscale x 4 x i32> %v0,
                                            <vscale x 4 x i32> %v1,
                                            <vscale x 4 x i32> %v2,
                                            <vscale x 4 x i32> %v3,
                                            <vscale x 4 x i1> %pred,
-                                           i32* %base1)
+                                           ptr %base1)
   ret void
 }
 
-define void @st4q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %v2, <vscale x 2 x i64> %v3, <vscale x 2 x i1> %pred, <vscale x 2 x i64>* %addr) {
+define void @st4q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %v2, <vscale x 2 x i64> %v3, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -792,17 +792,17 @@ define void @st4q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 28
+  %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv2i64(<vscale x 2 x i64> %v0,
                                            <vscale x 2 x i64> %v1,
                                            <vscale x 2 x i64> %v2,
                                            <vscale x 2 x i64> %v3,
                                            <vscale x 2 x i1> %pred,
-                                           i64* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x i1> %pred, <vscale x 8 x half>* %addr) {
+define void @st4q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -811,17 +811,17 @@ define void @st4q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 28
+  %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv8f16(<vscale x 8 x half> %v0,
                                            <vscale x 8 x half> %v1,
                                            <vscale x 8 x half> %v2,
                                            <vscale x 8 x half> %v3,
                                            <vscale x 8 x i1> %pred,
-                                           half* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2,<vscale x 4 x float> %v3,  <vscale x 4 x i1> %pred, <vscale x 4 x float>* %addr) {
+define void @st4q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2,<vscale x 4 x float> %v3,  <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -830,17 +830,17 @@ define void @st4q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 28
+  %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv4f32(<vscale x 4 x float> %v0,
                                            <vscale x 4 x float> %v1,
                                            <vscale x 4 x float> %v2,
                                            <vscale x 4 x float> %v3,
                                            <vscale x 4 x i1> %pred,
-                                           float* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x i1> %pred, <vscale x 2 x double>* %addr) {
+define void @st4q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -849,17 +849,17 @@ define void @st4q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 28
+  %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv2f64(<vscale x 2 x double> %v0,
                                            <vscale x 2 x double> %v1,
                                            <vscale x 2 x double> %v2,
                                            <vscale x 2 x double> %v3,
                                            <vscale x 2 x i1> %pred,
-                                           double* %base)
+                                           ptr %base)
   ret void
 }
 
-define void @st4q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x i1> %pred, <vscale x 8 x bfloat>* %addr) {
+define void @st4q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
@@ -868,13 +868,13 @@ define void @st4q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 28
+  %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 28
   call void @llvm.aarch64.sve.st4q.nxv8bf16(<vscale x 8 x bfloat> %v0,
                                             <vscale x 8 x bfloat> %v1,
                                             <vscale x 8 x bfloat> %v2,
                                             <vscale x 8 x bfloat> %v3,
                                             <vscale x 8 x i1> %pred,
-                                            bfloat* %base)
+                                            ptr %base)
   ret void
 }
 

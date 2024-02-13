@@ -43,17 +43,17 @@ __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*);
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t);
 
-template <class _Atp, class _Fn>
+template <class _Atp, class _BackoffTest>
 struct __libcpp_atomic_wait_backoff_impl {
-  _Atp* __a;
-  _Fn __test_fn;
+  _Atp* __a_;
+  _BackoffTest __backoff_test_;
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(64)) {
-      auto const __monitor = std::__libcpp_atomic_monitor(__a);
-      if (__test_fn())
+      auto __monitor = std::__libcpp_atomic_monitor(__a_);
+      if (__backoff_test_(__monitor))
         return true;
-      std::__libcpp_atomic_wait(__a, __monitor);
+      std::__libcpp_atomic_wait(__a_, __monitor);
     } else if (__elapsed > chrono::microseconds(4))
       __libcpp_thread_yield();
     else {
@@ -62,10 +62,26 @@ struct __libcpp_atomic_wait_backoff_impl {
   }
 };
 
-template <class _Atp, class _Fn>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Fn&& __test_fn) {
-  __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Fn> > __backoff_fn = {__a, __test_fn};
-  return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
+template <class _Atp, class _Poll, class _BackoffTest>
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
+__cxx_atomic_wait(_Atp* __a, _Poll&& __poll, _BackoffTest&& __backoff_test) {
+  __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_BackoffTest> > __backoff_fn = {__a, __backoff_test};
+  return std::__libcpp_thread_poll_with_backoff(__poll, __backoff_fn);
+}
+
+template <class _Poll>
+struct __libcpp_atomic_wait_poll_as_backoff_test {
+  _Poll __poll_;
+
+  _LIBCPP_AVAILABILITY_SYNC
+  _LIBCPP_HIDE_FROM_ABI bool operator()(__cxx_contention_t&) const { return __poll_(); }
+};
+
+template <class _Atp, class _Poll>
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Poll&& __poll) {
+  __libcpp_atomic_wait_backoff_impl<_Atp, __libcpp_atomic_wait_poll_as_backoff_test<_Poll&> > __backoff_fn = {
+      __a, {__poll}};
+  return std::__libcpp_thread_poll_with_backoff(__poll, __backoff_fn);
 }
 
 #else // _LIBCPP_HAS_NO_THREADS

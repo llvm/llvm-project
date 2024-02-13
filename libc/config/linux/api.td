@@ -55,7 +55,7 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
 }
 
 def MathAPI : PublicAPI<"math.h"> {
-  let Types = ["double_t", "float_t"];
+  let Types = ["double_t", "float_t", "float128"];
 }
 
 def FenvAPI: PublicAPI<"fenv.h"> {
