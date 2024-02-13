@@ -242,11 +242,10 @@ public:
       if (!isRegisterClass() || !RHS.isRegisterClass())
         return false;
 
-      RegisterSet Tmp;
-      std::insert_iterator<RegisterSet> II(Tmp, Tmp.begin());
+      std::vector<Record *> Tmp;
       std::set_intersection(Registers.begin(), Registers.end(),
-                            RHS.Registers.begin(), RHS.Registers.end(), II,
-                            LessRecordByID());
+                            RHS.Registers.begin(), RHS.Registers.end(),
+                            std::back_inserter(Tmp), LessRecordByID());
 
       return !Tmp.empty();
     }
@@ -1270,11 +1269,10 @@ void AsmMatcherInfo::buildRegisterClasses(
       }
 
       RegisterSet Tmp;
-      std::swap(Tmp, ContainingSet);
-      std::insert_iterator<RegisterSet> II(ContainingSet,
-                                           ContainingSet.begin());
-      std::set_intersection(Tmp.begin(), Tmp.end(), RS.begin(), RS.end(), II,
-                            LessRecordByID());
+      std::set_intersection(ContainingSet.begin(), ContainingSet.end(),
+                            RS.begin(), RS.end(),
+                            std::inserter(Tmp, Tmp.begin()), LessRecordByID());
+      ContainingSet = std::move(Tmp);
     }
 
     if (!ContainingSet.empty()) {
