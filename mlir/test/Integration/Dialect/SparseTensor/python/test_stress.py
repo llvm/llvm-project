@@ -206,9 +206,7 @@ def main():
         dense_lvl = st.EncodingAttr.build_level_type(st.LevelFormat.dense)
         sparse_lvl = st.EncodingAttr.build_level_type(st.LevelFormat.compressed)
         levels = list(
-            itertools.product(
-                *itertools.repeat([dense_lvl, sparse_lvl], rank)
-            )
+            itertools.product(*itertools.repeat([dense_lvl, sparse_lvl], rank))
         )
         # All permutations.
         orderings = list(
