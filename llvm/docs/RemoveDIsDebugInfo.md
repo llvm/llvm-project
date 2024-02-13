@@ -1,4 +1,4 @@
-# What's all this then?
+# Debug info migration: From intrinsics to records
 
 We're planning on removing debug info intrinsics from LLVM, as they're slow, unwieldy and can confuse optimisation passes if they're not expecting them. Instead of having a sequence of instructions that looks like this:
 

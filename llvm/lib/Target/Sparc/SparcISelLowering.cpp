@@ -13,6 +13,7 @@
 
 #include "SparcISelLowering.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
 #include "SparcTargetMachine.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -729,6 +731,30 @@ SDValue SparcTargetLowering::LowerFormalArguments_64(
   return Chain;
 }
 
+// Check whether any of the argument registers are reserved
+static bool isAnyArgRegReserved(const SparcRegisterInfo *TRI,
+                                const MachineFunction &MF) {
+  // The register window design means that outgoing parameters at O*
+  // will appear in the callee as I*.
+  // Be conservative and check both sides of the register names.
+  bool Outgoing =
+      llvm::any_of(SP::GPROutgoingArgRegClass, [TRI, &MF](MCPhysReg r) {
+        return TRI->isReservedReg(MF, r);
+      });
+  bool Incoming =
+      llvm::any_of(SP::GPRIncomingArgRegClass, [TRI, &MF](MCPhysReg r) {
+        return TRI->isReservedReg(MF, r);
+      });
+  return Outgoing || Incoming;
+}
+
+static void emitReservedArgRegCallError(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  F.getContext().diagnose(DiagnosticInfoUnsupported{
+      F, ("SPARC doesn't support"
+          " function calls if any of the argument registers is reserved.")});
+}
+
 SDValue
 SparcTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                SmallVectorImpl<SDValue> &InVals) const {
@@ -805,6 +831,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall                      = CLI.IsTailCall;
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1055,6 +1082,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice)
            ? TRI->getRTCallPreservedMask(CallConv)
            : TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv));
+
+  if (isAnyArgRegReserved(TRI, MF))
+    emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -1125,6 +1156,13 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
     .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
     .Default(0);
 
+  // If we're directly referencing register names
+  // (e.g in GCC C extension `register int r asm("g1");`),
+  // make sure that said register is in the reserve list.
+  const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  if (!TRI->isReservedReg(MF, Reg))
+    Reg = 0;
+
   if (Reg)
     return Reg;
 
@@ -1189,6 +1227,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SDLoc DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1372,6 +1411,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice) ? TRI->getRTCallPreservedMask(CLI.CallConv)
                          : TRI->getCallPreservedMask(DAG.getMachineFunction(),
                                                      CLI.CallConv));
+
+  if (isAnyArgRegReserved(TRI, MF))
+    emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
