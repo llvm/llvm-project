@@ -3983,8 +3983,8 @@ static bool paddingIsNotNeeded(PackOp op) {
                                       op.getMixedTiles());
 }
 
-// Returns true if the `srcShape` or `destShape` is different from the one in
-// `packOp`.
+/// Returns true if the `srcShape` or `destShape` is different from the one in
+/// `packOp` and populates each with the inferred static shape.
 static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
                              SmallVectorImpl<int64_t> &destShape) {
   bool changeNeeded = false;
