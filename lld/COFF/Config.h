@@ -290,7 +290,7 @@ struct Configuration {
   uint32_t minorOSVersion = 0;
   uint32_t majorSubsystemVersion = 6;
   uint32_t minorSubsystemVersion = 0;
-  uint32_t timestamp = 0;
+  uint64_t timestamp = 0;
   uint32_t functionPadMin = 0;
   uint32_t timeTraceGranularity = 0;
   uint16_t dependentLoadFlags = 0;

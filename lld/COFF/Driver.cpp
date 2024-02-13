@@ -1821,7 +1821,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       StringRef value(arg->getValue());
       if (value.getAsInteger(0, config->timestamp))
         fatal(Twine("invalid timestamp: ") + value +
-              ".  Expected 32-bit integer");
+              ".  Expected 64-bit integer");
     }
   } else {
     config->repro = false;
@@ -1830,7 +1830,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       StringRef value(*epoch);
       if (value.getAsInteger(0, config->timestamp))
         fatal(Twine("invalid SOURCE_DATE_EPOCH timestamp: ") + value +
-              ".  Expected 32-bit integer");
+              ".  Expected 64-bit integer");
     } else {
       config->timestamp = time(nullptr);
     }

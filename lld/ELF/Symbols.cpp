@@ -167,7 +167,7 @@ uint64_t Symbol::getGotVA() const {
 }
 
 uint64_t Symbol::getGotOffset() const {
-  return getGotIdx() * target->gotEntrySize;
+  return getGotIdx() * (uint64_t)target->gotEntrySize;
 }
 
 uint64_t Symbol::getGotPltVA() const {
@@ -178,8 +178,9 @@ uint64_t Symbol::getGotPltVA() const {
 
 uint64_t Symbol::getGotPltOffset() const {
   if (isInIplt)
-    return getPltIdx() * target->gotEntrySize;
-  return (getPltIdx() + target->gotPltHeaderEntriesNum) * target->gotEntrySize;
+    return getPltIdx() * (uint64_t)target->gotEntrySize;
+  return (getPltIdx() + target->gotPltHeaderEntriesNum) *
+         (uint64_t)target->gotEntrySize;
 }
 
 uint64_t Symbol::getPltVA() const {

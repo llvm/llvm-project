@@ -13,8 +13,8 @@ RUN: env SOURCE_DATE_EPOCH=12345 lld-link %t.obj /debug /timestamp:0 /entry:main
 RUN: lld-link %t.obj /debug /timestamp:4294967295 /entry:main /nodefaultlib /out:%t.8.exe
 RUN: env SOURCE_DATE_EPOCH=4294967295 lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.9.exe
 # Test that setting UINT32_MAX+1 as timestamp fails.
-RUN: env LLD_IN_TEST=1 not lld-link %t.obj /debug /timestamp:4294967296 /entry:main /nodefaultlib /out:%t.10.exe 2>&1 | FileCheck %s --check-prefix=ERROR
-RUN: env SOURCE_DATE_EPOCH=4294967296 env LLD_IN_TEST=1 not lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.11.exe 2>&1 | FileCheck %s --check-prefix=ERROR2
+RUN: env LLD_IN_TEST=1 not lld-link %t.obj /debug /timestamp:18446744073709551616 /entry:main /nodefaultlib /out:%t.10.exe 2>&1 | FileCheck %s --check-prefix=ERROR
+RUN: env SOURCE_DATE_EPOCH=18446744073709551616 env LLD_IN_TEST=1 not lld-link %t.obj /debug /entry:main /nodefaultlib /out:%t.11.exe 2>&1 | FileCheck %s --check-prefix=ERROR2
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.1.exe | FileCheck %s --check-prefix=HASH
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.2.exe | FileCheck %s --check-prefix=HASH
 RUN: llvm-readobj --file-headers --coff-debug-directory %t.3.exe | FileCheck %s --check-prefix=ZERO
@@ -41,5 +41,5 @@ LARGE: TimeDateStamp: 2038-01-19 03:14:07 (0x7FFFFFFF)
 LARGE: DebugDirectory [
 LARGE: TimeDateStamp: 2038-01-19 03:14:07 (0x7FFFFFFF)
 
-ERROR: error: invalid timestamp: 4294967296.  Expected 32-bit integer
-ERROR2: error: invalid SOURCE_DATE_EPOCH timestamp: 4294967296.  Expected 32-bit integer
+ERROR: error: invalid timestamp: 18446744073709551616.  Expected 64-bit integer
+ERROR2: error: invalid SOURCE_DATE_EPOCH timestamp: 18446744073709551616.  Expected 64-bit integer

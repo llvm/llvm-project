@@ -1714,7 +1714,8 @@ void elf::postScanRelocations() {
         if (!sym.isDefined()) {
           replaceWithDefined(sym, *in.plt,
                              target->pltHeaderSize +
-                                 target->pltEntrySize * sym.getPltIdx(),
+                                 (uint64_t)target->pltEntrySize *
+                                     sym.getPltIdx(),
                              0);
           sym.setFlags(NEEDS_COPY);
           if (config->emachine == EM_PPC) {

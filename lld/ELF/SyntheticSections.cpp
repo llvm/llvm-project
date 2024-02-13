@@ -801,7 +801,7 @@ uint64_t MipsGotSection::getGlobalDynOffset(const InputFile *f,
                                             const Symbol &s) const {
   const FileGot &g = gots[f->mipsGotIndex];
   Symbol *sym = const_cast<Symbol *>(&s);
-  return g.dynTlsSymbols.lookup(sym) * config->wordsize;
+  return g.dynTlsSymbols.lookup(sym) * (uint64_t)config->wordsize;
 }
 
 const Symbol *MipsGotSection::getFirstGlobalEntry() const {
