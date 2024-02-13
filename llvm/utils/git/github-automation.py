@@ -309,11 +309,9 @@ class PRMergeOnBehalfInformation:
         self.author = author
         self.reviewer = reviewer
 
-    def run(self) -> bool:
-        # Check this first because it only costs 1 API point.
+    def can_merge(self, user: str) -> bool:
         try:
-            if self.repo.get_collaborator_permission(self.author) in ["admin", "write"]:
-                return
+            return self.repo.get_collaborator_permission(user) in ["admin", "write"]
         # There is a UnknownObjectException for this scenario, but this method
         # does not use it.
         except github.GithubException as e:
@@ -322,6 +320,12 @@ class PRMergeOnBehalfInformation:
             # issue, raise it so it is visible.
             if e.status != 404:
                 raise e
+            return False
+
+    def run(self) -> bool:
+        # Check this first because it only costs 1 API point.
+        if self.can_merge(self.author):
+            return
 
         # A review can be approved more than once, only comment the first time.
         for comment in self.pr.as_issue().get_comments():
@@ -329,9 +333,16 @@ class PRMergeOnBehalfInformation:
                 return
 
         # This text is using Markdown formatting.
-        comment = f"""\
+        if self.can_merge(self.reviewer):
+            comment = f"""\
 {self.COMMENT_TAG}
 @{self.reviewer} the PR author does not have permission to merge their own PRs yet. Please merge on their behalf."""
+        else:
+            comment = f"""\
+{self.COMMENT_TAG}
+@{self.reviewer} the author of this PR does not have permission to merge and neither do you.
+Please find someone who has merge permissions who can merge it on the author's behalf. This could be one of the other reviewers or you can ask on [Discord](https://discord.com/invite/xS7Z362)."""
+
         self.pr.as_issue().create_comment(comment)
         return True
 
