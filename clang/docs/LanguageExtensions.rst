@@ -2764,6 +2764,39 @@ Query for this feature with ``__has_builtin(__builtin_readcyclecounter)``. Note
 that even if present, its use may depend on run-time privilege or other OS
 controlled state.
 
+``__builtin_readsteadycounter``
+-------------------------------
+
+``__builtin_readsteadycounter`` is used to access the fixed frequency counter
+register (or a similar steady-rate clock) on those targets that support it.
+The function is similar to ``__builtin_readcyclecounter`` above except that the
+frequency is fixed, making it suitable for measuring elapsed time.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_readsteadycounter()
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  unsigned long long t0 = __builtin_readsteadycounter();
+  do_something();
+  unsigned long long t1 = __builtin_readsteadycounter();
+  unsigned long long secs_to_do_something = (t1 - t0) / tick_rate;
+
+**Description**:
+
+The ``__builtin_readsteadycounter()`` builtin returns the frequency counter value.
+When not supported by the target, the return value is always zero. This builtin
+takes no arguments and produces an unsigned long long result. The builtin does 
+not guarantee any particular frequency, only that it is stable. Knowledge of the 
+counter's true frequency will need to be provided by the user.
+
+Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
+
 ``__builtin_dump_struct``
 -------------------------
 

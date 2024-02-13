@@ -55,10 +55,12 @@ public:
       basic_stringbuf(const T& t, const Allocator& a);                                   // Since C++26
     template<class T>
       basic_stringbuf(const T& t, ios_base::openmode which, const Allocator& a);         // Since C++26
+    basic_stringbuf(const basic_stringbuf&) = delete;
     basic_stringbuf(basic_stringbuf&& rhs);
     basic_stringbuf(basic_stringbuf&& rhs, const allocator_type& a);                   // C++20
 
     // [stringbuf.assign] Assign and swap:
+    basic_stringbuf& operator=(const basic_stringbuf&) = delete;
     basic_stringbuf& operator=(basic_stringbuf&& rhs);
     void swap(basic_stringbuf& rhs) noexcept(see below);                               // conditionally noexcept since C++20
 
@@ -134,9 +136,11 @@ public:
       basic_istringstream(const T& t, const Allocator& a);                               // Since C++26
     template<class T>
       basic_istringstream(const T& t, ios_base::openmode which, const Allocator& a);     // Since C++26
+    basic_istringstream(const basic_istringstream&) = delete;
     basic_istringstream(basic_istringstream&& rhs);
 
     // [istringstream.assign] Assign and swap:
+    basic_istringstream& operator=(const basic_istringstream&) = delete;
     basic_istringstream& operator=(basic_istringstream&& rhs);
     void swap(basic_istringstream& rhs);
 
@@ -201,9 +205,11 @@ public:
       basic_ostringstream(const T& t, const Allocator& a);                                // Since C++26
     template<class T>
       basic_ostringstream(const T& t, ios_base::openmode which, const Allocator& a);      // Since C++26
+    basic_ostringstream(const basic_ostringstream&) = delete;                             
     basic_ostringstream(basic_ostringstream&& rhs);
 
     // [ostringstream.assign] Assign and swap:
+    basic_ostringstream& operator=(const basic_ostringstream&) = delete;
     basic_ostringstream& operator=(basic_ostringstream&& rhs);
     void swap(basic_ostringstream& rhs);
 
@@ -269,9 +275,11 @@ public:
       basic_stringstream(const T& t, const Allocator& a);                                   // Since C++26
     template<class T>
       basic_stringstream(const T& t, ios_base::openmode which, const Allocator& a);         // Since C++26
+    basic_stringstream(const basic_stringstream&) = delete;
     basic_stringstream(basic_stringstream&& rhs);
 
     // [stringstream.assign] Assign and swap:
+    basic_stringstream& operator=(const basic_stringstream&) = delete;
     basic_stringstream& operator=(basic_stringstream&& rhs);
     void swap(basic_stringstream& rhs);
 
@@ -424,6 +432,7 @@ public:
 
 #endif //  _LIBCPP_STD_VER >= 26
 
+  basic_stringbuf(const basic_stringbuf&) = delete;
   basic_stringbuf(basic_stringbuf&& __rhs) : __mode_(__rhs.__mode_) { __move_init(std::move(__rhs)); }
 
 #if _LIBCPP_STD_VER >= 20
@@ -434,6 +443,7 @@ public:
 #endif
 
   // [stringbuf.assign] Assign and swap:
+  basic_stringbuf& operator=(const basic_stringbuf&) = delete;
   basic_stringbuf& operator=(basic_stringbuf&& __rhs);
   void swap(basic_stringbuf& __rhs)
 #if _LIBCPP_STD_VER >= 20
@@ -913,12 +923,14 @@ public:
 
 #endif //  _LIBCPP_STD_VER >= 26
 
+  basic_istringstream(const basic_istringstream&) = delete;
   _LIBCPP_HIDE_FROM_ABI basic_istringstream(basic_istringstream&& __rhs)
       : basic_istream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
   }
 
   // [istringstream.assign] Assign and swap:
+  basic_istringstream& operator=(const basic_istringstream&) = delete;
   basic_istringstream& operator=(basic_istringstream&& __rhs) {
     basic_istream<char_type, traits_type>::operator=(std::move(__rhs));
     __sb_ = std::move(__rhs.__sb_);
@@ -1047,12 +1059,14 @@ public:
 
 #endif //  _LIBCPP_STD_VER >= 26
 
+  basic_ostringstream(const basic_ostringstream&) = delete;
   _LIBCPP_HIDE_FROM_ABI basic_ostringstream(basic_ostringstream&& __rhs)
       : basic_ostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_ostream<_CharT, _Traits>::set_rdbuf(&__sb_);
   }
 
   // [ostringstream.assign] Assign and swap:
+  basic_ostringstream& operator=(const basic_ostringstream&) = delete;
   basic_ostringstream& operator=(basic_ostringstream&& __rhs) {
     basic_ostream<char_type, traits_type>::operator=(std::move(__rhs));
     __sb_ = std::move(__rhs.__sb_);
@@ -1186,12 +1200,14 @@ public:
 
 #endif //  _LIBCPP_STD_VER >= 26
 
+  basic_stringstream(const basic_stringstream&) = delete;
   _LIBCPP_HIDE_FROM_ABI basic_stringstream(basic_stringstream&& __rhs)
       : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
     basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
   }
 
   // [stringstream.assign] Assign and swap:
+  basic_stringstream& operator=(const basic_stringstream&) = delete;
   basic_stringstream& operator=(basic_stringstream&& __rhs) {
     basic_iostream<char_type, traits_type>::operator=(std::move(__rhs));
     __sb_ = std::move(__rhs.__sb_);

@@ -84,6 +84,7 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   if (AnyInconclusiveBase)
     return std::nullopt;
 
+  Paths.clear();
   const auto hasPublicDerefInBase =
       [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
         auto hasDerefInBase = clang::hasPublicMethodInBase(Base, "deref");
@@ -154,6 +155,7 @@ std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
 
     if (((className == "Ref" || className == "RefPtr") &&
          methodName == "get") ||
+        (className == "Ref" && methodName == "ptr") ||
         ((className == "String" || className == "AtomString" ||
           className == "AtomStringImpl" || className == "UniqueString" ||
           className == "UniqueStringImpl" || className == "Identifier") &&
