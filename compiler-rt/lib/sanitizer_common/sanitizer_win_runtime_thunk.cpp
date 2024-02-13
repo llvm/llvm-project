@@ -11,16 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 #ifdef SANITIZER_DYNAMIC_RUNTIME_THUNK
-#define SANITIZER_IMPORT_INTERFACE 1
-#include "sanitizer_win_defs.h"
+#  define SANITIZER_IMPORT_INTERFACE 1
+#  include "sanitizer_win_defs.h"
 // Define weak alias for all weak functions imported from sanitizer common.
-#define INTERFACE_FUNCTION(Name)
-#define INTERFACE_WEAK_FUNCTION(Name) WIN_WEAK_IMPORT_DEF(Name)
-#include "sanitizer_common_interface.inc"
-#endif // SANITIZER_DYNAMIC_RUNTIME_THUNK
+#  define INTERFACE_FUNCTION(Name)
+#  define INTERFACE_WEAK_FUNCTION(Name) WIN_WEAK_IMPORT_DEF(Name)
+#  include "sanitizer_common_interface.inc"
+#endif  // SANITIZER_DYNAMIC_RUNTIME_THUNK
 
 namespace __sanitizer {
 // Add one, otherwise unused, external symbol to this object file so that the
 // Visual C++ linker includes it and reads the .drective section.
 void ForceWholeArchiveIncludeForSanitizerCommon() {}
-}
+}  // namespace __sanitizer
