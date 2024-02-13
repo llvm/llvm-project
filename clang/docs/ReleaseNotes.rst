@@ -296,6 +296,8 @@ clang-format
 
 - ``AlwaysBreakTemplateDeclarations`` is deprecated and renamed to
   ``BreakTemplateDeclarations``.
+- ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
+  ``BreakAfterReturnType``.
 
 libclang
 --------
