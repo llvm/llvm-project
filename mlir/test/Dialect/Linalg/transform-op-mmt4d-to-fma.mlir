@@ -33,7 +33,7 @@ module attributes {transform.with_named_sequence} {
     // Step 3: Simplify
     // vector.multi_reduction --> vector.contract
     // Generates a 6-dim vector.contract with the dim matching the original MMT4D Op
-    // and with the following split int parallel and reduction dims:
+    // and with the following split into parallel and reduction dims:
     //    * parallel, parallel, reduction, parallel, parallel, reduction
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.reduction_to_contract
@@ -51,7 +51,7 @@ module attributes {transform.with_named_sequence} {
     transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
 
     // Simplify the 6-dim vector.contract into a 3-dim matmul-like
-    // vector.contract with the following split splitn parallel and reduction
+    // vector.contract with the following split into parallel and reduction
     // dims:
     //    * parallel, parallel, reduction
     transform.apply_patterns to %func_h {
@@ -60,7 +60,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 
-    // Step 4: Lower vector.contract to vector.fma
+    // Step 4: Lower vector.contract to vector.fma via vector.outerproduct
     transform.apply_patterns to %func_h {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_outerproduct
