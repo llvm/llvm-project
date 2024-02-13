@@ -353,7 +353,7 @@ public:
     bool IsValid() const {
       // Having a pack name but no packed args doesn't make sense, so mark
       // these template parameters as invalid.
-      if (pack_name && !packed_args)
+      if (HasPackName() && !packed_args)
         return false;
       return args.size() == names.size() &&
              (!packed_args || !packed_args->packed_args);
@@ -394,14 +394,14 @@ public:
       return packed_args->GetArgs();
     }
 
-    bool HasPackName() const { return pack_name && pack_name[0]; }
+    bool HasPackName() const { return pack_name.has_value(); }
 
     llvm::StringRef GetPackName() const {
       assert(HasPackName());
-      return pack_name;
+      return pack_name.value();
     }
 
-    void SetPackName(char const *name) { pack_name = name; }
+    void SetPackName(char const *name) { pack_name.emplace(name); }
 
     void SetParameterPack(std::unique_ptr<TemplateParameterInfos> args) {
       packed_args = std::move(args);
@@ -413,7 +413,7 @@ public:
     llvm::SmallVector<const char *, 2> names;
     llvm::SmallVector<clang::TemplateArgument, 2> args;
 
-    const char * pack_name = nullptr;
+    std::optional<std::string> pack_name;
     std::unique_ptr<TemplateParameterInfos> packed_args;
   };
 
