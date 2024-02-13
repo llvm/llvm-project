@@ -373,6 +373,9 @@ public:
 
   Type *ResolveTypeUID(const DIERef &die_ref);
 
+  /// Returns the DWARFIndex for this symbol, if it exists.
+  DWARFIndex *getIndex() { return m_index.get(); }
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;

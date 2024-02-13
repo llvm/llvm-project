@@ -1,5 +1,6 @@
 add_lldb_unittest(SymbolFileDWARFTests
   DWARFASTParserClangTests.cpp
+  DWARFDebugNamesIndexTest.cpp
   DWARFDIETest.cpp
   DWARFIndexCachingTest.cpp
   DWARFUnitTest.cpp
