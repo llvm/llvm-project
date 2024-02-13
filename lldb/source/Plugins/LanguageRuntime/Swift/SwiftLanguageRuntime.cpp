@@ -888,14 +888,14 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
 
   if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS) {
     if (obj_file->GetType() != ObjectFile::eTypeJIT)
-      if (Log *log = GetLog(LLDBLog::Types))
-        log->Printf("%s: failed to get start address for %s.", __FUNCTION__,
-                    obj_file->GetFileSpec().GetFilename().GetCString());
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "{0}: failed to get start address for \"{1}\".", __FUNCTION__,
+               module_sp->GetObjectName());
     return false;
   }
   bool found = HasReflectionInfo(obj_file);
-  LLDB_LOGF(GetLog(LLDBLog::Types), "%s reflection metadata in \"%s\"",
-            found ? "Adding" : "No", obj_file->GetFileSpec().GetPath().c_str());
+  LLDB_LOG(GetLog(LLDBLog::Types), "{0} reflection metadata in \"{1}\"",
+            found ? "Adding" : "No", module_sp->GetObjectName());
   if (!found)
     return true;
 
