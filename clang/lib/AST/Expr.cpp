@@ -714,25 +714,11 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-<<<<<<< HEAD
-    const auto &LO = Context.getLangOpts();
-    if (ForceElaboratedPrinting) {
-      if ((IK == Func || IK == Function) && !LO.MicrosoftExt)
-        return FD->getNameAsString();
-      if (IK == LFunction && LO.MicrosoftExt)
-        return FD->getNameAsString();
-    } else {
-      if (IK != PrettyFunction && IK != PrettyFunctionNoVirtual &&
-          IK != FuncSig && IK != LFuncSig)
-        return FD->getNameAsString();
-    }
-=======
     if (IK != PredefinedIdentKind::PrettyFunction &&
         IK != PredefinedIdentKind::PrettyFunctionNoVirtual &&
         IK != PredefinedIdentKind::FuncSig &&
         IK != PredefinedIdentKind::LFuncSig)
       return FD->getNameAsString();
->>>>>>> upstream/main
 
     SmallString<256> Name;
     llvm::raw_svector_ostream Out(Name);
