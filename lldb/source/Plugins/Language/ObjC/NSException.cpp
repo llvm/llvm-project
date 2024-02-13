@@ -137,14 +137,17 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     m_name_sp.reset();
     m_reason_sp.reset();
     m_userinfo_sp.reset();
     m_reserved_sp.reset();
 
-    return ExtractFields(m_backend, &m_name_sp, &m_reason_sp, &m_userinfo_sp,
-                         &m_reserved_sp);
+    const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
+                                   &m_userinfo_sp, &m_reserved_sp);
+
+    return ret ? lldb::ChildCacheState::eReuse
+               : lldb::ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return true; }

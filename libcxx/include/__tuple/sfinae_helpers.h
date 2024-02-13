@@ -18,9 +18,7 @@
 #include <__tuple/tuple_types.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
@@ -49,24 +47,7 @@ struct __tuple_sfinae_base {
 
   template <class _FromArgs, class _ToArgs>
   using __constructible = decltype(__do_test<is_constructible>(_ToArgs{}, _FromArgs{}));
-  template <class _FromArgs, class _ToArgs>
-  using __convertible = decltype(__do_test<is_convertible>(_FromArgs{}, _ToArgs{}));
-  template <class _FromArgs, class _ToArgs>
-  using __assignable = decltype(__do_test<is_assignable>(_ToArgs{}, _FromArgs{}));
 };
-
-// __tuple_convertible
-
-template <class _Tp,
-          class _Up,
-          bool = __tuple_like_ext<__libcpp_remove_reference_t<_Tp> >::value,
-          bool = __tuple_like_ext<_Up>::value>
-struct __tuple_convertible : public false_type {};
-
-template <class _Tp, class _Up>
-struct __tuple_convertible<_Tp, _Up, true, true>
-    : public __tuple_sfinae_base::__convertible< typename __make_tuple_types<_Tp>::type,
-                                                 typename __make_tuple_types<_Up>::type > {};
 
 // __tuple_constructible
 
@@ -80,19 +61,6 @@ template <class _Tp, class _Up>
 struct __tuple_constructible<_Tp, _Up, true, true>
     : public __tuple_sfinae_base::__constructible< typename __make_tuple_types<_Tp>::type,
                                                    typename __make_tuple_types<_Up>::type > {};
-
-// __tuple_assignable
-
-template <class _Tp,
-          class _Up,
-          bool = __tuple_like_ext<__libcpp_remove_reference_t<_Tp> >::value,
-          bool = __tuple_like_ext<_Up>::value>
-struct __tuple_assignable : public false_type {};
-
-template <class _Tp, class _Up>
-struct __tuple_assignable<_Tp, _Up, true, true>
-    : public __tuple_sfinae_base::__assignable< typename __make_tuple_types<_Tp>::type,
-                                                typename __make_tuple_types<_Up&>::type > {};
 
 template <size_t _Ip, class... _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, tuple<_Tp...> > {

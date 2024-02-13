@@ -353,6 +353,72 @@ private:
   llvm::function_ref<QualType()> ComputeType;
 };
 
+/// Describes the result of template argument deduction.
+///
+/// The TemplateDeductionResult enumeration describes the result of
+/// template argument deduction, as returned from
+/// DeduceTemplateArguments(). The separate TemplateDeductionInfo
+/// structure provides additional information about the results of
+/// template argument deduction, e.g., the deduced template argument
+/// list (if successful) or the specific template parameters or
+/// deduced arguments that were involved in the failure.
+enum class TemplateDeductionResult {
+  /// Template argument deduction was successful.
+  Success = 0,
+  /// The declaration was invalid; do nothing.
+  Invalid,
+  /// Template argument deduction exceeded the maximum template
+  /// instantiation depth (which has already been diagnosed).
+  InstantiationDepth,
+  /// Template argument deduction did not deduce a value
+  /// for every template parameter.
+  Incomplete,
+  /// Template argument deduction did not deduce a value for every
+  /// expansion of an expanded template parameter pack.
+  IncompletePack,
+  /// Template argument deduction produced inconsistent
+  /// deduced values for the given template parameter.
+  Inconsistent,
+  /// Template argument deduction failed due to inconsistent
+  /// cv-qualifiers on a template parameter type that would
+  /// otherwise be deduced, e.g., we tried to deduce T in "const T"
+  /// but were given a non-const "X".
+  Underqualified,
+  /// Substitution of the deduced template argument values
+  /// resulted in an error.
+  SubstitutionFailure,
+  /// After substituting deduced template arguments, a dependent
+  /// parameter type did not match the corresponding argument.
+  DeducedMismatch,
+  /// After substituting deduced template arguments, an element of
+  /// a dependent parameter type did not match the corresponding element
+  /// of the corresponding argument (when deducing from an initializer list).
+  DeducedMismatchNested,
+  /// A non-depnedent component of the parameter did not match the
+  /// corresponding component of the argument.
+  NonDeducedMismatch,
+  /// When performing template argument deduction for a function
+  /// template, there were too many call arguments.
+  TooManyArguments,
+  /// When performing template argument deduction for a function
+  /// template, there were too few call arguments.
+  TooFewArguments,
+  /// The explicitly-specified template arguments were not valid
+  /// template arguments for the given template.
+  InvalidExplicitArguments,
+  /// Checking non-dependent argument conversions failed.
+  NonDependentConversionFailure,
+  /// The deduced arguments did not satisfy the constraints associated
+  /// with the template.
+  ConstraintsNotSatisfied,
+  /// Deduction failed; that's all we know.
+  MiscellaneousDeductionFailure,
+  /// CUDA Target attributes do not match.
+  CUDATargetMismatch,
+  /// Some error which was already diagnosed.
+  AlreadyDiagnosed
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 class Sema final {
   Sema(const Sema &) = delete;
@@ -1342,6 +1408,12 @@ public:
     /// context not already known to be immediately invoked.
     llvm::SmallPtrSet<DeclRefExpr *, 4> ReferenceToConsteval;
 
+    /// P2718R0 - Lifetime extension in range-based for loops.
+    /// MaterializeTemporaryExprs in for-range-init expressions which need to
+    /// extend lifetime. Add MaterializeTemporaryExpr* if the value of
+    /// InLifetimeExtendingContext is true.
+    SmallVector<MaterializeTemporaryExpr *, 8> ForRangeLifetimeExtendTemps;
+
     /// \brief Describes whether we are in an expression constext which we have
     /// to handle differently.
     enum ExpressionKind {
@@ -1360,6 +1432,39 @@ public:
     // non constant expressions, for example for array bounds (which may be
     // VLAs).
     bool InConditionallyConstantEvaluateContext = false;
+
+    /// Whether we are currently in a context in which all temporaries must be
+    /// lifetime-extended, even if they're not bound to a reference (for
+    /// example, in a for-range initializer).
+    bool InLifetimeExtendingContext = false;
+
+    /// Whether we are currently in a context in which all temporaries must be
+    /// materialized.
+    ///
+    /// [class.temporary]/p2:
+    /// The materialization of a temporary object is generally delayed as long
+    /// as possible in order to avoid creating unnecessary temporary objects.
+    ///
+    /// Temporary objects are materialized:
+    ///   (2.1) when binding a reference to a prvalue ([dcl.init.ref],
+    ///   [expr.type.conv], [expr.dynamic.cast], [expr.static.cast],
+    ///   [expr.const.cast], [expr.cast]),
+    ///
+    ///   (2.2) when performing member access on a class prvalue ([expr.ref],
+    ///   [expr.mptr.oper]),
+    ///
+    ///   (2.3) when performing an array-to-pointer conversion or subscripting
+    ///   on an array prvalue ([conv.array], [expr.sub]),
+    ///
+    ///   (2.4) when initializing an object of type
+    ///   std​::​initializer_list<T> from a braced-init-list
+    ///   ([dcl.init.list]),
+    ///
+    ///   (2.5) for certain unevaluated operands ([expr.typeid], [expr.sizeof])
+    ///
+    ///   (2.6) when a prvalue that has type other than cv void appears as a
+    ///   discarded-value expression ([expr.context]).
+    bool InMaterializeTemporaryObjectContext = false;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -2644,8 +2749,6 @@ public:
 
   void DiagnoseUseOfUnimplementedSelectors();
 
-  bool isSimpleTypeSpecifier(tok::TokenKind Kind) const;
-
   ParsedType getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                          Scope *S, CXXScopeSpec *SS = nullptr,
                          bool isClassName = false, bool HasTrailingDot = false,
@@ -2923,7 +3026,8 @@ public:
   bool DiagnoseClassNameShadow(DeclContext *DC, DeclarationNameInfo Info);
   bool diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
                                     DeclarationName Name, SourceLocation Loc,
-                                    bool IsTemplateId);
+                                    TemplateIdAnnotation *TemplateId,
+                                    bool IsMemberSpecialization);
   void
   diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
                             SourceLocation FallbackLoc,
@@ -3463,29 +3567,29 @@ public:
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
-    CXXSpecialMember SpecialMember : 8;
-    DefaultedComparisonKind Comparison : 8;
+    unsigned SpecialMember : 8;
+    unsigned Comparison : 8;
 
   public:
     DefaultedFunctionKind()
-        : SpecialMember(CXXInvalid), Comparison(DefaultedComparisonKind::None) {
+        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {
     }
     DefaultedFunctionKind(CXXSpecialMember CSM)
-        : SpecialMember(CSM), Comparison(DefaultedComparisonKind::None) {}
+        : SpecialMember(CSM), Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(CXXInvalid), Comparison(Comp) {}
+        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(Comp)) {}
 
     bool isSpecialMember() const { return SpecialMember != CXXInvalid; }
     bool isComparison() const {
-      return Comparison != DefaultedComparisonKind::None;
+      return static_cast<DefaultedComparisonKind>(Comparison) != DefaultedComparisonKind::None;
     }
 
     explicit operator bool() const {
       return isSpecialMember() || isComparison();
     }
 
-    CXXSpecialMember asSpecialMember() const { return SpecialMember; }
-    DefaultedComparisonKind asComparison() const { return Comparison; }
+    CXXSpecialMember asSpecialMember() const { return static_cast<CXXSpecialMember>(SpecialMember); }
+    DefaultedComparisonKind asComparison() const { return static_cast<DefaultedComparisonKind>(Comparison); }
 
     /// Get the index of this function kind for use in diagnostics.
     unsigned getDiagnosticIndex() const {
@@ -3493,7 +3597,7 @@ public:
                     "invalid should have highest index");
       static_assert((unsigned)DefaultedComparisonKind::None == 0,
                     "none should be equal to zero");
-      return SpecialMember + (unsigned)Comparison;
+      return SpecialMember + Comparison;
     }
   };
 
@@ -4800,13 +4904,12 @@ public:
   llvm::Error isValidSectionSpecifier(StringRef Str);
   bool checkSectionName(SourceLocation LiteralLoc, StringRef Str);
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
-  bool checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &Str,
-                              bool &isDefault);
-  bool
-  checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
-                              const StringLiteral *Literal, bool &HasDefault,
-                              bool &HasCommas, bool &HasNotDefault,
-                              SmallVectorImpl<SmallString<64>> &StringsBuffer);
+  bool checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
+                              StringRef &Str, bool &isDefault);
+  bool checkTargetClonesAttrString(
+      SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
+      Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
+      SmallVectorImpl<SmallString<64>> &StringsBuffer);
   bool checkMSInheritanceAttrOnDefinition(
       CXXRecordDecl *RD, SourceRange Range, bool BestCase,
       MSInheritanceModel SemanticSpelling);
@@ -5253,22 +5356,17 @@ public:
     BFRK_Check
   };
 
-  StmtResult ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
-                                  SourceLocation CoawaitLoc,
-                                  Stmt *InitStmt,
-                                  Stmt *LoopVar,
-                                  SourceLocation ColonLoc, Expr *Collection,
-                                  SourceLocation RParenLoc,
-                                  BuildForRangeKind Kind);
-  StmtResult BuildCXXForRangeStmt(SourceLocation ForLoc,
-                                  SourceLocation CoawaitLoc,
-                                  Stmt *InitStmt,
-                                  SourceLocation ColonLoc,
-                                  Stmt *RangeDecl, Stmt *Begin, Stmt *End,
-                                  Expr *Cond, Expr *Inc,
-                                  Stmt *LoopVarDecl,
-                                  SourceLocation RParenLoc,
-                                  BuildForRangeKind Kind);
+  StmtResult ActOnCXXForRangeStmt(
+      Scope *S, SourceLocation ForLoc, SourceLocation CoawaitLoc,
+      Stmt *InitStmt, Stmt *LoopVar, SourceLocation ColonLoc, Expr *Collection,
+      SourceLocation RParenLoc, BuildForRangeKind Kind,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
+  StmtResult BuildCXXForRangeStmt(
+      SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
+      SourceLocation ColonLoc, Stmt *RangeDecl, Stmt *Begin, Stmt *End,
+      Expr *Cond, Expr *Inc, Stmt *LoopVarDecl, SourceLocation RParenLoc,
+      BuildForRangeKind Kind,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
   StmtResult FinishCXXForRangeStmt(Stmt *ForRange, Stmt *Body);
 
   StmtResult ActOnGotoStmt(SourceLocation GotoLoc,
@@ -8424,7 +8522,7 @@ public:
                                     SourceLocation RAngleLoc);
 
   DeclResult ActOnVarTemplateSpecialization(
-      Scope *S, Declarator &D, TypeSourceInfo *DI,
+      Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
       StorageClass SC, bool IsPartialSpecialization);
 
@@ -9229,80 +9327,14 @@ public:
   QualType adjustCCAndNoReturn(QualType ArgFunctionType, QualType FunctionType,
                                bool AdjustExceptionSpec = false);
 
-  /// Describes the result of template argument deduction.
-  ///
-  /// The TemplateDeductionResult enumeration describes the result of
-  /// template argument deduction, as returned from
-  /// DeduceTemplateArguments(). The separate TemplateDeductionInfo
-  /// structure provides additional information about the results of
-  /// template argument deduction, e.g., the deduced template argument
-  /// list (if successful) or the specific template parameters or
-  /// deduced arguments that were involved in the failure.
-  enum TemplateDeductionResult {
-    /// Template argument deduction was successful.
-    TDK_Success = 0,
-    /// The declaration was invalid; do nothing.
-    TDK_Invalid,
-    /// Template argument deduction exceeded the maximum template
-    /// instantiation depth (which has already been diagnosed).
-    TDK_InstantiationDepth,
-    /// Template argument deduction did not deduce a value
-    /// for every template parameter.
-    TDK_Incomplete,
-    /// Template argument deduction did not deduce a value for every
-    /// expansion of an expanded template parameter pack.
-    TDK_IncompletePack,
-    /// Template argument deduction produced inconsistent
-    /// deduced values for the given template parameter.
-    TDK_Inconsistent,
-    /// Template argument deduction failed due to inconsistent
-    /// cv-qualifiers on a template parameter type that would
-    /// otherwise be deduced, e.g., we tried to deduce T in "const T"
-    /// but were given a non-const "X".
-    TDK_Underqualified,
-    /// Substitution of the deduced template argument values
-    /// resulted in an error.
-    TDK_SubstitutionFailure,
-    /// After substituting deduced template arguments, a dependent
-    /// parameter type did not match the corresponding argument.
-    TDK_DeducedMismatch,
-    /// After substituting deduced template arguments, an element of
-    /// a dependent parameter type did not match the corresponding element
-    /// of the corresponding argument (when deducing from an initializer list).
-    TDK_DeducedMismatchNested,
-    /// A non-depnedent component of the parameter did not match the
-    /// corresponding component of the argument.
-    TDK_NonDeducedMismatch,
-    /// When performing template argument deduction for a function
-    /// template, there were too many call arguments.
-    TDK_TooManyArguments,
-    /// When performing template argument deduction for a function
-    /// template, there were too few call arguments.
-    TDK_TooFewArguments,
-    /// The explicitly-specified template arguments were not valid
-    /// template arguments for the given template.
-    TDK_InvalidExplicitArguments,
-    /// Checking non-dependent argument conversions failed.
-    TDK_NonDependentConversionFailure,
-    /// The deduced arguments did not satisfy the constraints associated
-    /// with the template.
-    TDK_ConstraintsNotSatisfied,
-    /// Deduction failed; that's all we know.
-    TDK_MiscellaneousDeductionFailure,
-    /// CUDA Target attributes do not match.
-    TDK_CUDATargetMismatch,
-    /// Some error which was already diagnosed.
-    TDK_AlreadyDiagnosed
-  };
-
   TemplateDeductionResult
   DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
-                          const TemplateArgumentList &TemplateArgs,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
   TemplateDeductionResult
   DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
-                          const TemplateArgumentList &TemplateArgs,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
   TemplateDeductionResult SubstituteExplicitTemplateArguments(
@@ -9475,7 +9507,7 @@ public:
 
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
-      const TemplateArgumentList *Innermost = nullptr,
+      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
       bool SkipForSpecialization = false);
@@ -10010,6 +10042,18 @@ public:
     return currentEvaluationContext().isImmediateFunctionContext();
   }
 
+  bool isInLifetimeExtendingContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back().InLifetimeExtendingContext;
+  }
+
+  bool isInMaterializeTemporaryObjectContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back().InMaterializeTemporaryObjectContext;
+  }
+
   bool isCheckingDefaultArgumentOrInitializer() const {
     const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
     return (Ctx.Context ==
@@ -10047,6 +10091,32 @@ public:
       Res = Ctx.DelayedDefaultInitializationContext;
     }
     return Res;
+  }
+
+  /// keepInLifetimeExtendingContext - Pull down InLifetimeExtendingContext
+  /// flag from previous context.
+  void keepInLifetimeExtendingContext() {
+    if (ExprEvalContexts.size() > 2 &&
+        ExprEvalContexts[ExprEvalContexts.size() - 2]
+            .InLifetimeExtendingContext) {
+      auto &LastRecord = ExprEvalContexts.back();
+      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      LastRecord.InLifetimeExtendingContext =
+          PrevRecord.InLifetimeExtendingContext;
+    }
+  }
+
+  /// keepInMaterializeTemporaryObjectContext - Pull down
+  /// InMaterializeTemporaryObjectContext flag from previous context.
+  void keepInMaterializeTemporaryObjectContext() {
+    if (ExprEvalContexts.size() > 2 &&
+        ExprEvalContexts[ExprEvalContexts.size() - 2]
+            .InMaterializeTemporaryObjectContext) {
+      auto &LastRecord = ExprEvalContexts.back();
+      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+      LastRecord.InMaterializeTemporaryObjectContext =
+          PrevRecord.InMaterializeTemporaryObjectContext;
+    }
   }
 
   /// RAII class used to determine whether SFINAE has
@@ -10467,7 +10537,7 @@ public:
                                      bool AtEndOfTU = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-      const TemplateArgumentList &TemplateArgList,
+      const TemplateArgumentList *PartialSpecArgs,
       const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
@@ -12305,6 +12375,9 @@ public:
   /// Called on well-formed 'relaxed' clause.
   OMPClause *ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'weak' clause.
+  OMPClause *ActOnOpenMPWeakClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
 
   /// Called on well-formed 'init' clause.
   OMPClause *
@@ -14371,7 +14444,7 @@ public:
 };
 
 DeductionFailureInfo
-MakeDeductionFailureInfo(ASTContext &Context, Sema::TemplateDeductionResult TDK,
+MakeDeductionFailureInfo(ASTContext &Context, TemplateDeductionResult TDK,
                          sema::TemplateDeductionInfo &Info);
 
 /// Contains a late templated function.

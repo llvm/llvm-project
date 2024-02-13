@@ -228,7 +228,7 @@ for:
   %phi_i = phi i32 [ 0, %entry ], [ %i, %for ]
   %phi = phi ptr [ %gep_a, %entry], [ %gep_for, %for ]
   %i = add i32 %phi_i, 1
-  %gep_for = getelementptr inbounds i32, i32* %phi, i32 0
+  %gep_for = getelementptr inbounds i32, ptr %phi, i32 0
   %loop.cond = icmp ult i32 %i, 10
   br i1 %loop.cond, label %for, label %end
 
@@ -397,7 +397,7 @@ for:
   %phi_i = phi i32 [ 0, %entry ], [ %i, %for ]
   %phi = phi ptr [ %gep_a, %entry], [ %gep_for, %for ]
   %i = add i32 %phi_i, 1
-  %gep_for = getelementptr inbounds float, float* %phi, i32 0
+  %gep_for = getelementptr inbounds float, ptr %phi, i32 0
   %loop.cond = icmp ult i32 %i, 10
   br i1 %loop.cond, label %for, label %end
 

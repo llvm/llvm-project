@@ -96,7 +96,8 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // An address that is held in a general-purpose register.
     Info.setAllowsMemory();
     return true;
-  case 'S': // A symbolic address
+  case 's':
+  case 'S': // A symbol or label reference with a constant offset
     Info.setAllowsRegister();
     return true;
   case 'v':
@@ -233,7 +234,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCV.def"
+#include "clang/Basic/BuiltinsRISCV.inc"
 };
 
 ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {

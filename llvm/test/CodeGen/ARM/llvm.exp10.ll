@@ -36,6 +36,8 @@ define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
+; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    pop {r7, pc}
   %r = call <1 x half> @llvm.exp10.v1f16(<1 x half> %x)
   ret <1 x half> %r
@@ -44,19 +46,26 @@ define <1 x half> @exp10_v1f16(<1 x half> %x) {
 define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: exp10_v2f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    strh.w r0, [sp, #6]
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    strh.w r0, [sp, #4]
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
+; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    vmov.32 r0, d16[0]
+; CHECK-NEXT:    vmov.32 r1, d16[1]
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    pop {r4, pc}
   %r = call <2 x half> @llvm.exp10.v2f16(<2 x half> %x)
   ret <2 x half> %r
 }
@@ -65,24 +74,27 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; CHECK-LABEL: exp10_v3f16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r6, r1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl exp10f
+; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    pkhbt r5, r0, r6, lsl #16
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    uxth r0, r0
+; CHECK-NEXT:    vmov d16, r5, r0
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    vmov.u16 r1, d16[1]
+; CHECK-NEXT:    vmov.u16 r2, d16[2]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
   %r = call <3 x half> @llvm.exp10.v3f16(<3 x half> %x)
   ret <3 x half> %r
@@ -93,14 +105,10 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    mov r6, r2
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
-; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
@@ -109,15 +117,22 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    pkhbt r6, r0, r7, lsl #16
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl exp10f
+; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
-; CHECK-NEXT:    mov r3, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    pkhbt r0, r0, r5, lsl #16
+; CHECK-NEXT:    vmov d16, r0, r6
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    vmov.u16 r1, d16[1]
+; CHECK-NEXT:    vmov.u16 r2, d16[2]
+; CHECK-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
   %r = call <4 x half> @llvm.exp10.v4f16(<4 x half> %x)

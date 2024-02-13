@@ -1927,7 +1927,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       x.left() = Expr<T>{std::move(*c)};
     }
     if (auto c{GetScalarConstantValue<T>(x.left())}) {
-      if (c->IsZero()) {
+      if (c->IsZero() && x.right().Rank() == 0) {
         return std::move(x.left());
       } else if (c->CompareSigned(Scalar<T>{1}) == Ordering::Equal) {
         if (IsVariable(x.right())) {

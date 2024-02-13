@@ -27,12 +27,7 @@
 namespace llvm {
 namespace objcopy {
 
-enum class FileFormat {
-  Unspecified,
-  ELF,
-  Binary,
-  IHex,
-};
+enum class FileFormat { Unspecified, ELF, Binary, IHex, SREC };
 
 // This type keeps track of the machine info for various architectures. This
 // lets us map architecture names to ELF types and the e_machine value of the
@@ -218,6 +213,7 @@ struct CommonConfig {
   uint64_t PadTo = 0;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
+  StringRef SymbolsPrefixRemove;
   StringRef AllocSectionsPrefix;
   DiscardType DiscardMode = DiscardType::None;
 

@@ -724,14 +724,6 @@ public:
                          ValueRange argValues = std::nullopt) override;
   using PatternRewriter::inlineBlockBefore;
 
-  /// PatternRewriter hook for cloning blocks of one region into another. The
-  /// given region to clone *must* not have been modified as part of conversion
-  /// yet, i.e. it must be within an operation that is either in the process of
-  /// conversion, or has not yet been converted.
-  void cloneRegionBefore(Region &region, Region &parent,
-                         Region::iterator before, IRMapping &mapping) override;
-  using PatternRewriter::cloneRegionBefore;
-
   /// PatternRewriter hook for inserting a new operation.
   void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
@@ -748,7 +740,7 @@ public:
   void cancelOpModification(Operation *op) override;
 
   /// PatternRewriter hook for notifying match failure reasons.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
   using PatternRewriter::notifyMatchFailure;

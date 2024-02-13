@@ -939,7 +939,7 @@ std::string LinkerDriver::getImportName(bool asLib) {
 
 void LinkerDriver::createImportLibrary(bool asLib) {
   llvm::TimeTraceScope timeScope("Create import library");
-  std::vector<COFFShortExport> exports;
+  std::vector<COFFShortExport> exports, nativeExports;
   for (Export &e1 : ctx.config.exports) {
     COFFShortExport e2;
     e2.Name = std::string(e1.name);
@@ -958,8 +958,8 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   std::string path = getImplibPath();
 
   if (!ctx.config.incremental) {
-    checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
-                                  ctx.config.mingw));
+    checkError(writeImportLibrary(libName, path, exports, nativeExports,
+                                  ctx.config.machine, ctx.config.mingw));
     return;
   }
 
@@ -968,8 +968,8 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> oldBuf = MemoryBuffer::getFile(
       path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
-    checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
-                                  ctx.config.mingw));
+    checkError(writeImportLibrary(libName, path, exports, nativeExports,
+                                  ctx.config.machine, ctx.config.mingw));
     return;
   }
 
@@ -979,7 +979,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     fatal("cannot create temporary file for import library " + path + ": " +
           ec.message());
 
-  if (Error e = writeImportLibrary(libName, tmpName, exports,
+  if (Error e = writeImportLibrary(libName, tmpName, exports, nativeExports,
                                    ctx.config.machine, ctx.config.mingw)) {
     checkError(std::move(e));
     return;
@@ -1825,7 +1825,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   } else {
     config->repro = false;
-    config->timestamp = time(nullptr);
+    if (std::optional<std::string> epoch =
+            Process::GetEnv("SOURCE_DATE_EPOCH")) {
+      StringRef value(*epoch);
+      if (value.getAsInteger(0, config->timestamp))
+        fatal(Twine("invalid SOURCE_DATE_EPOCH timestamp: ") + value +
+              ".  Expected 32-bit integer");
+    } else {
+      config->timestamp = time(nullptr);
+    }
   }
 
   // Handle /alternatename

@@ -37,7 +37,7 @@ static llvm::cl::opt<bool> EmptyLineCommentCoverage(
                    "disable it on test)"),
     llvm::cl::init(true), llvm::cl::Hidden);
 
-static llvm::cl::opt<bool> SystemHeadersCoverage(
+llvm::cl::opt<bool> SystemHeadersCoverage(
     "system-headers-coverage",
     llvm::cl::desc("Enable collecting coverage from system headers"),
     llvm::cl::init(false), llvm::cl::Hidden);
@@ -1812,8 +1812,10 @@ struct CounterCoverageMappingBuilder
     assert(S->isConstexpr());
 
     // evaluate constant condition...
-    const auto *E = cast<ConstantExpr>(S->getCond());
-    const bool isTrue = E->getResultAsAPSInt().getExtValue();
+    const bool isTrue =
+        S->getCond()
+            ->EvaluateKnownConstInt(CVM.getCodeGenModule().getContext())
+            .getBoolValue();
 
     extendRegion(S);
 

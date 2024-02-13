@@ -128,3 +128,13 @@ void errno_pclose(void) {
     if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }
+
+void errno_realpath(char *Path, char *Buf) {
+  char *Ret = realpath(Path, Buf);
+  if (!Ret) {
+    clang_analyzer_eval(errno != 0);  // expected-warning{{TRUE}}
+    if (errno) {}                     // no-warning
+  } else {
+    if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}

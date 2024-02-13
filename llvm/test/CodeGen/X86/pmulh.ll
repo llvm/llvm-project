@@ -329,7 +329,7 @@ define <16 x i16> @and_mulhuw_v16i16(<16 x i32> %a, <16 x i32> %b) {
 ;
 ; SSE41-LABEL: and_mulhuw_v16i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [32767,32767,32767,32767]
+; SSE41-NEXT:    pmovsxwd {{.*#+}} xmm8 = [32767,32767,32767,32767]
 ; SSE41-NEXT:    pand %xmm8, %xmm3
 ; SSE41-NEXT:    pand %xmm8, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2

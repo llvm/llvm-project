@@ -95,6 +95,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Do finalize relaxation after collecting relaxation infos.
+  virtual void finalizeRelax(int passes) const {}
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
@@ -236,6 +238,7 @@ void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols();
 void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
+void initSymbolAnchors();
 
 LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();

@@ -371,6 +371,10 @@ FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
 void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
                                              PatternBenefit benefit = 1);
 
+/// Appends patterns for emulating a sub-byte vector transpose.
+void populateVectorTransposeNarrowTypeRewritePatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
 } // namespace vector
 } // namespace mlir
 

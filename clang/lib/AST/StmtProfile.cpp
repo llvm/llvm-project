@@ -594,6 +594,8 @@ void OMPClauseProfiler::VisitOMPReleaseClause(const OMPReleaseClause *) {}
 
 void OMPClauseProfiler::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
 
+void OMPClauseProfiler::VisitOMPWeakClause(const OMPWeakClause *) {}
+
 void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
 void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}

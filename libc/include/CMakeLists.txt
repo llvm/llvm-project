@@ -73,6 +73,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-macros.inttypes_macros
 )
 
 add_gen_header(
@@ -100,6 +101,7 @@ add_gen_header(
     .llvm-libc-macros.math_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
+    .llvm-libc-types.float128
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -224,6 +226,15 @@ else()
 endif()
 
 add_gen_header(
+  stdbit
+  DEF_FILE stdbit.h.def
+  GEN_HDR stdbit.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdbit_macros
+)
+
+add_gen_header(
   stdio
   DEF_FILE stdio.h.def
   GEN_HDR stdio.h
@@ -330,6 +341,17 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_auxv_macros
+)
+
+add_gen_header(
+  sys_epoll
+  DEF_FILE sys/epoll.h.def
+  GEN_HDR sys/epoll.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_epoll_event
+    .llvm-libc-types.struct_epoll_data
+    .llvm-libc-types.sigset_t
 )
 
 add_gen_header(

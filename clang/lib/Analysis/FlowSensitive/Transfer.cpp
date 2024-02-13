@@ -536,7 +536,17 @@ public:
 
       copyRecord(*LocSrc, *LocDst, Env);
       Env.setStorageLocation(*S, *LocDst);
+      return;
     }
+
+    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
+    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
+    // can return a value.
+    VisitCallExpr(S);
+  }
+
+  void VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+    propagateValue(*RBO->getSemanticForm(), *RBO, Env);
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {

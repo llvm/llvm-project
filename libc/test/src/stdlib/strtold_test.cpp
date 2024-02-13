@@ -77,7 +77,7 @@ public:
         LIBC_NAMESPACE::fputil::FPBits<long double>(expectedRawData);
     const int expected_errno = expectedErrno;
 
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 
     LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =
