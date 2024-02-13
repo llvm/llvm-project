@@ -3508,8 +3508,9 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
       setValue(&I, lowerIsFpClass(ClassVal, ClassTest));
       return;
     }
-  } else if (const ConstantExpr *FC = dyn_cast<ConstantExpr>(&I))
+  } else if (const ConstantExpr *FC = dyn_cast<ConstantExpr>(&I)) {
     predicate = FCmpInst::Predicate(FC->getPredicate());
+  }
 
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
