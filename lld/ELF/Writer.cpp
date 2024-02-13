@@ -1104,7 +1104,9 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   PhdrEntry *last = nullptr;
   PhdrEntry *lastRO = nullptr;
-
+  auto isLarge = [](OutputSection *osec) {
+    return config->emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
+  };
   for (Partition &part : partitions) {
     for (PhdrEntry *p : part.phdrs) {
       if (p->p_type != PT_LOAD)
@@ -1124,10 +1126,11 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   if (last) {
-    // _edata points to the end of the last mapped initialized section.
+    // _edata points to the end of the last non-large mapped initialized
+    // section.
     OutputSection *edata = nullptr;
     for (OutputSection *os : outputSections) {
-      if (os->type != SHT_NOBITS)
+      if (os->type != SHT_NOBITS && !isLarge(os))
         edata = os;
       if (os == last->lastSec)
         break;
