@@ -2,7 +2,7 @@
 // RUN: not %clang -target x86_64-unknown-unknown -installapi %s 2> %t 
 // RUN: FileCheck --check-prefix INVALID_INSTALLAPI -input-file %t %s
 
-// INVALID_INSTALLAPI: error: the clang compiler does not support 'x86_64-unknown-unknown' for InstallAPI
+// INVALID_INSTALLAPI: error: InstallAPI is not supported for 'x86_64-unknown-unknown'
 
 // Check installapi phases.
 // RUN: %clang -target x86_64-apple-macos11 -ccc-print-phases -installapi %s 2> %t 

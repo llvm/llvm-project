@@ -4325,6 +4325,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       Actions.push_back(
           C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
   } else if (Args.hasArg(options::OPT_installapi)) {
+    // TODO: Lift restriction once operation can handle multiple inputs.
     assert(Inputs.size() == 1 && "InstallAPI action can only handle 1 input");
     const auto [InputType, InputArg] = Inputs.front();
     Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);

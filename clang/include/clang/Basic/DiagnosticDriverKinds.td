@@ -806,5 +806,5 @@ def err_drv_triple_version_invalid : Error<
   "version '%0' in target triple '%1' is invalid">;
 
 def err_drv_installapi_unsupported : Error<
-  "the clang compiler does not support '%0' for InstallAPI">;
+  "InstallAPI is not supported for '%0'">;
 }

@@ -45,7 +45,6 @@ config.suffixes = [
     ".rs",
     ".ifs",
     ".rc",
-    ".tbd",
 ]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
