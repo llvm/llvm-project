@@ -15,7 +15,6 @@
 // template<class T>
 //  concept tuple-like;           // exposition only
 
-
 #include <array>
 #include <complex>
 #include <ranges>

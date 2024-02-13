@@ -10,18 +10,15 @@
 
 // <complex>
 
-//   template<size_t I, class T>
-//     constexpr T& get(complex<T>&) noexcept;
-//   template<size_t I, class T>
-//     constexpr T&& get(complex<T>&&) noexcept;
-//   template<size_t I, class T>
-//     constexpr const T& get(const complex<T>&) noexcept;
-//   template<size_t I, class T>
-//     constexpr const T&& get(const complex<T>&&) noexcept;
+// Support for:
+//  - Structured bindings
+//  - Ranges
 
 #include <cassert>
 #include <concepts>
 #include <complex>
+#include <ranges>
+
 #include <utility>
 
 template <typename T>
@@ -62,6 +59,20 @@ constexpr void test() {
   }
 
   // Ranges
+
+  {
+    std::complex<T> arr[]{{27, 28}, {82, 94}};
+
+    std::same_as<std::vector<T>> decltype(auto) reals{arr | std::views::elements<0> | std::ranges::to<std::vector>()};
+    assert(reals.size() == 2);
+    assert(reals[0] == 27);
+    assert(reals[1] == 82);
+
+    std::same_as<std::vector<T>> decltype(auto) imags{arr | std::views::elements<1> | std::ranges::to<std::vector>()};
+    assert(reals.size() == 2);
+    assert(imags[0] == 28);
+    assert(imags[1] == 94);
+  }
 }
 
 constexpr bool test() {
