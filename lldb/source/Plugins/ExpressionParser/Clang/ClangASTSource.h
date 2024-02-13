@@ -13,6 +13,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/NameSearchContext.h"
+#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -30,7 +31,7 @@ namespace lldb_private {
 /// knows the name it is looking for, but nothing else. The ExternalSemaSource
 /// class provides Decls (VarDecl, FunDecl, TypeDecl) to Clang for these
 /// names, consulting the ClangExpressionDeclMap to do the actual lookups.
-class ClangASTSource : public clang::ExternalASTSource,
+class ClangASTSource : public ImporterBackedASTSource,
                        public ClangASTImporter::MapCompleter {
 public:
   /// Constructor
