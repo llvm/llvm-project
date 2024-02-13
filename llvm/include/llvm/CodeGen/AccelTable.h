@@ -284,7 +284,7 @@ public:
                        const unsigned DieTag, const unsigned UnitID,
                        const bool IsTU = false)
       : OffsetVal(DieOffset), ParentOffset(DefiningParentOffset),
-        DieTag(DieTag), AbbrevID(0), IsTU(IsTU), UnitID(UnitID) {}
+        DieTag(DieTag), AbbrevNumber(0), IsTU(IsTU), UnitID(UnitID) {}
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -326,10 +326,10 @@ public:
   }
 
   /// Sets AbbrevIndex for an Entry.
-  void setAbbrevIndex(uint16_t AbbrevIndex) { AbbrevID = AbbrevIndex; }
+  void setAbbrevNumber(uint16_t AbbrevNum) { AbbrevNumber = AbbrevNum; }
 
   /// Returns AbbrevIndex for an Entry.
-  uint16_t getAbbrevIndex() const { return AbbrevID; }
+  uint16_t getAbbrevNumber() const { return AbbrevNumber; }
 
   /// If `Die` has a non-null parent and the parent is not a declaration,
   /// return its offset.
@@ -339,7 +339,7 @@ protected:
   std::variant<const DIE *, uint64_t> OffsetVal;
   std::optional<uint64_t> ParentOffset;
   uint32_t DieTag : 16;
-  uint32_t AbbrevID : 15;
+  uint32_t AbbrevNumber : 15;
   uint32_t IsTU : 1;
   uint32_t UnitID;
   uint64_t order() const override { return getDieOffset(); }
@@ -348,7 +348,7 @@ protected:
 class DebugNamesAbbrev : public FoldingSetNode {
 public:
   uint32_t DieTag;
-  uint32_t Index;
+  uint32_t Number;
   struct AttributeEncoding {
     dwarf::Index Index;
     dwarf::Form Form;
@@ -359,9 +359,9 @@ public:
     AttrVect.push_back(Attr);
   }
   /// Set abbreviation tag index.
-  void setAbbrevTagIndex(uint32_t AbbrevIndex) { Index = AbbrevIndex; }
+  void setNumber(uint32_t AbbrevNumber) { Number = AbbrevNumber; }
   /// Get abbreviation tag index.
-  uint32_t getAbbrevTagIndex() const { return Index; }
+  uint32_t getNumber() const { return Number; }
   /// Get DIE Tag.
   uint32_t getDieTag() const { return DieTag; }
   /// Used to gather unique data for the abbreviation folding set.

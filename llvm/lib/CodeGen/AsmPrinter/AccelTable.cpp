@@ -455,15 +455,15 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
         void *InsertPos;
         if (DebugNamesAbbrev *Existing =
                 AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
-          Value->setAbbrevIndex(Existing->getAbbrevTagIndex());
+          Value->setAbbrevNumber(Existing->getNumber());
           continue;
         }
         DebugNamesAbbrev *NewAbbrev =
             new (Alloc) DebugNamesAbbrev(std::move(Abbrev));
-        NewAbbrev->setAbbrevTagIndex(AbbreviationsVector.size());
         AbbreviationsVector.push_back(NewAbbrev);
+        NewAbbrev->setNumber(AbbreviationsVector.size());
         AbbreviationsSet.InsertNode(NewAbbrev, InsertPos);
-        Value->setAbbrevIndex(NewAbbrev->getAbbrevTagIndex());
+        Value->setAbbrevNumber(NewAbbrev->getNumber());
       }
     }
   }
@@ -515,7 +515,7 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
   Asm->OutStreamer->emitLabel(AbbrevStart);
   for (const DebugNamesAbbrev *Abbrev : AbbreviationsVector) {
     Asm->OutStreamer->AddComment("Abbrev code");
-    Asm->emitULEB128(Abbrev->getAbbrevTagIndex() + 1);
+    Asm->emitULEB128(Abbrev->getNumber());
     Asm->OutStreamer->AddComment(dwarf::TagString(Abbrev->getDieTag()));
     Asm->emitULEB128(Abbrev->getDieTag());
     for (const DebugNamesAbbrev::AttributeEncoding &AttrEnc :
@@ -535,9 +535,10 @@ void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry,
     const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
     DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) {
-  assert(Entry.getAbbrevIndex() < AbbreviationsVector.size() &&
+  unsigned AbbrevIndex = Entry.getAbbrevNumber() - 1;
+  assert(AbbrevIndex < AbbreviationsVector.size() &&
          "Entry abbrev index is outside of abbreviations vector range.");
-  DebugNamesAbbrev *Abbrev = AbbreviationsVector[Entry.getAbbrevIndex()];
+  DebugNamesAbbrev *Abbrev = AbbreviationsVector[AbbrevIndex];
   std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
       getIndexForEntry(Entry);
   std::optional<OffsetAndUnitID> MaybeParentOffset =
@@ -553,7 +554,7 @@ void Dwarf5AccelTableWriter::emitEntry(
   if (EmittedAccelEntrySymbols.insert(EntrySymbol).second)
     Asm->OutStreamer->emitLabel(EntrySymbol);
 
-  Asm->emitULEB128(Entry.getAbbrevIndex() + 1, "Abbreviation code");
+  Asm->emitULEB128(Entry.getAbbrevNumber(), "Abbreviation code");
 
   for (const DebugNamesAbbrev::AttributeEncoding &AttrEnc :
        Abbrev->getAttributes()) {
