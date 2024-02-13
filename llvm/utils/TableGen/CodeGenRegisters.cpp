@@ -2034,12 +2034,11 @@ void CodeGenRegBank::computeRegUnitSets() {
     // Compare new sets with all original classes.
     for (unsigned SearchIdx = (Idx >= NumRegUnitSubSets) ? 0 : Idx + 1;
          SearchIdx != EndIdx; ++SearchIdx) {
-      std::set<unsigned> Intersection;
-      std::set_intersection(RegUnitSets[Idx].Units.begin(),
-                            RegUnitSets[Idx].Units.end(),
-                            RegUnitSets[SearchIdx].Units.begin(),
-                            RegUnitSets[SearchIdx].Units.end(),
-                            std::inserter(Intersection, Intersection.begin()));
+      std::vector<unsigned> Intersection;
+      std::set_intersection(
+          RegUnitSets[Idx].Units.begin(), RegUnitSets[Idx].Units.end(),
+          RegUnitSets[SearchIdx].Units.begin(),
+          RegUnitSets[SearchIdx].Units.end(), std::back_inserter(Intersection));
       if (Intersection.empty())
         continue;
 

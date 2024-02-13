@@ -242,11 +242,10 @@ public:
       if (!isRegisterClass() || !RHS.isRegisterClass())
         return false;
 
-      RegisterSet Tmp;
-      std::insert_iterator<RegisterSet> II(Tmp, Tmp.begin());
+      std::vector<Record *> Tmp;
       std::set_intersection(Registers.begin(), Registers.end(),
-                            RHS.Registers.begin(), RHS.Registers.end(), II,
-                            LessRecordByID());
+                            RHS.Registers.begin(), RHS.Registers.end(),
+                            std::back_inserter(Tmp), LessRecordByID());
 
       return !Tmp.empty();
     }
