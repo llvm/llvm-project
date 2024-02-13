@@ -1105,3 +1105,13 @@ namespace NonConstReads {
   static_assert(z == 0, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{read of non-const variable 'z'}}
 }
+
+/// This test passes a MaterializedTemporaryExpr to evaluateAsRValue.
+/// That needs to return a null pointer after the lvalue-to-rvalue conversion.
+/// We used to fail to do that.
+namespace rdar8769025 {
+  __attribute__((nonnull)) void f1(int * const &p);
+  void test_f1() {
+    f1(0); // both-warning{{null passed to a callee that requires a non-null argument}}
+  }
+}

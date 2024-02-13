@@ -232,11 +232,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
 
     // Primitive values.
     if (std::optional<PrimType> T = Ctx.classify(Ty)) {
-      if (T == PT_Ptr || T == PT_FnPtr) {
-        R = Ptr.toAPValue();
-      } else {
-        TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
-      }
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
       return true;
     }
 
