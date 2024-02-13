@@ -1649,7 +1649,7 @@ static void collectProcessorIndices(const CodeGenSchedClass &SC,
     IdxVec PI;
     std::set_union(&T.ProcIndex, &T.ProcIndex + 1, ProcIndices.begin(),
                    ProcIndices.end(), std::back_inserter(PI));
-    ProcIndices.swap(PI);
+    ProcIndices = std::move(PI);
   }
 }
 

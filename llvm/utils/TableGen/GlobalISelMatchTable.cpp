@@ -545,8 +545,8 @@ void GroupMatcher::optimize() {
     if (T != E)
       F = ++T;
   }
-  optimizeRules<GroupMatcher>(Matchers, MatcherStorage).swap(Matchers);
-  optimizeRules<SwitchMatcher>(Matchers, MatcherStorage).swap(Matchers);
+  Matchers = optimizeRules<GroupMatcher>(Matchers, MatcherStorage);
+  Matchers = optimizeRules<SwitchMatcher>(Matchers, MatcherStorage);
 }
 
 //===- SwitchMatcher ------------------------------------------------------===//
