@@ -1,4 +1,4 @@
-//===-- MipsAsmParser.cpp - Parse Mips assembly to MCInst instructions ----===//
+///===-- MipsAsmParser.cpp - Parse Mips assembly to MCInst instructions ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -2920,11 +2920,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         (Res.getSymA()->getSymbol().isELF() &&
          cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
              ELF::STB_LOCAL);
-    if (!IsLocalSym && ABI.IsO32()) {
-      // PrivateGlobalPrefix for O32 is '$', while we support '.L' anyway.
-      if (Res.getSymA()->getSymbol().getName().starts_with(".L"))
-        IsLocalSym = true;
-    }
+    // For O32, "$"-prefixed symbols are recognized as temporary while
+    // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
+    // manually.
+    if (ABI.IsO32() && Res.getSymA()->getSymbol().getName().starts_with(".L"))
+      IsLocalSym = true;
     bool UseXGOT = STI->hasFeature(Mips::FeatureXGOT) && !IsLocalSym;
 
     // The case where the result register is $25 is somewhat special. If the
