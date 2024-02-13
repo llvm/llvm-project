@@ -54,7 +54,7 @@ from abc import abstractmethod
 
 class LLDBOptionValueParser:
     """
-    This class is holds the option definitions for the command, and when
+    This class holds the option definitions for the command, and when
     the command is run, you can ask the parser for the current values.  """
 
     def __init__(self):
