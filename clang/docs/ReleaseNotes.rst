@@ -56,6 +56,10 @@ Clang Frontend Potentially Breaking Changes
   ``ArrayRef<TemplateArgument>`` reduces AST memory usage by 0.4% when compiling clang, and is
   expected to show similar improvements on other workloads.
 
+- Removed the ``-Wgnu-binary-literal`` diagnostic group. Binary literals are no
+  longer a GNU extension, they're now a C23 extension which is controlled via
+  ``-pedantic`` or ``-Wc23-extensions``.
+
 Target OS macros extension
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
@@ -113,6 +117,8 @@ C Language Changes
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- No longer diagnose use of binary literals as an extension in C23 mode. Fixes
+ `#72017 <https://github.com/llvm/llvm-project/issues/72017>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
