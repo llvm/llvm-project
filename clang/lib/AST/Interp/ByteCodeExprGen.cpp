@@ -167,7 +167,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitNull(classifyPrim(CE->getType()), CE);
 
   case CK_PointerToIntegral: {
-    // TODO: Discard handling.
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -464,7 +466,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
   // have a PrimType).
-  if (!T && Ctx.getLangOpts().CPlusPlus) {
+  if (!T && BO->getOpcode() == BO_Cmp) {
     if (DiscardResult)
       return true;
     const ComparisonCategoryInfo *CmpInfo =
@@ -1750,8 +1752,7 @@ bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
-  assert(!Initializing);
-  return this->visit(E->getFunctionName());
+  return this->delegate(E->getFunctionName());
 }
 
 template <class Emitter>
@@ -2051,6 +2052,86 @@ bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
   return this->emitCall(F, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExpressionTraitExpr(
+    const ExpressionTraitExpr *E) {
+  assert(Ctx.getLangOpts().CPlusPlus);
+  return this->emitConstBool(E->getValue(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
+  if (DiscardResult)
+    return true;
+  assert(!Initializing);
+
+  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(E->getGuidDecl());
+  if (!GlobalIndex)
+    return false;
+  if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    return false;
+
+  const Record *R = this->getRecord(E->getType());
+  assert(R);
+
+  const APValue &V = E->getGuidDecl()->getAsAPValue();
+  if (V.getKind() == APValue::None)
+    return true;
+
+  assert(V.isStruct());
+  assert(V.getStructNumBases() == 0);
+  // FIXME: This could be useful in visitAPValue, too.
+  for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I) {
+    const APValue &F = V.getStructField(I);
+    const Record::Field *RF = R->getField(I);
+
+    if (F.isInt()) {
+      PrimType T = classifyPrim(RF->Decl->getType());
+      if (!this->visitAPValue(F, T, E))
+        return false;
+      if (!this->emitInitField(T, RF->Offset, E))
+        return false;
+    } else if (F.isArray()) {
+      assert(RF->Desc->isPrimitiveArray());
+      const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
+      PrimType ElemT = classifyPrim(ArrType->getElementType());
+      assert(ArrType);
+
+      if (!this->emitDupPtr(E))
+        return false;
+      if (!this->emitGetPtrField(RF->Offset, E))
+        return false;
+
+      for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
+        if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
+          return false;
+        if (!this->emitInitElem(ElemT, A, E))
+          return false;
+      }
+
+      if (!this->emitPopPtr(E))
+        return false;
+    } else {
+      assert(false && "I don't think this should be possible");
+    }
+  }
+
+  return this->emitInitPtr(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Bool);
+  return this->emitConstBool(E->isSatisfied(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
+    const ConceptSpecializationExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Bool);
+  return this->emitConstBool(E->isSatisfied(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2277,8 +2358,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceParam(
     const Expr *LV, PrimType T, const ParmVarDecl *PD, DerefKind AK,
     llvm::function_ref<bool(PrimType)> Direct,
     llvm::function_ref<bool(PrimType)> Indirect) {
-  auto It = this->Params.find(PD);
-  if (It != this->Params.end()) {
+  if (auto It = this->Params.find(PD); It != this->Params.end()) {
     unsigned Idx = It->second.Offset;
     switch (AK) {
     case DerefKind::Read:
@@ -2549,10 +2629,13 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
-    if (!this->visitLocalInitializer(E, *LocalOffset))
+    if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
-    if (!this->emitGetPtrLocal(*LocalOffset, E))
+    if (!visitInitializer(E))
+      return false;
+
+    if (!this->emitInitPtr(E))
       return false;
     return this->emitRetValue(E);
   }

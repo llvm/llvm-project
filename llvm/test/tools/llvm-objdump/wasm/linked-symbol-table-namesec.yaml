@@ -2,12 +2,12 @@
 # RUN: llvm-objdump -t %t.wasm | FileCheck %s
 #
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 00000000   F *UND* my_func_import_name
-# CHECK-NEXT: 00000083 g F CODE my_func_export_name
-# CHECK-NEXT: 00000086 l F CODE my_func_local_name
-# CHECK-NEXT: 00000000    *UND* my_global_import_name
-# CHECK-NEXT: 00000001 g  GLOBAL my_global_export_name
-# CHECK-NEXT: 00000000 l O DATA my_datasegment_name
+# CHECK-NEXT: 00000000   F *UND* 00000000 my_func_import_name
+# CHECK-NEXT: 00000083 g F CODE 00000003 my_func_export_name
+# CHECK-NEXT: 00000086 l F CODE 00000003 my_func_local_name
+# CHECK-NEXT: 00000000    *UND* 00000000 my_global_import_name
+# CHECK-NEXT: 00000001 g  GLOBAL 00000000 my_global_export_name
+# CHECK-NEXT: 00000000 l O DATA 00000004 my_datasegment_name
 
 --- !WASM
 FileHeader:

@@ -1805,6 +1805,14 @@ LLVMValueRef LLVMBlockAddress(LLVMValueRef F, LLVMBasicBlockRef BB) {
   return wrap(BlockAddress::get(unwrap<Function>(F), unwrap(BB)));
 }
 
+LLVMValueRef LLVMGetBlockAddressFunction(LLVMValueRef BlockAddr) {
+  return wrap(unwrap<BlockAddress>(BlockAddr)->getFunction());
+}
+
+LLVMBasicBlockRef LLVMGetBlockAddressBasicBlock(LLVMValueRef BlockAddr) {
+  return wrap(unwrap<BlockAddress>(BlockAddr)->getBasicBlock());
+}
+
 /*--.. Operations on global variables, functions, and aliases (globals) ....--*/
 
 LLVMModuleRef LLVMGetGlobalParent(LLVMValueRef Global) {

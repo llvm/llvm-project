@@ -22,8 +22,6 @@
 using namespace llvm;
 using namespace coverage;
 
-using MCDCConditionID = CounterMappingRegion::MCDCConditionID;
-
 [[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(Error E, coveragemap_error Expected_Err,
             const std::string &Expected_Msg = std::string()) {
@@ -199,19 +197,18 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeDecisionRegion(
-        CounterMappingRegion::MCDCParameters{Mask, NC}, FileID, LS, CS, LE,
-        CE));
+        mcdc::DecisionParameters{Mask, NC}, FileID, LS, CS, LE, CE));
   }
 
-  void addMCDCBranchCMR(Counter C1, Counter C2, MCDCConditionID ID,
-                        MCDCConditionID TrueID, MCDCConditionID FalseID,
+  void addMCDCBranchCMR(Counter C1, Counter C2, mcdc::ConditionID ID,
+                        mcdc::ConditionID TrueID, mcdc::ConditionID FalseID,
                         StringRef File, unsigned LS, unsigned CS, unsigned LE,
                         unsigned CE) {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeBranchRegion(
-        C1, C2, CounterMappingRegion::MCDCParameters{0, 0, ID, TrueID, FalseID},
-        FileID, LS, CS, LE, CE));
+        C1, C2, FileID, LS, CS, LE, CE,
+        mcdc::BranchParameters{ID, TrueID, FalseID}));
   }
 
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
