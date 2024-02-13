@@ -27,11 +27,6 @@ using namespace llvm;
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 
-// None of these tests are meaningful or do anything if we do not have the
-// experimental "head" bit compiled into ilist_iterator (aka
-// ilist_iterator_w_bits), thus there's no point compiling these tests in.
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
@@ -1476,6 +1471,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
   // ... except for some dangling DPValues.
   EXPECT_NE(Exit.getTrailingDPValues(), nullptr);
   EXPECT_FALSE(Exit.getTrailingDPValues()->empty());
+  Exit.getTrailingDPValues()->eraseFromParent();
   Exit.deleteTrailingDPValues();
 
   UseNewDbgInfoFormat = false;
@@ -1534,4 +1530,3 @@ TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
 }
 
 } // End anonymous namespace.
-#endif // EXPERIMENTAL_DEBUGINFO_ITERATORS
