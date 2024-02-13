@@ -80,6 +80,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // instruction size.
   field bit FixedSize = 0;
 
+  // wait count to manage asynchronous loads/stores.
+  field bit ASYNC_CNT = 0;
+
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
   field bit VOP3_OPSEL = 0;
@@ -210,8 +213,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
 
-  // Reserved, must be 0.
-  let TSFlags{41} = 0;
+  let TSFlags{41} = ASYNC_CNT;
 
   let TSFlags{42} = VOP3_OPSEL;
 
