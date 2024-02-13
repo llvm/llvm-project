@@ -2928,7 +2928,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return BuildTemplateIdExpr(SS, TemplateKWLoc, R, ADL, TemplateArgs);
   }
 
-  return BuildDeclarationNameExpr(SS, R, ADL);
+  return BuildDeclarationNameExpr(SS, R, ADL, /*AcceptInvalidDecl=*/true);
 }
 
 /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
@@ -3452,6 +3452,10 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                    R.getLookupNameInfo(),
                                    NeedsADL, R.isOverloadedResult(),
                                    R.begin(), R.end());
+
+  if (R.isSingleResult() && R.getFoundDecl()->isInvalidDecl()) {
+    return CreateRecoveryExpr(ULE->getBeginLoc(), ULE->getEndLoc(), {ULE});
+  }
 
   return ULE;
 }
