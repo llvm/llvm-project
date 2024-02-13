@@ -863,7 +863,7 @@ int main(int argc, char **argv) {
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {
-    if (Verbose)
+    if (Verbose || Verify)
       DumpType = DIDT_All;
     else
       DumpType = DIDT_DebugInfo;
