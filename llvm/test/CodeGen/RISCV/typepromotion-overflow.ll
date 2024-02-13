@@ -171,8 +171,7 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_add_underflow_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -2
-; CHECK-NEXT:    andi a1, a0, 255
+; CHECK-NEXT:    addi a1, a0, -2
 ; CHECK-NEXT:    li a2, 251
 ; CHECK-NEXT:    li a0, 8
 ; CHECK-NEXT:    bltu a1, a2, .LBB9_2
@@ -207,9 +206,8 @@ define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 define i32 @sext_sub_underflow(i8 zeroext %a) {
 ; CHECK-LABEL: sext_sub_underflow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -6
-; CHECK-NEXT:    andi a1, a0, 255
-; CHECK-NEXT:    li a2, 250
+; CHECK-NEXT:    addi a1, a0, -6
+; CHECK-NEXT:    li a2, -6
 ; CHECK-NEXT:    li a0, 8
 ; CHECK-NEXT:    bltu a2, a1, .LBB11_2
 ; CHECK-NEXT:  # %bb.1:
@@ -240,8 +238,7 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: safe_sub_underflow_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -4
-; CHECK-NEXT:    andi a1, a0, 255
+; CHECK-NEXT:    addi a1, a0, -4
 ; CHECK-NEXT:    li a2, 250
 ; CHECK-NEXT:    li a0, 8
 ; CHECK-NEXT:    bltu a2, a1, .LBB13_2
@@ -259,9 +256,8 @@ define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 define i32 @sext_sub_underflow_neg(i8 zeroext %a) {
 ; CHECK-LABEL: sext_sub_underflow_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -4
-; CHECK-NEXT:    andi a1, a0, 255
-; CHECK-NEXT:    li a2, 253
+; CHECK-NEXT:    addi a1, a0, -4
+; CHECK-NEXT:    li a2, -3
 ; CHECK-NEXT:    li a0, 8
 ; CHECK-NEXT:    bltu a1, a2, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:
@@ -322,15 +318,18 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; CHECK-LABEL: convert_add_order:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori a1, a0, 1
-; CHECK-NEXT:    sltiu a2, a1, 50
+; CHECK-NEXT:    li a2, 50
+; CHECK-NEXT:    bltu a1, a2, .LBB19_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a1, 255
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB19_2:
 ; CHECK-NEXT:    addi a1, a1, -40
-; CHECK-NEXT:    andi a1, a1, 255
 ; CHECK-NEXT:    sltiu a1, a1, 20
-; CHECK-NEXT:    li a3, 2
-; CHECK-NEXT:    sub a3, a3, a1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    or a2, a2, a3
-; CHECK-NEXT:    and a0, a2, a0
+; CHECK-NEXT:    li a2, 2
+; CHECK-NEXT:    sub a1, a2, a1
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    ret
   %shl = or i8 %arg, 1
   %cmp.0 = icmp ult i8 %shl, 50
@@ -348,9 +347,8 @@ define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
 ; CHECK-NEXT:    sext.w a2, a0
 ; CHECK-NEXT:    sgtz a2, a2
 ; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    addi a0, a0, -11
-; CHECK-NEXT:    andi a2, a0, 247
-; CHECK-NEXT:    bltu a2, a1, .LBB20_2
+; CHECK-NEXT:    addi a0, a0, 245
+; CHECK-NEXT:    bltu a0, a1, .LBB20_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 100
 ; CHECK-NEXT:  .LBB20_2:
@@ -369,9 +367,10 @@ define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ; CHECK-LABEL: underflow_if_sub_signext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a2, a0
+; CHECK-NEXT:    andi a1, a1, 255
 ; CHECK-NEXT:    sgtz a2, a2
 ; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    addi a0, a0, -11
+; CHECK-NEXT:    addi a0, a0, 245
 ; CHECK-NEXT:    bltu a0, a1, .LBB21_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 100
