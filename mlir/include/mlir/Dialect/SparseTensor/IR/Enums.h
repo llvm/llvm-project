@@ -31,7 +31,6 @@
 // NOTE: Client code will need to include "mlir/ExecutionEngine/Float16bits.h"
 // if they want to use the `MLIR_SPARSETENSOR_FOREVERY_V` macro.
 
-#include "llvm/ADT/ArrayRef.h"
 #include <cassert>
 #include <cinttypes>
 #include <complex>
@@ -346,7 +345,7 @@ constexpr std::optional<LevelFormat> getLevelFormat(LevelType lt) {
 /// for the input level format.
 inline std::optional<LevelType>
 buildLevelType(LevelFormat lf,
-               llvm::ArrayRef<LevelPropertyNondefault> properties,
+               const std::vector<LevelPropertyNondefault> &properties,
                uint64_t n = 0, uint64_t m = 0) {
   uint64_t newN = n << 32;
   uint64_t newM = m << 40;
