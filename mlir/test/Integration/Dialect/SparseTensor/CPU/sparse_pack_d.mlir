@@ -23,6 +23,12 @@
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 
+#CCC = #sparse_tensor.encoding<{
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed),
+  posWidth = 64,
+  crdWidth = 32
+}>
+
 #BatchedCSR = #sparse_tensor.encoding<{
   map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed),
   posWidth = 64,
@@ -35,7 +41,9 @@
   crdWidth = 32
 }>
 
-// Test with batched-CSR and CSR-dense.
+//
+// Test assembly operation with CCC, batched-CSR and CSR-dense.
+//
 module {
   //
   // Main driver.
@@ -43,6 +51,31 @@ module {
   func.func @entry() {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f32
+
+    //
+    // Setup CCC.
+    //
+
+    %data0 = arith.constant dense<
+       [ 1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0 ]> : tensor<8xf32>
+    %pos00 = arith.constant dense<
+       [ 0, 3  ]> : tensor<2xi64>
+    %crd00 = arith.constant dense<
+       [ 0, 2, 3 ]> : tensor<3xi32>
+    %pos01 = arith.constant dense<
+       [ 0, 2, 4, 5  ]> : tensor<4xi64>
+    %crd01 = arith.constant dense<
+       [ 0, 1, 1, 2, 1 ]> : tensor<5xi32>
+    %pos02 = arith.constant dense<
+       [ 0, 2, 4, 5, 7, 8  ]> : tensor<6xi64>
+    %crd02 = arith.constant dense<
+       [ 0, 1, 0, 1, 0, 0, 1, 0  ]> : tensor<8xi32>
+
+    %s0 = sparse_tensor.assemble %data0, %pos00, %crd00, %pos01, %crd01, %pos02, %crd02 :
+       tensor<8xf32>,
+       tensor<2xi64>, tensor<3xi32>,
+       tensor<4xi64>, tensor<5xi32>,
+       tensor<6xi64>, tensor<8xi32> to tensor<4x3x2xf32, #CCC>
 
     //
     // Setup BatchedCSR.
@@ -75,9 +108,14 @@ module {
     //
     // Verify.
     //
+    // CHECK: ( ( ( 1, 2 ), ( 3, 4 ), ( 0, 0 ) ), ( ( 0, 0 ), ( 0, 0 ), ( 0, 0 ) ), ( ( 0, 0 ), ( 5, 0 ), ( 6, 7 ) ), ( ( 0, 0 ), ( 8, 0 ), ( 0, 0 ) ) )
     // CHECK: ( ( ( 1, 2 ), ( 0, 3 ), ( 4, 0 ) ), ( ( 5, 6 ), ( 0, 0 ), ( 0, 7 ) ), ( ( 8, 9 ), ( 10, 11 ), ( 12, 13 ) ), ( ( 14, 0 ), ( 0, 15 ), ( 0, 16 ) ) )
     // CHECK: ( ( ( 1, 2 ), ( 0, 3 ), ( 4, 0 ) ), ( ( 5, 6 ), ( 0, 0 ), ( 0, 7 ) ), ( ( 8, 9 ), ( 10, 11 ), ( 12, 13 ) ), ( ( 14, 0 ), ( 0, 15 ), ( 0, 16 ) ) )
     //
+
+    %d0 = sparse_tensor.convert %s0 : tensor<4x3x2xf32, #CCC> to tensor<4x3x2xf32>
+    %v0 = vector.transfer_read %d0[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
+    vector.print %v0 : vector<4x3x2xf32>
 
     %d1 = sparse_tensor.convert %s1 : tensor<4x3x2xf32, #BatchedCSR> to tensor<4x3x2xf32>
     %v1 = vector.transfer_read %d1[%c0, %c0, %c0], %f0 : tensor<4x3x2xf32>, vector<4x3x2xf32>
@@ -88,6 +126,7 @@ module {
     vector.print %v2 : vector<4x3x2xf32>
 
     // FIXME: doing this explicitly crashes runtime
+    // bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
     // bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #BatchedCSR>
     // bufferization.dealloc_tensor %s2 : tensor<4x3x2xf32, #CSRDense>
     return

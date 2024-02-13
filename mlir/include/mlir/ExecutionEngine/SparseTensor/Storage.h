@@ -465,9 +465,6 @@ private:
 
   /// Computes the assembled-size associated with the `l`-th level,
   /// given the assembled-size associated with the `(l-1)`-th level.
-  /// "Assembled-sizes" correspond to the (nominal) sizes of overhead
-  /// storage, as opposed to "level-sizes" which are the cardinality
-  /// of possible coordinates for that level.
   uint64_t assembledSize(uint64_t parentSz, uint64_t l) const {
     if (isCompressedLvl(l))
       return positions[l][parentSz];
@@ -764,11 +761,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   // Note that none of the buffers can be reused because ownership
   // of the memory passed from clients is not necessarily transferred.
   // Therefore, all data is copied over into a new SparseTensorStorage.
-  //
-  // TODO: this needs to be generalized to all formats AND
-  //       we need a proper audit of e.g. double compressed
-  //       levels where some are not filled
-  //
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
     if (!isUniqueLvl(l) && (isCompressedLvl(l) || isLooseCompressedLvl(l))) {
