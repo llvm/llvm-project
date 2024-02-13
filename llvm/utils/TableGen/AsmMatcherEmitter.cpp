@@ -1269,9 +1269,9 @@ void AsmMatcherInfo::buildRegisterClasses(
       }
 
       RegisterSet Tmp;
-      std::insert_iterator<RegisterSet> II(Tmp, Tmp.begin());
       std::set_intersection(ContainingSet.begin(), ContainingSet.end(),
-                            RS.begin(), RS.end(), II, LessRecordByID());
+                            RS.begin(), RS.end(),
+                            std::inserter(Tmp, Tmp.begin()), LessRecordByID());
       ContainingSet = std::move(Tmp);
     }
 
