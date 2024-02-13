@@ -1734,6 +1734,12 @@ SDValue SelectionDAG::getShiftAmountConstant(uint64_t Val, EVT VT,
   return getConstant(Val, DL, ShiftVT);
 }
 
+SDValue SelectionDAG::getShiftAmountConstant(const APInt &Val, EVT VT,
+                                             const SDLoc &DL, bool LegalTypes) {
+  assert(Val.ult(VT.getScalarSizeInBits()) && "Out of range shift");
+  return getShiftAmountConstant(Val.getZExtValue(), VT, DL, LegalTypes);
+}
+
 SDValue SelectionDAG::getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
                                            bool isTarget) {
   return getConstant(Val, DL, TLI->getVectorIdxTy(getDataLayout()), isTarget);
