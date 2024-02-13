@@ -712,8 +712,7 @@ public:
   // Create a native register unit that is associated with one or two root
   // registers.
   unsigned newRegUnit(CodeGenRegister *R0, CodeGenRegister *R1 = nullptr) {
-    RegUnits.resize(RegUnits.size() + 1);
-    RegUnit &RU = RegUnits.back();
+    RegUnit &RU = RegUnits.emplace_back();
     RU.Roots[0] = R0;
     RU.Roots[1] = R1;
     RU.Artificial = R0->Artificial;
@@ -725,8 +724,8 @@ public:
   // Create a new non-native register unit that can be adopted by a register
   // to increase its pressure. Note that NumNativeRegUnits is not increased.
   unsigned newRegUnit(unsigned Weight) {
-    RegUnits.resize(RegUnits.size() + 1);
-    RegUnits.back().Weight = Weight;
+    RegUnit &RU = RegUnits.emplace_back();
+    RU.Weight = Weight;
     return RegUnits.size() - 1;
   }
 

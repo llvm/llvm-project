@@ -486,11 +486,10 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
   std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     // Add process itinerary to the list.
-    ProcItinLists.resize(ProcItinLists.size() + 1);
+    std::vector<InstrItinerary> &ItinList = ProcItinLists.emplace_back();
 
     // If this processor defines no itineraries, then leave the itinerary list
     // empty.
-    std::vector<InstrItinerary> &ItinList = ProcItinLists.back();
     if (!ProcModel.hasItineraries())
       continue;
 
@@ -1029,17 +1028,16 @@ void SubtargetEmitter::ExpandProcResources(
 // tables. Must be called for each processor in order.
 void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
                                            SchedClassTables &SchedTables) {
-  SchedTables.ProcSchedClasses.resize(SchedTables.ProcSchedClasses.size() + 1);
+  std::vector<MCSchedClassDesc> &SCTab =
+      SchedTables.ProcSchedClasses.emplace_back();
   if (!ProcModel.hasInstrSchedModel())
     return;
 
-  std::vector<MCSchedClassDesc> &SCTab = SchedTables.ProcSchedClasses.back();
   LLVM_DEBUG(dbgs() << "\n+++ SCHED CLASSES (GenSchedClassTables) +++\n");
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     LLVM_DEBUG(SC.dump(&SchedModels));
 
-    SCTab.resize(SCTab.size() + 1);
-    MCSchedClassDesc &SCDesc = SCTab.back();
+    MCSchedClassDesc &SCDesc = SCTab.emplace_back();
     // SCDesc.Name is guarded by NDEBUG
     SCDesc.NumMicroOps = 0;
     SCDesc.BeginGroup = false;
