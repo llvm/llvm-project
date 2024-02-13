@@ -95,12 +95,12 @@ def generate_matmul(
     BLOCK_M=128,
     BLOCK_N=128,
     BLOCK_K=64,
-    use_warp_specilization=True,
+    use_warp_specialization=True,
     saveIR=False,
     max_num_stages=3,
 ):
     with matmulBuilder.ir.Context() as ctx, matmulBuilder.ir.Location.unknown():
-        if use_warp_specilization:
+        if use_warp_specialization:
             mlir_nvgpu_module = matmulBuilder.generate_matmul_ws(
                 input_type,
                 output_type,
@@ -161,7 +161,7 @@ def matmul(
     BLOCK_M=128,
     BLOCK_N=128,
     BLOCK_K=64,
-    use_warp_specilization=True,
+    use_warp_specialization=True,
     saveIR=False,
     max_num_stages=3,
     print_results=False,
@@ -170,7 +170,7 @@ def matmul(
     # Print the configuration
     ity = "f16" if input_type == np.float16 else "f32"
     oty = "f16" if output_type == np.float16 else "f32"
-    gemmty = "Warp Specilization" if use_warp_specilization else "Multistage"
+    gemmty = "Warp specialization" if use_warp_specialization else "Multistage"
     print(
         "===-- Running GEMM "
         + gemmty
@@ -207,7 +207,7 @@ def matmul(
         BLOCK_M,
         BLOCK_N,
         BLOCK_K,
-        use_warp_specilization,
+        use_warp_specialization,
         saveIR,
         max_num_stages,
     )
@@ -221,7 +221,7 @@ def matmul(
     mem_c = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(c)))
     kernelName = (
         "mlir_matmul_warpspecialized"
-        if use_warp_specilization
+        if use_warp_specialization
         else "mlir_matmul_multistage"
     )
 
@@ -252,7 +252,7 @@ matmul(
     128,
     4096,
     max_num_stages=3,
-    use_warp_specilization=False,
+    use_warp_specialization=False,
 )
 # GEMM Warp Specilized  f32 += f16 * f16
 matmul(
@@ -262,5 +262,5 @@ matmul(
     1024,
     512,
     max_num_stages=3,
-    use_warp_specilization=True,
+    use_warp_specialization=True,
 )
