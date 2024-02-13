@@ -54,6 +54,7 @@ def Enqueue : BuiltinGroup;
 def AsyncCopy : BuiltinGroup;
 def VectorLoadStore : BuiltinGroup;
 def LoadStore : BuiltinGroup;
+def IntelSubgroups : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -625,7 +626,7 @@ def GroupBuiltins : GenericTable {
                 "IsBallotFindBit", "IsLogical", "NoGroupOperation", "HasBoolArg"];
 }
 
-// Function to lookup native builtins by their name and set.
+// Function to lookup group builtins by their name and set.
 def lookupGroupBuiltin : SearchIndex {
   let Table = GroupBuiltins;
   let Key = ["Name"];
@@ -871,6 +872,61 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", Wo
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
 
+//===----------------------------------------------------------------------===//
+// Class defining a sub group builtin that should be translated into a
+// SPIR-V instruction using the SPV_INTEL_subgroups extension.
+//
+// name is the demangled name of the given builtin.
+// opcode specifies the SPIR-V operation code of the generated instruction.
+//===----------------------------------------------------------------------===//
+class IntelSubgroupsBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+  bit IsBlock = !or(!eq(operation, OpSubgroupBlockReadINTEL),
+                    !eq(operation, OpSubgroupBlockWriteINTEL));
+  bit IsWrite = !eq(operation, OpSubgroupBlockWriteINTEL);
+}
+
+// Table gathering all the Intel sub group builtins.
+def IntelSubgroupsBuiltins : GenericTable {
+  let FilterClass = "IntelSubgroupsBuiltin";
+  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupIntelSubgroupsBuiltin : SearchIndex {
+  let Table = IntelSubgroupsBuiltins;
+  let Key = ["Name"];
+}
+
+// Multiclass used to define incoming builtin records for the SPV_INTEL_subgroups extension
+// and corresponding work/sub group builtin records.
+multiclass DemangledIntelSubgroupsBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("intel_sub_group_", name), OpenCL_std, IntelSubgroups, minNumArgs, maxNumArgs>;
+  def : IntelSubgroupsBuiltin<!strconcat("intel_sub_group_", name), operation>;
+}
+
+// cl_intel_subgroups
+defm : DemangledIntelSubgroupsBuiltin<"shuffle", 2, 2, OpSubgroupShuffleINTEL>;
+defm : DemangledIntelSubgroupsBuiltin<"shuffle_down", 3, 3, OpSubgroupShuffleDownINTEL>;
+defm : DemangledIntelSubgroupsBuiltin<"shuffle_up", 3, 3, OpSubgroupShuffleUpINTEL>;
+defm : DemangledIntelSubgroupsBuiltin<"shuffle_xor", 2, 2, OpSubgroupShuffleXorINTEL>;
+foreach i = ["", "2", "4", "8"] in {
+  // cl_intel_subgroups
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read",  i), 1, 2, OpSubgroupBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write", i), 2, 3, OpSubgroupBlockWriteINTEL>;
+  // cl_intel_subgroups_short
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_ui",  i), 1, 2, OpSubgroupBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_ui", i), 2, 3, OpSubgroupBlockWriteINTEL>;
+}
+// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long
+foreach i = ["", "2", "4", "8", "16"] in {
+  foreach j = ["c", "s", "l"] in {
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_u", j,  i), 1, 2, OpSubgroupBlockReadINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_u", j, i), 2, 3, OpSubgroupBlockWriteINTEL>;
+  }
+}
+// OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
 
 //===----------------------------------------------------------------------===//
 // Class defining a get builtin record used for lowering builtin calls such as
