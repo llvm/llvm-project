@@ -451,9 +451,7 @@ private:
 
   // Returns the canonial name of the given PGOName. In a canonical name, all
   // suffixes that begins with "." except ".__uniq." are stripped.
-  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`. And both
-  // should probably preserve `.specialized.<NSpecs>` suffix now that
-  // function-specialization is enabled by default.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
   static StringRef getCanonicalName(StringRef PGOName);
 
   // Add the function into the symbol table, by creating the following
