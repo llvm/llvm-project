@@ -125,4 +125,16 @@ def fir_CUDALaunchBoundsAttr : fir_Attr<"CUDALaunchBounds"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def fir_CUDAClusterDimsAttr : fir_Attr<"CUDAClusterDims"> {
+  let mnemonic = "cluster_dims";
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$x,
+    "mlir::IntegerAttr":$y,
+    "mlir::IntegerAttr":$z
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS
