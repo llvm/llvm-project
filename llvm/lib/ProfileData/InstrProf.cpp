@@ -554,10 +554,10 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
     return E;
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName == PGOFuncName)
-    return Error::success();
+  if (CanonicalFuncName != PGOFuncName)
+    return mapName(CanonicalFuncName);
 
-  return mapName(CanonicalFuncName);
+  return Error::success();
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
