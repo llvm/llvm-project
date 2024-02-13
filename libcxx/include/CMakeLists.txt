@@ -110,6 +110,7 @@ set(files
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
   __algorithm/ranges_contains.h
+  __algorithm/ranges_contains_subrange.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h

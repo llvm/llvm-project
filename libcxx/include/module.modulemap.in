@@ -778,6 +778,7 @@ module std_private_algorithm_ranges_clamp                                [system
   export std_private_functional_ranges_operations
 }
 module std_private_algorithm_ranges_contains                             [system] { header "__algorithm/ranges_contains.h" }
+module std_private_algorithm_ranges_contains_subrange                    [system] { header "__algorithm/ranges_contains_subrange.h" }
 module std_private_algorithm_ranges_copy                                 [system] {
   header "__algorithm/ranges_copy.h"
   export std_private_algorithm_in_out_result
