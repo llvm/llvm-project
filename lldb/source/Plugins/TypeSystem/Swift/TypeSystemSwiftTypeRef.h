@@ -530,10 +530,13 @@ public:
   /// Forwards to SwiftASTContext.
   PersistentExpressionState *GetPersistentExpressionState() override;
   Status PerformCompileUnitImports(const SymbolContext &sc);
+  /// Returns how often ModulesDidLoad was called/
+  unsigned GetGeneration() const { return m_generation; }
 
   friend class SwiftASTContextForExpressions;
 protected:
   lldb::TargetWP m_target_wp;
+  unsigned m_generation = 0;
 
   /// This exists to implement the PerformCompileUnitImports
   /// mechanism.

@@ -116,6 +116,7 @@ public:
     return lldb::eLanguageTypeSwift;
   }
 
+  void SymbolsDidLoad(const ModuleList &module_list) override;
   void ModulesDidLoad(const ModuleList &module_list) override;
 
   bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
