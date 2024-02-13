@@ -39,6 +39,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
 #include <algorithm>
 #include <optional>
@@ -6847,6 +6848,27 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
   case Intrinsic::experimental_constrained_ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
+  case Intrinsic::experimental_gc_relocate: {
+    GCRelocateInst &GCR = *cast<GCRelocateInst>(Call);
+    Value *DerivedPtr = GCR.getDerivedPtr();
+    Value *BasePtr = GCR.getBasePtr();
+
+    // Undef is undef, even after relocation.
+    if (isa<UndefValue>(DerivedPtr) || isa<UndefValue>(BasePtr)) {
+      return UndefValue::get(GCR.getType());
+    }
+
+    if (auto *PT = dyn_cast<PointerType>(GCR.getType())) {
+      // For now, the assumption is that the relocation of null will be null
+      // for most any collector. If this ever changes, a corresponding hook
+      // should be added to GCStrategy and this code should check it first.
+      if (isa<ConstantPointerNull>(DerivedPtr)) {
+        // Use null-pointer of gc_relocate's type to replace it.
+        return ConstantPointerNull::get(PT);
+      }
+    }
+    return nullptr;
+  }
   default:
     return nullptr;
   }
