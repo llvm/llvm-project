@@ -44,7 +44,7 @@ import time
 import traceback
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB modules
 import lldb
@@ -517,7 +517,7 @@ def builder_module():
     return lldbplatformutil.builder_module()
 
 
-class Base(unittest2.TestCase):
+class Base(unittest.TestCase):
     """
     Abstract base for performing lldb (see TestBase) or other generic tests (see
     BenchBase for one example).  lldbtest.Base works with the test driver to
@@ -1090,17 +1090,14 @@ class Base(unittest2.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("FAIL", file=sbuf)
 
-    def markExpectedFailure(self, err, bugnumber):
+    def markExpectedFailure(self, err):
         """Callback invoked when an expected failure/error occurred."""
         self.__expected__ = True
         with recording(self, False) as sbuf:
             # False because there's no need to write "expected failure" to the
             # stderr twice.
             # Once by the Python unittest framework, and a second time by us.
-            if bugnumber is None:
-                print("expected failure", file=sbuf)
-            else:
-                print("expected failure (problem id:" + str(bugnumber) + ")", file=sbuf)
+            print("expected failure", file=sbuf)
 
     def markSkippedTest(self):
         """Callback invoked when a test is skipped."""
@@ -1111,19 +1108,14 @@ class Base(unittest2.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("skipped test", file=sbuf)
 
-    def markUnexpectedSuccess(self, bugnumber):
+    def markUnexpectedSuccess(self):
         """Callback invoked when an unexpected success occurred."""
         self.__unexpected__ = True
         with recording(self, False) as sbuf:
             # False because there's no need to write "unexpected success" to the
             # stderr twice.
             # Once by the Python unittest framework, and a second time by us.
-            if bugnumber is None:
-                print("unexpected success", file=sbuf)
-            else:
-                print(
-                    "unexpected success (problem id:" + str(bugnumber) + ")", file=sbuf
-                )
+            print("unexpected success", file=sbuf)
 
     def getRerunArgs(self):
         return " -f %s.%s" % (self.__class__.__name__, self._testMethodName)
@@ -1704,13 +1696,11 @@ class LLDBTestCaseFactory(type):
 
                     xfail_reason = xfail_for_debug_info_cat_fn(cat)
                     if xfail_reason:
-                        test_method = unittest2.expectedFailure(xfail_reason)(
-                            test_method
-                        )
+                        test_method = unittest.expectedFailure(test_method)
 
                     skip_reason = skip_for_debug_info_cat_fn(cat)
                     if skip_reason:
-                        test_method = unittest2.skip(skip_reason)(test_method)
+                        test_method = unittest.skip(skip_reason)(test_method)
 
                     newattrs[method_name] = test_method
 
@@ -2226,7 +2216,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         match_strings = lldb.SBStringList()
         interp.HandleCompletion(command, len(command), 0, -1, match_strings)
         # match_strings is a 1-indexed list, so we have to slice...
-        self.assertItemsEqual(
+        self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
         )
 
