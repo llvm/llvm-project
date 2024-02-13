@@ -86,6 +86,10 @@ constexpr bool all_the_algorithms()
     assert(copies == 0);
     (void)std::ranges::contains(a, value, Proj(&copies));
     assert(copies == 0);
+    (void)std::ranges::contains_subrange(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::contains_subrange(a, b, Equal(), Proj(&copies), Proj(&copies));
+    assert(copies == 0);
 #endif
     (void)std::ranges::count(first, last, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count(a, value, Proj(&copies)); assert(copies == 0);
