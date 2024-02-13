@@ -222,8 +222,12 @@ Building this project is done with the following steps, assuming the files
 
   $ mkdir build
   $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_BUILD=<build>
+  $ ninja -j1 std -C build
   $ ninja -C build
   $ build/main
+
+.. note:: The ``std`` dependencies of ``std.compat`` is not always resolved when
+          building the ``std`` target using multiple jobs.
 
 This is another small sample program that uses the module ``std`` from
 installation directory. It consists of a ``CMakeLists.txt``, an
