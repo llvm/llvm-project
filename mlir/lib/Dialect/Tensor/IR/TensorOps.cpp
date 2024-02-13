@@ -3766,8 +3766,9 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
       if (!ShapedType::isDynamic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
-    } else if (inputShape[pos] % (*constantTile) != 0)
+    } else if (inputShape[pos] % (*constantTile) != 0) {
       return true;
+    }
   }
   return false;
 }
