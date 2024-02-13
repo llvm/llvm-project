@@ -2523,7 +2523,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     unsigned NumElts = DestTy->castAs<VectorType>()->getNumElements();
     for (unsigned I = 0; I != NumElts; ++I)
       Mask.push_back(I);
-    
+
     return Builder.CreateShuffleVector(Vec, Mask, "trunc");
   }
 

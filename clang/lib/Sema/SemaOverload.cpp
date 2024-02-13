@@ -228,13 +228,13 @@ void StandardConversionSequence::setAsIdentityConversion() {
 /// implicit conversions.
 ImplicitConversionRank StandardConversionSequence::getRank() const {
   ImplicitConversionRank Rank = ICR_Exact_Match;
-  if  (GetConversionRank(First) > Rank)
+  if (GetConversionRank(First) > Rank)
     Rank = GetConversionRank(First);
-  if  (GetConversionRank(Second) > Rank)
+  if (GetConversionRank(Second) > Rank)
     Rank = GetConversionRank(Second);
-  if  (GetConversionRank(Element) > Rank)
+  if (GetConversionRank(Element) > Rank)
     Rank = GetConversionRank(Element);
-  if  (GetConversionRank(Third) > Rank)
+  if (GetConversionRank(Third) > Rank)
     Rank = GetConversionRank(Third);
   return Rank;
 }
