@@ -694,7 +694,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AlwaysBreakAfterReturnType,
               FormatStyle::RTBS_TopLevelDefinitions);
   // For backward compatibility:
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,
               FormatStyle::RTBS_None);
   CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic",
