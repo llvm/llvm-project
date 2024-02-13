@@ -104,7 +104,7 @@ for.end:
 ; CSPGOSUMMARY-LABEL: @foo
 ; CSPGOSUMMARY: %even.odd.i = select i1 %tobool.i{{[0-9]*}}, ptr @even, ptr @odd
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
-; CSPGOSUMMARY: %even.odd.i2 = select i1 %tobool.i{{[0-9]*}}, ptr @even, ptr @odd
+; CSPGOSUMMARY: %even.odd.i2 = select i1 %tobool.i{{[0-9]*}}, ptr @odd, ptr @even
 ; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
 
 declare dso_local i32 @bar_m(i32)

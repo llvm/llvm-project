@@ -86,6 +86,20 @@ lto::Config BitcodeCompiler::createConfig() {
   c.CSIRProfile = std::string(ctx.config.ltoCSProfileFile);
   c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
   c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
+  c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
+  c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
+
+  if (ctx.config.emit == EmitKind::LLVM) {
+    c.PostInternalizeModuleHook = [this](size_t task, const Module &m) {
+      if (std::unique_ptr<raw_fd_ostream> os =
+              openLTOOutputFile(ctx.config.outputFile))
+        WriteBitcodeToFile(m, *os, false);
+      return false;
+    };
+  } else if (ctx.config.emit == EmitKind::ASM) {
+    c.CGFileType = CodeGenFileType::AssemblyFile;
+    c.Options.MCOptions.AsmVerbose = true;
+  }
 
   if (ctx.config.saveTemps)
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
@@ -204,6 +218,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
 
   std::vector<InputFile *> ret;
+  bool emitASM = ctx.config.emit == EmitKind::ASM;
+  const char *Ext = emitASM ? ".s" : ".obj";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;
     // Get the native object contents either from the cache or from memory.  Do
@@ -226,20 +242,21 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =
           saver().save(Twine(ctx.config.outputFile) + ".lto" +
-                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ".obj");
+                       (i == 0 ? Twine("") : Twine('.') + Twine(i)) + Ext);
     } else {
       StringRef directory = sys::path::parent_path(bitcodeFilePath);
-      StringRef baseName = sys::path::filename(bitcodeFilePath);
+      StringRef baseName = sys::path::stem(bitcodeFilePath);
       StringRef outputFileBaseName = sys::path::filename(ctx.config.outputFile);
       SmallString<64> path;
       sys::path::append(path, directory,
-                        outputFileBaseName + ".lto." + baseName);
+                        outputFileBaseName + ".lto." + baseName + Ext);
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    if (ctx.config.saveTemps)
+    if (ctx.config.saveTemps || emitASM)
       saveBuffer(buf[i].second, ltoObjName);
-    ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
+    if (!emitASM)
+      ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   return ret;

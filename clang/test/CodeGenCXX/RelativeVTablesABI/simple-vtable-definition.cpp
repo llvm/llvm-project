@@ -14,7 +14,7 @@
 // CHECK: @_ZTI1A ={{.*}} constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i32 8), ptr @_ZTS1A }, align 8
 
 // The rtti should be in a comdat
-// CHECK: @_ZTI1A.rtti_proxy = hidden unnamed_addr constant ptr @_ZTI1A, comdat
+// CHECK: @_ZTI1A.rtti_proxy = {{.*}}comdat
 
 // The vtable symbol is exposed through an alias.
 // @_ZTV1A = dso_local unnamed_addr alias { [3 x i32] }, ptr @_ZTV1A.local

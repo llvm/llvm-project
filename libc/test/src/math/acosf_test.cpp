@@ -17,14 +17,12 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
-
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcAcosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibcAcosfTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcAcosfTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acosf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -45,11 +43,11 @@ TEST(LlvmLibcAcosfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST(LlvmLibcAcosfTest, InFloatRange) {
+TEST_F(LlvmLibcAcosfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acos, x,
@@ -57,7 +55,7 @@ TEST(LlvmLibcAcosfTest, InFloatRange) {
   }
 }
 
-TEST(LlvmLibcAcosfTest, SpecificBitPatterns) {
+TEST_F(LlvmLibcAcosfTest, SpecificBitPatterns) {
   constexpr int N = 13;
   constexpr uint32_t INPUTS[N] = {
       0x3f000000, // x = 0.5f
@@ -76,7 +74,7 @@ TEST(LlvmLibcAcosfTest, SpecificBitPatterns) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acos, x,
                                    LIBC_NAMESPACE::acosf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acos, -x,

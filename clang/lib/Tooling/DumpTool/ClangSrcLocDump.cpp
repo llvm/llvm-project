@@ -111,7 +111,7 @@ int main(int argc, const char **argv) {
 
   auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), OFS);
 
-  auto Driver = std::make_unique<driver::Driver>(
+  auto Driver = std::make_unique<clang::driver::Driver>(
       "clang", llvm::sys::getDefaultTargetTriple(), Diagnostics,
       "ast-api-dump-tool", OFS);
 
@@ -121,14 +121,14 @@ int main(int argc, const char **argv) {
     return 1;
 
   const auto &Jobs = Comp->getJobs();
-  if (Jobs.size() != 1 || !isa<driver::Command>(*Jobs.begin())) {
+  if (Jobs.size() != 1 || !isa<clang::driver::Command>(*Jobs.begin())) {
     SmallString<256> error_msg;
     llvm::raw_svector_ostream error_stream(error_msg);
     Jobs.Print(error_stream, "; ", true);
     return 1;
   }
 
-  const auto &Cmd = cast<driver::Command>(*Jobs.begin());
+  const auto &Cmd = cast<clang::driver::Command>(*Jobs.begin());
   const llvm::opt::ArgStringList &CC1Args = Cmd.getArguments();
 
   auto Invocation = std::make_unique<CompilerInvocation>();

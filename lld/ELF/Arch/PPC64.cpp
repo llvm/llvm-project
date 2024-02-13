@@ -253,7 +253,7 @@ static bool addOptional(StringRef name, uint64_t value,
   Symbol *sym = symtab.find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
+  sym->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
                        STT_FUNC, value,
                        /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
@@ -1563,6 +1563,8 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
   uint64_t lastPPCRelaxedRelocOff = -1;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;

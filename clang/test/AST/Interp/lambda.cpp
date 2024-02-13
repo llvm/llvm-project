@@ -155,6 +155,19 @@ namespace StaticInvoker {
     return fp(i).a;
   }
   static_assert(sv6(12) == 12);
+
+
+  /// A generic lambda.
+  auto GL = [](auto a) { return a; };
+  constexpr char (*fp2)(char) = GL;
+  static_assert(fp2('3') == '3', "");
+
+  struct GLS {
+    int a;
+  };
+  auto GL2 = [](auto a) { return GLS{a}; };
+  constexpr GLS (*fp3)(char) = GL2;
+  static_assert(fp3('3').a == '3', "");
 }
 
 namespace LambdasAsParams {
@@ -178,4 +191,25 @@ namespace LambdasAsParams {
     return static_cast<float>(a());
   }
   static_assert(heh() == 1.0);
+}
+
+namespace ThisCapture {
+  class Foo {
+  public:
+    int b = 32;
+    int a;
+
+    constexpr Foo() : a([this](){ return b + 1;}()) {}
+
+    constexpr int Aplus2() const {
+      auto F = [this]() {
+        return a + 2;
+      };
+
+      return F();
+    }
+  };
+  constexpr Foo F;
+  static_assert(F.a == 33, "");
+  static_assert(F.Aplus2() == (33 + 2), "");
 }

@@ -367,19 +367,33 @@ VP_PROPERTY_FUNCTIONAL_SDOPC(FCOPYSIGN)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(copysign)
 END_REGISTER_VP(vp_copysign, VP_FCOPYSIGN)
 
-// llvm.vp.minnum(x, y, mask,vlen)
+// llvm.vp.minnum(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_minnum, 2, 3, VP_FMINNUM, -1)
 VP_PROPERTY_BINARYOP
 VP_PROPERTY_FUNCTIONAL_SDOPC(FMINNUM)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(minnum)
 END_REGISTER_VP(vp_minnum, VP_FMINNUM)
 
-// llvm.vp.maxnum(x, y, mask,vlen)
+// llvm.vp.maxnum(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_maxnum, 2, 3, VP_FMAXNUM, -1)
 VP_PROPERTY_BINARYOP
 VP_PROPERTY_FUNCTIONAL_SDOPC(FMAXNUM)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(maxnum)
 END_REGISTER_VP(vp_maxnum, VP_FMAXNUM)
+
+// llvm.vp.minimum(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_minimum, 2, 3, VP_FMINIMUM, -1)
+VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(FMINIMUM)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(minimum)
+END_REGISTER_VP(vp_minimum, VP_FMINIMUM)
+
+// llvm.vp.maximum(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_maximum, 2, 3, VP_FMAXIMUM, -1)
+VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(FMAXIMUM)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(maximum)
+END_REGISTER_VP(vp_maximum, VP_FMAXIMUM)
 
 // llvm.vp.ceil(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_ceil, 1, 2, VP_FCEIL, -1)
@@ -699,8 +713,14 @@ VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(vp_merge, VP_MERGE)
 
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
-VP_PROPERTY_FUNCTIONAL_INTRINSIC(experimental_vector_splice)
+VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
+
+// llvm.experimental.vp.reverse(x,mask,vlen)
+BEGIN_REGISTER_VP(experimental_vp_reverse, 1, 2,
+                  EXPERIMENTAL_VP_REVERSE, -1)
+VP_PROPERTY_NO_FUNCTIONAL
+END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
 

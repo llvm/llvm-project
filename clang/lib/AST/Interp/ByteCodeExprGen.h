@@ -30,7 +30,6 @@ namespace interp {
 
 template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
-template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
@@ -61,14 +60,15 @@ public:
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
+  bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
+  bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E);
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
@@ -106,6 +106,16 @@ public:
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
+  bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
+  bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
+  bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
+  bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
+  bool VisitRequiresExpr(const RequiresExpr *E);
+  bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -126,9 +136,8 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    return E->isGLValue() ? PT_Ptr : classify(E->getType());
+    return Ctx.classify(E);
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
@@ -172,6 +181,9 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
+    if (!this->emitInitPtr(Init))
+      return false;
+
     return this->emitPopPtr(Init);
   }
 
@@ -183,8 +195,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if ((Init->getType()->isArrayType() || Init->getType()->isRecordType()) &&
-        !this->emitCheckGlobalCtor(Init))
+    if (!this->emitInitPtr(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -198,10 +209,11 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitPopPtr(I);
+    return this->emitInitPtrPop(I);
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -214,14 +226,13 @@ private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
-  friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
 
   /// Emits a zero initializer.
-  bool visitZeroInitializer(QualType QT, const Expr *E);
+  bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
   enum class DerefKind {
@@ -258,15 +269,6 @@ private:
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
 
-  /// Returns the CXXRecordDecl for the type of the given expression,
-  /// or nullptr if no such decl exists.
-  const CXXRecordDecl *getRecordDecl(const Expr *E) const {
-    QualType T = E->getType();
-    if (const auto *RD = T->getPointeeCXXRecordDecl())
-      return RD;
-    return T->getAsCXXRecordDecl();
-  }
-
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
 
@@ -277,6 +279,16 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  PrimType classifyComplexElementType(QualType T) const {
+    assert(T->isAnyComplexType());
+
+    QualType ElemType = T->getAs<ComplexType>()->getElementType();
+
+    return *this->classify(ElemType);
+  }
+
+  bool emitComplexReal(const Expr *SubExpr);
+
   bool emitRecordDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);
@@ -303,6 +315,9 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
+
+  /// Flag indicating if we're initializing a global variable.
+  bool GlobalDecl = false;
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;
@@ -356,6 +371,7 @@ public:
     if (!Idx)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
   }
 
   /// Overriden to support explicit destruction.
@@ -364,6 +380,7 @@ public:
       return;
     this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
     this->Idx = std::nullopt;
   }
 
@@ -385,8 +402,27 @@ public:
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
         this->Ctx->emitRecordDestruction(Local.Desc);
+        removeIfStoredOpaqueValue(Local);
       }
     }
+  }
+
+  void removeStoredOpaqueValues() {
+    if (!Idx)
+      return;
+
+    for (const Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+      removeIfStoredOpaqueValue(Local);
+    }
+  }
+
+  void removeIfStoredOpaqueValue(const Scope::Local &Local) {
+    if (const auto *OVE =
+            llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
+      if (auto It = this->Ctx->OpaqueExprs.find(OVE);
+          It != this->Ctx->OpaqueExprs.end())
+        this->Ctx->OpaqueExprs.erase(It);
+    };
   }
 
   /// Index of the scope in the chain.

@@ -13,6 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Duration.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -895,6 +896,10 @@ void raw_fd_ostream::anchor() {}
 raw_fd_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
+#ifdef __MVS__
+  EC = enableAutoConversion(STDOUT_FILENO);
+  assert(!EC);
+#endif
   static raw_fd_ostream S("-", EC, sys::fs::OF_None);
   assert(!EC);
   return S;
@@ -902,6 +907,10 @@ raw_fd_ostream &llvm::outs() {
 
 raw_fd_ostream &llvm::errs() {
   // Set standard error to be unbuffered and tied to outs() by default.
+#ifdef __MVS__
+  std::error_code EC = enableAutoConversion(STDERR_FILENO);
+  assert(!EC);
+#endif
   static raw_fd_ostream S(STDERR_FILENO, false, true);
   return S;
 }
@@ -927,6 +936,9 @@ raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
   if (!isRegularFile())
     EC = std::make_error_code(std::errc::invalid_argument);
 }
+
+raw_fd_stream::raw_fd_stream(int fd, bool shouldClose)
+    : raw_fd_ostream(fd, shouldClose, false, OStreamKind::OK_FDStream) {}
 
 ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   assert(get_fd() >= 0 && "File already closed.");

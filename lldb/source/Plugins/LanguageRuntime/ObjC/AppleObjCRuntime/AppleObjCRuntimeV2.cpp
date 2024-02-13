@@ -917,7 +917,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     std::unique_ptr<RegularExpression> regex_up;
     switch (command.GetArgumentCount()) {
     case 0:
@@ -929,14 +929,14 @@ protected:
         result.AppendError(
             "invalid argument - please provide a valid regular expression");
         result.SetStatus(lldb::eReturnStatusFailed);
-        return false;
+        return;
       }
       break;
     }
     default: {
       result.AppendError("please provide 0 or 1 arguments");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
     }
 
@@ -997,11 +997,10 @@ protected:
         }
       }
       result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
     result.AppendError("current process has no Objective-C runtime loaded");
     result.SetStatus(lldb::eReturnStatusFailed);
-    return false;
   }
 
   CommandOptions m_options;
@@ -1034,11 +1033,11 @@ public:
   ~CommandObjectMultiwordObjC_TaggedPointer_Info() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() == 0) {
       result.AppendError("this command requires arguments");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1048,7 +1047,7 @@ protected:
     if (!objc_runtime) {
       result.AppendError("current process has no Objective-C runtime loaded");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     ObjCLanguageRuntime::TaggedPointerVendor *tagged_ptr_vendor =
@@ -1056,7 +1055,7 @@ protected:
     if (!tagged_ptr_vendor) {
       result.AppendError("current process has no tagged pointer support");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
@@ -1071,7 +1070,7 @@ protected:
         result.AppendErrorWithFormatv(
             "could not convert '{0}' to a valid address\n", arg_str);
         result.SetStatus(lldb::eReturnStatusFailed);
-        return false;
+        return;
       }
 
       if (!tagged_ptr_vendor->IsPossibleTaggedPointer(arg_addr)) {
@@ -1084,7 +1083,7 @@ protected:
         result.AppendErrorWithFormatv(
             "could not get class descriptor for {0:x16}\n", arg_addr);
         result.SetStatus(lldb::eReturnStatusFailed);
-        return false;
+        return;
       }
 
       uint64_t info_bits = 0;
@@ -1106,7 +1105,6 @@ protected:
     }
 
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
@@ -1895,15 +1893,15 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper(
       if (loader->IsFullyInitialized()) {
         switch (exe_ctx.GetTargetRef().GetDynamicClassInfoHelper()) {
         case eDynamicClassInfoHelperAuto:
-          [[clang::fallthrough]];
+          LLVM_FALLTHROUGH;
         case eDynamicClassInfoHelperGetRealizedClassList:
           if (m_runtime.m_has_objc_getRealizedClassList_trylock)
             return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
-          [[clang::fallthrough]];
+          LLVM_FALLTHROUGH;
         case eDynamicClassInfoHelperCopyRealizedClassList:
           if (m_runtime.m_has_objc_copyRealizedClassList)
             return DynamicClassInfoExtractor::objc_copyRealizedClassList;
-          [[clang::fallthrough]];
+          LLVM_FALLTHROUGH;
         case eDynamicClassInfoHelperRealizedClassesStruct:
           return DynamicClassInfoExtractor::gdb_objc_realized_classes;
         }
@@ -2643,7 +2641,7 @@ static bool DoesProcessHaveSharedCache(Process &process) {
     return true; // this should not happen
 
   llvm::StringRef platform_plugin_name_sr = platform_sp->GetPluginName();
-  if (platform_plugin_name_sr.endswith("-simulator"))
+  if (platform_plugin_name_sr.ends_with("-simulator"))
     return false;
 
   return true;
@@ -2733,7 +2731,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
     llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
     llvm::StringRef class_prefix("OBJC_CLASS_$_");
 
-    if (name_strref.startswith(ivar_prefix)) {
+    if (name_strref.starts_with(ivar_prefix)) {
       llvm::StringRef ivar_skipped_prefix =
           name_strref.substr(ivar_prefix.size());
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
@@ -2766,7 +2764,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
               ivar_func);
         }
       }
-    } else if (name_strref.startswith(class_prefix)) {
+    } else if (name_strref.starts_with(class_prefix)) {
       llvm::StringRef class_skipped_prefix =
           name_strref.substr(class_prefix.size());
       const ConstString class_name_cs(class_skipped_prefix);

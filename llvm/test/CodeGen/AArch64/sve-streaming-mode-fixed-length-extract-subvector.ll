@@ -184,15 +184,11 @@ define void @extract_subvector_v4i64(ptr %a, ptr %b) {
 define <2 x half> @extract_subvector_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: extract_subvector_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    adrp x8, .LCPI12_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov z1.h, z0.h[3]
-; CHECK-NEXT:    mov z0.h, z0.h[2]
-; CHECK-NEXT:    str h1, [sp, #10]
-; CHECK-NEXT:    str h0, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI12_0]
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %ret = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %op, i64 2)
   ret <2 x half> %ret

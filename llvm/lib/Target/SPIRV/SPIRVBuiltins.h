@@ -37,6 +37,18 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  const Register OrigRet, const Type *OrigRetTy,
                                  const SmallVectorImpl<Register> &Args,
                                  SPIRVGlobalRegistry *GR);
+
+/// Translates a string representing a SPIR-V or OpenCL builtin type to a
+/// TargetExtType that can be further lowered with lowerBuiltinType().
+///
+/// \return A TargetExtType representing the builtin SPIR-V type.
+///
+/// \p TypeName is the full string representation of the SPIR-V or OpenCL
+/// builtin type.
+const TargetExtType *
+parseBuiltinTypeNameToTargetExtType(std::string TypeName,
+                                    MachineIRBuilder &MIRBuilder);
+
 /// Handles the translation of the provided special opaque/builtin type \p Type
 /// to SPIR-V type. Generates the corresponding machine instructions for the
 /// target type or gets the already existing OpType<...> register from the

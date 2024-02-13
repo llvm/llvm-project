@@ -17,12 +17,12 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcLog10Test = LIBC_NAMESPACE::testing::FPTest<double>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
-DECLARE_SPECIAL_CONSTANTS(double)
-
-TEST(LlvmLibcLog10Test, SpecialNumbers) {
+TEST_F(LlvmLibcLog10Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log10(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log10(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10(neg_inf), FE_INVALID);
@@ -34,7 +34,7 @@ TEST(LlvmLibcLog10Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log10(1.0));
 }
 
-TEST(LlvmLibcLog10Test, TrickyInputs) {
+TEST_F(LlvmLibcLog10Test, TrickyInputs) {
   constexpr int N = 36;
   constexpr uint64_t INPUTS[N] = {
       0x3ff0000000000000, // x = 1.0
@@ -66,13 +66,13 @@ TEST(LlvmLibcLog10Test, TrickyInputs) {
       0x30160580e7268a99, 0x5ca04103b7eaa345, 0x19ad77dc4a40093f,
       0x0000449fb5c8a96e};
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,
                                    LIBC_NAMESPACE::log10(x), 0.5);
   }
 }
 
-TEST(LlvmLibcLog10Test, AllExponents) {
+TEST_F(LlvmLibcLog10Test, AllExponents) {
   double x = 0x1.0p-1074;
   for (int i = -1074; i < 1024; ++i, x *= 2.0) {
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,
@@ -80,7 +80,7 @@ TEST(LlvmLibcLog10Test, AllExponents) {
   }
 }
 
-TEST(LlvmLibcLog10Test, InDoubleRange) {
+TEST_F(LlvmLibcLog10Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'001;
   constexpr uint64_t START = 0x3FD0'0000'0000'0000ULL; // 0.25
   constexpr uint64_t STOP = 0x4010'0000'0000'0000ULL;  // 4.0
@@ -102,7 +102,7 @@ TEST(LlvmLibcLog10Test, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log10(x);
       ++cc;
       if (isnan(result) || isinf(result))

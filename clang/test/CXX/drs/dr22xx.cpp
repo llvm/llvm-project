@@ -1,14 +1,19 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+
 
 #if __cplusplus >= 201103L
 namespace dr2211 { // dr2211: 8
 void f() {
   int a;
-  auto f = [a](int a) { (void)a; }; // expected-error {{a lambda parameter cannot shadow an explicitly captured entity}}
-  // expected-note@-1{{variable 'a' is explicitly captured here}}
+  auto f = [a](int a) { (void)a; };
+  // since-cxx11-error@-1 {{a lambda parameter cannot shadow an explicitly captured entity}}
+  //   since-cxx11-note@-2 {{variable 'a' is explicitly captured here}}
   auto g = [=](int a) { (void)a; };
 }
 }
@@ -24,9 +29,12 @@ struct A<int, U>;
 
 namespace dr2229 { // dr2229: 7
 struct AnonBitfieldQualifiers {
-  const unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
-  volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
-  const volatile unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}
+  const unsigned : 1;
+  // expected-error@-1 {{anonymous bit-field cannot have qualifiers}}
+  volatile unsigned : 1;
+  // expected-error@-1 {{anonymous bit-field cannot have qualifiers}}
+  const volatile unsigned : 1;
+  // expected-error@-1 {{anonymous bit-field cannot have qualifiers}}
 
   unsigned : 1;
   const unsigned i1 : 1;
@@ -98,7 +106,8 @@ namespace MultilevelSpecialization {
     template <T... V> void f(int i = 0, int (&... arr)[V]);
   };
   template<> template<int a, int b>
-    void B<int, int>::f(int i, int (&arr1)[a], int (&arr2)[b]) {} // expected-error {{does not match}}
+    void B<int, int>::f(int i, int (&arr1)[a], int (&arr2)[b]) {}
+    // since-cxx11-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'dr2233::MultilevelSpecialization::B<int, int>'}}
   template<> template<>
     void B<int, int>::f<1, 1>(int i, int (&arr1a)[1], int (&arr2a)[1]) {}
 }
@@ -122,6 +131,69 @@ namespace CheckAfterMerging2 {
 }
 #endif
 } // namespace dr2233
+
+namespace dr2267 { // dr2267: no
+#if __cplusplus >= 201103L
+struct A {} a;
+struct B { explicit B(const A&); }; // #dr2267-struct-B
+
+struct D { D(); };
+struct C { explicit operator D(); } c;
+
+B b1(a);
+const B &b2{a}; // FIXME ill-formed
+const B &b3(a);
+// since-cxx11-error@-1 {{no viable conversion from 'struct A' to 'const B'}}
+//   since-cxx11-note@#dr2267-struct-B {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const B &' for 1st argument}}
+//   since-cxx11-note@#dr2267-struct-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'B &&' for 1st argument}}
+//   since-cxx11-note@#dr2267-struct-B {{explicit constructor is not a candidate}}
+
+D d1(c);
+const D &d2{c}; // FIXME ill-formed
+const D &d3(c); // FIXME ill-formed
+#endif
+}
+
+namespace dr2273 { // dr2273: 3.3
+#if __cplusplus >= 201103L
+struct A {
+  A(int = 0) = delete; // #dr2273-A
+};
+
+struct B : A { // #dr2273-B
+  using A::A;
+};
+
+B b;
+// since-cxx11-error@-1 {{call to implicitly-deleted default constructor of 'B'}}
+//   since-cxx11-note@#dr2273-B {{default constructor of 'B' is implicitly deleted because base class 'A' has a deleted default constructor}}
+//   since-cxx11-note@#dr2273-A {{'A' has been explicitly marked deleted here}}
+#endif
+}
+
+namespace dr2277 { // dr2277: partial
+#if __cplusplus >= 201103L
+struct A {
+  A(int, int = 0);
+  void f(int, int = 0); // #dr2277-A-f
+};
+struct B : A {
+  B(int);
+  using A::A;
+
+  void f(int); // #dr2277-B-f
+  using A::f;
+};
+
+void g() {
+  B b{0};
+  b.f(0); // FIXME: this is well-formed for the same reason as initialization of 'b' above
+  // since-cxx11-error@-1 {{call to member function 'f' is ambiguous}}
+  //   since-cxx11-note@#dr2277-A-f {{candidate function}}
+  //   since-cxx11-note@#dr2277-B-f {{candidate function}}
+}
+#endif
+}
 
 namespace dr2292 { // dr2292: 9
 #if __cplusplus >= 201103L

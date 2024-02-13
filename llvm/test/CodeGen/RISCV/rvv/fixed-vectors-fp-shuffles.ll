@@ -55,61 +55,35 @@ define <4 x double> @shuffle_vf_v4f64(<4 x double> %x) {
 }
 
 define <4 x double> @vrgather_permute_shuffle_vu_v4f64(<4 x double> %x) {
-; RV32-LABEL: vrgather_permute_shuffle_vu_v4f64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 4096
-; RV32-NEXT:    addi a0, a0, 513
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v10, a0
-; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v10
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vrgather_permute_shuffle_vu_v4f64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 4096
-; RV64-NEXT:    addiw a0, a0, 513
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64-NEXT:    vsext.vf2 v12, v10
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
+; CHECK-LABEL: vrgather_permute_shuffle_vu_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 4096
+; CHECK-NEXT:    addi a0, a0, 513
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
   %s = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 1, i32 2, i32 0, i32 1>
   ret <4 x double> %s
 }
 
 define <4 x double> @vrgather_permute_shuffle_uv_v4f64(<4 x double> %x) {
-; RV32-LABEL: vrgather_permute_shuffle_uv_v4f64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 4096
-; RV32-NEXT:    addi a0, a0, 513
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v10, a0
-; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v10
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vrgather_permute_shuffle_uv_v4f64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 4096
-; RV64-NEXT:    addiw a0, a0, 513
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64-NEXT:    vsext.vf2 v12, v10
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
+; CHECK-LABEL: vrgather_permute_shuffle_uv_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 4096
+; CHECK-NEXT:    addi a0, a0, 513
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
   %s = shufflevector <4 x double> poison, <4 x double> %x, <4 x i32> <i32 5, i32 6, i32 4, i32 5>
   ret <4 x double> %s
 }

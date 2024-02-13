@@ -33,6 +33,30 @@ add_integration_test(
     libc.src.unistd.fork
 )
 
+if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86}))
+  add_integration_test(
+    stack_smashing_test
+    SUITE
+      unistd-integration-tests
+    SRCS
+      stack_smashing_test.cpp
+    DEPENDS
+      libc.include.errno
+      libc.include.signal
+      libc.include.sys_wait
+      libc.include.unistd
+      libc.src.compiler.__stack_chk_fail
+      libc.src.pthread.pthread_atfork
+      libc.src.signal.raise
+      libc.src.sys.wait.wait
+      libc.src.sys.wait.wait4
+      libc.src.sys.wait.waitpid
+      libc.src.unistd.fork
+    COMPILE_OPTIONS
+      -fstack-protector-all
+  )
+endif()
+
 add_executable(
   libc_execv_test_normal_exit
   EXCLUDE_FROM_ALL

@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:  -analyzer-checker=alpha.security.cert.env.InvalidPtr\
+// RUN:  -analyzer-checker=security.cert.env.InvalidPtr\
+// RUN:  -analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true \
 // RUN:  -analyzer-output=text -verify -Wno-unused %s
 
 #include "../Inputs/system-header-simulator.h"

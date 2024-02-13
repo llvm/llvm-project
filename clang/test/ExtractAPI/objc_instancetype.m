@@ -84,8 +84,8 @@
       },
       "location": {
         "position": {
-          "character": 12,
-          "line": 1
+          "character": 11,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -150,8 +150,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 2
+          "character": 0,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -221,8 +221,8 @@
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 3
+          "character": 0,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

@@ -19,7 +19,8 @@ using namespace llvm::jitlink;
 TEST(MemoryManagerErrorTest, ErrorOnFirstAllocate) {
   // Check that we can get addresses for blocks, symbols, and edges.
   auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
-                                       support::little, getGenericEdgeKindName);
+                                       llvm::endianness::little,
+                                       getGenericEdgeKindName);
 
   ArrayRef<char> Content = "hello, world!";
   auto &Sec =

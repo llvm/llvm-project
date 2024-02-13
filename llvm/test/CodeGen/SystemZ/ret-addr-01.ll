@@ -12,4 +12,27 @@ entry:
   ret ptr %0
 }
 
+; Check the caller's return address.
+define ptr @rtcaller() nounwind "backchain" {
+entry:
+; CHECK-LABEL: rtcaller:
+; CHECK: lg   %r1, 0(%r15)
+; CHECK  lg   %r2, 112(%r1)
+; CHECK: br   %r14
+  %0 = tail call ptr @llvm.returnaddress(i32 1)
+  ret ptr %0
+}
+
+; Check the caller's caller's return address.
+define ptr @rtcallercaller() nounwind "backchain" {
+entry:
+; CHECK-LABEL: rtcallercaller:
+; CHECK: lg   %r1, 0(%r15)
+; CHECK: lg   %r1, 0(%r1)
+; CHECK  lg   %r2, 112(%r1)
+; CHECK: br   %r14
+  %0 = tail call ptr @llvm.returnaddress(i32 2)
+  ret ptr %0
+}
+
 declare ptr @llvm.returnaddress(i32) nounwind readnone

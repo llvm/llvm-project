@@ -20,16 +20,18 @@ class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T max_normal = T(FPBits(FPBits::MAX_NORMAL));
-  const T min_normal = T(FPBits(FPBits::MIN_NORMAL));
-  const T max_subnormal = T(FPBits(FPBits::MAX_SUBNORMAL));
-  const T min_subnormal = T(FPBits(FPBits::MIN_SUBNORMAL));
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+  const T nan = FPBits::quiet_nan().get_val();
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+
+  const T max_normal = FPBits::max_normal().get_val();
+  const T min_normal = FPBits::min_normal().get_val();
+  const T max_subnormal = FPBits::max_subnormal().get_val();
+  const T min_subnormal = FPBits::min_subnormal().get_val();
 
 public:
   void test_special_numbers(Func func) {

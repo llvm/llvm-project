@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | FileCheck %s
 
 ! Tests the different possible type involving polymorphic entities.
 
@@ -47,6 +47,10 @@ module call_dispatch
   end type
   type :: node_ptr
     type(node_ptr), pointer :: n
+  end type
+
+  type :: q1
+    class(p1), allocatable :: p
   end type
 
   contains
@@ -147,20 +151,21 @@ module call_dispatch
 
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch(
 ! CHECK-SAME:  %[[P:.*]]: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "p"}) {
-! CHECK:       fir.dispatch "tbp_nopass"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>){{$}}
-! CHECK:       fir.dispatch "tbp_pass"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "tbp_pass_arg0"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "tbp_pass_arg1"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)  (%{{.*}}, %[[P]] : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32} 
+! CHECK:       %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] {uniq_name = "_QMcall_dispatchFcheck_dispatchEp"} : (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+! CHECK:       fir.dispatch "tbp_nopass"(%[[P_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>){{$}}
+! CHECK:       fir.dispatch "tbp_pass"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK:       fir.dispatch "tbp_pass_arg0"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK:       fir.dispatch "tbp_pass_arg1"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)  (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32} 
 
-! CHECK:       fir.dispatch "proc1"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>){{$}}
-! CHECK:       fir.dispatch "proc2"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "proc3"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "proc4"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P]] : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
+! CHECK:       fir.dispatch "proc1"(%[[P_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>){{$}}
+! CHECK:       fir.dispatch "proc2"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK:       fir.dispatch "proc3"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK:       fir.dispatch "proc4"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
 
-! CHECK: %{{.*}} = fir.dispatch "p1_fct1_nopass"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32{{$}}
-! CHECK: %{{.*}} = fir.dispatch "p1_fct2"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 0 : i32}
-! CHECK: %{{.*}} = fir.dispatch "p1_fct3_arg0"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 0 : i32}
-! CHECK: %{{.*}} = fir.dispatch "p1_fct4_arg1"(%[[P]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P]] : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 1 : i32}
+! CHECK: %{{.*}} = fir.dispatch "p1_fct1_nopass"(%[[P_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32{{$}}
+! CHECK: %{{.*}} = fir.dispatch "p1_fct2"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 0 : i32}
+! CHECK: %{{.*}} = fir.dispatch "p1_fct3_arg0"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 0 : i32}
+! CHECK: %{{.*}} = fir.dispatch "p1_fct4_arg1"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 1 : i32}
 
   subroutine check_dispatch_deferred(a, x)
     class(a1) :: a
@@ -171,7 +176,9 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_deferred(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>> {fir.bindc_name = "a"}, 
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
-! CHECK: fir.dispatch "nopassd"(%[[ARG0]] : !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>) (%[[ARG1]] : !fir.box<!fir.array<?xf32>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_deferredEa"} : (!fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>) -> (!fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>, !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_deferredEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK: fir.dispatch "nopassd"(%[[ARG0_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>) (%[[ARG1_DECL]]#0 : !fir.box<!fir.array<?xf32>>)
 
     subroutine check_dispatch_scalar_allocatable(p)
       class(p1), allocatable :: p
@@ -180,9 +187,10 @@ module call_dispatch
 
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_scalar_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>> {fir.bindc_name = "p"}) {
-! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcall_dispatchFcheck_dispatch_scalar_allocatableEp"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
     subroutine check_dispatch_scalar_pointer(p)
       class(p1), pointer :: p
@@ -191,9 +199,10 @@ module call_dispatch
 
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_scalar_pointer(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>> {fir.bindc_name = "p"}) {
-! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMcall_dispatchFcheck_dispatch_scalar_pointerEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
     subroutine check_dispatch_static_array(p, t)
       class(p1) :: p(10)
@@ -211,15 +220,17 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_static_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "p"}, 
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "t"}) {
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_static_arrayEp"} : (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) {uniq_name = "_QMcall_dispatchFcheck_dispatch_static_arrayEt"} : (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
 ! CHECK: fir.do_loop {{.*}} {
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[ARG0]], %{{.*}} : (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[CLASS_BOX:.*]] = fir.embox %[[COORD]] source_box %[[ARG0]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG0_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: fir.do_loop {{.*}} {
-! CHECK: %[[COORD1:.*]] = fir.coordinate_of %[[ARG1]], %{{.*}} : (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[COORD]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[EMBOX]]) {{.*}}: (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG1_DECL]]#0 (%{{.*}})  : (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[DESIGNATE]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[CONV]]) {{.*}}: (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
 
     subroutine check_dispatch_dynamic_array(p, t)
       class(p1) :: p(:)
@@ -237,15 +248,17 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_dynamic_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "p"}, 
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "t"}) {
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_arrayEp"} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_arrayEt"} : (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[ARG0]], %{{.*}} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[CLASS_BOX:.*]] = fir.embox %[[COORD]] source_box %[[ARG0]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG0_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[ARG1]], %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[COORD]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[EMBOX]]) {{.*}}: (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG1_DECL]]#0 (%{{.*}})  : (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[DESIGNATE]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[CONV]]) {{.*}} : (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
 
     subroutine check_dispatch_allocatable_array(p, t)
       class(p1), allocatable :: p(:)
@@ -263,22 +276,19 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_allocatable_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "p"}, 
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "t"}) {
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcall_dispatchFcheck_dispatch_allocatable_arrayEp"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcall_dispatchFcheck_dispatch_allocatable_arrayEt"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: fir.store %arg3 to %0 : !fir.ref<i32>
-! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[BOX_DIMS_ARG0:.*]]:3 = fir.box_dims %[[LOAD_ARG0]], %[[C0]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, index) -> (index, index, index)
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[LOAD_ARG0]], %{{.*}} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[CLASS_BOX:.*]] = fir.embox %[[COORD]] source_box %[[LOAD_ARG0]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD_ARG0]] (%{{.*}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: %[[LOAD_ARG1:.*]] = fir.load %[[ARG1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[BOX_DIMS_ARG1:.*]]:3 = fir.box_dims %[[LOAD_ARG1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, index) -> (index, index, index)
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[LOAD_ARG1]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[COORD]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[EMBOX]]) {{.*}}: (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
+! CHECK: %[[LOAD_ARG1:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD_ARG1]] (%{{.*}})  : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[DESIGNATE]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[CONV]]) {{.*}}: (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
 
     subroutine check_dispatch_pointer_array(p, t)
       class(p1), pointer :: p(:)
@@ -296,22 +306,20 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "p"}, 
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "t"}) {
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMcall_dispatchFcheck_dispatch_pointer_arrayEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMcall_dispatchFcheck_dispatch_pointer_arrayEt"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
 
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[BOX_DIMS_ARG0]]:3 = fir.box_dims %[[LOAD_ARG0]], %[[C0]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, index) -> (index, index, index)
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[LOAD_ARG0]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[CLASS_BOX]] = fir.embox %[[COORD]] source_box %[[LOAD_ARG0]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[CLASS_BOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD_ARG0]] (%{{.*}})  : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: %[[LOAD_ARG1:.*]] = fir.load %[[ARG1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
-! CHECK: %[[C0:.*]] = arith.constant 0 : index
-! CHECK: %[[BOX_DIMS_ARG1:.*]]:3 = fir.box_dims %[[LOAD_ARG1]], %[[C0]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, index) -> (index, index, index)
-! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[LOAD_ARG1]], %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[EMBOX:.*]] = fir.embox %[[COORD]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[EMBOX]]) {{.*}}: (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
+! CHECK: %[[LOAD_ARG1:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD_ARG1]] (%{{.*}})  : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[DESIGNATE]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[EMBOX]] : (!fir.box<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMcall_dispatchPtbp_pass(%[[CONV]]) fastmath<contract> : (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> ()
 
     subroutine check_dispatch_dynamic_array_copy(p, o)
       class(p1) :: p(:)
@@ -326,12 +334,13 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_dynamic_array_copy(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "p"}, 
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "o"}) {
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_array_copyEo"} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_array_copyEp"} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+
 ! CHECK: %{{.*}} = fir.do_loop {{.*}} {
-! CHECK: %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %{{.*}} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[CLASS1:.*]] = fir.embox %[[COORD1]] source_box %[[ARG0]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %{{.*}} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: %[[CLASS2:.*]] = fir.embox %[[COORD2]] source_box %[[ARG1]] : (!fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "pass_with_class_arg"(%[[CLASS1]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[CLASS1]], %[[CLASS2]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: %[[DESIGNATE0:.*]] = hlfir.designate %[[ARG0_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: %[[DESIGNATE1:.*]] = hlfir.designate %[[ARG1_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "pass_with_class_arg"(%[[DESIGNATE0]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE0]], %[[DESIGNATE1]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! ------------------------------------------------------------------------------
 ! Test that direct call is emitted when the type is known
@@ -354,5 +363,16 @@ module call_dispatch
   subroutine use_node_test(n)
     type(use_node) :: n
   end subroutine
+
+
+  subroutine base_component()
+    type(q1) :: q
+    allocate(p1::q%p)
+
+    call q%p%tbp_nopass()
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMcall_dispatchPbase_component()
+! CHECK: fir.dispatch "tbp_nopass"(%{{.*}} : !fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
 
 end module

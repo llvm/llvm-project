@@ -17,8 +17,9 @@ function(add_startup_object name)
   add_object_library(
     ${name}
     SRCS ${ADD_STARTUP_OBJECT_SRC}
-    DEPENDS ${ADD_STARTUP_OBJECT_DEPENDS}
     COMPILE_OPTIONS ${ADD_STARTUP_OBJECT_COMPILE_OPTIONS}
+    ${ADD_STARTUP_OBJECT_UNPARSED_ARGUMENTS}
+    DEPENDS ${ADD_STARTUP_OBJECT_DEPENDS}
   )
   set_target_properties(
     ${fq_target_name}

@@ -122,7 +122,7 @@ define i1 @test4(i32 %X) {
 
 define i1 @test4_i16(i16 %X) {
 ; CHECK-LABEL: @test4_i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 933, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP3]], 0

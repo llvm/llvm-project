@@ -191,7 +191,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     : ExternalSource(nullptr), CurFPFeatures(pp.getLangOpts()),
       LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
       Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
-      CollectStats(false), CodeCompleter(CodeCompleter), CurContext(nullptr),
+      APINotes(SourceMgr, LangOpts), CollectStats(false),
+      CodeCompleter(CodeCompleter), CurContext(nullptr),
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
@@ -221,7 +222,6 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
-  isConstantEvaluatedOverride = false;
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
@@ -330,8 +330,9 @@ void Sema::Initialize() {
   if (getLangOpts().MSVCCompat) {
     if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
-      PushOnScopeChains(Context.buildImplicitRecord("type_info", TTK_Class),
-                        TUScope);
+      PushOnScopeChains(
+          Context.buildImplicitRecord("type_info", TagTypeKind::Class),
+          TUScope);
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
@@ -591,7 +592,11 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
 
   if (Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
     return;
-  if (E->IgnoreParenImpCasts()->getType()->isNullPtrType())
+
+  const Expr *EStripped = E->IgnoreParenImpCasts();
+  if (EStripped->getType()->isNullPtrType())
+    return;
+  if (isa<GNUNullExpr>(EStripped))
     return;
 
   if (Diags.isIgnored(diag::warn_zero_as_null_pointer_constant,
@@ -613,6 +618,8 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
 
   // If it is a macro from system header, and if the macro name is not "NULL",
   // do not warn.
+  // Note that uses of "NULL" will be ignored above on systems that define it
+  // as __null.
   SourceLocation MaybeMacroLoc = E->getBeginLoc();
   if (Diags.getSuppressSystemWarnings() &&
       SourceMgr.isInSystemMacro(MaybeMacroLoc) &&
@@ -863,6 +870,7 @@ static void checkUndefinedButUsed(Sema &S) {
   // Collect all the still-undefined entities with internal linkage.
   SmallVector<std::pair<NamedDecl *, SourceLocation>, 16> Undefined;
   S.getUndefinedButUsed(Undefined);
+  S.UndefinedButUsed.clear();
   if (Undefined.empty()) return;
 
   for (const auto &Undef : Undefined) {
@@ -916,8 +924,6 @@ static void checkUndefinedButUsed(Sema &S) {
     if (UseLoc.isValid())
       S.Diag(UseLoc, diag::note_used_here);
   }
-
-  S.UndefinedButUsed.clear();
 }
 
 void Sema::LoadExternalWeakUndeclaredIdentifiers() {
@@ -951,7 +957,7 @@ static bool MethodsAndNestedClassesComplete(const CXXRecordDecl *RD,
        I != E && Complete; ++I) {
     if (const CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(*I))
       Complete = M->isDefined() || M->isDefaulted() ||
-                 (M->isPure() && !isa<CXXDestructorDecl>(M));
+                 (M->isPureVirtual() && !isa<CXXDestructorDecl>(M));
     else if (const FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(*I))
       // If the template function is marked as late template parsed at this
       // point, it has not been instantiated and therefore we have not
@@ -1280,8 +1286,6 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (auto *FD = dyn_cast<FunctionDecl>(D)) {
         bool DefInPMF = false;
         if (auto *FDD = FD->getDefinition()) {
-          assert(FDD->getOwningModule() &&
-                 FDD->getOwningModule()->isModulePurview());
           DefInPMF = FDD->getOwningModule()->isPrivateModule();
           if (!DefInPMF)
             continue;
@@ -1328,8 +1332,8 @@ void Sema::ActOnEndOfTranslationUnit() {
       // Set the length of the array to 1 (C99 6.9.2p5).
       Diag(VD->getLocation(), diag::warn_tentative_incomplete_array);
       llvm::APInt One(Context.getTypeSize(Context.getSizeType()), true);
-      QualType T = Context.getConstantArrayType(ArrayT->getElementType(), One,
-                                                nullptr, ArrayType::Normal, 0);
+      QualType T = Context.getConstantArrayType(
+          ArrayT->getElementType(), One, nullptr, ArraySizeModifier::Normal, 0);
       VD->setType(T);
     } else if (RequireCompleteType(VD->getLocation(), VD->getType(),
                                    diag::err_tentative_def_incomplete_type))
@@ -1389,7 +1393,8 @@ void Sema::ActOnEndOfTranslationUnit() {
               Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
                   << /*function=*/0 << DiagD << DiagRange;
           }
-        } else {
+        } else if (!FD->isTargetMultiVersion() ||
+                   FD->isTargetMultiVersionDefault()) {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
                 << /*function=*/0 << DiagD << DiagRange;
@@ -2072,15 +2077,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
-    if (Ty->isRVVType())
+    if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType())
       checkRVVTypeSupport(Ty, Loc, D);
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures(
-          "sve", CallerFeatureMap))
+      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
+          !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
         Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
     }
   };
@@ -2754,7 +2759,7 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
     return false;
 
   LookupQualifiedName(LR, DC);
-  bool Result = std::all_of(LR.begin(), LR.end(), [](Decl *Dcl) {
+  bool Result = llvm::all_of(LR, [](Decl *Dcl) {
     if (NamedDecl *ND = dyn_cast<NamedDecl>(Dcl)) {
       ND = ND->getUnderlyingDecl();
       return isa<FunctionDecl>(ND) || isa<FunctionTemplateDecl>(ND) ||

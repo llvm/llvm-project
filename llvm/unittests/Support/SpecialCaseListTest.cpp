@@ -25,8 +25,8 @@ protected:
                                                        std::string &Error,
                                                        bool UseGlobs = true) {
     auto S = List.str();
-    if (UseGlobs)
-      S = (Twine("#!special-case-list-v2\n") + S).str();
+    if (!UseGlobs)
+      S = (Twine("#!special-case-list-v1\n") + S).str();
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(S);
     return SpecialCaseList::create(MB.get(), Error);
   }
@@ -46,8 +46,8 @@ protected:
     SmallString<64> Path;
     sys::fs::createTemporaryFile("SpecialCaseListTest", "temp", FD, Path);
     raw_fd_ostream OF(FD, true, true);
-    if (UseGlobs)
-      OF << "#!special-case-list-v2\n";
+    if (!UseGlobs)
+      OF << "#!special-case-list-v1\n";
     OF << Contents;
     OF.close();
     return std::string(Path.str());
@@ -70,10 +70,10 @@ TEST_F(SpecialCaseListTest, Basic) {
   EXPECT_FALSE(SCL->inSection("", "fun", "hello"));
   EXPECT_FALSE(SCL->inSection("", "src", "hello", "category"));
 
-  EXPECT_EQ(4u, SCL->inSectionBlame("", "src", "hello"));
-  EXPECT_EQ(5u, SCL->inSectionBlame("", "src", "bye"));
-  EXPECT_EQ(6u, SCL->inSectionBlame("", "src", "hi", "category"));
-  EXPECT_EQ(7u, SCL->inSectionBlame("", "src", "zzzz", "category"));
+  EXPECT_EQ(3u, SCL->inSectionBlame("", "src", "hello"));
+  EXPECT_EQ(4u, SCL->inSectionBlame("", "src", "bye"));
+  EXPECT_EQ(5u, SCL->inSectionBlame("", "src", "hi", "category"));
+  EXPECT_EQ(6u, SCL->inSectionBlame("", "src", "zzzz", "category"));
   EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hi"));
   EXPECT_EQ(0u, SCL->inSectionBlame("", "fun", "hello"));
   EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hello", "category"));
@@ -85,12 +85,12 @@ TEST_F(SpecialCaseListTest, CorrectErrorLineNumberWithBlankLine) {
                                          "\n"
                                          "[not valid\n",
                                          Error));
-  EXPECT_THAT(Error, StartsWith("malformed section header on line 4:"));
+  EXPECT_THAT(Error, StartsWith("malformed section header on line 3:"));
 
   EXPECT_EQ(nullptr, makeSpecialCaseList("\n\n\n"
                                          "[not valid\n",
                                          Error));
-  EXPECT_THAT(Error, StartsWith("malformed section header on line 5:"));
+  EXPECT_THAT(Error, StartsWith("malformed section header on line 4:"));
 }
 
 TEST_F(SpecialCaseListTest, SectionGlobErrorHandling) {
@@ -101,7 +101,7 @@ TEST_F(SpecialCaseListTest, SectionGlobErrorHandling) {
   EXPECT_EQ(makeSpecialCaseList("[[]", Error), nullptr);
   EXPECT_EQ(
       Error,
-      "malformed section at line 2: '[': invalid glob pattern, unmatched '['");
+      "malformed section at line 1: '[': invalid glob pattern, unmatched '['");
 
   EXPECT_EQ(makeSpecialCaseList("src:=", Error), nullptr);
   EXPECT_THAT(Error, HasSubstr("Supplied glob was blank"));
@@ -163,10 +163,10 @@ TEST_F(SpecialCaseListTest, Substring) {
 TEST_F(SpecialCaseListTest, InvalidSpecialCaseList) {
   std::string Error;
   EXPECT_EQ(nullptr, makeSpecialCaseList("badline", Error));
-  EXPECT_EQ("malformed line 2: 'badline'", Error);
+  EXPECT_EQ("malformed line 1: 'badline'", Error);
   EXPECT_EQ(nullptr, makeSpecialCaseList("src:bad[a-", Error));
   EXPECT_EQ(
-      "malformed glob in line 2: 'bad[a-': invalid glob pattern, unmatched '['",
+      "malformed glob in line 1: 'bad[a-': invalid glob pattern, unmatched '['",
       Error);
   std::vector<std::string> Files(1, "unexisting");
   EXPECT_EQ(nullptr,

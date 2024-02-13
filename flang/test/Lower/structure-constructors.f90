@@ -1,5 +1,5 @@
 ! Test lowering of structure constructors
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module m_struct_ctor
   implicit none

@@ -63,7 +63,10 @@ def sub_vrm1_5 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_1>;
 def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
-def sub_32_hi  : SubRegIndex<32, 32>;
+// GPR sizes change with HwMode.
+// FIXME: Support HwMode in SubRegIndex?
+def sub_gpr_even : SubRegIndex<-1>;
+def sub_gpr_odd  : SubRegIndex<-1, -1>;
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -118,6 +121,8 @@ def XLenVT : ValueTypeByHwMode<[RV32, RV64],
 // Allow f64 in GPR for ZDINX on RV64.
 def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
+def XLenPairFVT : ValueTypeByHwMode<[RV32],
+                                    [f64]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -137,6 +142,8 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 0, 4))>;
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
+def GPRX1 : GPRRegisterClass<(add X1)>;
+def GPRX5 : GPRRegisterClass<(add X5)>;
 
 def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
 
@@ -164,6 +171,8 @@ def SP : GPRRegisterClass<(add X2)>;
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))>;
+
+def GPRX1X5 :  GPRRegisterClass<(add X1, X5)>;
 
 // Floating point registers
 let RegAltNameIndices = [ABIRegAltName] in {
@@ -351,7 +360,7 @@ class NFList<int lmul> {
 // Generate [start, end) SubRegIndex list.
 class SubRegSet<int nf, int lmul> {
   list<SubRegIndex> L = !foldl([]<SubRegIndex>,
-                               [0, 1, 2, 3, 4, 5, 6, 7],
+                               !range(0, 8),
                                AccList, i,
                                !listconcat(AccList,
                                  !if(!lt(i, nf),
@@ -379,15 +388,9 @@ class IndexSet<int tuple_index, int nf, int lmul, bit isV0 = false> {
     !foldl([]<int>,
               !if(isV0, [0],
                 !cond(
-                  !eq(lmul, 1):
-                  [8, 9, 10, 11, 12, 13, 14, 15,
-                   16, 17, 18, 19, 20, 21, 22, 23,
-                   24, 25, 26, 27, 28, 29, 30, 31,
-                   1, 2, 3, 4, 5, 6, 7],
-                  !eq(lmul, 2):
-                  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2, 3],
-                  !eq(lmul, 4):
-                  [2, 3, 4, 5, 6, 7, 1])),
+                  !eq(lmul, 1): !listconcat(!range(8, 32), !range(1, 8)),
+                  !eq(lmul, 2): !listconcat(!range(4, 16), !range(1, 4)),
+                  !eq(lmul, 4): !listconcat(!range(2, 8), !range(1, 2)))),
               L, i,
               !listconcat(L,
                           !if(!le(!mul(!add(i, tuple_index), lmul),
@@ -417,12 +420,11 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
 }
 
 // Vector registers
-foreach Index = 0-31 in {
+foreach Index = !range(0, 32, 1) in {
   def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
 
-foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                 24, 26, 28, 30] in {
+foreach Index = !range(0, 32, 2) in {
   def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index),
                       !cast<Register>("V"#!add(Index, 1))]>,
@@ -431,7 +433,7 @@ foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
   }
 }
 
-foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
+foreach Index = !range(0, 32, 4) in {
   def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M2"),
                       !cast<Register>("V"#!add(Index, 2)#"M2")]>,
@@ -440,7 +442,7 @@ foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
   }
 }
 
-foreach Index = [0, 8, 16, 24] in {
+foreach Index = !range(0, 32, 8) in {
   def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M4"),
                       !cast<Register>("V"#!add(Index, 4)#"M4")]>,
@@ -490,7 +492,7 @@ defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
 defvar VM1VTs = [vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
                  vbfloat16m1_t, vfloat16m1_t, vfloat32m1_t,
                  vfloat64m1_t, vint8mf2_t, vint8mf4_t, vint8mf8_t,
-	               vint16mf2_t, vint16mf4_t, vint32mf2_t,
+                 vint16mf2_t, vint16mf4_t, vint32mf2_t,
                  vfloat16mf4_t, vfloat16mf2_t, vbfloat16mf4_t,
                  vbfloat16mf2_t, vfloat32mf2_t];
 
@@ -549,33 +551,37 @@ def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
 def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
 
 let RegAltNameIndices = [ABIRegAltName] in {
-  def X0_PD : RISCVRegWithSubRegs<0, X0.AsmName,
-                                     [X0, DUMMY_REG_PAIR_WITH_X0],
-                                     X0.AltNames> {
-    let SubRegIndices = [sub_32, sub_32_hi];
+  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
+                                    [X0, DUMMY_REG_PAIR_WITH_X0],
+                                    X0.AltNames> {
+    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
     let CoveredBySubRegs = 1;
   }
   foreach I = 1-15 in {
     defvar Index = !shl(I, 1);
+    defvar IndexP1 = !add(Index, 1);
     defvar Reg = !cast<Register>("X"#Index);
-    defvar RegP1 = !cast<Register>("X"#!add(Index,1));
-    def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
-                                          [Reg, RegP1],
-                                          Reg.AltNames> {
-      let SubRegIndices = [sub_32, sub_32_hi];
+    defvar RegP1 = !cast<Register>("X"#IndexP1);
+    def "X" # Index #"_X" # IndexP1 : RISCVRegWithSubRegs<Index,
+                                                          Reg.AsmName,
+                                                          [Reg, RegP1],
+                                                          Reg.AltNames> {
+      let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
       let CoveredBySubRegs = 1;
     }
   }
 }
 
-let RegInfos = RegInfoByHwMode<[RV64], [RegInfo<64, 64, 64>]> in
-def GPRPF64 : RegisterClass<"RISCV", [f64], 64, (add
-    X10_PD, X12_PD, X14_PD, X16_PD,
-    X6_PD,
-    X28_PD, X30_PD,
-    X8_PD,
-    X18_PD, X20_PD, X22_PD, X24_PD, X26_PD,
-    X0_PD, X2_PD, X4_PD
+let RegInfos = RegInfoByHwMode<[RV32, RV64],
+                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+    DecoderMethod = "DecodeGPRPairRegisterClass" in
+def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
+    X10_X11, X12_X13, X14_X15, X16_X17,
+    X6_X7,
+    X28_X29, X30_X31,
+    X8_X9,
+    X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
+    X0_Pair, X2_X3, X4_X5
 )>;
 
 // The register class is added for inline assembly for vector mask types.
@@ -598,3 +604,9 @@ foreach m = LMULList in {
 // Special registers
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
+
+// Shadow Stack register
+def SSP    : RISCVReg<0, "ssp">;
+
+// Dummy VCIX state register
+def VCIX_STATE : RISCVReg<0, "vcix_state">;

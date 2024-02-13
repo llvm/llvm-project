@@ -46,7 +46,7 @@ BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
 git_ref=""
-
+do_cmake_cache="no"
 do_bolt="no"
 if [ "$System" = "Linux" ]; then
     case $Machine in
@@ -87,6 +87,7 @@ function usage() {
     echo " -no-mlir             Disable check-out & build MLIR"
     echo " -no-flang            Disable check-out & build Flang"
     echo " -silent-log          Don't output build logs to stdout"
+    echo " -use-cmake-cache     Build using a CMake cache file"
 }
 
 while [ $# -gt 0 ]; do
@@ -200,6 +201,9 @@ while [ $# -gt 0 ]; do
         -silent-log )
             do_silent_log="yes"
             ;;
+        -use-cmake-cache | --use-cmake-cache )
+            do_cmake_cache="yes"
+            ;;
         -help | --help | -h | --h | -\? )
             usage
             exit 0
@@ -246,6 +250,8 @@ if [ "$Release" != "test" ]; then
   fi
 fi
 
+UserNumJobs="$NumJobs"
+
 # Figure out how many make processes to run.
 if [ -z "$NumJobs" ]; then
     NumJobs=`sysctl -n hw.activecpu 2> /dev/null || true`
@@ -258,6 +264,13 @@ if [ -z "$NumJobs" ]; then
 fi
 if [ -z "$NumJobs" ]; then
     NumJobs=3
+fi
+
+if [ "$MAKE" = "ninja" ] && [ -z "$UserNumJobs" ]; then
+  # Rely on default ninja job numbers
+  J_ARG=""
+else
+  J_ARG="-j $NumJobs"
 fi
 
 # Projects list
@@ -318,6 +331,55 @@ Package=$Package-$Triple
 
 # Errors to be highlighted at the end are written to this file.
 echo -n > $LogDir/deferred_errors.log
+
+redir="/dev/stdout"
+if [ $do_silent_log == "yes" ]; then
+  echo "# Silencing build logs because of -silent-log flag..."
+  redir="/dev/null"
+fi
+
+
+function build_with_cmake_cache() {
+(
+  CMakeBuildDir=$BuildDir/build
+  SrcDir=$BuildDir/llvm-project/
+  InstallDir=$BuildDir/install
+
+  rm -rf $CMakeBuildDir
+
+  # FIXME: Would be nice if the commands were echoed to the log file too.
+  set -x
+
+  env CC="$c_compiler" CXX="$cxx_compiler" \
+  cmake -G "$generator" -B $CMakeBuildDir -S $SrcDir/llvm \
+        -C $SrcDir/clang/cmake/caches/Release.cmake \
+	-DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_POSITION_INDEPENDENT_CODE;LLVM_LIT_ARGS" \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DLLVM_LIT_ARGS="-j $NumJobs $LitVerbose" \
+        $ExtraConfigureFlags
+        2>&1 | tee $LogDir/llvm.configure-$Flavor.log
+
+  ${MAKE} $J_ARG $Verbose -C $CMakeBuildDir stage2-check-all \
+          2>&1 | tee $LogDir/llvm.make-$Flavor.log > $redir
+
+  DESTDIR="${InstallDir}" \
+  ${MAKE} -C $CMakeBuildDir stage2-install \
+          2>&1 | tee $LogDir/llvm.install-$Flavor.log > $redir
+
+ mkdir -p $BuildDir/Release
+ pushd $BuildDir/Release
+ mv $InstallDir/usr/local $Package
+ if [ "$use_gzip" = "yes" ]; then
+    tar cf - $Package | gzip -9c > $BuildDir/$Package.tar.gz
+  else
+    tar cf - $Package | xz -9ce -T $NumJobs > $BuildDir/$Package.tar.xz
+  fi
+  mv $Package $InstallDir/usr/local
+  popd
+) 2>&1 | tee $LogDir/testing.$Release-$RC.log
+
+  exit 0
+}
 
 function deferred_error() {
   Phase="$1"
@@ -417,6 +479,10 @@ function configure_llvmCore() {
     # building itself and any selected runtimes in the second phase.
     if [ "$Phase" -lt "2" ]; then
       runtime_list=""
+      # compiler-rt builtins is needed on AIX to have a functional Phase 1 clang.
+      if [ "$System" = "AIX" ]; then
+        runtime_list="compiler-rt"
+      fi  
     else
       runtime_list="$runtimes"
     fi
@@ -461,21 +527,26 @@ function build_llvmCore() {
     fi
     LitVerbose="-v"
 
-    redir="/dev/stdout"
-    if [ $do_silent_log == "yes" ]; then
-      echo "# Silencing build logs because of -silent-log flag..."
-      redir="/dev/null"
+    InstallTarget="install"
+    if [ "$Phase" -lt "3" ]; then
+      BuildTarget="clang"
+      InstallTarget="install-clang install-clang-resource-headers"
+      # compiler-rt builtins is needed on AIX to have a functional Phase 1 clang.
+      if [ "$System" = "AIX" -o "$Phase" != "1" ]; then
+        BuildTarget="$BuildTarget runtimes"
+        InstallTarget="$InstallTarget install-runtimes"
+      fi
     fi
 
     cd $ObjDir
     echo "# Compiling llvm $Release-$RC $Flavor"
-    echo "# ${MAKE} -j $NumJobs $Verbose"
-    ${MAKE} -j $NumJobs $Verbose \
+    echo "# ${MAKE} $J_ARG $Verbose"
+    ${MAKE} $J_ARG $Verbose $BuildTarget \
         2>&1 | tee $LogDir/llvm.make-Phase$Phase-$Flavor.log > $redir
 
     echo "# Installing llvm $Release-$RC $Flavor"
     echo "# ${MAKE} install"
-    DESTDIR="${DestDir}" ${MAKE} install \
+    DESTDIR="${DestDir}" ${MAKE} $InstallTarget \
         2>&1 | tee $LogDir/llvm.install-Phase$Phase-$Flavor.log > $redir
     cd $BuildDir
 }
@@ -493,7 +564,7 @@ function test_llvmCore() {
     fi
 
     cd $ObjDir
-    if ! ( ${MAKE} -j $NumJobs $KeepGoing $Verbose check-all \
+    if ! ( ${MAKE} $J_ARG $KeepGoing $Verbose check-all \
         2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
       deferred_error $Phase $Flavor "check-all failed"
     fi
@@ -504,7 +575,7 @@ function test_llvmCore() {
           cmake $TestSuiteSrcDir -G "$generator" -DTEST_SUITE_LIT=$Lit \
                 -DTEST_SUITE_HOST_CC=$build_compiler
 
-      if ! ( ${MAKE} -j $NumJobs $KeepGoing $Verbose check \
+      if ! ( ${MAKE} $J_ARG $KeepGoing $Verbose check \
           2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
         deferred_error $Phase $Flavor "test suite failed"
       fi
@@ -576,7 +647,13 @@ if [ $do_test_suite = "yes" ]; then
   mkdir -p $TestSuiteBuildDir
 fi
 
+if [ "$do_cmake_cache" = "yes" ]; then
+  build_with_cmake_cache
+  exit 0
+fi
+
 (
+
 Flavors="Release"
 if [ "$do_debug" = "yes" ]; then
     Flavors="Debug $Flavors"

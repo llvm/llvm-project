@@ -51,6 +51,9 @@ public:
   /// Evaluates a toplevel expression as an rvalue.
   bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
 
+  /// Like evaluateAsRvalue(), but does no implicit lvalue-to-rvalue conversion.
+  bool evaluate(State &Parent, const Expr *E, APValue &Result);
+
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
 
@@ -64,9 +67,22 @@ public:
   unsigned getCharBit() const;
   /// Return the floating-point semantics for T.
   const llvm::fltSemantics &getFloatSemantics(QualType T) const;
+  /// Return the size of T in bits.
+  uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
+
+  /// Classifies a type.
+  std::optional<PrimType> classify(QualType T) const;
 
   /// Classifies an expression.
-  std::optional<PrimType> classify(QualType T) const;
+  std::optional<PrimType> classify(const Expr *E) const {
+    if (E->isGLValue()) {
+      if (E->getType()->isFunctionType())
+        return PT_FnPtr;
+      return PT_Ptr;
+    }
+
+    return classify(E->getType());
+  }
 
   const CXXMethodDecl *
   getOverridingFunction(const CXXRecordDecl *DynamicDecl,
@@ -83,6 +99,9 @@ public:
 
     return false;
   }
+
+  /// Returns the program. This is only needed for unittests.
+  Program &getProgram() const { return *P.get(); }
 
 private:
   /// Runs a function.

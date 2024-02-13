@@ -209,11 +209,13 @@ def OMPC_Write : Clause<"write"> { let clangClass = "OMPWriteClause"; }
 def OMPC_Update : Clause<"update"> { let clangClass = "OMPUpdateClause"; }
 def OMPC_Capture : Clause<"capture"> { let clangClass = "OMPCaptureClause"; }
 def OMPC_Compare : Clause<"compare"> { let clangClass = "OMPCompareClause"; }
+def OMPC_Fail : Clause<"fail"> { let clangClass = "OMPFailClause"; }
 def OMPC_SeqCst : Clause<"seq_cst"> { let clangClass = "OMPSeqCstClause"; }
 def OMPC_AcqRel : Clause<"acq_rel"> { let clangClass = "OMPAcqRelClause"; }
 def OMPC_Acquire : Clause<"acquire"> { let clangClass = "OMPAcquireClause"; }
 def OMPC_Release : Clause<"release"> { let clangClass = "OMPReleaseClause"; }
 def OMPC_Relaxed : Clause<"relaxed"> { let clangClass = "OMPRelaxedClause"; }
+def OMPC_Weak : Clause<"weak"> { let clangClass = "OMPWeakClause"; }
 def OMPC_Depend : Clause<"depend"> {
   let clangClass = "OMPDependClause";
   let flangClass = "OmpDependClause";
@@ -287,6 +289,9 @@ def OMPC_DefaultMap : Clause<"defaultmap"> {
 }
 def OMPC_To : Clause<"to"> {
   let clangClass = "OMPToClause";
+  let flangClass = "OmpObjectList";
+}
+def OMPC_Enter : Clause<"enter"> {
   let flangClass = "OmpObjectList";
 }
 def OMPC_From : Clause<"from"> {
@@ -448,6 +453,10 @@ def OMPC_Doacross : Clause<"doacross"> {
 
 def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
+}
+
+def OMPC_OMX_Bare : Clause<"ompx_bare"> {
+  let clangClass = "OMPXBareClause";
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,7 +642,9 @@ def OMP_Atomic : Directive<"atomic"> {
     VersionedClause<OMPC_Acquire, 50>,
     VersionedClause<OMPC_Release, 50>,
     VersionedClause<OMPC_Relaxed, 50>,
-    VersionedClause<OMPC_Hint, 50>
+    VersionedClause<OMPC_Hint, 50>,
+    VersionedClause<OMPC_Fail, 51>,
+    VersionedClause<OMPC_Weak, 51>
   ];
 }
 def OMP_Target : Directive<"target"> {
@@ -1120,7 +1131,8 @@ def OMP_DeclareTarget : Directive<"declare target"> {
   let allowedClauses = [
     VersionedClause<OMPC_To>,
     VersionedClause<OMPC_Link>,
-    VersionedClause<OMPC_Indirect>
+    VersionedClause<OMPC_Indirect>,
+    VersionedClause<OMPC_Enter, 52>
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_DeviceType, 50>
@@ -1520,6 +1532,7 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_ThreadLimit>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_OMX_Bare>,
   ];
 }
 def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
@@ -2007,8 +2020,16 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   ];
 }
 def OMP_Workshare : Directive<"workshare"> {}
-def OMP_EndDo : Directive<"end do"> {}
-def OMP_EndDoSimd : Directive<"end do simd"> {}
+def OMP_EndDo : Directive<"end do"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_EndDoSimd : Directive<"end do simd"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
 def OMP_EndSections : Directive<"end sections"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>

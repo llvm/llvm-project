@@ -31,6 +31,9 @@
 @gep3 = global <2 x ptr> getelementptr(i8, <2 x ptr> zeroinitializer, <2 x i64> <i64 0, i64 0>)
 @gep4 = global <2 x ptr> getelementptr({ i8 }, <2 x ptr> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)
 
+@bitcast1 = global <2 x i32> bitcast (<4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1> to <2 x i32>)
+@bitcast2 = global <4 x i16> bitcast (<2 x i32> <i32 -1, i32 -1> to <4 x i16>)
+
 
 ; Need a function to make update_test_checks.py work.
 ;.
@@ -48,6 +51,8 @@
 ; CHECK: @[[GEP2:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> undef
 ; CHECK: @[[GEP3:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> zeroinitializer
 ; CHECK: @[[GEP4:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> zeroinitializer
+; CHECK: @[[BITCAST1:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i32> <i32 -1, i32 -1>
+; CHECK: @[[BITCAST2:[a-zA-Z0-9_$"\\.-]+]] = global <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
 ;.
 define void @dummy() {
 ; CHECK-LABEL: @dummy(

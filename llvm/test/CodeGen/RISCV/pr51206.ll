@@ -31,7 +31,7 @@ define signext i32 @wobble() nounwind {
 ; CHECK-NEXT:  # %bb.1: # %bb10
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    call quux@plt
+; CHECK-NEXT:    call quux
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:  .LBB0_2: # %bb12

@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s
 ;
 ; This test checks that the lds input queue will is empty at the end of
 ; the ALU clause.

@@ -275,7 +275,29 @@ public:
     return PushConstructName(criticalConstruct);
   }
   bool Pre(const parser::DoConstruct &doConstruct) {
-    return PushConstructName(doConstruct);
+    const auto &optionalName{std::get<std::optional<parser::Name>>(
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
+            .statement.t)};
+    if (optionalName) {
+      constructNames_.emplace_back(optionalName->ToString());
+    }
+    // Allow FORTRAN '66 extended DO ranges
+    PushScope().isExteriorGotoFatal = false;
+    // Process labels of the DO and END DO statements, but not the
+    // statements themselves, so that a non-construct END DO
+    // can be distinguished (below).
+    Pre(std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t));
+    Walk(std::get<parser::Block>(doConstruct.t), *this);
+    Pre(std::get<parser::Statement<parser::EndDoStmt>>(doConstruct.t));
+    PopConstructName(doConstruct);
+    return false;
+  }
+  void Post(const parser::EndDoStmt &endDoStmt) {
+    // Visited only for non-construct labeled DO termination
+    if (const auto &name{endDoStmt.v}) {
+      context_.Say(name->source, "Unexpected DO construct name '%s'"_err_en_US,
+          name->source);
+    }
   }
   bool Pre(const parser::IfConstruct &ifConstruct) {
     return PushConstructName(ifConstruct);
@@ -329,9 +351,6 @@ public:
   }
   void Post(const parser::CriticalConstruct &criticalConstruct) {
     PopConstructName(criticalConstruct);
-  }
-  void Post(const parser::DoConstruct &doConstruct) {
-    PopConstructName(doConstruct);
   }
   void Post(const parser::IfConstruct &ifConstruct) {
     PopConstructName(ifConstruct);
@@ -716,6 +735,22 @@ private:
   // C1131
   void CheckName(const parser::DoConstruct &doConstruct) {
     CheckEndName<parser::NonLabelDoStmt, parser::EndDoStmt>("DO", doConstruct);
+    if (auto label{std::get<std::optional<parser::Label>>(
+            std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
+                .statement.t)}) {
+      const auto &endDoStmt{
+          std::get<parser::Statement<parser::EndDoStmt>>(doConstruct.t)};
+      if (!endDoStmt.label || *endDoStmt.label != *label) {
+        context_
+            .Say(endDoStmt.source,
+                "END DO statement must have the label '%d' matching its DO statement"_err_en_US,
+                *label)
+            .Attach(std::get<parser::Statement<parser::NonLabelDoStmt>>(
+                        doConstruct.t)
+                        .source,
+                "corresponding DO statement"_en_US);
+      }
+    }
   }
   // C1035
   void CheckName(const parser::ForallConstruct &forallConstruct) {

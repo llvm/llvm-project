@@ -41,6 +41,8 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=ppc64le
     #elif defined(__powerpc64__)
       #error ARCHITECTURE=ppc64
+    #elif defined(__powerpc__) && !defined(__powerpc64__)
+      #error ARCHITECTURE=ppc
     #elif defined(__mips__) && defined(__mips64)
       #error ARCHITECTURE=mips64
     #elif defined(__mips__) && !defined(__mips64)
@@ -51,6 +53,10 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=loongarch64
     #elif defined(__ve__)
       #error ARCHITECTURE=ve
+    #elif defined(__s390x__)
+      #error ARCHITECTURE=s390x
+    #elif defined(__wasm32__)
+      #error ARCHITECTURE=wasm32
     #else
       #error ARCHITECTURE=UnknownArchitecture
     #endif

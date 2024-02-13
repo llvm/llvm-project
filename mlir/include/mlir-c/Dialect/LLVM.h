@@ -19,7 +19,7 @@ extern "C" {
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(LLVM, llvm);
 
 /// Creates an llvm.ptr type.
-MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirType pointee,
+MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirContext ctx,
                                                    unsigned addressSpace);
 
 /// Creates an llmv.void type.

@@ -393,8 +393,7 @@ void Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   CXXRecordDecl *RD = Method->getParent();
   if (Method->getType()->isDependentType())
     return;
-  if (RD->getLambdaCaptureDefault() == LambdaCaptureDefault::LCD_None &&
-      RD->capture_size() == 0)
+  if (RD->isCapturelessLambda())
     return;
   QualType ExplicitObjectParameterType = Method->getParamDecl(0)
                                              ->getType()
@@ -917,7 +916,7 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
       }
     }
 
-    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo, CurScope);
+    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo);
     assert(MethodTyInfo && "no type from lambda-declarator");
 
     // Check for unexpanded parameter packs in the method type.
@@ -1445,7 +1444,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       for (const auto &Capture : Intro.Captures) {
         if (Capture.Id == TP->getIdentifier()) {
           Diag(Capture.Loc, diag::err_template_param_shadow) << Capture.Id;
-          Diag(TP->getLocation(), diag::note_template_param_here);
+          NoteTemplateParameterLocation(*TP);
         }
       }
     }
@@ -1886,8 +1885,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   return InitSeq.Perform(*this, Entity, InitKind, InitExpr);
 }
 
-ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                                 Scope *CurScope) {
+ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
@@ -2296,33 +2294,55 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   return BuildBlock;
 }
 
+static FunctionDecl *getPatternFunctionDecl(FunctionDecl *FD) {
+  if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization) {
+    while (FD->getInstantiatedFromMemberFunction())
+      FD = FD->getInstantiatedFromMemberFunction();
+    return FD;
+  }
+
+  if (FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate)
+    return FD->getInstantiatedFromDecl();
+
+  FunctionTemplateDecl *FTD = FD->getPrimaryTemplate();
+  if (!FTD)
+    return nullptr;
+
+  while (FTD->getInstantiatedFromMemberTemplate())
+    FTD = FTD->getInstantiatedFromMemberTemplate();
+
+  return FTD->getTemplatedDecl();
+}
+
 Sema::LambdaScopeForCallOperatorInstantiationRAII::
     LambdaScopeForCallOperatorInstantiationRAII(
-        Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
-        LocalInstantiationScope &Scope)
-    : FunctionScopeRAII(SemasRef) {
+        Sema &SemaRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
+        LocalInstantiationScope &Scope, bool ShouldAddDeclsFromParentScope)
+    : FunctionScopeRAII(SemaRef) {
   if (!isLambdaCallOperator(FD)) {
     FunctionScopeRAII::disable();
     return;
   }
 
-  if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
-    FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
-    if (const auto *FromMemTempl =
-            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
-      SemasRef.addInstantiatedCapturesToScope(
-          FD, FromMemTempl->getTemplatedDecl(), Scope, MLTAL);
+  SemaRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
+
+  FunctionDecl *Pattern = getPatternFunctionDecl(FD);
+  if (Pattern) {
+    SemaRef.addInstantiatedCapturesToScope(FD, Pattern, Scope, MLTAL);
+
+    FunctionDecl *ParentFD = FD;
+    while (ShouldAddDeclsFromParentScope) {
+
+      ParentFD =
+          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(ParentFD));
+      Pattern =
+          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(Pattern));
+
+      if (!FD || !Pattern)
+        break;
+
+      SemaRef.addInstantiatedParametersToScope(ParentFD, Pattern, Scope, MLTAL);
+      SemaRef.addInstantiatedLocalVarsToScope(ParentFD, Pattern, Scope);
     }
   }
-
-  else if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
-           FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate) {
-    FunctionDecl *InstantiatedFrom =
-        FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization
-            ? FD->getInstantiatedFromMemberFunction()
-            : FD->getInstantiatedFromDecl();
-    SemasRef.addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL);
-  }
-
-  SemasRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 }

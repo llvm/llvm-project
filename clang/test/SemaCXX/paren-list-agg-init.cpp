@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++20 %s -fsyntax-only
+// RUN: %clang_cc1 -verify -std=c++20 %s -fsyntax-only -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=expected,beforecxx20 -Wc++20-extensions -std=c++20 %s -fsyntax-only -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -verify=expected,beforecxx20 -Wc++20-extensions -std=c++20 %s -fsyntax-only
 
 struct A { // expected-note 4{{candidate constructor}}
@@ -90,7 +92,7 @@ T Construct(Args... args) {
   // beforecxx20-warning@-1 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
 }
 
-void foo(int n) {
+void foo(int n) { // expected-note {{declared here}}
   A a1(1954, 9, 21);
   // expected-error@-1 {{excess elements in struct initializer}}
   A a2(2.1);
@@ -173,8 +175,9 @@ void foo(int n) {
   int arr5[2](1, 2);
   // beforecxx20-warning@-1 {{aggregate initialization of type 'int[2]' from a parenthesized list of values is a C++20 extension}}
 
-  int arr6[n](1, 2, 3);
-  // expected-error@-1 {{variable-sized object may not be initialized}}
+  int arr6[n](1, 2, 3); // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                           expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}} \
+                           expected-error {{variable-sized object may not be initialized}}
 
   I i(1, 2);
   // expected-error@-1 {{no matching constructor for initialization of 'I'}}
@@ -286,7 +289,7 @@ int test() {
   // used to crash
   S a(0, 1);
   S b(0);
-  S c(0, 0, 1); // beforecxx20-warning {{aggregate initialization of type 'S' from a parenthesized list of values is a C++20 extension}}
+  S c(0, 0, 1);
 
   S d {0, 1};
   S e {0};

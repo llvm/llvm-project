@@ -88,7 +88,7 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
   for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
     llvm::StringRef ArgString(CmdArgs[i]);
 
-    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+    if (ArgString.starts_with("-bE:") || ArgString.starts_with("-bexport:") ||
         ArgString == "-bexpall" || ArgString == "-bexpfull")
       return true;
 
@@ -96,8 +96,8 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
     if (ArgString == "-b" && i + 1 < Size) {
       ++i;
       llvm::StringRef ArgNextString(CmdArgs[i]);
-      if (ArgNextString.startswith("E:") ||
-          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+      if (ArgNextString.starts_with("E:") ||
+          ArgNextString.starts_with("export:") || ArgNextString == "expall" ||
           ArgNextString == "expfull")
         return true;
     }
@@ -233,7 +233,15 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -320,6 +328,12 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (D.IsFlangMode()) {
+    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    CmdArgs.push_back("-lm");
+    CmdArgs.push_back("-lpthread");
+  }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));

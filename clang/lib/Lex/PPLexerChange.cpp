@@ -122,10 +122,10 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurPPLexer = TheLexer;
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = TheLexer->isDependencyDirectivesLexer()
-                       ? CLK_DependencyDirectivesLexer
-                       : CLK_Lexer;
+  if (CurLexerCallback != CLK_LexAfterModuleImport)
+    CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
+                           ? CLK_DependencyDirectivesLexer
+                           : CLK_Lexer;
 
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {
@@ -161,8 +161,8 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = CLK_TokenLexer;
+  if (CurLexerCallback != CLK_LexAfterModuleImport)
+    CurLexerCallback = CLK_TokenLexer;
 }
 
 /// EnterTokenStream - Add a "macro" context to the top of the include stack,
@@ -180,7 +180,7 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
 void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
                                     bool DisableMacroExpansion, bool OwnsTokens,
                                     bool IsReinject) {
-  if (CurLexerKind == CLK_CachingLexer) {
+  if (CurLexerCallback == CLK_CachingLexer) {
     if (CachedLexPos < CachedTokens.size()) {
       assert(IsReinject && "new tokens in the middle of cached stream");
       // We're entering tokens into the middle of our cached token stream. We
@@ -216,8 +216,8 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = CLK_TokenLexer;
+  if (CurLexerCallback != CLK_LexAfterModuleImport)
+    CurLexerCallback = CLK_TokenLexer;
 }
 
 /// Compute the relative path that names the given file relative to

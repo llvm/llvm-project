@@ -20,7 +20,7 @@ Requirements for *new* repositories as part of the
 
 If you want to integrate your project as part of the Monorepo, please take a
 look at the
-[Developer Policy](DeveloperPolicy.html#adding-an-established-project-to-the-llvm-monorepo>).
+[Developer Policy](project:DeveloperPolicy.rst#Adding an Established Project To the LLVM Monorepo).
 
 To request a new repository, please create an issue with the
 [Infrastructure Working Group](https://github.com/llvm/llvm-iwg/issues).

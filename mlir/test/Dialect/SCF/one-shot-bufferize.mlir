@@ -269,20 +269,12 @@ func.func @scf_for_yield_non_equivalent(
 
 // -----
 
-// Note: This bufferizes to inefficient code, but bufferization should not see
-// such IR in the first place. The iter_arg would canonicalize away. This test
-// case is just to ensure that the bufferization generates correct code.
-
 // CHECK-LABEL: func @scf_for_yield_allocation(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[t]])
-// This alloc is for the bufferization.alloc_tensor.
-//   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
-// This alloc is for the scf.yield.
-//       CHECK:     %[[alloc3:.*]] = memref.alloc(%{{.*}})
-//       CHECK:     memref.copy %[[alloc2]], %[[alloc3]]
-//       CHECK:     %[[casted3:.*]] = memref.cast %[[alloc3]]
-//       CHECK:     scf.yield %[[casted3]]
+//   CHECK-DAG:     %[[alloc:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     %[[casted:.*]] = memref.cast %[[alloc]]
+//       CHECK:     scf.yield %[[casted]]
 //       CHECK:   return %[[for]]
 func.func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
                                %step : index) -> tensor<?xf32> {

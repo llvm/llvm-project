@@ -18,7 +18,7 @@ end subroutine
 ! CHECK:           %[[VAL_7:.*]] = arith.constant false
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 80 : i32
-! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 7 : i32
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
@@ -52,7 +52,7 @@ end subroutine
 ! CHECK:           %[[VAL_38:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_39:.*]]:3 = fir.box_dims %[[VAL_36]], %[[VAL_38]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_40:.*]] = fir.shape %[[VAL_39]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_41:.*]]:3 = hlfir.associate %[[VAL_37]](%[[VAL_40]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_41:.*]]:3 = hlfir.associate %[[VAL_37]](%[[VAL_40]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           fir.call @_QMarrayctorPtakes_int(%[[VAL_41]]#0) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_41]]#1, %[[VAL_41]]#2 : !fir.ref<!fir.array<?xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_37]] : !hlfir.expr<?xi32>

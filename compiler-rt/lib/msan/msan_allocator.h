@@ -28,5 +28,8 @@ struct MsanThreadLocalMallocStorage {
   MsanThreadLocalMallocStorage() {}
 };
 
+void LockAllocator();
+void UnlockAllocator();
+
 } // namespace __msan
 #endif // MSAN_ALLOCATOR_H

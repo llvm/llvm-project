@@ -378,19 +378,6 @@ CString libc_make_test_file_path_func(const char *file_name);
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
-// The GNU compiler emits a warning if nested "if" statements are followed by
-// an "else" statement and braces are not used to explicitly disambiguate the
-// "else" binding.  This leads to problems with code like:
-//
-//   if (gate)
-//     ASSERT_*(condition) << "Some message";
-//
-// The "switch (0) case 0:" idiom is used to suppress this.
-#define LIBC_AMBIGUOUS_ELSE_BLOCKER_                                           \
-  switch (0)                                                                   \
-  case 0:                                                                      \
-  default:
-
 // If RET_OR_EMPTY is the 'return' keyword we perform an early return which
 // corresponds to an assert. If it is empty the execution continues, this
 // corresponds to an expect.
@@ -402,7 +389,6 @@ CString libc_make_test_file_path_func(const char *file_name);
 // returning a boolean. This expression is responsible for logging the
 // diagnostic in case of failure.
 #define LIBC_TEST_SCAFFOLDING_(TEST, RET_OR_EMPTY)                             \
-  LIBC_AMBIGUOUS_ELSE_BLOCKER_                                                 \
   if (TEST)                                                                    \
     ;                                                                          \
   else                                                                         \
@@ -456,6 +442,16 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define EXPECT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, )
 #define ASSERT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, return)
+
+////////////////////////////////////////////////////////////////////////////////
+// Errno checks.
+
+#define ASSERT_ERRNO_EQ(VAL)                                                   \
+  ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_SUCCESS()                                                 \
+  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_FAILURE()                                                 \
+  ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.

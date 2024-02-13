@@ -345,13 +345,20 @@ TEST_F(QualifierFixerTest, RightQualifier) {
       "bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args) {",
       Style);
   verifyFormat("Foo<Foo<int> const> P;", "Foo<const Foo<int>> P;", Style);
-  verifyFormat("Foo<Foo<int> const> P;\n", "Foo<const Foo<int>> P;\n", Style);
   verifyFormat("Foo<Foo<int> const> P;\n#if 0\n#else\n#endif",
                "Foo<const Foo<int>> P;\n#if 0\n#else\n#endif", Style);
 
   verifyFormat("auto const i = 0;", "const auto i = 0;", Style);
   verifyFormat("auto const &ir = i;", "const auto &ir = i;", Style);
   verifyFormat("auto const *ip = &i;", "const auto *ip = &i;", Style);
+
+  verifyFormat("void f(Concept auto const &x);",
+               "void f(const Concept auto &x);", Style);
+  verifyFormat("void f(std::integral auto const &x);",
+               "void f(const std::integral auto &x);", Style);
+
+  verifyFormat("auto lambda = [] { int const i = 0; };",
+               "auto lambda = [] { const int i = 0; };", Style);
 
   verifyFormat("Foo<Foo<int> const> P;\n#if 0\n#else\n#endif",
                "Foo<const Foo<int>> P;\n#if 0\n#else\n#endif", Style);
@@ -653,6 +660,14 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const auto i = 0;", "auto const i = 0;", Style);
   verifyFormat("const auto &ir = i;", "auto const &ir = i;", Style);
   verifyFormat("const auto *ip = &i;", "auto const *ip = &i;", Style);
+
+  verifyFormat("void f(const Concept auto &x);",
+               "void f(Concept auto const &x);", Style);
+  verifyFormat("void f(const std::integral auto &x);",
+               "void f(std::integral auto const &x);", Style);
+
+  verifyFormat("auto lambda = [] { const int i = 0; };",
+               "auto lambda = [] { int const i = 0; };", Style);
 
   verifyFormat("Foo<const Foo<int>> P;\n#if 0\n#else\n#endif",
                "Foo<Foo<int> const> P;\n#if 0\n#else\n#endif", Style);
@@ -1040,6 +1055,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 
   auto Tokens = annotate(
       "const static inline auto restrict int double long constexpr friend");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[0], ConfiguredTokens));
@@ -1074,6 +1090,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
 
   auto NotTokens = annotate("for while do Foo Bar ");
+  ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[0], ConfiguredTokens));
@@ -1105,6 +1122,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 TEST_F(QualifierFixerTest, IsMacro) {
 
   auto Tokens = annotate("INT INTPR Foo int");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[0]));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isPossibleMacro(Tokens[1]));
@@ -1254,17 +1272,17 @@ TEST_F(QualifierFixerTest, DisableRegions) {
   ReplacementCount = 0;
   verifyFormat("// clang-format off\n"
                "int const inline static a = 0;\n"
-               "// clang-format on\n",
+               "// clang-format on",
                Style);
   EXPECT_EQ(ReplacementCount, 0);
   verifyFormat("// clang-format off\n"
                "int const inline static a = 0;\n"
                "// clang-format on\n"
-               "inline static const int a = 0;\n",
+               "inline static const int a = 0;",
                "// clang-format off\n"
                "int const inline static a = 0;\n"
                "// clang-format on\n"
-               "int const inline static a = 0;\n",
+               "int const inline static a = 0;",
                Style);
 }
 

@@ -203,7 +203,7 @@ inline bool IsObjCIdentifiedObject(const Value *V) {
       StringRef Name = GV->getName();
       // These special variables are known to hold values which are not
       // reference-counted pointers.
-      if (Name.startswith("\01l_objc_msgSend_fixup_"))
+      if (Name.starts_with("\01l_objc_msgSend_fixup_"))
         return true;
 
       StringRef Section = GV->getSection();

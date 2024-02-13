@@ -78,6 +78,10 @@ public:
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
 
+  /// Print the attribute without dialect wrapping.
+  void printStripped(raw_ostream &os) const;
+  void printStripped(raw_ostream &os, AsmState &state) const;
+
   /// Get an opaque pointer to the attribute.
   const void *getAsOpaquePointer() const { return impl; }
   /// Construct an attribute from the opaque pointer representation.
@@ -409,7 +413,6 @@ struct CastInfo<To, From,
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
-      (void)ty;
       return true;
     } else {
       return To::classof(ty);

@@ -219,7 +219,7 @@ template <endianness E> static uint32_t readShuffle(const uint8_t *loc) {
   // words in a big-endian order. That is why we have to swap these
   // words to get a correct value.
   uint32_t v = read32(loc);
-  if (E == support::little)
+  if (E == llvm::endianness::little)
     return (v << 16) | (v >> 16);
   return v;
 }
@@ -237,12 +237,12 @@ static void writeShuffleValue(uint8_t *loc, uint64_t v, uint8_t bitsSize,
                               uint8_t shift) {
   // See comments in readShuffle for purpose of this code.
   uint16_t *words = (uint16_t *)loc;
-  if (E == support::little)
+  if (E == llvm::endianness::little)
     std::swap(words[0], words[1]);
 
   writeValue(loc, v, bitsSize, shift);
 
-  if (E == support::little)
+  if (E == llvm::endianness::little)
     std::swap(words[0], words[1]);
 }
 
@@ -771,12 +771,11 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   if (!sym->section)
     return false;
 
-  ObjFile<ELFT> *file =
-      cast<InputSectionBase>(sym->section)->template getFile<ELFT>();
-  if (!file)
+  InputFile *file = cast<InputSectionBase>(sym->section)->file;
+  if (!file || file->isInternal())
     return false;
 
-  return file->getObj().getHeader().e_flags & EF_MIPS_PIC;
+  return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
 template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {

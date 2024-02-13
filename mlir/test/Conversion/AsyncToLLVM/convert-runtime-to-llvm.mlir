@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s --dump-input=always
+// RUN: mlir-opt %s -convert-async-to-llvm | FileCheck %s --dump-input=always
 
 // CHECK-LABEL: @create_token
 func.func @create_token() {

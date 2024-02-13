@@ -15,10 +15,16 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, memmove,
                    (void *dst, const void *src, size_t count)) {
+  // Memmove may handle some small sizes as efficiently as inline_memcpy.
+  // For these sizes we may not do is_disjoint check.
+  // This both avoids additional code for the most frequent smaller sizes
+  // and removes code bloat (we don't need the memcpy logic for small sizes).
+  if (inline_memmove_small_size(dst, src, count))
+    return dst;
   if (is_disjoint(dst, src, count))
     inline_memcpy(dst, src, count);
   else
-    inline_memmove(dst, src, count);
+    inline_memmove_follow_up(dst, src, count);
   return dst;
 }
 

@@ -147,9 +147,9 @@ void AlignerPass::alignBlocks(BinaryFunction &Function,
   }
 }
 
-void AlignerPass::runOnFunctions(BinaryContext &BC) {
+Error AlignerPass::runOnFunctions(BinaryContext &BC) {
   if (!BC.HasRelocations)
-    return;
+    return Error::success();
 
   AlignHistogram.resize(opts::BlockAlignment);
 
@@ -157,22 +157,6 @@ void AlignerPass::runOnFunctions(BinaryContext &BC) {
     // Create a separate MCCodeEmitter to allow lock free execution
     BinaryContext::IndependentCodeEmitter Emitter =
         BC.createIndependentMCCodeEmitter();
-
-    // Align objects that contains constant islands and no code
-    // to at least 8 bytes.
-    if (!BF.size() && BF.hasIslandsInfo()) {
-      uint16_t Alignment = BF.getConstantIslandAlignment();
-      // Check if we're forcing output alignment and it is greater than minimal
-      // CI required one
-      if (!opts::UseCompactAligner && Alignment < opts::AlignFunctions &&
-          opts::AlignFunctions <= opts::AlignFunctionsMaxBytes)
-        Alignment = opts::AlignFunctions;
-
-      BF.setAlignment(Alignment);
-      BF.setMaxAlignmentBytes(Alignment);
-      BF.setMaxColdAlignmentBytes(Alignment);
-      return;
-    }
 
     if (opts::UseCompactAligner)
       alignCompact(BF, Emitter.MCE.get());
@@ -195,6 +179,7 @@ void AlignerPass::runOnFunctions(BinaryContext &BC) {
     dbgs() << "BOLT-DEBUG: total execution count of aligned blocks: "
            << AlignedBlocksCount << '\n';
   );
+  return Error::success();
 }
 
 } // end namespace bolt

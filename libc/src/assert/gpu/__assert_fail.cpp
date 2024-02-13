@@ -33,6 +33,7 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
   // Only a single line should be printed if an assertion is hit.
   if (gpu::is_first_lane(mask))
     LIBC_NAMESPACE::report_assertion_failure(assertion, file, line, function);
+  gpu::sync_lane(mask);
   LIBC_NAMESPACE::abort();
 }
 

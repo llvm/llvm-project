@@ -75,8 +75,16 @@ public:
   bool IsNameDefined(const CharBlock &);
   bool IsFunctionLikeDefinition(const CharBlock &);
 
-  std::optional<TokenSequence> MacroReplacement(
-      const TokenSequence &, Prescanner &);
+  // When called with partialFunctionLikeMacro not null, MacroReplacement()
+  // and ReplaceMacros() handle an unclosed function-like macro reference
+  // by terminating macro replacement at the name of the FLM and returning
+  // its index in the result.  This allows the recursive call sites in
+  // MacroReplacement to append any remaining tokens in their inputs to
+  // that result and try again.  All other Fortran preprocessors share this
+  // behavior.
+  std::optional<TokenSequence> MacroReplacement(const TokenSequence &,
+      Prescanner &,
+      std::optional<std::size_t> *partialFunctionLikeMacro = nullptr);
 
   // Implements a preprocessor directive.
   void Directive(const TokenSequence &, Prescanner &);
@@ -86,7 +94,8 @@ private:
   enum class CanDeadElseAppear { No, Yes };
 
   CharBlock SaveTokenAsName(const CharBlock &);
-  TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &);
+  TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &,
+      std::optional<std::size_t> *partialFunctionLikeMacro = nullptr);
   void SkipDisabledConditionalCode(
       const std::string &, IsElseActive, Prescanner &, ProvenanceRange);
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,

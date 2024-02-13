@@ -296,6 +296,10 @@ pipeline, immediately after the link stage. The ``internalize`` pass is also
 recommended to remove unused math functions from the resulting PTX. For an
 input IR module ``module.bc``, the following compilation flow is recommended:
 
+The ``NVVMReflect`` pass will attempt to remove dead code even without
+optimizations. This allows potentially incompatible instructions to be avoided
+at all optimizations levels by using the ``__CUDA_ARCH`` argument.
+
 1. Save list of external functions in ``module.bc``
 2. Link ``module.bc`` with ``libdevice.compute_XX.YY.bc``
 3. Internalize all functions not in list from (1)
@@ -329,7 +333,7 @@ optimization pipeline before dead-code elimination.
 The NVPTX TargetMachine knows how to schedule ``NVVMReflect`` at the beginning
 of your pass manager; just use the following code when setting up your pass
 manager and the PassBuilder will use ``registerPassBuilderCallbacks`` to let
-NVPTXTargetMachine::registerPassBuilderCallbacks add the the pass to the
+NVPTXTargetMachine::registerPassBuilderCallbacks add the pass to the
 pass manager:
 
 .. code-block:: c++

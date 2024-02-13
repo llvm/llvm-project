@@ -17,12 +17,10 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcSinhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcSinhfTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcSinhfTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinhf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -41,27 +39,27 @@ TEST(LlvmLibcSinhfTest, SpecialNumbers) {
 }
 
 // For small values, sinh(x) is x.
-TEST(LlvmLibcSinhfTest, SmallValues) {
-  float x = float(FPBits(uint32_t(0x17800000)));
+TEST_F(LlvmLibcSinhfTest, SmallValues) {
+  float x = FPBits(uint32_t(0x17800000)).get_val();
   float result = LIBC_NAMESPACE::sinhf(x);
   EXPECT_FP_EQ(x, result);
 
-  x = float(FPBits(uint32_t(0x00400000)));
+  x = FPBits(uint32_t(0x00400000)).get_val();
   result = LIBC_NAMESPACE::sinhf(x);
   EXPECT_FP_EQ(x, result);
 }
 
-TEST(LlvmLibcSinhfTest, Overflow) {
-  libc_errno = 0;
+TEST_F(LlvmLibcSinhfTest, Overflow) {
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::sinhf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::sinhf(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::sinhf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::sinhf(FPBits(0x42cffff8U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::sinhf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::sinhf(FPBits(0x42d00008U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }

@@ -23,12 +23,10 @@ body:             |
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[COPY3]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SHL]], [[AND1]](s32)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[AND1]], [[C3]]
-    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SHL]], [[AND2]](s32)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C3]]
-    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND4]], [[AND3]](s32)
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[AND]](s32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[LSHR]]
     ; CHECK-NEXT: $w0 = COPY [[OR]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -67,12 +65,10 @@ body:             |
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[COPY3]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C2]](s64)
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SHL]], [[AND1]](s32)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[AND1]], [[C3]]
-    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[SHL]], [[AND2]](s32)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C3]]
-    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND4]], [[AND3]](s32)
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[AND]](s32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL1]], [[LSHR]]
     ; CHECK-NEXT: $w0 = COPY [[OR]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0

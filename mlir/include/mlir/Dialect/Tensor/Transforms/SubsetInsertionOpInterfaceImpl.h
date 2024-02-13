@@ -13,8 +13,7 @@ namespace mlir {
 class DialectRegistry;
 
 namespace tensor {
-void registerSubsetInsertionOpInterfaceExternalModels(
-    DialectRegistry &registry);
+void registerSubsetOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace tensor
 } // namespace mlir
 

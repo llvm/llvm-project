@@ -86,6 +86,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -185,7 +186,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
                             CLANG_VERSION_MAJOR_STRING);
   }
 
-  return std::string(P.str());
+  return std::string(P);
 }
 
 Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
@@ -670,10 +671,15 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     if (Args.hasArg(options::OPT_march_EQ) ||
         Args.hasArg(options::OPT_mcpu_EQ)) {
       StringRef ArchName = tools::riscv::getRISCVArch(Args, Target);
-      if (ArchName.starts_with_insensitive("rv32"))
-        Target.setArch(llvm::Triple::riscv32);
-      else if (ArchName.starts_with_insensitive("rv64"))
-        Target.setArch(llvm::Triple::riscv64);
+      auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+          ArchName, /*EnableExperimentalExtensions=*/true);
+      if (!llvm::errorToBool(ISAInfo.takeError())) {
+        unsigned XLen = (*ISAInfo)->getXLen();
+        if (XLen == 32)
+          Target.setArch(llvm::Triple::riscv32);
+        else if (XLen == 64)
+          Target.setArch(llvm::Triple::riscv64);
+      }
     }
   }
 
@@ -767,7 +773,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                    [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
                      return types::isHIP(I.first);
                    }) ||
-      C.getInputArgs().hasArg(options::OPT_hip_link);
+      C.getInputArgs().hasArg(options::OPT_hip_link) ||
+      C.getInputArgs().hasArg(options::OPT_hipstdpar);
   if (IsCuda && IsHIP) {
     Diag(clang::diag::err_drv_mix_cuda_hip);
     return;
@@ -1302,6 +1309,26 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
         Diag(diag::err_drv_invalid_directx_shader_module) << TargetProfile;
 
       A->claim();
+
+      if (Args.hasArg(options::OPT_spirv)) {
+        llvm::Triple T(TargetTriple);
+        T.setArch(llvm::Triple::spirv);
+        T.setOS(llvm::Triple::Vulkan);
+
+        // Set specific Vulkan version if applicable.
+        if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
+          const llvm::StringSet<> ValidValues = {"vulkan1.2", "vulkan1.3"};
+          if (ValidValues.contains(A->getValue())) {
+            T.setOSName(A->getValue());
+          } else {
+            Diag(diag::err_drv_invalid_value)
+                << A->getAsString(Args) << A->getValue();
+          }
+          A->claim();
+        }
+
+        TargetTriple = T.str();
+      }
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
     }
@@ -1416,6 +1443,20 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC = getToolChain(
       *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
+  // Check if the environment version is valid except wasm case.
+  llvm::Triple Triple = TC.getTriple();
+  if (!Triple.isWasm()) {
+    StringRef TripleVersionName = Triple.getEnvironmentVersionString();
+    StringRef TripleObjectFormat =
+        Triple.getObjectFormatTypeName(Triple.getObjectFormat());
+    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
+        TripleVersionName != TripleObjectFormat) {
+      Diags.Report(diag::err_drv_triple_version_invalid)
+          << TripleVersionName << TC.getTripleString();
+      ContainsError = true;
+    }
+  }
+
   // Report warning when arm64EC option is overridden by specified target
   if ((TC.getTriple().getArch() != llvm::Triple::aarch64 ||
        TC.getTriple().getSubArch() != llvm::Triple::AArch64SubArch_arm64ec) &&
@@ -1443,7 +1484,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
     case llvm::Triple::aarch64_32:
-      if (TC.getTriple().getEnvironmentName().startswith("eabi")) {
+      if (TC.getTriple().getEnvironmentName().starts_with("eabi")) {
         Diag(diag::warn_target_unrecognized_env)
             << TargetTriple
             << (TC.getTriple().getArchName().str() + "-none-elf");
@@ -1514,7 +1555,7 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   // (or /Library/Logs/DiagnosticReports for root) and has the filename pattern
   // clang-<VERSION>_<YYYY-MM-DD-HHMMSS>_<hostname>.crash.
   path::home_directory(CrashDiagDir);
-  if (CrashDiagDir.startswith("/var/root"))
+  if (CrashDiagDir.starts_with("/var/root"))
     CrashDiagDir = "/";
   path::append(CrashDiagDir, "Library/Logs/DiagnosticReports");
   int PID =
@@ -1532,7 +1573,7 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   for (fs::directory_iterator File(CrashDiagDir, EC), FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     StringRef FileName = path::filename(File->path());
-    if (!FileName.startswith(Name))
+    if (!FileName.starts_with(Name))
       continue;
     if (fs::status(File->path(), FileStatus))
       continue;
@@ -1543,7 +1584,7 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
     // The first line should start with "Process:", otherwise this isn't a real
     // .crash file.
     StringRef Data = CrashFile.get()->getBuffer();
-    if (!Data.startswith("Process:"))
+    if (!Data.starts_with("Process:"))
       continue;
     // Parse parent process pid line, e.g: "Parent Process: clang-4.0 [79141]"
     size_t ParentProcPos = Data.find("Parent Process:");
@@ -1772,7 +1813,7 @@ void Driver::generateCompilationDiagnostics(
       ReproCrashFilename = TempFile;
       llvm::sys::path::replace_extension(ReproCrashFilename, ".crash");
     }
-    if (StringRef(TempFile).endswith(".cache")) {
+    if (StringRef(TempFile).ends_with(".cache")) {
       // In some cases (modules) we'll dump extra data to help with reproducing
       // the crash into a directory next to the output.
       VFS = llvm::sys::path::filename(TempFile);
@@ -1806,7 +1847,7 @@ void Driver::generateCompilationDiagnostics(
       ScriptOS << "\n# Additional information: " << AdditionalInformation
                << "\n";
     if (Report)
-      Report->TemporaryFiles.push_back(std::string(Script.str()));
+      Report->TemporaryFiles.push_back(std::string(Script));
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
@@ -1932,12 +1973,6 @@ int Driver::ExecuteCompilation(
 void Driver::PrintHelp(bool ShowHidden) const {
   llvm::opt::Visibility VisibilityMask = getOptionVisibilityMask();
 
-  // TODO: We're overriding the mask for flang here to keep this NFC for the
-  // option refactoring, but what we really need to do is annotate the flags
-  // that Flang uses.
-  if (IsFlangMode())
-    VisibilityMask = llvm::opt::Visibility(options::FlangOption);
-
   std::string Usage = llvm::formatv("{0} [options] file...", Name).str();
   getOpts().printHelp(llvm::outs(), Usage.c_str(), DriverTitle.c_str(),
                       ShowHidden, /*ShowAllAliases=*/false,
@@ -1999,7 +2034,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   // Distinguish "--autocomplete=-someflag" and "--autocomplete=-someflag,"
   // because the latter indicates that the user put space before pushing tab
   // which should end up in a file completion.
-  const bool HasSpace = PassedFlags.endswith(",");
+  const bool HasSpace = PassedFlags.ends_with(",");
 
   // Parse PassedFlags by "," as all the command-line flags are passed to this
   // function separated by ","
@@ -2039,7 +2074,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
 
   // When flag ends with '=' and there was no value completion, return empty
   // string and fall back to the file autocompletion.
-  if (SuggestedCompletions.empty() && !Cur.endswith("=")) {
+  if (SuggestedCompletions.empty() && !Cur.ends_with("=")) {
     // If the flag is in the form of "--autocomplete=-foo",
     // we were requested to print out all option names that start with "-foo".
     // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".
@@ -2051,7 +2086,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
     // TODO: Find a good way to add them to OptTable instead and them remove
     // this code.
     for (StringRef S : DiagnosticIDs::getDiagnosticFlags())
-      if (S.startswith(Cur))
+      if (S.starts_with(Cur))
         SuggestedCompletions.push_back(std::string(S));
   }
 
@@ -2533,7 +2568,7 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
   // so we can't downgrade diagnostics for `/GR-` from an error to a warning
   // in cc mode. (We can in cl mode because cl.exe itself only warns on
   // unknown flags.)
-  if (IsCLMode() && Ty == types::TY_Object && !Value.startswith("/"))
+  if (IsCLMode() && Ty == types::TY_Object && !Value.starts_with("/"))
     return true;
 
   Diag(clang::diag::err_drv_no_such_file) << Value;
@@ -2588,8 +2623,11 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       Diag(clang::diag::note_drv_t_option_is_global);
   }
 
+  // CUDA/HIP and their preprocessor expansions can be accepted by CL mode.
   // Warn -x after last input file has no effect
-  if (!IsCLMode()) {
+  auto LastXArg = Args.getLastArgValue(options::OPT_x);
+  const llvm::StringSet<> ValidXArgs = {"cuda", "hip", "cui", "hipi"};
+  if (!IsCLMode() || ValidXArgs.contains(LastXArg)) {
     Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);
     Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);
     if (LastXArg && LastInputArg &&
@@ -2704,6 +2742,10 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
           InputTypeArg->claim();
         }
       }
+
+      if ((Ty == types::TY_C || Ty == types::TY_CXX) &&
+          Args.hasArgNoClaim(options::OPT_hipstdpar))
+        Ty = types::TY_HIP;
 
       if (DiagnoseInputExistence(Args, Value, Ty, /*TypoCorrect=*/true))
         Inputs.push_back(std::make_pair(Ty, A));
@@ -3915,6 +3957,11 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
 
   if (FinalPhase == phases::Link) {
+    if (Args.hasArgNoClaim(options::OPT_hipstdpar)) {
+      Args.AddFlagArg(nullptr, getOpts().getOption(options::OPT_hip_link));
+      Args.AddFlagArg(nullptr,
+                      getOpts().getOption(options::OPT_frtlib_add_rpath));
+    }
     // Emitting LLVM while linking disabled except in HIPAMD Toolchain
     if (Args.hasArg(options::OPT_emit_llvm) && !Args.hasArg(options::OPT_hip_link))
       Diag(clang::diag::err_drv_emit_llvm_link);
@@ -4720,10 +4767,11 @@ Action *Driver::ConstructPhaseAction(
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_S))
-        Output = types::TY_LTO_IR;
-      else if (Args.hasArg(options::OPT_ffat_lto_objects))
+      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+          !Args.hasArg(options::OPT_emit_llvm))
         Output = types::TY_PP_Asm;
+      else if (Args.hasArg(options::OPT_S))
+        Output = types::TY_LTO_IR;
       else
         Output = types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -6042,17 +6090,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   SmallString<128> R(ResourceDir);
   llvm::sys::path::append(R, Name);
   if (llvm::sys::fs::exists(Twine(R)))
-    return std::string(R.str());
+    return std::string(R);
 
   SmallString<128> P(TC.getCompilerRTPath());
   llvm::sys::path::append(P, Name);
   if (llvm::sys::fs::exists(Twine(P)))
-    return std::string(P.str());
+    return std::string(P);
 
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);
   if (llvm::sys::fs::exists(Twine(D)))
-    return std::string(D.str());
+    return std::string(D);
 
   if (auto P = SearchPaths(TC.getLibraryPaths()))
     return *P;
@@ -6089,11 +6137,11 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     if (llvm::sys::fs::is_directory(PrefixDir)) {
       SmallString<128> P(PrefixDir);
       if (ScanDirForExecutable(P, Name))
-        return std::string(P.str());
+        return std::string(P);
     } else {
       SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
-        return std::string(P.str());
+        return std::string(P);
     }
   }
 
@@ -6109,7 +6157,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     for (const auto &Path : List) {
       SmallString<128> P(Path);
       if (ScanDirForExecutable(P, TargetSpecificExecutable))
-        return std::string(P.str());
+        return std::string(P);
     }
 
     // Fall back to the path
@@ -6129,7 +6177,7 @@ std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
     return "";
   }
 
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
@@ -6140,7 +6188,7 @@ std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
     return "";
   }
 
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
@@ -6162,7 +6210,7 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
       Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");
   }
-  return std::string(Output.str());
+  return std::string(Output);
 }
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,
@@ -6182,6 +6230,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::XROS:
     case llvm::Triple::DriverKit:
       TC = std::make_unique<toolchains::DarwinClang>(*this, Target, Args);
       break;
@@ -6436,18 +6485,15 @@ bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Minor))
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Micro))
     return false;
@@ -6475,9 +6521,8 @@ bool Driver::GetReleaseVersion(StringRef Str,
     Digits[CurDigit] = Digit;
     if (Str.empty())
       return true;
-    if (Str[0] != '.')
+    if (!Str.consume_front("."))
       return false;
-    Str = Str.drop_front(1);
     CurDigit++;
   }
 
@@ -6551,7 +6596,7 @@ llvm::StringRef clang::driver::getDriverMode(StringRef ProgName,
       getDriverOptTable().getOption(options::OPT_driver_mode).getPrefixedName();
   llvm::StringRef Opt;
   for (StringRef Arg : Args) {
-    if (!Arg.startswith(OptName))
+    if (!Arg.starts_with(OptName))
       continue;
     Opt = Arg;
   }
@@ -6592,7 +6637,7 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   else
     Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
 
-  if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
+  if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).starts_with("-cc1"))
     MarkEOLs = false;
 
   llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
@@ -6606,7 +6651,7 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   // If -cc1 came from a response file, remove the EOL sentinels.
   auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
                                 [](const char *A) { return A != nullptr; });
-  if (FirstArg != Args.end() && StringRef(*FirstArg).startswith("-cc1")) {
+  if (FirstArg != Args.end() && StringRef(*FirstArg).starts_with("-cc1")) {
     // If -cc1 came from a response file, remove the EOL sentinels.
     if (MarkEOLs) {
       auto newEnd = std::remove(Args.begin(), Args.end(), nullptr);

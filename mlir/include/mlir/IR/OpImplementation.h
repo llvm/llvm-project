@@ -180,6 +180,14 @@ public:
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
 
+  /// Print the alias for the given attribute, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printAlias(Attribute attr);
+
+  /// Print the alias for the given type, return failure if no alias could
+  /// be printed.
+  virtual LogicalResult printAlias(Type type);
+
   /// Print the given string as a keyword, or a quoted and escaped string if it
   /// has any special or non-printable characters in it.
   virtual void printKeywordOrString(StringRef keyword);
@@ -225,6 +233,8 @@ public:
     os << ')';
     printArrowTypeList(results);
   }
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
   /// Class used to automatically end a cyclic region on destruction.
   class CyclicPrintReset {
@@ -292,14 +302,6 @@ protected:
 private:
   AsmPrinter(const AsmPrinter &) = delete;
   void operator=(const AsmPrinter &) = delete;
-
-  /// Print the alias for the given attribute, return failure if no alias could
-  /// be printed.
-  virtual LogicalResult printAlias(Attribute attr);
-
-  /// Print the alias for the given type, return failure if no alias could
-  /// be printed.
-  virtual LogicalResult printAlias(Type type);
 
   /// The internal implementation of the printer.
   Impl *impl{nullptr};
@@ -1595,9 +1597,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   struct Argument {
-    UnresolvedOperand ssaName;    // SourceLoc, SSA name, result #.
-    Type type;                    // Type.
-    DictionaryAttr attrs;         // Attributes if present.
+    UnresolvedOperand ssaName;         // SourceLoc, SSA name, result #.
+    Type type;                         // Type.
+    DictionaryAttr attrs;              // Attributes if present.
     std::optional<Location> sourceLoc; // Source location specifier if present.
   };
 
@@ -1762,6 +1764,17 @@ public:
                  const SetVector<AsmDialectResourceHandle> &referencedResources,
                  AsmResourceBuilder &builder) const {}
 };
+
+//===--------------------------------------------------------------------===//
+// Custom printers and parsers.
+//===--------------------------------------------------------------------===//
+
+// Handles custom<DimensionList>(...) in TableGen.
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions);
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions);
+
 } // namespace mlir
 
 //===--------------------------------------------------------------------===//

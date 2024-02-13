@@ -188,10 +188,6 @@ bool FunctionLayout::update(const ArrayRef<BinaryBasicBlock *> NewLayout) {
   for (BinaryBasicBlock *const BB : NewLayout) {
     FragmentNum Num = BB->getFragmentNum();
 
-    assert(Num >= Fragments.back()->getFragmentNum() &&
-           "Blocks must be arranged such that fragments are monotonically "
-           "increasing.");
-
     // Add empty fragments if necessary
     while (Fragments.back()->getFragmentNum() < Num)
       addFragment();

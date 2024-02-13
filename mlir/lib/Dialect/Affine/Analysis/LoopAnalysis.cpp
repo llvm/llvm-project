@@ -95,7 +95,7 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
   // Take the min if all trip counts are constant.
   std::optional<uint64_t> tripCount;
   for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
       if (tripCount.has_value())
         tripCount =
             std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
@@ -124,7 +124,7 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   std::optional<uint64_t> gcd;
   for (auto resultExpr : map.getResults()) {
     uint64_t thisGcd;
-    if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
       uint64_t tripCount = constExpr.getValue();
       // 0 iteration loops (greatest divisor is 2^64 - 1).
       if (tripCount == 0)
@@ -235,9 +235,9 @@ static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
     SmallVector<Value, 4> exprOperands;
     auto resultExpr = accessMap.getResult(i);
     resultExpr.walk([&](AffineExpr expr) {
-      if (auto dimExpr = expr.dyn_cast<AffineDimExpr>())
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
         exprOperands.push_back(mapOperands[dimExpr.getPosition()]);
-      else if (auto symExpr = expr.dyn_cast<AffineSymbolExpr>())
+      else if (auto symExpr = dyn_cast<AffineSymbolExpr>(expr))
         exprOperands.push_back(mapOperands[numDims + symExpr.getPosition()]);
     });
     // Check access invariance of each operand in 'exprOperands'.

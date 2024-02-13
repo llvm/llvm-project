@@ -18,7 +18,8 @@ include "mlir/IR/OpBase.td"
 def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
     "apply_conversion_patterns.memref.memref_to_llvm_type_converter",
     [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
-                               ["getTypeConverterType"]>]> {
+                               ["getTypeConverter",
+                                "getTypeConverterType"]>]> {
   let description = [{
     This operation provides an "LLVMTypeConverter" that lowers memref types to
     LLVM types.
@@ -30,8 +31,6 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       machine word.
     - `use_generic_functions`: Use generic allocation and deallocation functions
       instead of the classic "malloc", "aligned_alloc" and "free" functions.
-    - `use_opaque_pointers`: Generate LLVM IR using opaque pointers instead of
-      typed pointers.
     // TODO: the following two options don't really make sense for 
     // memref_to_llvm_type_converter specifically.
     // We should have a single to_llvm_type_converter.
@@ -45,7 +44,6 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_aligned_alloc,
       DefaultValuedOptionalAttr<I64Attr, "64">:$index_bitwidth,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_opaque_pointers,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
       OptionalAttr<StrAttr>:$data_layout);
   let assemblyFormat = "attr-dict";

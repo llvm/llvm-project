@@ -17,12 +17,12 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcLog1pTest = LIBC_NAMESPACE::testing::FPTest<double>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
-DECLARE_SPECIAL_CONSTANTS(double)
-
-TEST(LlvmLibcLog1pTest, SpecialNumbers) {
+TEST_F(LlvmLibcLog1pTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log1p(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log1p(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log1p(neg_inf), FE_INVALID);
@@ -33,7 +33,7 @@ TEST(LlvmLibcLog1pTest, SpecialNumbers) {
                               FE_DIVBYZERO);
 }
 
-TEST(LlvmLibcLog1pTest, TrickyInputs) {
+TEST_F(LlvmLibcLog1pTest, TrickyInputs) {
   constexpr int N = 41;
   constexpr uint64_t INPUTS[N] = {
       0x3ff0000000000000, // x = 1.0
@@ -67,13 +67,13 @@ TEST(LlvmLibcLog1pTest, TrickyInputs) {
       0x5671e2f1628093e4, 0x73dac56e2bf1a951, 0x8001bc6879ea14c5,
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
                                    LIBC_NAMESPACE::log1p(x), 0.5);
   }
 }
 
-TEST(LlvmLibcLog1pTest, AllExponents) {
+TEST_F(LlvmLibcLog1pTest, AllExponents) {
   double x = 0x1.0p-1074;
   for (int i = -1074; i < 1024; ++i, x *= 2.0) {
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
@@ -81,7 +81,7 @@ TEST(LlvmLibcLog1pTest, AllExponents) {
   }
 }
 
-TEST(LlvmLibcLog1pTest, InDoubleRange) {
+TEST_F(LlvmLibcLog1pTest, InDoubleRange) {
   constexpr uint64_t COUNT = 4501;
 
   auto test = [&](uint64_t start, uint64_t stop,
@@ -102,7 +102,7 @@ TEST(LlvmLibcLog1pTest, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x) || x < 0.0)
         continue;
-      libc_errno = 0;
+      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log1p(x);
       ++cc;
       if (isnan(result) || isinf(result))

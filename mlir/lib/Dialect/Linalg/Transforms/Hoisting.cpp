@@ -43,15 +43,6 @@ using llvm::dbgs;
 using namespace mlir;
 using namespace mlir::linalg;
 
-void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
-  IRRewriter rewriter(func->getContext());
-  // TODO: walking in some reverse / inside-out order would be more efficient
-  // and would capture more cases.
-  func.walk([&](scf::ForOp forOp) {
-    hoistRedundantSubsetExtractInsert(rewriter, forOp);
-  });
-}
-
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
   Value source = transferRead.getSource();
@@ -82,16 +73,16 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   return true;
 }
 
-void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfers(Operation *root) {
   bool changed = true;
   while (changed) {
     changed = false;
     // First move loop invariant ops outside of their loop. This needs to be
     // done before as we cannot move ops without interrupting the function walk.
-    func.walk(
+    root->walk(
         [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
-    func.walk([&](vector::TransferReadOp transferRead) {
+    root->walk([&](vector::TransferReadOp transferRead) {
       if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
 
@@ -173,16 +164,16 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
         if (auto transferWriteUse =
                 dyn_cast<vector::TransferWriteOp>(use.getOwner())) {
           if (!vector::isDisjointTransferSet(
-                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
-                  cast<VectorTransferOpInterface>(
-                      transferWriteUse.getOperation())))
+                  cast<VectorTransferOpInterface>(*transferWrite),
+                  cast<VectorTransferOpInterface>(*transferWriteUse),
+                  /*testDynamicValueUsingBounds=*/true))
             return WalkResult::advance();
         } else if (auto transferReadUse =
                        dyn_cast<vector::TransferReadOp>(use.getOwner())) {
           if (!vector::isDisjointTransferSet(
-                  cast<VectorTransferOpInterface>(transferWrite.getOperation()),
-                  cast<VectorTransferOpInterface>(
-                      transferReadUse.getOperation())))
+                  cast<VectorTransferOpInterface>(*transferWrite),
+                  cast<VectorTransferOpInterface>(*transferReadUse),
+                  /*testDynamicValueUsingBounds=*/true))
             return WalkResult::advance();
         } else {
           // Unknown use, we cannot prove that it doesn't alias with the

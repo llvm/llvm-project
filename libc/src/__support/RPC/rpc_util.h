@@ -13,6 +13,8 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE {
 namespace rpc {
@@ -20,7 +22,7 @@ namespace rpc {
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700
-  LIBC_INLINE_ASM("nanosleep.u32 64;" ::: "memory");
+  __nvvm_nanosleep(64);
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   __builtin_amdgcn_s_sleep(2);
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
@@ -62,6 +64,18 @@ template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
                                  bytes);
   else
     return reinterpret_cast<T *>(reinterpret_cast<uint8_t *>(ptr) + bytes);
+}
+
+/// Wrapper around the optimal memory copy implementation for the target.
+LIBC_INLINE void rpc_memcpy(void *dst, const void *src, size_t count) {
+  // The built-in memcpy prefers to fully unroll loops. We want to minimize
+  // resource usage so we use a single nounroll loop implementation.
+#if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+  inline_memcpy_byte_per_byte(reinterpret_cast<Ptr>(dst),
+                              reinterpret_cast<CPtr>(src), count);
+#else
+  inline_memcpy(dst, src, count);
+#endif
 }
 
 } // namespace rpc

@@ -156,6 +156,14 @@ struct NameUniquer {
   static std::string
   getTypeDescriptorBindingTableName(llvm::StringRef mangledTypeName);
 
+  /// Remove markers that have been added when doing partial type
+  /// conversions. mlir::Type cannot be mutated in a pass, so new
+  /// fir::RecordType must be created when lowering member types.
+  /// Suffixes added to these new types are meaningless and are
+  /// dropped in the names passed to LLVM.
+  static llvm::StringRef
+  dropTypeConversionMarkers(llvm::StringRef mangledTypeName);
+
 private:
   static std::string intAsString(std::int64_t i);
   static std::string doKind(std::int64_t kind);

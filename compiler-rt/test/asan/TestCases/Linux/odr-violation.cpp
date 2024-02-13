@@ -58,7 +58,7 @@ namespace foo { char G[SZ]; }
 #include <stdio.h>
 namespace foo { char G[100]; }
 // CHECK: ERROR: AddressSanitizer: odr-violation
-// CHECK: size=100 'foo::G' {{.*}}odr-violation.cpp:[[@LINE-2]]
+// CHECK: size=100 'foo::G' {{.*}}odr-violation.cpp:[[@LINE-2]] in {{.*}}.tmp-ODR-EXE
 // CHECK: size={{4|100}} 'foo::G'
 int main(int argc, char **argv) {
   printf("PASS: %p\n", &foo::G);

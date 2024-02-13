@@ -187,6 +187,7 @@ struct Config {
   llvm::StringRef cmseOutputLib;
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
+  bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   llvm::StringRef thinLTOPrefixReplaceOld;
@@ -366,7 +367,7 @@ struct Config {
   bool isLE;
 
   // endianness::little if isLE is true. endianness::big otherwise.
-  llvm::support::endianness endianness;
+  llvm::endianness endianness;
 
   // True if the target is the little-endian MIPS64.
   //
@@ -473,6 +474,8 @@ struct Ctx {
                  std::pair<const InputFile *, const InputFile *>>
       backwardReferences;
   llvm::SmallSet<llvm::StringRef, 0> auxiliaryFiles;
+  // InputFile for linker created symbols with no source location.
+  InputFile *internalFile;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.

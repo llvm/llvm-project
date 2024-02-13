@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
- // test limits.h
+// test <limits.h>
+//
+// Even though <limits.h> is not provided by libc++, we still test that
+// using it with libc++ on the search path will work.
 
 #include <limits.h>
 

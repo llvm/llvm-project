@@ -58,6 +58,8 @@ terms of memory usage and cache performance. However, it's important to
 consider the trade-offs and potential impact on code readability and
 maintainability.
 
+Enums without enumerators (empty) are excluded from analysis.
+
 Requires C++11 or above.
 Does not provide auto-fixes.
 

@@ -442,10 +442,16 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     // Implement functions necessary for DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
+        mlir::ArrayRef<mlir::NamedAttribute>) {
+      OpBuilder::InsertionGuard guard(b);
+      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+    }
+
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-      return nullptr;
+      return regionBuilder;
     }
 
     static void createRegion(::mlir::OpBuilder &opBuilder,
@@ -510,15 +516,22 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     // Implement functions necessary for DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
+        mlir::ArrayRef<mlir::NamedAttribute>) {
+      OpBuilder::InsertionGuard guard(b);
+      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+    }
+
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-      return nullptr;
+      return regionBuilder;
     }
   }];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

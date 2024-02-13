@@ -26,6 +26,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -70,6 +71,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -91,10 +93,10 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::sroa;
 
 #define DEBUG_TYPE "sroa"
 
@@ -121,15 +123,139 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
-
-/// The maximum number of alloca slices allowed when splitting.
-static cl::opt<int>
-    SROAMaxAllocaSlices("sroa-max-alloca-slices", cl::init(1024),
-                        cl::desc("Maximum number of alloca slices allowed "
-                                 "after which splitting is not attempted"),
-                        cl::Hidden);
-
 namespace {
+
+class AllocaSliceRewriter;
+class AllocaSlices;
+class Partition;
+
+class SelectHandSpeculativity {
+  unsigned char Storage = 0; // None are speculatable by default.
+  using TrueVal = Bitfield::Element<bool, 0, 1>;  // Low 0'th bit.
+  using FalseVal = Bitfield::Element<bool, 1, 1>; // Low 1'th bit.
+public:
+  SelectHandSpeculativity() = default;
+  SelectHandSpeculativity &setAsSpeculatable(bool isTrueVal);
+  bool isSpeculatable(bool isTrueVal) const;
+  bool areAllSpeculatable() const;
+  bool areAnySpeculatable() const;
+  bool areNoneSpeculatable() const;
+  // For interop as int half of PointerIntPair.
+  explicit operator intptr_t() const { return static_cast<intptr_t>(Storage); }
+  explicit SelectHandSpeculativity(intptr_t Storage_) : Storage(Storage_) {}
+};
+static_assert(sizeof(SelectHandSpeculativity) == sizeof(unsigned char));
+
+using PossiblySpeculatableLoad =
+    PointerIntPair<LoadInst *, 2, SelectHandSpeculativity>;
+using UnspeculatableStore = StoreInst *;
+using RewriteableMemOp =
+    std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
+using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
+
+/// An optimization pass providing Scalar Replacement of Aggregates.
+///
+/// This pass takes allocations which can be completely analyzed (that is, they
+/// don't escape) and tries to turn them into scalar SSA values. There are
+/// a few steps to this process.
+///
+/// 1) It takes allocations of aggregates and analyzes the ways in which they
+///    are used to try to split them into smaller allocations, ideally of
+///    a single scalar data type. It will split up memcpy and memset accesses
+///    as necessary and try to isolate individual scalar accesses.
+/// 2) It will transform accesses into forms which are suitable for SSA value
+///    promotion. This can be replacing a memset with a scalar store of an
+///    integer value, or it can involve speculating operations on a PHI or
+///    select to be a PHI or select of the results.
+/// 3) Finally, this will try to detect a pattern of accesses which map cleanly
+///    onto insert and extract operations on a vector value, and convert them to
+///    this form. By doing so, it will enable promotion of vector aggregates to
+///    SSA vector values.
+class SROA {
+  LLVMContext *const C;
+  DomTreeUpdater *const DTU;
+  AssumptionCache *const AC;
+  const bool PreserveCFG;
+
+  /// Worklist of alloca instructions to simplify.
+  ///
+  /// Each alloca in the function is added to this. Each new alloca formed gets
+  /// added to it as well to recursively simplify unless that alloca can be
+  /// directly promoted. Finally, each time we rewrite a use of an alloca other
+  /// the one being actively rewritten, we add it back onto the list if not
+  /// already present to ensure it is re-visited.
+  SmallSetVector<AllocaInst *, 16> Worklist;
+
+  /// A collection of instructions to delete.
+  /// We try to batch deletions to simplify code and make things a bit more
+  /// efficient. We also make sure there is no dangling pointers.
+  SmallVector<WeakVH, 8> DeadInsts;
+
+  /// Post-promotion worklist.
+  ///
+  /// Sometimes we discover an alloca which has a high probability of becoming
+  /// viable for SROA after a round of promotion takes place. In those cases,
+  /// the alloca is enqueued here for re-processing.
+  ///
+  /// Note that we have to be very careful to clear allocas out of this list in
+  /// the event they are deleted.
+  SmallSetVector<AllocaInst *, 16> PostPromotionWorklist;
+
+  /// A collection of alloca instructions we can directly promote.
+  std::vector<AllocaInst *> PromotableAllocas;
+
+  /// A worklist of PHIs to speculate prior to promoting allocas.
+  ///
+  /// All of these PHIs have been checked for the safety of speculation and by
+  /// being speculated will allow promoting allocas currently in the promotable
+  /// queue.
+  SmallSetVector<PHINode *, 8> SpeculatablePHIs;
+
+  /// A worklist of select instructions to rewrite prior to promoting
+  /// allocas.
+  SmallMapVector<SelectInst *, RewriteableMemOps, 8> SelectsToRewrite;
+
+  /// Select instructions that use an alloca and are subsequently loaded can be
+  /// rewritten to load both input pointers and then select between the result,
+  /// allowing the load of the alloca to be promoted.
+  /// From this:
+  ///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
+  ///   %V = load <type>, ptr %P2
+  /// to:
+  ///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
+  ///   %V2 = load <type>, ptr %Other
+  ///   %V = select i1 %cond, <type> %V1, <type> %V2
+  ///
+  /// We can do this to a select if its only uses are loads
+  /// and if either the operand to the select can be loaded unconditionally,
+  ///        or if we are allowed to perform CFG modifications.
+  /// If found an intervening bitcast with a single use of the load,
+  /// allow the promotion.
+  static std::optional<RewriteableMemOps>
+  isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
+
+public:
+  SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
+       SROAOptions PreserveCFG_)
+      : C(C), DTU(DTU), AC(AC),
+        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+
+  /// Main run method used by both the SROAPass and by the legacy pass.
+  std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
+
+private:
+  friend class AllocaSliceRewriter;
+
+  bool presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS);
+  AllocaInst *rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
+  bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
+  std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
+  void clobberUse(Use &U);
+  bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
+  bool promoteAllocas(Function &F);
+};
+
+} // end anonymous namespace
 
 /// Calculate the fragment of a variable to use when slicing a store
 /// based on the slice dimensions, existing fragment, and base storage
@@ -139,7 +265,9 @@ namespace {
 /// UseNoFrag - The new slice already covers the whole variable.
 /// Skip - The new alloca slice doesn't include this variable.
 /// FIXME: Can we use calculateFragmentIntersect instead?
+namespace {
 enum FragCalcResult { UseFrag, UseNoFrag, Skip };
+}
 static FragCalcResult
 calculateFragment(DILocalVariable *Variable,
                   uint64_t NewStorageSliceOffsetInBits,
@@ -191,6 +319,29 @@ static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
   return DebugVariable(DVI->getVariable(), std::nullopt,
                        DVI->getDebugLoc().getInlinedAt());
 }
+static DebugVariable getAggregateVariable(DPValue *DPV) {
+  return DebugVariable(DPV->getVariable(), std::nullopt,
+                       DPV->getDebugLoc().getInlinedAt());
+}
+
+static DPValue *createLinkedAssign(DPValue *, DIBuilder &DIB,
+                                   Instruction *LinkedInstr, Value *NewValue,
+                                   DILocalVariable *Variable,
+                                   DIExpression *Expression, Value *Address,
+                                   DIExpression *AddressExpression,
+                                   const DILocation *DI) {
+  (void)DIB;
+  return DPValue::createLinkedDPVAssign(LinkedInstr, NewValue, Variable,
+                                        Expression, Address, AddressExpression,
+                                        DI);
+}
+static DbgAssignIntrinsic *createLinkedAssign(
+    DbgAssignIntrinsic *, DIBuilder &DIB, Instruction *LinkedInstr,
+    Value *NewValue, DILocalVariable *Variable, DIExpression *Expression,
+    Value *Address, DIExpression *AddressExpression, const DILocation *DI) {
+  return DIB.insertDbgAssign(LinkedInstr, NewValue, Variable, Expression,
+                             Address, AddressExpression, DI);
+}
 
 /// Find linked dbg.assign and generate a new one with the correct
 /// FragmentInfo. Link Inst to the new dbg.assign.  If Value is nullptr the
@@ -212,8 +363,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
                              Instruction *Inst, Value *Dest, Value *Value,
                              const DataLayout &DL) {
   auto MarkerRange = at::getAssignmentMarkers(OldInst);
+  auto DPVAssignMarkerRange = at::getDPVAssignmentMarkers(OldInst);
   // Nothing to do if OldInst has no linked dbg.assign intrinsics.
-  if (MarkerRange.empty())
+  if (MarkerRange.empty() && DPVAssignMarkerRange.empty())
     return;
 
   LLVM_DEBUG(dbgs() << "  migrateDebugInfo\n");
@@ -234,6 +386,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   for (auto *DAI : at::getAssignmentMarkers(OldAlloca))
     BaseFragments[getAggregateVariable(DAI)] =
         DAI->getExpression()->getFragmentInfo();
+  for (auto *DPV : at::getDPVAssignmentMarkers(OldAlloca))
+    BaseFragments[getAggregateVariable(DPV)] =
+        DPV->getExpression()->getFragmentInfo();
 
   // The new inst needs a DIAssignID unique metadata tag (if OldInst has
   // one). It shouldn't already have one: assert this assumption.
@@ -243,7 +398,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  for (DbgAssignIntrinsic *DbgAssign : MarkerRange) {
+  auto MigrateDbgAssign = [&](auto DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -254,7 +409,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       {
         auto R = BaseFragments.find(getAggregateVariable(DbgAssign));
         if (R == BaseFragments.end())
-          continue;
+          return;
         BaseFragment = R->second;
       }
       std::optional<DIExpression::FragmentInfo> CurrentFragment =
@@ -265,7 +420,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
           BaseFragment, CurrentFragment, NewFragment);
 
       if (Result == Skip)
-        continue;
+        return;
       if (Result == UseFrag && !(NewFragment == CurrentFragment)) {
         if (CurrentFragment) {
           // Rewrite NewFragment to be relative to the existing one (this is
@@ -297,9 +452,10 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     }
 
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-    auto *NewAssign = DIB.insertDbgAssign(
-        Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
-        DIExpression::get(Ctx, std::nullopt), DbgAssign->getDebugLoc());
+    auto *NewAssign = createLinkedAssign(
+        DbgAssign, DIB, Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
+        DIExpression::get(Expr->getContext(), std::nullopt),
+        DbgAssign->getDebugLoc());
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -333,10 +489,14 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     NewAssign->moveBefore(DbgAssign);
 
     NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
-    LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign
-                      << "\n");
-  }
+    LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
+  };
+
+  for_each(MarkerRange, MigrateDbgAssign);
+  for_each(DPVAssignMarkerRange, MigrateDbgAssign);
 }
+
+namespace {
 
 /// A custom IRBuilder inserter which prefixes all names, but only in
 /// Assert builds.
@@ -430,8 +590,6 @@ public:
   bool operator!=(const Slice &RHS) const { return !operator==(RHS); }
 };
 
-} // end anonymous namespace
-
 /// Representation of the alloca slices.
 ///
 /// This class represents the slices of an alloca which are formed by its
@@ -439,7 +597,7 @@ public:
 /// for the slices used and we reflect that in this structure. The uses are
 /// stored, sorted by increasing beginning offset and with unsplittable slices
 /// starting at a particular offset before splittable slices.
-class llvm::sroa::AllocaSlices {
+class AllocaSlices {
 public:
   /// Construct the slices of a particular alloca.
   AllocaSlices(const DataLayout &DL, AllocaInst &AI);
@@ -571,7 +729,7 @@ private:
 ///
 /// Objects of this type are produced by traversing the alloca's slices, but
 /// are only ephemeral and not persistent.
-class llvm::sroa::Partition {
+class Partition {
 private:
   friend class AllocaSlices;
   friend class AllocaSlices::partition_iterator;
@@ -635,6 +793,8 @@ public:
   /// partitions.
   ArrayRef<Slice *> splitSliceTails() const { return SplitTails; }
 };
+
+} // end anonymous namespace
 
 /// An iterator over partitions of the alloca's slices.
 ///
@@ -967,10 +1127,8 @@ private:
           // For array or vector indices, scale the index by the size of the
           // type.
           APInt Index = OpC->getValue().sextOrTrunc(Offset.getBitWidth());
-          GEPOffset +=
-              Index *
-              APInt(Offset.getBitWidth(),
-                    DL.getTypeAllocSize(GTI.getIndexedType()).getFixedValue());
+          GEPOffset += Index * APInt(Offset.getBitWidth(),
+                                     GTI.getSequentialElementStride(DL));
         }
 
         // If this index has computed an intermediate pointer which is not
@@ -1152,6 +1310,7 @@ private:
     }
 
     if (II.isLaunderOrStripInvariantGroup()) {
+      insertUse(II, Offset, AllocSize, true);
       enqueueUsers(II);
       return;
     }
@@ -1541,38 +1700,37 @@ static void speculatePHINodeLoads(IRBuilderTy &IRB, PHINode &PN) {
   PN.eraseFromParent();
 }
 
-sroa::SelectHandSpeculativity &
-sroa::SelectHandSpeculativity::setAsSpeculatable(bool isTrueVal) {
+SelectHandSpeculativity &
+SelectHandSpeculativity::setAsSpeculatable(bool isTrueVal) {
   if (isTrueVal)
-    Bitfield::set<sroa::SelectHandSpeculativity::TrueVal>(Storage, true);
+    Bitfield::set<SelectHandSpeculativity::TrueVal>(Storage, true);
   else
-    Bitfield::set<sroa::SelectHandSpeculativity::FalseVal>(Storage, true);
+    Bitfield::set<SelectHandSpeculativity::FalseVal>(Storage, true);
   return *this;
 }
 
-bool sroa::SelectHandSpeculativity::isSpeculatable(bool isTrueVal) const {
-  return isTrueVal
-             ? Bitfield::get<sroa::SelectHandSpeculativity::TrueVal>(Storage)
-             : Bitfield::get<sroa::SelectHandSpeculativity::FalseVal>(Storage);
+bool SelectHandSpeculativity::isSpeculatable(bool isTrueVal) const {
+  return isTrueVal ? Bitfield::get<SelectHandSpeculativity::TrueVal>(Storage)
+                   : Bitfield::get<SelectHandSpeculativity::FalseVal>(Storage);
 }
 
-bool sroa::SelectHandSpeculativity::areAllSpeculatable() const {
+bool SelectHandSpeculativity::areAllSpeculatable() const {
   return isSpeculatable(/*isTrueVal=*/true) &&
          isSpeculatable(/*isTrueVal=*/false);
 }
 
-bool sroa::SelectHandSpeculativity::areAnySpeculatable() const {
+bool SelectHandSpeculativity::areAnySpeculatable() const {
   return isSpeculatable(/*isTrueVal=*/true) ||
          isSpeculatable(/*isTrueVal=*/false);
 }
-bool sroa::SelectHandSpeculativity::areNoneSpeculatable() const {
+bool SelectHandSpeculativity::areNoneSpeculatable() const {
   return !areAnySpeculatable();
 }
 
-static sroa::SelectHandSpeculativity
+static SelectHandSpeculativity
 isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   assert(LI.isSimple() && "Only for simple loads");
-  sroa::SelectHandSpeculativity Spec;
+  SelectHandSpeculativity Spec;
 
   const DataLayout &DL = SI.getModule()->getDataLayout();
   for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
@@ -1585,8 +1743,8 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   return Spec;
 }
 
-std::optional<sroa::RewriteableMemOps>
-SROAPass::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
+std::optional<RewriteableMemOps>
+SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
@@ -1620,7 +1778,7 @@ SROAPass::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
       continue;
     }
 
-    sroa::SelectHandSpeculativity Spec =
+    SelectHandSpeculativity Spec =
         isSafeLoadOfSelectToSpeculate(*LI, SI, PreserveCFG);
     if (PreserveCFG && !Spec.areAllSpeculatable())
       return {}; // Give up on this `select`.
@@ -1671,7 +1829,7 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
 template <typename T>
 static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
-                                 sroa::SelectHandSpeculativity Spec,
+                                 SelectHandSpeculativity Spec,
                                  DomTreeUpdater &DTU) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) && "Only for load and store!");
   LLVM_DEBUG(dbgs() << "    original mem op: " << I << "\n");
@@ -1727,7 +1885,7 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
 }
 
 static void rewriteMemOpOfSelect(SelectInst &SelInst, Instruction &I,
-                                 sroa::SelectHandSpeculativity Spec,
+                                 SelectHandSpeculativity Spec,
                                  DomTreeUpdater &DTU) {
   if (auto *LI = dyn_cast<LoadInst>(&I))
     rewriteMemOpOfSelect(SelInst, *LI, Spec, DTU);
@@ -1738,13 +1896,13 @@ static void rewriteMemOpOfSelect(SelectInst &SelInst, Instruction &I,
 }
 
 static bool rewriteSelectInstMemOps(SelectInst &SI,
-                                    const sroa::RewriteableMemOps &Ops,
+                                    const RewriteableMemOps &Ops,
                                     IRBuilderTy &IRB, DomTreeUpdater *DTU) {
   bool CFGChanged = false;
   LLVM_DEBUG(dbgs() << "    original select: " << SI << "\n");
 
   for (const RewriteableMemOp &Op : Ops) {
-    sroa::SelectHandSpeculativity Spec;
+    SelectHandSpeculativity Spec;
     Instruction *I;
     if (auto *const *US = std::get_if<UnspeculatableStore>(&Op)) {
       I = *US;
@@ -1775,8 +1933,8 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
                              APInt Offset, Type *PointerTy,
                              const Twine &NamePrefix) {
   if (Offset != 0)
-    Ptr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(Offset),
-                                NamePrefix + "sroa_idx");
+    Ptr = IRB.CreateInBoundsPtrAdd(Ptr, IRB.getInt(Offset),
+                                   NamePrefix + "sroa_idx");
   return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
                                                  NamePrefix + "sroa_cast");
 }
@@ -1980,8 +2138,9 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
 
 /// Test whether a vector type is viable for promotion.
 ///
-/// This implements the necessary checking for \c isVectorPromotionViable over
-/// all slices of the alloca for the given VectorType.
+/// This implements the necessary checking for \c checkVectorTypesForPromotion
+/// (and thus isVectorPromotionViable) over all slices of the alloca for the
+/// given VectorType.
 static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
                                         const DataLayout &DL) {
   uint64_t ElementSize =
@@ -2006,88 +2165,16 @@ static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
   return true;
 }
 
-/// Test whether the given alloca partitioning and range of slices can be
-/// promoted to a vector.
+/// Test whether any vector type in \p CandidateTys is viable for promotion.
 ///
-/// This is a quick test to check whether we can rewrite a particular alloca
-/// partition (and its newly formed alloca) into a vector alloca with only
-/// whole-vector loads and stores such that it could be promoted to a vector
-/// SSA value. We only can ensure this for a limited set of operations, and we
-/// don't want to do the rewrites unless we are confident that the result will
-/// be promotable, so we have an early test here.
-static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
-  // Collect the candidate types for vector-based promotion. Also track whether
-  // we have different element types.
-  SmallVector<VectorType *, 4> CandidateTys;
-  SetVector<Type *> LoadStoreTys;
-  Type *CommonEltTy = nullptr;
-  VectorType *CommonVecPtrTy = nullptr;
-  bool HaveVecPtrTy = false;
-  bool HaveCommonEltTy = true;
-  bool HaveCommonVecPtrTy = true;
-  auto CheckCandidateType = [&](Type *Ty) {
-    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-      // Return if bitcast to vectors is different for total size in bits.
-      if (!CandidateTys.empty()) {
-        VectorType *V = CandidateTys[0];
-        if (DL.getTypeSizeInBits(VTy).getFixedValue() !=
-            DL.getTypeSizeInBits(V).getFixedValue()) {
-          CandidateTys.clear();
-          return;
-        }
-      }
-      CandidateTys.push_back(VTy);
-      Type *EltTy = VTy->getElementType();
-
-      if (!CommonEltTy)
-        CommonEltTy = EltTy;
-      else if (CommonEltTy != EltTy)
-        HaveCommonEltTy = false;
-
-      if (EltTy->isPointerTy()) {
-        HaveVecPtrTy = true;
-        if (!CommonVecPtrTy)
-          CommonVecPtrTy = VTy;
-        else if (CommonVecPtrTy != VTy)
-          HaveCommonVecPtrTy = false;
-      }
-    }
-  };
-  // Put load and store types into a set for de-duplication.
-  for (const Slice &S : P) {
-    Type *Ty;
-    if (auto *LI = dyn_cast<LoadInst>(S.getUse()->getUser()))
-      Ty = LI->getType();
-    else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
-      Ty = SI->getValueOperand()->getType();
-    else
-      continue;
-    LoadStoreTys.insert(Ty);
-    // Consider any loads or stores that are the exact size of the slice.
-    if (S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset())
-      CheckCandidateType(Ty);
-  }
-  // Consider additional vector types where the element type size is a
-  // multiple of load/store element size.
-  for (Type *Ty : LoadStoreTys) {
-    if (!VectorType::isValidElementType(Ty))
-      continue;
-    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
-    // Make a copy of CandidateTys and iterate through it, because we might
-    // append to CandidateTys in the loop.
-    SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
-    for (VectorType *&VTy : CandidateTysCopy) {
-      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
-      unsigned ElementSize =
-          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-      if (TypeSize != VectorSize && TypeSize != ElementSize &&
-          VectorSize % TypeSize == 0) {
-        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
-        CheckCandidateType(NewVTy);
-      }
-    }
-  }
-
+/// This implements the necessary checking for \c isVectorPromotionViable over
+/// all slices of the alloca for the given VectorType.
+static VectorType *
+checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
+                             SmallVectorImpl<VectorType *> &CandidateTys,
+                             bool HaveCommonEltTy, Type *CommonEltTy,
+                             bool HaveVecPtrTy, bool HaveCommonVecPtrTy,
+                             VectorType *CommonVecPtrTy) {
   // If we didn't find a vector type, nothing to do here.
   if (CandidateTys.empty())
     return nullptr;
@@ -2168,6 +2255,101 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       return VTy;
 
   return nullptr;
+}
+
+/// Test whether the given alloca partitioning and range of slices can be
+/// promoted to a vector.
+///
+/// This is a quick test to check whether we can rewrite a particular alloca
+/// partition (and its newly formed alloca) into a vector alloca with only
+/// whole-vector loads and stores such that it could be promoted to a vector
+/// SSA value. We only can ensure this for a limited set of operations, and we
+/// don't want to do the rewrites unless we are confident that the result will
+/// be promotable, so we have an early test here.
+static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
+  // Collect the candidate types for vector-based promotion. Also track whether
+  // we have different element types.
+  SmallVector<VectorType *, 4> CandidateTys;
+  SetVector<Type *> LoadStoreTys;
+  Type *CommonEltTy = nullptr;
+  VectorType *CommonVecPtrTy = nullptr;
+  bool HaveVecPtrTy = false;
+  bool HaveCommonEltTy = true;
+  bool HaveCommonVecPtrTy = true;
+  auto CheckCandidateType = [&](Type *Ty) {
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      // Return if bitcast to vectors is different for total size in bits.
+      if (!CandidateTys.empty()) {
+        VectorType *V = CandidateTys[0];
+        if (DL.getTypeSizeInBits(VTy).getFixedValue() !=
+            DL.getTypeSizeInBits(V).getFixedValue()) {
+          CandidateTys.clear();
+          return;
+        }
+      }
+      CandidateTys.push_back(VTy);
+      Type *EltTy = VTy->getElementType();
+
+      if (!CommonEltTy)
+        CommonEltTy = EltTy;
+      else if (CommonEltTy != EltTy)
+        HaveCommonEltTy = false;
+
+      if (EltTy->isPointerTy()) {
+        HaveVecPtrTy = true;
+        if (!CommonVecPtrTy)
+          CommonVecPtrTy = VTy;
+        else if (CommonVecPtrTy != VTy)
+          HaveCommonVecPtrTy = false;
+      }
+    }
+  };
+
+  // Put load and store types into a set for de-duplication.
+  for (const Slice &S : P) {
+    Type *Ty;
+    if (auto *LI = dyn_cast<LoadInst>(S.getUse()->getUser()))
+      Ty = LI->getType();
+    else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
+      Ty = SI->getValueOperand()->getType();
+    else
+      continue;
+    LoadStoreTys.insert(Ty);
+    // Consider any loads or stores that are the exact size of the slice.
+    if (S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset())
+      CheckCandidateType(Ty);
+  }
+
+  if (auto *VTy = checkVectorTypesForPromotion(
+          P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+          HaveCommonVecPtrTy, CommonVecPtrTy))
+    return VTy;
+
+  // Consider additional vector types where the element type size is a
+  // multiple of load/store element size.
+  for (Type *Ty : LoadStoreTys) {
+    if (!VectorType::isValidElementType(Ty))
+      continue;
+    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
+    // Make a copy of CandidateTys and iterate through it, because we might
+    // append to CandidateTys in the loop.
+    SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
+    CandidateTys.clear();
+    for (VectorType *&VTy : CandidateTysCopy) {
+      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
+      unsigned ElementSize =
+          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+      if (TypeSize != VectorSize && TypeSize != ElementSize &&
+          VectorSize % TypeSize == 0) {
+        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
+        CheckCandidateType(NewVTy);
+      }
+    }
+  }
+
+  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
+                                      CommonEltTy, HaveVecPtrTy,
+                                      HaveCommonVecPtrTy, CommonVecPtrTy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
@@ -2437,14 +2619,15 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   return V;
 }
 
+namespace {
+
 /// Visitor to rewrite instructions using p particular slice of an alloca
 /// to use a new alloca.
 ///
 /// Also implements the rewriting to vector-based accesses when the partition
 /// passes the isVectorPromotionViable predicate. Most of the rewriting logic
 /// lives here.
-class llvm::sroa::AllocaSliceRewriter
-    : public InstVisitor<AllocaSliceRewriter, bool> {
+class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   // Befriend the base class so it can delegate to private visit methods.
   friend class InstVisitor<AllocaSliceRewriter, bool>;
 
@@ -2452,7 +2635,7 @@ class llvm::sroa::AllocaSliceRewriter
 
   const DataLayout &DL;
   AllocaSlices &AS;
-  SROAPass &Pass;
+  SROA &Pass;
   AllocaInst &OldAI, &NewAI;
   const uint64_t NewAllocaBeginOffset, NewAllocaEndOffset;
   Type *NewAllocaTy;
@@ -2510,7 +2693,7 @@ class llvm::sroa::AllocaSliceRewriter
   }
 
 public:
-  AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROAPass &Pass,
+  AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROA &Pass,
                       AllocaInst &OldAI, AllocaInst &NewAI,
                       uint64_t NewAllocaBeginOffset,
                       uint64_t NewAllocaEndOffset, bool IsIntegerPromotable,
@@ -2748,7 +2931,7 @@ private:
                                 "endian_shift");
           }
     } else {
-      Type *LTy = TargetTy->getPointerTo(AS);
+      Type *LTy = IRB.getPtrTy(AS);
       LoadInst *NewLI =
           IRB.CreateAlignedLoad(TargetTy, getNewAllocaSlicePtr(IRB, LTy),
                                 getSliceAlign(), LI.isVolatile(), LI.getName());
@@ -2773,14 +2956,19 @@ private:
       assert(DL.typeSizeEqualsStoreSize(LI.getType()) &&
              "Non-byte-multiple bit width");
       // Move the insertion point just past the load so that we can refer to it.
-      IRB.SetInsertPoint(&*std::next(BasicBlock::iterator(&LI)));
+      BasicBlock::iterator LIIt = std::next(LI.getIterator());
+      // Ensure the insertion point comes before any debug-info immediately
+      // after the load, so that variable values referring to the load are
+      // dominated by it.
+      LIIt.setHeadBit(true);
+      IRB.SetInsertPoint(LI.getParent(), LIIt);
       // Create a placeholder value with the same type as LI to use as the
       // basis for the new value. This allows us to replace the uses of LI with
       // the computed value, and then replace the placeholder with LI, leaving
       // LI only used for this computation.
-      Value *Placeholder = new LoadInst(
-          LI.getType(), PoisonValue::get(LI.getType()->getPointerTo(AS)), "",
-          false, Align(1));
+      Value *Placeholder =
+          new LoadInst(LI.getType(), PoisonValue::get(IRB.getPtrTy(AS)), "",
+                       false, Align(1));
       V = insertInteger(DL, IRB, Placeholder, V, NewBeginOffset - BeginOffset,
                         "insert");
       LI.replaceAllUsesWith(V);
@@ -2903,7 +3091,7 @@ private:
           IRB.CreateAlignedStore(V, NewPtr, NewAI.getAlign(), SI.isVolatile());
     } else {
       unsigned AS = SI.getPointerAddressSpace();
-      Value *NewPtr = getNewAllocaSlicePtr(IRB, V->getType()->getPointerTo(AS));
+      Value *NewPtr = getNewAllocaSlicePtr(IRB, IRB.getPtrTy(AS));
       NewSI =
           IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(), SI.isVolatile());
     }
@@ -2979,6 +3167,7 @@ private:
       // emit dbg.assign intrinsics for mem intrinsics storing through non-
       // constant geps, or storing a variable number of bytes.
       assert(at::getAssignmentMarkers(&II).empty() &&
+             at::getDPVAssignmentMarkers(&II).empty() &&
              "AT: Unexpected link to non-const GEP");
       deleteIfTriviallyDead(OldPtr);
       return false;
@@ -3125,11 +3314,13 @@ private:
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
-        for (auto *DAI : at::getAssignmentMarkers(&II)) {
-          if (llvm::is_contained(DAI->location_ops(), II.getDest()) ||
-              DAI->getAddress() == II.getDest())
-            DAI->replaceVariableLocationOp(II.getDest(), AdjustedPtr);
-        }
+        auto UpdateAssignAddress = [&](auto *DbgAssign) {
+          if (llvm::is_contained(DbgAssign->location_ops(), II.getDest()) ||
+              DbgAssign->getAddress() == II.getDest())
+            DbgAssign->replaceVariableLocationOp(II.getDest(), AdjustedPtr);
+        };
+        for_each(at::getAssignmentMarkers(&II), UpdateAssignAddress);
+        for_each(at::getDPVAssignmentMarkers(&II), UpdateAssignAddress);
         II.setDest(AdjustedPtr);
         II.setDestAlignment(SliceAlign);
       } else {
@@ -3154,6 +3345,7 @@ private:
         (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
          SliceSize !=
              DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue() ||
+         !DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ||
          !NewAI.getAllocatedType()->isSingleValueType());
 
     // If we're just going to emit a memcpy, the alloca hasn't changed, and the
@@ -3258,7 +3450,6 @@ private:
     } else {
       OtherTy = NewAllocaTy;
     }
-    OtherPtrTy = OtherTy->getPointerTo(OtherAS);
 
     Value *AdjPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
                                    OtherPtr->getName() + ".");
@@ -3336,7 +3527,8 @@ private:
   }
 
   bool visitIntrinsicInst(IntrinsicInst &II) {
-    assert((II.isLifetimeStartOrEnd() || II.isDroppable()) &&
+    assert((II.isLifetimeStartOrEnd() || II.isLaunderOrStripInvariantGroup() ||
+            II.isDroppable()) &&
            "Unexpected intrinsic!");
     LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
 
@@ -3349,6 +3541,9 @@ private:
       OldPtr->dropDroppableUsesIn(II);
       return true;
     }
+
+    if (II.isLaunderOrStripInvariantGroup())
+      return true;
 
     assert(II.getArgOperand(1) == OldPtr);
     // Lifetime intrinsics are only promotable if they cover the whole alloca.
@@ -3367,7 +3562,7 @@ private:
                          NewEndOffset - NewBeginOffset);
     // Lifetime intrinsics always expect an i8* so directly get such a pointer
     // for the new alloca slice.
-    Type *PointerTy = IRB.getInt8PtrTy(OldPtr->getType()->getPointerAddressSpace());
+    Type *PointerTy = IRB.getPtrTy(OldPtr->getType()->getPointerAddressSpace());
     Value *Ptr = getNewAllocaSlicePtr(IRB, PointerTy);
     Value *New;
     if (II.getIntrinsicID() == Intrinsic::lifetime_start)
@@ -3471,8 +3666,6 @@ private:
     return true;
   }
 };
-
-namespace {
 
 /// Visitor to rewrite aggregate loads and stores as scalar.
 ///
@@ -3711,6 +3904,7 @@ private:
                          DL);
       } else {
         assert(at::getAssignmentMarkers(Store).empty() &&
+               at::getDPVAssignmentMarkers(Store).empty() &&
                "AT: unexpected debug.assign linked to store through "
                "unbounded GEP");
       }
@@ -3748,30 +3942,62 @@ private:
     return false;
   }
 
-  // Fold gep (select cond, ptr1, ptr2) => select cond, gep(ptr1), gep(ptr2)
+  // Fold gep (select cond, ptr1, ptr2), idx
+  //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
+  // and  gep ptr, (select cond, idx1, idx2)
+  //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
   bool foldGEPSelect(GetElementPtrInst &GEPI) {
-    if (!GEPI.hasAllConstantIndices())
-      return false;
+    // Check whether the GEP has exactly one select operand and all indices
+    // will become constant after the transform.
+    SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
+    for (Value *Op : GEPI.indices()) {
+      if (auto *SI = dyn_cast<SelectInst>(Op)) {
+        if (Sel)
+          return false;
 
-    SelectInst *Sel = cast<SelectInst>(GEPI.getPointerOperand());
+        Sel = SI;
+        if (!isa<ConstantInt>(Sel->getTrueValue()) ||
+            !isa<ConstantInt>(Sel->getFalseValue()))
+          return false;
+        continue;
+      }
+
+      if (!isa<ConstantInt>(Op))
+        return false;
+    }
+
+    if (!Sel)
+      return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):"
                       << "\n    original: " << *Sel
                       << "\n              " << GEPI);
 
+    auto GetNewOps = [&](Value *SelOp) {
+      SmallVector<Value *> NewOps;
+      for (Value *Op : GEPI.operands())
+        if (Op == Sel)
+          NewOps.push_back(SelOp);
+        else
+          NewOps.push_back(Op);
+      return NewOps;
+    };
+
+    Value *True = Sel->getTrueValue();
+    Value *False = Sel->getFalseValue();
+    SmallVector<Value *> TrueOps = GetNewOps(True);
+    SmallVector<Value *> FalseOps = GetNewOps(False);
+
     IRB.SetInsertPoint(&GEPI);
-    SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
 
     Type *Ty = GEPI.getSourceElementType();
-    Value *True = Sel->getTrueValue();
-    Value *NTrue = IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep",
-                                 IsInBounds);
+    Value *NTrue = IRB.CreateGEP(Ty, TrueOps[0], ArrayRef(TrueOps).drop_front(),
+                                 True->getName() + ".sroa.gep", IsInBounds);
 
-    Value *False = Sel->getFalseValue();
-
-    Value *NFalse = IRB.CreateGEP(Ty, False, Index,
-                                  False->getName() + ".sroa.gep", IsInBounds);
+    Value *NFalse =
+        IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
+                      False->getName() + ".sroa.gep", IsInBounds);
 
     Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                    Sel->getName() + ".sroa.sel");
@@ -3845,8 +4071,7 @@ private:
   }
 
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-    if (isa<SelectInst>(GEPI.getPointerOperand()) &&
-        foldGEPSelect(GEPI))
+    if (foldGEPSelect(GEPI))
       return true;
 
     if (isa<PHINode>(GEPI.getPointerOperand()) &&
@@ -4046,7 +4271,7 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
 /// there all along.
 ///
 /// \returns true if any changes are made.
-bool SROAPass::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
+bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   LLVM_DEBUG(dbgs() << "Pre-splitting loads and stores\n");
 
   // Track the loads and stores which are candidates for pre-splitting here, in
@@ -4525,8 +4750,8 @@ bool SROAPass::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// appropriate new offsets. It also evaluates how successful the rewrite was
 /// at enabling promotion and if it was successful queues the alloca to be
 /// promoted.
-AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
-                                       Partition &P) {
+AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
+                                   Partition &P) {
   // Try to compute a friendly type for this partition of the alloca. This
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
@@ -4706,9 +4931,51 @@ AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   return NewAI;
 }
 
+static void insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig,
+                             AllocaInst *NewAddr, DIExpression *NewFragmentExpr,
+                             Instruction *BeforeInst) {
+  DIB.insertDeclare(NewAddr, Orig->getVariable(), NewFragmentExpr,
+                    Orig->getDebugLoc(), BeforeInst);
+}
+static void insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig,
+                             AllocaInst *NewAddr, DIExpression *NewFragmentExpr,
+                             Instruction *BeforeInst) {
+  (void)BeforeInst;
+  if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
+    NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
+                         DIAssignID::getDistinct(NewAddr->getContext()));
+  }
+  auto *NewAssign = DIB.insertDbgAssign(
+      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
+      Orig->getAddressExpression(), Orig->getDebugLoc());
+  LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
+  (void)NewAssign;
+}
+static void insertNewDbgInst(DIBuilder &DIB, DPValue *Orig, AllocaInst *NewAddr,
+                             DIExpression *NewFragmentExpr,
+                             Instruction *BeforeInst) {
+  (void)DIB;
+  if (Orig->isDbgDeclare()) {
+    DPValue *DPV = DPValue::createDPVDeclare(
+        NewAddr, Orig->getVariable(), NewFragmentExpr, Orig->getDebugLoc());
+    BeforeInst->getParent()->insertDPValueBefore(DPV,
+                                                 BeforeInst->getIterator());
+    return;
+  }
+  if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
+    NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
+                         DIAssignID::getDistinct(NewAddr->getContext()));
+  }
+  auto *NewAssign = DPValue::createLinkedDPVAssign(
+      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
+      Orig->getAddressExpression(), Orig->getDebugLoc());
+  LLVM_DEBUG(dbgs() << "Created new DPVAssign: " << *NewAssign << "\n");
+  (void)NewAssign;
+}
+
 /// Walks the slices of an alloca and form partitions based on them,
 /// rewriting each of their uses.
-bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
+bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (AS.begin() == AS.end())
     return false;
 
@@ -4807,12 +5074,7 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  TinyPtrVector<DbgVariableIntrinsic *> DbgVariables;
-  for (auto *DbgDeclare : FindDbgDeclareUses(&AI))
-    DbgVariables.push_back(DbgDeclare);
-  for (auto *DbgAssign : at::getAssignmentMarkers(&AI))
-    DbgVariables.push_back(DbgAssign);
-  for (DbgVariableIntrinsic *DbgVariable : DbgVariables) {
+  auto MigrateOne = [&](auto *DbgVariable) {
     auto *Expr = DbgVariable->getExpression();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     uint64_t AllocaSize =
@@ -4865,41 +5127,34 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
       // Remove any existing intrinsics on the new alloca describing
       // the variable fragment.
-      for (DbgDeclareInst *OldDII : FindDbgDeclareUses(Fragment.Alloca)) {
-        auto SameVariableFragment = [](const DbgVariableIntrinsic *LHS,
-                                       const DbgVariableIntrinsic *RHS) {
+      auto RemoveOne = [DbgVariable](auto *OldDII) {
+        auto SameVariableFragment = [](const auto *LHS, const auto *RHS) {
           return LHS->getVariable() == RHS->getVariable() &&
                  LHS->getDebugLoc()->getInlinedAt() ==
                      RHS->getDebugLoc()->getInlinedAt();
         };
         if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();
-      }
+      };
+      for_each(findDbgDeclares(Fragment.Alloca), RemoveOne);
+      for_each(findDPVDeclares(Fragment.Alloca), RemoveOne);
 
-      if (auto *DbgAssign = dyn_cast<DbgAssignIntrinsic>(DbgVariable)) {
-        if (!Fragment.Alloca->hasMetadata(LLVMContext::MD_DIAssignID)) {
-          Fragment.Alloca->setMetadata(
-              LLVMContext::MD_DIAssignID,
-              DIAssignID::getDistinct(AI.getContext()));
-        }
-        auto *NewAssign = DIB.insertDbgAssign(
-            Fragment.Alloca, DbgAssign->getValue(), DbgAssign->getVariable(),
-            FragmentExpr, Fragment.Alloca, DbgAssign->getAddressExpression(),
-            DbgAssign->getDebugLoc());
-        NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
-        LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign
-                          << "\n");
-      } else {
-        DIB.insertDeclare(Fragment.Alloca, DbgVariable->getVariable(),
-                          FragmentExpr, DbgVariable->getDebugLoc(), &AI);
-      }
+      insertNewDbgInst(DIB, DbgVariable, Fragment.Alloca, FragmentExpr, &AI);
     }
-  }
+  };
+
+  // Migrate debug information from the old alloca to the new alloca(s)
+  // and the individual partitions.
+  for_each(findDbgDeclares(&AI), MigrateOne);
+  for_each(findDPVDeclares(&AI), MigrateOne);
+  for_each(at::getAssignmentMarkers(&AI), MigrateOne);
+  for_each(at::getDPVAssignmentMarkers(&AI), MigrateOne);
+
   return Changed;
 }
 
 /// Clobber a use with poison, deleting the used value if it becomes dead.
-void SROAPass::clobberUse(Use &U) {
+void SROA::clobberUse(Use &U) {
   Value *OldV = U;
   // Replace the use with an poison value.
   U = PoisonValue::get(OldV->getType());
@@ -4919,7 +5174,7 @@ void SROAPass::clobberUse(Use &U) {
 /// the slices of the alloca, and then hands it off to be split and
 /// rewritten as needed.
 std::pair<bool /*Changed*/, bool /*CFGChanged*/>
-SROAPass::runOnAlloca(AllocaInst &AI) {
+SROA::runOnAlloca(AllocaInst &AI) {
   bool Changed = false;
   bool CFGChanged = false;
 
@@ -4951,9 +5206,6 @@ SROAPass::runOnAlloca(AllocaInst &AI) {
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
-    return {Changed, CFGChanged};
-
-  if (std::distance(AS.begin(), AS.end()) > SROAMaxAllocaSlices)
     return {Changed, CFGChanged};
 
   // Delete all the dead users of this alloca before splitting and rewriting it.
@@ -5004,7 +5256,7 @@ SROAPass::runOnAlloca(AllocaInst &AI) {
 ///
 /// We also record the alloca instructions deleted here so that they aren't
 /// subsequently handed to mem2reg to promote.
-bool SROAPass::deleteDeadInstructions(
+bool SROA::deleteDeadInstructions(
     SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
   bool Changed = false;
   while (!DeadInsts.empty()) {
@@ -5018,7 +5270,9 @@ bool SROAPass::deleteDeadInstructions(
     // not be able to find it.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      for (DbgDeclareInst *OldDII : FindDbgDeclareUses(AI))
+      for (DbgDeclareInst *OldDII : findDbgDeclares(AI))
+        OldDII->eraseFromParent();
+      for (DPValue *OldDII : findDPVDeclares(AI))
         OldDII->eraseFromParent();
     }
 
@@ -5045,7 +5299,7 @@ bool SROAPass::deleteDeadInstructions(
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.
 /// This function returns whether any promotion occurred.
-bool SROAPass::promoteAllocas(Function &F) {
+bool SROA::promoteAllocas(Function &F) {
   if (PromotableAllocas.empty())
     return false;
 
@@ -5062,12 +5316,8 @@ bool SROAPass::promoteAllocas(Function &F) {
   return true;
 }
 
-PreservedAnalyses SROAPass::runImpl(Function &F, DomTreeUpdater &RunDTU,
-                                    AssumptionCache &RunAC) {
+std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
   LLVM_DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
-  C = &F.getContext();
-  DTU = &RunDTU;
-  AC = &RunAC;
 
   const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBB = F.getEntryBlock();
@@ -5118,14 +5368,23 @@ PreservedAnalyses SROAPass::runImpl(Function &F, DomTreeUpdater &RunDTU,
   assert((!CFGChanged || !PreserveCFG) &&
          "Should not have modified the CFG when told to preserve it.");
 
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  if (isAssignmentTrackingEnabled(*F.getParent())) {
-    for (auto &BB : F)
+  if (Changed && isAssignmentTrackingEnabled(*F.getParent())) {
+    for (auto &BB : F) {
       RemoveRedundantDbgInstrs(&BB);
+    }
   }
 
+  return {Changed, CFGChanged};
+}
+
+PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  auto [Changed, CFGChanged] =
+      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
   PreservedAnalyses PA;
   if (!CFGChanged)
     PA.preserveSet<CFGAnalyses>();
@@ -5133,41 +5392,27 @@ PreservedAnalyses SROAPass::runImpl(Function &F, DomTreeUpdater &RunDTU,
   return PA;
 }
 
-PreservedAnalyses SROAPass::runImpl(Function &F, DominatorTree &RunDT,
-                                    AssumptionCache &RunAC) {
-  DomTreeUpdater DTU(RunDT, DomTreeUpdater::UpdateStrategy::Lazy);
-  return runImpl(F, DTU, RunAC);
-}
-
-PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
-  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
-  return runImpl(F, DT, AC);
-}
-
 void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (PreserveCFG ? "<preserve-cfg>" : "<modify-cfg>");
+  OS << (PreserveCFG == SROAOptions::PreserveCFG ? "<preserve-cfg>"
+                                                 : "<modify-cfg>");
 }
 
-SROAPass::SROAPass(SROAOptions PreserveCFG_)
-    : PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+SROAPass::SROAPass(SROAOptions PreserveCFG) : PreserveCFG(PreserveCFG) {}
+
+namespace {
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
-///
-/// This is in the llvm namespace purely to allow it to be a friend of the \c
-/// SROA pass.
-class llvm::sroa::SROALegacyPass : public FunctionPass {
-  /// The SROA implementation.
-  SROAPass Impl;
+class SROALegacyPass : public FunctionPass {
+  SROAOptions PreserveCFG;
 
 public:
   static char ID;
 
   SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
-      : FunctionPass(ID), Impl(PreserveCFG) {
+      : FunctionPass(ID), PreserveCFG(PreserveCFG) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -5175,10 +5420,13 @@ public:
     if (skipFunction(F))
       return false;
 
-    auto PA = Impl.runImpl(
-        F, getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F));
-    return !PA.areAllPreserved();
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    AssumptionCache &AC =
+        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    auto [Changed, _] =
+        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+    return Changed;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -5190,6 +5438,8 @@ public:
 
   StringRef getPassName() const override { return "SROA"; }
 };
+
+} // end anonymous namespace
 
 char SROALegacyPass::ID = 0;
 

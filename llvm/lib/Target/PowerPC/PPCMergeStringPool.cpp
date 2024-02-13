@@ -15,8 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -88,7 +86,8 @@ public:
   static char ID;
   PPCMergeStringPool() : ModulePass(ID) {}
 
-  bool runOnModule(Module &M) override { return mergeModuleStringPool(M); }
+  bool doInitialization(Module &M) override { return mergeModuleStringPool(M); }
+  bool runOnModule(Module &M) override { return false; }
 
   StringRef getPassName() const override { return "PPC Merge String Pool"; }
 
@@ -142,6 +141,16 @@ static bool hasReplaceableUsers(GlobalVariable &GV) {
 // valid candidates to be merged into the string pool. Valid candidates will
 // be added to MergeableStrings.
 void PPCMergeStringPool::collectCandidateConstants(Module &M) {
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  SmallVector<GlobalValue *, 4> UsedVCompiler;
+  collectUsedGlobalVariables(M, UsedVCompiler, /*CompilerUsed=*/true);
+  // Combine all of the Global Variables marked as used into a SmallPtrSet for
+  // faster lookup inside the loop.
+  SmallPtrSet<GlobalValue *, 8> AllUsedGlobals;
+  AllUsedGlobals.insert(UsedV.begin(), UsedV.end());
+  AllUsedGlobals.insert(UsedVCompiler.begin(), UsedVCompiler.end());
+
   for (GlobalVariable &Global : M.globals()) {
     LLVM_DEBUG(dbgs() << "Looking at global:");
     LLVM_DEBUG(Global.dump());
@@ -171,6 +180,10 @@ void PPCMergeStringPool::collectCandidateConstants(Module &M) {
 
     // If the constant is undef then ConstData will be null.
     if (!ConstData)
+      continue;
+
+    // Do not pool globals that are part of llvm.used or llvm.compiler.end.
+    if (AllUsedGlobals.contains(&Global))
       continue;
 
     if (!hasReplaceableUsers(Global))
@@ -255,6 +268,17 @@ bool PPCMergeStringPool::mergeModuleStringPool(Module &M) {
     // Access to the pooled constant strings require an offset. Add a GEP
     // before every use in order to compute this offset.
     replaceUsesWithGEP(GV, PooledGlobal, ElementIndex);
+
+    // Replace all the uses by metadata.
+    if (GV->isUsedByMetadata()) {
+      Constant *Indices[2] = {
+          ConstantInt::get(Type::getInt32Ty(*Context), 0),
+          ConstantInt::get(Type::getInt32Ty(*Context), ElementIndex)};
+      Constant *ConstGEP = ConstantExpr::getInBoundsGetElementPtr(
+          PooledStructType, PooledGlobal, Indices);
+      ValueAsMetadata::handleRAUW(GV, ConstGEP);
+    }
+    assert(!GV->isUsedByMetadata() && "Should be no metadata use anymore");
 
     // This GV has no more uses so we can erase it.
     if (GV->use_empty())

@@ -56,4 +56,13 @@ module m
       end block
     end associate
   end subroutine
+  subroutine test2(x, vec)
+    type t
+      integer :: i
+    end type
+    type(t) :: x(100)
+    integer(8) :: vec(10)
+    integer(kind=merge(1,-1, .not. is_contiguous(x(1:50:2)%i)))    t01
+    integer(kind=merge(1,-1, .not. is_contiguous(x(vec)%i)))       t02
+  end subroutine
 end module

@@ -28,6 +28,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -855,6 +856,7 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
     EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
 
   incrementProfileCounter(Body);
+  maybeCreateMCDCCondBitmap();
 
   RunCleanupsScope RunCleanups(*this);
 
@@ -1291,10 +1293,10 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(BaseCtorContinueBB);
   }
 
-  llvm::Value *const OldThis = CXXThisValue;
   for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
     if (!ConstructVBases)
       continue;
+    SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
@@ -1311,15 +1313,13 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   // Then, non-virtual base initializers.
   for (; B != E && (*B)->isBaseInitializer(); B++) {
     assert(!(*B)->isBaseVirtual());
-
+    SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
     EmitBaseInitializer(*this, ClassDecl, *B);
   }
-
-  CXXThisValue = OldThis;
 
   InitializeVTablePointers(ClassDecl);
 
@@ -1445,8 +1445,10 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   }
 
   Stmt *Body = Dtor->getBody();
-  if (Body)
+  if (Body) {
     incrementProfileCounter(Body);
+    maybeCreateMCDCCondBitmap();
+  }
 
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
@@ -1549,6 +1551,7 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
   LexicalScope Scope(*this, RootCS->getSourceRange());
 
   incrementProfileCounter(RootCS);
+  maybeCreateMCDCCondBitmap();
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);

@@ -167,10 +167,10 @@ FlatAffineValueConstraints::addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
         // iteration (e.g., lbMap.getResult(0) = 0, ubMap.getResult(0) = 1).
         // Make sure we skip those cases by checking that the lb result is not
         // just a constant.
-        !lbMap.getResult(0).isa<AffineConstantExpr>()) {
+        !isa<AffineConstantExpr>(lbMap.getResult(0))) {
       // Limited support: we expect the lb result to be just a loop dimension.
       // Not supported otherwise for now.
-      AffineDimExpr result = lbMap.getResult(0).dyn_cast<AffineDimExpr>();
+      AffineDimExpr result = dyn_cast<AffineDimExpr>(lbMap.getResult(0));
       if (!result)
         return failure();
 

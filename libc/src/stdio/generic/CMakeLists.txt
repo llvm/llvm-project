@@ -319,9 +319,9 @@ add_entrypoint_object(
 add_entrypoint_object(
   getchar_unlocked
   SRCS
-    getc_unlocked.cpp
+    getchar_unlocked.cpp
   HDRS
-    ../getc_unlocked.h
+    ../getchar_unlocked.h
   DEPENDS
     libc.src.errno.errno
     libc.include.stdio
@@ -337,6 +337,18 @@ add_entrypoint_object(
     ../fgets.h
   DEPENDS
     libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ungetc
+  SRCS
+    ungetc.cpp
+  HDRS
+    ../ungetc.h
+  DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file

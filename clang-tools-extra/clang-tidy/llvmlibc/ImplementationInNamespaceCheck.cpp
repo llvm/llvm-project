@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImplementationInNamespaceCheck.h"
+#include "NamespaceConstants.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
-
-const static StringRef RequiredNamespaceStart = "__llvm_libc";
-const static StringRef RequiredNamespaceMacroName = "LIBC_NAMESPACE";
 
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

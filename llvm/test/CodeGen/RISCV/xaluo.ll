@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m -verify-machineinstrs | FileCheck %s --check-prefix=RV64
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zba -verify-machineinstrs | FileCheck %s --check-prefix=RV32ZBA
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zba -verify-machineinstrs | FileCheck %s --check-prefix=RV64ZBA
-; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+experimental-zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV32ZICOND
-; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+experimental-zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV64ZICOND
+; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV32ZICOND
+; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV64ZICOND
 
 ;
 ; Get the actual value of the overflow bit.
@@ -193,7 +193,7 @@ define zeroext i1 @saddo4.i32(i32 signext %v1, ptr %res) {
 ; RV64-LABEL: saddo4.i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a2, 4096
-; RV64-NEXT:    addiw a2, a2, -1
+; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    addw a2, a0, a2
 ; RV64-NEXT:    slt a0, a2, a0
 ; RV64-NEXT:    sw a2, 0(a1)
@@ -211,7 +211,7 @@ define zeroext i1 @saddo4.i32(i32 signext %v1, ptr %res) {
 ; RV64ZBA-LABEL: saddo4.i32:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a2, 4096
-; RV64ZBA-NEXT:    addiw a2, a2, -1
+; RV64ZBA-NEXT:    addi a2, a2, -1
 ; RV64ZBA-NEXT:    addw a2, a0, a2
 ; RV64ZBA-NEXT:    slt a0, a2, a0
 ; RV64ZBA-NEXT:    sw a2, 0(a1)
@@ -229,7 +229,7 @@ define zeroext i1 @saddo4.i32(i32 signext %v1, ptr %res) {
 ; RV64ZICOND-LABEL: saddo4.i32:
 ; RV64ZICOND:       # %bb.0: # %entry
 ; RV64ZICOND-NEXT:    lui a2, 4096
-; RV64ZICOND-NEXT:    addiw a2, a2, -1
+; RV64ZICOND-NEXT:    addi a2, a2, -1
 ; RV64ZICOND-NEXT:    addw a2, a0, a2
 ; RV64ZICOND-NEXT:    slt a0, a2, a0
 ; RV64ZICOND-NEXT:    sw a2, 0(a1)
@@ -5927,4 +5927,3 @@ declare {i32, i1} @llvm.smul.with.overflow.i32(i32, i32) nounwind readnone
 declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone
 declare {i32, i1} @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
 declare {i64, i1} @llvm.umul.with.overflow.i64(i64, i64) nounwind readnone
-

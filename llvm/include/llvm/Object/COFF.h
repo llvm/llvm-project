@@ -1298,7 +1298,8 @@ private:
 class ResourceSectionRef {
 public:
   ResourceSectionRef() = default;
-  explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
+  explicit ResourceSectionRef(StringRef Ref)
+      : BBS(Ref, llvm::endianness::little) {}
 
   Error load(const COFFObjectFile *O);
   Error load(const COFFObjectFile *O, const SectionRef &S);
@@ -1360,6 +1361,47 @@ class SectionStrippedError
 public:
   SectionStrippedError() { setErrorCode(object_error::section_stripped); }
 };
+
+inline std::optional<std::string>
+getArm64ECMangledFunctionName(StringRef Name) {
+  bool IsCppFn = Name[0] == '?';
+  if (IsCppFn && Name.find("$$h") != std::string::npos)
+    return std::nullopt;
+  if (!IsCppFn && Name[0] == '#')
+    return std::nullopt;
+
+  StringRef Prefix = "$$h";
+  size_t InsertIdx = 0;
+  if (IsCppFn) {
+    InsertIdx = Name.find("@@");
+    size_t ThreeAtSignsIdx = Name.find("@@@");
+    if (InsertIdx != std::string::npos && InsertIdx != ThreeAtSignsIdx) {
+      InsertIdx += 2;
+    } else {
+      InsertIdx = Name.find("@");
+      if (InsertIdx != std::string::npos)
+        InsertIdx++;
+    }
+  } else {
+    Prefix = "#";
+  }
+
+  return std::optional<std::string>(
+      (Name.substr(0, InsertIdx) + Prefix + Name.substr(InsertIdx)).str());
+}
+
+inline std::optional<std::string>
+getArm64ECDemangledFunctionName(StringRef Name) {
+  if (Name[0] == '#')
+    return std::string(Name.substr(1));
+  if (Name[0] != '?')
+    return std::nullopt;
+
+  std::pair<StringRef, StringRef> Pair = Name.split("$$h");
+  if (Pair.second.empty())
+    return std::nullopt;
+  return (Pair.first + Pair.second).str();
+}
 
 } // end namespace object
 

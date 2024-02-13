@@ -1,0 +1,39 @@
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+libc_linker_script = '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'
+
+config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
+
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib -nostdlib++ -L %{lib} -lc++ -lc++abi'
+    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost' +
+    ' -T {}'.format(libc_linker_script) +
+    ' -Wl,--defsym=__flash=0x0'
+    ' -Wl,--defsym=__flash_size=0x400000'
+    ' -Wl,--defsym=__ram=0x21000000'
+    ' -Wl,--defsym=__ram_size=0x1000000'
+    ' -Wl,--defsym=__stack_size=0x1000'
+))
+
+config.executor = (
+    '@LIBCXXABI_LIBCXX_PATH@/utils/qemu_baremetal.py'
+    ' --qemu @QEMU_SYSTEM_ARM@'
+    ' --machine mps2-an385'
+    ' --cpu cortex-m3')
+config.substitutions.append(('%{exec}',
+    '%{executor}'
+    ' --execdir %T'
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

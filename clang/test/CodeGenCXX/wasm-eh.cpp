@@ -34,7 +34,7 @@ void test0() {
 // CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
 // CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
 // CHECK-NEXT:   %[[SELECTOR:.*]] = call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #8
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #7
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_INT_BB:.*]], label %[[CATCH_FALLTHROUGH_BB:.*]]
 
@@ -51,7 +51,7 @@ void test0() {
 // CHECK-NEXT:   br label %[[TRY_CONT_BB:.*]]
 
 // CHECK: [[CATCH_FALLTHROUGH_BB]]
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTId) #8
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTId) #7
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_FLOAT_BB:.*]], label %[[RETHROW_BB:.*]]
 

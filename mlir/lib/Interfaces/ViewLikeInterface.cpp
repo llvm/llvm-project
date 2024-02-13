@@ -66,6 +66,17 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
   if (failed(verifyListOfOperandsOrIntegers(
           op, "stride", maxRanks[2], op.getStaticStrides(), op.getStrides())))
     return failure();
+
+  for (int64_t offset : op.getStaticOffsets()) {
+    if (offset < 0 && !ShapedType::isDynamic(offset))
+      return op->emitError("expected offsets to be non-negative, but got ")
+             << offset;
+  }
+  for (int64_t size : op.getStaticSizes()) {
+    if (size < 0 && !ShapedType::isDynamic(size))
+      return op->emitError("expected sizes to be non-negative, but got ")
+             << size;
+  }
   return success();
 }
 

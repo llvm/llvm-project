@@ -47,10 +47,10 @@ define void @f_undef_1(<8 x i64> %a, ptr %dst) {
 ; CHECK-LABEL: f_undef_1:
 ; CHECK:       // %bb.0: // %BB
 ; CHECK-NEXT:    mov v16.16b, v0.16b
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    mov v5.16b, v2.16b
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q3_q4
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    mov v4.16b, v3.16b
 ; CHECK-NEXT:    mov v17.16b, v16.16b

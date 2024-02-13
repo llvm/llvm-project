@@ -62,7 +62,7 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   if (variants.empty() && getRanges().size() > 1) {
     for (const Range &range : getRanges()) {
       std::vector<Range> subRanges = getRanges();
-      llvm::erase_value(subRanges, range);
+      llvm::erase(subRanges, range);
       variants.push_back(createNewNode(subRanges));
     }
 

@@ -166,8 +166,8 @@ public:
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by isIEEE(), and does not have unnormal
-  /// values
+  /// compatible layout as defined by APFloat::isIEEE(), and does not have
+  /// non-IEEE values, such as x86_fp80's unnormal values.
   bool isIEEELikeFPTy() const {
     switch (getTypeID()) {
     case DoubleTyID:
@@ -482,11 +482,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.
   //
-
-  // TODO: After opaque pointer transition this can be replaced by simply
-  //       calling PointerType::get(C, AS).
-  static PointerType *getInt8PtrTy(LLVMContext &C, unsigned AS = 0);
-
   static Type *getWasm_ExternrefTy(LLVMContext &C);
   static Type *getWasm_FuncrefTy(LLVMContext &C);
 

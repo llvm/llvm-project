@@ -156,7 +156,7 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
                     : TypeDependence::None)),
       ElementType(et) {
   ArrayTypeBits.IndexTypeQuals = tq;
-  ArrayTypeBits.SizeModifier = sm;
+  ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
 
 unsigned ConstantArrayType::getNumAddressingBits(const ASTContext &Context,
@@ -218,20 +218,19 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                 unsigned TypeQuals) {
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(ArraySize.getZExtValue());
-  ID.AddInteger(SizeMod);
+  ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   ID.AddBoolean(SizeExpr != nullptr);
   if (SizeExpr)
     SizeExpr->Profile(ID, Context, true);
 }
 
-DependentSizedArrayType::DependentSizedArrayType(const ASTContext &Context,
-                                                 QualType et, QualType can,
+DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
                                                  unsigned tq,
                                                  SourceRange brackets)
-    : ArrayType(DependentSizedArray, et, can, sm, tq, e),
-      Context(Context), SizeExpr((Stmt*) e), Brackets(brackets) {}
+    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e),
+      Brackets(brackets) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context,
@@ -240,44 +239,42 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       unsigned TypeQuals,
                                       Expr *E) {
   ID.AddPointer(ET.getAsOpaquePtr());
-  ID.AddInteger(SizeMod);
+  ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   E->Profile(ID, Context, true);
 }
 
-DependentVectorType::DependentVectorType(const ASTContext &Context,
-                                         QualType ElementType,
+DependentVectorType::DependentVectorType(QualType ElementType,
                                          QualType CanonType, Expr *SizeExpr,
-                                         SourceLocation Loc,
-                                         VectorType::VectorKind VecKind)
+                                         SourceLocation Loc, VectorKind VecKind)
     : Type(DependentVector, CanonType,
            TypeDependence::DependentInstantiation |
                ElementType->getDependence() |
                (SizeExpr ? toTypeDependence(SizeExpr->getDependence())
                          : TypeDependence::None)),
-      Context(Context), ElementType(ElementType), SizeExpr(SizeExpr), Loc(Loc) {
-  VectorTypeBits.VecKind = VecKind;
+      ElementType(ElementType), SizeExpr(SizeExpr), Loc(Loc) {
+  VectorTypeBits.VecKind = llvm::to_underlying(VecKind);
 }
 
 void DependentVectorType::Profile(llvm::FoldingSetNodeID &ID,
                                   const ASTContext &Context,
                                   QualType ElementType, const Expr *SizeExpr,
-                                  VectorType::VectorKind VecKind) {
+                                  VectorKind VecKind) {
   ID.AddPointer(ElementType.getAsOpaquePtr());
-  ID.AddInteger(VecKind);
+  ID.AddInteger(llvm::to_underlying(VecKind));
   SizeExpr->Profile(ID, Context, true);
 }
 
-DependentSizedExtVectorType::DependentSizedExtVectorType(
-    const ASTContext &Context, QualType ElementType, QualType can,
-    Expr *SizeExpr, SourceLocation loc)
+DependentSizedExtVectorType::DependentSizedExtVectorType(QualType ElementType,
+                                                         QualType can,
+                                                         Expr *SizeExpr,
+                                                         SourceLocation loc)
     : Type(DependentSizedExtVector, can,
            TypeDependence::DependentInstantiation |
                ElementType->getDependence() |
                (SizeExpr ? toTypeDependence(SizeExpr->getDependence())
                          : TypeDependence::None)),
-      Context(Context), SizeExpr(SizeExpr), ElementType(ElementType), loc(loc) {
-}
+      SizeExpr(SizeExpr), ElementType(ElementType), loc(loc) {}
 
 void
 DependentSizedExtVectorType::Profile(llvm::FoldingSetNodeID &ID,
@@ -287,8 +284,7 @@ DependentSizedExtVectorType::Profile(llvm::FoldingSetNodeID &ID,
   SizeExpr->Profile(ID, Context, true);
 }
 
-DependentAddressSpaceType::DependentAddressSpaceType(const ASTContext &Context,
-                                                     QualType PointeeType,
+DependentAddressSpaceType::DependentAddressSpaceType(QualType PointeeType,
                                                      QualType can,
                                                      Expr *AddrSpaceExpr,
                                                      SourceLocation loc)
@@ -297,8 +293,7 @@ DependentAddressSpaceType::DependentAddressSpaceType(const ASTContext &Context,
                PointeeType->getDependence() |
                (AddrSpaceExpr ? toTypeDependence(AddrSpaceExpr->getDependence())
                               : TypeDependence::None)),
-      Context(Context), AddrSpaceExpr(AddrSpaceExpr), PointeeType(PointeeType),
-      loc(loc) {}
+      AddrSpaceExpr(AddrSpaceExpr), PointeeType(PointeeType), loc(loc) {}
 
 void DependentAddressSpaceType::Profile(llvm::FoldingSetNodeID &ID,
                                         const ASTContext &Context,
@@ -337,12 +332,14 @@ ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
     : MatrixType(tc, matrixType, canonType), NumRows(nRows),
       NumColumns(nColumns) {}
 
-DependentSizedMatrixType::DependentSizedMatrixType(
-    const ASTContext &CTX, QualType ElementType, QualType CanonicalType,
-    Expr *RowExpr, Expr *ColumnExpr, SourceLocation loc)
+DependentSizedMatrixType::DependentSizedMatrixType(QualType ElementType,
+                                                   QualType CanonicalType,
+                                                   Expr *RowExpr,
+                                                   Expr *ColumnExpr,
+                                                   SourceLocation loc)
     : MatrixType(DependentSizedMatrix, ElementType, CanonicalType, RowExpr,
                  ColumnExpr),
-      Context(CTX), RowExpr(RowExpr), ColumnExpr(ColumnExpr), loc(loc) {}
+      RowExpr(RowExpr), ColumnExpr(ColumnExpr), loc(loc) {}
 
 void DependentSizedMatrixType::Profile(llvm::FoldingSetNodeID &ID,
                                        const ASTContext &CTX,
@@ -360,7 +357,7 @@ VectorType::VectorType(QualType vecType, unsigned nElements, QualType canonType,
 VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
                        QualType canonType, VectorKind vecKind)
     : Type(tc, canonType, vecType->getDependence()), ElementType(vecType) {
-  VectorTypeBits.VecKind = vecKind;
+  VectorTypeBits.VecKind = llvm::to_underlying(vecKind);
   VectorTypeBits.NumElements = nElements;
 }
 
@@ -368,11 +365,10 @@ BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
     : Type(BitInt, QualType{}, TypeDependence::None), IsUnsigned(IsUnsigned),
       NumBits(NumBits) {}
 
-DependentBitIntType::DependentBitIntType(const ASTContext &Context,
-                                         bool IsUnsigned, Expr *NumBitsExpr)
+DependentBitIntType::DependentBitIntType(bool IsUnsigned, Expr *NumBitsExpr)
     : Type(DependentBitInt, QualType{},
            toTypeDependence(NumBitsExpr->getDependence())),
-      Context(Context), ExprAndUnsigned(NumBitsExpr, IsUnsigned) {}
+      ExprAndUnsigned(NumBitsExpr, IsUnsigned) {}
 
 bool DependentBitIntType::isUnsigned() const {
   return ExprAndUnsigned.getInt();
@@ -2372,7 +2368,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
 }
 
 bool Type::isSizelessBuiltinType() const {
-  if (isSVESizelessBuiltinType() || isRVVSizelessBuiltinType())
+  if (isSizelessVectorType())
     return true;
 
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
@@ -2405,6 +2401,10 @@ bool Type::isWebAssemblyTableType() const {
 }
 
 bool Type::isSizelessType() const { return isSizelessBuiltinType(); }
+
+bool Type::isSizelessVectorType() const {
+  return isSVESizelessBuiltinType() || isRVVSizelessBuiltinType();
+}
 
 bool Type::isSVESizelessBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
@@ -2475,9 +2475,13 @@ QualType Type::getSveEltType(const ASTContext &Ctx) const {
 bool Type::isRVVVLSBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
-#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, IsFP) \
-    case BuiltinType::Id: \
-      return NF == 1;
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP, IsBF)                                            \
+  case BuiltinType::Id:                                                        \
+    return NF == 1;
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return true;
 #include "clang/Basic/RISCVVTypes.def"
     default:
       return false;
@@ -2490,7 +2494,17 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
   assert(isRVVVLSBuiltinType() && "unsupported type!");
 
   const BuiltinType *BTy = castAs<BuiltinType>();
-  return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
+
+  switch (BTy->getKind()) {
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return Ctx.UnsignedCharTy;
+  default:
+    return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
+#include "clang/Basic/RISCVVTypes.def"
+  }
+
+  llvm_unreachable("Unhandled type");
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
@@ -2603,19 +2617,22 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   return false;
 }
 
-bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
-  if ((*this)->isArrayType())
-    return Context.getBaseElementType(*this).isTriviallyCopyableType(Context);
+static bool isTriviallyCopyableTypeImpl(const QualType &type,
+                                        const ASTContext &Context,
+                                        bool IsCopyConstructible) {
+  if (type->isArrayType())
+    return isTriviallyCopyableTypeImpl(Context.getBaseElementType(type),
+                                       Context, IsCopyConstructible);
 
-  if (hasNonTrivialObjCLifetime())
+  if (type.hasNonTrivialObjCLifetime())
     return false;
 
   // C++11 [basic.types]p9 - See Core 2094
   //   Scalar types, trivially copyable class types, arrays of such types, and
   //   cv-qualified versions of these types are collectively
-  //   called trivially copyable types.
+  //   called trivially copy constructible types.
 
-  QualType CanonicalType = getCanonicalType();
+  QualType CanonicalType = type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2633,20 +2650,35 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (!ClassDecl->isTriviallyCopyable()) return false;
+      if (IsCopyConstructible) {
+        return ClassDecl->isTriviallyCopyConstructible();
+      } else {
+        return ClassDecl->isTriviallyCopyable();
+      }
     }
-
     return true;
   }
-
   // No other types can match.
   return false;
+}
+
+bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this, Context,
+                                     /*IsCopyConstructible=*/false);
+}
+
+bool QualType::isTriviallyCopyConstructibleType(
+    const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this, Context,
+                                     /*IsCopyConstructible=*/true);
 }
 
 bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
   QualType BaseElementType = Context.getBaseElementType(*this);
 
   if (BaseElementType->isIncompleteType()) {
+    return false;
+  } else if (!BaseElementType->isObjectType()) {
     return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();
@@ -2666,6 +2698,8 @@ static bool
 HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
   if (Decl->isUnion())
     return false;
+  if (Decl->isLambda())
+    return Decl->isCapturelessLambda();
 
   auto IsDefaultedOperatorEqualEqual = [&](const FunctionDecl *Function) {
     return Function->getOverloadedOperator() ==
@@ -3013,24 +3047,36 @@ bool Type::isSpecifierType() const {
 ElaboratedTypeKeyword
 TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   switch (TypeSpec) {
-  default: return ETK_None;
-  case TST_typename: return ETK_Typename;
-  case TST_class: return ETK_Class;
-  case TST_struct: return ETK_Struct;
-  case TST_interface: return ETK_Interface;
-  case TST_union: return ETK_Union;
-  case TST_enum: return ETK_Enum;
+  default:
+    return ElaboratedTypeKeyword::None;
+  case TST_typename:
+    return ElaboratedTypeKeyword::Typename;
+  case TST_class:
+    return ElaboratedTypeKeyword::Class;
+  case TST_struct:
+    return ElaboratedTypeKeyword::Struct;
+  case TST_interface:
+    return ElaboratedTypeKeyword::Interface;
+  case TST_union:
+    return ElaboratedTypeKeyword::Union;
+  case TST_enum:
+    return ElaboratedTypeKeyword::Enum;
   }
 }
 
 TagTypeKind
 TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   switch(TypeSpec) {
-  case TST_class: return TTK_Class;
-  case TST_struct: return TTK_Struct;
-  case TST_interface: return TTK_Interface;
-  case TST_union: return TTK_Union;
-  case TST_enum: return TTK_Enum;
+  case TST_class:
+    return TagTypeKind::Class;
+  case TST_struct:
+    return TagTypeKind::Struct;
+  case TST_interface:
+    return TagTypeKind::Interface;
+  case TST_union:
+    return TagTypeKind::Union;
+  case TST_enum:
+    return TagTypeKind::Enum;
   }
 
   llvm_unreachable("Type specifier is not a tag type kind.");
@@ -3039,11 +3085,16 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
 ElaboratedTypeKeyword
 TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   switch (Kind) {
-  case TTK_Class: return ETK_Class;
-  case TTK_Struct: return ETK_Struct;
-  case TTK_Interface: return ETK_Interface;
-  case TTK_Union: return ETK_Union;
-  case TTK_Enum: return ETK_Enum;
+  case TagTypeKind::Class:
+    return ElaboratedTypeKeyword::Class;
+  case TagTypeKind::Struct:
+    return ElaboratedTypeKeyword::Struct;
+  case TagTypeKind::Interface:
+    return ElaboratedTypeKeyword::Interface;
+  case TagTypeKind::Union:
+    return ElaboratedTypeKeyword::Union;
+  case TagTypeKind::Enum:
+    return ElaboratedTypeKeyword::Enum;
   }
   llvm_unreachable("Unknown tag type kind.");
 }
@@ -3051,13 +3102,18 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
 TagTypeKind
 TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
-  case ETK_Class: return TTK_Class;
-  case ETK_Struct: return TTK_Struct;
-  case ETK_Interface: return TTK_Interface;
-  case ETK_Union: return TTK_Union;
-  case ETK_Enum: return TTK_Enum;
-  case ETK_None: // Fall through.
-  case ETK_Typename:
+  case ElaboratedTypeKeyword::Class:
+    return TagTypeKind::Class;
+  case ElaboratedTypeKeyword::Struct:
+    return TagTypeKind::Struct;
+  case ElaboratedTypeKeyword::Interface:
+    return TagTypeKind::Interface;
+  case ElaboratedTypeKeyword::Union:
+    return TagTypeKind::Union;
+  case ElaboratedTypeKeyword::Enum:
+    return TagTypeKind::Enum;
+  case ElaboratedTypeKeyword::None: // Fall through.
+  case ElaboratedTypeKeyword::Typename:
     llvm_unreachable("Elaborated type keyword is not a tag type kind.");
   }
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3066,14 +3122,14 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
 bool
 TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
-  case ETK_None:
-  case ETK_Typename:
+  case ElaboratedTypeKeyword::None:
+  case ElaboratedTypeKeyword::Typename:
     return false;
-  case ETK_Class:
-  case ETK_Struct:
-  case ETK_Interface:
-  case ETK_Union:
-  case ETK_Enum:
+  case ElaboratedTypeKeyword::Class:
+  case ElaboratedTypeKeyword::Struct:
+  case ElaboratedTypeKeyword::Interface:
+  case ElaboratedTypeKeyword::Union:
+  case ElaboratedTypeKeyword::Enum:
     return true;
   }
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3081,13 +3137,20 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
 
 StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
-  case ETK_None: return {};
-  case ETK_Typename: return "typename";
-  case ETK_Class:  return "class";
-  case ETK_Struct: return "struct";
-  case ETK_Interface: return "__interface";
-  case ETK_Union:  return "union";
-  case ETK_Enum:   return "enum";
+  case ElaboratedTypeKeyword::None:
+    return {};
+  case ElaboratedTypeKeyword::Typename:
+    return "typename";
+  case ElaboratedTypeKeyword::Class:
+    return "class";
+  case ElaboratedTypeKeyword::Struct:
+    return "struct";
+  case ElaboratedTypeKeyword::Interface:
+    return "__interface";
+  case ElaboratedTypeKeyword::Union:
+    return "union";
+  case ElaboratedTypeKeyword::Enum:
+    return "enum";
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3120,7 +3183,7 @@ DependentTemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
                                              NestedNameSpecifier *Qualifier,
                                              const IdentifierInfo *Name,
                                              ArrayRef<TemplateArgument> Args) {
-  ID.AddInteger(Keyword);
+  ID.AddInteger(llvm::to_underlying(Keyword));
   ID.AddPointer(Qualifier);
   ID.AddPointer(Name);
   for (const TemplateArgument &Arg : Args)
@@ -3374,9 +3437,18 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_SwiftAsync: return "swiftasynccall";
   case CC_PreserveMost: return "preserve_most";
   case CC_PreserveAll: return "preserve_all";
+  case CC_M68kRTD: return "m68k_rtd";
+  case CC_PreserveNone: return "preserve_none";
   }
 
   llvm_unreachable("Invalid calling convention.");
+}
+
+void FunctionProtoType::ExceptionSpecInfo::instantiate() {
+  assert(Type == EST_Uninstantiated);
+  NoexceptExpr =
+      cast<FunctionProtoType>(SourceTemplate->getType())->getNoexceptExpr();
+  Type = EST_DependentNoexcept;
 }
 
 FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
@@ -3401,6 +3473,14 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     FunctionTypeBits.HasExtraBitfields = false;
   }
 
+  if (epi.requiresFunctionProtoTypeArmAttributes()) {
+    auto &ArmTypeAttrs = *getTrailingObjects<FunctionTypeArmAttributes>();
+    ArmTypeAttrs = FunctionTypeArmAttributes();
+
+    // Also set the bit in FunctionTypeExtraBitfields
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.HasArmTypeAttributes = true;
+  }
 
   // Fill in the trailing argument array.
   auto *argSlot = getTrailingObjects<QualType>();
@@ -3412,10 +3492,10 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
   // Propagate the SME ACLE attributes.
   if (epi.AArch64SMEAttributes != SME_NormalFunction) {
-    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    auto &ArmTypeAttrs = *getTrailingObjects<FunctionTypeArmAttributes>();
     assert(epi.AArch64SMEAttributes <= SME_AttributeMask &&
            "Not enough bits to encode SME attributes");
-    ExtraBits.AArch64SMEAttributes = epi.AArch64SMEAttributes;
+    ArmTypeAttrs.AArch64SMEAttributes = epi.AArch64SMEAttributes;
   }
 
   // Fill in the exception type array if present.
@@ -3726,11 +3806,68 @@ QualType DecltypeType::desugar() const {
   return QualType(this, 0);
 }
 
-DependentDecltypeType::DependentDecltypeType(const ASTContext &Context, Expr *E)
-    : DecltypeType(E, Context.DependentTy), Context(Context) {}
+DependentDecltypeType::DependentDecltypeType(Expr *E, QualType UnderlyingType)
+    : DecltypeType(E, UnderlyingType) {}
 
 void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
                                     const ASTContext &Context, Expr *E) {
+  E->Profile(ID, Context, true);
+}
+
+PackIndexingType::PackIndexingType(const ASTContext &Context,
+                                   QualType Canonical, QualType Pattern,
+                                   Expr *IndexExpr,
+                                   ArrayRef<QualType> Expansions)
+    : Type(PackIndexing, Canonical,
+           computeDependence(Pattern, IndexExpr, Expansions)),
+      Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
+      Size(Expansions.size()) {
+
+  std::uninitialized_copy(Expansions.begin(), Expansions.end(),
+                          getTrailingObjects<QualType>());
+}
+
+std::optional<unsigned> PackIndexingType::getSelectedIndex() const {
+  if (isInstantiationDependentType())
+    return std::nullopt;
+  // Should only be not a constant for error recovery.
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(getIndexExpr());
+  if (!CE)
+    return std::nullopt;
+  auto Index = CE->getResultAsAPSInt();
+  assert(Index.isNonNegative() && "Invalid index");
+  return static_cast<unsigned>(Index.getExtValue());
+}
+
+TypeDependence
+PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
+                                    ArrayRef<QualType> Expansions) {
+  TypeDependence IndexD = toTypeDependence(IndexExpr->getDependence());
+
+  TypeDependence TD = IndexD | (IndexExpr->isInstantiationDependent()
+                                    ? TypeDependence::DependentInstantiation
+                                    : TypeDependence::None);
+  if (Expansions.empty())
+    TD |= Pattern->getDependence() & TypeDependence::DependentInstantiation;
+  else
+    for (const QualType &T : Expansions)
+      TD |= T->getDependence();
+
+  if (!(IndexD & TypeDependence::UnexpandedPack))
+    TD &= ~TypeDependence::UnexpandedPack;
+
+  // If the pattern does not contain an unexpended pack,
+  // the type is still dependent, and invalid
+  if (!Pattern->containsUnexpandedParameterPack())
+    TD |= TypeDependence::Error | TypeDependence::DependentInstantiation;
+
+  return TD;
+}
+
+void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
+                               const ASTContext &Context, QualType Pattern,
+                               Expr *E) {
+  Pattern.Profile(ID);
   E->Profile(ID, Context, true);
 }
 
@@ -3853,6 +3990,8 @@ bool AttributedType::isCallingConv() const {
   case attr::IntelOclBicc:
   case attr::PreserveMost:
   case attr::PreserveAll:
+  case attr::M68kRTD:
+  case attr::PreserveNone:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -4147,7 +4286,7 @@ public:
     // Compute the cached properties and then set the cache.
     CachedProperties Result = computeCachedProperties(T);
     T->TypeBits.CacheValid = true;
-    T->TypeBits.CachedLinkage = Result.getLinkage();
+    T->TypeBits.CachedLinkage = llvm::to_underlying(Result.getLinkage());
     T->TypeBits.CachedLocalOrUnnamed = Result.hasLocalOrUnnamedType();
   }
 };
@@ -4179,20 +4318,20 @@ static CachedProperties computeCachedProperties(const Type *T) {
     // Treat instantiation-dependent types as external.
     if (!T->isInstantiationDependentType()) T->dump();
     assert(T->isInstantiationDependentType());
-    return CachedProperties(ExternalLinkage, false);
+    return CachedProperties(Linkage::External, false);
 
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
     // Give non-deduced 'auto' types external linkage. We should only see them
     // here in error recovery.
-    return CachedProperties(ExternalLinkage, false);
+    return CachedProperties(Linkage::External, false);
 
   case Type::BitInt:
   case Type::Builtin:
     // C++ [basic.link]p8:
     //   A type is said to have linkage if and only if:
     //     - it is a fundamental type (3.9.1); or
-    return CachedProperties(ExternalLinkage, false);
+    return CachedProperties(Linkage::External, false);
 
   case Type::Record:
   case Type::Enum: {
@@ -4408,6 +4547,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::TypeOfExpr:
   case Type::TypeOf:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::UnaryTransform:
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:
@@ -4736,7 +4876,7 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
                    ConceptDecl *TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
     : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
-  AutoTypeBits.Keyword = (unsigned)Keyword;
+  AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);

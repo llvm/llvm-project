@@ -91,6 +91,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # stdbit.h entrypoints
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
@@ -142,6 +149,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -170,6 +183,18 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
+
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
+
+    # sys/epoll.h entrypoints
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.src.sys.epoll.epoll_wait
+    # libc.src.sys.epoll.epoll_pwait
+    # libc.src.sys.epoll.epoll_pwait2
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -319,12 +344,19 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -353,8 +385,28 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
+if(LIBC_COMPILER_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float128 entrypoints
+    libc.src.math.ceilf128
+    libc.src.math.copysignf128
+    libc.src.math.fabsf128
+    libc.src.math.fdimf128
+    libc.src.math.floorf128
+    libc.src.math.fmaxf128
+    libc.src.math.fminf128
+    libc.src.math.frexpf128
+    libc.src.math.roundf128
+    libc.src.math.sqrtf128
+    libc.src.math.truncf128
+  )
+endif()
+
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
@@ -479,6 +531,16 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.spawn.posix_spawn_file_actions_addopen
     libc.src.spawn.posix_spawn_file_actions_destroy
     libc.src.spawn.posix_spawn_file_actions_init
+
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
+    libc.src.search.insque
+    libc.src.search.remque
 
     # threads.h entrypoints
     libc.src.threads.call_once

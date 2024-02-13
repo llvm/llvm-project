@@ -158,7 +158,7 @@ a dominating header.
 
 * The `FixIrreducible <https://llvm.org/doxygen/FixIrreducible_8h.html>`_
   pass can transform irreducible control flow into loops by inserting
-  new loop headers. It is not inlcuded in any default optimization pass
+  new loop headers. It is not included in any default optimization pass
   pipeline, but is required for some back-end targets.
 
 

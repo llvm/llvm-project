@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_is_contiguous(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}) {

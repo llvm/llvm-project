@@ -19,25 +19,25 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v40, s16, 16
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:    v_writelane_b32 v40, s34, 2
-; CHECK-NEXT:    v_writelane_b32 v40, s35, 3
-; CHECK-NEXT:    v_writelane_b32 v40, s36, 4
-; CHECK-NEXT:    v_writelane_b32 v40, s37, 5
-; CHECK-NEXT:    v_writelane_b32 v40, s38, 6
-; CHECK-NEXT:    v_writelane_b32 v40, s39, 7
-; CHECK-NEXT:    v_writelane_b32 v40, s40, 8
-; CHECK-NEXT:    v_writelane_b32 v40, s41, 9
-; CHECK-NEXT:    v_writelane_b32 v40, s42, 10
-; CHECK-NEXT:    v_writelane_b32 v40, s43, 11
-; CHECK-NEXT:    v_writelane_b32 v40, s44, 12
+; CHECK-NEXT:    v_writelane_b32 v41, s16, 16
+; CHECK-NEXT:    v_writelane_b32 v41, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
+; CHECK-NEXT:    v_writelane_b32 v41, s34, 2
+; CHECK-NEXT:    v_writelane_b32 v41, s35, 3
+; CHECK-NEXT:    v_writelane_b32 v41, s36, 4
+; CHECK-NEXT:    v_writelane_b32 v41, s37, 5
+; CHECK-NEXT:    v_writelane_b32 v41, s38, 6
+; CHECK-NEXT:    v_writelane_b32 v41, s39, 7
+; CHECK-NEXT:    v_writelane_b32 v41, s40, 8
+; CHECK-NEXT:    v_writelane_b32 v41, s41, 9
+; CHECK-NEXT:    v_writelane_b32 v41, s42, 10
+; CHECK-NEXT:    v_writelane_b32 v41, s43, 11
+; CHECK-NEXT:    v_writelane_b32 v41, s44, 12
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
-; CHECK-NEXT:    v_writelane_b32 v40, s46, 14
+; CHECK-NEXT:    v_writelane_b32 v41, s45, 13
+; CHECK-NEXT:    v_writelane_b32 v41, s46, 14
 ; CHECK-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- undef
 ; CHECK-NEXT:  .Ltmp0:
@@ -45,55 +45,55 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, __kmpc_alloc_shared@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, __kmpc_alloc_shared@gotpcrel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v40, s47, 15
+; CHECK-NEXT:    v_writelane_b32 v41, s47, 15
 ; CHECK-NEXT:    s_load_dwordx2 s[46:47], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v41, v31
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v40, v31
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s42, s15
 ; CHECK-NEXT:    s_mov_b32 s43, s14
 ; CHECK-NEXT:    s_mov_b32 s44, s13
 ; CHECK-NEXT:    s_mov_b32 s45, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[46:47]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; CHECK-NEXT:    s_mov_b32 s12, s45
 ; CHECK-NEXT:    s_mov_b32 s13, s44
 ; CHECK-NEXT:    s_mov_b32 s14, s43
 ; CHECK-NEXT:    s_mov_b32 s15, s42
-; CHECK-NEXT:    v_mov_b32_e32 v31, v41
+; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[46:47]
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- [$vgpr0_vgpr1+0]
 ; CHECK-NEXT:    .loc 1 0 9 is_stmt 0 ; dummy:0:9
-; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-NEXT:    v_readlane_b32 s47, v40, 15
-; CHECK-NEXT:    v_readlane_b32 s46, v40, 14
-; CHECK-NEXT:    v_readlane_b32 s45, v40, 13
-; CHECK-NEXT:    v_readlane_b32 s44, v40, 12
-; CHECK-NEXT:    v_readlane_b32 s43, v40, 11
-; CHECK-NEXT:    v_readlane_b32 s42, v40, 10
-; CHECK-NEXT:    v_readlane_b32 s41, v40, 9
-; CHECK-NEXT:    v_readlane_b32 s40, v40, 8
-; CHECK-NEXT:    v_readlane_b32 s39, v40, 7
-; CHECK-NEXT:    v_readlane_b32 s38, v40, 6
-; CHECK-NEXT:    v_readlane_b32 s37, v40, 5
-; CHECK-NEXT:    v_readlane_b32 s36, v40, 4
-; CHECK-NEXT:    v_readlane_b32 s35, v40, 3
-; CHECK-NEXT:    v_readlane_b32 s34, v40, 2
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
-; CHECK-NEXT:    v_readlane_b32 s4, v40, 16
+; CHECK-NEXT:    v_readlane_b32 s47, v41, 15
+; CHECK-NEXT:    v_readlane_b32 s46, v41, 14
+; CHECK-NEXT:    v_readlane_b32 s45, v41, 13
+; CHECK-NEXT:    v_readlane_b32 s44, v41, 12
+; CHECK-NEXT:    v_readlane_b32 s43, v41, 11
+; CHECK-NEXT:    v_readlane_b32 s42, v41, 10
+; CHECK-NEXT:    v_readlane_b32 s41, v41, 9
+; CHECK-NEXT:    v_readlane_b32 s40, v41, 8
+; CHECK-NEXT:    v_readlane_b32 s39, v41, 7
+; CHECK-NEXT:    v_readlane_b32 s38, v41, 6
+; CHECK-NEXT:    v_readlane_b32 s37, v41, 5
+; CHECK-NEXT:    v_readlane_b32 s36, v41, 4
+; CHECK-NEXT:    v_readlane_b32 s35, v41, 3
+; CHECK-NEXT:    v_readlane_b32 s34, v41, 2
+; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
+; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
+; CHECK-NEXT:    v_readlane_b32 s4, v41, 16
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
 ; CHECK-NEXT:    s_mov_b32 s33, s4
@@ -110,7 +110,7 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0, !25, !26}
-!llvm.module.flags = !{!27, !28, !29, !30, !31, !32}
+!llvm.module.flags = !{!27, !28, !29, !30, !31, !32, !44}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0 (https://github.com/llvm/llvm-project.git 05256c8d95e0b15bcc502d595c15d902ff520f97)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !8, imports: !20, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "dummy", directory: "dummy", checksumkind: CSK_MD5, checksum: "b67bec84bdce3730b4a6f2ed8d50b85c")
@@ -155,3 +155,4 @@ attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willre
 !41 = !DILocalVariable(name: "dummy", arg: 3, scope: !34, file: !1, line: 49, type: !5)
 !42 = !DILocalVariable(name: "dummy", arg: 4, scope: !34, file: !1, line: 49, type: !5)
 !43 = !DILocation(line: 49, column: 9, scope: !34)
+!44 = !{i32 1, !"amdgpu_code_object_version", i32 500}

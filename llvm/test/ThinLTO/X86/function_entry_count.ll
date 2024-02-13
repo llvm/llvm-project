@@ -18,7 +18,7 @@
 ; CHECK: define void @f(i32{{.*}}) [[ATTR:#[0-9]+]] !prof ![[PROF1:[0-9]+]]
 ; CHECK: define available_externally void @g() !prof ![[PROF2]]
 ; CHECK-DAG: ![[PROF1]] = !{!"synthetic_function_entry_count", i64 10}
-; CHECK-DAG: ![[PROF2]] = !{!"synthetic_function_entry_count", i64 198}
+; CHECK-DAG: ![[PROF2]] = !{!"synthetic_function_entry_count", i64 200}
 ; CHECK-DAG: attributes [[ATTR]] = { norecurse nounwind }
 
 target triple = "x86_64-unknown-linux-gnu"

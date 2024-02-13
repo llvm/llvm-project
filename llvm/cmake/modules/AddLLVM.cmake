@@ -211,10 +211,10 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     )
 
   if(APPLE)
-    if("${stderr}" MATCHES "PROJECT:ld64")
+    if("${stderr}" MATCHES "PROGRAM:ld")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_LD64 YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: ld64")
+      set(LLVM_LINKER_IS_APPLE YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Apple")
     elseif("${stderr}" MATCHES "^LLD" OR
            "${stdout}" MATCHES "^LLD")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -241,6 +241,12 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU ld")
+    elseif("${stderr}" MATCHES "(illumos)" OR
+           "${stdout}" MATCHES "(illumos)")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD_ILLUMOS YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Solaris ld (illumos)")
     elseif("${stderr}" MATCHES "Solaris Link Editors" OR
            "${stdout}" MATCHES "Solaris Link Editors")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -726,6 +732,8 @@ function(llvm_add_library name)
     endforeach()
   endif()
 
+  add_custom_linker_flags(${name})
+
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
     llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
@@ -1019,6 +1027,8 @@ macro(add_llvm_executable name)
     endforeach()
   endif( LLVM_COMMON_DEPENDS )
 
+  add_custom_linker_flags(${name})
+
   if(NOT ARG_IGNORE_EXTERNALIZE_DEBUGINFO)
     llvm_externalize_debuginfo(${name})
   endif()
@@ -1303,9 +1313,11 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-ar
     llvm-cov
     llvm-cxxfilt
+    llvm-dlltool
     llvm-dwp
     llvm-ranlib
     llvm-lib
+    llvm-mca
     llvm-ml
     llvm-nm
     llvm-objcopy
@@ -1523,6 +1535,13 @@ endmacro()
 macro(add_llvm_tool_subdirectory name)
   add_llvm_external_project(${name})
 endmacro(add_llvm_tool_subdirectory)
+
+macro(add_custom_linker_flags name)
+  if (LLVM_${name}_LINKER_FLAGS)
+    message(DEBUG "Applying ${LLVM_${name}_LINKER_FLAGS} to ${name}")
+    target_link_options(${name} PRIVATE ${LLVM_${name}_LINKER_FLAGS})
+  endif()
+endmacro()
 
 function(get_project_name_from_src_var var output)
   string(REGEX MATCH "LLVM_EXTERNAL_(.*)_SOURCE_DIR"

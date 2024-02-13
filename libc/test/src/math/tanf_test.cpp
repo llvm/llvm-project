@@ -18,15 +18,14 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcTanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcTanfTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -44,11 +43,11 @@ TEST(LlvmLibcTanfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST(LlvmLibcTanfTest, InFloatRange) {
+TEST_F(LlvmLibcTanfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
@@ -56,7 +55,7 @@ TEST(LlvmLibcTanfTest, InFloatRange) {
   }
 }
 
-TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
+TEST_F(LlvmLibcTanfTest, SpecificBitPatterns) {
   constexpr int N = 54;
   constexpr uint32_t INPUTS[N] = {
       0x3a7a'8d2fU, // x = 0x1.f51a5ep-11f
@@ -116,7 +115,7 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
                                    LIBC_NAMESPACE::tanf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, -x,
@@ -126,9 +125,9 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
 
 // SDCOMP-26094: check tanf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(LlvmLibcTanfTest, SDCOMP_26094) {
+TEST_F(LlvmLibcTanfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     ASSERT_MPFR_MATCH(mpfr::Operation::Tan, x, LIBC_NAMESPACE::tanf(x), 0.5);
   }
 }

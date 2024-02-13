@@ -76,6 +76,11 @@ class TestCase(TestBase):
             return debug_stats["targets"][0]
         return None
 
+    def get_command_stats(self, debug_stats):
+        if "commands" in debug_stats:
+            return debug_stats["commands"]
+        return None
+
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -354,6 +359,25 @@ class TestCase(TestBase):
         ]
         self.assertNotEqual(exe_module, None)
         self.verify_keys(exe_module, 'module dict for "%s"' % (exe), module_keys)
+
+    def test_commands(self):
+        """
+        Test "statistics dump" and the command information.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("target list", result)
+        interp.HandleCommand("target list", result)
+
+        debug_stats = self.get_stats()
+
+        command_stats = self.get_command_stats(debug_stats)
+        self.assertNotEqual(command_stats, None)
+        self.assertEqual(command_stats["target list"], 2)
 
     def test_breakpoints(self):
         """Test "statistics dump"

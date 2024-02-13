@@ -177,3 +177,16 @@ namespace LambdaCallOp {
     p();
   }
 }
+
+// This used to crash due to an assertion failure,
+// see gh#67690
+namespace {
+  struct C {
+    int x;
+  };
+
+  template <const C *p> void f() {
+    const auto &[c] = *p;
+    &c; // expected-warning {{expression result unused}}
+  }
+}

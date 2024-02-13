@@ -175,9 +175,8 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *argIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, index));
       llvm::Value *argPtrPtr =
-          builder.CreateGEP(builder.getInt8PtrTy(), argList, argIndex);
-      llvm::Value *argPtr =
-          builder.CreateLoad(builder.getInt8PtrTy(), argPtrPtr);
+          builder.CreateGEP(builder.getPtrTy(), argList, argIndex);
+      llvm::Value *argPtr = builder.CreateLoad(builder.getPtrTy(), argPtrPtr);
       llvm::Type *argTy = arg.getType();
       llvm::Value *load = builder.CreateLoad(argTy, argPtr);
       args.push_back(load);
@@ -191,10 +190,8 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *retIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, llvm::size(func.args())));
       llvm::Value *retPtrPtr =
-          builder.CreateGEP(builder.getInt8PtrTy(), argList, retIndex);
-      llvm::Value *retPtr =
-          builder.CreateLoad(builder.getInt8PtrTy(), retPtrPtr);
-      retPtr = builder.CreateBitCast(retPtr, result->getType()->getPointerTo());
+          builder.CreateGEP(builder.getPtrTy(), argList, retIndex);
+      llvm::Value *retPtr = builder.CreateLoad(builder.getPtrTy(), retPtrPtr);
       builder.CreateStore(result, retPtr);
     }
 
@@ -222,6 +219,11 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 ExecutionEngine::~ExecutionEngine() {
+  // Execute the global destructors from the module being processed.
+  // TODO: Allow JIT deinitialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (jit && !jit->getTargetTriple().isAArch64())
+    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
@@ -398,6 +400,12 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
+
+  // Execute the global constructors from the module being processed.
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (!engine->jit->getTargetTriple().isAArch64())
+    cantFail(engine->jit->initialize(engine->jit->getMainJITDylib()));
 
   return std::move(engine);
 }

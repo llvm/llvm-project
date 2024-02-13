@@ -15,10 +15,10 @@
 
 #include <stdint.h>
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcExp10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibcExp10fTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp10f(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -40,17 +40,17 @@ TEST(LlvmLibcExp10fTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(1000.0f, LIBC_NAMESPACE::exp10f(3.0f));
 }
 
-TEST(LlvmLibcExp10fTest, Overflow) {
-  libc_errno = 0;
+TEST_F(LlvmLibcExp10fTest, Overflow) {
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(FPBits(0x43000000U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(FPBits(0x43000001U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }

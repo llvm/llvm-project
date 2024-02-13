@@ -253,29 +253,30 @@ def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.f
 
 //===---------------------------------------------------------------------===//
 // WMMA intrinsics
-class ROCDL_Wmma_IntrOp<string mnemonic, list<Trait> traits = []> :
+class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
+                        list<Trait> traits = []> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
                   "amdgcn_" # !subst(".","_", mnemonic),
-                  [0], [], traits, 1>,
+                  [0], overloadedOperands, traits, 1>,
   Arguments<(ins Variadic<LLVM_Type>:$args)> {
   let assemblyFormat =
     "$args attr-dict `:` functional-type($args, $res)";
 }
 
 // Available on RDNA3
-def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16">;
-def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16">;
-def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16">;
-def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16">;
-def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8">;
-def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
+def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16", [0]>;
+def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16", [0]>;
+def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16", [0]>;
+def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16", [0]>;
+def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
+def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
 
 //===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
 // raw buffer mode).
 //===---------------------------------------------------------------------===//
 
-def ROCDLBufferRsrc : LLVM_OpaquePointerInAddressSpace<8>;
+def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
@@ -635,7 +636,9 @@ def ROCDL_TargettAttr :
     StringRefParameter<"Target triple.", "\"amdgcn-amd-amdhsa\"">:$triple,
     StringRefParameter<"Target chip.", "\"gfx900\"">:$chip,
     StringRefParameter<"Target chip features.", "\"\"">:$features,
-    StringRefParameter<"ABI version.", "\"400\"">:$abi,
+    // Also update the default builder below and rocdl-attach-target in
+    // Dialect/GPU/Transforms/Passes.td .
+    StringRefParameter<"ABI version.", "\"500\"">:$abi,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
   );
@@ -647,7 +650,7 @@ def ROCDL_TargettAttr :
                      CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
                      CArg<"StringRef", "\"gfx900\"">:$chip,
                      CArg<"StringRef", "\"\"">:$features,
-                     CArg<"StringRef", "\"400\"">:$abiVersion,
+                     CArg<"StringRef", "\"500\"">:$abiVersion,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
       return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,

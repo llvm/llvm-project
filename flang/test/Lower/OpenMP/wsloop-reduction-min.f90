@@ -2,7 +2,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 !CHECK: omp.reduction.declare @[[MIN_DECLARE_F:.*]] : f32 init {
-!CHECK:   %[[MAXIMUM_VAL_F:.*]] = arith.constant -1.401300e-45 : f32
+!CHECK:   %[[MAXIMUM_VAL_F:.*]] = arith.constant 3.40282347E+38 : f32
 !CHECK:   omp.yield(%[[MAXIMUM_VAL_F]] : f32)
 !CHECK: combiner
 !CHECK: ^bb0(%[[ARG0_F:.*]]: f32, %[[ARG1_F:.*]]: f32):

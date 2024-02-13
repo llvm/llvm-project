@@ -143,7 +143,7 @@ public:
   ///
   /// FIXME: Make non-optional using a virtual file as needed, remove \c
   /// Filename and use \c OrigEntry.getNameAsRequested() instead.
-  OptionalFileEntryRefDegradesToFileEntryPtr OrigEntry;
+  OptionalFileEntryRef OrigEntry;
 
   /// References the file which the contents were actually loaded from.
   ///
@@ -167,17 +167,21 @@ public:
   ///
   /// When true, the original entry may be a virtual file that does not
   /// exist.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned BufferOverridden : 1;
 
   /// True if this content cache was initially created for a source file
   /// considered to be volatile (likely to change between stat and open).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFileVolatile : 1;
 
   /// True if this file may be transient, that is, if it might not
   /// exist at some later point in time when this content entry is used,
   /// after serialization and deserialization.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsTransient : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned IsBufferInvalid : 1;
 
   ContentCache()
@@ -305,6 +309,7 @@ class FileInfo {
   unsigned NumCreatedFIDs : 31;
 
   /// Whether this FileInfo has any \#line directives.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasLineDirectives : 1;
 
   /// The content cache and the characteristic of the file.
@@ -476,6 +481,7 @@ static_assert(sizeof(FileInfo) <= sizeof(ExpansionInfo),
 class SLocEntry {
   static constexpr int OffsetBits = 8 * sizeof(SourceLocation::UIntTy) - 1;
   SourceLocation::UIntTy Offset : OffsetBits;
+  LLVM_PREFERRED_TYPE(bool)
   SourceLocation::UIntTy IsExpansion : 1;
   union {
     FileInfo File;
@@ -498,6 +504,14 @@ public:
   const ExpansionInfo &getExpansion() const {
     assert(isExpansion() && "Not a macro expansion SLocEntry!");
     return Expansion;
+  }
+
+  /// Creates an incomplete SLocEntry that is only able to report its offset.
+  static SLocEntry getOffsetOnly(SourceLocation::UIntTy Offset) {
+    assert(!(Offset & (1ULL << OffsetBits)) && "Offset is too large");
+    SLocEntry E;
+    E.Offset = Offset;
+    return E;
   }
 
   static SLocEntry get(SourceLocation::UIntTy Offset, const FileInfo &FI) {
@@ -533,6 +547,12 @@ public:
   /// \returns true if an error occurred that prevented the source-location
   /// entry from being loaded.
   virtual bool ReadSLocEntry(int ID) = 0;
+
+  /// Get the index ID for the loaded SourceLocation offset.
+  ///
+  /// \returns Invalid index ID (0) if an error occurred that prevented the
+  /// SLocEntry  from being loaded.
+  virtual int getSLocEntryID(SourceLocation::UIntTy SLocOffset) = 0;
 
   /// Retrieve the module import location and name for the given ID, if
   /// in fact it was loaded from a module (rather than, say, a precompiled
@@ -702,6 +722,11 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// use (-ID - 2).
   llvm::PagedVector<SrcMgr::SLocEntry> LoadedSLocEntryTable;
 
+  /// For each allocation in LoadedSLocEntryTable, we keep the first FileID.
+  /// We assume exactly one allocation per AST file, and use that to determine
+  /// whether two FileIDs come from the same AST file.
+  SmallVector<FileID, 0> LoadedSLocEntryAllocBegin;
+
   /// The starting offset of the next local SLocEntry.
   ///
   /// This is LocalSLocEntryTable.back().Offset + the size of that entry.
@@ -723,6 +748,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Same indexing as LoadedSLocEntryTable.
   llvm::BitVector SLocEntryLoaded;
+
+  /// A bitmap that indicates whether the entries of LoadedSLocEntryTable
+  /// have already had their offset loaded from the external source.
+  ///
+  /// Superset of SLocEntryLoaded. Same indexing as SLocEntryLoaded.
+  llvm::BitVector SLocEntryOffsetLoaded;
 
   /// An external source for source location entries.
   ExternalSLocEntrySource *ExternalSLocEntries = nullptr;
@@ -877,13 +908,6 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
-  ///
-  /// This translates NULL into standard input.
-  FileID createFileID(const FileEntry *SourceFile, SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind FileCharacter,
-                      int LoadedID = 0,
-                      SourceLocation::UIntTy LoadedOffset = 0);
-
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0,
@@ -909,7 +933,7 @@ public:
 
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
   /// new FileID for the \p SourceFile.
-  FileID getOrCreateFileID(const FileEntry *SourceFile,
+  FileID getOrCreateFileID(FileEntryRef SourceFile,
                            SrcMgr::CharacteristicKind FileCharacter);
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
@@ -1040,8 +1064,8 @@ public:
 
   /// Returns the FileEntry record for the provided FileID.
   const FileEntry *getFileEntryForID(FileID FID) const {
-    if (auto *Entry = getSLocEntryForFile(FID))
-      return Entry->getFile().getContentCache().OrigEntry;
+    if (auto FE = getFileEntryRefForID(FID))
+      return *FE;
     return nullptr;
   }
 
@@ -1059,9 +1083,11 @@ public:
   std::optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
 
   /// Returns the FileEntry record for the provided SLocEntry.
-  const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
-  {
-    return sloc.getFile().getContentCache().OrigEntry;
+  const FileEntry *
+  getFileEntryForSLocEntry(const SrcMgr::SLocEntry &SLocEntry) const {
+    if (auto FE = SLocEntry.getFile().getContentCache().OrigEntry)
+      return *FE;
+    return nullptr;
   }
 
   /// Return a StringRef to the source buffer data for the
@@ -1645,6 +1671,11 @@ public:
   std::pair<bool, bool>
   isInTheSameTranslationUnit(std::pair<FileID, unsigned> &LOffs,
                              std::pair<FileID, unsigned> &ROffs) const;
+
+  /// Determines whether the two decomposed source location is in the same TU.
+  bool isInTheSameTranslationUnitImpl(
+      const std::pair<FileID, unsigned> &LOffs,
+      const std::pair<FileID, unsigned> &ROffs) const;
 
   /// Determines the order of 2 source locations in the "source location
   /// address space".

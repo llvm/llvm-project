@@ -135,8 +135,10 @@ module m6d
 end
 !Expect: m6d.mod
 !module m6d
+! use m6a,only:t1
 ! use m6a,only:t2=>t1
-! type(t2),parameter::p=t2()
+! private::t1
+! type(t2),parameter::p=t1()
 !end
 
 module m6e

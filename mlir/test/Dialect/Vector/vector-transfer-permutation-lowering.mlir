@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @lower_permutation_with_mask_fixed_width(
 //       CHECK:   %[[vec:.*]] = arith.constant dense<-2.000000e+00> : vector<7x1xf32>
@@ -35,17 +35,19 @@ func.func @permutation_with_mask_scalable(%2: memref<?x?xf32>, %dim_1: index, %d
   %cst_0 = arith.constant 0.000000e+00 : f32
 
   %mask = vector.create_mask %dim_2, %dim_1 : vector<2x[4]xi1>
-  %1 = vector.transfer_read %2[%c0, %c0], %cst_0, %mask 
+  %1 = vector.transfer_read %2[%c0, %c0], %cst_0, %mask
     {in_bounds = [true, true, true], permutation_map = affine_map<(d0, d1) -> (0, d1, d0)>}
     : memref<?x?xf32>, vector<8x[4]x2xf32>
   return %1 : vector<8x[4]x2xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op
-    : (!transform.any_op) -> !transform.any_op
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.transfer_permutation_patterns
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.transfer_permutation_patterns
+    } : !transform.any_op
+    transform.yield
+  }
 }

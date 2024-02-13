@@ -292,18 +292,13 @@ body:             |
     ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[AND]](s64)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s32) = G_UADDO [[CTLZ]], [[C3]]
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UADDO1]], [[C4]]
-    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[C2]], [[C2]], [[AND2]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[C2]], [[C2]], [[UADDO1]]
     ; CHECK-NEXT: [[CTLZ1:%[0-9]+]]:_(s64) = G_CTLZ [[AND1]](s64)
-    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C4]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[AND3]](s32), [[UADDO]], [[CTLZ1]]
-    ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C4]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[AND4]](s32), [[UADDE]], [[C2]]
-    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s32) = G_USUBO [[SELECT]], [[C5]]
-    ; CHECK-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[USUBO1]], [[C4]]
-    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s32) = G_USUBE [[SELECT1]], [[C2]], [[AND5]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s32), [[UADDO]], [[CTLZ1]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s32), [[UADDE]], [[C2]]
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s32) = G_USUBO [[SELECT]], [[C4]]
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s32) = G_USUBE [[SELECT1]], [[C2]], [[USUBO1]]
     ; CHECK-NEXT: $x0 = COPY [[USUBO]](s64)
     ; CHECK-NEXT: $x1 = COPY [[USUBE]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1

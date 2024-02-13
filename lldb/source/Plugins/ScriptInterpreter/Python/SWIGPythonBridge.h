@@ -116,12 +116,6 @@ public:
   // callbacks. Although these are scripting-language specific, their definition
   // depends on the public API.
 
-  static python::PythonObject LLDBSwigPythonCreateScriptedObject(
-      const char *python_class_name, const char *session_dictionary_name,
-      lldb::ExecutionContextRefSP exe_ctx_sp,
-      const lldb_private::StructuredDataImpl &args_impl,
-      std::string &error_string);
-
   static llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
       const char *python_function_name, const char *session_dictionary_name,
       const lldb::StackFrameSP &sb_frame,

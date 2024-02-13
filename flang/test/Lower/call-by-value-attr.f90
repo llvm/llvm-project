@@ -1,5 +1,5 @@
 ! Test for PassBy::BaseAddressValueAttribute
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 program call_by_value_attr
   interface
      subroutine subri(val)

@@ -19,6 +19,7 @@
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -139,7 +140,8 @@ public:
   /// registers so that the instructions result is independent of the place
   /// in the function.
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
-    return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
+    return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
+            MI.getNumOperands() == 1) ||
            (MI.getDesc().isRematerializable() &&
             isReallyTriviallyReMaterializable(MI));
   }
@@ -148,6 +150,11 @@ public:
   /// of instruction rematerialization or sinking.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {
     return false;
+  }
+
+  virtual bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
+                            MachineCycleInfo *CI) const {
+    return true;
   }
 
 protected:
@@ -262,7 +269,7 @@ public:
   /// the destination along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than loading from the stack slot.
-  virtual unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  virtual Register isLoadFromStackSlot(const MachineInstr &MI,
                                        int &FrameIndex) const {
     return 0;
   }
@@ -271,7 +278,7 @@ public:
   /// bytes loaded from the stack. This must be implemented if a backend
   /// supports partial stack slot spills/loads to further disambiguate
   /// what the load does.
-  virtual unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  virtual Register isLoadFromStackSlot(const MachineInstr &MI,
                                        int &FrameIndex,
                                        unsigned &MemBytes) const {
     MemBytes = 0;
@@ -280,7 +287,7 @@ public:
 
   /// Check for post-frame ptr elimination stack locations as well.
   /// This uses a heuristic so it isn't reliable for correctness.
-  virtual unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
+  virtual Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                              int &FrameIndex) const {
     return 0;
   }
@@ -300,7 +307,7 @@ public:
   /// the source reg along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than storing to the stack slot.
-  virtual unsigned isStoreToStackSlot(const MachineInstr &MI,
+  virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex) const {
     return 0;
   }
@@ -309,7 +316,7 @@ public:
   /// bytes stored to the stack. This must be implemented if a backend
   /// supports partial stack slot spills/loads to further disambiguate
   /// what the store does.
-  virtual unsigned isStoreToStackSlot(const MachineInstr &MI,
+  virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex,
                                       unsigned &MemBytes) const {
     MemBytes = 0;
@@ -318,7 +325,7 @@ public:
 
   /// Check for post-frame ptr elimination stack locations as well.
   /// This uses a heuristic, so it isn't reliable for correctness.
-  virtual unsigned isStoreToStackSlotPostFE(const MachineInstr &MI,
+  virtual Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                             int &FrameIndex) const {
     return 0;
   }
@@ -1018,6 +1025,11 @@ protected:
     return std::nullopt;
   }
 
+  virtual std::optional<DestSourcePair>
+  isCopyLikeInstrImpl(const MachineInstr &MI) const {
+    return std::nullopt;
+  }
+
   /// Return true if the given terminator MI is not expected to spill. This
   /// sets the live interval as not spillable and adjusts phi node lowering to
   /// not introduce copies after the terminator. Use with care, these are
@@ -1036,30 +1048,19 @@ public:
   /// For COPY-instruction the method naturally returns destination and source
   /// registers as machine operands, for all other instructions the method calls
   /// target-dependent implementation.
-  std::optional<DestSourcePair>
-  isCopyInstr(const MachineInstr &MI,
-              bool ForbidImplicitOperands = true) const {
+  std::optional<DestSourcePair> isCopyInstr(const MachineInstr &MI) const {
     if (MI.isCopy()) {
-      // TODO: Should validate implicit operands here?
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     }
-
-    // TODO: This is a conservative hack to ensure correctness when extra
-    // operands are added for special liveness tracking, while also not changing
-    // debug info. In particular SUBREG_TO_REG may introduce an implicit-def of
-    // a super register after coalescing. This may manifest as a copy-like
-    // instruction with an undef subregister def, and a full register
-    // implicit-def appended to the operand list.
-
-    // Really, implementations of this should be considering extra implicit
-    // operands. A more sophisticated implementation would recognize an
-    // implicit-def of the full register, and report that as the
-    // destination. This should be removed when all targets are validated for
-    // correct SUBREG_TO_REG liveness handling.
-    if (ForbidImplicitOperands && MI.getNumImplicitOperands() != 0)
-      return std::nullopt;
-
     return isCopyInstrImpl(MI);
+  }
+
+  // Similar to `isCopyInstr`, but adds non-copy semantics on MIR, but
+  // ultimately generates a copy instruction.
+  std::optional<DestSourcePair> isCopyLikeInstr(const MachineInstr &MI) const {
+    if (auto IsCopyInstr = isCopyInstr(MI))
+      return IsCopyInstr;
+    return isCopyLikeInstrImpl(MI);
   }
 
   bool isFullCopyInstr(const MachineInstr &MI) const {
@@ -1073,9 +1074,9 @@ public:
   }
 
   /// If the specific machine instruction is an instruction that adds an
-  /// immediate value and a physical register, and stores the result in
-  /// the given physical register \c Reg, return a pair of the source
-  /// register and the offset which has been added.
+  /// immediate value and a register, and stores the result in the given
+  /// register \c Reg, return a pair of the source register and the offset
+  /// which has been added.
   virtual std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                                    Register Reg) const {
     return std::nullopt;
@@ -1427,6 +1428,8 @@ public:
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory. This is a convenience function for callers that are only prepared
   /// to handle a single base operand.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
                                bool &OffsetIsScalable,
@@ -1439,6 +1442,8 @@ public:
   /// It returns false if base operands and offset could not be determined.
   /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
@@ -1509,13 +1514,20 @@ public:
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
-  /// \p NumLoads is the number of loads that will be in the cluster if this
-  /// hook returns true.
+  /// \p Offset1 and \p Offset2 are the byte offsets for the memory
+  /// operations.
+  /// \p OffsetIsScalable1 and \p OffsetIsScalable2 indicate if the offset is
+  /// scaled by a runtime quantity.
+  /// \p ClusterSize is the number of operations in the resulting load/store
+  /// cluster if this hook returns true.
   /// \p NumBytes is the number of bytes that will be loaded from all the
   /// clustered loads if this hook returns true.
   virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                                   int64_t Offset1, bool OffsetIsScalable1,
                                    ArrayRef<const MachineOperand *> BaseOps2,
-                                   unsigned NumLoads, unsigned NumBytes) const {
+                                   int64_t Offset2, bool OffsetIsScalable2,
+                                   unsigned ClusterSize,
+                                   unsigned NumBytes) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");
   }
 
@@ -1698,7 +1710,7 @@ public:
   /// then the caller may assume that DefMI has been erased from its parent
   /// block. The caller may assume that it will not be erased by this
   /// function otherwise.
-  virtual bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+  virtual bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                              Register Reg, MachineRegisterInfo *MRI) const {
     return false;
   }
@@ -1718,9 +1730,9 @@ public:
     return Opcode <= TargetOpcode::COPY;
   }
 
-  virtual int getOperandLatency(const InstrItineraryData *ItinData,
-                                SDNode *DefNode, unsigned DefIdx,
-                                SDNode *UseNode, unsigned UseIdx) const;
+  virtual std::optional<unsigned>
+  getOperandLatency(const InstrItineraryData *ItinData, SDNode *DefNode,
+                    unsigned DefIdx, SDNode *UseNode, unsigned UseIdx) const;
 
   /// Compute and return the use operand latency of a given pair of def and use.
   /// In most cases, the static scheduling itinerary was enough to determine the
@@ -1730,10 +1742,10 @@ public:
   /// This is a raw interface to the itinerary that may be directly overridden
   /// by a target. Use computeOperandLatency to get the best estimate of
   /// latency.
-  virtual int getOperandLatency(const InstrItineraryData *ItinData,
-                                const MachineInstr &DefMI, unsigned DefIdx,
-                                const MachineInstr &UseMI,
-                                unsigned UseIdx) const;
+  virtual std::optional<unsigned>
+  getOperandLatency(const InstrItineraryData *ItinData,
+                    const MachineInstr &DefMI, unsigned DefIdx,
+                    const MachineInstr &UseMI, unsigned UseIdx) const;
 
   /// Compute the instruction latency of a given instruction.
   /// If the instruction has higher cost when predicated, it's returned via
@@ -1744,8 +1756,8 @@ public:
 
   virtual unsigned getPredicationCost(const MachineInstr &MI) const;
 
-  virtual int getInstrLatency(const InstrItineraryData *ItinData,
-                              SDNode *Node) const;
+  virtual unsigned getInstrLatency(const InstrItineraryData *ItinData,
+                                   SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
   unsigned defaultDefLatency(const MCSchedModel &SchedModel,
@@ -2001,8 +2013,10 @@ public:
 
   /// True if the instruction is bound to the top of its basic block and no
   /// other instructions shall be inserted before it. This can be implemented
-  /// to prevent register allocator to insert spills before such instructions.
-  virtual bool isBasicBlockPrologue(const MachineInstr &MI) const {
+  /// to prevent register allocator to insert spills for \p Reg before such
+  /// instructions.
+  virtual bool isBasicBlockPrologue(const MachineInstr &MI,
+                                    Register Reg = Register()) const {
     return false;
   }
 
@@ -2106,12 +2120,19 @@ public:
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
   }
 
-  /// Insert an architecture-specific instruction to clear a register.
+  /// Insert an architecture-specific instruction to clear a register. If you
+  /// need to avoid sideeffects (e.g. avoid XOR on x86, which sets EFLAGS), set
+  /// \p AllowSideEffects to \p false.
   virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator Iter,
-                                  DebugLoc &DL) const {
+                                  DebugLoc &DL,
+                                  bool AllowSideEffects = true) const {
+#if 0
+    // FIXME: This should exist once all platforms that use stack protectors
+    // implements it.
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
+#endif
   }
 
   /// Return true if the function can safely be outlined from.
@@ -2191,6 +2212,16 @@ public:
 
   // Get the call frame size just before MI.
   unsigned getCallFrameSizeAt(MachineInstr &MI) const;
+
+  /// Fills in the necessary MachineOperands to refer to a frame index.
+  /// The best way to understand this is to print `asm(""::"m"(x));` after
+  /// finalize-isel. Example:
+  /// INLINEASM ... 262190 /* mem:m */, %stack.0.x.addr, 1, $noreg, 0, $noreg
+  /// we would add placeholders for:                     ^  ^       ^  ^
+  virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
+                                     int FI) const {
+    llvm_unreachable("unknown number of operands necessary");
+  }
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

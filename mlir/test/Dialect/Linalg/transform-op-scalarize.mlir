@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-transform-dialect-interpreter %s | FileCheck %s
+// RUN: mlir-opt -transform-interpreter %s | FileCheck %s
 
 func.func @scalarize(%arg0: tensor<24x12xf32>,
                      %arg1: tensor<12x25xf32>,
@@ -18,9 +18,11 @@ func.func @scalarize(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops = transform.structured.tile_using_for %0 [10, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-  %2 = transform.structured.scalarize %1 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops = transform.structured.tile_using_for %0 [10, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %2 = transform.structured.scalarize %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

@@ -182,7 +182,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
   }
   uint8_t *Buffer = Allocator.Allocate<uint8_t>(Size);
   MutableArrayRef<uint8_t> Output(Buffer, Size);
-  BinaryStreamWriter Writer(Output, support::little);
+  BinaryStreamWriter Writer(Output, llvm::endianness::little);
 
   Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
   for (const auto &B : Builders) {
@@ -314,8 +314,8 @@ template <typename value_type>
 raw_ostream &operator<<(raw_ostream &OS,
                         const binary_le_impl<value_type> &BLE) {
   char Buffer[sizeof(BLE.Value)];
-  support::endian::write<value_type, support::little, support::unaligned>(
-      Buffer, BLE.Value);
+  support::endian::write<value_type, llvm::endianness::little>(Buffer,
+                                                               BLE.Value);
   OS.write(Buffer, sizeof(BLE.Value));
   return OS;
 }

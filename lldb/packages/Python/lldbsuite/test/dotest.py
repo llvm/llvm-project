@@ -442,8 +442,6 @@ def parseOptionsAndInitTestdirs():
             os.path.realpath(os.path.abspath(x)) for x in args.args
         ]
 
-    lldbtest_config.codesign_identity = args.codesign_identity
-
 
 def registerFaulthandler():
     try:
@@ -485,15 +483,15 @@ def setupSysPath():
     os.environ["LLDB_SRC"] = lldbsuite.lldb_root
 
     pluginPath = os.path.join(scriptPath, "plugins")
-    toolsLLDBVSCode = os.path.join(scriptPath, "tools", "lldb-vscode")
+    toolsLLDBDAP = os.path.join(scriptPath, "tools", "lldb-dap")
     toolsLLDBServerPath = os.path.join(scriptPath, "tools", "lldb-server")
     intelpt = os.path.join(scriptPath, "tools", "intelpt")
 
     # Insert script dir, plugin dir and lldb-server dir to the sys.path.
     sys.path.insert(0, pluginPath)
-    # Adding test/tools/lldb-vscode to the path makes it easy to
-    # "import lldb_vscode_testcase" from the VSCode tests
-    sys.path.insert(0, toolsLLDBVSCode)
+    # Adding test/tools/lldb-dap to the path makes it easy to
+    # "import lldb_dap_testcase" from the DAP tests
+    sys.path.insert(0, toolsLLDBDAP)
     # Adding test/tools/lldb-server to the path makes it easy
     # to "import lldbgdbserverutils" from the lldb-server tests
     sys.path.insert(0, toolsLLDBServerPath)
@@ -538,15 +536,15 @@ def setupSysPath():
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
-    lldbVSCodeExec = os.path.join(lldbDir, "lldb-vscode")
-    if is_exe(lldbVSCodeExec):
-        os.environ["LLDBVSCODE_EXEC"] = lldbVSCodeExec
+    lldbDAPExec = os.path.join(lldbDir, "lldb-dap")
+    if is_exe(lldbDAPExec):
+        os.environ["LLDBDAP_EXEC"] = lldbDAPExec
     else:
-        if not configuration.shouldSkipBecauseOfCategories(["lldb-vscode"]):
+        if not configuration.shouldSkipBecauseOfCategories(["lldb-dap"]):
             print(
-                "The 'lldb-vscode' executable cannot be located.  The lldb-vscode tests can not be run as a result."
+                "The 'lldb-dap' executable cannot be located.  The lldb-dap tests can not be run as a result."
             )
-            configuration.skip_categories.append("lldb-vscode")
+            configuration.skip_categories.append("lldb-dap")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 

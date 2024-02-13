@@ -10,6 +10,8 @@
 #include "common.h"
 #include "report.h"
 
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -80,7 +82,7 @@ void FlagParser::parseFlag() {
       ++Pos;
     Value = Buffer + ValueStart;
   }
-  if (!runHandler(Name, Value))
+  if (!runHandler(Name, Value, '='))
     reportError("flag parsing failed.");
 }
 
@@ -122,10 +124,16 @@ inline bool parseBool(const char *Value, bool *b) {
   return false;
 }
 
-bool FlagParser::runHandler(const char *Name, const char *Value) {
+void FlagParser::parseStringPair(const char *Name, const char *Value) {
+  if (!runHandler(Name, Value, '\0'))
+    reportError("flag parsing failed.");
+}
+
+bool FlagParser::runHandler(const char *Name, const char *Value,
+                            const char Sep) {
   for (u32 I = 0; I < NumberOfFlags; ++I) {
     const uptr Len = strlen(Flags[I].Name);
-    if (strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != '=')
+    if (strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != Sep)
       continue;
     bool Ok = false;
     switch (Flags[I].Type) {
@@ -136,12 +144,18 @@ bool FlagParser::runHandler(const char *Name, const char *Value) {
       break;
     case FlagType::FT_int:
       char *ValueEnd;
-      *reinterpret_cast<int *>(Flags[I].Var) =
-          static_cast<int>(strtol(Value, &ValueEnd, 10));
-      Ok =
-          *ValueEnd == '"' || *ValueEnd == '\'' || isSeparatorOrNull(*ValueEnd);
-      if (!Ok)
+      errno = 0;
+      long V = strtol(Value, &ValueEnd, 10);
+      if (errno != 0 ||                 // strtol failed (over or underflow)
+          V > INT_MAX || V < INT_MIN || // overflows integer
+          // contains unexpected characters
+          (*ValueEnd != '"' && *ValueEnd != '\'' &&
+           !isSeparatorOrNull(*ValueEnd))) {
         reportInvalidFlag("int", Value);
+        break;
+      }
+      *reinterpret_cast<int *>(Flags[I].Var) = static_cast<int>(V);
+      Ok = true;
       break;
     }
     return Ok;

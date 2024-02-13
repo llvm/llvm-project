@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
+
+// Starting in Android N (API 24), SELinux policy prevents the shell user from
+// creating a hard link.
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22|23}}
 
 // <filesystem>
 
@@ -16,11 +20,11 @@
 // void create_hard_link(const path& existing_symlink, const path& new_symlink,
 //                   error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 static void test_signatures()

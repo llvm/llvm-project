@@ -40,6 +40,25 @@ static bool isKnownControlFlowInterface(Operation *op) {
   return isa<LoopLikeOpInterface, RegionBranchOpInterface>(op);
 }
 
+/// Returns true if the given operation represents a loop by testing whether it
+/// implements the `LoopLikeOpInterface` or the `RegionBranchOpInterface`. In
+/// the case of a `RegionBranchOpInterface`, it checks all region-based control-
+/// flow edges for cycles.
+static bool isLoop(Operation *op) {
+  // If the operation implements the `LoopLikeOpInterface` it can be considered
+  // a loop.
+  if (isa<LoopLikeOpInterface>(op))
+    return true;
+
+  // If the operation does not implement the `RegionBranchOpInterface`, it is
+  // (currently) not possible to detect a loop.
+  auto regionInterface = dyn_cast<RegionBranchOpInterface>(op);
+  if (!regionInterface)
+    return false;
+
+  return regionInterface.hasLoop();
+}
+
 /// Returns true if the given operation implements the AllocationOpInterface
 /// and it supports the dominate block hoisting.
 static bool allowAllocDominateBlockHoisting(Operation *op) {
@@ -115,8 +134,7 @@ static bool hasAllocationScope(Value alloc,
       // Check if the operation is a known control flow interface and break the
       // loop to avoid transformation in loops. Furthermore skip transformation
       // if the operation does not implement a RegionBeanchOpInterface.
-      if (BufferPlacementTransformationBase::isLoop(parentOp) ||
-          !isKnownControlFlowInterface(parentOp))
+      if (isLoop(parentOp) || !isKnownControlFlowInterface(parentOp))
         break;
     }
   } while ((region = region->getParentRegion()));
@@ -290,9 +308,7 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the given operation does not represent a loop.
-  bool isLegalPlacement(Operation *op) {
-    return !BufferPlacementTransformationBase::isLoop(op);
-  }
+  bool isLegalPlacement(Operation *op) { return !isLoop(op); }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
@@ -327,7 +343,7 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   /// given loop operation. If this is the case, it indicates that the
   /// allocation is passed via a back edge.
   bool isLegalPlacement(Operation *op) {
-    return BufferPlacementTransformationBase::isLoop(op) &&
+    return isLoop(op) &&
            !dominators->dominates(aliasDominatorBlock, op->getBlock());
   }
 

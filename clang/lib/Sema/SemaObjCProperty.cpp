@@ -180,7 +180,7 @@ Decl *Sema::ActOnProperty(Scope *S, SourceLocation AtLoc,
   unsigned Attributes = ODS.getPropertyAttributes();
   FD.D.setObjCWeakProperty((Attributes & ObjCPropertyAttribute::kind_weak) !=
                            0);
-  TypeSourceInfo *TSI = GetTypeForDeclarator(FD.D, S);
+  TypeSourceInfo *TSI = GetTypeForDeclarator(FD.D);
   QualType T = TSI->getType();
   if (!getOwnershipRule(Attributes)) {
     Attributes |= deducePropertyOwnershipFromType(*this, T);
@@ -2488,8 +2488,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
         /*isPropertyAccessor=*/true, /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
         (property->getPropertyImplementation() == ObjCPropertyDecl::Optional)
-            ? ObjCMethodDecl::Optional
-            : ObjCMethodDecl::Required);
+            ? ObjCImplementationControl::Optional
+            : ObjCImplementationControl::Required);
     CD->addDecl(GetterMethod);
 
     AddPropertyAttrs(*this, GetterMethod, property);
@@ -2530,19 +2530,17 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       // for this class.
       SourceLocation Loc = property->getLocation();
 
-      SetterMethod =
-        ObjCMethodDecl::Create(Context, Loc, Loc,
-                               property->getSetterName(), Context.VoidTy,
-                               nullptr, CD, !IsClassProperty,
-                               /*isVariadic=*/false,
-                               /*isPropertyAccessor=*/true,
-                               /*isSynthesizedAccessorStub=*/false,
-                               /*isImplicitlyDeclared=*/true,
-                               /*isDefined=*/false,
-                               (property->getPropertyImplementation() ==
-                                ObjCPropertyDecl::Optional) ?
-                                ObjCMethodDecl::Optional :
-                                ObjCMethodDecl::Required);
+      SetterMethod = ObjCMethodDecl::Create(
+          Context, Loc, Loc, property->getSetterName(), Context.VoidTy, nullptr,
+          CD, !IsClassProperty,
+          /*isVariadic=*/false,
+          /*isPropertyAccessor=*/true,
+          /*isSynthesizedAccessorStub=*/false,
+          /*isImplicitlyDeclared=*/true,
+          /*isDefined=*/false,
+          (property->getPropertyImplementation() == ObjCPropertyDecl::Optional)
+              ? ObjCImplementationControl::Optional
+              : ObjCImplementationControl::Required);
 
       // Remove all qualifiers from the setter's parameter type.
       QualType paramTy =

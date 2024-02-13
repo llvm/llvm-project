@@ -149,8 +149,8 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
 
   // Don't add byte count suffixes when '\01' or '?' are in the first
   // character.
-  if (Name.startswith("\01") ||
-      (DL.doNotMangleLeadingQuestionMark() && Name.startswith("?")))
+  if (Name.starts_with("\01") ||
+      (DL.doNotMangleLeadingQuestionMark() && Name.starts_with("?")))
     MSFunc = nullptr;
 
   CallingConv::ID CC =

@@ -37,21 +37,13 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   if (IsDescriptor(details.type()) || details.IsAssumedRank()) {
     return true;
   }
-  std::size_t j{0};
   for (const ShapeSpec &shapeSpec : details.shape()) {
-    ++j;
-    if (const auto &lb{shapeSpec.lbound().GetExplicit()};
-        !lb || !IsConstantExpr(*lb)) {
-      return true;
-    }
     if (const auto &ub{shapeSpec.ubound().GetExplicit()}) {
       if (!IsConstantExpr(*ub)) {
         return true;
       }
-    } else if (j == details.shape().size() && details.isDummy()) {
-      // assumed size array
     } else {
-      return true;
+      return shapeSpec.ubound().isColon();
     }
   }
   return false;
@@ -95,14 +87,14 @@ bool IsPassedViaDescriptor(const Symbol &symbol) {
   if (IsAllocatableOrPointer(symbol)) {
     return true;
   }
+  if (semantics::IsAssumedSizeArray(symbol)) {
+    return false;
+  }
   if (const auto *object{
           symbol.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
     if (object->isDummy()) {
       if (object->type() &&
           object->type()->category() == DeclTypeSpec::Character) {
-        return false;
-      }
-      if (object->IsAssumedSize()) {
         return false;
       }
       bool isExplicitShape{true};
@@ -240,6 +232,11 @@ bool DynamicType::IsTypelessIntrinsicArgument() const {
   return category_ == TypeCategory::Integer && kind_ == TypelessKind;
 }
 
+bool DynamicType::IsLengthlessIntrinsicType() const {
+  return common::IsNumericTypeCategory(category_) ||
+      category_ == TypeCategory::Logical;
+}
+
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
     const std::optional<DynamicType> &type) {
   return type ? GetDerivedTypeSpec(*type) : nullptr;
@@ -288,7 +285,7 @@ const semantics::DerivedTypeSpec *GetParentTypeSpec(
 }
 
 // Compares two derived type representations to see whether they both
-// represent the "same type" in the sense of section 7.5.2.4.
+// represent the "same type" in the sense of section F'2023 7.5.2.4.
 using SetOfDerivedTypePairs =
     std::set<std::pair<const semantics::DerivedTypeSpec *,
         const semantics::DerivedTypeSpec *>>;
@@ -506,6 +503,19 @@ bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
   return AreSameDerivedType(x, y, false, false, inProgress);
+}
+
+bool AreSameDerivedType(
+    const semantics::DerivedTypeSpec *x, const semantics::DerivedTypeSpec *y) {
+  return x == y || (x && y && AreSameDerivedType(*x, *y));
+}
+
+bool DynamicType::IsEquivalentTo(const DynamicType &that) const {
+  return category_ == that.category_ && kind_ == that.kind_ &&
+      PointeeComparison(charLengthParamValue_, that.charLengthParamValue_) &&
+      knownLength().has_value() == that.knownLength().has_value() &&
+      (!knownLength() || *knownLength() == *that.knownLength()) &&
+      AreSameDerivedType(derived_, that.derived_);
 }
 
 static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,

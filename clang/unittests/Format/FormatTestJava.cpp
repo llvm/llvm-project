@@ -221,7 +221,7 @@ TEST_F(FormatTestJava, EnumDeclarations) {
                "\"cccccccccccccccccccccccc\"),\n"
                "  SECOND_ENUM(\"a\", \"b\", \"c\");\n"
                "  private VeryLongEnum(String a, String b, String c) {}\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestJava, ArrayInitializers) {
@@ -601,6 +601,21 @@ TEST_F(FormatTestJava, ShortFunctions) {
                "  void f() { return; }\n"
                "}",
                Style);
+}
+
+TEST_F(FormatTestJava, ConfigurableSpacesInSquareBrackets) {
+  FormatStyle Spaces = getLLVMStyle(FormatStyle::LK_Java);
+
+  verifyFormat("Object[] arguments", Spaces);
+  verifyFormat("final Class<?>[] types = new Class<?>[numElements];", Spaces);
+  verifyFormat("types[i] = arguments[i].getClass();", Spaces);
+
+  Spaces.SpacesInSquareBrackets = true;
+
+  verifyFormat("Object[ ] arguments", Spaces);
+  verifyFormat("final Class<?>[ ] types = new Class<?>[ numElements ];",
+               Spaces);
+  verifyFormat("types[ i ] = arguments[ i ].getClass();", Spaces);
 }
 
 } // namespace

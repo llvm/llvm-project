@@ -492,7 +492,13 @@ Expr<TR> FoldElementalIntrinsicHelper(FoldingContext &context,
     CHECK(rank == GetRank(shape));
     // Compute all the scalar values of the results
     std::vector<Scalar<TR>> results;
-    if (TotalElementCount(shape) > 0) {
+    std::optional<uint64_t> n{TotalElementCount(shape)};
+    if (!n) {
+      context.messages().Say(
+          "Too many elements in elemental intrinsic function result"_err_en_US);
+      return Expr<TR>{std::move(funcRef)};
+    }
+    if (*n > 0) {
       ConstantBounds bounds{shape};
       ConstantSubscripts resultIndex(rank, 1);
       ConstantSubscripts argIndex[]{std::get<I>(*args)->lbounds()...};
@@ -879,33 +885,41 @@ template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
     context_.messages().Say(
         "'shape=' argument must not have a negative extent"_err_en_US);
   } else {
-    int rank{GetRank(shape.value())};
-    std::size_t resultElements{TotalElementCount(shape.value())};
-    std::optional<std::vector<int>> dimOrder;
-    if (order) {
-      dimOrder = ValidateDimensionOrder(rank, *order);
-    }
-    std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
-    if (order && !dimOrder) {
-      context_.messages().Say("Invalid 'order=' argument in RESHAPE"_err_en_US);
-    } else if (resultElements > source->size() && (!pad || pad->empty())) {
+    std::optional<uint64_t> optResultElement{TotalElementCount(shape.value())};
+    if (!optResultElement) {
       context_.messages().Say(
-          "Too few elements in 'source=' argument and 'pad=' "
-          "argument is not present or has null size"_err_en_US);
+          "'shape=' argument has too many elements"_err_en_US);
     } else {
-      Constant<T> result{!source->empty() || !pad
-              ? source->Reshape(std::move(shape.value()))
-              : pad->Reshape(std::move(shape.value()))};
-      ConstantSubscripts subscripts{result.lbounds()};
-      auto copied{result.CopyFrom(*source,
-          std::min(source->size(), resultElements), subscripts, dimOrderPtr)};
-      if (copied < resultElements) {
-        CHECK(pad);
-        copied += result.CopyFrom(
-            *pad, resultElements - copied, subscripts, dimOrderPtr);
+      int rank{GetRank(shape.value())};
+      uint64_t resultElements{*optResultElement};
+      std::optional<std::vector<int>> dimOrder;
+      if (order) {
+        dimOrder = ValidateDimensionOrder(rank, *order);
       }
-      CHECK(copied == resultElements);
-      return Expr<T>{std::move(result)};
+      std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
+      if (order && !dimOrder) {
+        context_.messages().Say(
+            "Invalid 'order=' argument in RESHAPE"_err_en_US);
+      } else if (resultElements > source->size() && (!pad || pad->empty())) {
+        context_.messages().Say(
+            "Too few elements in 'source=' argument and 'pad=' "
+            "argument is not present or has null size"_err_en_US);
+      } else {
+        Constant<T> result{!source->empty() || !pad
+                ? source->Reshape(std::move(shape.value()))
+                : pad->Reshape(std::move(shape.value()))};
+        ConstantSubscripts subscripts{result.lbounds()};
+        auto copied{result.CopyFrom(*source,
+            std::min(static_cast<uint64_t>(source->size()), resultElements),
+            subscripts, dimOrderPtr)};
+        if (copied < resultElements) {
+          CHECK(pad);
+          copied += result.CopyFrom(
+              *pad, resultElements - copied, subscripts, dimOrderPtr);
+        }
+        CHECK(copied == resultElements);
+        return Expr<T>{std::move(result)};
+      }
     }
   }
   // Invalid, prevent re-folding
@@ -944,14 +958,19 @@ template <typename T> Expr<T> Folder<T>::SPREAD(FunctionRef<T> &&funcRef) {
     ConstantSubscripts shape{source->shape()};
     shape.insert(shape.begin() + *dim - 1, *ncopies);
     Constant<T> spread{source->Reshape(std::move(shape))};
-    std::vector<int> dimOrder;
-    for (int j{0}; j < sourceRank; ++j) {
-      dimOrder.push_back(j < *dim - 1 ? j : j + 1);
+    std::optional<uint64_t> n{TotalElementCount(spread.shape())};
+    if (!n) {
+      context_.messages().Say("Too many elements in SPREAD result"_err_en_US);
+    } else {
+      std::vector<int> dimOrder;
+      for (int j{0}; j < sourceRank; ++j) {
+        dimOrder.push_back(j < *dim - 1 ? j : j + 1);
+      }
+      dimOrder.push_back(*dim - 1);
+      ConstantSubscripts at{spread.lbounds()}; // all 1
+      spread.CopyFrom(*source, *n, at, &dimOrder);
+      return Expr<T>{std::move(spread)};
     }
-    dimOrder.push_back(*dim - 1);
-    ConstantSubscripts at{spread.lbounds()}; // all 1
-    spread.CopyFrom(*source, TotalElementCount(spread.shape()), at, &dimOrder);
-    return Expr<T>{std::move(spread)};
   }
   // Invalid, prevent re-folding
   return MakeInvalidIntrinsic(std::move(funcRef));
@@ -1105,14 +1124,17 @@ Expr<T> RewriteSpecificMINorMAX(
   intrinsic.characteristics.value().functionResult.value().SetType(*resultType);
   auto insertConversion{[&](const auto &x) -> Expr<T> {
     using TR = ResultType<decltype(x)>;
-    FunctionRef<TR> maxRef{std::move(funcRef.proc()), std::move(args)};
+    FunctionRef<TR> maxRef{
+        ProcedureDesignator{funcRef.proc()}, ActualArguments{args}};
     return Fold(context, ConvertToType<T>(AsCategoryExpr(std::move(maxRef))));
   }};
   if (auto *sx{UnwrapExpr<Expr<SomeReal>>(*resultTypeArg)}) {
     return common::visit(insertConversion, sx->u);
+  } else if (auto *sx{UnwrapExpr<Expr<SomeInteger>>(*resultTypeArg)}) {
+    return common::visit(insertConversion, sx->u);
+  } else {
+    return Expr<T>{std::move(funcRef)}; // error recovery
   }
-  auto &sx{DEREF(UnwrapExpr<Expr<SomeInteger>>(*resultTypeArg))};
-  return common::visit(insertConversion, sx.u);
 }
 
 // FoldIntrinsicFunction()
@@ -1905,7 +1927,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       x.left() = Expr<T>{std::move(*c)};
     }
     if (auto c{GetScalarConstantValue<T>(x.left())}) {
-      if (c->IsZero()) {
+      if (c->IsZero() && x.right().Rank() == 0) {
         return std::move(x.left());
       } else if (c->CompareSigned(Scalar<T>{1}) == Ordering::Equal) {
         if (IsVariable(x.right())) {

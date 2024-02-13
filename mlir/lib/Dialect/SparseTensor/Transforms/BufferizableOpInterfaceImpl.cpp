@@ -32,7 +32,7 @@ struct SparseBufferizableOpInterfaceExternalModel
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     return op->emitError(
-        "sparse_tensor ops must be bufferized with the sparse compiler");
+        "sparse_tensor ops must be bufferized with the sparsifier");
   }
 };
 

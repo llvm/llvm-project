@@ -115,6 +115,8 @@ public:
            const SourceLocation *Locs, ASTContext &Ctx);
 };
 
+enum class ObjCImplementationControl { None, Required, Optional };
+
 /// ObjCMethodDecl - Represents an instance or class method declaration.
 /// ObjC methods can be declared within 4 contexts: class interfaces,
 /// categories, protocols, and class implementations. While C++ member
@@ -139,10 +141,6 @@ class ObjCMethodDecl : public NamedDecl, public DeclContext {
   // This class stores some data in DeclContext::ObjCMethodDeclBits
   // to save some space. Use the provided accessors to access it.
 
-public:
-  enum ImplementationControl { None, Required, Optional };
-
-private:
   /// Return type of this method.
   QualType MethodDeclType;
 
@@ -168,14 +166,14 @@ private:
   /// constructed by createImplicitParams.
   ImplicitParamDecl *CmdDecl = nullptr;
 
-  ObjCMethodDecl(SourceLocation beginLoc, SourceLocation endLoc,
-                 Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
-                 DeclContext *contextDecl, bool isInstance = true,
-                 bool isVariadic = false, bool isPropertyAccessor = false,
-                 bool isSynthesizedAccessorStub = false,
-                 bool isImplicitlyDeclared = false, bool isDefined = false,
-                 ImplementationControl impControl = None,
-                 bool HasRelatedResultType = false);
+  ObjCMethodDecl(
+      SourceLocation beginLoc, SourceLocation endLoc, Selector SelInfo,
+      QualType T, TypeSourceInfo *ReturnTInfo, DeclContext *contextDecl,
+      bool isInstance = true, bool isVariadic = false,
+      bool isPropertyAccessor = false, bool isSynthesizedAccessorStub = false,
+      bool isImplicitlyDeclared = false, bool isDefined = false,
+      ObjCImplementationControl impControl = ObjCImplementationControl::None,
+      bool HasRelatedResultType = false);
 
   SelectorLocationsKind getSelLocsKind() const {
     return static_cast<SelectorLocationsKind>(ObjCMethodDeclBits.SelLocsKind);
@@ -235,7 +233,7 @@ public:
          bool isVariadic = false, bool isPropertyAccessor = false,
          bool isSynthesizedAccessorStub = false,
          bool isImplicitlyDeclared = false, bool isDefined = false,
-         ImplementationControl impControl = None,
+         ObjCImplementationControl impControl = ObjCImplementationControl::None,
          bool HasRelatedResultType = false);
 
   static ObjCMethodDecl *CreateDeserialized(ASTContext &C, unsigned ID);
@@ -495,16 +493,17 @@ public:
   const ObjCPropertyDecl *findPropertyDecl(bool CheckOverrides = true) const;
 
   // Related to protocols declared in  \@protocol
-  void setDeclImplementation(ImplementationControl ic) {
-    ObjCMethodDeclBits.DeclImplementation = ic;
+  void setDeclImplementation(ObjCImplementationControl ic) {
+    ObjCMethodDeclBits.DeclImplementation = llvm::to_underlying(ic);
   }
 
-  ImplementationControl getImplementationControl() const {
-    return ImplementationControl(ObjCMethodDeclBits.DeclImplementation);
+  ObjCImplementationControl getImplementationControl() const {
+    return static_cast<ObjCImplementationControl>(
+        ObjCMethodDeclBits.DeclImplementation);
   }
 
   bool isOptional() const {
-    return getImplementationControl() == Optional;
+    return getImplementationControl() == ObjCImplementationControl::Optional;
   }
 
   /// Returns true if this specific method declaration is marked with the
@@ -581,6 +580,7 @@ class ObjCTypeParamDecl : public TypedefNameDecl {
   unsigned Index : 14;
 
   /// The variance of the type parameter.
+  LLVM_PREFERRED_TYPE(ObjCTypeParamVariance)
   unsigned Variance : 2;
 
   /// The location of the variance, if any.
@@ -742,10 +742,13 @@ private:
 
   QualType DeclType;
   TypeSourceInfo *DeclTypeSourceInfo;
+  LLVM_PREFERRED_TYPE(ObjCPropertyAttribute::Kind)
   unsigned PropertyAttributes : NumObjCPropertyAttrsBits;
+  LLVM_PREFERRED_TYPE(ObjCPropertyAttribute::Kind)
   unsigned PropertyAttributesAsWritten : NumObjCPropertyAttrsBits;
 
   // \@required/\@optional
+  LLVM_PREFERRED_TYPE(PropertyControl)
   unsigned PropertyImplementation : 2;
 
   // getter name of NULL if no getter
@@ -1179,14 +1182,17 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
 
     /// Indicates that the contents of this Objective-C class will be
     /// completed by the external AST source when required.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned ExternallyCompleted : 1;
 
     /// Indicates that the ivar cache does not yet include ivars
     /// declared in the implementation.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IvarListMissingImplementation : 1;
 
     /// Indicates that this interface decl contains at least one initializer
     /// marked with the 'objc_designated_initializer' attribute.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasDesignatedInitializers : 1;
 
     enum InheritedDesignatedInitializersState {
@@ -1202,9 +1208,11 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     };
 
     /// One of the \c InheritedDesignatedInitializersState enumeratos.
+    LLVM_PREFERRED_TYPE(InheritedDesignatedInitializersState)
     mutable unsigned InheritedDesignatedInitializers : 2;
 
     /// Tracks whether a ODR hash has been computed for this interface.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -2008,7 +2016,9 @@ private:
   ObjCIvarDecl *NextIvar = nullptr;
 
   // NOTE: VC++ treats enums as signed, avoid using the AccessControl enum
+  LLVM_PREFERRED_TYPE(AccessControl)
   unsigned DeclAccess : 3;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Synthesized : 1;
 };
 
@@ -2075,6 +2085,7 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
     ObjCProtocolList ReferencedProtocols;
 
     /// Tracks whether a ODR hash has been computed for this protocol.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -2597,9 +2608,11 @@ class ObjCImplementationDecl : public ObjCImplDecl {
 
   /// Do the ivars of this class require initialization other than
   /// zero-initialization?
+  LLVM_PREFERRED_TYPE(bool)
   bool HasNonZeroConstructors : 1;
 
   /// Do the ivars of this class require non-trivial destruction?
+  LLVM_PREFERRED_TYPE(bool)
   bool HasDestructors : 1;
 
   ObjCImplementationDecl(DeclContext *DC,

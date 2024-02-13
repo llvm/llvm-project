@@ -30,10 +30,6 @@ using namespace mlir::tosa;
 
 namespace {
 
-/// Rounding mode to be used on floating point operations that require rounding.
-static constexpr llvm::RoundingMode tosaRoundingMode =
-    llvm::APFloat::rmNearestTiesToEven;
-
 /// Apply the given transformation \p toApply to every element of the tensor to
 /// be transformed \p toTransform.
 ///
@@ -44,14 +40,14 @@ static constexpr llvm::RoundingMode tosaRoundingMode =
 template <class SrcValType, class TargetValType, class TargetType>
 DenseElementsAttr applyElementWise(
     const DenseElementsAttr &toTransform,
-    const std::function<TargetValType(const SrcValType &, TargetType)> &toApply,
+    const std::function<TargetValType(const SrcValType &)> &toApply,
     TargetType targetType) {
   SmallVector<TargetValType> transformedValues;
   // We already know the amount of values we will insert, reserve space for
   // all of them to avoid dynamic resizing
   transformedValues.reserve(toTransform.getNumElements());
   for (auto val : toTransform.getValues<SrcValType>()) {
-    auto transformedVal = toApply(val, targetType);
+    auto transformedVal = toApply(val);
     transformedValues.push_back(transformedVal);
   }
 
@@ -64,7 +60,7 @@ DenseElementsAttr applyElementWise(
 
 template DenseElementsAttr applyElementWise<APFloat, APFloat, FloatType>(
     const DenseElementsAttr &toTransform,
-    const std::function<APFloat(const APFloat &, FloatType)> &toApply,
+    const std::function<APFloat(const APFloat &)> &toApply,
     FloatType targetType);
 
 /// Function that checks if the type contained in \p toCheck is float.
@@ -249,14 +245,6 @@ struct TosaFoldConstantReciprocal : public OpRewritePattern<ReciprocalOp> {
 
   using OpRewritePattern::OpRewritePattern;
 
-  static APFloat computeReciprocal(const APFloat &floatVal, FloatType floatTy) {
-    auto recipAttr = FloatAttr::get(floatTy, 1.0);
-    APFloat recip = recipAttr.getValue();
-    recip.divide(floatVal, tosaRoundingMode);
-
-    return recip;
-  }
-
   LogicalResult matchAndRewrite(ReciprocalOp recip,
                                 PatternRewriter &rewriter) const override {
     auto inputTensor = recip.getInput1();
@@ -281,7 +269,7 @@ struct TosaFoldConstantReciprocal : public OpRewritePattern<ReciprocalOp> {
 
     // Create a new tensor with the updated values
     auto newTensor = applyElementWise<APFloat, APFloat, FloatType>(
-        inputValues, &computeReciprocal,
+        inputValues, &ReciprocalOp::calcOneElement,
         cast<FloatType>(inputValues.getElementType()));
 
     // Replace the use of the reciprocal with the transformed tensor
@@ -350,6 +338,11 @@ llvm::APInt calculateReducedValue(const mlir::ElementsAttr &oldTensorAttr,
 template <typename OperationType>
 struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
 
+  ReduceConstantOptimization(MLIRContext *context,
+                             bool aggressiveReduceConstant)
+      : OpRewritePattern<OperationType>(context),
+        aggressiveReduceConstant(aggressiveReduceConstant) {}
+
   using OpRewritePattern<OperationType>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OperationType op,
@@ -361,7 +354,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
       return rewriter.notifyMatchFailure(
           op, "reduce input must be const operation");
 
-    if (!inputOp.hasOneUse())
+    if (!inputOp.hasOneUse() && !this->aggressiveReduceConstant)
       return rewriter.notifyMatchFailure(
           op, "input operation has more than one user");
 
@@ -400,18 +393,26 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, rankedTensorType, denseAttr);
     return success();
   }
+  const bool aggressiveReduceConstant;
 };
 
 } // namespace
 
 void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
-                                               RewritePatternSet &patterns) {
-  patterns.add<ReduceConstantOptimization<ReduceAllOp>>(ctx);
-  patterns.add<ReduceConstantOptimization<ReduceAnyOp>>(ctx);
-  patterns.add<ReduceConstantOptimization<ReduceMaxOp>>(ctx);
-  patterns.add<ReduceConstantOptimization<ReduceMinOp>>(ctx);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(ctx);
-  patterns.add<ReduceConstantOptimization<ReduceSumOp>>(ctx);
+                                               RewritePatternSet &patterns,
+                                               bool aggressiveReduceConstant) {
+  patterns.add<ReduceConstantOptimization<ReduceAllOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceAnyOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceMaxOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
+      ctx, aggressiveReduceConstant);
 }
 
 void mlir::tosa::populateTosaFoldConstantTransposePatterns(

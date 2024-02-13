@@ -69,6 +69,10 @@ public:
   }
 
   unsigned getInliningThresholdMultiplier() const { return 1; }
+  unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const { return 8; }
+  unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const {
+    return 8;
+  }
   unsigned adjustInliningThreshold(const CallBase *CB) const { return 0; }
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
     return 0;
@@ -231,6 +235,8 @@ public:
 
   bool isNumRegsMajorCostOfLSR() const { return true; }
 
+  bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
+
   bool isProfitableLSRChainElement(Instruction *I) const { return false; }
 
   bool canMacroFuseCmp() const { return false; }
@@ -297,6 +303,10 @@ public:
   }
 
   bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
+
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
 
   bool enableOrderedReductions() const { return false; }
 
@@ -372,6 +382,15 @@ public:
 
   bool enableSelectOptimize() const { return true; }
 
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) {
+    // If the select is a logical-and/logical-or then it is better treated as a
+    // and/or by the backend.
+    using namespace llvm::PatternMatch;
+    return isa<SelectInst>(I) &&
+           !match(I, m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
+                                 m_LogicalOr(m_Value(), m_Value())));
+  }
+
   bool enableInterleavedAccessVectorization() const { return false; }
 
   bool enableMaskedInterleavedAccessVectorization() const { return false; }
@@ -419,6 +438,11 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind) const {
     return TTI::TCC_Free;
+  }
+
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const {
+    return false;
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
@@ -490,6 +514,8 @@ public:
     llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
   }
 
+  std::optional<unsigned> getMinPageSize() const { return {}; }
+
   unsigned getPrefetchDistance() const { return 0; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,
                                 unsigned NumStridedMemAccesses,
@@ -541,6 +567,13 @@ public:
         return 3;
 
     return 1;
+  }
+
+  InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                                  unsigned Opcode1,
+                                  const SmallBitVector &OpcodeMask,
+                                  TTI::TargetCostKind CostKind) const {
+    return InstructionCost::getInvalid();
   }
 
   InstructionCost
@@ -658,6 +691,14 @@ public:
     return 1;
   }
 
+  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr) const {
+    return InstructionCost::getInvalid();
+  }
+
   unsigned getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -703,6 +744,7 @@ public:
     case Intrinsic::coro_subfn_addr:
     case Intrinsic::threadlocal_address:
     case Intrinsic::experimental_widenable_condition:
+    case Intrinsic::ssa_copy:
       // These intrinsics don't actually represent code after lowering.
       return 0;
     }
@@ -796,6 +838,11 @@ public:
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==
             Callee->getFnAttribute("target-features"));
+  }
+
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const {
+    return DefaultCallPenalty;
   }
 
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
@@ -1024,7 +1071,7 @@ public:
         if (TargetType->isScalableTy())
           return TTI::TCC_Basic;
         int64_t ElementSize =
-            DL.getTypeAllocSize(GTI.getIndexedType()).getFixedValue();
+            GTI.getSequentialElementStride(DL).getFixedValue();
         if (ConstIdx) {
           BaseOffset +=
               ConstIdx->getValue().sextOrTrunc(PtrSizeBits) * ElementSize;

@@ -14,6 +14,7 @@
 #include "flags.h"
 #include "flags_parser.h"
 #include "local_cache.h"
+#include "mem_map.h"
 #include "memtag.h"
 #include "options.h"
 #include "quarantine.h"
@@ -245,12 +246,14 @@ public:
   // - unlinking the local stats from the global ones (destroying the cache does
   //   the last two items).
   void commitBack(TSD<ThisT> *TSD) {
+    TSD->assertLocked(/*BypassCheck=*/true);
     Quarantine.drain(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()));
     TSD->getCache().destroy(&Stats);
   }
 
   void drainCache(TSD<ThisT> *TSD) {
+    TSD->assertLocked(/*BypassCheck=*/true);
     Quarantine.drainAndRecycle(&TSD->getQuarantineCache(),
                                QuarantineCallback(*this, TSD->getCache()));
     TSD->getCache().drain();
@@ -361,21 +364,17 @@ public:
     if (LIKELY(PrimaryT::canAllocate(NeededSize))) {
       ClassId = SizeClassMap::getClassIdBySize(NeededSize);
       DCHECK_NE(ClassId, 0U);
-      bool UnlockRequired;
-      auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
+      typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Block = TSD->getCache().allocate(ClassId);
-      // If the allocation failed, the most likely reason with a 32-bit primary
-      // is the region being full. In that event, retry in each successively
-      // larger class until it fits. If it fails to fit in the largest class,
-      // fallback to the Secondary.
+      // If the allocation failed, retry in each successively larger class until
+      // it fits. If it fails to fit in the largest class, fallback to the
+      // Secondary.
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId && !Block)
           Block = TSD->getCache().allocate(++ClassId);
         if (!Block)
           ClassId = 0;
       }
-      if (UnlockRequired)
-        TSD->unlock();
     }
     if (UNLIKELY(ClassId == 0)) {
       Block = Secondary.allocate(Options, Size, Alignment, &SecondaryBlockEnd,
@@ -385,6 +384,7 @@ public:
     if (UNLIKELY(!Block)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
+      printStats();
       reportOutOfMemory(NeededSize);
     }
 
@@ -519,6 +519,9 @@ public:
 
   NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize = 0,
                            UNUSED uptr Alignment = MinAlignment) {
+    if (UNLIKELY(!Ptr))
+      return;
+
     // For a deallocation, we only ensure minimal initialization, meaning thread
     // local data will be left uninitialized for now (when using ELF TLS). The
     // fallback cache will be used instead. This is a workaround for a situation
@@ -526,9 +529,6 @@ public:
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-
-    if (UNLIKELY(!Ptr))
-      return;
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
@@ -687,10 +687,12 @@ public:
     Quarantine.disable();
     Primary.disable();
     Secondary.disable();
+    Depot.disable();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
+    Depot.enable();
     Secondary.enable();
     Primary.enable();
     Quarantine.enable();
@@ -824,9 +826,14 @@ public:
   // for it, which then forces realloc to copy the usable size of a chunk as
   // opposed to its actual size.
   uptr getUsableSize(const void *Ptr) {
-    initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
+
+    return getAllocSize(Ptr);
+  }
+
+  uptr getAllocSize(const void *Ptr) {
+    initThreadMaybe();
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
@@ -836,9 +843,11 @@ public:
     Ptr = getHeaderTaggedPointer(const_cast<void *>(Ptr));
     Chunk::UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
-    // Getting the usable size of a chunk only makes sense if it's allocated.
+
+    // Getting the alloc size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Sizing, const_cast<void *>(Ptr));
+
     return getSize(Ptr, &Header);
   }
 
@@ -883,7 +892,7 @@ public:
 
   void setTrackAllocationStacks(bool Track) {
     initThreadMaybe();
-    if (getFlags()->allocation_ring_buffer_size == 0) {
+    if (getFlags()->allocation_ring_buffer_size <= 0) {
       DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
       return;
     }
@@ -925,21 +934,7 @@ public:
 
   uptr getRingBufferSize() {
     initThreadMaybe();
-    auto *RingBuffer = getRingBuffer();
-    return RingBuffer ? ringBufferSizeInBytes(RingBuffer->Size) : 0;
-  }
-
-  static bool setRingBufferSizeForBuffer(char *Buffer, size_t Size) {
-    // Need at least one entry.
-    if (Size < sizeof(AllocationRingBuffer) +
-                   sizeof(typename AllocationRingBuffer::Entry)) {
-      return false;
-    }
-    AllocationRingBuffer *RingBuffer =
-        reinterpret_cast<AllocationRingBuffer *>(Buffer);
-    RingBuffer->Size = (Size - sizeof(AllocationRingBuffer)) /
-                       sizeof(typename AllocationRingBuffer::Entry);
-    return true;
+    return RingBufferElements ? ringBufferSizeInBytes(RingBufferElements) : 0;
   }
 
   static const uptr MaxTraceSize = 64;
@@ -956,8 +951,9 @@ public:
   static void getErrorInfo(struct scudo_error_info *ErrorInfo,
                            uintptr_t FaultAddr, const char *DepotPtr,
                            const char *RegionInfoPtr, const char *RingBufferPtr,
-                           const char *Memory, const char *MemoryTags,
-                           uintptr_t MemoryAddr, size_t MemorySize) {
+                           size_t RingBufferSize, const char *Memory,
+                           const char *MemoryTags, uintptr_t MemoryAddr,
+                           size_t MemorySize) {
     *ErrorInfo = {};
     if (!allocatorSupportsMemoryTagging<Config>() ||
         MemoryAddr + MemorySize < MemoryAddr)
@@ -976,7 +972,7 @@ public:
     // Check the ring buffer. For primary allocations this will only find UAF;
     // for secondary allocations we can find either UAF or OOB.
     getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
-                           RingBufferPtr);
+                           RingBufferPtr, RingBufferSize);
 
     // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
     // Beyond that we are likely to hit false positives.
@@ -1041,15 +1037,15 @@ private:
       atomic_u32 DeallocationTid;
     };
 
-    MemMapT MemMap;
     atomic_uptr Pos;
-    u32 Size;
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
   };
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
   char *RawRingBuffer = {};
+  u32 RingBufferElements = 0;
+  MemMapT RawRingBufferMap;
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {
@@ -1145,12 +1141,11 @@ private:
       void *BlockBegin = getBlockBegin(Ptr, Header);
       const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
-        bool UnlockRequired;
-        auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-        const bool CacheDrained =
-            TSD->getCache().deallocate(ClassId, BlockBegin);
-        if (UnlockRequired)
-          TSD->unlock();
+        bool CacheDrained;
+        {
+          typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
+          CacheDrained = TSD->getCache().deallocate(ClassId, BlockBegin);
+        }
         // When we have drained some blocks back to the Primary from TSD, that
         // implies that we may have the chance to release some pages as well.
         // Note that in order not to block other thread's accessing the TSD,
@@ -1164,12 +1159,9 @@ private:
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
-      bool UnlockRequired;
-      auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
+      typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
-      if (UnlockRequired)
-        TSD->unlock();
     }
   }
 
@@ -1255,7 +1247,7 @@ private:
                             u32 DeallocationTid) {
     uptr Pos = atomic_fetch_add(&getRingBuffer()->Pos, 1, memory_order_relaxed);
     typename AllocationRingBuffer::Entry *Entry =
-        getRingBufferEntry(RawRingBuffer, Pos % getRingBuffer()->Size);
+        getRingBufferEntry(RawRingBuffer, Pos % RingBufferElements);
 
     // First invalidate our entry so that we don't attempt to interpret a
     // partially written state in getSecondaryErrorInfo(). The fences below
@@ -1396,17 +1388,19 @@ private:
                                      size_t &NextErrorReport,
                                      uintptr_t FaultAddr,
                                      const StackDepot *Depot,
-                                     const char *RingBufferPtr) {
+                                     const char *RingBufferPtr,
+                                     size_t RingBufferSize) {
     auto *RingBuffer =
         reinterpret_cast<const AllocationRingBuffer *>(RingBufferPtr);
-    if (!RingBuffer || RingBuffer->Size == 0)
+    size_t RingBufferElements = ringBufferElementsFromBytes(RingBufferSize);
+    if (!RingBuffer || RingBufferElements == 0)
       return;
     uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
 
-    for (uptr I = Pos - 1;
-         I != Pos - 1 - RingBuffer->Size && NextErrorReport != NumErrorReports;
+    for (uptr I = Pos - 1; I != Pos - 1 - RingBufferElements &&
+                           NextErrorReport != NumErrorReports;
          --I) {
-      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBuffer->Size);
+      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBufferElements);
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
       if (!EntryPtr)
         continue;
@@ -1485,10 +1479,10 @@ private:
   }
 
   void mapAndInitializeRingBuffer() {
+    if (getFlags()->allocation_ring_buffer_size <= 0)
+      return;
     u32 AllocationRingBufferSize =
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
-    if (AllocationRingBufferSize < 1)
-      return;
     MemMapT MemMap;
     MemMap.map(
         /*Addr=*/0U,
@@ -1496,9 +1490,8 @@ private:
                 getPageSizeCached()),
         "scudo:ring_buffer");
     RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
-    auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
-    RingBuffer->MemMap = MemMap;
-    RingBuffer->Size = AllocationRingBufferSize;
+    RawRingBufferMap = MemMap;
+    RingBufferElements = AllocationRingBufferSize;
     static_assert(sizeof(AllocationRingBuffer) %
                           alignof(typename AllocationRingBuffer::Entry) ==
                       0,
@@ -1508,16 +1501,23 @@ private:
   void unmapRingBuffer() {
     auto *RingBuffer = getRingBuffer();
     if (RingBuffer != nullptr) {
-      MemMapT MemMap = RingBuffer->MemMap;
-      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
+                             RawRingBufferMap.getCapacity());
     }
     RawRingBuffer = nullptr;
   }
 
-  static constexpr size_t ringBufferSizeInBytes(u32 AllocationRingBufferSize) {
+  static constexpr size_t ringBufferSizeInBytes(u32 RingBufferElements) {
     return sizeof(AllocationRingBuffer) +
-           AllocationRingBufferSize *
-               sizeof(typename AllocationRingBuffer::Entry);
+           RingBufferElements * sizeof(typename AllocationRingBuffer::Entry);
+  }
+
+  static constexpr size_t ringBufferElementsFromBytes(size_t Bytes) {
+    if (Bytes < sizeof(AllocationRingBuffer)) {
+      return 0;
+    }
+    return (Bytes - sizeof(AllocationRingBuffer)) /
+           sizeof(typename AllocationRingBuffer::Entry);
   }
 
   inline AllocationRingBuffer *getRingBuffer() {

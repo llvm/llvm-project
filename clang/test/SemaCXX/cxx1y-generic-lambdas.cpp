@@ -24,7 +24,7 @@ int test() {
   L.operator()(3);
   L.operator()<char>(3.14); //expected-warning{{implicit conversion}}
   return 0;
-}  
+}
 } //end ns
 
 namespace test_conversion_to_fptr_2 {
@@ -32,12 +32,12 @@ namespace test_conversion_to_fptr_2 {
 template<class T> struct X {
 
   T (*fp)(T) = [](auto a) { return a; };
-  
+
 };
 
 X<int> xi;
 
-template<class T> 
+template<class T>
 void fooT(T t, T (*fp)(T) = [](auto a) { return a; }) {
   fp(t);
 }
@@ -108,11 +108,11 @@ int test() {
 
 {
  auto L = [=](auto b) {
-    return [](auto a) { 
-      return [=](auto c) { 
-        return [](auto d) ->decltype(a + b + c + d) { return d; }; 
-      }; 
-    }; 
+    return [](auto a) {
+      return [=](auto c) {
+        return [](auto d) ->decltype(a + b + c + d) { return d; };
+      };
+    };
   };
   int (*fp)(int) = L('8')(3)(short{});
   double (*fs)(char) = L(3.14)(short{})('4');
@@ -146,12 +146,12 @@ int test() {
   f2(glambda); // expected-error{{no matching function}}
   g(glambda); // expected-error{{call to 'g' is ambiguous}}
   h(glambda); // OK: calls #3 since it is convertible from ID
-  
+
   int& (*fpi)(int*) = [](auto* a) -> auto& { return *a; }; // OK
-  
+
 }
 {
-  
+
   auto L = [](auto a) { return a; };
   int (*fp)(int) = L;
   fp(5);
@@ -202,7 +202,7 @@ int variadic_test() {
 
  int (*fp)(int, char, double) = [](auto ... a) -> int { vfun(a...); return 4; };
  fp(3, '4', 3.14);
- 
+
  int (*fp2)(int, char, double) = [](auto ... a) { vfun(a...); return 4; };
  fp(3, '4', 3.14);
  return 2;
@@ -213,7 +213,7 @@ int variadic_test() {
 namespace conversion_operator {
   void test() {
     auto L = [](auto a) -> int { return a; }; // expected-error {{cannot initialize}}
-    int (*fp)(int) = L; 
+    int (*fp)(int) = L;
     int (&fp2)(int) = [](auto a) { return a; };  // expected-error{{non-const lvalue}}
     int (&&fp3)(int) = [](auto a) { return a; };
     // expected-error@-1   {{no viable conversion}}
@@ -233,9 +233,9 @@ namespace conversion_operator {
 }
 
 namespace return_type_deduction_ok {
- auto l = [](auto a) ->auto { return a; }(2); 
- auto l2 = [](auto a) ->decltype(auto) { return a; }(2);  
- auto l3 = [](auto a) { return a; }(2); 
+ auto l = [](auto a) ->auto { return a; }(2);
+ auto l2 = [](auto a) ->decltype(auto) { return a; }(2);
+ auto l3 = [](auto a) { return a; }(2);
 
 }
 
@@ -268,10 +268,10 @@ int test() {
   M(4.15); //expected-note{{instantiation}}
  }
  {
-  int i = 10; 
+  int i = 10;
   auto L = [](auto a) {
-    return [](auto b) { 
-      b = sizeof(i);  //ok 
+    return [](auto b) {
+      b = sizeof(i);  //ok
       return b;
     };
   };
@@ -287,7 +287,7 @@ int test() {
   auto M = L(3);
   M(4.15);
  }
- 
+
 {
   auto L = [](auto a) ->decltype(a) {
     print("a = ", a, "\n");
@@ -321,7 +321,7 @@ int test() {
     };
   };
   auto M = L(3);
-  int (*fp)(double, int, const char*) = M; 
+  int (*fp)(double, int, const char*) = M;
   fp(4.15, 3, "fv");
 }
 
@@ -367,7 +367,7 @@ int test() {
 
 {
  struct X {
-  static void foo(double d) { } 
+  static void foo(double d) { }
   void test() {
     auto L = [](auto a) {
       print("a = ", a, "\n");
@@ -398,7 +398,7 @@ x.test();
 // Make sure we can escape the function
 {
  struct X {
-  static void foo(double d) { } 
+  static void foo(double d) { }
   auto test() {
     auto L = [](auto a) {
       print("a = ", a, "\n");
@@ -430,7 +430,7 @@ x.test();
 
 {
  struct X {
-  static void foo(double d) { } 
+  static void foo(double d) { }
   auto test() {
     auto L = [](auto a) {
       print("a = ", a, "\n");
@@ -464,7 +464,7 @@ x.test();
   char (*np)(const char*, int, const char*, double, const char*, int) = O;
   np("\n3 = ", 3, "\n6.14 = ", 6.14, "\n4'123'456 = ", 4'123'456);
   int (*np2)(const char*, int, const char*, double, const char*, int) = O; // expected-error{{no viable conversion}}
-  
+
 }
 } // end test()
 
@@ -472,17 +472,17 @@ namespace wrapped_within_templates {
 
 namespace explicit_return {
 template<class T> int fooT(T t) {
-  auto L = [](auto a) -> void { 
+  auto L = [](auto a) -> void {
     auto M = [](char b) -> void {
       auto N = [](auto c) -> void {
         int x = 0;
-        x = sizeof(a);        
+        x = sizeof(a);
         x = sizeof(b);
         x = sizeof(c);
-      };  
+      };
       N('a');
       N(decltype(a){});
-    };    
+    };
   };
   L(t);
   L(3.14);
@@ -495,17 +495,17 @@ int run = fooT('a') + fooT(3.14);
 
 namespace implicit_return_deduction {
 template<class T> auto fooT(T t) {
-  auto L = [](auto a)  { 
+  auto L = [](auto a)  {
     auto M = [](char b)  {
       auto N = [](auto c)  {
         int x = 0;
-        x = sizeof(a);        
+        x = sizeof(a);
         x = sizeof(b);
         x = sizeof(c);
-      };  
+      };
       N('a');
       N(decltype(a){});
-    };    
+    };
   };
   L(t);
   L(3.14);
@@ -517,20 +517,20 @@ int run = fooT('a') + fooT(3.14);
 template<class ... Ts> void print(Ts ... ts) { }
 
 template<class ... Ts> auto fooV(Ts ... ts) {
-  auto L = [](auto ... a) { 
-    auto M = [](decltype(a) ... b) {  
+  auto L = [](auto ... a) {
+    auto M = [](decltype(a) ... b) {
       auto N = [](auto c) {
         int x = 0;
-        x = sizeof...(a);        
+        x = sizeof...(a);
         x = sizeof...(b);
         x = sizeof(c);
-      };  
+      };
       N('a');
       N(N);
       N(first<Ts...>{});
     };
     M(a...);
-    print("a = ", a..., "\n");    
+    print("a = ", a..., "\n");
   };
   L(L, ts...);
   print("ts = ", ts..., "\n");
@@ -580,28 +580,28 @@ int (*np2)(const char*, int, const char*, double, const char*, int) = O; // expe
 
 
 
-} 
+}
 
 namespace variadic_tests_1 {
 template<class ... Ts> void print(Ts ... ts) { }
 
 template<class F, class ... Rest> F& FirstArg(F& f, Rest...) { return f; }
- 
+
 template<class ... Ts> int fooV(Ts ... ts) {
-  auto L = [](auto ... a) -> void { 
-    auto M = [](decltype(a) ... b) -> void {  
+  auto L = [](auto ... a) -> void {
+    auto M = [](decltype(a) ... b) -> void {
       auto N = [](auto c) -> void {
         int x = 0;
-        x = sizeof...(a);        
+        x = sizeof...(a);
         x = sizeof...(b);
         x = sizeof(c);
-      };  
+      };
       N('a');
       N(N);
       N(first<Ts...>{});
     };
     M(a...);
-    print("a = ", a..., "\n");    
+    print("a = ", a..., "\n");
   };
   L(L, ts...);
   print("ts = ", ts..., "\n");
@@ -613,14 +613,14 @@ int run2 = fooV(3.14, " ", '4', 5) + fooV("BC", 3, 2.77, 'A', float{}, short{}, 
 namespace more_variadic_1 {
 
 template<class ... Ts> int fooV(Ts ... ts) {
-  auto L = [](auto ... a) { 
-    auto M = [](decltype(a) ... b) -> void {  
+  auto L = [](auto ... a) {
+    auto M = [](decltype(a) ... b) -> void {
       auto N = [](auto c) -> void {
         int x = 0;
-        x = sizeof...(a);        
+        x = sizeof...(a);
         x = sizeof...(b);
         x = sizeof(c);
-      };  
+      };
       N('a');
       N(N);
       N(first<Ts...>{});
@@ -631,16 +631,16 @@ template<class ... Ts> int fooV(Ts ... ts) {
   auto M = L(L, ts...);
   decltype(L(L, ts...)) (*fp)(decltype(L), decltype(ts) ...) = L;
   void (*fp2)(decltype(L), decltype(ts) ...) = L(L, ts...);
-  
+
   {
-    auto L = [](auto ... a) { 
-      auto M = [](decltype(a) ... b) {  
+    auto L = [](auto ... a) {
+      auto M = [](decltype(a) ... b) {
         auto N = [](auto c) -> void {
           int x = 0;
-          x = sizeof...(a);        
+          x = sizeof...(a);
           x = sizeof...(b);
           x = sizeof(c);
-        };  
+        };
         N('a');
         N(N);
         N(first<Ts...>{});
@@ -669,7 +669,7 @@ int run2 = fooV(3.14, " ", '4', 5) + fooV("BC", 3, 2.77, 'A', float{}, short{}, 
 
 namespace at_ns_scope_within_class_member {
  struct X {
-  static void foo(double d) { } 
+  static void foo(double d) { }
   auto test() {
     auto L = [](auto a) {
       print("a = ", a, "\n");
@@ -703,13 +703,13 @@ auto O = N("\n3 = ", 3, "\n6.14 = ", 6.14, "\n4'123'456 = ", 4'123'456);
 char (*np)(const char*, int, const char*, double, const char*, int) = O;
 auto NP_result = np("\n3 = ", 3, "\n6.14 = ", 6.14, "\n4'123'456 = ", 4'123'456);
 int (*np2)(const char*, int, const char*, double, const char*, int) = O; // expected-error{{no viable conversion}}
-  
+
 } //end at_ns_scope_within_class_member
 
 
 namespace at_ns_scope_within_class_template_member {
  struct X {
-  static void foo(double d) { } 
+  static void foo(double d) { }
   template<class T = int>
   auto test(T = T{}) {
     auto L = [](auto a) {
@@ -733,7 +733,7 @@ namespace at_ns_scope_within_class_template_member {
     };
     return L;
   }
-  
+
 };
 X x;
 auto L = x.test();
@@ -745,24 +745,24 @@ auto O = N("\n3 = ", 3, "\n6.14 = ", 6.14, "\n4'123'456 = ", 4'123'456);
 char (*np)(const char*, int, const char*, double, const char*, int) = O;
 auto NP_result = np("\n3 = ", 3, "\n6.14 = ", 6.14, "\n4'123'456 = ", 4'123'456);
 int (*np2)(const char*, int, const char*, double, const char*, int) = O; // expected-error{{no viable conversion}}
-  
+
 } //end at_ns_scope_within_class_member
 
 
 namespace nested_generic_lambdas_123 {
 void test() {
   auto L = [](auto a) -> int {
-    auto M = [](auto b, decltype(a) b2) -> int { 
+    auto M = [](auto b, decltype(a) b2) -> int {
       return 1;
     };
     M(a, a);
   };
-  L(3); 
+  L(3);
 }
 template<class T> void foo(T) {
- auto L = [](auto a) { return a; }; 
+ auto L = [](auto a) { return a; };
 }
-template void foo(int); 
+template void foo(int);
 } // end ns nested_generic_lambdas_123
 
 namespace nested_fptr_235 {
@@ -796,7 +796,7 @@ int test()
 {
  {
    auto L = [](auto ... As) {
-    return [](auto b) ->decltype(b) {   
+    return [](auto b) ->decltype(b) {
       vfun([](decltype(As) a) -> decltype(a) { return a; } ...)(first<decltype(As)...>{});
       return decltype(b){};
     };
@@ -817,7 +817,7 @@ struct string {
   string &operator+=(const string &__str) { return *this; }
 };
 
-template <class T> 
+template <class T>
 void finalizeDefaultAtomValues() {
   auto startEnd = [](const char * sym) -> void {
     string start("__");
@@ -828,7 +828,7 @@ void finalizeDefaultAtomValues() {
 
 void f() { finalizeDefaultAtomValues<char>(); }
 
-} 
+}
 
 namespace PR17476_variant {
 struct string {
@@ -836,7 +836,7 @@ struct string {
   string &operator+=(const string &__str) { return *this; }
 };
 
-template <class T> 
+template <class T>
 void finalizeDefaultAtomValues() {
   auto startEnd = [](const T *sym) -> void {
     string start("__");
@@ -847,7 +847,7 @@ void finalizeDefaultAtomValues() {
 
 void f() { finalizeDefaultAtomValues<char>(); }
 
-} 
+}
 
 namespace PR17877_lambda_declcontext_and_get_cur_lambda_disconnect {
 
@@ -857,7 +857,7 @@ template<class T> struct U {
 };
 
 template<class T>
-struct V { 
+struct V {
   U<T> size() const { return U<T>{}; }
 };
 
@@ -872,7 +872,7 @@ void Do() {
 namespace inclass_lambdas_within_nested_classes {
 namespace ns1 {
 
-struct X1 {  
+struct X1 {
   struct X2 {
     enum { E = [](auto i) { return i; }(3) }; //expected-error{{inside of a constant expression}}\
                                           //expected-error{{constant}}\
@@ -883,7 +883,9 @@ struct X1 {
                                           //expected-error{{not an integral constant}}\
                                           //expected-note{{non-literal type}}
     int arr[([](int i) { return i; })(3)]; //expected-error{{inside of a constant expression}}\
-                                           //expected-error{{must have a constant size}}
+                                           //expected-error{{must have a constant size}}\
+                                           //expected-warning{{variable length arrays in C++ are a Clang extension}}\
+                                           //expected-note-re{{non-literal type '{{.*}}' cannot be used in a constant expression}}
     int (*fp)(int) = [](int i) { return i; };
     void fooptr(int (*fp)(char) = [](char c) { return 0; }) { }
     int L2 = ([](auto i) { return i; })(2);
@@ -892,7 +894,10 @@ struct X1 {
                                             //expected-error{{not an integral constant}}\
                                             //expected-note{{non-literal type}}
     int arrG[([](auto i) { return i; })(3)]; //expected-error{{inside of a constant expression}}\
-                                             //expected-error{{must have a constant size}}
+                                             //expected-error{{must have a constant size}}\
+                                             //expected-warning{{variable length arrays in C++ are a Clang extension}}\
+                                             //expected-note-re{{non-literal type '{{.*}}' cannot be used in a constant expression}}
+
     int (*fpG)(int) = [](auto i) { return i; };
     void fooptrG(int (*fp)(char) = [](auto c) { return 0; }) { }
   };
@@ -900,7 +905,7 @@ struct X1 {
 } //end ns
 
 namespace ns2 {
-struct X1 {  
+struct X1 {
   template<class T>
   struct X2 {
     int L = ([] (T i) { return i; })(2);
@@ -909,7 +914,10 @@ struct X1 {
                                         //expected-error{{not an integral constant}}\
                                         //expected-note{{non-literal type}}
     int arr[([](T i) { return i; })(3)]; //expected-error{{inside of a constant expression}}\
-                                         //expected-error{{must have a constant size}}
+                                         //expected-error{{must have a constant size}}\
+                                         //expected-warning{{variable length arrays in C++ are a Clang extension}}\
+                                         //expected-note-re{{non-literal type '{{.*}}' cannot be used in a constant expression}}
+
     int (*fp)(T) = [](T i) { return i; };
     void fooptr(T (*fp)(char) = [](char c) { return 0; }) { }
     int L2 = ([](auto i) { return i; })(2);
@@ -918,16 +926,19 @@ struct X1 {
                                             //expected-note{{non-literal type}}\
                                             //expected-error{{inside of a constant expression}}
     int arrG[([](auto i) { return i; })(3)]; //expected-error{{must have a constant size}} \
-                                             //expected-error{{inside of a constant expression}}
+                                             //expected-error{{inside of a constant expression}}\
+                                             //expected-warning{{variable length arrays in C++ are a Clang extension}}\
+                                             //expected-note-re{{non-literal type '{{.*}}' cannot be used in a constant expression}}
+
     int (*fpG)(T) = [](auto i) { return i; };
     void fooptrG(T (*fp)(char) = [](auto c) { return 0; }) { }
     template<class U = char> int fooG2(T (*fp)(U) = [](auto a) { return 0; }) { return 0; }
     template<class U = char> int fooG3(T (*fp)(U) = [](auto a) { return 0; });
   };
 };
-template<class T> 
+template<class T>
 template<class U>
-int X1::X2<T>::fooG3(T (*fp)(U)) { return 0; } 
+int X1::X2<T>::fooG3(T (*fp)(U)) { return 0; }
 X1::X2<int> x2; //expected-note {{in instantiation of}}
 int run1 = x2.fooG2();
 int run2 = x2.fooG3();

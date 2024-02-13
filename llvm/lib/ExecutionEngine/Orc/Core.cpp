@@ -30,6 +30,7 @@ char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
 char MissingSymbolDefinitions::ID = 0;
 char UnexpectedSymbolDefinitions::ID = 0;
+char UnsatisfiedSymbolDependencies::ID = 0;
 char MaterializationTask::ID = 0;
 char LookupTask::ID = 0;
 
@@ -101,6 +102,25 @@ std::error_code FailedToMaterialize::convertToErrorCode() const {
 
 void FailedToMaterialize::log(raw_ostream &OS) const {
   OS << "Failed to materialize symbols: " << *Symbols;
+}
+
+UnsatisfiedSymbolDependencies::UnsatisfiedSymbolDependencies(
+    std::shared_ptr<SymbolStringPool> SSP, JITDylibSP JD,
+    SymbolNameSet FailedSymbols, SymbolDependenceMap BadDeps,
+    std::string Explanation)
+    : SSP(std::move(SSP)), JD(std::move(JD)),
+      FailedSymbols(std::move(FailedSymbols)), BadDeps(std::move(BadDeps)),
+      Explanation(std::move(Explanation)) {}
+
+std::error_code UnsatisfiedSymbolDependencies::convertToErrorCode() const {
+  return orcError(OrcErrorCode::UnknownORCError);
+}
+
+void UnsatisfiedSymbolDependencies::log(raw_ostream &OS) const {
+  OS << "In " << JD->getName() << ", failed to materialize " << FailedSymbols
+     << ", due to unsatisfied dependencies " << BadDeps;
+  if (!Explanation.empty())
+    OS << " (" << Explanation << ")";
 }
 
 SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
@@ -276,7 +296,7 @@ void AbsoluteSymbolsMaterializationUnit::materialize(
     R->failMaterialization();
     return;
   }
-  if (auto Err = R->notifyEmitted()) {
+  if (auto Err = R->notifyEmitted({})) {
     R->getExecutionSession().reportError(std::move(Err));
     R->failMaterialization();
     return;
@@ -358,6 +378,7 @@ void ReExportsMaterializationUnit::materialize(
 
     std::unique_ptr<MaterializationResponsibility> R;
     SymbolAliasMap Aliases;
+    std::vector<SymbolDependenceGroup> SDGs;
   };
 
   // Build a list of queries to issue. In each round we build a query for the
@@ -427,14 +448,10 @@ void ReExportsMaterializationUnit::materialize(
              "Unexpected dependencies for reexports");
 
       auto &SrcJDDeps = Deps.find(&SrcJD)->second;
-      SymbolDependenceMap PerAliasDepsMap;
-      auto &PerAliasDeps = PerAliasDepsMap[&SrcJD];
 
-      for (auto &KV : QueryInfo->Aliases)
-        if (SrcJDDeps.count(KV.second.Aliasee)) {
-          PerAliasDeps = {KV.second.Aliasee};
-          QueryInfo->R->addDependencies(KV.first, PerAliasDepsMap);
-        }
+      for (auto &[Alias, AliasInfo] : QueryInfo->Aliases)
+        if (SrcJDDeps.count(AliasInfo.Aliasee))
+          QueryInfo->SDGs.push_back({{Alias}, {{&SrcJD, {AliasInfo.Aliasee}}}});
     };
 
     auto OnComplete = [QueryInfo](Expected<SymbolMap> Result) {
@@ -457,7 +474,7 @@ void ReExportsMaterializationUnit::materialize(
           QueryInfo->R->failMaterialization();
           return;
         }
-        if (auto Err = QueryInfo->R->notifyEmitted()) {
+        if (auto Err = QueryInfo->R->notifyEmitted(QueryInfo->SDGs)) {
           ES.reportError(std::move(Err));
           QueryInfo->R->failMaterialization();
           return;
@@ -874,83 +891,6 @@ JITDylib::getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const {
   });
 }
 
-void JITDylib::addDependencies(const SymbolStringPtr &Name,
-                               const SymbolDependenceMap &Dependencies) {
-  ES.runSessionLocked([&]() {
-    assert(Symbols.count(Name) && "Name not in symbol table");
-    assert(Symbols[Name].getState() < SymbolState::Emitted &&
-           "Can not add dependencies for a symbol that is not materializing");
-
-    LLVM_DEBUG({
-      dbgs() << "In " << getName() << " adding dependencies for " << *Name
-             << ": " << Dependencies << "\n";
-    });
-
-    // If Name is already in an error state then just bail out.
-    if (Symbols[Name].getFlags().hasError())
-      return;
-
-    auto &MI = MaterializingInfos[Name];
-    assert(Symbols[Name].getState() != SymbolState::Emitted &&
-           "Can not add dependencies to an emitted symbol");
-
-    bool DependsOnSymbolInErrorState = false;
-
-    // Register dependencies, record whether any depenendency is in the error
-    // state.
-    for (auto &KV : Dependencies) {
-      assert(KV.first && "Null JITDylib in dependency?");
-      auto &OtherJITDylib = *KV.first;
-      auto &DepsOnOtherJITDylib = MI.UnemittedDependencies[&OtherJITDylib];
-
-      for (auto &OtherSymbol : KV.second) {
-
-        // Check the sym entry for the dependency.
-        auto OtherSymI = OtherJITDylib.Symbols.find(OtherSymbol);
-
-        // Assert that this symbol exists and has not reached the ready state
-        // already.
-        assert(OtherSymI != OtherJITDylib.Symbols.end() &&
-               "Dependency on unknown symbol");
-
-        auto &OtherSymEntry = OtherSymI->second;
-
-        // If the other symbol is already in the Ready state then there's no
-        // dependency to add.
-        if (OtherSymEntry.getState() == SymbolState::Ready)
-          continue;
-
-        // If the dependency is in an error state then note this and continue,
-        // we will move this symbol to the error state below.
-        if (OtherSymEntry.getFlags().hasError()) {
-          DependsOnSymbolInErrorState = true;
-          continue;
-        }
-
-        // If the dependency was not in the error state then add it to
-        // our list of dependencies.
-        auto &OtherMI = OtherJITDylib.MaterializingInfos[OtherSymbol];
-
-        if (OtherSymEntry.getState() == SymbolState::Emitted)
-          transferEmittedNodeDependencies(MI, Name, OtherMI);
-        else if (&OtherJITDylib != this || OtherSymbol != Name) {
-          OtherMI.Dependants[this].insert(Name);
-          DepsOnOtherJITDylib.insert(OtherSymbol);
-        }
-      }
-
-      if (DepsOnOtherJITDylib.empty())
-        MI.UnemittedDependencies.erase(&OtherJITDylib);
-    }
-
-    // If this symbol dependended on any symbols in the error state then move
-    // this symbol to the error state too.
-    if (DependsOnSymbolInErrorState)
-      Symbols[Name].setFlags(Symbols[Name].getFlags() |
-                             JITSymbolFlags::HasError);
-  });
-}
-
 Error JITDylib::resolve(MaterializationResponsibility &MR,
                         const SymbolMap &Resolved) {
   AsynchronousSymbolQuerySet CompletedQueries;
@@ -1050,161 +990,6 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
   return Error::success();
 }
 
-Error JITDylib::emit(MaterializationResponsibility &MR,
-                     const SymbolFlagsMap &Emitted) {
-  AsynchronousSymbolQuerySet CompletedQueries;
-  DenseMap<JITDylib *, SymbolNameVector> ReadySymbols;
-
-  if (auto Err = ES.runSessionLocked([&, this]() -> Error {
-        if (MR.RT->isDefunct())
-          return make_error<ResourceTrackerDefunct>(MR.RT);
-
-        if (State != Open)
-          return make_error<StringError>("JITDylib " + getName() +
-                                             " is defunct",
-                                         inconvertibleErrorCode());
-
-        SymbolNameSet SymbolsInErrorState;
-        std::vector<SymbolTable::iterator> Worklist;
-
-        // Scan to build worklist, record any symbols in the erorr state.
-        for (const auto &KV : Emitted) {
-          auto &Name = KV.first;
-
-          auto SymI = Symbols.find(Name);
-          assert(SymI != Symbols.end() && "No symbol table entry for Name");
-
-          if (SymI->second.getFlags().hasError())
-            SymbolsInErrorState.insert(Name);
-          else
-            Worklist.push_back(SymI);
-        }
-
-        // If any symbols were in the error state then bail out.
-        if (!SymbolsInErrorState.empty()) {
-          auto FailedSymbolsDepMap = std::make_shared<SymbolDependenceMap>();
-          (*FailedSymbolsDepMap)[this] = std::move(SymbolsInErrorState);
-          return make_error<FailedToMaterialize>(
-              getExecutionSession().getSymbolStringPool(),
-              std::move(FailedSymbolsDepMap));
-        }
-
-        // Otherwise update dependencies and move to the emitted state.
-        while (!Worklist.empty()) {
-          auto SymI = Worklist.back();
-          Worklist.pop_back();
-
-          auto &Name = SymI->first;
-          auto &SymEntry = SymI->second;
-
-          // Move symbol to the emitted state.
-          assert(((SymEntry.getFlags().hasMaterializationSideEffectsOnly() &&
-                   SymEntry.getState() == SymbolState::Materializing) ||
-                  SymEntry.getState() == SymbolState::Resolved) &&
-                 "Emitting from state other than Resolved");
-          SymEntry.setState(SymbolState::Emitted);
-
-          auto MII = MaterializingInfos.find(Name);
-
-          // If this symbol has no MaterializingInfo then it's trivially ready.
-          // Update its state and continue.
-          if (MII == MaterializingInfos.end()) {
-            SymEntry.setState(SymbolState::Ready);
-            continue;
-          }
-
-          auto &MI = MII->second;
-
-          // For each dependant, transfer this node's emitted dependencies to
-          // it. If the dependant node is ready (i.e. has no unemitted
-          // dependencies) then notify any pending queries.
-          for (auto &KV : MI.Dependants) {
-            auto &DependantJD = *KV.first;
-            auto &DependantJDReadySymbols = ReadySymbols[&DependantJD];
-            for (auto &DependantName : KV.second) {
-              auto DependantMII =
-                  DependantJD.MaterializingInfos.find(DependantName);
-              assert(DependantMII != DependantJD.MaterializingInfos.end() &&
-                     "Dependant should have MaterializingInfo");
-
-              auto &DependantMI = DependantMII->second;
-
-              // Remove the dependant's dependency on this node.
-              assert(DependantMI.UnemittedDependencies.count(this) &&
-                     "Dependant does not have an unemitted dependencies record "
-                     "for "
-                     "this JITDylib");
-              assert(DependantMI.UnemittedDependencies[this].count(Name) &&
-                     "Dependant does not count this symbol as a dependency?");
-
-              DependantMI.UnemittedDependencies[this].erase(Name);
-              if (DependantMI.UnemittedDependencies[this].empty())
-                DependantMI.UnemittedDependencies.erase(this);
-
-              // Transfer unemitted dependencies from this node to the
-              // dependant.
-              DependantJD.transferEmittedNodeDependencies(DependantMI,
-                                                          DependantName, MI);
-
-              auto DependantSymI = DependantJD.Symbols.find(DependantName);
-              assert(DependantSymI != DependantJD.Symbols.end() &&
-                     "Dependant has no entry in the Symbols table");
-              auto &DependantSymEntry = DependantSymI->second;
-
-              // If the dependant is emitted and this node was the last of its
-              // unemitted dependencies then the dependant node is now ready, so
-              // notify any pending queries on the dependant node.
-              if (DependantSymEntry.getState() == SymbolState::Emitted &&
-                  DependantMI.UnemittedDependencies.empty()) {
-                assert(DependantMI.Dependants.empty() &&
-                       "Dependants should be empty by now");
-
-                // Since this dependant is now ready, we erase its
-                // MaterializingInfo and update its materializing state.
-                DependantSymEntry.setState(SymbolState::Ready);
-                DependantJDReadySymbols.push_back(DependantName);
-
-                for (auto &Q :
-                     DependantMI.takeQueriesMeeting(SymbolState::Ready)) {
-                  Q->notifySymbolMetRequiredState(
-                      DependantName, DependantSymI->second.getSymbol());
-                  if (Q->isComplete())
-                    CompletedQueries.insert(Q);
-                  Q->removeQueryDependence(DependantJD, DependantName);
-                }
-                DependantJD.MaterializingInfos.erase(DependantMII);
-              }
-            }
-          }
-
-          auto &ThisJDReadySymbols = ReadySymbols[this];
-          MI.Dependants.clear();
-          if (MI.UnemittedDependencies.empty()) {
-            SymI->second.setState(SymbolState::Ready);
-            ThisJDReadySymbols.push_back(Name);
-            for (auto &Q : MI.takeQueriesMeeting(SymbolState::Ready)) {
-              Q->notifySymbolMetRequiredState(Name, SymI->second.getSymbol());
-              if (Q->isComplete())
-                CompletedQueries.insert(Q);
-              Q->removeQueryDependence(*this, Name);
-            }
-            MaterializingInfos.erase(MII);
-          }
-        }
-
-        return Error::success();
-      }))
-    return Err;
-
-  // Otherwise notify all the completed queries.
-  for (auto &Q : CompletedQueries) {
-    assert(Q->isComplete() && "Q is not complete");
-    Q->handleComplete(ES);
-  }
-
-  return Error::success();
-}
-
 void JITDylib::unlinkMaterializationResponsibility(
     MaterializationResponsibility &MR) {
   ES.runSessionLocked([&]() {
@@ -1215,123 +1000,6 @@ void JITDylib::unlinkMaterializationResponsibility(
     if (I->second.empty())
       TrackerMRs.erase(MR.RT.get());
   });
-}
-
-std::pair<JITDylib::AsynchronousSymbolQuerySet,
-          std::shared_ptr<SymbolDependenceMap>>
-JITDylib::failSymbols(FailedSymbolsWorklist Worklist) {
-  AsynchronousSymbolQuerySet FailedQueries;
-  auto FailedSymbolsMap = std::make_shared<SymbolDependenceMap>();
-
-  while (!Worklist.empty()) {
-    assert(Worklist.back().first && "Failed JITDylib can not be null");
-    auto &JD = *Worklist.back().first;
-    auto Name = std::move(Worklist.back().second);
-    Worklist.pop_back();
-
-    (*FailedSymbolsMap)[&JD].insert(Name);
-
-    // Look up the symbol to fail.
-    auto SymI = JD.Symbols.find(Name);
-
-    // It's possible that this symbol has already been removed, e.g. if a
-    // materialization failure happens concurrently with a ResourceTracker or
-    // JITDylib removal. In that case we can safely skip this symbol and
-    // continue.
-    if (SymI == JD.Symbols.end())
-      continue;
-    auto &Sym = SymI->second;
-
-    // Move the symbol into the error state.
-    // Note that this may be redundant: The symbol might already have been
-    // moved to this state in response to the failure of a dependence.
-    Sym.setFlags(Sym.getFlags() | JITSymbolFlags::HasError);
-
-    // FIXME: Come up with a sane mapping of state to
-    // presence-of-MaterializingInfo so that we can assert presence / absence
-    // here, rather than testing it.
-    auto MII = JD.MaterializingInfos.find(Name);
-
-    if (MII == JD.MaterializingInfos.end())
-      continue;
-
-    auto &MI = MII->second;
-
-    // Move all dependants to the error state and disconnect from them.
-    for (auto &KV : MI.Dependants) {
-      auto &DependantJD = *KV.first;
-      for (auto &DependantName : KV.second) {
-        assert(DependantJD.Symbols.count(DependantName) &&
-               "No symbol table entry for DependantName");
-        auto &DependantSym = DependantJD.Symbols[DependantName];
-        DependantSym.setFlags(DependantSym.getFlags() |
-                              JITSymbolFlags::HasError);
-
-        assert(DependantJD.MaterializingInfos.count(DependantName) &&
-               "No MaterializingInfo for dependant");
-        auto &DependantMI = DependantJD.MaterializingInfos[DependantName];
-
-        auto UnemittedDepI = DependantMI.UnemittedDependencies.find(&JD);
-        assert(UnemittedDepI != DependantMI.UnemittedDependencies.end() &&
-               "No UnemittedDependencies entry for this JITDylib");
-        assert(UnemittedDepI->second.count(Name) &&
-               "No UnemittedDependencies entry for this symbol");
-        UnemittedDepI->second.erase(Name);
-        if (UnemittedDepI->second.empty())
-          DependantMI.UnemittedDependencies.erase(UnemittedDepI);
-
-        // If this symbol is already in the emitted state then we need to
-        // take responsibility for failing its queries, so add it to the
-        // worklist.
-        if (DependantSym.getState() == SymbolState::Emitted) {
-          assert(DependantMI.Dependants.empty() &&
-                 "Emitted symbol should not have dependants");
-          Worklist.push_back(std::make_pair(&DependantJD, DependantName));
-        }
-      }
-    }
-    MI.Dependants.clear();
-
-    // Disconnect from all unemitted depenencies.
-    for (auto &KV : MI.UnemittedDependencies) {
-      auto &UnemittedDepJD = *KV.first;
-      for (auto &UnemittedDepName : KV.second) {
-        auto UnemittedDepMII =
-            UnemittedDepJD.MaterializingInfos.find(UnemittedDepName);
-        assert(UnemittedDepMII != UnemittedDepJD.MaterializingInfos.end() &&
-               "Missing MII for unemitted dependency");
-        assert(UnemittedDepMII->second.Dependants.count(&JD) &&
-               "JD not listed as a dependant of unemitted dependency");
-        assert(UnemittedDepMII->second.Dependants[&JD].count(Name) &&
-               "Name is not listed as a dependant of unemitted dependency");
-        UnemittedDepMII->second.Dependants[&JD].erase(Name);
-        if (UnemittedDepMII->second.Dependants[&JD].empty())
-          UnemittedDepMII->second.Dependants.erase(&JD);
-      }
-    }
-    MI.UnemittedDependencies.clear();
-
-    // Collect queries to be failed for this MII.
-    AsynchronousSymbolQueryList ToDetach;
-    for (auto &Q : MII->second.pendingQueries()) {
-      // Add the query to the list to be failed and detach it.
-      FailedQueries.insert(Q);
-      ToDetach.push_back(Q);
-    }
-    for (auto &Q : ToDetach)
-      Q->detach();
-
-    assert(MI.Dependants.empty() &&
-           "Can not delete MaterializingInfo with dependants still attached");
-    assert(MI.UnemittedDependencies.empty() &&
-           "Can not delete MaterializingInfo with unemitted dependencies "
-           "still attached");
-    assert(!MI.hasQueriesPending() &&
-           "Can not delete MaterializingInfo with queries pending");
-    JD.MaterializingInfos.erase(MII);
-  }
-
-  return std::make_pair(std::move(FailedQueries), std::move(FailedSymbolsMap));
 }
 
 void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
@@ -1353,7 +1021,7 @@ void JITDylib::addToLinkOrder(const JITDylibSearchOrder &NewLinks) {
   ES.runSessionLocked([&]() {
     for (auto &KV : NewLinks) {
       // Skip elements of NewLinks that are already in the link order.
-      if (llvm::find(LinkOrder, KV) != LinkOrder.end())
+      if (llvm::is_contained(LinkOrder, KV))
         continue;
 
       LinkOrder.push_back(std::move(KV));
@@ -1504,16 +1172,38 @@ void JITDylib::dump(raw_ostream &OS) {
          << " pending queries: { ";
       for (const auto &Q : KV.second.pendingQueries())
         OS << Q.get() << " (" << Q->getRequiredState() << ") ";
-      OS << "}\n      Dependants:\n";
-      for (auto &KV2 : KV.second.Dependants)
-        OS << "        " << KV2.first->getName() << ": " << KV2.second << "\n";
-      OS << "      Unemitted Dependencies:\n";
-      for (auto &KV2 : KV.second.UnemittedDependencies)
-        OS << "        " << KV2.first->getName() << ": " << KV2.second << "\n";
+      OS << "}\n      Defining EDU: ";
+      if (KV.second.DefiningEDU) {
+        OS << KV.second.DefiningEDU.get() << " { ";
+        for (auto &[Name, Flags] : KV.second.DefiningEDU->Symbols)
+          OS << Name << " ";
+        OS << "}\n";
+        OS << "        Dependencies:\n";
+        if (!KV.second.DefiningEDU->Dependencies.empty()) {
+          for (auto &[DepJD, Deps] : KV.second.DefiningEDU->Dependencies) {
+            OS << "          " << DepJD->getName() << ": [ ";
+            for (auto &Dep : Deps)
+              OS << Dep << " ";
+            OS << "]\n";
+          }
+        } else
+          OS << "          none\n";
+      } else
+        OS << "none\n";
+      OS << "      Dependant EDUs:\n";
+      if (!KV.second.DependantEDUs.empty()) {
+        for (auto &DependantEDU : KV.second.DependantEDUs) {
+          OS << "        " << DependantEDU << ": "
+             << DependantEDU->JD->getName() << " { ";
+          for (auto &[Name, Flags] : DependantEDU->Symbols)
+            OS << Name << " ";
+          OS << "}\n";
+        }
+      } else
+        OS << "        none\n";
       assert((Symbols[KV.first].getState() != SymbolState::Ready ||
-              !KV.second.pendingQueries().empty() ||
-              !KV.second.Dependants.empty() ||
-              !KV.second.UnemittedDependencies.empty()) &&
+              (KV.second.pendingQueries().empty() && !KV.second.DefiningEDU &&
+               !KV.second.DependantEDUs.empty())) &&
              "Stale materializing info entry");
     }
   });
@@ -1568,7 +1258,7 @@ JITDylib::removeTracker(ResourceTracker &RT) {
   assert(State != Closed && "JD is defunct");
 
   SymbolNameVector SymbolsToRemove;
-  std::vector<std::pair<JITDylib *, SymbolStringPtr>> SymbolsToFail;
+  SymbolNameVector SymbolsToFail;
 
   if (&RT == DefaultTracker.get()) {
     SymbolNameSet TrackedSymbols;
@@ -1599,11 +1289,12 @@ JITDylib::removeTracker(ResourceTracker &RT) {
     // If there is a MaterializingInfo then collect any queries to fail.
     auto MII = MaterializingInfos.find(Sym);
     if (MII != MaterializingInfos.end())
-      SymbolsToFail.push_back({this, Sym});
+      SymbolsToFail.push_back(Sym);
   }
 
   AsynchronousSymbolQuerySet QueriesToFail;
-  auto Result = failSymbols(std::move(SymbolsToFail));
+  auto Result = ES.runSessionLocked(
+      [&]() { return ES.IL_failSymbols(*this, std::move(SymbolsToFail)); });
 
   // Removed symbols should be taken out of the table altogether.
   for (auto &Sym : SymbolsToRemove) {
@@ -1790,32 +1481,6 @@ void JITDylib::detachQueryHelper(AsynchronousSymbolQuery &Q,
            "QuerySymbol does not have MaterializingInfo");
     auto &MI = MaterializingInfos[QuerySymbol];
     MI.removeQuery(Q);
-  }
-}
-
-void JITDylib::transferEmittedNodeDependencies(
-    MaterializingInfo &DependantMI, const SymbolStringPtr &DependantName,
-    MaterializingInfo &EmittedMI) {
-  for (auto &KV : EmittedMI.UnemittedDependencies) {
-    auto &DependencyJD = *KV.first;
-    SymbolNameSet *UnemittedDependenciesOnDependencyJD = nullptr;
-
-    for (auto &DependencyName : KV.second) {
-      auto &DependencyMI = DependencyJD.MaterializingInfos[DependencyName];
-
-      // Do not add self dependencies.
-      if (&DependencyMI == &DependantMI)
-        continue;
-
-      // If we haven't looked up the dependencies for DependencyJD yet, do it
-      // now and cache the result.
-      if (!UnemittedDependenciesOnDependencyJD)
-        UnemittedDependenciesOnDependencyJD =
-            &DependantMI.UnemittedDependencies[&DependencyJD];
-
-      DependencyMI.Dependants[this].insert(DependantName);
-      UnemittedDependenciesOnDependencyJD->insert(DependencyName);
-    }
   }
 }
 
@@ -3034,16 +2699,588 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
   return MR.JD.resolve(MR, Symbols);
 }
 
-Error ExecutionSession::OL_notifyEmitted(MaterializationResponsibility &MR) {
+template <typename HandleNewDepFn>
+void ExecutionSession::propagateExtraEmitDeps(
+    std::deque<JITDylib::EmissionDepUnit *> Worklist, EDUInfosMap &EDUInfos,
+    HandleNewDepFn HandleNewDep) {
+
+  // Iterate to a fixed-point to propagate extra-emit dependencies through the
+  // EDU graph.
+  while (!Worklist.empty()) {
+    auto &EDU = *Worklist.front();
+    Worklist.pop_front();
+
+    assert(EDUInfos.count(&EDU) && "No info entry for EDU");
+    auto &EDUInfo = EDUInfos[&EDU];
+
+    // Propagate new dependencies to users.
+    for (auto *UserEDU : EDUInfo.IntraEmitUsers) {
+
+      // UserEDUInfo only present if UserEDU has its own users.
+      JITDylib::EmissionDepUnitInfo *UserEDUInfo = nullptr;
+      {
+        auto UserEDUInfoItr = EDUInfos.find(UserEDU);
+        if (UserEDUInfoItr != EDUInfos.end())
+          UserEDUInfo = &UserEDUInfoItr->second;
+      }
+
+      for (auto &[DepJD, Deps] : EDUInfo.NewDeps) {
+        auto &UserEDUDepsForJD = UserEDU->Dependencies[DepJD];
+        DenseSet<NonOwningSymbolStringPtr> *UserEDUNewDepsForJD = nullptr;
+        for (auto Dep : Deps) {
+          if (UserEDUDepsForJD.insert(Dep).second) {
+            HandleNewDep(*UserEDU, *DepJD, Dep);
+            if (UserEDUInfo) {
+              if (!UserEDUNewDepsForJD) {
+                // If UserEDU has no new deps then it's not in the worklist
+                // yet, so add it.
+                if (UserEDUInfo->NewDeps.empty())
+                  Worklist.push_back(UserEDU);
+                UserEDUNewDepsForJD = &UserEDUInfo->NewDeps[DepJD];
+              }
+              // Add (DepJD, Dep) to NewDeps.
+              UserEDUNewDepsForJD->insert(Dep);
+            }
+          }
+        }
+      }
+    }
+
+    EDUInfo.NewDeps.clear();
+  }
+}
+
+// Note: This method modifies the emitted set.
+ExecutionSession::EDUInfosMap ExecutionSession::simplifyDepGroups(
+    MaterializationResponsibility &MR,
+    ArrayRef<SymbolDependenceGroup> EmittedDeps) {
+
+  auto &TargetJD = MR.getTargetJITDylib();
+
+  // 1. Build initial EmissionDepUnit -> EmissionDepUnitInfo and
+  //    Symbol -> EmissionDepUnit mappings.
+  DenseMap<JITDylib::EmissionDepUnit *, JITDylib::EmissionDepUnitInfo> EDUInfos;
+  EDUInfos.reserve(EmittedDeps.size());
+  DenseMap<NonOwningSymbolStringPtr, JITDylib::EmissionDepUnit *> EDUForSymbol;
+  for (auto &DG : EmittedDeps) {
+    assert(!DG.Symbols.empty() && "DepGroup does not cover any symbols");
+
+    // Skip empty EDUs.
+    if (DG.Dependencies.empty())
+      continue;
+
+    auto TmpEDU = std::make_shared<JITDylib::EmissionDepUnit>(TargetJD);
+    auto &EDUInfo = EDUInfos[TmpEDU.get()];
+    EDUInfo.EDU = std::move(TmpEDU);
+    for (const auto &Symbol : DG.Symbols) {
+      NonOwningSymbolStringPtr NonOwningSymbol(Symbol);
+      assert(!EDUForSymbol.count(NonOwningSymbol) &&
+             "Symbol should not appear in more than one SymbolDependenceGroup");
+      assert(MR.getSymbols().count(Symbol) &&
+             "Symbol in DepGroups not in the emitted set");
+      auto NewlyEmittedItr = MR.getSymbols().find(Symbol);
+      EDUInfo.EDU->Symbols[NonOwningSymbol] = NewlyEmittedItr->second;
+      EDUForSymbol[NonOwningSymbol] = EDUInfo.EDU.get();
+    }
+  }
+
+  // 2. Build a "residual" EDU to cover all symbols that have no dependencies.
+  {
+    DenseMap<NonOwningSymbolStringPtr, JITSymbolFlags> ResidualSymbolFlags;
+    for (auto &[Sym, Flags] : MR.getSymbols()) {
+      if (!EDUForSymbol.count(NonOwningSymbolStringPtr(Sym)))
+        ResidualSymbolFlags[NonOwningSymbolStringPtr(Sym)] = Flags;
+    }
+    if (!ResidualSymbolFlags.empty()) {
+      auto ResidualEDU = std::make_shared<JITDylib::EmissionDepUnit>(TargetJD);
+      ResidualEDU->Symbols = std::move(ResidualSymbolFlags);
+      auto &ResidualEDUInfo = EDUInfos[ResidualEDU.get()];
+      ResidualEDUInfo.EDU = std::move(ResidualEDU);
+
+      // If the residual EDU is the only one then bail out early.
+      if (EDUInfos.size() == 1)
+        return EDUInfos;
+
+      // Otherwise add the residual EDU to the EDUForSymbol map.
+      for (auto &[Sym, Flags] : ResidualEDUInfo.EDU->Symbols)
+        EDUForSymbol[Sym] = ResidualEDUInfo.EDU.get();
+    }
+  }
+
+#ifndef NDEBUG
+  assert(EDUForSymbol.size() == MR.getSymbols().size() &&
+         "MR symbols not fully covered by EDUs?");
+  for (auto &[Sym, Flags] : MR.getSymbols()) {
+    assert(EDUForSymbol.count(NonOwningSymbolStringPtr(Sym)) &&
+           "Sym in MR not covered by EDU");
+  }
+#endif // NDEBUG
+
+  // 3. Use the DepGroups array to build a graph of dependencies between
+  //    EmissionDepUnits in this finalization. We want to remove these
+  //    intra-finalization uses, propagating dependencies on symbols outside
+  //    this finalization. Add EDUs to the worklist.
+  for (auto &DG : EmittedDeps) {
+
+    // Skip SymbolDependenceGroups with no dependencies.
+    if (DG.Dependencies.empty())
+      continue;
+
+    assert(EDUForSymbol.count(NonOwningSymbolStringPtr(*DG.Symbols.begin())) &&
+           "No EDU for DG");
+    auto &EDU =
+        *EDUForSymbol.find(NonOwningSymbolStringPtr(*DG.Symbols.begin()))
+             ->second;
+
+    for (auto &[DepJD, Deps] : DG.Dependencies) {
+      DenseSet<NonOwningSymbolStringPtr> NewDepsForJD;
+
+      assert(!Deps.empty() && "Dependence set for DepJD is empty");
+
+      if (DepJD != &TargetJD) {
+        // DepJD is some other JITDylib.There can't be any intra-finalization
+        // edges here, so just skip.
+        for (auto &Dep : Deps)
+          NewDepsForJD.insert(NonOwningSymbolStringPtr(Dep));
+      } else {
+        // DepJD is the Target JITDylib. Check for intra-finaliztaion edges,
+        // skipping any and recording the intra-finalization use instead.
+        for (auto &Dep : Deps) {
+          NonOwningSymbolStringPtr NonOwningDep(Dep);
+          auto I = EDUForSymbol.find(NonOwningDep);
+          if (I == EDUForSymbol.end()) {
+            if (!MR.getSymbols().count(Dep))
+              NewDepsForJD.insert(NonOwningDep);
+            continue;
+          }
+
+          if (I->second != &EDU)
+            EDUInfos[I->second].IntraEmitUsers.insert(&EDU);
+        }
+      }
+
+      if (!NewDepsForJD.empty())
+        EDU.Dependencies[DepJD] = std::move(NewDepsForJD);
+    }
+  }
+
+  // 4. Build the worklist.
+  std::deque<JITDylib::EmissionDepUnit *> Worklist;
+  for (auto &[EDU, EDUInfo] : EDUInfos) {
+    // If this EDU has extra-finalization dependencies and intra-finalization
+    // users then add it to the worklist.
+    if (!EDU->Dependencies.empty()) {
+      auto I = EDUInfos.find(EDU);
+      if (I != EDUInfos.end()) {
+        auto &EDUInfo = I->second;
+        if (!EDUInfo.IntraEmitUsers.empty()) {
+          EDUInfo.NewDeps = EDU->Dependencies;
+          Worklist.push_back(EDU);
+        }
+      }
+    }
+  }
+
+  // 4. Propagate dependencies through the EDU graph.
+  propagateExtraEmitDeps(
+      Worklist, EDUInfos,
+      [](JITDylib::EmissionDepUnit &, JITDylib &, NonOwningSymbolStringPtr) {});
+
+  return EDUInfos;
+}
+
+void ExecutionSession::IL_makeEDUReady(
+    std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
+    JITDylib::AsynchronousSymbolQuerySet &Queries) {
+
+  // The symbols for this EDU are ready.
+  auto &JD = *EDU->JD;
+
+  for (auto &[Sym, Flags] : EDU->Symbols) {
+    assert(JD.Symbols.count(SymbolStringPtr(Sym)) &&
+           "JD does not have an entry for Sym");
+    auto &Entry = JD.Symbols[SymbolStringPtr(Sym)];
+
+    assert(((Entry.getFlags().hasMaterializationSideEffectsOnly() &&
+             Entry.getState() == SymbolState::Materializing) ||
+            Entry.getState() == SymbolState::Resolved ||
+            Entry.getState() == SymbolState::Emitted) &&
+           "Emitting from state other than Resolved");
+
+    Entry.setState(SymbolState::Ready);
+
+    auto MII = JD.MaterializingInfos.find(SymbolStringPtr(Sym));
+
+    // Check for pending queries.
+    if (MII == JD.MaterializingInfos.end())
+      continue;
+    auto &MI = MII->second;
+
+    for (auto &Q : MI.takeQueriesMeeting(SymbolState::Ready)) {
+      Q->notifySymbolMetRequiredState(SymbolStringPtr(Sym), Entry.getSymbol());
+      if (Q->isComplete())
+        Queries.insert(Q);
+      Q->removeQueryDependence(JD, SymbolStringPtr(Sym));
+    }
+
+    JD.MaterializingInfos.erase(MII);
+  }
+}
+
+void ExecutionSession::IL_makeEDUEmitted(
+    std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
+    JITDylib::AsynchronousSymbolQuerySet &Queries) {
+
+  // The symbols for this EDU are emitted, but not ready.
+  auto &JD = *EDU->JD;
+
+  for (auto &[Sym, Flags] : EDU->Symbols) {
+    assert(JD.Symbols.count(SymbolStringPtr(Sym)) &&
+           "JD does not have an entry for Sym");
+    auto &Entry = JD.Symbols[SymbolStringPtr(Sym)];
+
+    assert(((Entry.getFlags().hasMaterializationSideEffectsOnly() &&
+             Entry.getState() == SymbolState::Materializing) ||
+            Entry.getState() == SymbolState::Resolved ||
+            Entry.getState() == SymbolState::Emitted) &&
+           "Emitting from state other than Resolved");
+
+    if (Entry.getState() == SymbolState::Emitted) {
+      // This was already emitted, so we can skip the rest of this loop.
+#ifndef NDEBUG
+      for (auto &[Sym, Flags] : EDU->Symbols) {
+        assert(JD.Symbols.count(SymbolStringPtr(Sym)) &&
+               "JD does not have an entry for Sym");
+        auto &Entry = JD.Symbols[SymbolStringPtr(Sym)];
+        assert(Entry.getState() == SymbolState::Emitted &&
+               "Symbols for EDU in inconsistent state");
+        assert(JD.MaterializingInfos.count(SymbolStringPtr(Sym)) &&
+               "Emitted symbol has no MI");
+        auto MI = JD.MaterializingInfos[SymbolStringPtr(Sym)];
+        assert(MI.takeQueriesMeeting(SymbolState::Emitted).empty() &&
+               "Already-emitted symbol has waiting-on-emitted queries");
+      }
+#endif // NDEBUG
+      break;
+    }
+
+    Entry.setState(SymbolState::Emitted);
+    auto &MI = JD.MaterializingInfos[SymbolStringPtr(Sym)];
+    MI.DefiningEDU = EDU;
+
+    for (auto &Q : MI.takeQueriesMeeting(SymbolState::Emitted)) {
+      Q->notifySymbolMetRequiredState(SymbolStringPtr(Sym), Entry.getSymbol());
+      if (Q->isComplete())
+        Queries.insert(Q);
+      Q->removeQueryDependence(JD, SymbolStringPtr(Sym));
+    }
+  }
+
+  for (auto &[DepJD, Deps] : EDU->Dependencies) {
+    for (auto &Dep : Deps)
+      DepJD->MaterializingInfos[SymbolStringPtr(Dep)].DependantEDUs.insert(
+          EDU.get());
+  }
+}
+
+/// Removes the given dependence from EDU. If EDU's dependence set becomes
+/// empty then this function adds an entry for it to the EDUInfos map.
+/// Returns true if a new EDUInfosMap entry is added.
+bool ExecutionSession::IL_removeEDUDependence(JITDylib::EmissionDepUnit &EDU,
+                                              JITDylib &DepJD,
+                                              NonOwningSymbolStringPtr DepSym,
+                                              EDUInfosMap &EDUInfos) {
+  assert(EDU.Dependencies.count(&DepJD) &&
+         "JD does not appear in Dependencies of DependantEDU");
+  assert(EDU.Dependencies[&DepJD].count(DepSym) &&
+         "Symbol does not appear in Dependencies of DependantEDU");
+  auto &JDDeps = EDU.Dependencies[&DepJD];
+  JDDeps.erase(DepSym);
+  if (JDDeps.empty()) {
+    EDU.Dependencies.erase(&DepJD);
+    if (EDU.Dependencies.empty()) {
+      // If the dependencies set has become empty then EDU _may_ be ready
+      // (we won't know for sure until we've propagated the extra-emit deps).
+      // Create an EDUInfo for it (if it doesn't have one already) so that
+      // it'll be visited after propagation.
+      auto &DepEDUInfo = EDUInfos[&EDU];
+      if (!DepEDUInfo.EDU) {
+        assert(EDU.JD->Symbols.count(
+                   SymbolStringPtr(EDU.Symbols.begin()->first)) &&
+               "Missing symbol entry for first symbol in EDU");
+        auto DepEDUFirstMI = EDU.JD->MaterializingInfos.find(
+            SymbolStringPtr(EDU.Symbols.begin()->first));
+        assert(DepEDUFirstMI != EDU.JD->MaterializingInfos.end() &&
+               "Missing MI for first symbol in DependantEDU");
+        DepEDUInfo.EDU = DepEDUFirstMI->second.DefiningEDU;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+Error ExecutionSession::makeJDClosedError(JITDylib::EmissionDepUnit &EDU,
+                                          JITDylib &ClosedJD) {
+  SymbolNameSet FailedSymbols;
+  for (auto &[Sym, Flags] : EDU.Symbols)
+    FailedSymbols.insert(SymbolStringPtr(Sym));
+  SymbolDependenceMap BadDeps;
+  for (auto &Dep : EDU.Dependencies[&ClosedJD])
+    BadDeps[&ClosedJD].insert(SymbolStringPtr(Dep));
+  return make_error<UnsatisfiedSymbolDependencies>(
+      ClosedJD.getExecutionSession().getSymbolStringPool(), EDU.JD,
+      std::move(FailedSymbols), std::move(BadDeps),
+      ClosedJD.getName() + " is closed");
+}
+
+Error ExecutionSession::makeUnsatisfiedDepsError(JITDylib::EmissionDepUnit &EDU,
+                                                 JITDylib &BadJD,
+                                                 SymbolNameSet BadDeps) {
+  SymbolNameSet FailedSymbols;
+  for (auto &[Sym, Flags] : EDU.Symbols)
+    FailedSymbols.insert(SymbolStringPtr(Sym));
+  SymbolDependenceMap BadDepsMap;
+  BadDepsMap[&BadJD] = std::move(BadDeps);
+  return make_error<UnsatisfiedSymbolDependencies>(
+      BadJD.getExecutionSession().getSymbolStringPool(), &BadJD,
+      std::move(FailedSymbols), std::move(BadDepsMap),
+      "dependencies removed or in error state");
+}
+
+Expected<JITDylib::AsynchronousSymbolQuerySet>
+ExecutionSession::IL_emit(MaterializationResponsibility &MR,
+                          EDUInfosMap EDUInfos) {
+
+  if (MR.RT->isDefunct())
+    return make_error<ResourceTrackerDefunct>(MR.RT);
+
+  auto &TargetJD = MR.getTargetJITDylib();
+  if (TargetJD.State != JITDylib::Open)
+    return make_error<StringError>("JITDylib " + TargetJD.getName() +
+                                       " is defunct",
+                                   inconvertibleErrorCode());
+
+  // Walk all EDUs:
+  // 1. Verifying that dependencies are available (not removed or in the error
+  //    state.
+  // 2. Removing any dependencies that are already Ready.
+  // 3. Lifting any EDUs for Emitted symbols into the EDUInfos map.
+  // 4. Finding any dependant EDUs and lifting them into the EDUInfos map.
+  std::deque<JITDylib::EmissionDepUnit *> Worklist;
+  for (auto &[EDU, _] : EDUInfos)
+    Worklist.push_back(EDU);
+
+  for (auto *EDU : Worklist) {
+    auto *EDUInfo = &EDUInfos[EDU];
+
+    SmallVector<JITDylib *> DepJDsToRemove;
+    for (auto &[DepJD, Deps] : EDU->Dependencies) {
+      if (DepJD->State != JITDylib::Open)
+        return makeJDClosedError(*EDU, *DepJD);
+
+      SymbolNameSet BadDeps;
+      SmallVector<NonOwningSymbolStringPtr> DepsToRemove;
+      for (auto &Dep : Deps) {
+        auto DepEntryItr = DepJD->Symbols.find(SymbolStringPtr(Dep));
+
+        // If this dep has been removed or moved to the error state then add it
+        // to the bad deps set. We aggregate these bad deps for more
+        // comprehensive error messages.
+        if (DepEntryItr == DepJD->Symbols.end() ||
+            DepEntryItr->second.getFlags().hasError()) {
+          BadDeps.insert(SymbolStringPtr(Dep));
+          continue;
+        }
+
+        // If this dep isn't emitted yet then just add it to the NewDeps set to
+        // be propagated.
+        auto &DepEntry = DepEntryItr->second;
+        if (DepEntry.getState() < SymbolState::Emitted) {
+          EDUInfo->NewDeps[DepJD].insert(Dep);
+          continue;
+        }
+
+        // This dep has been emitted, so add it to the list to be removed from
+        // EDU.
+        DepsToRemove.push_back(Dep);
+
+        // If Dep is Ready then there's nothing further to do.
+        if (DepEntry.getState() == SymbolState::Ready) {
+          assert(!DepJD->MaterializingInfos.count(SymbolStringPtr(Dep)) &&
+                 "Unexpected MaterializationInfo attached to ready symbol");
+          continue;
+        }
+
+        // If we get here thene Dep is Emitted. We need to look up its defining
+        // EDU and add this EDU to the defining EDU's list of users (this means
+        // creating an EDUInfos entry if the defining EDU doesn't have one
+        // already).
+        assert(DepJD->MaterializingInfos.count(SymbolStringPtr(Dep)) &&
+               "Expected MaterializationInfo for emitted dependency");
+        auto &DepMI = DepJD->MaterializingInfos[SymbolStringPtr(Dep)];
+        assert(DepMI.DefiningEDU &&
+               "Emitted symbol does not have a defining EDU");
+        assert(!DepMI.DefiningEDU->Dependencies.empty() &&
+               "Emitted symbol has empty dependencies (should be ready)");
+        assert(DepMI.DependantEDUs.empty() &&
+               "Already-emitted symbol has dependant EDUs?");
+        auto &DepEDUInfo = EDUInfos[DepMI.DefiningEDU.get()];
+        if (!DepEDUInfo.EDU) {
+          // No EDUInfo yet -- build initial entry, and reset the EDUInfo
+          // pointer, which we will have invalidated.
+          EDUInfo = &EDUInfos[EDU];
+          DepEDUInfo.EDU = DepMI.DefiningEDU;
+          for (auto &[DepDepJD, DepDeps] : DepEDUInfo.EDU->Dependencies) {
+            if (DepDepJD == &TargetJD) {
+              for (auto &DepDep : DepDeps)
+                if (!MR.getSymbols().count(SymbolStringPtr(DepDep)))
+                  DepEDUInfo.NewDeps[DepDepJD].insert(DepDep);
+            } else
+              DepEDUInfo.NewDeps[DepDepJD] = DepDeps;
+          }
+        }
+        DepEDUInfo.IntraEmitUsers.insert(EDU);
+      }
+
+      // Some dependencies were removed or in an error state -- error out.
+      if (!BadDeps.empty())
+        return makeUnsatisfiedDepsError(*EDU, *DepJD, std::move(BadDeps));
+
+      // Remove the emitted / ready deps from DepJD.
+      for (auto &Dep : DepsToRemove)
+        Deps.erase(Dep);
+
+      // If there are no further deps in DepJD then flag it for removal too.
+      if (Deps.empty())
+        DepJDsToRemove.push_back(DepJD);
+    }
+
+    // Remove any JDs whose dependence sets have become empty.
+    for (auto &DepJD : DepJDsToRemove) {
+      assert(EDU->Dependencies.count(DepJD) &&
+             "Trying to remove non-existent dep entries");
+      EDU->Dependencies.erase(DepJD);
+    }
+
+    // Now look for users of this EDU.
+    for (auto &[Sym, Flags] : EDU->Symbols) {
+      assert(TargetJD.Symbols.count(SymbolStringPtr(Sym)) &&
+             "Sym not present in symbol table");
+      assert((TargetJD.Symbols[SymbolStringPtr(Sym)].getState() ==
+                  SymbolState::Resolved ||
+              TargetJD.Symbols[SymbolStringPtr(Sym)]
+                  .getFlags()
+                  .hasMaterializationSideEffectsOnly()) &&
+             "Emitting symbol not in the resolved state");
+      assert(!TargetJD.Symbols[SymbolStringPtr(Sym)].getFlags().hasError() &&
+             "Symbol is already in an error state");
+
+      auto MII = TargetJD.MaterializingInfos.find(SymbolStringPtr(Sym));
+      if (MII == TargetJD.MaterializingInfos.end() ||
+          MII->second.DependantEDUs.empty())
+        continue;
+
+      for (auto &DependantEDU : MII->second.DependantEDUs) {
+        if (IL_removeEDUDependence(*DependantEDU, TargetJD, Sym, EDUInfos))
+          EDUInfo = &EDUInfos[EDU];
+        EDUInfo->IntraEmitUsers.insert(DependantEDU);
+      }
+      MII->second.DependantEDUs.clear();
+    }
+  }
+
+  Worklist.clear();
+  for (auto &[EDU, EDUInfo] : EDUInfos) {
+    if (!EDUInfo.IntraEmitUsers.empty() && !EDU->Dependencies.empty()) {
+      if (EDUInfo.NewDeps.empty())
+        EDUInfo.NewDeps = EDU->Dependencies;
+      Worklist.push_back(EDU);
+    }
+  }
+
+  propagateExtraEmitDeps(
+      Worklist, EDUInfos,
+      [](JITDylib::EmissionDepUnit &EDU, JITDylib &JD,
+         NonOwningSymbolStringPtr Sym) {
+        JD.MaterializingInfos[SymbolStringPtr(Sym)].DependantEDUs.insert(&EDU);
+      });
+
+  JITDylib::AsynchronousSymbolQuerySet CompletedQueries;
+
+  // Extract completed queries and lodge not-yet-ready EDUs in the
+  // session.
+  for (auto &[EDU, EDUInfo] : EDUInfos) {
+    if (EDU->Dependencies.empty())
+      IL_makeEDUReady(std::move(EDUInfo.EDU), CompletedQueries);
+    else
+      IL_makeEDUEmitted(std::move(EDUInfo.EDU), CompletedQueries);
+  }
+
+  return std::move(CompletedQueries);
+}
+
+Error ExecutionSession::OL_notifyEmitted(
+    MaterializationResponsibility &MR,
+    ArrayRef<SymbolDependenceGroup> DepGroups) {
   LLVM_DEBUG({
     dbgs() << "In " << MR.JD.getName() << " emitting " << MR.SymbolFlags
            << "\n";
+    if (!DepGroups.empty()) {
+      dbgs() << "  Initial dependencies:\n";
+      for (auto &SDG : DepGroups) {
+        dbgs() << "    Symbols: " << SDG.Symbols
+               << ", Dependencies: " << SDG.Dependencies << "\n";
+      }
+    }
   });
 
-  if (auto Err = MR.JD.emit(MR, MR.SymbolFlags))
-    return Err;
+#ifndef NDEBUG
+  SymbolNameSet Visited;
+  for (auto &DG : DepGroups) {
+    for (auto &Sym : DG.Symbols) {
+      assert(MR.SymbolFlags.count(Sym) &&
+             "DG contains dependence for symbol outside this MR");
+      assert(Visited.insert(Sym).second &&
+             "DG contains duplicate entries for Name");
+    }
+  }
+#endif // NDEBUG
+
+  auto EDUInfos = simplifyDepGroups(MR, DepGroups);
+
+  LLVM_DEBUG({
+    dbgs() << "  Simplified dependencies:\n";
+    for (auto &[EDU, EDUInfo] : EDUInfos) {
+      dbgs() << "    Symbols: { ";
+      for (auto &[Sym, Flags] : EDU->Symbols)
+        dbgs() << Sym << " ";
+      dbgs() << "}, Dependencies: { ";
+      for (auto &[DepJD, Deps] : EDU->Dependencies) {
+        dbgs() << "(" << DepJD->getName() << ", { ";
+        for (auto &Dep : Deps)
+          dbgs() << Dep << " ";
+        dbgs() << "}) ";
+      }
+      dbgs() << "}\n";
+    }
+  });
+
+  auto CompletedQueries =
+      runSessionLocked([&]() { return IL_emit(MR, EDUInfos); });
+
+  // On error bail out.
+  if (!CompletedQueries)
+    return CompletedQueries.takeError();
 
   MR.SymbolFlags.clear();
+
+  // Otherwise notify all the completed queries.
+  for (auto &Q : *CompletedQueries) {
+    assert(Q->isComplete() && "Q is not complete");
+    Q->handleComplete(*this);
+  }
+
   return Error::success();
 }
 
@@ -3064,6 +3301,143 @@ Error ExecutionSession::OL_defineMaterializing(
     return AcceptedDefs.takeError();
 }
 
+std::pair<JITDylib::AsynchronousSymbolQuerySet,
+          std::shared_ptr<SymbolDependenceMap>>
+ExecutionSession::IL_failSymbols(JITDylib &JD,
+                                 const SymbolNameVector &SymbolsToFail) {
+  JITDylib::AsynchronousSymbolQuerySet FailedQueries;
+  auto FailedSymbolsMap = std::make_shared<SymbolDependenceMap>();
+  auto ExtractFailedQueries = [&](JITDylib::MaterializingInfo &MI) {
+    JITDylib::AsynchronousSymbolQueryList ToDetach;
+    for (auto &Q : MI.pendingQueries()) {
+      // Add the query to the list to be failed and detach it.
+      FailedQueries.insert(Q);
+      ToDetach.push_back(Q);
+    }
+    for (auto &Q : ToDetach)
+      Q->detach();
+    assert(!MI.hasQueriesPending() && "Queries still pending after detach");
+  };
+
+  for (auto &Name : SymbolsToFail) {
+    (*FailedSymbolsMap)[&JD].insert(Name);
+
+    // Look up the symbol to fail.
+    auto SymI = JD.Symbols.find(Name);
+
+    // FIXME: Revisit this. We should be able to assert sequencing between
+    //        ResourceTracker removal and symbol failure.
+    //
+    // It's possible that this symbol has already been removed, e.g. if a
+    // materialization failure happens concurrently with a ResourceTracker or
+    // JITDylib removal. In that case we can safely skip this symbol and
+    // continue.
+    if (SymI == JD.Symbols.end())
+      continue;
+    auto &Sym = SymI->second;
+
+    // If the symbol is already in the error state then we must have visited
+    // it earlier.
+    if (Sym.getFlags().hasError()) {
+      assert(!JD.MaterializingInfos.count(Name) &&
+             "Symbol in error state still has MaterializingInfo");
+      continue;
+    }
+
+    // Move the symbol into the error state.
+    Sym.setFlags(Sym.getFlags() | JITSymbolFlags::HasError);
+
+    // FIXME: Come up with a sane mapping of state to
+    // presence-of-MaterializingInfo so that we can assert presence / absence
+    // here, rather than testing it.
+    auto MII = JD.MaterializingInfos.find(Name);
+    if (MII == JD.MaterializingInfos.end())
+      continue;
+
+    auto &MI = MII->second;
+
+    // Collect queries to be failed for this MII.
+    ExtractFailedQueries(MI);
+
+    if (MI.DefiningEDU) {
+      // If there is a DefiningEDU for this symbol then remove this
+      // symbol from it.
+      assert(MI.DependantEDUs.empty() &&
+             "Symbol with DefiningEDU should not have DependantEDUs");
+      assert(Sym.getState() >= SymbolState::Emitted &&
+             "Symbol has EDU, should have been emitted");
+      assert(MI.DefiningEDU->Symbols.count(NonOwningSymbolStringPtr(Name)) &&
+             "Symbol does not appear in its DefiningEDU");
+      MI.DefiningEDU->Symbols.erase(NonOwningSymbolStringPtr(Name));
+      MI.DefiningEDU = nullptr;
+    } else {
+      // Otherwise if there are any EDUs waiting on this symbol then move
+      // those symbols to the error state too, and deregister them from the
+      // symbols that they depend on.
+      // Note: We use a copy of DependantEDUs here since we'll be removing
+      // from the original set as we go.
+      for (auto &DependantEDU : MI.DependantEDUs) {
+
+        // Remove DependantEDU from all of its users DependantEDUs lists.
+        for (auto &[JD, Syms] : DependantEDU->Dependencies) {
+          for (auto Sym : Syms) {
+            assert(JD->Symbols.count(SymbolStringPtr(Sym)) && "Sym not in JD?");
+            assert(JD->MaterializingInfos.count(SymbolStringPtr(Sym)) &&
+                   "DependantEDU not registered with symbol it depends on");
+            auto SymMI = JD->MaterializingInfos[SymbolStringPtr(Sym)];
+            assert(SymMI.DependantEDUs.count(DependantEDU) &&
+                   "DependantEDU missing from DependantEDUs list");
+            SymMI.DependantEDUs.erase(DependantEDU);
+          }
+        }
+
+        // Move any symbols defined by DependantEDU into the error state and
+        // fail any queries waiting on them.
+        auto &DepJD = *DependantEDU->JD;
+        auto DepEDUSymbols = std::move(DependantEDU->Symbols);
+        for (auto &[DepName, Flags] : DepEDUSymbols) {
+          auto DepSymItr = DepJD.Symbols.find(SymbolStringPtr(DepName));
+          assert(DepSymItr != DepJD.Symbols.end() &&
+                 "Symbol not present in table");
+          auto &DepSym = DepSymItr->second;
+
+          assert(DepSym.getState() >= SymbolState::Emitted &&
+                 "Symbol has EDU, should have been emitted");
+          assert(!DepSym.getFlags().hasError() &&
+                 "Symbol is already in the error state?");
+          DepSym.setFlags(DepSym.getFlags() | JITSymbolFlags::HasError);
+          (*FailedSymbolsMap)[&DepJD].insert(SymbolStringPtr(DepName));
+
+          // This symbol has a defining EDU so its MaterializingInfo object must
+          // exist.
+          auto DepMIItr =
+              DepJD.MaterializingInfos.find(SymbolStringPtr(DepName));
+          assert(DepMIItr != DepJD.MaterializingInfos.end() &&
+                 "Symbol has defining EDU but not MaterializingInfo");
+          auto &DepMI = DepMIItr->second;
+          assert(DepMI.DefiningEDU.get() == DependantEDU &&
+                 "Bad EDU dependence edge");
+          assert(DepMI.DependantEDUs.empty() &&
+                 "Symbol was emitted, should not have any DependantEDUs");
+          ExtractFailedQueries(DepMI);
+          DepJD.MaterializingInfos.erase(SymbolStringPtr(DepName));
+        }
+      }
+
+      MI.DependantEDUs.clear();
+    }
+
+    assert(!MI.DefiningEDU && "DefiningEDU should have been reset");
+    assert(MI.DependantEDUs.empty() &&
+           "DependantEDUs should have been removed above");
+    assert(!MI.hasQueriesPending() &&
+           "Can not delete MaterializingInfo with queries pending");
+    JD.MaterializingInfos.erase(Name);
+  }
+
+  return std::make_pair(std::move(FailedQueries), std::move(FailedSymbolsMap));
+}
+
 void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
 
   LLVM_DEBUG({
@@ -3071,25 +3445,23 @@ void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
            << MR.SymbolFlags << "\n";
   });
 
-  JITDylib::FailedSymbolsWorklist Worklist;
-
-  for (auto &KV : MR.SymbolFlags)
-    Worklist.push_back(std::make_pair(&MR.JD, KV.first));
-  MR.SymbolFlags.clear();
-
-  if (Worklist.empty())
+  if (MR.SymbolFlags.empty())
     return;
+
+  SymbolNameVector SymbolsToFail;
+  for (auto &[Name, Flags] : MR.SymbolFlags)
+    SymbolsToFail.push_back(Name);
+  MR.SymbolFlags.clear();
 
   JITDylib::AsynchronousSymbolQuerySet FailedQueries;
   std::shared_ptr<SymbolDependenceMap> FailedSymbols;
 
-  runSessionLocked([&]() {
+  std::tie(FailedQueries, FailedSymbols) = runSessionLocked([&]() {
     // If the tracker is defunct then there's nothing to do here.
     if (MR.RT->isDefunct())
-      return;
-
-    std::tie(FailedQueries, FailedSymbols) =
-        JITDylib::failSymbols(std::move(Worklist));
+      return std::pair<JITDylib::AsynchronousSymbolQuerySet,
+                       std::shared_ptr<SymbolDependenceMap>>();
+    return IL_failSymbols(MR.getTargetJITDylib(), SymbolsToFail);
   });
 
   for (auto &Q : FailedQueries)
@@ -3138,29 +3510,6 @@ ExecutionSession::OL_delegate(MaterializationResponsibility &MR,
 
   return MR.JD.delegate(MR, std::move(DelegatedFlags),
                         std::move(DelegatedInitSymbol));
-}
-
-void ExecutionSession::OL_addDependencies(
-    MaterializationResponsibility &MR, const SymbolStringPtr &Name,
-    const SymbolDependenceMap &Dependencies) {
-  LLVM_DEBUG({
-    dbgs() << "Adding dependencies for " << Name << ": " << Dependencies
-           << "\n";
-  });
-  assert(MR.SymbolFlags.count(Name) &&
-         "Symbol not covered by this MaterializationResponsibility instance");
-  MR.JD.addDependencies(Name, Dependencies);
-}
-
-void ExecutionSession::OL_addDependenciesForAll(
-    MaterializationResponsibility &MR,
-    const SymbolDependenceMap &Dependencies) {
-  LLVM_DEBUG({
-    dbgs() << "Adding dependencies for all symbols in " << MR.SymbolFlags << ": "
-           << Dependencies << "\n";
-  });
-  for (auto &KV : MR.SymbolFlags)
-    MR.JD.addDependencies(KV.first, Dependencies);
 }
 
 #ifndef NDEBUG

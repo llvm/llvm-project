@@ -15,8 +15,11 @@
 
 namespace Fortran::runtime {
 
-int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
-    Terminator &terminator, bool hasStat, const Descriptor *errMsg) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+RT_API_ATTRS int Initialize(const Descriptor &instance,
+    const typeInfo::DerivedType &derived, Terminator &terminator, bool hasStat,
+    const Descriptor *errMsg) {
   const Descriptor &componentDesc{derived.component()};
   std::size_t elements{instance.Elements()};
   int stat{StatOk};
@@ -114,7 +117,7 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
   return stat;
 }
 
-static const typeInfo::SpecialBinding *FindFinal(
+static RT_API_ATTRS const typeInfo::SpecialBinding *FindFinal(
     const typeInfo::DerivedType &derived, int rank) {
   if (const auto *ranked{derived.FindSpecialBinding(
           typeInfo::SpecialBinding::RankFinal(rank))}) {
@@ -128,7 +131,7 @@ static const typeInfo::SpecialBinding *FindFinal(
   }
 }
 
-static void CallFinalSubroutine(const Descriptor &descriptor,
+static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
     if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
@@ -193,7 +196,7 @@ static void CallFinalSubroutine(const Descriptor &descriptor,
 }
 
 // Fortran 2018 subclause 7.5.6.2
-void Finalize(const Descriptor &descriptor,
+RT_API_ATTRS void Finalize(const Descriptor &descriptor,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (derived.noFinalizationNeeded() || !descriptor.IsAllocated()) {
     return;
@@ -285,7 +288,7 @@ void Finalize(const Descriptor &descriptor,
 // elementwise finalization of non-parent components taking place
 // before parent component finalization, and with all finalization
 // preceding any deallocation.
-void Destroy(const Descriptor &descriptor, bool finalize,
+RT_API_ATTRS void Destroy(const Descriptor &descriptor, bool finalize,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (derived.noDestructionNeeded() || !descriptor.IsAllocated()) {
     return;
@@ -313,7 +316,7 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   }
 }
 
-bool HasDynamicComponent(const Descriptor &descriptor) {
+RT_API_ATTRS bool HasDynamicComponent(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived = addendum->derivedType()) {
       const Descriptor &componentDesc{derived->component()};
@@ -331,4 +334,5 @@ bool HasDynamicComponent(const Descriptor &descriptor) {
   return false;
 }
 
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

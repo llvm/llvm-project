@@ -38,7 +38,7 @@ struct Container {
 
   constexpr explicit Container(std::ranges::input_range auto&& in)
     requires(Rank >= CtrChoice::DirectCtr)
-      : ctr_choice(CtrChoice::DirectCtr), size_(std::ranges::size(in)) {
+      : ctr_choice(CtrChoice::DirectCtr), size_(static_cast<int>(std::ranges::size(in))) {
     std::ranges::copy(in, begin());
   }
 
@@ -54,7 +54,7 @@ struct Container {
 
   constexpr Container(std::from_range_t, std::ranges::input_range auto&& in)
     requires(Rank >= CtrChoice::FromRangeT)
-      : ctr_choice(CtrChoice::FromRangeT), size_(std::ranges::size(in)) {
+      : ctr_choice(CtrChoice::FromRangeT), size_(static_cast<int>(std::ranges::size(in))) {
     std::ranges::copy(in, begin());
   }
 
@@ -70,7 +70,7 @@ struct Container {
   template <class Iter>
   constexpr Container(Iter b, Iter e)
     requires(Rank >= CtrChoice::BeginEndPair)
-      : ctr_choice(CtrChoice::BeginEndPair), size_(e - b) {
+      : ctr_choice(CtrChoice::BeginEndPair), size_(static_cast<int>(e - b)) {
     std::ranges::copy(b, e, begin());
   }
 

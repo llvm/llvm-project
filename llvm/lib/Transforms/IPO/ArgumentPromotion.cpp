@@ -100,7 +100,7 @@ static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
   if (Offset != 0) {
     APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(APOffset));
+    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
 }
@@ -161,6 +161,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                                   F->getName());
   NF->copyAttributesFrom(F);
   NF->copyMetadata(F, 0);
+  NF->setIsNewDbgInfoFormat(F->IsNewDbgInfoFormat);
 
   // The new function will have the !dbg metadata copied from the original
   // function. The original function may not be deleted, and dbg metadata need

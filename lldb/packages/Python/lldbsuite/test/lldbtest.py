@@ -29,7 +29,6 @@ $
 
 # System modules
 import abc
-from distutils.version import LooseVersion
 from functools import wraps
 import gc
 import glob
@@ -58,7 +57,6 @@ from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
 from lldbsuite.support import seven
-from lldbsuite.test.builders import get_builder
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -516,7 +514,7 @@ def getsource_if_available(obj):
 
 
 def builder_module():
-    return get_builder(sys.platform)
+    return lldbplatformutil.builder_module()
 
 
 class Base(unittest2.TestCase):
@@ -801,10 +799,10 @@ class Base(unittest2.TestCase):
         else:
             self.libcxxPath = None
 
-        if "LLDBVSCODE_EXEC" in os.environ:
-            self.lldbVSCodeExec = os.environ["LLDBVSCODE_EXEC"]
+        if "LLDBDAP_EXEC" in os.environ:
+            self.lldbDAPExec = os.environ["LLDBDAP_EXEC"]
         else:
-            self.lldbVSCodeExec = None
+            self.lldbDAPExec = None
 
         self.lldbOption = " ".join("-o '" + s + "'" for s in self.setUpCommands())
 
@@ -1224,6 +1222,17 @@ class Base(unittest2.TestCase):
     # (enables reading of the current test configuration)
     # ====================================================
 
+    def hasXMLSupport(self):
+        """Returns True if lldb was built with XML support. Use this check to
+        enable parts of tests, if you want to skip a whole test use skipIfXmlSupportMissing
+        instead."""
+        return (
+            lldb.SBDebugger.GetBuildConfiguration()
+            .GetValueForKey("xml")
+            .GetValueForKey("value")
+            .GetBooleanValue(False)
+        )
+
     def isMIPS(self):
         """Returns true if the architecture is MIPS."""
         arch = self.getArchitecture()
@@ -1271,6 +1280,17 @@ class Base(unittest2.TestCase):
     def isAArch64SME(self):
         return self.isAArch64() and "sme" in self.getCPUInfo()
 
+    def isAArch64SME2(self):
+        # If you have sme2, you also have sme.
+        return self.isAArch64() and "sme2" in self.getCPUInfo()
+
+    def isAArch64SMEFA64(self):
+        # smefa64 allows the use of the full A64 instruction set in streaming
+        # mode. This is required by certain test programs to setup register
+        # state.
+        cpuinfo = self.getCPUInfo()
+        return self.isAArch64() and "sme" in cpuinfo and "smefa64" in cpuinfo
+
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
@@ -1288,82 +1308,29 @@ class Base(unittest2.TestCase):
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
-        module = builder_module()
-        arch = module.getArchitecture()
-        if arch == "amd64":
-            arch = "x86_64"
-        if arch in ["armv7l", "armv8l"]:
-            arch = "arm"
-        return arch
+        return lldbplatformutil.getArchitecture()
 
     def getLldbArchitecture(self):
         """Returns the architecture of the lldb binary."""
-        if not hasattr(self, "lldbArchitecture"):
-            # These two target settings prevent lldb from doing setup that does
-            # nothing but slow down the end goal of printing the architecture.
-            command = [
-                lldbtest_config.lldbExec,
-                "-x",
-                "-b",
-                "-o",
-                "settings set target.preload-symbols false",
-                "-o",
-                "settings set target.load-script-from-symbol-file false",
-                "-o",
-                "file " + lldbtest_config.lldbExec,
-            ]
-
-            output = check_output(command)
-            str = output.decode()
-
-            for line in str.splitlines():
-                m = re.search(r"Current executable set to '.*' \((.*)\)\.", line)
-                if m:
-                    self.lldbArchitecture = m.group(1)
-                    break
-
-        return self.lldbArchitecture
+        return lldbplatformutil.getLLDBArchitecture()
 
     def getCompiler(self):
         """Returns the compiler in effect the test suite is running with."""
-        module = builder_module()
-        return module.getCompiler()
+        return lldbplatformutil.getCompiler()
 
     def getCompilerBinary(self):
         """Returns the compiler binary the test suite is running with."""
-        return self.getCompiler().split()[0]
+        return lldbplatformutil.getCompilerBinary()
 
     def getCompilerVersion(self):
         """Returns a string that represents the compiler version.
         Supports: llvm, clang.
         """
-        compiler = self.getCompilerBinary()
-        version_output = check_output([compiler, "--version"], errors="replace")
-        m = re.search("version ([0-9.]+)", version_output)
-        if m:
-            return m.group(1)
-        return "unknown"
+        return lldbplatformutil.getCompilerVersion()
 
     def getDwarfVersion(self):
         """Returns the dwarf version generated by clang or '0'."""
-        if configuration.dwarf_version:
-            return str(configuration.dwarf_version)
-        if "clang" in self.getCompiler():
-            try:
-                triple = builder_module().getTriple(self.getArchitecture())
-                target = ["-target", triple] if triple else []
-                driver_output = check_output(
-                    [self.getCompiler()] + target + "-g -c -x c - -o - -###".split(),
-                    stderr=STDOUT,
-                )
-                driver_output = driver_output.decode("utf-8")
-                for line in driver_output.split(os.linesep):
-                    m = re.search("dwarf-version=([0-9])", line)
-                    if m:
-                        return m.group(1)
-            except CalledProcessError:
-                pass
-        return "0"
+        return lldbplatformutil.getDwarfVersion()
 
     def platformIsDarwin(self):
         """Returns true if the OS triple for the selected platform is any valid apple OS"""
@@ -1390,41 +1357,11 @@ class Base(unittest2.TestCase):
         of trunk, so any less-than or equal-to comparisons will return False, and any
         greater-than or not-equal-to comparisons will return True.
         """
-        if compiler_version is None:
-            return True
-        operator = str(compiler_version[0])
-        version = compiler_version[1]
-
-        if version is None:
-            return True
-
-        test_compiler_version = self.getCompilerVersion()
-        if test_compiler_version == "unknown":
-            # Assume the compiler version is at or near the top of trunk.
-            return operator in [">", ">=", "!", "!=", "not"]
-
-        if operator == ">":
-            return LooseVersion(test_compiler_version) > LooseVersion(version)
-        if operator == ">=" or operator == "=>":
-            return LooseVersion(test_compiler_version) >= LooseVersion(version)
-        if operator == "<":
-            return LooseVersion(test_compiler_version) < LooseVersion(version)
-        if operator == "<=" or operator == "=<":
-            return LooseVersion(test_compiler_version) <= LooseVersion(version)
-        if operator == "!=" or operator == "!" or operator == "not":
-            return str(version) not in str(test_compiler_version)
-        return str(version) in str(test_compiler_version)
+        return lldbplatformutil.expectedCompilerVersion(compiler_version)
 
     def expectedCompiler(self, compilers):
         """Returns True iff any element of compilers is a sub-string of the current compiler."""
-        if compilers is None:
-            return True
-
-        for compiler in compilers:
-            if compiler in self.getCompiler():
-                return True
-
-        return False
+        return lldbplatformutil.expectedCompiler(compilers)
 
     def expectedArch(self, archs):
         """Returns True iff any element of archs is a sub-string of the current architecture."""
@@ -1606,14 +1543,6 @@ class Base(unittest2.TestCase):
         d = {"CXX_SOURCES": sources, "EXE": exe_name}
         self.build(dictionary=d)
 
-    def signBinary(self, binary_path):
-        if sys.platform.startswith("darwin"):
-            codesign_cmd = 'codesign --force --sign "%s" %s' % (
-                lldbtest_config.codesign_identity,
-                binary_path,
-            )
-            call(codesign_cmd, shell=True)
-
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
@@ -1730,6 +1659,11 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE:
             return original_testcase
 
+        # Default implementation for skip/xfail reason based on the debug category,
+        # where "None" means to run the test as usual.
+        def no_reason(_):
+            return None
+
         newattrs = {}
         for attrname, attrvalue in attrs.items():
             if attrname.startswith("test") and not getattr(
@@ -1751,6 +1685,12 @@ class LLDBTestCaseFactory(type):
                         if can_replicate
                     ]
 
+                xfail_for_debug_info_cat_fn = getattr(
+                    attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
+                )
+                skip_for_debug_info_cat_fn = getattr(
+                    attrvalue, "__skip_for_debug_info_cat_fn__", no_reason
+                )
                 for cat in categories:
 
                     @decorators.add_test_categories([cat])
@@ -1761,6 +1701,17 @@ class LLDBTestCaseFactory(type):
                     method_name = attrname + "_" + cat
                     test_method.__name__ = method_name
                     test_method.debug_info = cat
+
+                    xfail_reason = xfail_for_debug_info_cat_fn(cat)
+                    if xfail_reason:
+                        test_method = unittest2.expectedFailure(xfail_reason)(
+                            test_method
+                        )
+
+                    skip_reason = skip_for_debug_info_cat_fn(cat)
+                    if skip_reason:
+                        test_method = unittest2.skip(skip_reason)(test_method)
+
                     newattrs[method_name] = test_method
 
             else:

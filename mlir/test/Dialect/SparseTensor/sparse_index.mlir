@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 #DenseMatrix = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : dense)
@@ -18,23 +18,23 @@
 }
 
 // CHECK-LABEL:   func.func @dense_index(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty(%[[VAL_3]], %[[VAL_4]]) : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_24:.*]] = tensor.dim %[[VAL_5]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_5]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_3:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty(%[[VAL_3]], %[[VAL_4]]) : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_2]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_24:.*]] = sparse_tensor.lvl %[[VAL_5]], %[[VAL_2]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_5]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_1]] to %[[VAL_7]] step %[[VAL_2]] {
+// CHECK:             %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_8]] : index
+// CHECK:             %[[VAL_14:.*]] = arith.muli %[[VAL_10]], %[[VAL_24]] : index
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_8]] step %[[VAL_2]] {
-// CHECK:               %[[VAL_12:.*]] = arith.muli %[[VAL_8]], %[[VAL_10]] : index
-// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_11]] : index
-// CHECK:               %[[VAL_14:.*]] = arith.muli %[[VAL_24]], %[[VAL_10]] : index
-// CHECK:               %[[VAL_15:.*]] = arith.addi %[[VAL_14]], %[[VAL_11]] : index
+// CHECK:               %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_15:.*]] = arith.addi %[[VAL_11]], %[[VAL_14]] : index
 // CHECK:               %[[VAL_16:.*]] = arith.index_cast %[[VAL_11]] : index to i64
 // CHECK:               %[[VAL_17:.*]] = arith.index_cast %[[VAL_10]] : index to i64
 // CHECK:               %[[VAL_18:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xi64>
@@ -43,15 +43,15 @@
 // CHECK:               memref.store %[[VAL_20]], %[[VAL_9]]{{\[}}%[[VAL_15]]] : memref<?xi64>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_21:.*]] = sparse_tensor.load %[[VAL_5]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK:           return %[[VAL_21]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:           %[[VAL_21:.*]] = sparse_tensor.load %[[VAL_5]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK:           return %[[VAL_21]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:         }
 func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
                       -> tensor<?x?xi64, #DenseMatrix> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 0 : index
-  %0 = tensor.dim %arga, %c0 : tensor<?x?xi64, #DenseMatrix>
-  %1 = tensor.dim %arga, %c1 : tensor<?x?xi64, #DenseMatrix>
+  %0 = sparse_tensor.lvl %arga, %c0 : tensor<?x?xi64, #DenseMatrix>
+  %1 = sparse_tensor.lvl %arga, %c1 : tensor<?x?xi64, #DenseMatrix>
   %init = tensor.empty(%0, %1) : tensor<?x?xi64, #DenseMatrix>
   %r = linalg.generic #trait
       ins(%arga: tensor<?x?xi64, #DenseMatrix>)
@@ -70,17 +70,17 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 
 
 // CHECK-LABEL:   func.func @sparse_index(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty(%[[VAL_3]], %[[VAL_4]]) : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_3:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty(%[[VAL_3]], %[[VAL_4]]) : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_1]]] : memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // CHECK:           %[[T:.*]] = scf.for %[[VAL_13:.*]] = %[[VAL_11]] to %[[VAL_12]] step %[[VAL_2]] {{.*}} {
@@ -95,20 +95,20 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xi64>
 // CHECK:               %[[VAL_23:.*]] = arith.muli %[[VAL_21]], %[[VAL_22]] : i64
 // CHECK:               %[[VAL_24:.*]] = arith.muli %[[VAL_20]], %[[VAL_23]] : i64
-// CHECK:               %[[Y:.*]] = sparse_tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:               %[[Y:.*]] = sparse_tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:               scf.yield %[[Y]]
 // CHECK:             }
 // CHECK:             scf.yield %[[L]]
 // CHECK:           }
-// CHECK:           %[[VAL_25:.*]] = sparse_tensor.load %[[T]] hasInserts : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK:           return %[[VAL_25]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:           %[[VAL_25:.*]] = sparse_tensor.load %[[T]] hasInserts : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK:           return %[[VAL_25]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:         }
 func.func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)
                        -> tensor<?x?xi64, #SparseMatrix> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 0 : index
-  %0 = tensor.dim %arga, %c0 : tensor<?x?xi64, #SparseMatrix>
-  %1 = tensor.dim %arga, %c1 : tensor<?x?xi64, #SparseMatrix>
+  %0 = sparse_tensor.lvl %arga, %c0 : tensor<?x?xi64, #SparseMatrix>
+  %1 = sparse_tensor.lvl %arga, %c1 : tensor<?x?xi64, #SparseMatrix>
   %init = tensor.empty(%0, %1) : tensor<?x?xi64, #SparseMatrix>
   %r = linalg.generic #trait
       ins(%arga: tensor<?x?xi64, #SparseMatrix>)
@@ -124,4 +124,3 @@ func.func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)
   } -> tensor<?x?xi64, #SparseMatrix>
   return %r : tensor<?x?xi64, #SparseMatrix>
 }
-

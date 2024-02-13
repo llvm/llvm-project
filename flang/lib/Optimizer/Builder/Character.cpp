@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Builder/DoLoopHelper.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -850,4 +851,43 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
   fir::CharBoxValue fromBuf{resultBuf, resultLen};
   createAssign(toBuf, fromBuf);
   return temp;
+}
+
+fir::CharBoxValue
+fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
+                                   mlir::Location loc,
+                                   fir::CharBoxValue srcBoxChar, int toKind) {
+  // Use char_convert. Each code point is translated from a
+  // narrower/wider encoding to the target encoding. For example, 'A'
+  // may be translated from 0x41 : i8 to 0x0041 : i16. The symbol
+  // for euro (0x20AC : i16) may be translated from a wide character
+  // to "0xE2 0x82 0xAC" : UTF-8.
+  mlir::Value bufferSize = srcBoxChar.getLen();
+  auto kindMap = builder.getKindMap();
+  mlir::Value boxCharAddr = srcBoxChar.getAddr();
+  auto fromTy = boxCharAddr.getType();
+  if (auto charTy = fromTy.dyn_cast<fir::CharacterType>()) {
+    // boxchar is a value, not a variable. Turn it into a temporary.
+    // As a value, it ought to have a constant LEN value.
+    assert(charTy.hasConstantLen() && "must have constant length");
+    mlir::Value tmp = builder.createTemporary(loc, charTy);
+    builder.create<fir::StoreOp>(loc, boxCharAddr, tmp);
+    boxCharAddr = tmp;
+  }
+  auto fromBits = kindMap.getCharacterBitsize(
+      fir::unwrapRefType(fromTy).cast<fir::CharacterType>().getFKind());
+  auto toBits = kindMap.getCharacterBitsize(toKind);
+  if (toBits < fromBits) {
+    // Scale by relative ratio to give a buffer of the same length.
+    auto ratio = builder.createIntegerConstant(loc, bufferSize.getType(),
+                                               fromBits / toBits);
+    bufferSize = builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
+  }
+  mlir::Type toType =
+      fir::CharacterType::getUnknownLen(builder.getContext(), toKind);
+  auto dest = builder.createTemporary(loc, toType, /*name=*/{}, /*shape=*/{},
+                                      mlir::ValueRange{bufferSize});
+  builder.create<fir::CharConvertOp>(loc, boxCharAddr, srcBoxChar.getLen(),
+                                     dest);
+  return fir::CharBoxValue{dest, srcBoxChar.getLen()};
 }

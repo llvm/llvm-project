@@ -1,4 +1,4 @@
-; RUN: opt -passes='break-crit-edges,lowerswitch,mergereturn' -S < %s | FileCheck %s
+; RUN: opt -passes='break-crit-edges,lower-switch,mergereturn' -S < %s | FileCheck %s
 
 ; The pass did previously not report the correct Modified status in the case
 ; where a function had at most one return block, and an unified unreachable

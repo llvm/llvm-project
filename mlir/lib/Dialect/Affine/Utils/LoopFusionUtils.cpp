@@ -150,8 +150,8 @@ static Operation *getFusedLoopNestInsertionPoint(AffineForOp srcForOp,
   //
   // Valid insertion point range: (lastDepOpB, firstDepOpA)
   //
-  if (firstDepOpA != nullptr) {
-    if (lastDepOpB != nullptr) {
+  if (firstDepOpA) {
+    if (lastDepOpB) {
       if (firstDepOpA->isBeforeInBlock(lastDepOpB) || firstDepOpA == lastDepOpB)
         // No valid insertion point exists which preserves dependences.
         return nullptr;
@@ -218,7 +218,7 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   // Check dependences on all pairs of ops in 'targetDstOps' and store the
   // minimum loop depth at which a dependence is satisfied.
   for (unsigned i = 0, e = targetDstOps.size(); i < e; ++i) {
-    auto *srcOpInst = targetDstOps[i];
+    Operation *srcOpInst = targetDstOps[i];
     MemRefAccess srcAccess(srcOpInst);
     for (unsigned j = 0; j < e; ++j) {
       auto *dstOpInst = targetDstOps[j];
@@ -243,7 +243,6 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   return loopDepth;
 }
 
-// TODO: Prevent fusion of loop nests with side-effecting operations.
 // TODO: This pass performs some computation that is the same for all the depths
 // (e.g., getMaxLoopDepth). Implement a version of this utility that processes
 // all the depths at once or only the legal maximal depth for maximal fusion.
@@ -540,7 +539,7 @@ static int64_t getComputeCostHelper(
     }
   }
   // Add in additional op instances from slice (if specified in map).
-  if (computeCostMap != nullptr) {
+  if (computeCostMap) {
     auto it = computeCostMap->find(forOp);
     if (it != computeCostMap->end()) {
       opCount += it->second;
@@ -548,7 +547,7 @@ static int64_t getComputeCostHelper(
   }
   // Override trip count (if specified in map).
   int64_t tripCount = stats.tripCountMap[forOp];
-  if (tripCountOverrideMap != nullptr) {
+  if (tripCountOverrideMap) {
     auto it = tripCountOverrideMap->find(forOp);
     if (it != tripCountOverrideMap->end()) {
       tripCount = it->second;
@@ -592,17 +591,14 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
   auto *insertPointParent = slice.insertPoint->getParentOp();
 
   // The store and loads to this memref will disappear.
-  // TODO: Add load coalescing to memref data flow opt pass.
   if (storeLoadFwdGuaranteed) {
     // Subtract from operation count the loads/store we expect load/store
     // forwarding to remove.
     unsigned storeCount = 0;
     llvm::SmallDenseSet<Value, 4> storeMemrefs;
-    srcForOp.walk([&](Operation *op) {
-      if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op)) {
-        storeMemrefs.insert(storeOp.getMemRef());
-        ++storeCount;
-      }
+    srcForOp.walk([&](AffineWriteOpInterface storeOp) {
+      storeMemrefs.insert(storeOp.getMemRef());
+      ++storeCount;
     });
     // Subtract out any store ops in single-iteration src slice loop nest.
     if (storeCount > 0)
@@ -610,19 +606,18 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
     // Subtract out any load users of 'storeMemrefs' nested below
     // 'insertPointParent'.
     for (Value memref : storeMemrefs) {
-      for (auto *user : memref.getUsers()) {
-        if (dyn_cast<AffineReadOpInterface>(user)) {
-          SmallVector<AffineForOp, 4> loops;
-          // Check if any loop in loop nest surrounding 'user' is
-          // 'insertPointParent'.
-          getAffineForIVs(*user, &loops);
-          if (llvm::is_contained(loops, cast<AffineForOp>(insertPointParent))) {
-            if (auto forOp =
-                    dyn_cast_or_null<AffineForOp>(user->getParentOp())) {
-              if (computeCostMap.count(forOp) == 0)
-                computeCostMap[forOp] = 0;
-              computeCostMap[forOp] -= 1;
-            }
+      for (Operation *user : memref.getUsers()) {
+        if (!isa<AffineReadOpInterface>(user))
+          continue;
+        SmallVector<AffineForOp, 4> loops;
+        // Check if any loop in loop nest surrounding 'user' is
+        // 'insertPointParent'.
+        getAffineForIVs(*user, &loops);
+        if (llvm::is_contained(loops, cast<AffineForOp>(insertPointParent))) {
+          if (auto forOp = dyn_cast_or_null<AffineForOp>(user->getParentOp())) {
+            if (computeCostMap.count(forOp) == 0)
+              computeCostMap[forOp] = 0;
+            computeCostMap[forOp] -= 1;
           }
         }
       }

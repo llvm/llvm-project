@@ -20,7 +20,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
@@ -75,8 +74,8 @@ enum ResourceDirRecipeKind {
 
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
+static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
-static bool OptimizeArgs;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
@@ -148,10 +147,33 @@ static void ParseArgs(int argc, char **argv) {
     Format = *FormatType;
   }
 
+  std::vector<std::string> OptimizationFlags =
+      Args.getAllArgValues(OPT_optimize_args_EQ);
+  OptimizeArgs = ScanningOptimizations::None;
+  for (const auto &Arg : OptimizationFlags) {
+    auto Optimization =
+        llvm::StringSwitch<std::optional<ScanningOptimizations>>(Arg)
+            .Case("none", ScanningOptimizations::None)
+            .Case("header-search", ScanningOptimizations::HeaderSearch)
+            .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
+            .Case("all", ScanningOptimizations::All)
+            .Default(std::nullopt);
+    if (!Optimization) {
+      llvm::errs()
+          << ToolName
+          << ": for the --optimize-args option: Cannot find option named '"
+          << Arg << "'\n";
+      std::exit(1);
+    }
+    OptimizeArgs |= *Optimization;
+  }
+  if (OptimizationFlags.empty())
+    OptimizeArgs = ScanningOptimizations::Default;
+
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();
 
-  OptimizeArgs = Args.hasArg(OPT_optimize_args);
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
@@ -677,7 +699,6 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 // form specified command line after the positional parameter "--".
 static std::unique_ptr<tooling::CompilationDatabase>
 getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
-  llvm::InitLLVM X(argc, argv);
   ParseArgs(argc, argv);
 
   if (!CompilationDB.empty())
@@ -706,7 +727,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
                            *Diags);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
-  if (!C)
+  if (!C || C->getJobs().empty())
     return nullptr;
 
   auto Cmd = C->getJobs().begin();
@@ -808,9 +829,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                 // Also, clang-cl adds ".obj" extension if none is found.
                 if ((Arg == "-o" || Arg == "/o") && I != R)
                   LastO = I[-1]; // Next argument (reverse iterator)
-                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                else if (Arg.starts_with("/Fo") || Arg.starts_with("-Fo"))
                   LastO = Arg.drop_front(3).str();
-                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                else if (Arg.starts_with("/o") || Arg.starts_with("-o"))
                   LastO = Arg.drop_front(2).str();
 
                 if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))

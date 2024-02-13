@@ -24,6 +24,11 @@ class RewriterBase;
 /// arguments in `newBbArgs`.
 using NewYieldValuesFn = std::function<SmallVector<Value>(
     OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs)>;
+
+namespace detail {
+/// Verify invariants of the LoopLikeOpInterface.
+LogicalResult verifyLoopLikeOpInterface(Operation *op);
+} // namespace detail
 } // namespace mlir
 
 /// Include the generated interface declarations.

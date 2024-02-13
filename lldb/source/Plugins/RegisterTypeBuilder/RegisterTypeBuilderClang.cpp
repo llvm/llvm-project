@@ -60,7 +60,8 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
 
     fields_type = type_system->CreateRecordType(
         nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-        register_type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
+        register_type_name, llvm::to_underlying(clang::TagTypeKind::Struct),
+        lldb::eLanguageTypeC);
     type_system->StartTagDeclarationDefinition(fields_type);
 
     // We assume that RegisterFlags has padded and sorted the fields

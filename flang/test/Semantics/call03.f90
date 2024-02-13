@@ -345,11 +345,12 @@ module m01
     call volatile(d[1])
   end subroutine
 
-  subroutine test15() ! C1539
+  subroutine test15(assumedrank) ! C1539
     real, pointer :: a(:)
     real, asynchronous :: b(10)
     real, volatile :: c(10)
     real, asynchronous, volatile :: d(10)
+    real, asynchronous, volatile :: assumedrank(..)
     call assumedsize(a(::2)) ! ok
     call contiguous(a(::2)) ! ok
     call valueassumedsize(a(::2)) ! ok
@@ -368,6 +369,8 @@ module m01
     call volatileassumedsize(d(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous dummy argument 'x='
     call volatilecontiguous(d(::2))
+    !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous dummy argument 'x='
+    call volatilecontiguous(assumedrank)
   end subroutine
 
   subroutine test16() ! C1540

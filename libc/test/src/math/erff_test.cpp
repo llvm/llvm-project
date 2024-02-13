@@ -16,12 +16,12 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcErffTest, SpecialNumbers) {
+TEST_F(LlvmLibcErffTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::erff(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::erff(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::erff(neg_inf));
@@ -29,14 +29,14 @@ TEST(LlvmLibcErffTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::erff(neg_zero));
 }
 
-TEST(LlvmLibcErffTest, TrickyInputs) {
+TEST_F(LlvmLibcErffTest, TrickyInputs) {
   constexpr int N = 2;
   constexpr uint32_t INPUTS[N] = {
       0x3f65'9229U, // |x| = 0x1.cb2452p-1f
       0x4004'1e6aU, // |x| = 0x1.083cd4p+1f
   };
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, x,
                                    LIBC_NAMESPACE::erff(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, -x,
@@ -44,7 +44,7 @@ TEST(LlvmLibcErffTest, TrickyInputs) {
   }
 }
 
-TEST(LlvmLibcErffTest, InFloatRange) {
+TEST_F(LlvmLibcErffTest, InFloatRange) {
   constexpr uint32_t COUNT = 234561;
   constexpr uint32_t START = 0;           // 0
   constexpr uint32_t STOP = 0x4080'0000U; // 4.0f
