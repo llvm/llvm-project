@@ -1424,14 +1424,14 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ;
 ; GFX10-WGP-LABEL: agent_acquire_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: agent_acquire_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: agent_acquire_fence:
@@ -1460,14 +1460,14 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ;
 ; GFX11-WGP-LABEL: agent_acquire_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: agent_acquire_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: agent_acquire_fence:
@@ -1556,14 +1556,14 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ;
 ; GFX10-WGP-LABEL: agent_acq_rel_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: agent_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: agent_acq_rel_fence:
@@ -1594,14 +1594,14 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ;
 ; GFX11-WGP-LABEL: agent_acq_rel_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: agent_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: agent_acq_rel_fence:
@@ -1631,14 +1631,14 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ;
 ; GFX10-WGP-LABEL: agent_seq_cst_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: agent_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: agent_seq_cst_fence:
@@ -1669,14 +1669,14 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ;
 ; GFX11-WGP-LABEL: agent_seq_cst_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: agent_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: agent_seq_cst_fence:
@@ -1706,14 +1706,14 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ;
 ; GFX10-WGP-LABEL: agent_one_as_acquire_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: agent_one_as_acquire_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: agent_one_as_acquire_fence:
@@ -1742,14 +1742,14 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ;
 ; GFX11-WGP-LABEL: agent_one_as_acquire_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: agent_one_as_acquire_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: agent_one_as_acquire_fence:
@@ -1838,14 +1838,14 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ;
 ; GFX10-WGP-LABEL: agent_one_as_acq_rel_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: agent_one_as_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: agent_one_as_acq_rel_fence:
@@ -1876,14 +1876,14 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ;
 ; GFX11-WGP-LABEL: agent_one_as_acq_rel_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: agent_one_as_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: agent_one_as_acq_rel_fence:
@@ -1913,14 +1913,14 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ;
 ; GFX10-WGP-LABEL: agent_one_as_seq_cst_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: agent_one_as_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: agent_one_as_seq_cst_fence:
@@ -1951,14 +1951,14 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ;
 ; GFX11-WGP-LABEL: agent_one_as_seq_cst_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: agent_one_as_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: agent_one_as_seq_cst_fence:
@@ -1988,14 +1988,14 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX10-WGP-LABEL: system_acquire_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: system_acquire_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: system_acquire_fence:
@@ -2026,14 +2026,14 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX11-WGP-LABEL: system_acquire_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: system_acquire_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: system_acquire_fence:
@@ -2124,14 +2124,14 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ;
 ; GFX10-WGP-LABEL: system_acq_rel_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: system_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: system_acq_rel_fence:
@@ -2166,14 +2166,14 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ;
 ; GFX11-WGP-LABEL: system_acq_rel_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: system_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: system_acq_rel_fence:
@@ -2203,14 +2203,14 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ;
 ; GFX10-WGP-LABEL: system_seq_cst_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: system_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: system_seq_cst_fence:
@@ -2245,14 +2245,14 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ;
 ; GFX11-WGP-LABEL: system_seq_cst_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: system_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: system_seq_cst_fence:
@@ -2282,14 +2282,14 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX10-WGP-LABEL: system_one_as_acquire_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: system_one_as_acquire_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: system_one_as_acquire_fence:
@@ -2320,14 +2320,14 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX11-WGP-LABEL: system_one_as_acquire_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: system_one_as_acquire_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: system_one_as_acquire_fence:
@@ -2418,14 +2418,14 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ;
 ; GFX10-WGP-LABEL: system_one_as_acq_rel_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: system_one_as_acq_rel_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: system_one_as_acq_rel_fence:
@@ -2460,14 +2460,14 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ;
 ; GFX11-WGP-LABEL: system_one_as_acq_rel_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: system_one_as_acq_rel_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: system_one_as_acq_rel_fence:
@@ -2497,14 +2497,14 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ;
 ; GFX10-WGP-LABEL: system_one_as_seq_cst_fence:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
+; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
 ; GFX10-CU-LABEL: system_one_as_seq_cst_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
+; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    s_endpgm
 ;
 ; SKIP-CACHE-INV-LABEL: system_one_as_seq_cst_fence:
@@ -2539,14 +2539,14 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ;
 ; GFX11-WGP-LABEL: system_one_as_seq_cst_fence:
 ; GFX11-WGP:       ; %bb.0: ; %entry
-; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
+; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: system_one_as_seq_cst_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
+; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 ;
 ; GFX12-WGP-LABEL: system_one_as_seq_cst_fence:
