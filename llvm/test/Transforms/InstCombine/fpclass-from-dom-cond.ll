@@ -336,8 +336,7 @@ define float @test_signbit_check(float %x, i1 %cond) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[VALUE:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[X]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[VALUE]]
 ;
   %i32 = bitcast float %x to i32
   %cmp = icmp slt i32 %i32, 0
