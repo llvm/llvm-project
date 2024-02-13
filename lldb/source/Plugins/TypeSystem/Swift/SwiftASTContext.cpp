@@ -5169,9 +5169,8 @@ void SwiftASTContext::LogConfiguration() {
                         .RuntimeLibraryPaths.size());
 
   for (const auto &runtime_library_path :
-       m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths) {
+       m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths)
     HEALTH_LOG_PRINTF("    %s", runtime_library_path.c_str());
-  }
 
   HEALTH_LOG_PRINTF("  Runtime library import paths     : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
@@ -5179,37 +5178,37 @@ void SwiftASTContext::LogConfiguration() {
                         .size());
 
   for (const auto &runtime_import_path :
-       m_ast_context_ap->SearchPathOpts.getRuntimeLibraryImportPaths()) {
+       m_ast_context_ap->SearchPathOpts.getRuntimeLibraryImportPaths())
     HEALTH_LOG_PRINTF("    %s", runtime_import_path.c_str());
-  }
 
   HEALTH_LOG_PRINTF("  Framework search paths           : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .getFrameworkSearchPaths()
                         .size());
   for (const auto &framework_search_path :
-       m_ast_context_ap->SearchPathOpts.getFrameworkSearchPaths()) {
+       m_ast_context_ap->SearchPathOpts.getFrameworkSearchPaths())
     HEALTH_LOG_PRINTF("    %s", framework_search_path.Path.c_str());
-  }
 
   HEALTH_LOG_PRINTF("  Import search paths              : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .getImportSearchPaths()
                         .size());
   for (const std::string &import_search_path :
-       m_ast_context_ap->SearchPathOpts.getImportSearchPaths()) {
+       m_ast_context_ap->SearchPathOpts.getImportSearchPaths())
     HEALTH_LOG_PRINTF("    %s", import_search_path.c_str());
-  }
 
   swift::ClangImporterOptions &clang_importer_options =
       GetClangImporterOptions();
 
+  if (!clang_importer_options.BridgingHeader.empty())
+    HEALTH_LOG_PRINTF("  Bridging Header               : %s",
+                      clang_importer_options.BridgingHeader.c_str());
+
   HEALTH_LOG_PRINTF(
       "  Extra clang arguments            : (%llu items)",
       (unsigned long long)clang_importer_options.ExtraArgs.size());
-  for (std::string &extra_arg : clang_importer_options.ExtraArgs) {
+  for (std::string &extra_arg : clang_importer_options.ExtraArgs)
     HEALTH_LOG_PRINTF("    %s", extra_arg.c_str());
-  }
 
   HEALTH_LOG_PRINTF("  Plugin search options            : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
@@ -5239,10 +5238,9 @@ void SwiftASTContext::LogConfiguration() {
       continue;
     }
     if (auto *opt =
-            elem.dyn_cast<swift::PluginSearchOption::ExternalPluginPath>()) {
+            elem.dyn_cast<swift::PluginSearchOption::ExternalPluginPath>())
       HEALTH_LOG_PRINTF("    -external-plugin-path %s#%s",
                         opt->SearchPath.c_str(), opt->ServerPath.c_str());
-    }
   }
 }
 
@@ -8054,7 +8052,7 @@ bool SwiftASTContext::DumpTypeValue(
     break;
   }
 
-  return 0;
+  return false;
 }
 
 bool SwiftASTContext::IsImportedType(opaque_compiler_type_t type,
