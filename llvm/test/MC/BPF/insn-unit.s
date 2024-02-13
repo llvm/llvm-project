@@ -61,6 +61,9 @@
 // CHECK-32: c3 92 10 00 00 00 00 00 	lock *(u32 *)(r2 + 16) += w9
 // CHECK: db a3 e2 ff 00 00 00 00 	lock *(u64 *)(r3 - 30) += r10
 
+  callx r2
+// CHECK: 8d 02 00 00 00 00 00 00 	callx r2
+
 // ======== BPF_JMP Class ========
   if r1 & r2 goto Llabel0    // BPF_JSET  | BPF_X
   if r1 & 0xffff goto Llabel0    // BPF_JSET  | BPF_K

@@ -782,18 +782,26 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
 }
 
 bool AMDGPUTargetAsmStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI) {
-  for (int i = 0; i < 64; ++i) {
+    const MCSubtargetInfo &STI, bool TrapEnabled) {
+  const char *TrapInstr = TrapEnabled ? "\ts_trap 2" : "\ts_endpgm";
+  OS << TrapInstr
+     << " ; Trap with incompatible firmware that doesn't "
+        "support preloading kernel arguments.\n";
+  for (int i = 0; i < 63; ++i) {
     OS << "\ts_nop 0\n";
   }
   return true;
 }
 
 bool AMDGPUTargetELFStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI) {
+    const MCSubtargetInfo &STI, bool TrapEnabled) {
   const uint32_t Encoded_s_nop = 0xbf800000;
+  const uint32_t Encoded_s_trap = 0xbf920002;
+  const uint32_t Encoded_s_endpgm = 0xbf810000;
+  const uint32_t TrapInstr = TrapEnabled ? Encoded_s_trap : Encoded_s_endpgm;
   MCStreamer &OS = getStreamer();
-  for (int i = 0; i < 64; ++i) {
+  OS.emitInt32(TrapInstr);
+  for (int i = 0; i < 63; ++i) {
     OS.emitInt32(Encoded_s_nop);
   }
   return true;

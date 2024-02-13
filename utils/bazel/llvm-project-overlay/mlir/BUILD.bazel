@@ -4552,8 +4552,8 @@ cc_library(
     deps = [
         ":ControlFlowDialect",
         ":FuncDialect",
-        ":InferTypeOpInterface",
         ":IR",
+        ":InferTypeOpInterface",
         ":MeshShardingInterface",
     ],
 )
@@ -8756,7 +8756,7 @@ cc_library(
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
-	":VCIXToLLVMIRTranslation",
+        ":VCIXToLLVMIRTranslation",
         ":X86VectorToLLVMIRTranslation",
     ],
 )
@@ -9155,6 +9155,7 @@ cc_binary(
         "//mlir/test:TestLinalg",
         "//mlir/test:TestLoopLikeInterface",
         "//mlir/test:TestMath",
+        "//mlir/test:TestMathToVCIX",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMesh",
         "//mlir/test:TestNVGPU",
@@ -9175,7 +9176,6 @@ cc_binary(
         "//mlir/test:TestTypeDialect",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
-        "//mlir/test:TestMathToVCIX",
     ],
 )
 
@@ -10036,6 +10036,7 @@ cc_library(
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
         ":OpenMPTypeInterfacesIncGen",
+        ":Support",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
     ],
@@ -13657,11 +13658,11 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/VCIXDialect.h"],
     includes = ["include"],
     deps = [
-	":GPUDialect",
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
-        ":VCIXOpsIncGen",
         ":SideEffectInterfaces",
+        ":VCIXOpsIncGen",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
@@ -13689,7 +13690,7 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir/Dialect/LLVMIR/VCIXOps.cpp.inc",
         ),
-	(
+        (
             [
                 "-gen-dialect-decls",
                 "-dialect=vcix",
@@ -13730,9 +13731,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":ToLLVMIRTranslation",
         ":VCIXConversionIncGen",
         ":VCIXDialect",
-        ":ToLLVMIRTranslation",
         "//llvm:Core",
         "//llvm:Support",
     ],
