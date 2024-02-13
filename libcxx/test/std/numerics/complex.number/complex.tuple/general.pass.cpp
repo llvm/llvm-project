@@ -46,14 +46,14 @@ constexpr void test() {
   // Ranges
 
   {
-    std::complex<T> arr[]{{T{27}, T{28}}, {T{82}, T{94}}};
+    std::vector<std::complex<T>> v{{T{27}, T{28}}, {T{82}, T{94}}};
 
-    std::same_as<std::vector<T>> decltype(auto) reals{arr | std::views::elements<0> | std::ranges::to<std::vector>()};
+    std::same_as<std::vector<T>> decltype(auto) reals{v | std::views::elements<0> | std::ranges::to<std::vector<T>>()};
     assert(reals.size() == 2);
     assert(reals[0] == T{27});
     assert(reals[1] == T{82});
 
-    std::same_as<std::vector<T>> decltype(auto) imags{arr | std::views::elements<1> | std::ranges::to<std::vector>()};
+    std::same_as<std::vector<T>> decltype(auto) imags{v | std::views::elements<1> | std::ranges::to<std::vector<T>>()};
     assert(reals.size() == 2);
     assert(imags[0] == T{28});
     assert(imags[1] == T{94});
