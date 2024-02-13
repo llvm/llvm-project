@@ -16,9 +16,6 @@
 namespace LIBC_NAMESPACE {
 namespace gpu {
 
-/// The number of threads that execute in lock-step in a warp.
-constexpr const uint64_t LANE_SIZE = 32;
-
 /// Type aliases to the address spaces used by the NVPTX backend.
 template <typename T> using Private = [[clang::opencl_private]] T;
 template <typename T> using Constant = [[clang::opencl_constant]] T;
@@ -95,8 +92,8 @@ LIBC_INLINE uint64_t get_thread_id() {
          get_num_threads_x() * get_num_threads_y() * get_thread_id_z();
 }
 
-/// Returns the size of a CUDA warp.
-LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
+/// Returns the size of a CUDA warp, always 32 on NVIDIA hardware.
+LIBC_INLINE uint32_t get_lane_size() { return 32; }
 
 /// Returns the id of the thread inside of a CUDA warp executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {
