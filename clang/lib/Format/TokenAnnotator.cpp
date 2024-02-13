@@ -5086,7 +5086,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(TT_TableGenCondOperatorColon))
       return false;
     // Do not insert bang operators and consequent openers.
-    if (Right.isOneOf(tok::l_paren, tok::greater) &&
+    if (Right.isOneOf(tok::l_paren, tok::less) &&
         Left.isOneOf(TT_TableGenBangOperator, TT_TableGenCondOperator)) {
       return false;
     }
