@@ -35,9 +35,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const uint32_t *getNoPreservedMask() const override;
 
-  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
-                            int &FrameIdx) const override;
-
   // Update DestReg to have the value SrcReg plus an offset.  This is
   // used during frame layout, and we may need to ensure that if we
   // split the offset internally that the DestReg is always aligned,
