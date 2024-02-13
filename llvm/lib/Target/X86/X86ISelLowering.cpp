@@ -52816,7 +52816,7 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   SmallVector<SDValue, 8> Ops;
   EVT VT = V.getValueType();
   EVT EltVT = VT.getVectorElementType();
-  for (auto Op : V->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
       Ops.push_back(DAG.getConstantFP(-Cst->getValueAPF(), SDLoc(Op), EltVT));
     } else {
@@ -52838,8 +52838,8 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   // prefer one of the values. We prefer a constant with a negative value on
   // the first place.
   // N.B. We need to skip undefs that may precede a value.
-  for (auto op : V->op_values()) {
-    if (auto *Cst = dyn_cast<ConstantFPSDNode>(op)) {
+  for (const SDValue &Op : V->op_values()) {
+    if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
       if (Cst->isNegative())
         return SDValue();
       break;
