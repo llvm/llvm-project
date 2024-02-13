@@ -396,11 +396,13 @@ private:
   LineColPairMap CondLoc;
 
 public:
-  MCDCRecord(CounterMappingRegion Region, TestVectors TV,
-             TVPairMap IndependencePairs, BoolVector Folded, CondIDMap PosToID,
-             LineColPairMap CondLoc)
-      : Region(Region), TV(TV), IndependencePairs(IndependencePairs),
-        Folded(Folded), PosToID(PosToID), CondLoc(CondLoc){};
+  MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
+             TVPairMap &&IndependencePairs, BoolVector &&Folded,
+             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)),
+        IndependencePairs(std::move(IndependencePairs)),
+        Folded(std::move(Folded)), PosToID(std::move(PosToID)),
+        CondLoc(std::move(CondLoc)){};
 
   CounterMappingRegion getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
@@ -603,7 +605,9 @@ struct FunctionRecord {
   FunctionRecord(FunctionRecord &&FR) = default;
   FunctionRecord &operator=(FunctionRecord &&) = default;
 
-  void pushMCDCRecord(MCDCRecord Record) { MCDCRecords.push_back(Record); }
+  void pushMCDCRecord(MCDCRecord &&Record) {
+    MCDCRecords.push_back(std::move(Record));
+  }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
                   uint64_t FalseCount) {
