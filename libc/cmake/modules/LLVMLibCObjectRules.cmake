@@ -100,44 +100,11 @@ endfunction()
 # for the features we wish to use on that target. The minimum PTX features used
 # here roughly corresponds to the CUDA 9.0 release.
 # Adjust as needed for desired PTX features.
-function(get_nvptx_compile_options output_var gpu_arch)
+function(get_nvptx_compile_options output_var)
   set(nvptx_options "")
-  list(APPEND nvptx_options "-march=${gpu_arch}")
   list(APPEND nvptx_options "-Wno-unknown-cuda-version")
   list(APPEND nvptx_options "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false")
-  if(${gpu_arch} STREQUAL "sm_35")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_37")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_50")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_52")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_53")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_60")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_61")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_62")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_70")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_72")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_75")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_80")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  elseif(${gpu_arch} STREQUAL "sm_86")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  elseif(${gpu_arch} STREQUAL "sm_89")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  elseif(${gpu_arch} STREQUAL "sm_90")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  else()
-    message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
-  endif()
+  list(APPEND nvptx_options "--cuda-feature=+ptx63")
 
   if(LIBC_CUDA_ROOT)
     list(APPEND nvptx_options "--cuda-path=${LIBC_CUDA_ROOT}")
@@ -147,16 +114,16 @@ endfunction()
 
 # Build the object target for a single GPU arch.
 # Usage:
-#     _build_gpu_object_for_single_arch(
+#     _build_gpu_object_for_single_target(
 #       <target_name>
-#       <gpu_arch>
+#       <gpu_target>
 #       SRCS <list of .cpp files>
 #       HDRS <list of .h files>
 #       DEPENDS <list of dependencies>
 #       COMPILE_OPTIONS <optional list of special compile options for this target>
 #       FLAGS <optional list of flags>
 #     )
-function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
+function(_build_gpu_object_for_single_target fq_target_name gpu_target)
   cmake_parse_arguments(
     "ADD_GPU_OBJ"
     "" # No optional arguments
@@ -170,20 +137,16 @@ function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
   endif()
 
   set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
-  # Derive the triple from the specified architecture.
-  if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-    set(gpu_target_triple ${AMDGPU_TARGET_TRIPLE})
-    list(APPEND compile_options "-mcpu=${gpu_arch}")
+  if("${gpu_target}" STREQUAL ${AMDGPU_TARGET_TRIPLE})
     list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     list(APPEND compile_options "-emit-llvm")
-  elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    set(gpu_target_triple ${NVPTX_TARGET_TRIPLE})
-    get_nvptx_compile_options(nvptx_options ${gpu_arch})
+  elseif("${gpu_target}" STREQUAL ${NVPTX_TARGET_TRIPLE})
+    get_nvptx_compile_options(nvptx_options)
     list(APPEND compile_options "${nvptx_options}")
   else()
-    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
+    message(FATAL_ERROR "Unknown GPU architecture '${gpu_target}'")
   endif()
-  list(APPEND compile_options "--target=${gpu_target_triple}")
+  list(APPEND compile_options "--target=${gpu_target}")
 
   # Build the library for this target architecture. We always emit LLVM-IR for
   # packaged GPU binaries.
@@ -202,7 +165,7 @@ function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
     add_dependencies(${fq_target_name} ${ADD_GPU_OBJ_DEPENDS})
     set_target_properties(${fq_target_name} PROPERTIES DEPS "${ADD_GPU_OBJ_DEPENDS}")
   endif()
-endfunction(_build_gpu_object_for_single_arch)
+endfunction(_build_gpu_object_for_single_target)
 
 # Build the object target for the GPU.
 # This compiles the target for all supported architectures and embeds it into
@@ -232,13 +195,13 @@ function(_build_gpu_object_bundle fq_target_name)
   foreach(add_gpu_obj_src ${ADD_GPU_OBJ_SRCS})
     # The packaged version will be built for every target GPU architecture. We do
     # this so we can support multiple accelerators on the same machine.
-    foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
+    foreach(gpu_target ${NVPTX_TARGET_TRIPLE} ${AMDGPU_TARGET_TRIPLE})
       get_filename_component(src_name ${add_gpu_obj_src} NAME)
-      set(gpu_target_name ${fq_target_name}.${src_name}.${gpu_arch})
+      set(gpu_target_name ${fq_target_name}.${src_name}.${gpu_target})
 
-      _build_gpu_object_for_single_arch(
+      _build_gpu_object_for_single_target(
         ${gpu_target_name}
-        ${gpu_arch}
+        ${gpu_target}
         CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
         HDRS ${ADD_GPU_OBJ_HDRS}
         SRCS ${add_gpu_obj_src}
@@ -249,15 +212,15 @@ function(_build_gpu_object_bundle fq_target_name)
       )
       # Append this target to a list of images to package into a single binary.
       set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
-      if("${gpu_arch}" IN_LIST all_nvptx_architectures)
+      if("${gpu_target}" STREQUAL "${NVPTX_TARGET_TRIPLE}")
         get_nvptx_compile_options(nvptx_options ${gpu_arch})
         string(REGEX MATCH "\\+ptx[0-9]+" nvptx_ptx_feature ${nvptx_options})
         list(APPEND packager_images
-             --image=file=${input_file},arch=${gpu_arch},triple=${NVPTX_TARGET_TRIPLE},feature=${nvptx_ptx_feature})
+             --image=file=${input_file},arch=generic,triple=${NVPTX_TARGET_TRIPLE},feature=${nvptx_ptx_feature})
       else()
         list(APPEND packager_images
-             --image=file=${input_file},arch=${gpu_arch},triple=${AMDGPU_TARGET_TRIPLE})
-       endif()
+             --image=file=${input_file},arch=generic,triple=${AMDGPU_TARGET_TRIPLE})
+      endif()
       list(APPEND gpu_target_objects ${input_file})
     endforeach()
 
@@ -386,13 +349,14 @@ function(create_object_library fq_target_name)
     endif()
     # When the target for GPU is not bundled, internal_target_name is the same
     # as fq_targetname
-    _build_gpu_object_for_single_arch(
+    _build_gpu_object_for_single_target(
       ${internal_target_name}
-      ${LIBC_GPU_TARGET_ARCHITECTURE}
+      ${LIBC_GPU_TARGET_TRIPLE}
       SRCS ${ADD_OBJECT_SRCS}
       HDRS ${ADD_OBJECT_HDRS}
       CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
-      COMPILE_OPTIONS ${compile_options} ${public_packaging_for_internal}
+      COMPILE_OPTIONS ${compile_options} -march=${LIBC_GPU_TARGET_ARCHITECTURE}
+                      ${public_packaging_for_internal}
       DEPENDS ${fq_deps_list}
     )
   else()
@@ -598,12 +562,13 @@ function(create_entrypoint_object fq_target_name)
       DEPENDS ${full_deps_list}
       FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     )
-    _build_gpu_object_for_single_arch(
+    _build_gpu_object_for_single_target(
       ${internal_target_name}
-      ${LIBC_GPU_TARGET_ARCHITECTURE}
+      ${LIBC_GPU_TARGET_TRIPLE}
       SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
       HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
-      COMPILE_OPTIONS ${common_compile_options}
+      COMPILE_OPTIONS -march=${LIBC_GPU_TARGET_ARCHITECTURE}
+                      ${common_compile_options}
       CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPENDS ${full_deps_list}
       FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"

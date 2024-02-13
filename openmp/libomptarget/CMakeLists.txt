@@ -121,8 +121,7 @@ pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
 
 # Check if this build supports the GPU libc.
 set(LIBC_GPU_SUPPORT FALSE)
-if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND (LIBC_GPU_BUILD OR
-                                            LIBC_GPU_ARCHITECTURES))
+if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND LIBC_GPU_BUILD)
   set(LIBC_GPU_SUPPORT TRUE)
 endif()
 

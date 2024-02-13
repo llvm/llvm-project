@@ -13,8 +13,6 @@ set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
                             "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
 set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
-set(LIBC_GPU_ARCHITECTURES "all" CACHE STRING
-    "List of GPU architectures to build the libc for.")
 set(AMDGPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
 set(NVPTX_TARGET_TRIPLE "nvptx64-nvidia-cuda")
 
@@ -54,17 +52,6 @@ foreach(arch_tool ${LIBC_NVPTX_ARCH} ${LIBC_AMDGPU_ARCH})
 endforeach()
 list(REMOVE_DUPLICATES detected_gpu_architectures)
 
-if(LIBC_GPU_ARCHITECTURES STREQUAL "all")
-  set(LIBC_GPU_ARCHITECTURES ${all_gpu_architectures})
-elseif(LIBC_GPU_ARCHITECTURES STREQUAL "native")
-  if(NOT detected_gpu_architectures)
-    message(FATAL_ERROR "No GPUs found on the system when using 'native'")
-  endif()
-  set(LIBC_GPU_ARCHITECTURES ${detected_gpu_architectures})
-endif()
-message(STATUS "Building libc for the following GPU architecture(s): "
-               "${LIBC_GPU_ARCHITECTURES}")
-
 # Identify the program used to package multiple images into a single binary.
 find_program(LIBC_CLANG_OFFLOAD_PACKAGER
              NAMES clang-offload-packager NO_DEFAULT_PATH
@@ -98,16 +85,11 @@ elseif(detected_gpu_architectures)
   message(STATUS "Using GPU architecture detected on the system for testing: "
                  "'${gpu_test_architecture}'")
 else()
-  list(LENGTH LIBC_GPU_ARCHITECTURES n_gpu_archs)
-  if (${n_gpu_archs} EQUAL 1)
-    set(gpu_test_architecture ${LIBC_GPU_ARCHITECTURES})
-    message(STATUS "Using user-specified GPU architecture for testing: "
-                  "'${gpu_test_architecture}'")
-  else()
-    message(STATUS "No GPU architecture set for testing. GPU tests will not be "
-                  "availibe. Set 'LIBC_GPU_TEST_ARCHITECTURE' to override.")
-    return()
-  endif()
+  # FIXME: This logic is broken, just default to some value for now so it
+  #        builds correctly. This will be reworked in the future.
+  list(GET all_gpu_architectures 0 gpu_test_architecture)
+  message(STATUS "No GPU architecture set for testing. GPU tests will not be "
+          "availibe. Set 'LIBC_GPU_TEST_ARCHITECTURE' to override.")
 endif()
 
 if("${gpu_test_architecture}" IN_LIST all_amdgpu_architectures)

@@ -43,7 +43,7 @@ set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LL
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
     add_subdirectory(utils/LibcTableGenUtil)
@@ -65,7 +65,7 @@ if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR
   # to build libc-hdrgen and return.
 
   # Always make the RPC server availible to other projects for GPU mode.
-  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+  if(LIBC_GPU_BUILD)
     add_subdirectory(utils/gpu/server)
   endif()
   return()

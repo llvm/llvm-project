@@ -477,8 +477,9 @@ function(add_integration_test test_name)
                            -flto --target=${LIBC_GPU_TARGET_TRIPLE}
                            -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
   elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-    get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
+    get_nvptx_compile_options(nvptx_options)
     target_compile_options(${fq_build_target_name} PRIVATE
+                           -march=${LIBC_GPU_TARGET_ARCHITECTURE}
                            -nogpulib ${nvptx_options} -fno-use-cxa-atexit
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   endif()
@@ -539,9 +540,10 @@ if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
        --target=${LIBC_GPU_TARGET_TRIPLE}
        -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
 elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
+  get_nvptx_compile_options(nvptx_options)
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
+       -nogpulib ${nvptx_options} -fno-use-cxa-atexit 
+       -march=${LIBC_GPU_TARGET_ARCHITECTURE} --target=${LIBC_GPU_TARGET_TRIPLE})
 endif()
 
 # Rule to add a hermetic test. A hermetic test is one whose executable is fully

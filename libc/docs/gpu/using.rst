@@ -16,10 +16,8 @@ LLVM's libc GPU support *must* be built with an up-to-date ``clang`` compiler
 due to heavy reliance on ``clang``'s GPU support. This can be done automatically
 using the ``LLVM_ENABLE_RUNTIMES=libc`` option. To enable libc for the GPU,
 enable the ``LIBC_GPU_BUILD`` option. By default, ``libcgpu.a`` will be built
-using every supported GPU architecture. To restrict the number of architectures
-build, either set ``LIBC_GPU_ARCHITECTURES`` to the list of desired
-architectures manually or use ``native`` to detect the GPUs on your system. A
-typical ``cmake`` configuration will look like this:
+targeting the NVPTX and AMDGPU implementations. A typical ``cmake``
+configuration will look like this:
 
 .. code-block:: sh
 
@@ -31,7 +29,6 @@ typical ``cmake`` configuration will look like this:
      -DLLVM_ENABLE_RUNTIMES="libc;openmp"                  \
      -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
      -DLIBC_GPU_BUILD=ON                  \ # Build in GPU mode
-     -DLIBC_GPU_ARCHITECTURES=all         \ # Build all supported architectures
      -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where 'libcgpu.a' will live
   $> ninja install
 
