@@ -10,7 +10,7 @@ Standards
 -   stdfix.h is specified in the `ISO/IEC TR 18037:2008 <https://www.iso.org/standard/51126.html>`_,
     C extensions to support embedded processors .
 
--   Its `N1169 final draft <https://open-std.org/JTC1/SC22/WG14/www/docs/n1169.pdf>`_.
+-   Its `specifications <https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip>`_.
 
 ---------------
 Source location

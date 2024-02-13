@@ -1,6 +1,6 @@
 def StdcExt : StandardSpec<"stdc_ext"> {
-  // From N1169 standard:
-  // https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1169.pdf
+  // From ISO/IEC TR 18037:2008 standard:
+  // https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
   HeaderSpec StdFix = HeaderSpec<
       "stdfix.h",
       [],  // macros

@@ -12,8 +12,9 @@
 #include <__llvm-libc-common.h>
 #include <llvm-libc-macros/stdfix-macros.h>
 
-// From N1169 standard:
-// https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1169.pdf
+// From ISO/IEC TR 18037:2008 standard:
+// https://www.iso.org/standard/51126.html
+// https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
 
 %%public_api()
 
