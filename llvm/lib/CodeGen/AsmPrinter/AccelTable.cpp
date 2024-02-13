@@ -439,8 +439,7 @@ void DebugNamesAbbrev::Profile(FoldingSetNodeID &ID) const {
 void Dwarf5AccelTableWriter::populateAbbrevsMap() {
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
-      for (DWARF5AccelTableData *Value :
-           Hash->getValues<DWARF5AccelTableData *>()) {
+      for (auto *Value : Hash->getValues<DWARF5AccelTableData *>()) {
         std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
             getIndexForEntry(*Value);
         std::optional<dwarf::Form> MaybeParentForm = getFormForIdxParent(
