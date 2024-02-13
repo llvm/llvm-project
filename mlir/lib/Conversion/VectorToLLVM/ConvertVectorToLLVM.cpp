@@ -1746,7 +1746,8 @@ struct VectorInterleaveOpLowering
     VectorType resultType = interleaveOp.getResultVectorType();
     // n-D interleaves should have been lowered already.
     if (resultType.getRank() != 1)
-      return failure();
+      return rewriter.notifyMatchFailure(interleaveOp,
+                                         "InterleaveOp not rank 1");
     // If the result is rank 1, then this directly maps to LLVM.
     if (resultType.isScalable()) {
       rewriter.replaceOpWithNewOp<LLVM::experimental_vector_interleave2>(
