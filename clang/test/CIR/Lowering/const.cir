@@ -67,4 +67,15 @@ module {
   // CHECK:   %3 = llvm.mlir.constant(1 : i32) : i32
   // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.array<10 x i32>
 
+  cir.func @testInitArrWithBool() {
+    %1 = cir.const(#cir.const_array<[#cir.bool<true> : !cir.bool]> : !cir.array<!cir.bool x 1>) : !cir.array<!cir.bool x 1>
+    cir.return
+  }
+
+  // CHECK: llvm.func @testInitArrWithBool()
+  // CHECK:   [[ARR:%.*]] = llvm.mlir.undef : !llvm.array<1 x i8>
+  // CHECK:   [[TRUE:%.*]] = llvm.mlir.constant(1 : i8) : i8
+  // CHECK:   {{.*}} = llvm.insertvalue [[TRUE]], [[ARR]][0] : !llvm.array<1 x i8>
+  // CHECL: llvm.return
+
 }
