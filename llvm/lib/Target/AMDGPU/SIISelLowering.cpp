@@ -2826,8 +2826,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc) {
     allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
     allocateHSAUserSGPRs(CCInfo, MF, *TRI, *Info);
-    if (IsKernel && Subtarget->hasKernargPreload() &&
-        !Subtarget->needsKernargPreloadBackwardsCompatibility())
+    if (IsKernel && Subtarget->hasKernargPreload())
       allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, Ins, MF, *TRI, *Info);
 
     allocateLDSKernelId(CCInfo, MF, *TRI, *Info);

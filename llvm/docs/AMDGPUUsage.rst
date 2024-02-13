@@ -5515,7 +5515,10 @@ additional 256 bytes to the kernel_code_entry_byte_offset. This addition
 facilitates the incorporation of a prologue to the kernel entry to handle cases
 where code designed for kernarg preloading is executed on hardware equipped with
 incompatible firmware. If hardware has compatible firmware the 256 bytes at the
-start of the kernel entry will be skipped.
+start of the kernel entry will be skipped. Additionally, the compiler backend
+may insert a trap instruction at the start of the kernel prologue to manage
+situations where kernarg preloading is attempted on hardware with incompatible
+firmware.
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
