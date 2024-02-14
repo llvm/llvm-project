@@ -82,19 +82,20 @@ struct DXILOperationDesc {
 */
 static ParameterKind getDXILTypeNameToKind(StringRef typeNameStr) {
   auto paramKind = StringSwitch<ParameterKind>(typeNameStr)
-                       .Case("VoidTy", ParameterKind::VOID)
-                       .Case("Float16Ty", ParameterKind::HALF)
-                       .Case("Float32Ty", ParameterKind::FLOAT)
-                       .Case("Float64Ty", ParameterKind::DOUBLE)
-                       .Case("Int1Ty", ParameterKind::I1)
-                       .Case("Int8Ty", ParameterKind::I8)
-                       .Case("Int16Ty", ParameterKind::I16)
-                       .Case("Int32Ty", ParameterKind::I32)
-                       .Case("Int64Ty", ParameterKind::I64)
-                       .Case("OverloadTy", ParameterKind::OVERLOAD)
-                       .Case("HandleTy", ParameterKind::DXIL_HANDLE)
-                       .Case("CbufferTy", ParameterKind::CBUFFER_RET)
-                       .Case("ResourceTy", ParameterKind::RESOURCE_RET)
+                       .Case("llvm_void_ty", ParameterKind::VOID)
+                       .Case("llvm_half_ty", ParameterKind::HALF)
+                       .Case("llvm_float_ty", ParameterKind::FLOAT)
+                       .Case("llvm_double_ty", ParameterKind::DOUBLE)
+                       .Case("llvm_i1_ty", ParameterKind::I1)
+                       .Case("llvm_i8_ty", ParameterKind::I8)
+                       .Case("llvm_i16_ty", ParameterKind::I16)
+                       .Case("llvm_i32_ty", ParameterKind::I32)
+                       .Case("llvm_i64_ty", ParameterKind::I64)
+                       .Case("llvm_anyfloat_ty", ParameterKind::OVERLOAD)
+                       .Case("llvm_anyint_ty", ParameterKind::OVERLOAD)
+                       .Case("dxil_handle_ty", ParameterKind::DXIL_HANDLE)
+                       .Case("dxil_cbuffer_ty", ParameterKind::CBUFFER_RET)
+                       .Case("dxil_resource_ty", ParameterKind::RESOURCE_RET)
                        .Default(ParameterKind::INVALID);
   assert(paramKind != ParameterKind::INVALID &&
          "Unsupported DXIL Type specified");
