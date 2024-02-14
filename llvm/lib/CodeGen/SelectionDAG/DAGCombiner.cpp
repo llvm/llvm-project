@@ -13162,16 +13162,15 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc,
                                   bool NonNegZExt = false) {
-  if (!ISD::isNON_EXTLoad(N0.getNode()) ||
-      !ISD::isUNINDEXEDLoad(N0.getNode()))
+  if (!ISD::isNON_EXTLoad(N0.getNode()) || !ISD::isUNINDEXEDLoad(N0.getNode()))
     return {};
 
   // If this is zext nneg, see if it would make sense to treat it as a sext.
   if (NonNegZExt) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end(); UI != UE;
-         ++UI) {
+    for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end();
+         UI != UE; ++UI) {
       SDNode *User = *UI;
       if (User->getOpcode() == ISD::SETCC) {
         ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
