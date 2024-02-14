@@ -59,6 +59,7 @@ public:
     PreprocessJobClass,
     PrecompileJobClass,
     ExtractAPIJobClass,
+    InstallAPIJobClass,
     AnalyzeJobClass,
     MigrateJobClass,
     CompileJobClass,
@@ -446,6 +447,17 @@ public:
   }
 
   void addHeaderInput(Action *Input) { getInputs().push_back(Input); }
+};
+
+class InstallAPIJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  InstallAPIJobAction(Action *Input, types::ID OutputType);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == InstallAPIJobClass;
+  }
 };
 
 class AnalyzeJobAction : public JobAction {

@@ -736,5 +736,44 @@ TEST(ConstantsTest, ComdatUserTracking) {
   EXPECT_TRUE(Users.size() == 0);
 }
 
+// Verify that the C API getters for BlockAddress work
+TEST(ConstantsTest, BlockAddressCAPITest) {
+  const char *BlockAddressIR = R"(
+    define void @test_block_address_func() {
+    entry:
+      br label %block_bb_0
+    block_bb_0:
+      ret void
+    }
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  std::unique_ptr<Module> M =
+      parseAssemblyString(BlockAddressIR, Error, Context);
+
+  EXPECT_TRUE(M.get() != nullptr);
+
+  // Get the function
+  auto *Func = M->getFunction("test_block_address_func");
+  EXPECT_TRUE(Func != nullptr);
+
+  // Get the second basic block, since we can't use the entry one
+  const BasicBlock &BB = *(++Func->begin());
+  EXPECT_EQ(BB.getName(), "block_bb_0");
+
+  // Construct the C API values
+  LLVMValueRef BlockAddr = LLVMBlockAddress(wrap(Func), wrap(&BB));
+  EXPECT_TRUE(LLVMIsABlockAddress(BlockAddr));
+
+  // Get the Function/BasicBlock values back out
+  auto *OutFunc = unwrap(LLVMGetBlockAddressFunction(BlockAddr));
+  auto *OutBB = unwrap(LLVMGetBlockAddressBasicBlock(BlockAddr));
+
+  // Verify that they round-tripped properly
+  EXPECT_EQ(Func, OutFunc);
+  EXPECT_EQ(&BB, OutBB);
+}
+
 } // end anonymous namespace
 } // end namespace llvm

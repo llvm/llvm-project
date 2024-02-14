@@ -8,7 +8,7 @@ and eStopReasonPlanComplete when breakpoint's condition fails or it is disabled.
 """
 
 
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
