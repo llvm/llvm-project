@@ -2470,7 +2470,8 @@ private:
     // found
     ompDeviceCodeFound =
         ompDeviceCodeFound ||
-        Fortran::lower::isOpenMPDeviceDeclareTarget(*this, getEval(), ompDecl);
+        Fortran::lower::isOpenMPDeviceDeclareTarget(
+            *this, bridge.getSemanticsContext(), getEval(), ompDecl);
     genOpenMPDeclarativeConstruct(
         *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
     builder->restoreInsertionPoint(insertPt);

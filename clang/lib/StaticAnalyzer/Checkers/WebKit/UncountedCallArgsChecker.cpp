@@ -91,6 +91,9 @@ public:
 
         const auto *Arg = CE->getArg(ArgIdx);
 
+        if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
+          Arg = defaultArg->getExpr();
+
         std::pair<const clang::Expr *, bool> ArgOrigin =
             tryToFindPtrOrigin(Arg, true);
 
@@ -125,6 +128,16 @@ public:
     // of object on LHS.
     if (auto *MemberOp = dyn_cast<CXXOperatorCallExpr>(CE)) {
       // Note: assignemnt to built-in type isn't derived from CallExpr.
+      if (MemberOp->getOperator() ==
+          OO_Equal) { // Ignore assignment to Ref/RefPtr.
+        auto *callee = MemberOp->getDirectCallee();
+        if (auto *calleeDecl = dyn_cast<CXXMethodDecl>(callee)) {
+          if (const CXXRecordDecl *classDecl = calleeDecl->getParent()) {
+            if (isRefCounted(classDecl))
+              return true;
+          }
+        }
+      }
       if (MemberOp->isAssignmentOp())
         return false;
     }

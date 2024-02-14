@@ -58,7 +58,7 @@ public:
         constexpr explicit duration(const Rep2& r,
             typename enable_if
             <
-               is_convertible<Rep2, rep>::value &&
+               is_convertible<const Rep2&, rep>::value &&
                (treat_as_floating_point<rep>::value ||
                !treat_as_floating_point<rep>::value && !treat_as_floating_point<Rep2>::value)
             >::type* = 0);

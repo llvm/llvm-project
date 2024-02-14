@@ -248,34 +248,6 @@ static inline bool atomicBarrierDroppedOnZero(unsigned Opcode) {
   return false;
 }
 
-static inline std::optional<std::string>
-getArm64ECMangledFunctionName(std::string Name) {
-  bool IsCppFn = Name[0] == '?';
-  if (IsCppFn && Name.find("$$h") != std::string::npos)
-    return std::nullopt;
-  if (!IsCppFn && Name[0] == '#')
-    return std::nullopt;
-
-  StringRef Prefix = "$$h";
-  size_t InsertIdx = 0;
-  if (IsCppFn) {
-    InsertIdx = Name.find("@@");
-    size_t ThreeAtSignsIdx = Name.find("@@@");
-    if (InsertIdx != std::string::npos && InsertIdx != ThreeAtSignsIdx) {
-      InsertIdx += 2;
-    } else {
-      InsertIdx = Name.find("@");
-      if (InsertIdx != std::string::npos)
-        InsertIdx++;
-    }
-  } else {
-    Prefix = "#";
-  }
-
-  Name.insert(Name.begin() + InsertIdx, Prefix.begin(), Prefix.end());
-  return std::optional<std::string>(Name);
-}
-
 namespace AArch64CC {
 
 // The CondCodes constants map directly to the 4-bit encoding of the condition
