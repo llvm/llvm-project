@@ -1024,17 +1024,17 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
   auto Open = [&]() { return ::open(P.begin(), OpenFlags, Mode); };
   if ((ResultFD = sys::RetryAfterSignal(-1, Open)) < 0)
     return errnoAsErrorCode();
-  // The underlying operation on these platforms allow opening directories 
-  // for reading in more cases than other platforms. 
-  #if defined(__MVS__) || defined(_AIX)        
-    if (Access == FA_Read) {
-      struct stat Status;
-      if (fstat(ResultFD, &Status) == -1)
-        return errnoAsErrorCode();
-      if (S_ISDIR(Status.st_mode))
-        return make_error_code(errc::is_a_directory);
-    }
-  #endif  
+// The underlying operation on these platforms allow opening directories
+// for reading in more cases than other platforms.
+#if defined(__MVS__) || defined(_AIX)
+  if (Access == FA_Read) {
+    struct stat Status;
+    if (fstat(ResultFD, &Status) == -1)
+      return errnoAsErrorCode();
+    if (S_ISDIR(Status.st_mode))
+      return make_error_code(errc::is_a_directory);
+  }
+#endif
 #ifndef O_CLOEXEC
   if (!(Flags & OF_ChildInherit)) {
     int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
