@@ -4,10 +4,10 @@
 # Check if the visibility of a single symbol is set correctly,
 # and none of other symbols are affected
 # RUN: cp %t.o %t0.o
-# RUN: llvm-objcopy %t0.o --set-symbol-visibility=default_local=hidden
-# RUN: llvm-objcopy %t0.o --set-symbol-visibility=internal_local=protected
-# RUN: llvm-objcopy %t0.o --set-symbol-visibility=hidden_local=internal
-# RUN: llvm-objcopy %t0.o --set-symbol-visibility=protected_local=default
+# RUN: llvm-objcopy %t0.o --set-symbol-visibility=default_local=hidden \
+# RUN:                    --set-symbol-visibility=internal_local=protected \
+# RUN:                    --set-symbol-visibility=hidden_local=internal \
+# RUN:                    --set-symbol-visibility=protected_local=default
 # RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=SINGLE
 
 # SINGLE-DAG: HIDDEN      1 default_local

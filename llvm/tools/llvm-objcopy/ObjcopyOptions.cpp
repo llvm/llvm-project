@@ -985,8 +985,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Expected<uint8_t> Type = parseVisibilityType(Visibility);
     if (!Type)
       return Type.takeError();
-    ELFConfig.SetVisibilityType = *Type;
-    if (Error E = ELFConfig.SymbolsToSetVisibility.addMatcher(
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E = ELFConfig.SymbolsToSetVisibility.back().first.addMatcher(
             NameOrPattern::create(Sym, SymbolMatchStyle, ErrorCallback)))
       return std::move(E);
   }
@@ -998,9 +998,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Expected<uint8_t> Type = parseVisibilityType(Visibility);
     if (!Type)
       return Type.takeError();
-    ELFConfig.SetVisibilityType = *Type;
-    if (Error E = addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility, DC.Alloc,
-                                     File, SymbolMatchStyle, ErrorCallback))
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E =
+            addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility.back().first,
+                               DC.Alloc, File, SymbolMatchStyle, ErrorCallback))
       return std::move(E);
   }
 

@@ -298,9 +298,9 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
 
-    if (ELFConfig.SymbolsToSetVisibility.matches(Sym.Name) &&
-        Sym.getShndx() != SHN_UNDEF)
-      Sym.Visibility = ELFConfig.SetVisibilityType;
+    for (auto &[Matcher, VisibilityType] : ELFConfig.SymbolsToSetVisibility)
+      if (Matcher.matches(Sym.Name) && Sym.getShndx() != SHN_UNDEF)
+        Sym.Visibility = VisibilityType;
 
     // Note: these two globalize flags have very similar names but different
     // meanings:
