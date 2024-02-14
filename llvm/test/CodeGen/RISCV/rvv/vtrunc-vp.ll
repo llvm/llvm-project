@@ -44,7 +44,7 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i16_unmasked(<vscale x 2 x i16> %a, 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i8> %v
 }
 
@@ -70,7 +70,7 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i32_unmasked(<vscale x 2 x i32> %a, 
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i8> %v
 }
 
@@ -100,7 +100,7 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i64_unmasked(<vscale x 2 x i64> %a, 
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i8> %v
 }
 
@@ -122,7 +122,7 @@ define <vscale x 2 x i16> @vtrunc_nxv2i16_nxv2i32_unmasked(<vscale x 2 x i32> %a
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -148,7 +148,7 @@ define <vscale x 2 x i16> @vtrunc_nxv2i16_nxv2i64_unmasked(<vscale x 2 x i64> %a
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -205,7 +205,7 @@ define <vscale x 2 x i32> @vtrunc_nxv2i32_nxv2i64_unmasked(<vscale x 2 x i64> %a
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x i32> %v
 }
 
