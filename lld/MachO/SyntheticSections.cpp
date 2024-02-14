@@ -1053,7 +1053,7 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
     std::vector<MachO::data_in_code_entry> sortedEntries;
     sortedEntries.assign(entries.begin(), entries.end());
     llvm::sort(sortedEntries, [](const data_in_code_entry &lhs,
-                                      const data_in_code_entry &rhs) {
+                                 const data_in_code_entry &rhs) {
       return lhs.offset < rhs.offset;
     });
 
