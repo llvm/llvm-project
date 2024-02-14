@@ -1174,9 +1174,13 @@ def C23 : DiagGroup<"c23-extensions">;
 
 def : DiagGroup<"c2x-extensions", [C23]>;
 
+// Previously supported warning group which is no longer pertinent as binary
+// literals are a C++14 and C23 extension now instead of a GNU extension.
+def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
+
 // A warning group for warnings about GCC extensions.
 def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
-                            GNUAutoType, GNUCaseRange,
+                            GNUAutoType, GNUBinaryLiteral, GNUCaseRange,
                             GNUComplexInteger, GNUCompoundLiteralInitializer,
                             GNUConditionalOmittedOperand, GNUDesignator,
                             GNUEmptyStruct,
