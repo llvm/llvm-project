@@ -1,10 +1,12 @@
-// RUN: %check_clang_tidy -std=c++17 %s modernize-use-designated-initializers %t
+// RUN: %check_clang_tidy -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN:     -- \
+// RUN:     -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++17 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.IgnoreSingleElementAggregates, value: false}]}" \
-// RUN:     --
+// RUN:     -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=POD -std=c++17 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.RestrictToPODTypes, value: true}]}" \
-// RUN:     --
+// RUN:     -- -fno-delayed-template-parsing
 
 struct S1 {};
 
