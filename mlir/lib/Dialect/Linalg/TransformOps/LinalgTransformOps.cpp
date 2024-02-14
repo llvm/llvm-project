@@ -3254,7 +3254,7 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
   rewriter.setInsertionPoint(target);
   if (target.getNumLoops() <= 1)
     return DiagnosedSilenceableFailure::success();
-  auto flatten = [&](linalg::LinalgOp &op) -> FailureOr<linalg::LinalgOp> {
+  auto flatten = [&](linalg::LinalgOp &op) -> FailureOr<CollapseResult> {
     if (!isElementwise(target)) {
       return rewriter.notifyMatchFailure(
           target, "only elementwise flattening is supported");
@@ -3295,46 +3295,12 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     }
     ReassociationIndices reassociation(target.getNumLoops());
     std::iota(reassociation.begin(), reassociation.end(), 0);
-    auto flattenOperand = [&](const Value &operand) {
-      return (!isa<MemRefType>(operand.getType()))
-                 ? operand
-                 : rewriter
-                       .create<memref::CollapseShapeOp>(target.getLoc(),
-                                                        operand, reassociation)
-                       .getResult();
-    };
-    SmallVector<Value, 2> flattenedOperands(
-        llvm::map_range(target->getOperands(), [&](const Value &operand) {
-          return flattenOperand(operand);
-        }));
-
-    SmallVector<AffineMap, 4> flattenedMaps(
-        llvm::map_range(flattenedOperands, [&](const Value &val) {
-          if (auto memRefTy = dyn_cast<MemRefType>(val.getType()))
-            return AffineMap::getMinorIdentityMap(1, memRefTy.getRank(),
-                                                  target.getContext());
-          return AffineMap::getMinorIdentityMap(1, 0, target.getContext());
-        }));
-
-    rewriter.modifyOpInPlace(op, [&]() {
-      op->setOperands(flattenedOperands);
-      // TODO: Find a more general way to determine if op requires explicit
-      // indexing_maps and iterator_types
-      if (isa<linalg::GenericOp>(op)) {
-        op->setAttr("indexing_maps",
-                    rewriter.getAffineMapArrayAttr(flattenedMaps));
-        op->setAttr(
-            "iterator_types",
-            rewriter.getArrayAttr({IteratorTypeAttr::get(
-                rewriter.getContext(), utils::IteratorType::parallel)}));
-      }
-    });
-    return op;
+    return collapseOpIterationDims(op, reassociation, rewriter);
   };
   auto maybeFlattened = flatten(target);
   if (failed(maybeFlattened))
     return emitDefaultSilenceableFailure(target);
-  results.push_back(*maybeFlattened);
+  results.push_back((*maybeFlattened).collapsedOp);
   return DiagnosedSilenceableFailure::success();
 }
 

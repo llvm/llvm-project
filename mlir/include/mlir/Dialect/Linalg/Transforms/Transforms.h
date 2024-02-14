@@ -1074,6 +1074,11 @@ bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
                               ArrayRef<ReassociationIndices> dimSequences);
 
+struct CollapseResult {
+  SmallVector<Value> results;
+  LinalgOp collapsedOp;
+};
+
 /// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition
 /// to calling this method is that for each list in `foldedIterationDim`, the
 /// sequence of dimensions is contiguous in domains of all `indexing_maps` of
@@ -1081,7 +1086,7 @@ bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
 /// When valid, the method also collapses the operands of the op. Returns
 /// replacement values of the results of the original `linalgOp` by inserting
 /// reshapes to get back values of compatible types.
-FailureOr<SmallVector<Value>>
+FailureOr<CollapseResult>
 collapseOpIterationDims(LinalgOp op,
                         ArrayRef<ReassociationIndices> foldedIterationDims,
                         RewriterBase &rewriter);

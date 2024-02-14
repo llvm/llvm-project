@@ -1479,23 +1479,23 @@ LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
       rewriter, op, resultTypes,
       llvm::to_vector(llvm::concat<Value>(inputOperands, outputOperands)));
 
-  // Get the iterator types for the operand.
-  SmallVector<Attribute> iteratorTypes = llvm::map_to_vector(
-      getCollapsedOpIteratorTypes(op.getIteratorTypesArray(), collapsingInfo),
-      [&](utils::IteratorType itTy) {
-        return cast<Attribute>(
-            IteratorTypeAttr::get(rewriter.getContext(), itTy));
-      });
-
-  // Get the indexing maps.
-  auto indexingMaps =
-      llvm::map_to_vector(op.getIndexingMapsArray(), [&](AffineMap map) {
-        return getCollapsedOpIndexingMap(map, collapsingInfo);
-      });
-
   // TODO: Find a more general way to determine if op requires explicit
   // indexing_maps and iterator_types
   if (isa<linalg::GenericOp>(op)) {
+    // Get the iterator types for the operand.
+    SmallVector<Attribute> iteratorTypes = llvm::map_to_vector(
+        getCollapsedOpIteratorTypes(op.getIteratorTypesArray(), collapsingInfo),
+        [&](utils::IteratorType itTy) {
+          return cast<Attribute>(
+              IteratorTypeAttr::get(rewriter.getContext(), itTy));
+        });
+
+    // Get the indexing maps.
+    auto indexingMaps =
+        llvm::map_to_vector(op.getIndexingMapsArray(), [&](AffineMap map) {
+          return getCollapsedOpIndexingMap(map, collapsingInfo);
+        });
+
     collapsedOp->setAttr("indexing_maps",
                          rewriter.getAffineMapArrayAttr(indexingMaps));
     collapsedOp->setAttr("iterator_types",
@@ -1506,7 +1506,7 @@ LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
 }
 
 /// Implementation of fusion with reshape operation by collapsing dimensions.
-FailureOr<SmallVector<Value>> mlir::linalg::collapseOpIterationDims(
+FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
     LinalgOp op, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter) {
   // Bail on trivial no-op cases.
@@ -1594,7 +1594,7 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseOpIterationDims(
       results.push_back(collapsedOpResult);
     }
   }
-  return results;
+  return CollapseResult{.results = results, .collapsedOp = collapsedOp};
 }
 
 namespace {
@@ -1626,14 +1626,14 @@ public:
         continue;
       }
 
-      std::optional<SmallVector<Value>> replacements = collapseOpIterationDims(
+      std::optional<CollapseResult> collapseResult = collapseOpIterationDims(
           genericOp, collapsableIterationDims, rewriter);
-      if (!replacements) {
+      if (!collapseResult) {
         return rewriter.notifyMatchFailure(
             genericOp, "failed to do the fusion by collapsing transformation");
       }
 
-      rewriter.replaceOp(genericOp, *replacements);
+      rewriter.replaceOp(genericOp, (*collapseResult).results);
       return success();
     }
     return failure();
@@ -1667,12 +1667,12 @@ public:
           op, "specified dimensions cannot be collapsed");
     }
 
-    std::optional<SmallVector<Value>> replacements =
+    std::optional<CollapseResult> collapseResult =
         collapseOpIterationDims(op, collapsableIterationDims, rewriter);
-    if (!replacements) {
+    if (!collapseResult) {
       return rewriter.notifyMatchFailure(op, "failed to collapse dimensions");
     }
-    rewriter.replaceOp(op, *replacements);
+    rewriter.replaceOp(op, (*collapseResult).results);
     return success();
   }
 
