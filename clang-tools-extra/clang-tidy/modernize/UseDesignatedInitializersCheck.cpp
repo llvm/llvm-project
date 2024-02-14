@@ -48,8 +48,11 @@ AST_MATCHER(InitListExpr, isFullyDesignated) {
 AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
 
 AST_MATCHER(FieldDecl, isAnonymousDecl) {
-  if (const auto *Record =
-          Node.getType().getCanonicalType()->getAsRecordDecl()) {
+  const auto Type = Node.getType();
+  if (Type.isNull()) {
+    return true;
+  }
+  if (const auto *Record = Type.getCanonicalType()->getAsRecordDecl()) {
     return Record->isAnonymousStructOrUnion() || !Record->getIdentifier();
   }
   return false;
