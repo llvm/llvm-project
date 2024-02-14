@@ -684,6 +684,7 @@ private:
   CodeGenModule &CGM;
 
   llvm::SmallVector<mcdc::ConditionIDs> DecisionStack;
+  MCDC::State &MCDCState;
   llvm::DenseMap<const Stmt *, mcdc::ConditionID> &CondIDs;
   mcdc::ConditionID NextID = 1;
   bool NotMapped = false;
