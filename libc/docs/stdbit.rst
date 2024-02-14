@@ -41,26 +41,26 @@ stdc_leading_ones_us         |check|
 stdc_leading_ones_ui         |check|
 stdc_leading_ones_ul         |check|
 stdc_leading_ones_ull        |check|
-stdc_trailing_zeros_uc
-stdc_trailing_zeros_us
-stdc_trailing_zeros_ui
-stdc_trailing_zeros_ul
-stdc_trailing_zeros_ull
-stdc_trailing_ones_uc
-stdc_trailing_ones_us
-stdc_trailing_ones_ui
-stdc_trailing_ones_ul
-stdc_trailing_ones_ull
-stdc_first_leading_zero_uc
-stdc_first_leading_zero_us
-stdc_first_leading_zero_ui
-stdc_first_leading_zero_ul
-stdc_first_leading_zero_ull
-stdc_first_leading_one_uc
-stdc_first_leading_one_us
-stdc_first_leading_one_ui
-stdc_first_leading_one_ul
-stdc_first_leading_one_ull
+stdc_trailing_zeros_uc       |check|
+stdc_trailing_zeros_us       |check|
+stdc_trailing_zeros_ui       |check|
+stdc_trailing_zeros_ul       |check|
+stdc_trailing_zeros_ull      |check|
+stdc_trailing_ones_uc        |check|
+stdc_trailing_ones_us        |check|
+stdc_trailing_ones_ui        |check|
+stdc_trailing_ones_ul        |check|
+stdc_trailing_ones_ull       |check|
+stdc_first_leading_zero_uc   |check|
+stdc_first_leading_zero_us   |check|
+stdc_first_leading_zero_ui   |check|
+stdc_first_leading_zero_ul   |check|
+stdc_first_leading_zero_ull  |check|
+stdc_first_leading_one_uc    |check|
+stdc_first_leading_one_us    |check|
+stdc_first_leading_one_ui    |check|
+stdc_first_leading_one_ul    |check|
+stdc_first_leading_one_ull   |check|
 stdc_first_trailing_zero_uc
 stdc_first_trailing_zero_us
 stdc_first_trailing_zero_ui
@@ -116,10 +116,10 @@ __STDC_ENDIAN_BIG__
 __STDC_ENDIAN_NATIVE__
 stdc_leading_zeros         |check|
 stdc_leading_ones          |check|
-stdc_trailing_zeros
-stdc_trailing_ones
-stdc_first_leading_zero
-stdc_first_leading_one
+stdc_trailing_zeros        |check|
+stdc_trailing_ones         |check|
+stdc_first_leading_zero    |check|
+stdc_first_leading_one     |check|
 stdc_first_trailing_zero
 stdc_first_trailing_one
 stdc_count_zeros
