@@ -15,6 +15,7 @@ class ParsedCommandTestCase(TestBase):
 
     # This crashes on the x86_64 Debian bot, but the failure is not helpful.
     # Disable the test while I try to find a way to reproduce.
+    @skipIf(py_version=("<=", (3, 9)))
     def test(self):
         self.pycmd_tests()
 
