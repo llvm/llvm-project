@@ -331,7 +331,8 @@ bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
     return SizeOut != Out.size();
   };
 
-  typedef std::pair<MVT, std::function<bool(MVT)>> WildPartT;
+  // Note: must be non-overlapping
+  using WildPartT = std::pair<MVT, std::function<bool(MVT)>>;
   static const WildPartT WildParts[] = {
       {MVT::iPTR, [](MVT T) { return T.isScalarInteger() || T == MVT::iPTR; }},
   };
