@@ -70,6 +70,15 @@ public:
       // or std::function call operator).
       unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
+      if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
+        auto *E = MemberCallExpr->getImplicitObjectArgument();
+        auto *ArgType = MemberCallExpr->getObjectType().getTypePtrOrNull();
+        std::optional<bool> IsUncounted =
+            isUncounted(ArgType->getAsCXXRecordDecl());
+        if (IsUncounted && *IsUncounted && !isPtrOriginSafe(E))
+          reportBugOnThis(E);
+      }
+
       for (auto P = F->param_begin();
            // FIXME: Also check variadic function parameters.
            // FIXME: Also check default function arguments. Probably a different
@@ -94,30 +103,34 @@ public:
         if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
           Arg = defaultArg->getExpr();
 
-        std::pair<const clang::Expr *, bool> ArgOrigin =
-            tryToFindPtrOrigin(Arg, true);
-
-        // Temporary ref-counted object created as part of the call argument
-        // would outlive the call.
-        if (ArgOrigin.second)
-          continue;
-
-        if (isa<CXXNullPtrLiteralExpr>(ArgOrigin.first)) {
-          // foo(nullptr)
-          continue;
-        }
-        if (isa<IntegerLiteral>(ArgOrigin.first)) {
-          // FIXME: Check the value.
-          // foo(NULL)
-          continue;
-        }
-
-        if (isASafeCallArg(ArgOrigin.first))
+        if (isPtrOriginSafe(Arg))
           continue;
 
         reportBug(Arg, *P);
       }
     }
+  }
+
+  bool isPtrOriginSafe(const Expr *Arg) const {
+    std::pair<const clang::Expr *, bool> ArgOrigin =
+        tryToFindPtrOrigin(Arg, true);
+
+    // Temporary ref-counted object created as part of the call argument
+    // would outlive the call.
+    if (ArgOrigin.second)
+      return true;
+
+    if (isa<CXXNullPtrLiteralExpr>(ArgOrigin.first)) {
+      // foo(nullptr)
+      return true;
+    }
+    if (isa<IntegerLiteral>(ArgOrigin.first)) {
+      // FIXME: Check the value.
+      // foo(NULL)
+      return true;
+    }
+
+    return isASafeCallArg(ArgOrigin.first);
   }
 
   bool shouldSkipCall(const CallExpr *CE) const {
@@ -190,6 +203,22 @@ public:
     const SourceLocation SrcLocToReport =
         isa<CXXDefaultArgExpr>(CallArg) ? Param->getDefaultArg()->getExprLoc()
                                         : CallArg->getSourceRange().getBegin();
+
+    PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
+    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+    Report->addRange(CallArg->getSourceRange());
+    BR->emitReport(std::move(Report));
+  }
+
+  void reportBugOnThis(const Expr *CallArg) const {
+    assert(CallArg);
+
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream Os(Buf);
+
+    Os << "Call argument for 'this' parameter is uncounted and unsafe.";
+
+    const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
