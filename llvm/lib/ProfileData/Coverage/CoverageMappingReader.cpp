@@ -313,9 +313,9 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return make_error<CoverageMapError>(
                 coveragemap_error::malformed,
                 "MCDCConditionID shouldn't be zero");
-          Params = mcdc::BranchParameters{static_cast<unsigned>(ID),
-                                          static_cast<unsigned>(TID),
-                                          static_cast<unsigned>(FID)};
+          Params = mcdc::BranchParameters{
+              static_cast<unsigned>(ID),
+              {static_cast<unsigned>(FID), static_cast<unsigned>(TID)}};
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;

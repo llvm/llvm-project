@@ -257,8 +257,8 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
         ParamsShouldBeNull = false;
         assert(BranchParams.ID > 0);
         encodeULEB128(static_cast<unsigned>(BranchParams.ID), OS);
-        encodeULEB128(static_cast<unsigned>(BranchParams.TrueID), OS);
-        encodeULEB128(static_cast<unsigned>(BranchParams.FalseID), OS);
+        encodeULEB128(static_cast<unsigned>(BranchParams.Conds[true]), OS);
+        encodeULEB128(static_cast<unsigned>(BranchParams.Conds[false]), OS);
       }
       break;
     case CounterMappingRegion::MCDCDecisionRegion:

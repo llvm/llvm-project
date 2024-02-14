@@ -246,7 +246,7 @@ class MCDCRecordProcessor {
   unsigned BitmapIdx;
 
   /// Mapping of a condition ID to its corresponding branch params.
-  llvm::DenseMap<unsigned, const mcdc::BranchParameters *> BranchParamsMap;
+  llvm::DenseMap<unsigned, mcdc::ConditionIDs> CondsMap;
 
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
@@ -269,38 +269,34 @@ public:
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
-  void recordTestVector(MCDCRecord::TestVector &TV, unsigned Index,
-                        MCDCRecord::CondState Result) {
-    if (!Bitmap[BitmapIdx + Index])
-      return;
-
-    // Copy the completed test vector to the vector of testvectors.
-    ExecVectors.push_back(TV);
-
-    // The final value (T,F) is equal to the last non-dontcare state on the
-    // path (in a short-circuiting system).
-    ExecVectors.back().push_back(Result);
-  }
-
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
                        unsigned Index) {
-    auto [UnusedID, TrueID, FalseID] = *BranchParamsMap[ID];
+    assert((Index & (1 << (ID - 1))) == 0);
 
-    TV[ID - 1] = MCDCRecord::MCDC_False;
-    if (FalseID > 0)
-      buildTestVector(TV, FalseID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_False);
+    for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
+      static_assert(MCDCRecord::MCDC_False == 0);
+      static_assert(MCDCRecord::MCDC_True == 1);
+      Index |= MCDCCond << (ID - 1);
+      TV[ID - 1] = MCDCCond;
+      auto NextID = CondsMap[ID][MCDCCond];
+      if (NextID > 0) {
+        buildTestVector(TV, NextID, Index);
+        continue;
+      }
 
-    Index |= 1 << (ID - 1);
-    TV[ID - 1] = MCDCRecord::MCDC_True;
-    if (TrueID > 0)
-      buildTestVector(TV, TrueID, Index);
-    else
-      recordTestVector(TV, Index, MCDCRecord::MCDC_True);
+      if (!Bitmap[BitmapIdx + Index])
+        continue;
+
+      // Copy the completed test vector to the vector of testvectors.
+      ExecVectors.push_back(TV);
+
+      // The final value (T,F) is equal to the last non-dontcare state on the
+      // path (in a short-circuiting system).
+      ExecVectors.back().push_back(MCDCCond);
+    }
 
     // Reset back to DontCare.
     TV[ID - 1] = MCDCRecord::MCDC_DontCare;
@@ -374,7 +370,7 @@ public:
     //   from being measured.
     for (const auto *B : Branches) {
       const auto &BranchParams = B->getBranchParams();
-      BranchParamsMap[BranchParams.ID] = &BranchParams;
+      CondsMap[BranchParams.ID] = BranchParams.Conds;
       PosToID[I] = BranchParams.ID - 1;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
