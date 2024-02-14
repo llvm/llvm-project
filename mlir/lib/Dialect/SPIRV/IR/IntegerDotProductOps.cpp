@@ -25,6 +25,7 @@ namespace mlir::spirv {
 // Integer Dot Product ops
 //===----------------------------------------------------------------------===//
 
+template <typename IntegerDotProductOpTy>
 static LogicalResult verifyIntegerDotProduct(Operation *op) {
   assert(llvm::is_contained({2u, 3u}, op->getNumOperands()) &&
          "Not an integer dot product op?");
@@ -33,7 +34,8 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
   // ODS enforces that vector 1 and vector 2, and result and the accumulator
   // have the same types.
   Type factorTy = op->getOperand(0).getType();
-  StringRef packedVectorFormatAttrName = SDotAccSatOp::getFormatAttrName(op->getName()).strref();
+  StringAttr packedVectorFormatAttrName =
+      IntegerDotProductOpTy::getFormatAttrName(op->getName());
   if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
     auto packedVectorFormat =
         llvm::dyn_cast_or_null<spirv::PackedVectorFormatAttr>(
@@ -100,7 +102,8 @@ getIntegerDotProductCapabilities(Operation *op) {
   SmallVector<ArrayRef<spirv::Capability>, 1> capabilities = {dotProductCap};
 
   Type factorTy = op->getOperand(0).getType();
-  StringRef packedVectorFormatAttrName = SDotAccSatOp::getFormatAttrName(op->getName()).strref();
+  StringAttr packedVectorFormatAttrName =
+      SDotAccSatOp::getFormatAttrName(op->getName());
   if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
     auto formatAttr = llvm::cast<spirv::PackedVectorFormatAttr>(
         op->getAttr(packedVectorFormatAttrName));
@@ -122,7 +125,7 @@ getIntegerDotProductCapabilities(Operation *op) {
 }
 
 #define SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(OpName)                              \
-  LogicalResult OpName::verify() { return verifyIntegerDotProduct(*this); }    \
+  LogicalResult OpName::verify() { return verifyIntegerDotProduct<OpName>(*this); }    \
   SmallVector<ArrayRef<spirv::Extension>, 1> OpName::getExtensions() {         \
     return getIntegerDotProductExtensions();                                   \
   }                                                                            \

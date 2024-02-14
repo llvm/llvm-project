@@ -1142,7 +1142,7 @@ void OpEmitter::genAttrNameGetters() {
     } else {
       const char *const getAttrName = R"(
   assert(index < {0} && "invalid attribute index");
-  // assert(name.getStringRef() == getOperationName() && "invalid operation name");
+  assert(name.getStringRef() == getOperationName() && "invalid operation name");
   assert(name.isRegistered() && "Operation isn't registered, missing a "
         "dependent dialect loading?");
   return name.getAttributeNames()[index];

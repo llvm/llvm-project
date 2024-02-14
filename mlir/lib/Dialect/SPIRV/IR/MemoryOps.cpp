@@ -25,10 +25,49 @@ using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
 
+/// Parses optional memory access (a.k.a. memory operand) attributes attached to
+/// a memory access operand/pointer. Specifically, parses the following syntax:
+///     (`[` memory-access `]`)?
+/// where:
+///     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", `
+///         integer-literal | `"NonTemporal"`
+template<typename MemoryOpTy>
+ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
+                                        OperationState &state) {
+  // Parse an optional list of attributes staring with '['
+  if (parser.parseOptionalLSquare()) {
+    // Nothing to do
+    return success();
+  }
+
+  spirv::MemoryAccess memoryAccessAttr;
+  StringAttr memoryAccessAttrName = MemoryOpTy::getMemoryAccessAttrName(state.name);
+  if (spirv::parseEnumStrAttr<spirv::MemoryAccessAttr>(memoryAccessAttr, parser,
+                                                       state, memoryAccessAttrName))
+    return failure();
+
+  if (spirv::bitEnumContainsAll(memoryAccessAttr,
+                                spirv::MemoryAccess::Aligned)) {
+    // Parse integer attribute for alignment.
+    Attribute alignmentAttr;
+    StringAttr alignmentAttrName = MemoryOpTy::getAlignmentAttrName(state.name);
+    Type i32Type = parser.getBuilder().getIntegerType(32);
+    if (parser.parseComma() ||
+        parser.parseAttribute(
+            alignmentAttr, i32Type,
+            alignmentAttrName,
+            state.attributes)) {
+      return failure();
+    }
+  }
+  return parser.parseRSquare();
+}
+
 // TODO Make sure to merge this and the previous function into one template
 // parameterized by memory access attribute name and alignment. Doing so now
 // results in VS2017 in producing an internal error (at the call site) that's
 // not detailed enough to understand what is happening.
+template<typename MemoryOpTy>
 static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
                                                      OperationState &state) {
   // Parse an optional list of attributes staring with '['
@@ -38,7 +77,8 @@ static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
   }
 
   spirv::MemoryAccess memoryAccessAttr;
-  StringRef memoryAccessAttrName = CopyMemoryOp::getMemoryAccessAttrName(state.name).strref();
+  StringRef memoryAccessAttrName =
+      MemoryOpTy::getMemoryAccessAttrName(state.name).strref();
   if (spirv::parseEnumStrAttr<spirv::MemoryAccessAttr>(
           memoryAccessAttr, parser, state, memoryAccessAttrName))
     return failure();
@@ -47,7 +87,8 @@ static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
                                 spirv::MemoryAccess::Aligned)) {
     // Parse integer attribute for alignment.
     Attribute alignmentAttr;
-    StringRef alignmentAttrName = CopyMemoryOp::getSourceAlignmentAttrName(state.name).strref();
+    StringAttr alignmentAttrName =
+        MemoryOpTy::getSourceAlignmentAttrName(state.name);
     Type i32Type = parser.getBuilder().getIntegerType(32);
     if (parser.parseComma() ||
         parser.parseAttribute(alignmentAttr, i32Type, alignmentAttrName,
@@ -182,7 +223,8 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // memory-access attribute is Aligned, then the alignment attribute must be
   // present.
   auto *op = memoryOp.getOperation();
-  auto memAccessAttr = op->getAttr(memoryOp.getSourceMemoryAccessAttrName().strref());
+  auto memAccessAttr =
+      op->getAttr(memoryOp.getSourceMemoryAccessAttrName().strref());
   if (!memAccessAttr) {
     // Alignment attribute shouldn't be present if memory access attribute is
     // not present.
@@ -378,7 +420,7 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand ptrInfo;
   Type elementType;
   if (parseEnumStrAttr(storageClass, parser) || parser.parseOperand(ptrInfo) ||
-      parseMemoryAccessAttributes(parser, result) ||
+      parseMemoryAccessAttributes<LoadOp>(parser, result) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
       parser.parseType(elementType)) {
     return failure();
@@ -427,7 +469,7 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
   Type elementType;
   if (parseEnumStrAttr(storageClass, parser) ||
       parser.parseOperandList(operandInfo, 2) ||
-      parseMemoryAccessAttributes(parser, result) || parser.parseColon() ||
+      parseMemoryAccessAttributes<StoreOp>(parser, result) || parser.parseColon() ||
       parser.parseType(elementType)) {
     return failure();
   }
@@ -501,13 +543,13 @@ ParseResult CopyMemoryOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseOperand(targetPtrInfo) || parser.parseComma() ||
       parseEnumStrAttr(sourceStorageClass, parser) ||
       parser.parseOperand(sourcePtrInfo) ||
-      parseMemoryAccessAttributes(parser, result)) {
+      parseMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
     return failure();
   }
 
   if (!parser.parseOptionalComma()) {
     // Parse 2nd memory access attributes.
-    if (parseSourceMemoryAccessAttributes(parser, result)) {
+    if (parseSourceMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
       return failure();
     }
   }
