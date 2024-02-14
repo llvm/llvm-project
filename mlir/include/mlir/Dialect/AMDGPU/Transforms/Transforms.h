@@ -49,7 +49,7 @@ namespace amdgpu {
 mlir::LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                        Value memrefValue);
 
-void optimizeSharedMemoryReadsAndWritesOp(mlir::func::FuncOp funcOp);
+std::optional<mlir::LogicalResult> optimizeSharedMemoryReadsAndWritesOp(mlir::func::FuncOp funcOp);
 
 } // namespace amdgpu
 } // namespace mlir
