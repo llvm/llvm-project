@@ -1126,7 +1126,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
-    // AlwaysBreakAfterReturnType was not, initialize the latter from the
+    // BreakAfterReturnType was not, initialize the latter from the
     // former for backwards compatibility.
     if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
         Style.BreakAfterReturnType == FormatStyle::RTBS_None) {
@@ -1869,10 +1869,10 @@ FormatStyle getWebKitStyle() {
 FormatStyle getGNUStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_All;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   Style.BreakBeforeBraces = FormatStyle::BS_GNU;
   Style.BreakBeforeTernaryOperators = true;
-  Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
   Style.Cpp11BracedListStyle = false;
   Style.ColumnLimit = 79;
   Style.FixNamespaceComments = false;
