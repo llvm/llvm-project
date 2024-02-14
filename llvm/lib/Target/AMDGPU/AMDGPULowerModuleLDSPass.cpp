@@ -327,6 +327,8 @@ class AMDGPULowerModuleLDS {
     return convertUsersOfConstantsToInstructions(LDSGlobals);
   }
 
+  std::optional<bool> HasAbsoluteGVs;
+
 public:
   AMDGPULowerModuleLDS(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
 
@@ -334,9 +336,9 @@ public:
 
   using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
-  static void getUsesOfLDSByFunction(CallGraph const &CG, Module &M,
-                                     FunctionVariableMap &kernels,
-                                     FunctionVariableMap &functions) {
+  void getUsesOfLDSByFunction(CallGraph const &CG, Module &M,
+                              FunctionVariableMap &kernels,
+                              FunctionVariableMap &functions) {
 
     // Get uses from the current function, excluding uses by called functions
     // Two output variables to avoid walking the globals list twice
@@ -345,10 +347,18 @@ public:
         continue;
       }
 
-      if (GV.isAbsoluteSymbolRef()) {
-        report_fatal_error(
-            "LDS variables with absolute addresses are unimplemented.");
-      }
+      // Check if the module is consistent: either all GVs are absolute (happens
+      // when we run the pass more than once), or none are.
+      if (HasAbsoluteGVs.has_value()) {
+        if (*HasAbsoluteGVs != GV.isAbsoluteSymbolRef()) {
+          report_fatal_error(
+              "Module cannot mix absolute and non-absolute LDS GVs");
+        }
+      } else
+        HasAbsoluteGVs = GV.isAbsoluteSymbolRef();
+
+      if (GV.isAbsoluteSymbolRef())
+        continue;
 
       for (User *V : GV.users()) {
         if (auto *I = dyn_cast<Instruction>(V)) {
@@ -368,7 +378,7 @@ public:
     FunctionVariableMap indirect_access;
   };
 
-  static LDSUsesInfoTy getTransitiveUsesOfLDS(CallGraph const &CG, Module &M) {
+  LDSUsesInfoTy getTransitiveUsesOfLDS(CallGraph const &CG, Module &M) {
 
     FunctionVariableMap direct_map_kernel;
     FunctionVariableMap direct_map_function;
