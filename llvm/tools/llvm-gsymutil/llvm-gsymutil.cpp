@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Archive.h"
@@ -87,6 +88,7 @@ static std::vector<std::string> InputFilenames;
 static std::string ConvertFilename;
 static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
+static std::string AggregateJsonFile;
 static bool Verify;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
@@ -137,6 +139,9 @@ static void parseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_out_file_EQ))
     OutputFilename = A->getValue();
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_aggregate_error_file_EQ))
+    AggregateJsonFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
 
@@ -515,10 +520,28 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     // Call error() if we have an error and it will exit with a status of 1
     if (auto Err = convertFileToGSYM(Aggregation))
       error("DWARF conversion failed: ", std::move(Err));
+
     // Report the errors from aggregator:
     Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
       OS << category << " occurred " << count << " time(s)\n";
     });
+    if (!AggregateJsonFile.empty()) {
+      std::error_code EC;
+      raw_fd_ostream JsonStream(AggregateJsonFile, EC,
+                                sys::fs::OF_Text | sys::fs::OF_None);
+      if (EC) {
+        OS << "error opening aggregate error json file '" << AggregateJsonFile
+           << "' for writing: " << EC.message() << '\n';
+        return 1;
+      }
+      JsonStream << "{\"errors\":[\n";
+      Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
+        JsonStream << "\"category\":\"";
+        llvm::printEscapedString(category, JsonStream);
+        JsonStream << "\",\"count\":" << count;
+      });
+      JsonStream << "]}\n";
+    }
     return 0;
   }
 
