@@ -148,7 +148,7 @@ public:
 
   const char *getName() const override { return "long-jmp"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 } // namespace bolt
 } // namespace llvm
