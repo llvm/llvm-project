@@ -1776,6 +1776,21 @@ public:
   BuiltinTemplateKind getBuiltinTemplateKind() const { return BTK; }
 };
 
+/// Provides information about an explicit instantiation of a variable or class
+/// template.
+struct ExplicitInstantiationInfo {
+  /// The template arguments as written..
+  const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
+
+  /// The location of the extern keyword.
+  SourceLocation ExternLoc;
+
+  /// The location of the template keyword.
+  SourceLocation TemplateKeywordLoc;
+
+  ExplicitInstantiationInfo() = default;
+};
+
 /// Represents a class template specialization, which refers to
 /// a class template with a given set of template arguments.
 ///
@@ -1807,19 +1822,6 @@ class ClassTemplateSpecializationDecl
   /// The template that this specialization specializes
   llvm::PointerUnion<ClassTemplateDecl *, SpecializedPartialSpecialization *>
     SpecializedTemplate;
-
-  struct ExplicitInstantiationInfo {
-    /// The template arguments as written..
-    const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
-
-    /// The location of the extern keyword.
-    SourceLocation ExternLoc;
-
-    /// The location of the template keyword.
-    SourceLocation TemplateKeywordLoc;
-
-    ExplicitInstantiationInfo() = default;
-  };
 
   /// Further info for explicit template specialization/instantiation.
   /// Does not apply to implicit specializations.
@@ -2002,10 +2004,27 @@ public:
     SpecializedTemplate = TemplDecl;
   }
 
+  /// Retrieve the template argument list as written in the sources,
+  /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateArgsAsWritten;
     return ExplicitInfo.get<const ASTTemplateArgumentListInfo *>();
+  }
+
+  /// Set the template argument list as written in the sources.
+  void
+  setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
+    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+      Info->TemplateArgsAsWritten = ArgsWritten;
+    else
+      ExplicitInfo = ArgsWritten;
+  }
+
+  /// Set the template argument list as written in the sources.
+  void setTemplateArgsAsWritten(const TemplateArgumentListInfo &ArgsInfo) {
+    setTemplateArgsAsWritten(
+        ASTTemplateArgumentListInfo::Create(getASTContext(), ArgsInfo));
   }
 
   /// Gets the location of the extern keyword, if present.
@@ -2015,28 +2034,15 @@ public:
     return SourceLocation();
   }
 
+  /// Sets the location of the extern keyword.
+  void setExternLoc(SourceLocation Loc);
+
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }
-
-  void
-  setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
-      Info->TemplateArgsAsWritten = ArgsWritten;
-    else
-      ExplicitInfo = ArgsWritten;
-  }
-
-  void setTemplateArgsAsWritten(const TemplateArgumentListInfo &ArgsInfo) {
-    setTemplateArgsAsWritten(
-        ASTTemplateArgumentListInfo::Create(getASTContext(), ArgsInfo));
-  }
-
-  /// Sets the location of the extern keyword.
-  void setExternLoc(SourceLocation Loc);
 
   /// Sets the location of the template keyword.
   void setTemplateKeywordLoc(SourceLocation Loc);
@@ -2599,19 +2605,6 @@ class VarTemplateSpecializationDecl : public VarDecl,
   llvm::PointerUnion<VarTemplateDecl *, SpecializedPartialSpecialization *>
   SpecializedTemplate;
 
-  struct ExplicitInstantiationInfo {
-    /// The template arguments as written..
-    const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
-
-    /// The location of the extern keyword.
-    SourceLocation ExternLoc;
-
-    /// The location of the template keyword.
-    SourceLocation TemplateKeywordLoc;
-
-    ExplicitInstantiationInfo() = default;
-  };
-
   /// Further info for explicit template specialization/instantiation.
   /// Does not apply to implicit specializations.
   llvm::PointerUnion<const ASTTemplateArgumentListInfo *,
@@ -2620,7 +2613,6 @@ class VarTemplateSpecializationDecl : public VarDecl,
 
   /// The template arguments used to describe this specialization.
   const TemplateArgumentList *TemplateArgs;
-  const ASTTemplateArgumentListInfo *TemplateArgsInfo = nullptr;
 
   /// The point where this template was instantiated (if any).
   SourceLocation PointOfInstantiation;
@@ -2777,10 +2769,27 @@ public:
     SpecializedTemplate = TemplDecl;
   }
 
+  /// Retrieve the template argument list as written in the sources,
+  /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateArgsAsWritten;
     return ExplicitInfo.get<const ASTTemplateArgumentListInfo *>();
+  }
+
+  /// Set the template argument list as written in the sources.
+  void
+  setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
+    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+      Info->TemplateArgsAsWritten = ArgsWritten;
+    else
+      ExplicitInfo = ArgsWritten;
+  }
+
+  /// Set the template argument list as written in the sources.
+  void setTemplateArgsAsWritten(const TemplateArgumentListInfo &ArgsInfo) {
+    setTemplateArgsAsWritten(
+        ASTTemplateArgumentListInfo::Create(getASTContext(), ArgsInfo));
   }
 
   /// Gets the location of the extern keyword, if present.
@@ -2790,28 +2799,15 @@ public:
     return SourceLocation();
   }
 
+  /// Sets the location of the extern keyword.
+  void setExternLoc(SourceLocation Loc);
+
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }
-
-  void
-  setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
-      Info->TemplateArgsAsWritten = ArgsWritten;
-    else
-      ExplicitInfo = ArgsWritten;
-  }
-
-  void setTemplateArgsAsWritten(const TemplateArgumentListInfo &ArgsInfo) {
-    setTemplateArgsAsWritten(
-        ASTTemplateArgumentListInfo::Create(getASTContext(), ArgsInfo));
-  }
-
-  /// Sets the location of the extern keyword.
-  void setExternLoc(SourceLocation Loc);
 
   /// Sets the location of the template keyword.
   void setTemplateKeywordLoc(SourceLocation Loc);
