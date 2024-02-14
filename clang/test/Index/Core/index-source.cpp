@@ -295,6 +295,7 @@ template<typename T>
 class PartialSpecilizationClass<Cls, T>;
 // CHECK: [[@LINE-1]]:7 | class(Gen,TPS)/C++ | PartialSpecilizationClass | c:@SP>1#T@PartialSpecilizationClass>#$@S@Cls#t0.0 | <no-cgname> | Decl,RelSpecialization | rel: 1
 // CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass
+// CHECK-NEXT: [[@LINE-3]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
 
 template<>
 class PartialSpecilizationClass<Cls, Cls> : Cls { };
@@ -302,6 +303,10 @@ class PartialSpecilizationClass<Cls, Cls> : Cls { };
 // CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass
 // CHECK-NEXT: [[@LINE-3]]:45 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_
+// CHECK-NEXT: [[@LINE-5]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_
+// CHECK-NEXT: [[@LINE-7]]:38 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | PartialSpecilizationClass | c:@S@PartialSpecilizationClass>#$@S@Cls#S0_
 
 template<typename T, int x>
 void functionSp() { }
@@ -325,6 +330,14 @@ class ClassWithCorrectSpecialization { };
 
 template<>
 class ClassWithCorrectSpecialization<SpecializationDecl<Cls>, Record::C> { };
+// CHECK: [[@LINE-1]]:38 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | ClassWithCorrectSpecialization | c:@S@ClassWithCorrectSpecialization>#$@S@SpecializationDecl>#$@S@Cls#VI2
+// CHECK-NEXT: [[@LINE-3]]:57 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | ClassWithCorrectSpecialization | c:@S@ClassWithCorrectSpecialization>#$@S@SpecializationDecl>#$@S@Cls#VI2
+// CHECK-NEXT: [[@LINE-5]]:71 | static-property/C++ | C | c:@S@Record@C | __ZN6Record1CE | Ref,Read,RelCont | rel: 1
+// CHECK-NEXT: RelCont | ClassWithCorrectSpecialization | c:@S@ClassWithCorrectSpecialization>#$@S@SpecializationDecl>#$@S@Cls#VI2
+// CHECK-NEXT: [[@LINE-7]]:63 | struct/C++ | Record | c:@S@Record | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | ClassWithCorrectSpecialization | c:@S@ClassWithCorrectSpecialization>#$@S@SpecializationDecl>#$@S@Cls#VI2
 
 namespace ns {
 // CHECK: [[@LINE-1]]:11 | namespace/C++ | ns | c:@N@ns | <no-cgname> | Decl | rel: 0
