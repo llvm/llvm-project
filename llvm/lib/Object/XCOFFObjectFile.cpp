@@ -762,8 +762,8 @@ size_t XCOFFObjectFile::getFileHeaderSize() const {
 }
 
 size_t XCOFFObjectFile::getSectionHeaderSize() const {
-  return is64Bit() ? sizeof(XCOFFSectionHeader64)
-                   : sizeof(XCOFFSectionHeader32);
+  return is64Bit() ? sizeof(XCOFFSectionHeader64) :
+                     sizeof(XCOFFSectionHeader32);
 }
 
 bool XCOFFObjectFile::is64Bit() const {

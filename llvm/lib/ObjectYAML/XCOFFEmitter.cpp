@@ -226,7 +226,6 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
       InitSections[I].Flags |= DwarfSubtype;
     }
   }
-
   return initRelocations(CurrentOffset);
 }
 
@@ -529,7 +528,6 @@ void XCOFFWriter::writeSectionHeaders() {
   for (uint16_t I = 0, E = Obj.Sections.size(); I < E; ++I) {
     XCOFFYAML::Section DerivedSec = InitSections[I];
     writeName(DerivedSec.SectionName, W);
-
     if (Is64Bit) {
       // Virtual address is the same as physical address.
       W.write<uint64_t>(DerivedSec.Address); // Physical address
