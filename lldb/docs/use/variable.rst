@@ -460,6 +460,15 @@ summary strings, regardless of the format they have applied to their types. To
 do that, you can use %format inside an expression path, as in ${var.x->x%u},
 which would display the value of x as an unsigned integer.
 
+Additionally, custom output can be achieved by using a printf format string
+after the ``%`` marker. When a summary string contains two ``%`` markers, then
+it is using a custom printf format. To illustrate, compare ``${var.byte%x}``
+and ``${var.byte%%x}``. The former uses lldb's hex formatting (``x``), which
+automatically includes a ``0x`` prefix, and also zero pads the value to match
+the size of the type. The latter uses printf formatting (``%x``), and will
+print only the hex value, with no ``0x`` prefix, and no padding. This raw
+control is useful when composing multiple pieces into a larger whole.
+
 You can also use some other special format markers, not available for formats
 themselves, but which carry a special meaning when used in this context:
 
