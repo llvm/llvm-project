@@ -849,7 +849,7 @@ protected:
 
 public:
   /// Add SchedGroups to \p SyncedSchedGroups to implement this Strategy.
-  virtual void applyIGLPStrategy(
+  virtual bool applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
       IGLPPhase Phase) = 0;
@@ -868,7 +868,7 @@ public:
 class MFMASmallGemmOpt final : public IGLPStrategy {
 private:
 public:
-  void applyIGLPStrategy(
+  bool applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
       IGLPPhase Phase) override;
@@ -881,7 +881,7 @@ public:
   }
 };
 
-void MFMASmallGemmOpt::applyIGLPStrategy(
+bool MFMASmallGemmOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
     IGLPPhase Phase) {
@@ -902,6 +902,8 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
   }
+
+  return true;
 }
 
 class MFMASmallGemmSingleWaveOpt final : public IGLPStrategy {
@@ -1098,7 +1100,7 @@ private:
   };
 
 public:
-  void applyIGLPStrategy(
+  bool applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
       IGLPPhase Phase) override;
@@ -1115,7 +1117,7 @@ static unsigned DSWCount = 0;
 static unsigned DSWWithPermCount = 0;
 static unsigned DSWWithSharedVMEMCount = 0;
 
-void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
+bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
     IGLPPhase Phase) {
@@ -1354,6 +1356,8 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
   }
+
+  return true;
 }
 
 static std::unique_ptr<IGLPStrategy>
@@ -1374,6 +1378,8 @@ private:
   const SIInstrInfo *TII;
 
   ScheduleDAGMI *DAG;
+
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations;
 
   // Organize lists of SchedGroups by their SyncID. SchedGroups /
   // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
@@ -1401,7 +1407,7 @@ private:
   void initSchedGroupBarrierPipelineStage(
       std::vector<SUnit>::reverse_iterator RIter);
 
-  void initIGLPOpt(SUnit &SU);
+  bool initIGLPOpt(SUnit &SU);
 
 public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
@@ -1417,7 +1423,10 @@ public:
   IGLPPhase Phase = IGLPPhase::Initial;
 
   IGroupLPDAGMutation() = default;
-  IGroupLPDAGMutation(IGLPPhase Phase) : Phase(Phase) {}
+  IGroupLPDAGMutation(
+      IGLPPhase Phase,
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations)
+      : SavedMutations(SavedMutations), Phase(Phase) {}
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -1622,8 +1631,7 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     } else if (Opc == AMDGPU::IGLP_OPT) {
       resetEdges(*R, DAG);
       if (!foundSB && !foundIGLP)
-        initIGLPOpt(*R);
-      foundIGLP = true;
+        foundIGLP |= initIGLPOpt(*R);
     }
   }
 
@@ -1632,7 +1640,13 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     // PipelineSolver performs the mutation by adding the edges it
     // determined as the best
     PS.solve();
+    return;
   }
+
+  // !foundSB && !foundIGLP -- most likely we have an ILGP_OPT instruciton but
+  // did not apply any mutation
+  for (auto &m : *SavedMutations)
+    m->apply(DAG);
 }
 
 void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
@@ -1711,14 +1725,15 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
   SG.initSchedGroup(RIter, SyncedInstrs[SG.getSyncID()]);
 }
 
-void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
+bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   IGLPStrategyID StrategyID =
       (IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
-  if (S->shouldApplyStrategy(DAG)) {
-    IsBottomUp = S->IsBottomUp;
-    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups, Phase);
-  }
+  if (!S->shouldApplyStrategy(DAG))
+    return false;
+
+  IsBottomUp = S->IsBottomUp;
+  return S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups, Phase);
 }
 
 } // namespace
@@ -1730,8 +1745,10 @@ namespace llvm {
 /// same scheduling region (e.g. pre and post-RA scheduling / multiple
 /// scheduling "phases"), we can reenter this mutation framework more than once
 /// for a given region.
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(IGLPPhase Phase) {
-  return std::make_unique<IGroupLPDAGMutation>(Phase);
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(
+    IGLPPhase Phase,
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations) {
+  return std::make_unique<IGroupLPDAGMutation>(Phase, SavedMutations);
 }
 
 } // end namespace llvm

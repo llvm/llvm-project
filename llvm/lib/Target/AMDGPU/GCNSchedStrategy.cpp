@@ -713,7 +713,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation(IGLPPhase::PreRAReentry));
+  DAG.addMutation(createIGroupLPDAGMutation(IGLPPhase::PreRAReentry, nullptr));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -855,7 +855,9 @@ bool GCNSchedStage::initGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
     bool IsInitialStage = StageID == GCNSchedStageID::OccInitialSchedule ||
                           StageID == GCNSchedStageID::ILPInitialSchedule;
-    DAG.addMutation(createIGroupLPDAGMutation(IsInitialStage ? IGLPPhase::Initial : IGLPPhase::PreRAReentry));
+    DAG.addMutation(createIGroupLPDAGMutation(
+        IsInitialStage ? IGLPPhase::Initial : IGLPPhase::PreRAReentry,
+        &SavedMutations));
   }
 
   return true;
@@ -1569,7 +1571,8 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
-    addMutation(createIGroupLPDAGMutation(/*IsReentry=*/IGLPPhase::PostRA));
+    addMutation(createIGroupLPDAGMutation(/*IsReentry=*/IGLPPhase::PostRA,
+                                          &SavedMutations));
   }
 
   ScheduleDAGMI::schedule();
