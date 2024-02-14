@@ -402,6 +402,9 @@ bool Decl::isInAnonymousNamespace() const {
 
 bool Decl::isInStdNamespace() const {
   const DeclContext *DC = getDeclContext();
+  while (auto const LD = dyn_cast_or_null<LinkageSpecDecl>(DC)) {
+    DC = LD->getDeclContext();
+  }
   return DC && DC->isStdNamespace();
 }
 
