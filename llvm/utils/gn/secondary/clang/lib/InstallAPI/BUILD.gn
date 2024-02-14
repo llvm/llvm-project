@@ -1,0 +1,10 @@
+static_library("InstallAPI") {
+  output_name = "clangInstallAPI"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//llvm/lib/Support",
+    "//llvm/lib/TextAPI",
+  ]
+  sources = [ "Context.cpp" ]
+}
