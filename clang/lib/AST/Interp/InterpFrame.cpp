@@ -228,10 +228,16 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
+  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+    return Caller->getExpr(RetPC);
+
   return S.getExpr(Func, PC);
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
+  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+    return Caller->getLocation(RetPC);
+
   return S.getLocation(Func, PC);
 }
 
