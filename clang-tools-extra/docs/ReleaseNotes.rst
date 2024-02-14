@@ -164,6 +164,10 @@ Changes in existing checks
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
 
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
+  emit warnings for static data member with an in-class initializer.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
