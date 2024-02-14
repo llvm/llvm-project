@@ -34,7 +34,7 @@ public:
     bool CanAllowExpansion() const;
 
     bool CanAllowExpansion(bool is_root, TypeSummaryImpl *entry,
-                          ValueObject *valobj, const std::string &summary);
+                          ValueObject &valobj, const std::string &summary);
   };
 
   struct PointerAsArraySettings {
