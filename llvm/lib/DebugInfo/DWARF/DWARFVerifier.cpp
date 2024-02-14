@@ -9,6 +9,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2026,11 +2028,31 @@ void OutputCategoryAggregator::EnumerateResults(
 }
 
 void DWARFVerifier::summarize() {
-  if (ErrorCategory.GetNumCategories() && DumpOpts.ShowAggregateErrors) {
+  if (!ErrorCategory.GetNumCategories())
+    return;
+  if (DumpOpts.ShowAggregateErrors) {
     error() << "Aggregated error counts:\n";
     ErrorCategory.EnumerateResults([&](StringRef s, unsigned count) {
       error() << s << " occurred " << count << " time(s).\n";
     });
+  }
+  if (!DumpOpts.AggregateErrJsonFile.empty()) {
+    std::error_code EC;
+    raw_fd_ostream JsonStream(DumpOpts.AggregateErrJsonFile, EC,
+                              sys::fs::OF_Text | sys::fs::OF_None);
+    if (EC) {
+      error() << "error opening aggregate error json file '"
+              << DumpOpts.AggregateErrJsonFile << "' for writing: "
+              << EC.message() << '\n';
+      return;
+    }
+    JsonStream << "{\"errors\":[\n";
+    ErrorCategory.EnumerateResults([&](StringRef category, unsigned count) {
+      JsonStream << "\"category\":\"";
+      llvm::printEscapedString(category, JsonStream);
+      JsonStream << "\",\"count\":" << count;
+    });
+    JsonStream << "]}\n";
   }
 }
 
