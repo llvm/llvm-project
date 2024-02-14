@@ -432,12 +432,20 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // must be implemented here.
     break;
   case TTI::SK_ExtractSubvector:
+    // Extract at zero is always a subregister extract
+    if (Index == 0)
+      return TTI::TCC_Free;
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
     return LT.first *
            getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI, LT.second, CostKind);
   case TTI::SK_InsertSubvector:
+    // Insert at zero is always a subregister insert
+    if (Index == 0)
+      return TTI::TCC_Free;
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
