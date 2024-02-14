@@ -14,9 +14,12 @@ C++20 supports the designated initializer syntax for aggregate types.
 By applying it, we can always be sure that aggregates are constructed correctly,
 because every variable being initialized is referenced by name.
 
-Even when compiling in a language version older than C++20, depending on you compiler,
-designated initializers are potentially supported. Therefore, the check is not restricted
-to C++20 and older.
+Even when compiling in a language version older than C++20, depending on your
+compiler, designated initializers are potentially supported. Therefore, the
+check is not restricted to C++20 and older. Check out the options
+``-Wc99-designator`` to get support for mixed designators in
+initializer list in C and ``-Wc++20-designator`` for support of designated
+initializers in older C++ language modes.
 
 Example:
 
