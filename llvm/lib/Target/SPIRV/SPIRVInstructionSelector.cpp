@@ -723,13 +723,13 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   }
 
   Result |= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(Ptr)
-      .addUse(ScopeReg)
-      .addUse(MemSemReg)
-      .addUse(ValueReg)
-      .constrainAllUses(TII, TRI, RBI);
+                .addDef(ResVReg)
+                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(Ptr)
+                .addUse(ScopeReg)
+                .addUse(MemSemReg)
+                .addUse(ValueReg)
+                .constrainAllUses(TII, TRI, RBI);
   return Result;
 }
 
