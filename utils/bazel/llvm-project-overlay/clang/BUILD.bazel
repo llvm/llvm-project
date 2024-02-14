@@ -1843,6 +1843,7 @@ cc_library(
         ":driver",
         ":driver_options_inc_gen",
         ":edit",
+        ":install_api",
         ":lex",
         ":parse",
         ":sema",
@@ -1862,6 +1863,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TextAPI",
         "//llvm:config",
     ],
 )
@@ -2049,6 +2051,24 @@ cc_library(
     includes = ["include"],
     deps = [
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "install_api",
+    srcs = glob([
+        "lib/InstallAPI/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/InstallAPI/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":support",
+        "//llvm:Support",
+        "//llvm:TextAPI",
     ],
 )
 
