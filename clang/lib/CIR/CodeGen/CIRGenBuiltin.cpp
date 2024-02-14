@@ -451,6 +451,14 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
                                              /*EmittedE=*/nullptr, IsDynamic));
   }
+  case Builtin::BI__builtin_unreachable: {
+    buildUnreachable(E->getExprLoc());
+
+    // We do need to preserve an insertion point.
+    builder.createBlock(builder.getBlock()->getParent());
+
+    return RValue::get(nullptr);
+  }
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImempcpy:

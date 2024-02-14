@@ -2845,6 +2845,22 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
 }
 
 //===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
+  let summary = "invoke immediate undefined behavior";
+  let description = [{
+    If the program control flow reaches a `cir.unreachable` operation, the
+    program exhibits undefined behavior immediately. This operation is useful
+    in cases where the unreachability of a program point needs to be explicitly
+    marked.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
 // These operations are hacks to get around missing features in LLVM's dialect.

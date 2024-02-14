@@ -681,6 +681,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     }
     if (SanOpts.has(SanitizerKind::Return) || shouldEmitUnreachable) {
       // TODO: builder.createUnreachable();
+      assert(!UnimplementedFeature::unreachableOp());
       builder.clearInsertionPoint();
     }
   }

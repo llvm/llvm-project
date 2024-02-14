@@ -136,21 +136,6 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
       mlir::Block *outgoing = builder.getInsertionBlock();
       assert(outgoing && "expression emission cleared block!");
 
-      // FIXME: Should we mimic LLVM emission here?
-      // The expression emitters assume (reasonably!) that the insertion
-      // point is always set.  To maintain that, the call-emission code
-      // for noreturn functions has to enter a new block with no
-      // predecessors.  We want to kill that block and mark the current
-      // insertion point unreachable in the common case of a call like
-      // "exit();".  Since expression emission doesn't otherwise create
-      // blocks with no predecessors, we can just test for that.
-      // However, we must be careful not to do this to our incoming
-      // block, because *statement* emission does sometimes create
-      // reachable blocks which will have no predecessors until later in
-      // the function.  This occurs with, e.g., labels that are not
-      // reachable by fallthrough.
-      if (incoming != outgoing && outgoing->use_empty())
-        assert(0 && "not implemented");
       break;
     }
 

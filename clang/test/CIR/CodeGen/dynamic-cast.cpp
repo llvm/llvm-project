@@ -48,6 +48,7 @@ Derived &ref_cast(Base &b) {
 // CHECK-NEXT:   %[[#V18:]] = cir.unary(not, %[[#V17]]) : !cir.bool, !cir.bool
 // CHECK-NEXT:   cir.if %[[#V18]] {
 // CHECK-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
+// CHECK-NEXT:     cir.unreachable
 // CHECK-NEXT:   }
 // CHECK-NEXT:   %{{.+}} = cir.cast(bitcast, %[[#V16]] : !cir.ptr<!void>), !cir.ptr<!ty_22Derived22>
 
