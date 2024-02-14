@@ -46,4 +46,4 @@ class TestConcurrentVFork(TestBase):
         self.runCmd("settings set target.process.follow-fork-mode child")
         # Child process exits with code "index + 10" since index is [0-4]
         # so the exit code should be 1[0-4]
-        self.expect("continue", patterns=[r'exited with status = 1[0-4]'])
+        self.expect("continue", patterns=[r"exited with status = 1[0-4]"])
