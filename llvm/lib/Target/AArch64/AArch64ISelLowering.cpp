@@ -1880,6 +1880,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
   }
 
   // Lower fixed length vector operations to scalable equivalents.
+  setOperationAction(ISD::ANY_EXTEND, MVT::f32, Legal);
   setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
   setOperationAction(ISD::AND, VT, Custom);
@@ -25045,11 +25046,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
   case ISD::FP_ROUND: {
     if (N->getValueType(0) == MVT::f16 && !Subtarget->hasFullFP16()) {
-      // Promote fp16 result to legal type
       SDLoc DL(N);
-      EVT NVT = getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
       Results.push_back(
-          DAG.getNode(ISD::FP16_TO_FP, DL, NVT, N->getOperand(0)));
+          DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i16, N->getOperand(0)));
     }
     return;
   }
