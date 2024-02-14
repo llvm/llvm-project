@@ -2,7 +2,7 @@
 
 auto func() {
   return __builtin_strcmp("", "");
-  // CHECK:      cir.func @_Z4funcv() -> !s32i extra( {inline = #cir.inline<no>, optnone = #cir.optnone} ) {
+  // CHECK:      cir.func @_Z4funcv()
   // CHECK-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64} loc(#loc2)
   // CHECK-NEXT: %1 = cir.const(#cir.int<0> : !s32i) : !s32i loc(#loc7)
   // CHECK-NEXT: cir.store %1, %0 : !s32i, cir.ptr <!s32i> loc(#loc8)

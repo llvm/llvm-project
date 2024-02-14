@@ -308,14 +308,18 @@ static Address emitAddressAtOffset(CIRGenFunction &CGF, Address addr,
   return addr;
 }
 
-static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
+static void AddAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
+                                               ASTContext &Ctx,
+                                               mlir::NamedAttrList &FuncAttrs,
                                                const FunctionProtoType *FPT) {
   if (!FPT)
     return;
 
   if (!isUnresolvedExceptionSpec(FPT->getExceptionSpecType()) &&
-      FPT->isNothrow())
-    llvm_unreachable("NoUnwind NYI");
+      FPT->isNothrow()) {
+    auto nu = mlir::cir::NoThrowAttr::get(builder.getContext());
+    FuncAttrs.set(nu.getMnemonic(), nu);
+  }
 }
 
 /// Construct the CIR attribute list of a function or call.
@@ -335,10 +339,11 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
 ///     attributes that restrict how the frontend generates code must be
 ///     added here rather than getDefaultFunctionAttributes.
 ///
-void CIRGenModule::ConstructAttributeList(
-    StringRef Name, const CIRGenFunctionInfo &FI, CIRGenCalleeInfo CalleeInfo,
-    llvm::SmallSet<mlir::Attribute, 8> &Attrs, bool AttrOnCallSite,
-    bool IsThunk) {
+void CIRGenModule::ConstructAttributeList(StringRef Name,
+                                          const CIRGenFunctionInfo &FI,
+                                          CIRGenCalleeInfo CalleeInfo,
+                                          mlir::DictionaryAttr &Attrs,
+                                          bool AttrOnCallSite, bool IsThunk) {
   // Implementation Disclaimer
   //
   // UnimplementedFeature and asserts are used throughout the code to track
@@ -349,13 +354,92 @@ void CIRGenModule::ConstructAttributeList(
   // That said, for the most part, the approach here is very specific compared
   // to the rest of CIRGen and attributes and other handling should be done upon
   // demand.
+  mlir::NamedAttrList FuncAttrs;
 
   // Collect function CIR attributes from the CC lowering.
   // TODO: NoReturn, cmse_nonsecure_call
 
   // Collect function CIR attributes from the callee prototype if we have one.
-  AddAttributesFromFunctionProtoType(astCtx,
+  AddAttributesFromFunctionProtoType(getBuilder(), astCtx, FuncAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
+
+  const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
+
+  // TODO(cir): Attach assumption attributes to the declaration. If this is a
+  // call site, attach assumptions from the caller to the call as well.
+
+  bool HasOptnone = false;
+  (void)HasOptnone;
+  // The NoBuiltinAttr attached to the target FunctionDecl.
+  mlir::Attribute *NBA;
+
+  if (TargetDecl) {
+
+    if (TargetDecl->hasAttr<NoThrowAttr>()) {
+      auto nu = mlir::cir::NoThrowAttr::get(builder.getContext());
+      FuncAttrs.set(nu.getMnemonic(), nu);
+    }
+
+    if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
+      AddAttributesFromFunctionProtoType(
+          getBuilder(), astCtx, FuncAttrs,
+          Fn->getType()->getAs<FunctionProtoType>());
+      if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
+        // A sane operator new returns a non-aliasing pointer.
+        auto Kind = Fn->getDeclName().getCXXOverloadedOperator();
+        if (getCodeGenOpts().AssumeSaneOperatorNew &&
+            (Kind == OO_New || Kind == OO_Array_New))
+          ; // llvm::Attribute::NoAlias
+      }
+      const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
+      const bool IsVirtualCall = MD && MD->isVirtual();
+      // Don't use [[noreturn]], _Noreturn or [[no_builtin]] for a call to a
+      // virtual function. These attributes are not inherited by overloads.
+      if (!(AttrOnCallSite && IsVirtualCall)) {
+        if (Fn->isNoReturn())
+          ; // NoReturn
+        // NBA = Fn->getAttr<NoBuiltinAttr>();
+        (void)NBA;
+      }
+    }
+
+    if (isa<FunctionDecl>(TargetDecl) || isa<VarDecl>(TargetDecl)) {
+      // Only place nomerge attribute on call sites, never functions. This
+      // allows it to work on indirect virtual function calls.
+      if (AttrOnCallSite && TargetDecl->hasAttr<NoMergeAttr>())
+        ;
+    }
+
+    // 'const', 'pure' and 'noalias' attributed functions are also nounwind.
+    if (TargetDecl->hasAttr<ConstAttr>()) {
+      // gcc specifies that 'const' functions have greater restrictions than
+      // 'pure' functions, so they also cannot have infinite loops.
+    } else if (TargetDecl->hasAttr<PureAttr>()) {
+      // gcc specifies that 'pure' functions cannot have infinite loops.
+    } else if (TargetDecl->hasAttr<NoAliasAttr>()) {
+    }
+
+    HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
+    if (auto *AllocSize = TargetDecl->getAttr<AllocSizeAttr>()) {
+      std::optional<unsigned> NumElemsParam;
+      if (AllocSize->getNumElemsParam().isValid())
+        NumElemsParam = AllocSize->getNumElemsParam().getLLVMIndex();
+      // TODO(cir): add alloc size attr.
+    }
+
+    if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
+      assert(!UnimplementedFeature::openCL());
+    }
+
+    if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
+        getLangOpts().OffloadUniformBlock)
+      assert(!UnimplementedFeature::CUDA());
+
+    if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
+      ;
+  }
+
+  Attrs = mlir::DictionaryAttr::get(builder.getContext(), FuncAttrs);
 }
 
 static mlir::cir::CIRCallOpInterface
@@ -566,7 +650,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // TODO: Update the largest vector width if any arguments have vector types.
 
   // Compute the calling convention and attributes.
-  llvm::SmallSet<mlir::Attribute, 8> Attrs;
+  mlir::DictionaryAttr Attrs;
   StringRef FnName;
   if (auto calleeFnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
     FnName = calleeFnOp.getName();
@@ -601,14 +685,16 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     // We don't need to model anything in IR to get this behavior.
     CannotThrow = true;
   } else {
-    // FIXME(cir): pass down nounwind attribute
-    CannotThrow = false;
-  }
-  (void)CannotThrow;
+    // Otherwise, nounwind call sites will never throw.
+    auto noThrowAttr = mlir::cir::NoThrowAttr::get(builder.getContext());
+    CannotThrow = Attrs.contains(noThrowAttr.getMnemonic());
 
-  // In LLVM this contains the basic block, in CIR we solely track for now.
-  bool InvokeDest = getInvokeDest();
-  (void)InvokeDest;
+    if (auto fptr = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
+      if (fptr.getExtraAttrs().getElements().contains(
+              noThrowAttr.getMnemonic()))
+        CannotThrow = true;
+  }
+  auto InvokeDest = CannotThrow ? false : getInvokeDest();
 
   // TODO: UnusedReturnSizePtr
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))

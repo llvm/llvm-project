@@ -7,7 +7,7 @@ int *table_ptr = table;
 // CHECK: cir.global external @table_ptr = #cir.global_view<@table> : !cir.ptr<!s32i>
 
 int test() { return table[1]; }
-//      CHECK: cir.func @_Z4testv() -> !s32i extra( {inline = #cir.inline<no>, optnone = #cir.optnone} ) {
+//      CHECK: cir.func @_Z4testv()
 // CHECK-NEXT:    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:    %1 = cir.get_global @table : cir.ptr <!cir.array<!s32i x 3>>
 

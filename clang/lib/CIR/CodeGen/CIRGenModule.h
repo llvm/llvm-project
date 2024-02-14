@@ -261,8 +261,8 @@ public:
   /// \param Attrs [out] - On return, the attribute list to use.
   void ConstructAttributeList(StringRef Name, const CIRGenFunctionInfo &Info,
                               CIRGenCalleeInfo CalleeInfo,
-                              llvm::SmallSet<mlir::Attribute, 8> &Attrs,
-                              bool AttrOnCallSite, bool IsThunk);
+                              mlir::DictionaryAttr &Attrs, bool AttrOnCallSite,
+                              bool IsThunk);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type

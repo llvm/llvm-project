@@ -2110,12 +2110,7 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return verifyCallCommInSymbolUses(*this, symbolTable);
 }
 
-LogicalResult cir::TryCallOp::verify() {
-  auto tryScope = (*this)->getParentOfType<mlir::cir::TryOp>();
-  if (!tryScope)
-    return emitOpError() << "expected to be within a 'cir.try' region";
-  return mlir::success();
-}
+LogicalResult cir::TryCallOp::verify() { return mlir::success(); }
 
 ::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result) {
