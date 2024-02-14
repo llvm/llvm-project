@@ -234,6 +234,13 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
   //
   // FIXME(cir): This is closer to memcpy behavior but less optimal, instead of
   // copy from a global, we just create a cir.const out of it.
+
+  if (addr.getElementType() != Ty) {
+    auto ptr = addr.getPointer();
+    ptr = builder.createBitcast(ptr.getLoc(), ptr, builder.getPointerTo(Ty));
+    addr = addr.withPointer(ptr, addr.isKnownNonNull());
+  }
+
   auto loc = CGM.getLoc(D.getSourceRange());
   builder.createStore(loc, builder.getConstant(loc, constant), addr);
 }
