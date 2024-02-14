@@ -16,6 +16,7 @@ Math Functions
   :hidden:
 
   log.rst
+  stdfix.rst
 
 
 .. contents:: Table of Contents
@@ -610,6 +611,11 @@ Algorithms + Implementation Details
 ===================================
 
 * :doc:`log`
+
+Fixed-point Arithmetics
+=======================
+
+* :doc:`stdfix`
 
 References
 ==========
