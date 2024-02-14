@@ -174,13 +174,14 @@ public:
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "dynamicDowncast" || name == "downcast" || name == "bitwise_cast" ||
-        name == "is" || name == "equal" || name == "hash" ||
-        name == "isType"
+        name == "dynamicDowncast" || name == "downcast" ||
+        name == "checkedDowncast" || name == "uncheckedDowncast" ||
+        name == "bitwise_cast" || name == "is" || name == "equal" ||
+        name == "hash" || name == "isType" ||
         // FIXME: Most/all of these should be implemented via attributes.
-        || name == "equalIgnoringASCIICase" ||
+        name == "equalIgnoringASCIICase" ||
         name == "equalIgnoringASCIICaseCommon" ||
-        name == "equalIgnoringNullity")
+        name == "equalIgnoringNullity" || name == "toString")
       return true;
 
     return false;
