@@ -208,14 +208,14 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0, "indirect call target")
 /* For memory intrinsic functions size profiling. */
 VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
-/* For virtual table address profiling, the addresses of the virtual table
+/* For virtual table address profiling, the address point of the virtual table
  * (i.e., the address contained in objects pointing to a virtual table) are
  * profiled. Note this may not be the address of the per C++ class virtual table
- *  object (i.e., there is an offset).
+ *  object (e.g., there might be an offset).
  *
  * The profiled addresses are stored in raw profile, together with the following
  * two types of information.
- * 1. The (beginning and ending) addresses of per C++ class virtual table objects.
+ * 1. The (starting and ending) addresses of per C++ class virtual table objects.
  * 2. The (compressed) virtual table object names.
  * RawInstrProfReader converts profiled virtual table addresses to virtual table
  *  objects' MD5 hash.
@@ -983,4 +983,3 @@ InstrProfIsSingleValRange(uint64_t Value) {
 }
 
 #endif /* INSTR_PROF_VALUE_PROF_MEMOP_API */
-

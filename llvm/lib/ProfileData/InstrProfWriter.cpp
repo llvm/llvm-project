@@ -616,18 +616,6 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
     std::string CompressedVTableNames;
 
-    std::vector<std::string> VTableNameStrs;
-    for (const auto &VTableName : VTableNames.keys()) {
-      VTableNameStrs.push_back(VTableName.str());
-    }
-
-    if (!VTableNameStrs.empty()) {
-      if (Error E = collectGlobalObjectNameStrings(
-              VTableNameStrs, compression::zlib::isAvailable(),
-              CompressedVTableNames))
-        return E;
-    }
-
     uint64_t CompressedStringLen = CompressedVTableNames.length();
 
     // Record the length of compressed string.
@@ -828,11 +816,6 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
       for (const auto &Func : I.getValue())
         OrderedFuncData.push_back(std::make_pair(I.getKey(), Func));
     }
-  }
-
-  for (const auto &VTableName : VTableNames) {
-    if (Error E = Symtab.addVTableName(VTableName.getKey()))
-      return E;
   }
 
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))

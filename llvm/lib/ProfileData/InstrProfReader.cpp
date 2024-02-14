@@ -366,6 +366,8 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
               return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
+        } else if (ValueKind == IPVK_VTableTarget) {
+          // do nothing
         } else {
           READ_NUM(VD.first, Value);
         }
@@ -582,10 +584,17 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto NumBitmapBytes = swap(Header.NumBitmapBytes);
   auto PaddingBytesAfterBitmapBytes = swap(Header.PaddingBytesAfterBitmapBytes);
   auto NamesSize = swap(Header.NamesSize);
+  auto VTableNameSize = swap(Header.VNamesSize);
+  auto NumVTables = swap(Header.NumVTables);
   ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
-  auto PaddingSize = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterNames = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterVTableNames = getNumPaddingBytes(VTableNameSize);
+
+  auto VTableSectionSize =
+      NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
+  auto PaddingBytesAfterVTableProfData = getNumPaddingBytes(VTableSectionSize);
 
   // Profile data starts after profile header and binary ids if exist.
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdSize;
@@ -594,7 +603,12 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
   ptrdiff_t NamesOffset =
       BitmapOffset + NumBitmapBytes + PaddingBytesAfterBitmapBytes;
-  ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
+  ptrdiff_t VTableProfDataOffset =
+      NamesOffset + NamesSize + PaddingBytesAfterNames;
+  ptrdiff_t VTableNameOffset = VTableProfDataOffset + VTableSectionSize +
+                               PaddingBytesAfterVTableProfData;
+  ptrdiff_t ValueDataOffset =
+      VTableNameOffset + VTableNameSize + PaddingBytesAfterVTableNames;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
@@ -614,8 +628,14 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);
     DataEnd = Data + NumData;
+    VTableBegin =
+        reinterpret_cast<const RawInstrProf::VTableProfileData<IntPtrT> *>(
+            Start + VTableProfDataOffset);
+    VTableEnd = VTableBegin + NumVTables;
     NamesStart = Start + NamesOffset;
     NamesEnd = NamesStart + NamesSize;
+    VNamesStart = Start + VTableNameOffset;
+    VNamesEnd = VNamesStart + VTableNameSize;
   }
 
   CountersStart = Start + CountersOffset;
@@ -1258,6 +1278,19 @@ Error IndexedInstrProfReader::readHeader() {
     if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
+  }
+
+  if (GET_VERSION(Header->formatVersion()) >= 12) {
+    uint64_t VTableNamesOffset =
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->VTableNamesOffset);
+    const unsigned char *Ptr = Start + VTableNamesOffset;
+
+    CompressedVTableNamesLen =
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
+
+    VTableNamePtr = (const char *)Ptr;
   }
 
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
