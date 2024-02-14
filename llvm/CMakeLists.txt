@@ -1256,8 +1256,10 @@ if( LLVM_INCLUDE_TESTS )
   get_property(LLVM_ALL_LIT_DEPENDS GLOBAL PROPERTY LLVM_ALL_LIT_DEPENDS)
   get_property(LLVM_ALL_ADDITIONAL_TEST_DEPENDS
       GLOBAL PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
-  add_custom_target(test-depends
-      DEPENDS ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
+  add_custom_target(test-depends)
+  if(LLVM_ALL_LIT_DEPENDS OR LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
+    add_dependencies(test-depends ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
+  endif()
   set_target_properties(test-depends PROPERTIES FOLDER "Tests")
   add_dependencies(check-all test-depends)
 endif()
