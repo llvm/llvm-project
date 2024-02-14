@@ -110,13 +110,13 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 //   | output - exp(dx) | < 2^-126.
 Float128 poly_approx_f128(const Float128 &dx) {
   constexpr Float128 COEFFS_128[]{
-      {Sign::POS, -127, 0x80000000000000000000000000000000_u128}, // 1.0
-      {Sign::POS, -128, 0x80000000000000000000000000000000_u128}, // 0.5
-      {Sign::POS, -130, 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab_u128}, // 1/6
-      {Sign::POS, -132, 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab_u128}, // 1/24
-      {Sign::POS, -134, 0x88888888888888888888888888888889_u128}, // 1/120
-      {Sign::POS, -137, 0xb60b60b60b60b60b60b60b60b60b60b6_u128}, // 1/720
-      {Sign::POS, -140, 0xd00d00d00d00d00d00d00d00d00d00d0_u128}, // 1/5040
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
+      {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
+      {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/24
+      {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/120
+      {Sign::POS, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/720
+      {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -166,7 +166,7 @@ Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
 
   int hi = static_cast<int>(kd) >> 12;
   Float128 minus_one{Sign::NEG, -127 - hi,
-                     0x80000000000000000000000000000000_u128};
+                     0x80000000'00000000'00000000'00000000_u128};
 
   Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
 

@@ -21,11 +21,11 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Simple) {
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80LongerMantissa) {
-  eisel_lemire_test(0x12345678123456781234567812345678_u128, 0,
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 0,
                     0x91a2b3c091a2b3c1, 16507);
-  eisel_lemire_test(0x12345678123456781234567812345678_u128, 300,
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 300,
                     0xd97757de56adb65c, 17503);
-  eisel_lemire_test(0x12345678123456781234567812345678_u128, -300,
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, -300,
                     0xc30feb9a7618457d, 15510);
 }
 
@@ -57,23 +57,23 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Fallback) {
 #else // Quad precision long double
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Simple) {
-  eisel_lemire_test(123, 0, 0x1ec00000000000000000000000000_u128, 16389);
+  eisel_lemire_test(123, 0, 0x1ec00'00000000'00000000'00000000_u128, 16389);
   eisel_lemire_test(12345678901234568192u, 0,
-                    0x156a95319d63e1800000000000000_u128, 16446);
+                    0x156a9'5319d63e'18000000'00000000_u128, 16446);
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128LongerMantissa) {
-  eisel_lemire_test(0x12345678123456781234567812345678_u128, 0,
-                    0x12345678123456781234567812345_u128, 16507);
-  eisel_lemire_test(0x12345678123456781234567812345678_u128, 300,
-                    0x1b2eeafbcad5b6cb8b4451dfcde19_u128, 17503);
-  eisel_lemire_test(0x12345678123456781234567812345678_u128, -300,
-                    0x1861fd734ec308afa7189f0f7595f_u128, 15510);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 0,
+                    0x12345'67812345'67812345'67812345_u128, 16507);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 300,
+                    0x1b2ee'afbcad5b'6cb8b445'1dfcde19_u128, 17503);
+  eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, -300,
+                    0x1861f'd734ec30'8afa7189'f0f7595f_u128, 15510);
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Fallback) {
   ASSERT_FALSE(internal::eisel_lemire<long double>(
-                   {0x5ce0e9a56015fec5aadfa328ae39b333_u128, 1})
+                   {0x5ce0e9a5'6015fec5'aadfa328'ae39b333_u128, 1})
                    .has_value());
 }
 

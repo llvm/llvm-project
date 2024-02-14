@@ -102,14 +102,14 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 //   | output - 10^dx | < 1.5 * 2^-124.
 Float128 poly_approx_f128(const Float128 &dx) {
   constexpr Float128 COEFFS_128[]{
-      {Sign::POS, -127, 0x00000000000000080000000000000000_u128}, // 1.0
-      {Sign::POS, -126, 0x935d8dddaaa8ac16ea56d62b82d30a2d_u128},
-      {Sign::POS, -126, 0xa9a92639e753443a80a99ce75f4d5bdb_u128},
-      {Sign::POS, -126, 0x82382c8ef16523046a4f9d7dbf6c9635_u128},
-      {Sign::POS, -124, 0x12bd7609fd98c44c345787019216c7af_u128},
-      {Sign::POS, -127, 0x450a7ff47535d889cc41ed7e0d27aee5_u128},
-      {Sign::POS, -130, 0xd3f6b844702d636b8326bb91a6e7601d_u128},
-      {Sign::POS, -130, 0x45b937f0d05bb1cdfa7b46df314112a9_u128},
+      {Sign::POS, -127, 0x00000000'00000008'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -126, 0x935d8ddd'aaa8ac16'ea56d62b'82d30a2d_u128},
+      {Sign::POS, -126, 0xa9a92639'e753443a'80a99ce7'5f4d5bdb_u128},
+      {Sign::POS, -126, 0x82382c8e'f1652304'6a4f9d7d'bf6c9635_u128},
+      {Sign::POS, -124, 0x12bd7609'fd98c44c'34578701'9216c7af_u128},
+      {Sign::POS, -127, 0x450a7ff4'7535d889'cc41ed7e'0d27aee5_u128},
+      {Sign::POS, -130, 0xd3f6b844'702d636b'8326bb91'a6e7601d_u128},
+      {Sign::POS, -130, 0x45b937f0'd05bb1cd'fa7b46df'314112a9_u128},
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
