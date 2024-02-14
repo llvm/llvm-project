@@ -165,3 +165,10 @@ S13 s131 {1, 2};
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
 // CHECK-MESSAGES-POD: :[[@LINE-2]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
 // CHECK-FIXES: S13 s131 {.k=1, .i=2};
+
+#define A (3+2)
+#define B .j=1
+
+S9 s92 {A, B};
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-FIXES: S9 s92 {.i=A, B};
