@@ -708,37 +708,37 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
     operands.push_back(id);
   }
 
-  StringRef memory_access = op.getMemoryAccessAttrName().strref();
+  StringAttr memory_access = op.getMemoryAccessAttrName();
   if (auto attr = op->getAttr(memory_access)) {
     operands.push_back(
         static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
   }
 
-  elidedAttrs.push_back(memory_access);
+  elidedAttrs.push_back(memory_access.strref());
 
-  StringRef alignment = op.getAlignmentAttrName().strref();
+  StringAttr alignment = op.getAlignmentAttrName();
   if (auto attr = op->getAttr(alignment)) {
     operands.push_back(static_cast<uint32_t>(
         cast<IntegerAttr>(attr).getValue().getZExtValue()));
   }
 
-  elidedAttrs.push_back(alignment);
+  elidedAttrs.push_back(alignment.strref());
 
-  StringRef source_memory_access = op.getSourceMemoryAccessAttrName().strref();
+  StringAttr source_memory_access = op.getSourceMemoryAccessAttrName();
   if (auto attr = op->getAttr(source_memory_access)) {
     operands.push_back(
         static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
   }
 
-  elidedAttrs.push_back(source_memory_access);
+  elidedAttrs.push_back(source_memory_access.strref());
 
-  StringRef source_alignment = op.getSourceAlignmentAttrName().strref();
+  StringAttr source_alignment = op.getSourceAlignmentAttrName();
   if (auto attr = op->getAttr(source_alignment)) {
     operands.push_back(static_cast<uint32_t>(
         cast<IntegerAttr>(attr).getValue().getZExtValue()));
   }
 
-  elidedAttrs.push_back(source_alignment);
+  elidedAttrs.push_back(source_alignment.strref());
   if (failed(emitDebugLine(functionBody, op.getLoc())))
     return failure();
   encodeInstructionInto(functionBody, spirv::Opcode::OpCopyMemory, operands);
