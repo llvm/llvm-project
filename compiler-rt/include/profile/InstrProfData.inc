@@ -303,6 +303,7 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
+
 #ifdef INSTR_PROF_SECT_ENTRY
 #define INSTR_PROF_DATA_DEFINED
 INSTR_PROF_SECT_ENTRY(IPSK_data, \
@@ -760,7 +761,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define INSTR_PROF_DATA_COFF ".lprfd$M"
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
-#define INSTR_PROF_VNAME_COFF ".lprfn$M"
+#define INSTR_PROF_VNAME_COFF ".lprfvn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
 #define INSTR_PROF_BITS_COFF ".lprfb$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
