@@ -5735,6 +5735,9 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     const Stmt *S = CS.getStmt();
     assert(S != nullptr && "Expecting non-null Stmt");
 
+    // print stmt class (kind)
+    OS << "<" << S->getStmtClassName() << "> ";
+
     // special printing for statement-expressions.
     if (const StmtExpr *SE = dyn_cast<StmtExpr>(S)) {
       const CompoundStmt *Sub = SE->getSubStmt();
