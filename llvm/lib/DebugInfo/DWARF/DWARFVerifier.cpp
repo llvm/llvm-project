@@ -2042,8 +2042,8 @@ void DWARFVerifier::summarize() {
                               sys::fs::OF_Text | sys::fs::OF_None);
     if (EC) {
       error() << "error opening aggregate error json file '"
-              << DumpOpts.AggregateErrJsonFile << "' for writing: "
-              << EC.message() << '\n';
+              << DumpOpts.AggregateErrJsonFile
+              << "' for writing: " << EC.message() << '\n';
       return;
     }
     JsonStream << "{\"errors\":[\n";
