@@ -72,7 +72,7 @@ public:
 
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
         auto *E = MemberCallExpr->getImplicitObjectArgument();
-        auto *ArgType = MemberCallExpr->getObjectType().getTypePtrOrNull();
+        QualType ArgType = MemberCallExpr->getObjectType();
         std::optional<bool> IsUncounted =
             isUncounted(ArgType->getAsCXXRecordDecl());
         if (IsUncounted && *IsUncounted && !isPtrOriginSafe(E))
@@ -213,15 +213,10 @@ public:
   void reportBugOnThis(const Expr *CallArg) const {
     assert(CallArg);
 
-    SmallString<100> Buf;
-    llvm::raw_svector_ostream Os(Buf);
-
-    Os << "Call argument for 'this' parameter is uncounted and unsafe.";
-
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
-    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+    auto Report = std::make_unique<BasicBugReport>(Bug, "Call argument for 'this' parameter is uncounted and unsafe.", BSLoc);
     Report->addRange(CallArg->getSourceRange());
     BR->emitReport(std::move(Report));
   }
