@@ -2190,9 +2190,6 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
 
   // Number of digits in a group between separators.
   unsigned Grouping = (Radix == 8 || Radix == 10) ? 3 : 4;
-  if (Radix == 8 || Radix == 10) {
-    Grouping = 3;
-  }
 
   // First, check for a zero value and just short circuit the logic below.
   if (isZero()) {
