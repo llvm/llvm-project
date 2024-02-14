@@ -31320,7 +31320,7 @@ static auto createBSWAPShuffleMask(EVT VT) {
       ShuffleMask.push_back((I * ScalarSizeInBytes) + J);
 
   return ShuffleMask;
-} 
+}
 
 static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
