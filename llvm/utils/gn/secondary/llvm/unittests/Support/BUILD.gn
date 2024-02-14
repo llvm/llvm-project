@@ -41,6 +41,7 @@ unittest("SupportTests") {
     "ErrnoTest.cpp",
     "ErrorOrTest.cpp",
     "ErrorTest.cpp",
+    "ExponentialBackoffTest.cpp",
     "ExtensibleRTTITest.cpp",
     "FSUniqueIDTest.cpp",
     "FileCollectorTest.cpp",
