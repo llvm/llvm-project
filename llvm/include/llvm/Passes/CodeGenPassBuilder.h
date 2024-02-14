@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// Interfaces for registering analysis passes, producing common pass manager
-/// configurations, and parsing of pass pipelines.
+/// Interfaces for producing common pass manager configurations.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -137,16 +136,6 @@ public:
                       raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                       CodeGenFileType FileType) const;
 
-  void registerModuleAnalyses(ModuleAnalysisManager &) const;
-  void registerFunctionAnalyses(FunctionAnalysisManager &) const;
-  void registerMachineFunctionAnalyses(MachineFunctionAnalysisManager &) const;
-
-  void registerAnalyses(MachineFunctionAnalysisManager &MFAM) const {
-    registerModuleAnalyses(*MFAM.MAM);
-    registerFunctionAnalyses(*MFAM.FAM);
-    registerMachineFunctionAnalyses(MFAM);
-  }
-
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
   }
@@ -238,14 +227,6 @@ protected:
   LLVMTargetMachine &TM;
   CGPassBuilderOption Opt;
   PassInstrumentationCallbacks *PIC;
-
-  /// Target override these hooks to parse target-specific analyses.
-  void registerTargetAnalysis(ModuleAnalysisManager &) const {}
-  void registerTargetAnalysis(FunctionAnalysisManager &) const {}
-  void registerTargetAnalysis(MachineFunctionAnalysisManager &) const {}
-  std::pair<StringRef, bool> getTargetPassNameFromLegacyName(StringRef) const {
-    return {"", false};
-  }
 
   template <typename TMC> TMC &getTM() const { return static_cast<TMC &>(TM); }
   CodeGenOptLevel getOptLevel() const { return TM.getOptLevel(); }
@@ -575,52 +556,6 @@ Error CodeGenPassBuilder<Derived>::verifyStartStop(
             PIC->getPassNameForClassName(Info.StopPass) + "\".",
         std::make_error_code(std::errc::invalid_argument));
   return Error::success();
-}
-
-static inline AAManager registerAAAnalyses() {
-  AAManager AA;
-
-  // The order in which these are registered determines their priority when
-  // being queried.
-
-  // Basic AliasAnalysis support.
-  // Add TypeBasedAliasAnalysis before BasicAliasAnalysis so that
-  // BasicAliasAnalysis wins if they disagree. This is intended to help
-  // support "obvious" type-punning idioms.
-  AA.registerFunctionAnalysis<TypeBasedAA>();
-  AA.registerFunctionAnalysis<ScopedNoAliasAA>();
-  AA.registerFunctionAnalysis<BasicAA>();
-
-  return AA;
-}
-
-template <typename Derived>
-void CodeGenPassBuilder<Derived>::registerModuleAnalyses(
-    ModuleAnalysisManager &MAM) const {
-#define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
-  MAM.registerPass([&] { return CREATE_PASS; });
-#include "MachinePassRegistry.def"
-  derived().registerTargetAnalysis(MAM);
-}
-
-template <typename Derived>
-void CodeGenPassBuilder<Derived>::registerFunctionAnalyses(
-    FunctionAnalysisManager &FAM) const {
-  FAM.registerPass([this] { return registerAAAnalyses(); });
-
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  FAM.registerPass([&] { return CREATE_PASS; });
-#include "MachinePassRegistry.def"
-  derived().registerTargetAnalysis(FAM);
-}
-
-template <typename Derived>
-void CodeGenPassBuilder<Derived>::registerMachineFunctionAnalyses(
-    MachineFunctionAnalysisManager &MFAM) const {
-#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
-  MFAM.registerPass([&] { return CREATE_PASS; });
-#include "MachinePassRegistry.def"
-  derived().registerTargetAnalysis(MFAM);
 }
 
 template <typename Derived>
