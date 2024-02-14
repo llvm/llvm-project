@@ -13,23 +13,34 @@
 #ifndef LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 #define LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 
+#include <variant>
+
 namespace llvm::coverage::mcdc {
 
 /// The ID for MCDCBranch.
 using ConditionID = unsigned int;
 
-/// MC/DC-specifig parameters
-struct Parameters {
+struct DecisionParameters {
   /// Byte Index of Bitmap Coverage Object for a Decision Region.
-  unsigned BitmapIdx = 0;
+  unsigned BitmapIdx;
 
   /// Number of Conditions used for a Decision Region.
-  unsigned NumConditions = 0;
+  unsigned NumConditions;
 
+  DecisionParameters() = delete;
+};
+
+struct BranchParameters {
   /// IDs used to represent a branch region and other branch regions
   /// evaluated based on True and False branches.
-  ConditionID ID = 0, TrueID = 0, FalseID = 0;
+  ConditionID ID, TrueID, FalseID;
+
+  BranchParameters() = delete;
 };
+
+/// The type of MC/DC-specific parameters.
+using Parameters =
+    std::variant<std::monostate, DecisionParameters, BranchParameters>;
 
 } // namespace llvm::coverage::mcdc
 
