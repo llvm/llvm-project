@@ -4373,7 +4373,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
         symfiles.Append(module_spec_no_ext);
       }
     }
-
+    Log *log = GetLog(DWARFLog::SplitDwarf);
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
@@ -4381,9 +4381,12 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     for (const auto &symfile : symfiles.files()) {
       module_spec.GetSymbolFileSpec() =
           FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
+      LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
+               module_spec.GetSymbolFileSpec());
       FileSpec dwp_filespec =
           PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
       if (FileSystem::Instance().Exists(dwp_filespec)) {
+        LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
         DataBufferSP dwp_file_data_sp;
         lldb::offset_t dwp_file_data_offset = 0;
         ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
@@ -4396,6 +4399,10 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
           break;
         }
       }
+    }
+    if (!m_dwp_symfile) {
+      LLDB_LOG(log, "Unable to locate for DWP file for: \"{0}\"",
+               m_objfile_sp->GetModule()->GetFileSpec());
     }
   });
   return m_dwp_symfile;
