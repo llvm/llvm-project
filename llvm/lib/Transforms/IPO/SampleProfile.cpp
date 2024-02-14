@@ -446,13 +446,19 @@ class SampleProfileMatcher {
 
   // Match state for an anchor/callsite.
   enum class MatchState {
-    InitialMatch = 0,
-    InitialMismatch = 1,
-    // From initial mismatch to final match.
-    RecoveredMismatch = 2,
-    // From initial match to final mismatch.
-    RemovedMatch = 3,
-    Unknown = 32,
+    Unknown = 0,
+    // Initial match in pre-match.
+    InitialMatch = 1,
+    // Initial mismatch in pre-match.
+    InitialMismatch = 2,
+    // InitialMatch stays matched in post-match.
+    UnchangedMatch = 3,
+    // InitialMismatch stays mismatched in post-match.
+    UnchangedMismatch = 4,
+    // InitialMismatch is recovered in post-match.
+    RecoveredMismatch = 5,
+    // InitialMatch is removed and becomes mismatched in post-match.
+    RemovedMatch = 6,
   };
 
   // For each function, store every callsite and its matching state into this
@@ -507,6 +513,12 @@ private:
       const std::map<LineLocation, std::unordered_set<FunctionId>>
           &ProfileAnchors,
       const LocToLocMap *IRToProfileLocationMap);
+
+  bool isMismatchState(const enum MatchState &State) {
+    return State == MatchState::InitialMismatch ||
+           State == MatchState::UnchangedMismatch ||
+           State == MatchState::RemovedMatch;
+  };
 
   // Count the samples of checksum mismatched function for the top-level
   // function and all inlinees.
@@ -2434,12 +2446,15 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
       IsCallsiteMatched = true;
 
     if (IsCallsiteMatched) {
-      auto R =
-          CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
-      // When there is an existing state, we know it's in post-match phrase.
-      // Update the matching state accordingly.
-      if (!R.second && R.first->second == MatchState::InitialMismatch)
-        R.first->second = MatchState::RecoveredMismatch;
+      auto It = CallsiteMatchStates.find(ProfileLoc);
+      if (It == CallsiteMatchStates.end())
+        CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
+      else if (IsPostMatch) {
+        if (It->second == MatchState::InitialMatch)
+          It->second = MatchState::UnchangedMatch;
+        else if (It->second == MatchState::InitialMismatch)
+          It->second = MatchState::RecoveredMismatch;
+      }
     }
   }
 
@@ -2452,9 +2467,14 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
       CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
-    // The inital match is removed in post-match.
-    else if (IsPostMatch && It->second == MatchState::InitialMatch)
-      CallsiteMatchStates.emplace(Loc, MatchState::RemovedMatch);
+    else if (IsPostMatch) {
+      // Update the state if it's not matched(UnchangedMatch or
+      // RecoveredMismatch).
+      if (It->second == MatchState::InitialMismatch)
+        It->second = MatchState::UnchangedMismatch;
+      else if (It->second == MatchState::InitialMatch)
+        It->second = MatchState::RemovedMatch;
+    }
   }
 }
 
@@ -2501,14 +2521,9 @@ void SampleProfileMatcher::countMismatchedCallsiteSamples(
     return It->second;
   };
 
-  auto IsMismatchState = [&](const enum MatchState &State) {
-    return State == MatchState::InitialMismatch ||
-           State == MatchState::RemovedMatch;
-  };
-
   auto AttributeMismatchedSamples = [&](const enum MatchState &State,
                                         uint64_t Samples) {
-    if (IsMismatchState(State))
+    if (isMismatchState(State))
       MismatchedCallsiteSamples += Samples;
     else if (State == MatchState::RecoveredMismatch)
       RecoveredCallsiteSamples += Samples;
@@ -2527,7 +2542,7 @@ void SampleProfileMatcher::countMismatchedCallsiteSamples(
       CallsiteSamples += CS.second.getTotalSamples();
     AttributeMismatchedSamples(State, CallsiteSamples);
 
-    if (IsMismatchState(State))
+    if (isMismatchState(State))
       continue;
 
     // When the current level of inlined call site matches the profiled call
@@ -2546,8 +2561,7 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
   const auto &MatchStates = It->second;
   for (const auto &I : MatchStates) {
     TotalProfiledCallsites++;
-    if (I.second == MatchState::InitialMismatch ||
-        I.second == MatchState::RemovedMatch)
+    if (isMismatchState(I.second))
       NumMismatchedCallsites++;
     else if (I.second == MatchState::RecoveredMismatch)
       NumRecoveredCallsites++;

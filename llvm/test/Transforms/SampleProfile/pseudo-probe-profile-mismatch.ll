@@ -9,11 +9,11 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch-nested.prof -report-profile-staleness -persist-profile-staleness -S 2>&1 | FileCheck %s --check-prefix=CHECK-NESTED
 
 
-; CHECK: (1/3) of functions' profile are invalid and (10/50) of samples are discarded due to function hash mismatch.
+; CHECK: (2/3) of functions' profile are invalid and (40/50) of samples are discarded due to function hash mismatch.
 ; CHECK: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
-; CHECK: (0/2) of callsites and (0/20) of samples are recovered by stale profile matching.
+; CHECK: (1/2) of callsites and (10/20) of samples are recovered by stale profile matching.
 
-; CHECK-MD: ![[#]] = !{!"NumStaleProfileFunc", i64 1, !"TotalProfiledFunc", i64 3, !"MismatchedFunctionSamples", i64 10, !"TotalFunctionSamples", i64 50, !"NumMismatchedCallsites", i64 2, !"NumRecoveredCallsites", i64 0, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 20, !"RecoveredCallsiteSamples", i64 0}
+; CHECK-MD: ![[#]] = !{!"NumStaleProfileFunc", i64 2, !"TotalProfiledFunc", i64 3, !"MismatchedFunctionSamples", i64 40, !"TotalFunctionSamples", i64 50, !"NumMismatchedCallsites", i64 1, !"NumRecoveredCallsites", i64 1, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 10, !"RecoveredCallsiteSamples", i64 10}
 
 
 ; CHECK-OBJ: .llvm_stats
@@ -22,7 +22,7 @@
 ; CHECK-ASM: .byte	19
 ; CHECK-ASM: .ascii	"NumStaleProfileFunc"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"MQ=="
+; CHECK-ASM: .ascii	"Mg=="
 ; CHECK-ASM: .byte	17
 ; CHECK-ASM: .ascii	"TotalProfiledFunc"
 ; CHECK-ASM: .byte	4
@@ -30,7 +30,7 @@
 ; CHECK-ASM: .byte	25
 ; CHECK-ASM: .ascii	"MismatchedFunctionSamples"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"MTA="
+; CHECK-ASM: .ascii	"NDA="
 ; CHECK-ASM: .byte	20
 ; CHECK-ASM: .ascii	"TotalFunctionSamples"
 ; CHECK-ASM: .byte	4
@@ -38,11 +38,11 @@
 ; CHECK-ASM: .byte	22
 ; CHECK-ASM: .ascii	"NumMismatchedCallsites"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"Mg=="
+; CHECK-ASM: .ascii	"MQ=="
 ; CHECK-ASM: .byte	21
 ; CHECK-ASM: .ascii	"NumRecoveredCallsites"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"MA=="
+; CHECK-ASM: .ascii	"MQ=="
 ; CHECK-ASM: .byte	22
 ; CHECK-ASM: .ascii	"TotalProfiledCallsites"
 ; CHECK-ASM: .byte	4
@@ -50,11 +50,11 @@
 ; CHECK-ASM: .byte	25
 ; CHECK-ASM: .ascii	"MismatchedCallsiteSamples"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"MjA="
+; CHECK-ASM: .ascii	"MTA="
 ; CHECK-ASM: .byte	24
 ; CHECK-ASM: .ascii	"RecoveredCallsiteSamples"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"MA=="
+; CHECK-ASM: .ascii	"MTA="
 
 
 ; CHECK-NESTED: (1/2) of functions' profile are invalid and (211/311) of samples are discarded due to function hash mismatch.
