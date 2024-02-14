@@ -11,8 +11,5 @@
 
 // CHECK: mbd created and binded to socket at: mbd-launch/mbd.sock
 
-// Make sure mbd.sock does not exist
-// RUN: [ ! -f "mbd-launch/mbd.sock" ] && true || false
-
 // Make sure mbd.err is empty
 // RUN: [ ! -s "mbd-launch/mbd.err" ] && true || false

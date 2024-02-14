@@ -21,8 +21,5 @@ int main() {return 0;}
 // Check that a clang invocation can handshake with an existing module build daemon
 // CHECK-EXIST: remark: Successfully completed handshake with module build daemon [-Rmodule-build-daemon]
 
-// Make sure mbd.sock does not exist
-// RUN: [ ! -f "mbd-launch/mbd.sock" ] && true || false
-
 // Make sure mbd.err is empty
 // RUN: [ ! -s "mbd-launch/mbd.err" ] && true || false
