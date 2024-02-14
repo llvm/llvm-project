@@ -476,13 +476,10 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   StringRef reflstr =
       obj_file_format_up->getSectionName(swift::ReflectionSectionKind::reflstr);
 
-  bool hasReflectionSection = false;
-  hasReflectionSection |= findSectionInObject(field_md);
-  hasReflectionSection |= findSectionInObject(assocty);
-  hasReflectionSection |= findSectionInObject(builtin);
-  hasReflectionSection |= findSectionInObject(capture);
-  hasReflectionSection |= findSectionInObject(typeref);
-  hasReflectionSection |= findSectionInObject(reflstr);
+  bool hasReflectionSection =
+      findSectionInObject(field_md) || findSectionInObject(assocty) ||
+      findSectionInObject(builtin) || findSectionInObject(capture) ||
+      findSectionInObject(typeref) || findSectionInObject(reflstr);
   return hasReflectionSection;
 }
 
