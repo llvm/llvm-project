@@ -305,6 +305,12 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
+Fixed Point Support in Clang
+----------------------------
+
+- Support fixed point precision macros according to ``7.18a.3`` of
+  `ISO/IEC TR 18037:2008 <https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip>`_.
+
 AST Matchers
 ------------
 
