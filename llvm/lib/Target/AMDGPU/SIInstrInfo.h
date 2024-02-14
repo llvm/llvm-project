@@ -708,25 +708,41 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DisableWQM;
   }
 
+  // SI_SPILL_S32_TO_VGPR and SI_RESTORE_S32_FROM_VGPR form a special case of
+  // SGPRs spilling to VGPRs which are SGPR spills but from VALU instructions
+  // therefore we need an explicit check for them since just checking if the
+  // Spill bit is set and what instruction type it came from miss classifies
+  // them.
   static bool isVGPRSpill(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VGPRSpill;
+    return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
+           MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
+           ((MI.getDesc().TSFlags & SIInstrFlags::Spill) &&
+            (MI.getDesc().TSFlags & SIInstrFlags::VALU));
   }
 
   bool isVGPRSpill(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VGPRSpill;
+    return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
+           Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
+           ((get(Opcode).TSFlags & SIInstrFlags::Spill) &&
+            (get(Opcode).TSFlags & SIInstrFlags::VALU));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::SGPRSpill;
+    return MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR ||
+           MI.getOpcode() == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
+           ((MI.getDesc().TSFlags & SIInstrFlags::Spill) &&
+            (MI.getDesc().TSFlags & SIInstrFlags::SALU));
   }
 
   bool isSGPRSpill(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::SGPRSpill;
+    return Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR ||
+           Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
+           ((get(Opcode).TSFlags & SIInstrFlags::Spill) &&
+            (get(Opcode).TSFlags & SIInstrFlags::SALU));
   }
 
   bool isSpillOpcode(uint16_t Opcode) const {
-    return get(Opcode).TSFlags &
-           (SIInstrFlags::SGPRSpill | SIInstrFlags::VGPRSpill);
+    return get(Opcode).TSFlags & SIInstrFlags::Spill;
   }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
