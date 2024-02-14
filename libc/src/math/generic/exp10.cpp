@@ -102,7 +102,7 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 //   | output - 10^dx | < 1.5 * 2^-124.
 Float128 poly_approx_f128(const Float128 &dx) {
   constexpr Float128 COEFFS_128[]{
-      {Sign::POS, -127, 0x00000000'00000008'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -126, 0x935d8ddd'aaa8ac16'ea56d62b'82d30a2d_u128},
       {Sign::POS, -126, 0xa9a92639'e753443a'80a99ce7'5f4d5bdb_u128},
       {Sign::POS, -126, 0x82382c8e'f1652304'6a4f9d7d'bf6c9635_u128},
