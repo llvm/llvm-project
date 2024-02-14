@@ -57,6 +57,59 @@ struct Graph {
     }
 };
 
+struct DfsTraverse {
+    DfsTraverse(const Graph &G) : G(G) {}
+
+    const Graph &G;
+
+    int source;
+    int target;
+    int maxDistance;
+    std::vector<int> path;
+    std::vector<bool> visiting;
+    std::set<std::vector<int>> results;
+
+    void search(int source, int target, int maxDistance) {
+        this->source = source;
+        this->target = target;
+        this->maxDistance = maxDistance;
+
+        this->path.clear();
+        this->path.push_back(source);
+
+        this->visiting.resize(G.n, false);
+
+        dfs(source, 0);
+    }
+
+    void dfs(int u, int d) {
+        if (d > maxDistance || (d == maxDistance && u != target))
+            return;
+
+        if (u == target) {
+            // llvm::errs() << "found:";
+            // for (int v : path) {
+            //     llvm::errs() << " " << v;
+            // }
+            // llvm::errs() << "\n";
+
+            results.insert(path);
+            return;
+        }
+
+        for (int v : G.G[u]) {
+            if (visiting[v])
+                continue;
+
+            visiting[v] = true;
+            this->path.push_back(v);
+            dfs(v, d + 1);
+            this->path.pop_back();
+            visiting[v] = false;
+        }
+    }
+};
+
 struct BlockGraph {
     const CFG *cfg;
     Graph g;

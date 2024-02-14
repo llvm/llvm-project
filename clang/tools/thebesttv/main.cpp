@@ -162,13 +162,69 @@ int main(int argc, const char **argv) {
 
     printCloc(allFiles);
 
+    {
+        Graph G(Global.functionCnt);
+        for (const auto &[caller, callees] : Global.callGraph) {
+            int u = Global.getIdOfFunction(caller);
+            if (u == -1)
+                continue;
+            for (const auto &callee : callees) {
+                int v = Global.getIdOfFunction(callee);
+                if (v == -1)
+                    continue;
+                G.addEdge(u, v);
+                G.addEdge(v, u);
+            }
+        }
+
+        int maxCnt = 0;
+        for (int u = 0; u < G.n; u++)
+            for (int v = u + 1; v < G.n; v++) {
+                // std::string source = "IOPriorityPanel_new(IOPriority)";
+                // std::string target = "Vector_new(const ObjectClass *, _Bool,
+                // int)"; int u = Global.getIdOfFunction(source); int v =
+                // Global.getIdOfFunction(target);
+
+                DfsTraverse dfs(G);
+                dfs.search(u, v, 3);
+                std::set<int> allFunctionIDs;
+
+                for (const auto &path : dfs.results) {
+                    for (int id : path) {
+                        allFunctionIDs.insert(id);
+                    }
+                }
+
+                if (allFunctionIDs.size() > maxCnt) {
+                    maxCnt = allFunctionIDs.size();
+                    llvm::errs() << "MaxCnt: " << maxCnt << "\t" << u << " -> "
+                                 << v << "\n";
+                }
+
+                // for (auto &path : dfs.results) {
+                //     bool first = true;
+                //     for (auto &node : path) {
+                //         std::string &name =
+                //         Global.functionLocations[node]->name; if (first) {
+                //             first = false;
+                //             llvm::errs() << name << " ->\n";
+                //         } else {
+                //             llvm::errs() << "  " << name << "\n";
+                //         }
+                //     }
+                //     llvm::errs() << "\n";
+                // }
+            }
+    }
+
     while (true) {
         std::string methodName;
         llvm::errs() << "> ";
-        std::cin >> methodName;
+        std::getline(std::cin, methodName);
         if (!std::cin)
             break;
-        methodName += "(";
+        if (methodName.find('(') == std::string::npos)
+            methodName += "(";
 
         for (const auto &[caller, callees] : Global.callGraph) {
             if (caller.find(methodName) != 0)
