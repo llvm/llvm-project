@@ -524,7 +524,7 @@ private:
 
     /// IDs that are stored in MCDCBranches
     /// Complete when all IDs (1 to NumConditions) are met.
-    DenseSet<CounterMappingRegion::MCDCConditionID> ConditionIDs;
+    DenseSet<mcdc::ConditionID> ConditionIDs;
 
     /// Set of IDs of Expansion(s) that are relevant to DecisionRegion
     /// and its children (via expansions).

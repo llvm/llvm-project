@@ -371,10 +371,9 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
 
     auto CMR = CounterMappingRegion(
         C, C2,
-        CounterMappingRegion::MCDCParameters{
-            static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
-            static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-            static_cast<unsigned>(FID)},
+        mcdc::Parameters{static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
+                         static_cast<unsigned>(ID), static_cast<unsigned>(TID),
+                         static_cast<unsigned>(FID)},
         InferredFileID, ExpandedFileID, LineStart, ColumnStart,
         LineStart + NumLines, ColumnEnd, Kind);
     if (CMR.startLoc() > CMR.endLoc())
