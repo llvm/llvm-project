@@ -126,7 +126,8 @@ TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
   std::string DefWithCodeMessedUp =
       "def SimpleValueCode {  let  \n"
       "Code=       \n"
-      "               [{ A TokCode is  nothing more than a multi-line string literal "
+      "               [{ A TokCode is  nothing more than a multi-line string "
+      "literal "
       "delimited by \\[{ and }\\]. It  can break across lines and the line "
       "breaks are retained in the string. \n"
       "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}] \n"
