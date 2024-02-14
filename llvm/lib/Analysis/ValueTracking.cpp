@@ -4272,7 +4272,7 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
   Value *LHS;
   uint64_t ClassVal = 0;
   const APFloat *CRHS;
-  // TODO: handle sign-bit check idiom
+  const APInt *RHS;
   if (match(Cond, m_FCmp(Pred, m_Value(LHS), m_APFloat(CRHS)))) {
     auto [CmpVal, MaskIfTrue, MaskIfFalse] = fcmpImpliesClass(
         Pred, *CxtI->getParent()->getParent(), LHS, *CRHS, LHS != V);
@@ -4282,6 +4282,15 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
                              m_Value(LHS), m_ConstantInt(ClassVal)))) {
     FPClassTest Mask = static_cast<FPClassTest>(ClassVal);
     KnownFromContext.knownNot(CondIsTrue ? ~Mask : Mask);
+  } else if (match(Cond, m_ICmp(Pred, m_ElementWiseBitCast(m_Value(LHS)),
+                                m_APInt(RHS)))) {
+    bool TrueIfSigned;
+    if (!isSignBitCheck(Pred, *RHS, TrueIfSigned))
+      return;
+    if (TrueIfSigned == CondIsTrue)
+      KnownFromContext.signBitMustBeOne();
+    else
+      KnownFromContext.signBitMustBeZero();
   }
 }
 
