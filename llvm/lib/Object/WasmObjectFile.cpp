@@ -1943,7 +1943,7 @@ uint32_t WasmObjectFile::getSymbolSize(SymbolRef Symb) const {
   if (!Sym.isDefined())
     return 0;
   if (Sym.isTypeGlobal())
-    return globals()[Sym.Info.ElementIndex - getNumImportedGlobals()].Size;
+    return getDefinedGlobal(Sym.Info.ElementIndex).Size;
   if (Sym.isTypeData())
     return Sym.Info.DataRef.Size;
   if (Sym.isTypeFunction())
