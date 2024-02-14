@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -verify -pedantic
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -fsyntax-only -std=c23 -verify -pedantic
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -fsyntax-only -std=c23 -verify -pedantic
 enum e {A,
         B = 42LL << 32,        // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
       C = -4, D = 12456 };
@@ -185,6 +185,8 @@ _Static_assert(
     _BitInt(67) : 0,
     __INTMAX_TYPE__ : 0,
     __UINTMAX_TYPE__ : 0,
+    long long : 0,
+    unsigned long long : 0,
     __int128_t : 0,
     __uint128_t : 1
     )
