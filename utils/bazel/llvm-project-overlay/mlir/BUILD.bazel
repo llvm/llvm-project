@@ -1042,6 +1042,25 @@ cc_binary(
 )
 
 cc_binary(
+    name = "_mlirDialectsLLVM.so",
+    srcs = ["lib/Bindings/Python/DialectLLVM.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPILLVM",
+        ":MLIRBindingsPythonHeadersAndDeps",
+        "//third_party/pybind11",
+    ],
+)
+
+cc_binary(
     name = "_mlirDialectsQuant.so",
     srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
     copts = PYBIND11_COPTS,
