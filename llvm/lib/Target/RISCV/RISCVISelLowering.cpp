@@ -3880,7 +3880,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // For m1 vectors, if we have non-undef values in both halves of our vector,
   // split the vector into low and high halves, build them separately, then
   // use a vselect to combine them.  For long vectors, this cuts the critical
-  // path of the vslide1down sequence in half, and gives us an oppurtunity
+  // path of the vslide1down sequence in half, and gives us an opportunity
   // to special case each half independently.  Note that we don't change the
   // length of the sub-vectors here, so if both fallback to the generic
   // vslide1down path, we should be able to fold the vselect into the final
