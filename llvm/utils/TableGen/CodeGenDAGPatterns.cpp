@@ -530,24 +530,24 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big,
   auto LT = [](MVT A, MVT B) -> bool {
     // Always treat non-scalable MVTs as smaller than scalable MVTs for the
     // purposes of ordering.
-    auto ASize = std::make_tuple(A.isScalableVector(), A.getScalarSizeInBits(),
-                                 A.getSizeInBits().getKnownMinValue());
-    auto BSize = std::make_tuple(B.isScalableVector(), B.getScalarSizeInBits(),
-                                 B.getSizeInBits().getKnownMinValue());
+    auto ASize = std::tuple(A.isScalableVector(), A.getScalarSizeInBits(),
+                            A.getSizeInBits().getKnownMinValue());
+    auto BSize = std::tuple(B.isScalableVector(), B.getScalarSizeInBits(),
+                            B.getSizeInBits().getKnownMinValue());
     return ASize < BSize;
   };
   auto SameKindLE = [](MVT A, MVT B) -> bool {
     // This function is used when removing elements: when a vector is compared
     // to a non-vector or a scalable vector to any non-scalable MVT, it should
     // return false (to avoid removal).
-    if (std::make_tuple(A.isVector(), A.isScalableVector()) !=
-        std::make_tuple(B.isVector(), B.isScalableVector()))
+    if (std::tuple(A.isVector(), A.isScalableVector()) !=
+        std::tuple(B.isVector(), B.isScalableVector()))
       return false;
 
-    return std::make_tuple(A.getScalarSizeInBits(),
-                           A.getSizeInBits().getKnownMinValue()) <=
-           std::make_tuple(B.getScalarSizeInBits(),
-                           B.getSizeInBits().getKnownMinValue());
+    return std::tuple(A.getScalarSizeInBits(),
+                      A.getSizeInBits().getKnownMinValue()) <=
+           std::tuple(B.getScalarSizeInBits(),
+                      B.getSizeInBits().getKnownMinValue());
   };
 
   for (unsigned M : Modes) {
@@ -751,8 +751,8 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
 namespace {
 struct TypeSizeComparator {
   bool operator()(const TypeSize &LHS, const TypeSize &RHS) const {
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+    return std::tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
+           std::tuple(RHS.isScalable(), RHS.getKnownMinValue());
   }
 };
 } // end anonymous namespace
@@ -2988,7 +2988,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
       // Check that the ComplexPattern uses are consistent: "(MY_PAT $a, $b)"
       // and "(MY_PAT $b, $a)" should not be allowed in the same pattern;
       // neither should "(MY_PAT_1 $a, $b)" and "(MY_PAT_2 $a, $b)".
-      auto OperandId = std::make_pair(Operator, i);
+      auto OperandId = std::pair(Operator, i);
       auto PrevOp = ComplexPatternOperands.find(Child->getName());
       if (PrevOp != ComplexPatternOperands.end()) {
         if (PrevOp->getValue() != OperandId)
@@ -3197,7 +3197,7 @@ void CodeGenDAGPatterns::ParseNodeInfo() {
 
   while (!Nodes.empty()) {
     Record *R = Nodes.back();
-    SDNodes.insert(std::make_pair(R, SDNodeInfo(R, CGH)));
+    SDNodes.insert(std::pair(R, SDNodeInfo(R, CGH)));
     Nodes.pop_back();
   }
 
@@ -3217,7 +3217,7 @@ void CodeGenDAGPatterns::ParseNodeTransforms() {
     Record *SDNode = XFormNode->getValueAsDef("Opcode");
     StringRef Code = XFormNode->getValueAsString("XFormFunction");
     SDNodeXForms.insert(
-        std::make_pair(XFormNode, NodeXForm(SDNode, std::string(Code))));
+        std::pair(XFormNode, NodeXForm(SDNode, std::string(Code))));
 
     Xforms.pop_back();
   }
@@ -3227,7 +3227,7 @@ void CodeGenDAGPatterns::ParseComplexPatterns() {
   std::vector<Record *> AMs =
       Records.getAllDerivedDefinitions("ComplexPattern");
   while (!AMs.empty()) {
-    ComplexPatterns.insert(std::make_pair(AMs.back(), AMs.back()));
+    ComplexPatterns.insert(std::pair(AMs.back(), AMs.back()));
     AMs.pop_back();
   }
 }
@@ -3340,7 +3340,7 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
     std::vector<std::pair<Init *, StringInit *>> Ops;
     for (unsigned op = 0, e = DefaultInfo->getNumArgs(); op != e; ++op)
       Ops.push_back(
-          std::make_pair(DefaultInfo->getArg(op), DefaultInfo->getArgName(op)));
+          std::pair(DefaultInfo->getArg(op), DefaultInfo->getArgName(op)));
     DagInit *DI = DagInit::get(SomeSDNode, nullptr, Ops);
 
     // Create a TreePattern to parse this.

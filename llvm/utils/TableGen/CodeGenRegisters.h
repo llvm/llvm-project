@@ -111,8 +111,7 @@ public:
   CodeGenSubRegIndex *addComposite(CodeGenSubRegIndex *A,
                                    CodeGenSubRegIndex *B) {
     assert(A && B);
-    std::pair<CompMap::iterator, bool> Ins =
-        Composed.insert(std::make_pair(A, B));
+    std::pair<CompMap::iterator, bool> Ins = Composed.insert(std::pair(A, B));
     // Synthetic subreg indices that aren't contiguous (for instance ARM
     // register tuples) don't have a bit range, so it's OK to let
     // B->Offset == -1. For the other cases, accumulate the offset and set
@@ -706,7 +705,7 @@ public:
   // This function is only for use by CodeGenRegister::computeSuperRegs().
   // Others should simply use Reg->getTopoSig().
   unsigned getTopoSig(const TopoSigId &Id) {
-    return TopoSigs.insert(std::make_pair(Id, TopoSigs.size())).first->second;
+    return TopoSigs.insert(std::pair(Id, TopoSigs.size())).first->second;
   }
 
   // Create a native register unit that is associated with one or two root

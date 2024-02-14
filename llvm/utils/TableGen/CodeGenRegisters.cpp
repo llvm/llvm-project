@@ -281,13 +281,13 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
     CodeGenSubRegIndex *Idx = ExplicitSubRegIndices[i];
     if (!SR->Artificial)
       Idx->Artificial = false;
-    if (!SubRegs.insert(std::make_pair(Idx, SR)).second)
+    if (!SubRegs.insert(std::pair(Idx, SR)).second)
       PrintFatalError(TheDef->getLoc(), "SubRegIndex " + Idx->getName() +
                                             " appears twice in Register " +
                                             getName());
     // Map explicit sub-registers first, so the names take precedence.
     // The inherited sub-registers are mapped below.
-    SubReg2Idx.insert(std::make_pair(SR, Idx));
+    SubReg2Idx.insert(std::pair(SR, Idx));
   }
 
   // Keep track of inherited subregs and how they can be reached.
@@ -327,7 +327,7 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
       if (SubRegs.count(Comp.second) || !Orphans.erase(SRI->second))
         continue;
       // We found a new name for the orphaned sub-register.
-      SubRegs.insert(std::make_pair(Comp.second, SRI->second));
+      SubRegs.insert(std::pair(Comp.second, SRI->second));
       Indices.push_back(Comp.second);
     }
   }
@@ -374,7 +374,7 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 
     // Ensure that every sub-register has a unique name.
     DenseMap<const CodeGenRegister *, CodeGenSubRegIndex *>::iterator Ins =
-        SubReg2Idx.insert(std::make_pair(SubReg.second, SubReg.first)).first;
+        SubReg2Idx.insert(std::pair(SubReg.second, SubReg.first)).first;
     if (Ins->second == SubReg.first)
       continue;
     // Trouble: Two different names for SubReg.second.
@@ -520,7 +520,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
       // a sub-register with a concatenated sub-register index.
       CodeGenSubRegIndex *Concat = RegBank.getConcatSubRegIndex(Parts);
       std::pair<CodeGenSubRegIndex *, CodeGenRegister *> NewSubReg =
-          std::make_pair(Concat, Cand);
+          std::pair(Concat, Cand);
 
       if (!SubRegs.insert(NewSubReg).second)
         continue;
@@ -528,7 +528,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
       // We inserted a new subregister.
       NewSubRegs.push_back(NewSubReg);
       SubRegQueue.push(NewSubReg);
-      SubReg2Idx.insert(std::make_pair(Cand, Concat));
+      SubReg2Idx.insert(std::pair(Cand, Concat));
     }
   }
 
@@ -1074,7 +1074,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     BitVector SuperRegClassesBV(RegClasses.size());
     RC.getSuperRegClasses(SubIdx, SuperRegClassesBV);
     if (SuperRegClassesBV.any())
-      SuperRegClasses.push_back(std::make_pair(&RC, SuperRegClassesBV));
+      SuperRegClasses.push_back(std::pair(&RC, SuperRegClassesBV));
   }
   llvm::stable_sort(SuperRegClasses,
                     [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
@@ -1110,14 +1110,14 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
         // aren't subregisters of SuperRegRC whereas GR32 has a direct 1:1
         // mapping.
         if (SuperRegRC->getMembers().size() >= SubRegRC->getMembers().size())
-          return std::make_pair(ChosenSuperRegClass, SubRegRC);
+          return std::pair(ChosenSuperRegClass, SubRegRC);
       }
     }
 
     // If we found a fit but it wasn't quite ideal because SubRegRC had excess
     // registers, then we're done.
     if (ChosenSuperRegClass)
-      return std::make_pair(ChosenSuperRegClass, SubRegRC);
+      return std::pair(ChosenSuperRegClass, SubRegRC);
   }
 
   return std::nullopt;
@@ -1230,7 +1230,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
     // entries? (or maybe there's a reason for it - I don't know much about this
     // code, just drive-by refactoring)
     RegistersByName.insert(
-        std::make_pair(Reg.TheDef->getValueAsString("AsmName"), &Reg));
+        std::pair(Reg.TheDef->getValueAsString("AsmName"), &Reg));
 
   // Precompute all sub-register maps.
   // This will create Composite entries for all inferred sub-register indices.
@@ -1242,10 +1242,10 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   for (CodeGenSubRegIndex &SRI : SubRegIndices) {
     SRI.computeConcatTransitiveClosure();
     if (!SRI.ConcatenationOf.empty())
-      ConcatIdx.insert(std::make_pair(
-          SmallVector<CodeGenSubRegIndex *, 8>(SRI.ConcatenationOf.begin(),
-                                               SRI.ConcatenationOf.end()),
-          &SRI));
+      ConcatIdx.insert(
+          std::pair(SmallVector<CodeGenSubRegIndex *, 8>(
+                        SRI.ConcatenationOf.begin(), SRI.ConcatenationOf.end()),
+                    &SRI));
   }
 
   // Infer even more sub-registers by combining leading super-registers.
@@ -1336,12 +1336,12 @@ CodeGenRegister *CodeGenRegBank::getReg(Record *Def) {
 
 void CodeGenRegBank::addToMaps(CodeGenRegisterClass *RC) {
   if (Record *Def = RC->getDef())
-    Def2RC.insert(std::make_pair(Def, RC));
+    Def2RC.insert(std::pair(Def, RC));
 
   // Duplicate classes are rejected by insert().
   // That's OK, we only care about the properties handled by CGRC::Key.
   CodeGenRegisterClass::Key K(*RC);
-  Key2RC.insert(std::make_pair(K, RC));
+  Key2RC.insert(std::pair(K, RC));
 }
 
 // Create a synthetic sub-class if it is missing.
@@ -1472,7 +1472,7 @@ void CodeGenRegBank::computeComposites() {
   SmallSet<CompositePair, 4> UserDefined;
   for (const CodeGenSubRegIndex &Idx : SubRegIndices)
     for (auto P : Idx.getComposites())
-      UserDefined.insert(std::make_pair(&Idx, P.first));
+      UserDefined.insert(std::pair(&Idx, P.first));
 
   // Keep track of TopoSigs visited. We only need to visit each TopoSig once,
   // and many registers will share TopoSigs on regular architectures.

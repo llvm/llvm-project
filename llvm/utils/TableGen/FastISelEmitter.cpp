@@ -595,7 +595,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     int complexity = Pattern.getPatternComplexity(CGP);
 
     auto inserted_simple_pattern = SimplePatternsCheck.insert(
-        std::make_tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
+        std::tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
     if (!inserted_simple_pattern.second) {
       PrintFatalError(Pattern.getSrcRecord()->getLoc(),
                       "Duplicate predicate in FastISel table!");

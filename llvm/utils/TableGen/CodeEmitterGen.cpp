@@ -300,11 +300,11 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
         append("      }\n");
       }
       append("      }\n");
-      return std::make_pair(std::move(Case), std::move(BitOffsetCase));
+      return std::pair(std::move(Case), std::move(BitOffsetCase));
     }
   }
   addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
-  return std::make_pair(std::move(Case), std::move(BitOffsetCase));
+  return std::pair(std::move(Case), std::move(BitOffsetCase));
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(

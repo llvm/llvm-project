@@ -608,7 +608,7 @@ void SearchableTableEmitter::collectEnumEntries(
       Value = getInt(EntryRec, ValueField);
 
     Enum.Entries.push_back(std::make_unique<GenericEnum::Entry>(Name, Value));
-    Enum.EntryMap.insert(std::make_pair(EntryRec, Enum.Entries.back().get()));
+    Enum.EntryMap.insert(std::pair(EntryRec, Enum.Entries.back().get()));
   }
 
   if (ValueField.empty()) {
@@ -708,7 +708,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
 
     collectEnumEntries(*Enum, NameField, ValueField,
                        Records.getAllDerivedDefinitions(FilterClass));
-    EnumMap.insert(std::make_pair(EnumRec, Enum.get()));
+    EnumMap.insert(std::pair(EnumRec, Enum.get()));
     Enums.emplace_back(std::move(Enum));
   }
 
@@ -773,7 +773,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
       });
     }
 
-    TableMap.insert(std::make_pair(TableRec, Table.get()));
+    TableMap.insert(std::pair(TableRec, Table.get()));
     Tables.emplace_back(std::move(Table));
   }
 

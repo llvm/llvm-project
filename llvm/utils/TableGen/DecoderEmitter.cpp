@@ -614,7 +614,7 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    FilterChooserMap.insert(std::make_pair(
+    FilterChooserMap.insert(std::pair(
         NO_FIXED_SEGMENTS_SENTINEL,
         std::make_unique<FilterChooser>(Owner->AllInstructions,
                                         VariableInstructions, Owner->Operands,
@@ -641,10 +641,10 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.insert(std::make_pair(
-        Inst.first, std::make_unique<FilterChooser>(
-                        Owner->AllInstructions, Inst.second, Owner->Operands,
-                        BitValueArray, *Owner)));
+    FilterChooserMap.insert(
+        std::pair(Inst.first, std::make_unique<FilterChooser>(
+                                  Owner->AllInstructions, Inst.second,
+                                  Owner->Operands, BitValueArray, *Owner)));
   }
 }
 
@@ -1908,7 +1908,7 @@ void parseVarLenInstOperand(const Record &Def,
       int TiedReg = TiedTo[OpSubOpPair.first];
       if (TiedReg != -1) {
         unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(
-            std::make_pair(TiedReg, OpSubOpPair.second));
+            std::pair(TiedReg, OpSubOpPair.second));
         Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
       }
     }
@@ -2005,11 +2005,9 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   DagInit *Out = Def.getValueAsDag("OutOperandList");
   DagInit *In = Def.getValueAsDag("InOperandList");
   for (unsigned i = 0; i < Out->getNumArgs(); ++i)
-    InOutOperands.push_back(
-        std::make_pair(Out->getArg(i), Out->getArgNameStr(i)));
+    InOutOperands.push_back(std::pair(Out->getArg(i), Out->getArgNameStr(i)));
   for (unsigned i = 0; i < In->getNumArgs(); ++i)
-    InOutOperands.push_back(
-        std::make_pair(In->getArg(i), In->getArgNameStr(i)));
+    InOutOperands.push_back(std::pair(In->getArg(i), In->getArgNameStr(i)));
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
@@ -2545,7 +2543,7 @@ void DecoderEmitter::run(raw_ostream &o) {
       if (!NumberedEncodings[i].HwModeName.empty())
         DecoderNamespace +=
             std::string("_") + NumberedEncodings[i].HwModeName.str();
-      OpcMap[std::make_pair(DecoderNamespace, Size)].emplace_back(
+      OpcMap[std::pair(DecoderNamespace, Size)].emplace_back(
           i, IndexOfInstruction.find(Def)->second);
     } else {
       NumEncodingsOmitted++;
