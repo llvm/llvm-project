@@ -139,6 +139,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-rc
     llvm-readelf
     llvm-readobj
+    llvm-readtapi
     llvm-strip
     llvm-symbolizer
     llvm-windres

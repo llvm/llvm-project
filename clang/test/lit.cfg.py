@@ -98,6 +98,7 @@ tools = [
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
+    "llvm-readtapi",
     ToolSubst('%clang-cache', command=FindTool('clang-cache')),
     ToolSubst(
         "%clang_extdef_map",
