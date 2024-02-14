@@ -135,3 +135,26 @@ S11 s113 { .i=1, {}};
 S11 s114 { .i=1, .s10={1, .j=2}};
 // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use designated init expression [modernize-use-designated-initializers]
 // CHECK-FIXES: S11 s114 { .i=1, .s10={.i=1, .j=2}};
+
+struct S12 {
+    int i;
+    struct { int j; };
+};
+
+S12 s121 {1, 2};
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES-POD: :[[@LINE-2]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-FIXES: S12 s121 {.i=1, .j=2};
+
+struct S13 {
+    union {
+        int k;
+        double d;
+    };
+    int i;
+};
+
+S13 s131 {1, 2};
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES-POD: :[[@LINE-2]]:10: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-FIXES: S13 s131 {.k=1, .i=2};
