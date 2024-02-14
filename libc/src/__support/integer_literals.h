@@ -22,19 +22,19 @@
 namespace LIBC_NAMESPACE {
 
 LIBC_INLINE constexpr uint8_t operator""_u8(unsigned long long value) {
-  return value;
+  return static_cast<uint8_t>(value);
 }
 
 LIBC_INLINE constexpr uint16_t operator""_u16(unsigned long long value) {
-  return value;
+  return static_cast<uint16_t>(value);
 }
 
 LIBC_INLINE constexpr uint32_t operator""_u32(unsigned long long value) {
-  return value;
+  return static_cast<uint32_t>(value);
 }
 
 LIBC_INLINE constexpr uint64_t operator""_u64(unsigned long long value) {
-  return value;
+  return static_cast<uint64_t>(value);
 }
 
 namespace internal {
