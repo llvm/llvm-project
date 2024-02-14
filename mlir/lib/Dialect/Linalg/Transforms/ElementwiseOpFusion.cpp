@@ -1594,7 +1594,7 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
       results.push_back(collapsedOpResult);
     }
   }
-  return CollapseResult{.results = results, .collapsedOp = collapsedOp};
+  return CollapseResult{results, collapsedOp};
 }
 
 namespace {
