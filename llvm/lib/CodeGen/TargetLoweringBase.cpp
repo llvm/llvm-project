@@ -123,7 +123,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
   // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64) {
+  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
     setLibcallName(RTLIB::REM_F128, "fmodf128");
     setLibcallName(RTLIB::FMA_F128, "fmaf128");
     setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
