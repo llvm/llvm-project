@@ -1126,8 +1126,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
-    // BreakAfterReturnType was not, initialize the latter from the
-    // former for backwards compatibility.
+    // BreakAfterReturnType was not, initialize the latter from the former for
+    // backwards compatibility.
     if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
         Style.BreakAfterReturnType == FormatStyle::RTBS_None) {
       if (Style.AlwaysBreakAfterDefinitionReturnType ==
