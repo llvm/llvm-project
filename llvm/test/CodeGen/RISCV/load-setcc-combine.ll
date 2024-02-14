@@ -7,8 +7,6 @@ define i8 @zext_nonneg_load_i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    lh a0, 0(a0)
 ; CHECK-NEXT:    bltz a0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cont
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    srli a0, a0, 48
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    lbu a0, 0(a0)
 ; CHECK-NEXT:    ret

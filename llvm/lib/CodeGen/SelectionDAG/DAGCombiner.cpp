@@ -12821,11 +12821,13 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
 // ExtendUsesToFormExtLoad - Trying to extend uses of a load to enable this:
 // "fold ({s|z|a}ext (load x)) -> ({s|z|a}ext (truncate ({s|z|a}extload x)))"
 // transformation. Returns true if extension are possible and the above
-// mentioned transformation is profitable.
+// mentioned transformation is profitable. If ChangeToSExt is non-null, it will
+// be set to true if a signed setcc is found. Caller should use a sextload.
 static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
                                     unsigned ExtOpc,
                                     SmallVectorImpl<SDNode *> &ExtendNodes,
-                                    const TargetLowering &TLI) {
+                                    const TargetLowering &TLI,
+                                    bool *ChangeToSExt = nullptr) {
   bool HasCopyToRegUses = false;
   bool isTruncFree = TLI.isTruncateFree(VT, N0.getValueType());
   for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end(); UI != UE;
@@ -12838,9 +12840,12 @@ static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
     // FIXME: Only extend SETCC N, N and SETCC N, c for now.
     if (ExtOpc != ISD::ANY_EXTEND && User->getOpcode() == ISD::SETCC) {
       ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
-      if (ExtOpc == ISD::ZERO_EXTEND && ISD::isSignedIntSetCC(CC))
+      if (ExtOpc == ISD::ZERO_EXTEND && ISD::isSignedIntSetCC(CC)) {
         // Sign bits will be lost after a zext.
-        return false;
+        if (!ChangeToSExt)
+          return false;
+        *ChangeToSExt = true;
+      }
       bool Add = false;
       for (unsigned i = 0; i != 2; ++i) {
         SDValue UseOp = User->getOperand(i);
@@ -13154,12 +13159,14 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
 
 // fold ([s|z]ext (load x)) -> ([s|z]ext (truncate ([s|z]extload x)))
 // Only generate vector extloads when 1) they're legal, and 2) they are
-// deemed desirable by the target.
+// deemed desirable by the target. NonNegZExt can be set to true if a zero
+// extend has the nonneg flag to allow use of sextload if profitable.
 static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   const TargetLowering &TLI, EVT VT,
                                   bool LegalOperations, SDNode *N, SDValue N0,
                                   ISD::LoadExtType ExtLoadType,
-                                  ISD::NodeType ExtOpc) {
+                                  ISD::NodeType ExtOpc,
+                                  bool NonNegZExt = false) {
   // TODO: isFixedLengthVector() should be removed and any negative effects on
   // code generation being the result of that target's implementation of
   // isVectorLoadExtDesirable().
@@ -13170,14 +13177,22 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
        !TLI.isLoadExtLegal(ExtLoadType, VT, N0.getValueType())))
     return {};
 
+  bool ChangeToSExt = false;
   bool DoXform = true;
   SmallVector<SDNode *, 4> SetCCs;
   if (!N0.hasOneUse())
-    DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ExtOpc, SetCCs, TLI);
+    DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ExtOpc, SetCCs, TLI,
+                                      NonNegZExt ? &ChangeToSExt : nullptr);
   if (VT.isVector())
     DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
   if (!DoXform)
     return {};
+
+  // Change extension type if we found a signed setcc.
+  if (ChangeToSExt) {
+    ExtOpc = ISD::SIGN_EXTEND;
+    ExtLoadType = ISD::SEXTLOAD;
+  }
 
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
   SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
@@ -13765,7 +13780,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // Try to simplify (zext (load x)).
   if (SDValue foldedExt =
           tryToFoldExtOfLoad(DAG, *this, TLI, VT, LegalOperations, N, N0,
-                             ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
+                             ISD::ZEXTLOAD, ISD::ZERO_EXTEND, N->getFlags().hasNonNeg()))
     return foldedExt;
 
   if (SDValue foldedExt =
