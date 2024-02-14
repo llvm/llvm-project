@@ -411,10 +411,12 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   // FIXME: Proper solution:
   //  - refactor Sema::CheckArrayAccess
   //    - split safe/OOB/unknown decision logic from diagnostics emitting code
-  //    -  e. g. "Try harder to find a NamedDecl to point at in the note." already duplicated
+  //    -  e. g. "Try harder to find a NamedDecl to point at in the note."
+  //    already duplicated
   //  - call both from Sema and from here
 
-  const DeclRefExpr * BaseDRE = dyn_cast_or_null<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
+  const DeclRefExpr *BaseDRE =
+      dyn_cast_or_null<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
   if (!BaseDRE)
     return false;
   if (!BaseDRE->getDecl())
@@ -422,15 +424,17 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   auto BaseVarDeclTy = BaseDRE->getDecl()->getType();
   if (!BaseVarDeclTy->isConstantArrayType())
     return false;
-  const auto * CATy = dyn_cast_or_null<ConstantArrayType>(BaseVarDeclTy);
+  const auto *CATy = dyn_cast_or_null<ConstantArrayType>(BaseVarDeclTy);
   if (!CATy)
     return false;
   const APInt ArrSize = CATy->getSize();
 
-  if (const auto * IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
+  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
     const APInt ArrIdx = IdxLit->getValue();
-    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a bug
-    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < ArrSize.getLimitedValue())
+    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
+    // bug
+    if (ArrIdx.isNonNegative() &&
+        ArrIdx.getLimitedValue() < ArrSize.getLimitedValue())
       return true;
   }
 
