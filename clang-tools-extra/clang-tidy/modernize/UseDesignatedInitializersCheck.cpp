@@ -29,14 +29,6 @@ static constexpr bool IgnoreSingleElementAggregatesDefault = true;
 static constexpr char RestrictToPODTypesName[] = "RestrictToPODTypes";
 static constexpr bool RestrictToPODTypesDefault = false;
 
-UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
-    StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), IgnoreSingleElementAggregates(Options.get(
-                                         IgnoreSingleElementAggregatesName,
-                                         IgnoreSingleElementAggregatesDefault)),
-      RestrictToPODTypes(
-          Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)) {}
-
 namespace {
 
 AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
@@ -66,6 +58,14 @@ AST_MATCHER(FieldDecl, isAnonymousDecl) {
 }
 
 } // namespace
+
+UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context), IgnoreSingleElementAggregates(Options.get(
+                                         IgnoreSingleElementAggregatesName,
+                                         IgnoreSingleElementAggregatesDefault)),
+      RestrictToPODTypes(
+          Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
