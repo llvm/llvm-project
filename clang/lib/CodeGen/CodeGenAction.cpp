@@ -356,7 +356,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   }
 
   // Link each LinkModule into our module.
-  if (LinkInModules(getModule(), true))
+  if (LinkInModules(getModule()))
     return;
 
   for (auto &F : getModule()->functions()) {
