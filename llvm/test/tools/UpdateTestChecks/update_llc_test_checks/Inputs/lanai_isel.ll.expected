@@ -53,7 +53,7 @@ define i64 @i16_test(i16 %i) nounwind readnone {
 ; CHECK-NEXT:    t14: ch,glue = CopyToReg t0, Register:i32 $rv, t33
 ; CHECK-NEXT:    t1: i32 = ADD_I_LO TargetFrameIndex:i32<-1>, TargetConstant:i32<0>
 ; CHECK-NEXT:    t21: i32 = OR_I_LO t1, TargetConstant:i32<2>
-; CHECK-NEXT:    t23: i32,ch = LDHz_RI<Mem:(load (s16) from %fixed-stack.0 + 2)> t21, TargetConstant:i32<0>, TargetConstant:i32<0>, t0
+; CHECK-NEXT:    t23: i32,ch = LDHz_RI<Mem:(load (s16) from %fixed-stack.0 + 2, basealign 4)> t21, TargetConstant:i32<0>, TargetConstant:i32<0>, t0
 ; CHECK-NEXT:    t22: i32,ch = LDHz_RI<Mem:(dereferenceable load (s16) from %ir.loc)> TargetFrameIndex:i32<0>, TargetConstant:i32<0>, TargetConstant:i32<0>, t0
 ; CHECK-NEXT:    t24: i32 = ADD_R t23, t22, TargetConstant:i32<0>
 ; CHECK-NEXT:    t27: i32 = AND_I_HI t24, TargetConstant:i32<0>
@@ -76,7 +76,7 @@ define i64 @i8_test(i8 %i) nounwind readnone {
 ; CHECK-NEXT:    t14: ch,glue = CopyToReg t0, Register:i32 $rv, t33
 ; CHECK-NEXT:    t1: i32 = ADD_I_LO TargetFrameIndex:i32<-1>, TargetConstant:i32<0>
 ; CHECK-NEXT:    t21: i32 = OR_I_LO t1, TargetConstant:i32<3>
-; CHECK-NEXT:    t23: i32,ch = LDBz_RI<Mem:(load (s8) from %fixed-stack.0 + 3)> t21, TargetConstant:i32<0>, TargetConstant:i32<0>, t0
+; CHECK-NEXT:    t23: i32,ch = LDBz_RI<Mem:(load (s8) from %fixed-stack.0 + 3, basealign 4)> t21, TargetConstant:i32<0>, TargetConstant:i32<0>, t0
 ; CHECK-NEXT:    t22: i32,ch = LDBz_RI<Mem:(dereferenceable load (s8) from %ir.loc)> TargetFrameIndex:i32<0>, TargetConstant:i32<0>, TargetConstant:i32<0>, t0
 ; CHECK-NEXT:    t24: i32 = ADD_R t23, t22, TargetConstant:i32<0>
 ; CHECK-NEXT:    t26: i32 = SLI TargetConstant:i32<255>

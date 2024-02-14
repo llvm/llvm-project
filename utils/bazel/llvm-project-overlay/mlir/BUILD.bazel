@@ -1511,6 +1511,57 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "AMDGPUTransformOps",
+    srcs = glob([
+        "lib/Dialect/AMDGPU/TransformOps/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/AMDGPU/TransformOps/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+        ":AMDGPUTransformOpsIncGen",
+        ":AMDGPUTransforms",
+        ":AffineDialect",
+        ":FuncDialect",
+        ":IR",
+        ":TransformDialect",
+        ":VectorDialect",
+    ],
+)
+
+td_library(
+    name = "AMDGPUTransformOpsTdFiles",
+    srcs = glob([
+        "include/mlir/Dialect/AMDGPU/TransformOps/*.td",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUTransformOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.td",
+    deps = [
+        ":AMDGPUTransformOpsTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "AMDGPUPassIncGen",
     tbl_outs = [
@@ -4552,8 +4603,8 @@ cc_library(
     deps = [
         ":ControlFlowDialect",
         ":FuncDialect",
-        ":InferTypeOpInterface",
         ":IR",
+        ":InferTypeOpInterface",
         ":MeshShardingInterface",
     ],
 )
@@ -4614,6 +4665,7 @@ cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
+        ":AMDGPUTransformOps",
         ":AffineTransformOps",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
@@ -8756,7 +8808,7 @@ cc_library(
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
-	":VCIXToLLVMIRTranslation",
+        ":VCIXToLLVMIRTranslation",
         ":X86VectorToLLVMIRTranslation",
     ],
 )
@@ -8961,6 +9013,7 @@ cc_library(
     deps = [
         ":AMDGPUDialect",
         ":AMDGPUToROCDL",
+        ":AMDGPUTransformOps",
         ":AMDGPUTransforms",
         ":AMXDialect",
         ":AMXTransforms",
@@ -9155,6 +9208,7 @@ cc_binary(
         "//mlir/test:TestLinalg",
         "//mlir/test:TestLoopLikeInterface",
         "//mlir/test:TestMath",
+        "//mlir/test:TestMathToVCIX",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMesh",
         "//mlir/test:TestNVGPU",
@@ -9175,7 +9229,6 @@ cc_binary(
         "//mlir/test:TestTypeDialect",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
-        "//mlir/test:TestMathToVCIX",
     ],
 )
 
@@ -10036,6 +10089,7 @@ cc_library(
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
         ":OpenMPTypeInterfacesIncGen",
+        ":Support",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
     ],
@@ -13657,11 +13711,11 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/VCIXDialect.h"],
     includes = ["include"],
     deps = [
-	":GPUDialect",
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
-        ":VCIXOpsIncGen",
         ":SideEffectInterfaces",
+        ":VCIXOpsIncGen",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
@@ -13689,7 +13743,7 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir/Dialect/LLVMIR/VCIXOps.cpp.inc",
         ),
-	(
+        (
             [
                 "-gen-dialect-decls",
                 "-dialect=vcix",
@@ -13730,9 +13784,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":ToLLVMIRTranslation",
         ":VCIXConversionIncGen",
         ":VCIXDialect",
-        ":ToLLVMIRTranslation",
         "//llvm:Core",
         "//llvm:Support",
     ],

@@ -1288,10 +1288,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !PtrTy.isValid() || !OffsetTy.isValid())
       break;
 
-    if (!PtrTy.getScalarType().isPointer())
+    if (!PtrTy.isPointerOrPointerVector())
       report("gep first operand must be a pointer", MI);
 
-    if (OffsetTy.getScalarType().isPointer())
+    if (OffsetTy.isPointerOrPointerVector())
       report("gep offset operand must not be a pointer", MI);
 
     // TODO: Is the offset allowed to be a scalar with a vector?
@@ -1304,7 +1304,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid() || !MaskTy.isValid())
       break;
 
-    if (!DstTy.getScalarType().isPointer())
+    if (!DstTy.isPointerOrPointerVector())
       report("ptrmask result type must be a pointer", MI);
 
     if (!MaskTy.getScalarType().isScalar())
@@ -1330,15 +1330,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid())
       break;
 
-    LLT DstElTy = DstTy.getScalarType();
-    LLT SrcElTy = SrcTy.getScalarType();
-    if (DstElTy.isPointer() || SrcElTy.isPointer())
+    if (DstTy.isPointerOrPointerVector() || SrcTy.isPointerOrPointerVector())
       report("Generic extend/truncate can not operate on pointers", MI);
 
     verifyVectorElementMatch(DstTy, SrcTy, MI);
 
-    unsigned DstSize = DstElTy.getSizeInBits();
-    unsigned SrcSize = SrcElTy.getSizeInBits();
+    unsigned DstSize = DstTy.getScalarSizeInBits();
+    unsigned SrcSize = SrcTy.getScalarSizeInBits();
     switch (MI->getOpcode()) {
     default:
       if (DstSize <= SrcSize)

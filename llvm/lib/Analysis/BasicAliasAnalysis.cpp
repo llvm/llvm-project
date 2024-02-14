@@ -188,6 +188,12 @@ static bool isObjectSize(const Value *V, TypeSize Size, const DataLayout &DL,
   return ObjectSize && *ObjectSize == Size;
 }
 
+/// Return true if both V1 and V2 are VScale
+static bool areBothVScale(const Value *V1, const Value *V2) {
+  return PatternMatch::match(V1, PatternMatch::m_VScale()) &&
+         PatternMatch::match(V2, PatternMatch::m_VScale());
+}
+
 //===----------------------------------------------------------------------===//
 // CaptureInfo implementations
 //===----------------------------------------------------------------------===//
@@ -679,7 +685,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       //   A[x][x] -> x*16 + x*4 -> x*20
       // This also ensures that 'x' only appears in the index list once.
       for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
-        if (Decomposed.VarIndices[i].Val.V == LE.Val.V &&
+        if ((Decomposed.VarIndices[i].Val.V == LE.Val.V ||
+             areBothVScale(Decomposed.VarIndices[i].Val.V, LE.Val.V)) &&
             Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val)) {
           Scale += Decomposed.VarIndices[i].Scale;
           LE.IsNSW = false; // We cannot guarantee nsw for the merge.
@@ -1792,7 +1799,8 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
     bool Found = false;
     for (auto I : enumerate(DestGEP.VarIndices)) {
       VariableGEPIndex &Dest = I.value();
-      if (!isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI) ||
+      if ((!isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI) &&
+           !areBothVScale(Dest.Val.V, Src.Val.V)) ||
           !Dest.Val.hasSameCastsAs(Src.Val))
         continue;
 

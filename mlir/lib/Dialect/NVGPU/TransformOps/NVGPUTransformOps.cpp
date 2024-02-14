@@ -1010,7 +1010,8 @@ void HopperBuilder::buildBarrierArriveTx(
 
 void HopperBuilder::buildTryWaitParity(
     TypedValue<nvgpu::MBarrierGroupType> barrier) {
-  Value parity = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  Type i1 = rewriter.getI1Type();
+  Value parity = rewriter.create<LLVM::ConstantOp>(loc, i1, 0);
   // 10M is an arbitrary, not too small or too big number to specify the number
   // of ticks before retry.
   // TODO: hoist this in a default dialect constant.
