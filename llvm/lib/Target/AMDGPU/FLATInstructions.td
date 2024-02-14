@@ -296,8 +296,9 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsy
        !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
        (ins flat_offset:$offset, CPol_0:$cpol)),
   !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
-  let LGKM_CNT = !not(IsAsync); // TODO: define and set ASYNC_CNT
+  let LGKM_CNT = !not(IsAsync);
   let VM_CNT = !not(IsAsync);
+  let ASYNC_CNT = IsAsync;
   let is_flat_global = 1;
   let lds = 1;
   let has_data = 0;
@@ -326,7 +327,8 @@ class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_P
       !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)), (ins VGPR_32:$vdata),
       (ins flat_offset:$offset, CPol_0:$cpol)),
   " $vaddr, $vdata"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
-  let VM_CNT = 0;  // TODO: define and set ASYNC_CNT
+  let VM_CNT = 0;
+  let ASYNC_CNT = 1;
   let is_flat_global = 1;
   let lds = 1;
   let has_data = 1; // vdata for ds address
