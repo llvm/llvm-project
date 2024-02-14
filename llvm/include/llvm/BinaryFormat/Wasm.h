@@ -455,7 +455,6 @@ struct WasmSymbolInfo {
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
   };
-  uint32_t Size;
 };
 
 enum class NameType {

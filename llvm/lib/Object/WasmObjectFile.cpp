@@ -534,8 +534,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
                                   /* ImportModule */ std::nullopt,
                                   /* ImportName */ std::nullopt,
                                   /* ExportName */ std::nullopt,
-                                  {/* ElementIndex */ Index},
-                                  /* Size */ 0};
+                                  {/* ElementIndex */ Index}};
         const wasm::WasmSignature *Signature = nullptr;
         const wasm::WasmGlobalType *GlobalType = nullptr;
         const wasm::WasmTableType *TableType = nullptr;
@@ -557,7 +556,6 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             } else {
               Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
             }
-            Info.Size = functions()[Index - getNumImportedFunctions()].Size;
           } else {
             Info.Flags |= wasm::WASM_SYMBOL_UNDEFINED;
           }
