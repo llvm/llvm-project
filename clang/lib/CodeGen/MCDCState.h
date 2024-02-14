@@ -16,6 +16,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ProfileData/Coverage/MCDCTypes.h"
 
+namespace clang {
+class Stmt;
+} // namespace clang
+
 namespace clang::CodeGen::MCDC {
 
 using namespace llvm::coverage::mcdc;
