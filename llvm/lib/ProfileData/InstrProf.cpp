@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,6 +27,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -219,6 +221,12 @@ cl::opt<bool> DoInstrProfNameCompression(
     "enable-name-compression",
     cl::desc("Enable name/filename string compression"), cl::init(true));
 
+cl::opt<bool> EnableVTableValueProfiling(
+    "enable-vtable-value-profiling", cl::init(false),
+    cl::desc("If true, the virtual table address will be instrumented to know "
+             "the types of a C++ pointer. The information is used in indirect "
+             "call promotion to do selective vtable-based comparison."));
+
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
                                     bool AddSegmentInfo) {
@@ -295,20 +303,29 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
   return FileName;
 }
 
-// The PGO name has the format [<filepath>;]<mangled-name> where <filepath>; is
-// provided if linkage is local and is used to discriminate possibly identical
-// mangled names. ";" is used because it is unlikely to be found in either
-// <filepath> or <mangled-name>.
+// The PGO name has the format [<filepath>;]<linkage-name> where <filepath>; is
+// provided if linkage is local and <linkage-name> is the mangled function
+// name. The filepath is used to discriminate possibly identical function names.
+// ; is used because it is unlikely to be found in either <filepath> or
+// <linkage-name>.
 //
 // Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<mangled-name>. This caused trouble for Objective-C functions
-// which commonly have :'s in their names. We still need to compute this name to
-// lookup functions from profiles built by older compilers.
+// [<filepath>:]<function-name>. <filepath> is used to discriminate between
+// possibly identical function names when linkage is local and <function-name>
+// simply comes from F.getName(). This caused trouble for Objective-C functions
+// which commonly have :'s in their names. Also, since <function-name> is not
+// mangled, they cannot be passed to Mach-O linkers via -order_file. We still
+// need to compute this name to lookup functions from profiles built by older
+// compilers.
 static std::string
 getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
-  return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
+  SmallString<64> Name;
+  // FIXME: Mangler's handling is kept outside of `getGlobalIdentifier` for now.
+  // For more details please check issue #74565.
+  Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
+  return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
@@ -378,12 +395,19 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
-// See getIRPGOObjectName() for a discription of the format.
-std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName) {
-  auto [FileName, MangledName] = IRPGOName.split(kGlobalIdentifierDelimiter);
-  if (MangledName.empty())
-    return std::make_pair(StringRef(), IRPGOName);
-  return std::make_pair(FileName, MangledName);
+std::string getPGOName(const GlobalVariable &V, bool InLTO) {
+  // PGONameMetadata should be set by compiler at profile use time
+  // and read by symtab creation to look up symbols corresponding to
+  // a MD5 hash.
+  return getIRPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
+}
+
+// See getIRPGOFuncName() for a discription of the format.
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOFuncName) {
+  auto [FileName, FuncName] = IRPGOFuncName.split(';');
+  if (FuncName.empty())
+    return std::make_pair(StringRef(), IRPGOFuncName);
+  return std::make_pair(FileName, FuncName);
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
@@ -459,6 +483,17 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
       return E;
   }
+
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalVariable &G : M.globals()) {
+    if (!G.hasName())
+      continue;
+    Types.clear();
+    G.getMetadata(LLVMContext::MD_type, Types);
+    if (!Types.empty()) {
+      MD5VTableMap.emplace_back(G.getGUID(), &G);
+    }
+  }
   Sorted = false;
   finalizeSymtab();
   return Error::success();
@@ -517,47 +552,77 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
       std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
-StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
+Error InstrProfSymtab::create(StringRef FuncNameStrings,
+                              StringRef VTableNameStrings) {
+  if (Error E = readAndDecodeStrings(FuncNameStrings,
+                                     std::bind(&InstrProfSymtab::addFuncName,
+                                               this, std::placeholders::_1)))
+    return E;
+
+  return readAndDecodeStrings(
+      VTableNameStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
+Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
+    StringRef CompressedVTableStrings) {
+  return readAndDecodeStrings(
+      CompressedVTableStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+  if (Error E = addFuncName(PGOFuncName))
+    return E;
+  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
   // In ThinLTO, local function may have been promoted to global and have
   // suffix ".llvm." added to the function name. We need to add the
   // stripped function name to the symbol table so that we can find a match
   // from profile.
   //
-  // ".__uniq." suffix is used to differentiate internal linkage functions in
-  // different modules and should be kept. This is the only suffix with the
-  // pattern ".xxx" which is kept before matching, other suffixes similar as
-  // ".llvm." will be stripped.
+  // We may have other suffixes similar as ".llvm." which are needed to
+  // be stripped before the matching, but ".__uniq." suffix which is used
+  // to differentiate internal linkage functions in different modules
+  // should be kept. Now this is the only suffix with the pattern ".xxx"
+  // which is kept before matching.
   const std::string UniqSuffix = ".__uniq.";
-  size_t pos = PGOName.find(UniqSuffix);
-  if (pos != StringRef::npos)
+  auto pos = PGOFuncName.find(UniqSuffix);
+  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
+  // search '.' from the beginning.
+  if (pos != std::string::npos)
     pos += UniqSuffix.length();
   else
     pos = 0;
-
-  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
-  // the beginning.
-  pos = PGOName.find('.', pos);
-  if (pos != StringRef::npos && pos != 0)
-    return PGOName.substr(0, pos);
-
-  return PGOName;
+  pos = PGOFuncName.find('.', pos);
+  if (pos != std::string::npos && pos != 0) {
+    StringRef OtherFuncName = PGOFuncName.substr(0, pos);
+    if (Error E = addFuncName(OtherFuncName))
+      return E;
+    MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
+  }
+  return Error::success();
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  auto mapName = [&](StringRef Name) -> Error {
-    if (Error E = addFuncName(Name))
-      return E;
-    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
-    return Error::success();
-  };
-  if (Error E = mapName(PGOFuncName))
-    return E;
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+  finalizeSymtab();
+  auto It = lower_bound(
+      VTableAddrRangeToMD5Map, Address,
+      [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
+         uint64_t Addr) {
+        // Find the first address range of which end address is larger than
+        // `Addr`. Smaller-than-or-equal-to is used because the profiled address
+        // within a vtable should be [start-address, end-address).
+        return VTableRangeAddr.first.second <= Addr;
+      });
 
-  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName != PGOFuncName)
-    return mapName(CanonicalFuncName);
-
-  return Error::success();
+  // Returns the MD5 hash if Address is within the address range of an entry.
+  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
+    return It->second;
+  }
+  // The virtual table address collected from value profiler could be defined
+  // in another module that is not instrumented. Force the value to be 0 in
+  // this case.
+  return 0;
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
@@ -634,6 +699,17 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
   }
   return collectGlobalObjectNameStrings(
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
+}
+
+Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
+                           std::string &Result, bool doCompression) {
+  std::vector<std::string> VTableNameStrs;
+  for (auto *VTable : VTables) {
+    VTableNameStrs.push_back(getPGOName(*VTable));
+  }
+  return collectGlobalObjectNameStrings(
+      VTableNameStrs, compression::zlib::isAvailable() && doCompression,
+      Result);
 }
 
 void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
@@ -897,6 +973,9 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
 
   if (ValueKind == IPVK_IndirectCallTarget)
     return SymTab->getFunctionHashFromAddress(Value);
+
+  if (ValueKind == IPVK_VTableTarget)
+    return SymTab->getVTableHashFromAddress(Value);
 
   return Value;
 }
@@ -1288,8 +1367,8 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
-bool needsComdatForCounter(const Function &F, const Module &M) {
-  if (F.hasComdat())
+bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
+  if (GV.hasComdat())
     return true;
 
   if (!Triple(M.getTargetTriple()).supportsCOMDAT())
@@ -1305,7 +1384,7 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
   // available_externally functions will end up being duplicated in raw profile
   // data. This can result in distorted profile as the counts of those dups
   // will be accumulated by the profile merger.
-  GlobalValue::LinkageTypes Linkage = F.getLinkage();
+  GlobalValue::LinkageTypes Linkage = GV.getLinkage();
   if (Linkage != GlobalValue::ExternalWeakLinkage &&
       Linkage != GlobalValue::AvailableExternallyLinkage)
     return false;
@@ -1461,13 +1540,16 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++) {
     if (Base.ValueCounts[I] < 1.0f && Test.ValueCounts[I] < 1.0f)
       continue;
-    char ProfileKindName[20];
+    char ProfileKindName[20] = {0};
     switch (I) {
     case IPVK_IndirectCallTarget:
       strncpy(ProfileKindName, "IndirectCall", 19);
       break;
     case IPVK_MemOPSize:
       strncpy(ProfileKindName, "MemOP", 19);
+      break;
+    case IPVK_VTableTarget:
+      strncpy(ProfileKindName, "VTable", 19);
       break;
     default:
       snprintf(ProfileKindName, 19, "VP[%d]", I);
@@ -1533,9 +1615,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 12ull:
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
@@ -1561,10 +1646,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 12ull:
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
   case 11ull:
     [[fallthrough]];
   case 10ull:
