@@ -44,14 +44,13 @@ typedef struct __llvm_profile_header {
 } __llvm_profile_header;
 
 typedef struct ValueProfNode * PtrToNodeT;
-typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
-  ValueProfNode {
+typedef struct ValueProfNode {
 #define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
 } ValueProfNode;
 
 typedef void *IntPtrT;
-typedef struct VTableProfData {
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
 } VTableProfData;

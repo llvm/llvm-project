@@ -370,7 +370,7 @@ typedef struct ValueProfRecord {
   /*!
    * Return the number of value sites.
    */
-  uint32_t getNumValueSites() const {  return NumValueSites; }
+  uint32_t getNumValueSites() const { return NumValueSites; }
   /*!
    * Read data from this record and save it to Record.
    */
