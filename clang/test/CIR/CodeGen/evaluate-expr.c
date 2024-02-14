@@ -18,3 +18,15 @@ void foo() {
 // CHECK:    }
 // CHECK:    cir.return
 
+typedef struct { int x; } S;
+static const S s = {0};
+void bar() {
+  int a =  s.x;
+}
+// CHECK:  cir.func no_proto @bar()
+// CHECK:    [[ALLOC:%.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+// CHECK:    {{%.*}} = cir.get_global @s : cir.ptr <!ty_22S22>
+// CHECK:    [[CONST:%.*]] = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:    cir.store [[CONST]], [[ALLOC]] : !s32i, cir.ptr <!s32i>
+// CHECK:    cir.return
+
