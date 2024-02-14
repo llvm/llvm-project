@@ -1714,12 +1714,13 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
-  // Support dynamic shapes in 1D depthwise convolution, but only in the
-  // _channel_ dimension. That's exclusively to support scalable vectorisation.
   if (auto conv = dyn_cast<linalg::DepthwiseConv1DNwcWcOp>(op.getOperation())) {
+    // Support dynamic shapes in 1D depthwise convolution, but only in the
+    // _channel_ dimension. That's exclusively to support scalable
+    // vectorisation.
     auto lhsShaped = op.getDpsInputOperand(0)->get();
     ArrayRef<int64_t> lhsShape =
-        dyn_cast<ShapedType>(lhsShaped.getType()).getShape();
+        cast<ShapedType>(lhsShaped.getType()).getShape();
     auto shapeWithoutCh = lhsShape.drop_back(1);
     if (ShapedType::isDynamicShape(shapeWithoutCh))
       return failure();
@@ -1925,7 +1926,8 @@ vectorizeScalableVectorPrecondition(Operation *op,
   if (!isScalable)
     return success();
 
-  // Only element-wise ops supported in the presence of scalable dims.
+  // Only element-wise and 1d depthwise conv ops supported in the presence of
+  // scalable dims.
   auto linalgOp = dyn_cast<LinalgOp>(op);
   return success(linalgOp && (isElementwise(linalgOp) ||
                               isa<linalg::DepthwiseConv1DNwcWcOp>(op)));
@@ -3182,7 +3184,7 @@ struct Conv1DGenerator
          //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
          ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
-        lhsEltType, {false, false, scalableChDim});
+        lhsEltType, /*scalableDims=*/{false, false, scalableChDim});
     VectorType rhsType =
         VectorType::get({kwSize, cSize}, rhsEltType,
                         /*scalableDims=*/{false, scalableChDim});
@@ -3233,23 +3235,20 @@ struct Conv1DGenerator
     // 0].
     Value lhs = rewriter.create<vector::TransferReadOp>(
         loc, lhsType, lhsShaped, ValueRange{zero, zero, zero});
-    auto maybeMaskedLHS = maybeMaskXferOp(
-        lhsType.getShape(),
-        /*scalableDims=*/{false, false, scalableChDim}, lhs.getDefiningOp());
+    auto maybeMaskedLhs = maybeMaskXferOp(
+        lhsType.getShape(), lhsType.getScalableDims(), lhs.getDefiningOp());
 
     // Read rhs slice of size {kw, c} @ [0, 0].
     Value rhs = rewriter.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
                                                         ValueRange{zero, zero});
-    auto maybeMaskedRHS = maybeMaskXferOp(
-        rhsType.getShape(),
-        /*scalableDims=*/{false, scalableChDim}, rhs.getDefiningOp());
+    auto maybeMaskedRhs = maybeMaskXferOp(
+        rhsType.getShape(), rhsType.getScalableDims(), rhs.getDefiningOp());
 
     // Read res slice of size {n, w, c} @ [0, 0, 0].
     Value res = rewriter.create<vector::TransferReadOp>(
         loc, resType, resShaped, ValueRange{zero, zero, zero});
-    auto maybeMaskedRES = maybeMaskXferOp(
-        resType.getShape(),
-        /*scalableDims=*/{false, false, scalableChDim}, res.getDefiningOp());
+    auto maybeMaskedRes = maybeMaskXferOp(
+        resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
 
     //===------------------------------------------------------------------===//
     // Begin vector-only rewrite part
@@ -3264,7 +3263,7 @@ struct Conv1DGenerator
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         lhsVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
-            loc, maybeMaskedLHS->getResult(0),
+            loc, maybeMaskedLhs->getResult(0),
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             inOutSliceSizes, inOutStrides));
       }
@@ -3272,13 +3271,13 @@ struct Conv1DGenerator
     // Extract rhs slice of size {c} @ [kw].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       rhsVals.push_back(rewriter.create<vector::ExtractOp>(
-          loc, maybeMaskedRHS->getResult(0),
+          loc, maybeMaskedRhs->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{kw}));
     }
     // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, maybeMaskedRES->getResult(0),
+          loc, maybeMaskedRes->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
           inOutStrides));
     }
@@ -3317,7 +3316,6 @@ struct Conv1DGenerator
     // Its possible we failed to create the Fma.
     if (!llvm::all_of(resVals, [](Value v) { return v; })) {
       // Manually revert (in reverse order) to avoid leaving a bad IR state.
-      // TODO: Replace with maybeMasked
       for (auto &collection :
            {resVals, rhsVals, lhsVals, {res, rhs, lhs, zero}})
         for (Value v : collection)
@@ -3328,8 +3326,8 @@ struct Conv1DGenerator
     // Write back res slice: {n, wSizeStep, c} @ [0, w, 0].
     // This does not depend on kw.
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      maybeMaskedRES = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, resVals[w], maybeMaskedRES->getResult(0),
+      maybeMaskedRes = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, resVals[w], maybeMaskedRes->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{0, w, 0},
           /*strides=*/ArrayRef<int64_t>{1, 1, 1});
     }
@@ -3339,10 +3337,9 @@ struct Conv1DGenerator
 
     // Write back res slice of size {n, w, c} @ [0, 0, 0].
     Operation *resOut = rewriter.create<vector::TransferWriteOp>(
-        loc, maybeMaskedRES->getResult(0), resShaped,
+        loc, maybeMaskedRes->getResult(0), resShaped,
         ValueRange{zero, zero, zero});
-    return maybeMaskXferOp(resType.getShape(),
-                           /*scalableDims=*/{false, false, scalableChDim},
+    return maybeMaskXferOp(resType.getShape(), resType.getScalableDims(),
                            resOut);
   }
 
@@ -3384,9 +3381,8 @@ struct Conv1DGenerator
     if (!lhs || !rhs)
       return nullptr;
 
-    if (isa<FloatType>(resTy.getElementType())) {
+    if (isa<FloatType>(resTy.getElementType()))
       return rewriter.create<vector::FMAOp>(loc, lhs, rhs, res);
-    }
 
     auto mul = rewriter.create<arith::MulIOp>(loc, lhs, rhs);
     return rewriter.create<arith::AddIOp>(loc, mul, res);
