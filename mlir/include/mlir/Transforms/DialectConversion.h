@@ -655,8 +655,7 @@ struct ConversionPatternRewriterImpl;
 /// This class implements a pattern rewriter for use with ConversionPatterns. It
 /// extends the base PatternRewriter and provides special conversion specific
 /// hooks.
-class ConversionPatternRewriter final : public PatternRewriter,
-                                        public RewriterBase::Listener {
+class ConversionPatternRewriter final : public PatternRewriter {
 public:
   explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
@@ -735,10 +734,6 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook creating a new block.
-  void notifyBlockInserted(Block *block, Region *previous,
-                           Region::iterator previousIt) override;
-
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
 
@@ -746,9 +741,6 @@ public:
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
                          ValueRange argValues = std::nullopt) override;
   using PatternRewriter::inlineBlockBefore;
-
-  /// PatternRewriter hook for inserting a new operation.
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
@@ -762,18 +754,11 @@ public:
   /// PatternRewriter hook for updating the given operation in-place.
   void cancelOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for notifying match failure reasons.
-  void
-  notifyMatchFailure(Location loc,
-                     function_ref<void(Diagnostic &)> reasonCallback) override;
-  using PatternRewriter::notifyMatchFailure;
-
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
   // Hide unsupported pattern rewriter API.
-  using OpBuilder::getListener;
   using OpBuilder::setListener;
 
   void moveOpBefore(Operation *op, Block *block,
