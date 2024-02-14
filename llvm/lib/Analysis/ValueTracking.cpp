@@ -4285,11 +4285,7 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
   } else if (match(Cond, m_ICmp(Pred, m_ElementWiseBitCast(m_Value(LHS)),
                                 m_APInt(RHS)))) {
     bool TrueIfSigned;
-    if (Pred == ICmpInst::ICMP_SLT && RHS->isZero())
-      TrueIfSigned = true;
-    else if (Pred == ICmpInst::ICMP_SGT && RHS->isAllOnes())
-      TrueIfSigned = false;
-    else
+    if (!isSignBitCheck(Pred, *RHS, TrueIfSigned))
       return;
     if (TrueIfSigned == CondIsTrue)
       KnownFromContext.signBitMustBeOne();
