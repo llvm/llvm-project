@@ -98,6 +98,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  integer_literals_test
+  SUITE
+    libc-support-tests
+  SRCS
+    integer_literals_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.CPP.optional
+)
+
+add_libc_test(
   fixedvector_test
   SUITE
     libc-support-tests

@@ -534,8 +534,8 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
       [](const CodeGenInstruction *Rec1, const CodeGenInstruction *Rec2) {
         const auto &D1 = *Rec1->TheDef;
         const auto &D2 = *Rec2->TheDef;
-        return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
-               std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+        return std::tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
+               std::tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
       });
 
   // Assign an enum value to each instruction according to the sorted order.
