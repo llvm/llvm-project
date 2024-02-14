@@ -218,7 +218,8 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   return success();
 }
 
-std::optional<mlir::LogicalResult> amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp) {
+std::optional<mlir::LogicalResult>
+amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp) {
   SmallVector<memref::AllocOp> shmAllocOps;
   funcOp.walk([&](memref::AllocOp allocOp) {
     if (!amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
@@ -230,7 +231,7 @@ std::optional<mlir::LogicalResult> amdgpu::optimizeSharedMemoryReadsAndWritesOp(
                                                           allocOp.getMemref())))
       return failure();
   }
-   return success();
+  return success();
 }
 
 struct OptimizeSharedMemoryPass
