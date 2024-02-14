@@ -1533,8 +1533,9 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
   kmp_dyna_lockseq_t lockseq = __kmp_map_hint_to_lock(hint);
   if (*lk == 0) {
     if (KMP_IS_D_LOCK(lockseq)) {
-      KMP_COMPARE_AND_STORE_ACQ32((volatile kmp_int32 *)crit, 0,
-                                  KMP_GET_D_TAG(lockseq));
+      KMP_COMPARE_AND_STORE_ACQ32(
+          (volatile kmp_int32 *)&((kmp_base_tas_lock_t *)crit)->poll, 0,
+          KMP_GET_D_TAG(lockseq));
     } else {
       __kmp_init_indirect_csptr(crit, loc, global_tid, KMP_GET_I_TAG(lockseq));
     }

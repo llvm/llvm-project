@@ -828,6 +828,10 @@ def FeatureStdExtSstc
     : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
                        "'Sstc' (Supervisor-mode timer interrupts)", []>;
 
+def FeaturesSsqosid
+    : SubtargetFeature<"experimental-ssqosid", "HasStdExtSsqosid", "true",
+                       "'Ssqosid' (Quality-of-Service (QoS) Identifiers)", []>;
+
 def FeatureStdExtShtvala
     : SubtargetFeature<"shtvala", "HasStdExtShtvala", "true",
                        "'Shtvala' (htval provides all needed values)", []>;
@@ -1223,3 +1227,8 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+def FeatureForcedSWShadowStack : SubtargetFeature<
+    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
+    "Implement shadow stack with software.">;
+def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

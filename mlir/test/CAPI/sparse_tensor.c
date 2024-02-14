@@ -14,6 +14,7 @@
 #include "mlir-c/RegisterEverything.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,9 +38,9 @@ static int testRoundtripEncoding(MlirContext ctx) {
       mlirSparseTensorEncodingAttrGetDimToLvl(originalAttr);
   // CHECK: (d0, d1)[s0] -> (s0, d0, d1)
   mlirAffineMapDump(dimToLvl);
-  // CHECK: level_type: 4
-  // CHECK: level_type: 8
-  // CHECK: level_type: 8
+  // CHECK: level_type: 65536
+  // CHECK: level_type: 131072
+  // CHECK: level_type: 131072
   MlirAffineMap lvlToDim =
       mlirSparseTensorEncodingAttrGetLvlToDim(originalAttr);
   int lvlRank = mlirSparseTensorEncodingGetLvlRank(originalAttr);
@@ -47,7 +48,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
       malloc(sizeof(MlirSparseTensorLevelType) * lvlRank);
   for (int l = 0; l < lvlRank; ++l) {
     lvlTypes[l] = mlirSparseTensorEncodingAttrGetLvlType(originalAttr, l);
-    fprintf(stderr, "level_type: %lu\n", lvlTypes[l]);
+    fprintf(stderr, "level_type: %" PRIu64 "\n", lvlTypes[l]);
   }
   // CHECK: posWidth: 32
   int posWidth = mlirSparseTensorEncodingAttrGetPosWidth(originalAttr);

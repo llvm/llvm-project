@@ -51,10 +51,14 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
   const char *BitmapEnd = __llvm_profile_end_bitmap();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
+  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
+  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
+  const char *VNamesBegin = __llvm_profile_begin_vtabnames();
+  const char *VNamesEnd = __llvm_profile_end_vtabnames();
 
   return __llvm_profile_get_size_for_buffer_internal(
       DataBegin, DataEnd, CountersBegin, CountersEnd, BitmapBegin, BitmapEnd,
-      NamesBegin, NamesEnd);
+      NamesBegin, NamesEnd, VTableBegin, VTableEnd, VNamesBegin, VNamesEnd);
 }
 
 COMPILER_RT_VISIBILITY
@@ -179,7 +183,9 @@ COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
     const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
-    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd) {
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd,
+    const VTableProfData *VTableBegin, const VTableProfData *VTableEnd,
+    const char *VNamesBegin, const char *VNamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
@@ -187,22 +193,29 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
   const uint64_t NumBitmapBytes =
       __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
+  const uint64_t VTableSize =
+      __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
+  const uint64_t VNameSize =
+      __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
 
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes;
+      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes,
+      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
       DataSize, CountersSize, NumBitmapBytes, NamesSize, 0 /* VTableSize */,
       0 /* VNameSize */, &PaddingBytesBeforeCounters,
       &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
-      &PaddingBytesAfterNames, NULL /* PaddingBytesAfterVTable */,
-      NULL /* PaddingbytesAfterVNames */);
+      &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
+      &PaddingBytesAfterVNames);
 
   return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
          DataSize + PaddingBytesBeforeCounters + CountersSize +
          PaddingBytesAfterCounters + NumBitmapBytes +
-         PaddingBytesAfterBitmapBytes + NamesSize + PaddingBytesAfterNames;
+         PaddingBytesAfterBitmapBytes + NamesSize + PaddingBytesAfterNames +
+         VTableSize + PaddingBytesAfterVTable + VNameSize +
+         PaddingBytesAfterVNames;
 }
 
 COMPILER_RT_VISIBILITY

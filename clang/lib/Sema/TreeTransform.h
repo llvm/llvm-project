@@ -27,6 +27,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -3993,6 +3994,13 @@ public:
   ExprResult RebuildRecoveryExpr(SourceLocation BeginLoc, SourceLocation EndLoc,
                                  ArrayRef<Expr *> SubExprs, QualType Type) {
     return getSema().CreateRecoveryExpr(BeginLoc, EndLoc, SubExprs, Type);
+  }
+
+  StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
+                                            SourceLocation BeginLoc,
+                                            SourceLocation EndLoc,
+                                            StmtResult StrBlock) {
+    llvm_unreachable("Not yet implemented!");
   }
 
 private:
@@ -10991,6 +10999,21 @@ TreeTransform<Derived>::TransformOMPXAttributeClause(OMPXAttributeClause *C) {
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
   return getDerived().RebuildOMPXBareClause(C->getBeginLoc(), C->getEndLoc());
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC transformation
+//===----------------------------------------------------------------------===//
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
+    OpenACCComputeConstruct *C) {
+  // TODO OpenACC: Transform clauses.
+
+  // Transform Structured Block.
+  StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+
+  return getDerived().RebuildOpenACCComputeConstruct(
+      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(), StrBlock);
 }
 
 //===----------------------------------------------------------------------===//

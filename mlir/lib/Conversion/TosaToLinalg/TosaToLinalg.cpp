@@ -2010,7 +2010,8 @@ public:
     }
 
     bool didEncounterError = false;
-    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs});
+    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs},
+                                             rewriter.getContext());
     auto linalgOp = rewriter.create<linalg::GenericOp>(
         loc, ArrayRef<Type>({resultTy, resultMaxTy}), input,
         ValueRange({filledTensorIdx, filledTensorMax}), maps, iteratorTypes,
@@ -2351,9 +2352,11 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
         createZeroTensor(rewriter, loc, outputType, dynamicSizes)};
 
     // Indexing maps for input and output tensors
-    auto indexingMaps = AffineMap::inferFromExprList(llvm::ArrayRef{
-        affineDimsExpr(rewriter, 0, 3, 4), affineDimsExpr(rewriter, 0, 1, 2),
-        affineDimsExpr(rewriter, 0, 1, 2)});
+    auto indexingMaps = AffineMap::inferFromExprList(
+        llvm::ArrayRef{affineDimsExpr(rewriter, 0, 3, 4),
+                       affineDimsExpr(rewriter, 0, 1, 2),
+                       affineDimsExpr(rewriter, 0, 1, 2)},
+        rewriter.getContext());
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
@@ -2463,7 +2466,8 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
         ArrayRef{RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
                  RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
                  RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2),
-                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)});
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)},
+        rewriter.getContext());
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input_real, 1);

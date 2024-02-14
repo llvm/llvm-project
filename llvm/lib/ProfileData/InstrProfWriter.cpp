@@ -638,7 +638,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.writeByte(static_cast<uint8_t>(c));
 
     // Pad up to a multiple of 8.
-    // InstrProfReader could read bytes according to 'CompressedStringLen'.
+    // InstrProfReader would read bytes according to 'CompressedStringLen'.
     uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
 
     for (uint64_t K = CompressedStringLen; K < PaddedLength; K++) {

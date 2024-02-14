@@ -2803,6 +2803,7 @@ libc_function(
     name = "read",
     srcs = ["src/unistd/linux/read.cpp"],
     hdrs = ["src/unistd/read.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_macros_sanitizer",
@@ -2928,6 +2929,7 @@ libc_function(
     name = "write",
     srcs = ["src/unistd/linux/write.cpp"],
     hdrs = ["src/unistd/write.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -3216,6 +3218,7 @@ libc_function(
     name = "epoll_wait",
     srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
     hdrs = ["src/sys/epoll/epoll_wait.h"],
+    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -3226,6 +3229,7 @@ libc_function(
     name = "epoll_pwait",
     srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
     hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -3238,6 +3242,7 @@ libc_function(
 #     name = "epoll_pwait2",
 #     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
 #     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     weak = True,
 #     deps = [
 #         ":__support_osutil_syscall",
 #         ":errno",

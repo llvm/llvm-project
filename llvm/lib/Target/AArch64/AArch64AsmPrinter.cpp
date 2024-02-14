@@ -1602,7 +1602,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // attributes (isCall, isReturn, etc.). We lower them to the real
   // instruction here.
   case AArch64::TCRETURNri:
-  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNrix16x17:
+  case AArch64::TCRETURNrix17:
+  case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL: {
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);

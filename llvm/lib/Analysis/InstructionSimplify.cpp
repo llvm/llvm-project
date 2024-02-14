@@ -39,6 +39,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
 #include <algorithm>
 #include <optional>
@@ -1853,35 +1854,36 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
     return nullptr;
 
   FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
-  if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
-      (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
-    // (fcmp ord NNAN, X) & (fcmp ord X, Y) --> fcmp ord X, Y
-    // (fcmp ord NNAN, X) & (fcmp ord Y, X) --> fcmp ord Y, X
-    // (fcmp ord X, NNAN) & (fcmp ord X, Y) --> fcmp ord X, Y
-    // (fcmp ord X, NNAN) & (fcmp ord Y, X) --> fcmp ord Y, X
-    // (fcmp uno NNAN, X) | (fcmp uno X, Y) --> fcmp uno X, Y
-    // (fcmp uno NNAN, X) | (fcmp uno Y, X) --> fcmp uno Y, X
-    // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
-    // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
+  if ((PredL == FCmpInst::FCMP_ORD || PredL == FCmpInst::FCMP_UNO) &&
+      ((FCmpInst::isOrdered(PredR) && IsAnd) ||
+       (FCmpInst::isUnordered(PredR) && !IsAnd))) {
+    // (fcmp ord X, NNAN) & (fcmp o** X, Y) --> fcmp o** X, Y
+    // (fcmp uno X, NNAN) & (fcmp o** X, Y) --> false
+    // (fcmp uno X, NNAN) | (fcmp u** X, Y) --> fcmp u** X, Y
+    // (fcmp ord X, NNAN) | (fcmp u** X, Y) --> true
     if (((LHS1 == RHS0 || LHS1 == RHS1) &&
          isKnownNeverNaN(LHS0, /*Depth=*/0, Q)) ||
         ((LHS0 == RHS0 || LHS0 == RHS1) &&
          isKnownNeverNaN(LHS1, /*Depth=*/0, Q)))
-      return RHS;
+      return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
+                 ? static_cast<Value *>(RHS)
+                 : ConstantInt::getBool(LHS->getType(), !IsAnd);
+  }
 
-    // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
-    // (fcmp ord Y, X) & (fcmp ord NNAN, X) --> fcmp ord Y, X
-    // (fcmp ord X, Y) & (fcmp ord X, NNAN) --> fcmp ord X, Y
-    // (fcmp ord Y, X) & (fcmp ord X, NNAN) --> fcmp ord Y, X
-    // (fcmp uno X, Y) | (fcmp uno NNAN, X) --> fcmp uno X, Y
-    // (fcmp uno Y, X) | (fcmp uno NNAN, X) --> fcmp uno Y, X
-    // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
-    // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
+  if ((PredR == FCmpInst::FCMP_ORD || PredR == FCmpInst::FCMP_UNO) &&
+      ((FCmpInst::isOrdered(PredL) && IsAnd) ||
+       (FCmpInst::isUnordered(PredL) && !IsAnd))) {
+    // (fcmp o** X, Y) & (fcmp ord X, NNAN) --> fcmp o** X, Y
+    // (fcmp o** X, Y) & (fcmp uno X, NNAN) --> false
+    // (fcmp u** X, Y) | (fcmp uno X, NNAN) --> fcmp u** X, Y
+    // (fcmp u** X, Y) | (fcmp ord X, NNAN) --> true
     if (((RHS1 == LHS0 || RHS1 == LHS1) &&
          isKnownNeverNaN(RHS0, /*Depth=*/0, Q)) ||
         ((RHS0 == LHS0 || RHS0 == LHS1) &&
          isKnownNeverNaN(RHS1, /*Depth=*/0, Q)))
-      return LHS;
+      return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
+                 ? static_cast<Value *>(LHS)
+                 : ConstantInt::getBool(LHS->getType(), !IsAnd);
   }
 
   return nullptr;
@@ -3034,7 +3036,7 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   // floating-point casts:
   // icmp slt (bitcast (uitofp X)),  0 --> false
   // icmp sgt (bitcast (uitofp X)), -1 --> true
-  if (match(LHS, m_BitCast(m_UIToFP(m_Value(X))))) {
+  if (match(LHS, m_ElementWiseBitCast(m_UIToFP(m_Value(X))))) {
     if (Pred == ICmpInst::ICMP_SLT && match(RHS, m_Zero()))
       return ConstantInt::getFalse(ITy);
     if (Pred == ICmpInst::ICMP_SGT && match(RHS, m_AllOnes()))
@@ -6846,6 +6848,27 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
   case Intrinsic::experimental_constrained_ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
+  case Intrinsic::experimental_gc_relocate: {
+    GCRelocateInst &GCR = *cast<GCRelocateInst>(Call);
+    Value *DerivedPtr = GCR.getDerivedPtr();
+    Value *BasePtr = GCR.getBasePtr();
+
+    // Undef is undef, even after relocation.
+    if (isa<UndefValue>(DerivedPtr) || isa<UndefValue>(BasePtr)) {
+      return UndefValue::get(GCR.getType());
+    }
+
+    if (auto *PT = dyn_cast<PointerType>(GCR.getType())) {
+      // For now, the assumption is that the relocation of null will be null
+      // for most any collector. If this ever changes, a corresponding hook
+      // should be added to GCStrategy and this code should check it first.
+      if (isa<ConstantPointerNull>(DerivedPtr)) {
+        // Use null-pointer of gc_relocate's type to replace it.
+        return ConstantPointerNull::get(PT);
+      }
+    }
+    return nullptr;
+  }
   default:
     return nullptr;
   }

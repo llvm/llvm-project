@@ -4718,21 +4718,25 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                           DAG.getConstant(C1 & Imm, dl, ExtDstTy), Cond);
     } else if ((N1C->isZero() || N1C->isOne()) &&
                (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
-      // SETCC (SETCC), [0|1], [EQ|NE]  -> SETCC
-      if (N0.getOpcode() == ISD::SETCC &&
+      // SETCC (X), [0|1], [EQ|NE]  -> X if X is known 0/1. i1 types are
+      // excluded as they are handled below whilst checking for foldBooleans.
+      if ((N0.getOpcode() == ISD::SETCC || VT.getScalarType() != MVT::i1) &&
           isTypeLegal(VT) && VT.bitsLE(N0.getValueType()) &&
           (N0.getValueType() == MVT::i1 ||
-           getBooleanContents(N0.getOperand(0).getValueType()) ==
-                       ZeroOrOneBooleanContent)) {
+           getBooleanContents(N0.getValueType()) == ZeroOrOneBooleanContent) &&
+          DAG.MaskedValueIsZero(
+              N0, APInt::getBitsSetFrom(N0.getValueSizeInBits(), 1))) {
         bool TrueWhenTrue = (Cond == ISD::SETEQ) ^ (!N1C->isOne());
         if (TrueWhenTrue)
           return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
         // Invert the condition.
-        ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-        CC = ISD::getSetCCInverse(CC, N0.getOperand(0).getValueType());
-        if (DCI.isBeforeLegalizeOps() ||
-            isCondCodeLegal(CC, N0.getOperand(0).getSimpleValueType()))
-          return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
+        if (N0.getOpcode() == ISD::SETCC) {
+          ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+          CC = ISD::getSetCCInverse(CC, N0.getOperand(0).getValueType());
+          if (DCI.isBeforeLegalizeOps() ||
+              isCondCodeLegal(CC, N0.getOperand(0).getSimpleValueType()))
+            return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
+        }
       }
 
       if ((N0.getOpcode() == ISD::XOR ||
