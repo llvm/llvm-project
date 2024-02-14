@@ -1411,7 +1411,7 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
     const uint8_t *GlobalStart = Ctx.Ptr;
     Global.Offset = static_cast<uint32_t>(GlobalStart - SectionStart);
     auto GlobalOpcode = readVaruint32(Ctx);
-    Global.Type.Type = (uint8_t)parseValType(Ctx, GlobalOpcode);;
+    Global.Type.Type = (uint8_t)parseValType(Ctx, GlobalOpcode);
     Global.Type.Mutable = readVaruint1(Ctx);
     if (Error Err = readInitExpr(Global.InitExpr, Ctx))
       return Err;
@@ -1819,19 +1819,19 @@ Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {
 
 Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   auto &Sym = getWasmSymbol(Symb);
-  if (!Sym.isDefined()) return 0;
-  auto Sec = getSymbolSection(Symb);
-  if(!Sec)
-    return make_error<GenericBinaryError>("no section found for symbol",
-                                          object_error::parse_failed);
+  if (!Sym.isDefined())
+    return 0;
+  Expected<section_iterator> Sec = getSymbolSection(Symb);
+  if (!Sec)
+    return Sec.takeError();
   uint32_t SectionAddress = getSectionAddress(Sec.get()->getRawDataRefImpl());
   if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
       isDefinedFunctionIndex(Sym.Info.ElementIndex)) {
     return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset +
-          SectionAddress;
+           SectionAddress;
   }
   if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_GLOBAL &&
-  isDefinedGlobalIndex(Sym.Info.ElementIndex)) {
+      isDefinedGlobalIndex(Sym.Info.ElementIndex)) {
     return getDefinedGlobal(Sym.Info.ElementIndex).Offset + SectionAddress;
   }
 
