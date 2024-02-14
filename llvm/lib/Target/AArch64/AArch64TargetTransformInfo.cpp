@@ -1634,17 +1634,17 @@ static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
                                                        IntrinsicInst &II) {
   Value *A, *B;
   Type *RetTy = II.getType();
-  constexpr Intrinsic::ID From_SV = Intrinsic::aarch64_sve_convert_from_svbool;
-  constexpr Intrinsic::ID To_SV = Intrinsic::aarch64_sve_convert_to_svbool;
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
 
   // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
   // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
   if ((match(II.getArgOperand(0),
-             m_Intrinsic<From_SV>(m_Intrinsic<To_SV>(m_Value(A)))) &&
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
        match(II.getArgOperand(1),
-             m_Intrinsic<From_SV>(m_Intrinsic<To_SV>(m_Value(B))))) ||
-      (match(II.getArgOperand(0), m_Intrinsic<To_SV>(m_Value(A))) &&
-       match(II.getArgOperand(1), m_Intrinsic<To_SV>(m_Value(B))))) {
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
     auto *TyA = cast<ScalableVectorType>(A->getType());
     if (TyA == B->getType() &&
         RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
