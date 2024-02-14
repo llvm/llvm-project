@@ -22,19 +22,19 @@
 namespace LIBC_NAMESPACE {
 
 LIBC_INLINE constexpr uint8_t operator""_u8(unsigned long long value) {
-  return static_cast<uint8_t>(value);
+  return value;
 }
 
 LIBC_INLINE constexpr uint16_t operator""_u16(unsigned long long value) {
-  return static_cast<uint16_t>(value);
+  return value;
 }
 
 LIBC_INLINE constexpr uint32_t operator""_u32(unsigned long long value) {
-  return static_cast<uint32_t>(value);
+  return value;
 }
 
 LIBC_INLINE constexpr uint64_t operator""_u64(unsigned long long value) {
-  return static_cast<uint64_t>(value);
+  return value;
 }
 
 namespace internal {
@@ -76,7 +76,7 @@ template <typename T, int base> struct DigitBuffer {
   // Returns the digit for a particular character.
   // Returns 255 if the character is invalid.
   LIBC_INLINE static constexpr uint8_t get_digit_value(const char c) {
-    const auto to_lower = [](char c) -> uint8_t { return c | 32; };
+    const auto to_lower = [](char c) { return c | 32; };
     const auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
     const auto is_alpha = [](char c) {
       return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
