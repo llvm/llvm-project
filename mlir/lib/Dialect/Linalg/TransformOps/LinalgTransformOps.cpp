@@ -3254,50 +3254,13 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
   rewriter.setInsertionPoint(target);
   if (target.getNumLoops() <= 1)
     return DiagnosedSilenceableFailure::success();
-  auto flatten = [&](linalg::LinalgOp &op) -> FailureOr<CollapseResult> {
-    if (!isElementwise(target)) {
-      return rewriter.notifyMatchFailure(
-          target, "only elementwise flattening is supported");
-    }
-    // TODO: Support broadcasting and permutations
-    if (!llvm::all_of(target.getIndexingMapsArray(),
-                      [](auto map) { return map.isMinorIdentity(); })) {
-      return rewriter.notifyMatchFailure(
-          target, "only minor identity indexing maps is supported");
-    }
-    ShapedType nonEmptyShapeType = nullptr;
-    for (const auto &resultVal : target->getOperands()) {
-      auto resultType = resultVal.getType();
-      if (ShapedType resultShapedType = dyn_cast<ShapedType>(resultType)) {
-        if (resultShapedType.getShape().empty())
-          continue;
-        if (nonEmptyShapeType == nullptr) {
-          nonEmptyShapeType = resultShapedType;
-        } else if (resultShapedType != nonEmptyShapeType) {
-          return rewriter.notifyMatchFailure(
-              target, "all operands (except rank 0) must have same types");
-        }
-      }
-    }
-    if (target.hasPureBufferSemantics()) {
-      // TODO: Relax restrictions on layout
-      if (!llvm::all_of(target->getOperands(), [](Value operand) {
-            if (auto memRefTy = dyn_cast<MemRefType>(operand.getType()))
-              return memRefTy.getLayout().isIdentity();
-            return true;
-          })) {
-        return rewriter.notifyMatchFailure(
-            target, "only memrefs with identity layout is supported");
-      }
-    } else {
-      // TODO: Support tensors
-      return rewriter.notifyMatchFailure(target, "tensors are not supported");
-    }
-    ReassociationIndices reassociation(target.getNumLoops());
-    std::iota(reassociation.begin(), reassociation.end(), 0);
-    return collapseOpIterationDims(op, reassociation, rewriter);
-  };
-  auto maybeFlattened = flatten(target);
+  ReassociationIndices reassociation(target.getNumLoops());
+  std::iota(reassociation.begin(), reassociation.end(), 0);
+  auto maybeFlattened =
+      (isElementwise(target))
+          ? collapseOpIterationDims(target, reassociation, rewriter)
+          : FailureOr<CollapseResult>(rewriter.notifyMatchFailure(
+                target, "only elementwise flattening is supported"));
   if (failed(maybeFlattened))
     return emitDefaultSilenceableFailure(target);
   results.push_back((*maybeFlattened).collapsedOp);
