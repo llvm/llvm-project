@@ -152,7 +152,8 @@ namespace sys {
                             unsigned MemoryLimit = 0,
                             std::string *ErrMsg = nullptr,
                             bool *ExecutionFailed = nullptr,
-                            BitVector *AffinityMask = nullptr);
+                            BitVector *AffinityMask = nullptr,
+                            bool DetachProcess = false);
 
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
