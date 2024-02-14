@@ -44,10 +44,8 @@ def DeprecatedModuleDotMap : DiagGroup<"deprecated-module-dot-map">;
 def FrameworkHdrAtImport : DiagGroup<"atimport-in-framework-header">;
 def CXX14BinaryLiteral : DiagGroup<"c++14-binary-literal">;
 def CXXPre14CompatBinaryLiteral : DiagGroup<"c++98-c++11-compat-binary-literal">;
-def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
 def BinaryLiteral : DiagGroup<"binary-literal", [CXX14BinaryLiteral,
-                                                 CXXPre14CompatBinaryLiteral,
-                                                 GNUBinaryLiteral]>;
+                                                 CXXPre14CompatBinaryLiteral]>;
 def GNUCompoundLiteralInitializer : DiagGroup<"gnu-compound-literal-initializer">;
 def SingleBitBitFieldConstantConversion :
   DiagGroup<"single-bit-bitfield-constant-conversion">;
@@ -1176,10 +1174,13 @@ def C23 : DiagGroup<"c23-extensions">;
 
 def : DiagGroup<"c2x-extensions", [C23]>;
 
+// Previously supported warning group which is no longer pertinent as binary
+// literals are a C++14 and C23 extension now instead of a GNU extension.
+def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
+
 // A warning group for warnings about GCC extensions.
 def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
-                            GNUAutoType,
-                            GNUBinaryLiteral, GNUCaseRange,
+                            GNUAutoType, GNUBinaryLiteral, GNUCaseRange,
                             GNUComplexInteger, GNUCompoundLiteralInitializer,
                             GNUConditionalOmittedOperand, GNUDesignator,
                             GNUEmptyStruct,
