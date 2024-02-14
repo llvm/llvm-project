@@ -119,6 +119,26 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
+bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
+  assert(F);
+  QualType type = F->getReturnType();
+  while (!type.isNull()) {
+    if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
+      type = elaboratedT->desugar();
+      continue;
+    }
+    if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
+      if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
+        auto name = decl->getNameAsString();
+        return name == "Ref" || name == "RefPtr";
+      }
+      return false;
+    }
+    return false;
+  }
+  return false;
+}
+
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
@@ -194,8 +214,9 @@ bool isPtrConversion(const FunctionDecl *F) {
   // FIXME: check # of params == 1
   const auto FunctionName = safeGetName(F);
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
-      FunctionName == "dynamicDowncast"
-      || FunctionName == "downcast" || FunctionName == "bitwise_cast")
+      FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
+      FunctionName == "checkedDowncast" ||
+      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast")
     return true;
 
   return false;
