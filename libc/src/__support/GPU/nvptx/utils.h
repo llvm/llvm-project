@@ -110,21 +110,13 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
                                                            uint32_t x) {
   uint32_t mask = static_cast<uint32_t>(lane_mask);
   uint32_t id = __builtin_ffs(mask) - 1;
-#if __CUDA_ARCH__ >= 600
   return __nvvm_shfl_sync_idx_i32(mask, x, id, get_lane_size() - 1);
-#else
-  return __nvvm_shfl_idx_i32(x, id, get_lane_size() - 1);
-#endif
 }
 
 /// Returns a bitmask of threads in the current lane for which \p x is true.
 [[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
   uint32_t mask = static_cast<uint32_t>(lane_mask);
-#if __CUDA_ARCH__ >= 600
   return __nvvm_vote_ballot_sync(mask, x);
-#else
-  return mask & __nvvm_vote_ballot(x);
-#endif
 }
 /// Waits for all the threads in the block to converge and issues a fence.
 [[clang::convergent]] LIBC_INLINE void sync_threads() { __syncthreads(); }
@@ -135,13 +127,11 @@ LIBC_INLINE uint32_t get_lane_size() { return 32; }
 }
 
 /// Returns the current value of the GPU's processor clock.
-LIBC_INLINE uint64_t processor_clock() {
-  return __nvvm_read_ptx_sreg_clock64();
-}
+LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }
 
 /// Returns a global fixed-frequency timer at nanosecond frequency.
 LIBC_INLINE uint64_t fixed_frequency_clock() {
-  return __nvvm_read_ptx_sreg_globaltimer();
+  return __builtin_readsteadycounter();
 }
 
 /// Terminates execution of the calling thread.
