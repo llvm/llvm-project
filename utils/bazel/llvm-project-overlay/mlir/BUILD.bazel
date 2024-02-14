@@ -1056,7 +1056,7 @@ cc_binary(
         ":CAPIIR",
         ":CAPILLVM",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "//third_party/pybind11",
+        "@pybind11",
     ],
 )
 
