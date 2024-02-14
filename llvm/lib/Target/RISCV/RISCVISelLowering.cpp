@@ -19848,7 +19848,6 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
       Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
       MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
-
   if (XLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
