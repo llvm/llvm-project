@@ -2085,8 +2085,11 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                                 isPredicated() ? getMask() : nullptr);
+    auto *Copy =
+        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
+                              isPredicated() ? getMask() : nullptr);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReplicateSC)
