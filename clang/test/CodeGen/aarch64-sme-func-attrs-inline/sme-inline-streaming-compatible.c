@@ -1,10 +1,9 @@
 // RUN: %clang --target=aarch64-none-linux-gnu -march=armv9-a+sme -O3 -S -Xclang -verify %s
 
 // Conflicting attributes when using always_inline
-__attribute__((always_inline))
-void inlined_fn_streaming_compatible(void) __arm_streaming_compatible {}
-__attribute__((always_inline))
-void inlined_fn(void) {}
+#define __ai __attribute__((always_inline))
+__ai void inlined_fn_streaming_compatible(void) __arm_streaming_compatible {}
+__ai void inlined_fn(void) {}
 void inlined_fn_caller(void) { inlined_fn_streaming_compatible(); }
 __arm_locally_streaming
 void inlined_fn_caller_local(void) { inlined_fn_streaming_compatible(); }
