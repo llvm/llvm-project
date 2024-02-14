@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE::cpp {
 template <typename T> struct is_fixed_point {
 private:
   template <typename Head, typename... Args>
-  LIBC_INLINE_VAR static constexpr bool __is_unqualified_any_of() {
+  LIBC_INLINE static constexpr bool __is_unqualified_any_of() {
     return (... || is_same_v<remove_cv_t<Head>, Args>);
   }
 
