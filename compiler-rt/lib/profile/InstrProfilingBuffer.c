@@ -93,7 +93,7 @@ uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End) {
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_bitmap_bytes(const char *Begin,
                                              const char *End) {
-    if (Begin == NULL && End == NULL)
+  if (Begin == NULL && End == NULL)
     return 0;
   return (End - Begin);
 }
