@@ -32,7 +32,7 @@ namespace std {
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
 #  define OPERATOR_NEW_BODY(nothrow)          \
     GET_MALLOC_STACK_TRACE;                   \
-    void *res = msan_malloc(size, &stack);    \
+    void *res = msan_malloc(size, &stack, false);    \
     if (!nothrow && UNLIKELY(!res)) {         \
       GET_FATAL_STACK_TRACE_IF_EMPTY(&stack); \
       ReportOutOfMemory(size, &stack);        \
@@ -74,7 +74,7 @@ void *operator new[](size_t size, std::align_val_t align, std::nothrow_t const&)
 
 #define OPERATOR_DELETE_BODY \
   GET_MALLOC_STACK_TRACE; \
-  if (ptr) MsanDeallocate(&stack, ptr)
+  if (ptr) MsanDeallocate(&stack, ptr, false)
 
 INTERCEPTOR_ATTRIBUTE
 void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }

@@ -216,7 +216,7 @@ INTERCEPTOR(void, free, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   GET_MALLOC_STACK_TRACE;
-  MsanDeallocate(&stack, ptr);
+  MsanDeallocate(&stack, ptr, false);
 }
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
@@ -226,7 +226,7 @@ INTERCEPTOR(void, cfree, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   GET_MALLOC_STACK_TRACE;
-  MsanDeallocate(&stack, ptr);
+  MsanDeallocate(&stack, ptr, false);
 }
 #  define MSAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
 #else
@@ -292,6 +292,56 @@ INTERCEPTOR(void, malloc_stats, void) {
 #define MSAN_MAYBE_INTERCEPT_MALLOC_STATS INTERCEPT_FUNCTION(malloc_stats)
 #else
 #define MSAN_MAYBE_INTERCEPT_MALLOC_STATS
+#endif
+
+#if SANITIZER_FREEBSD
+
+// Is the only flag worths replicating
+#define MSAN_MALLOCX_ZERO 0x40
+
+INTERCEPTOR(void *, mallocx, SIZE_T size, int flags) {
+  bool zeroise = (flags & MSAN_MALLOCX_ZERO);
+  if (DlsymAlloc::Use())
+    return zeroise ? DlsymAlloc::Allocate(size) : DlsymAlloc::Callocate(1, size);
+  GET_MALLOC_STACK_TRACE;
+  return msan_malloc(size, &stack, zeroise);
+}
+
+INTERCEPTOR(void *, rallocx, void *ptr, SIZE_T size, int flags) {
+  bool zeroise = (flags & MSAN_MALLOCX_ZERO);
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr)) {
+    void *newptr = DlsymAlloc::Realloc(ptr, size);
+    if (newptr && zeroise)
+      __msan_memset(newptr, 0, size);
+    return newptr;
+  }
+  GET_MALLOC_STACK_TRACE;
+  return msan_realloc(ptr, size, &stack, zeroise);
+}
+
+INTERCEPTOR(uptr, sallocx, void *ptr, int flags) {
+  (void)flags;
+  return __sanitizer_get_allocated_size(ptr);
+}
+
+INTERCEPTOR(void, dallocx, void *ptr, int flags) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
+  MsanDeallocate(&stack, ptr, (flags & MSAN_MALLOCX_ZERO));
+}
+
+#define MSAN_MAYBE_INTERCEPT_MALLOCX INTERCEPT_FUNCTION(mallocx)
+#define MSAN_MAYBE_INTERCEPT_RALLOCX INTERCEPT_FUNCTION(rallocx)
+#define MSAN_MAYBE_INTERCEPT_SALLOCX INTERCEPT_FUNCTION(sallocx)
+#define MSAN_MAYBE_INTERCEPT_DALLOCX INTERCEPT_FUNCTION(dallocx)
+#else
+#define MSAN_MAYBE_INTERCEPT_MALLOCX
+#define MSAN_MAYBE_INTERCEPT_RALLOCX
+#define MSAN_MAYBE_INTERCEPT_SALLOCX
+#define MSAN_MAYBE_INTERCEPT_DALLOCX
 #endif
 
 INTERCEPTOR(char *, strcpy, char *dest, const char *src) {
@@ -1007,7 +1057,7 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size);
   GET_MALLOC_STACK_TRACE;
-  return msan_realloc(ptr, size, &stack);
+  return msan_realloc(ptr, size, &stack, false);
 }
 
 INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
@@ -1019,7 +1069,7 @@ INTERCEPTOR(void *, malloc, SIZE_T size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
   GET_MALLOC_STACK_TRACE;
-  return msan_malloc(size, &stack);
+  return msan_malloc(size, &stack, false);
 }
 
 void __msan_allocated_memory(const void *data, uptr size) {
@@ -1783,6 +1833,10 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_MALLINFO2;
   MSAN_MAYBE_INTERCEPT_MALLOPT;
   MSAN_MAYBE_INTERCEPT_MALLOC_STATS;
+  MSAN_MAYBE_INTERCEPT_MALLOCX;
+  MSAN_MAYBE_INTERCEPT_RALLOCX;
+  MSAN_MAYBE_INTERCEPT_SALLOCX;
+  MSAN_MAYBE_INTERCEPT_DALLOCX;
   INTERCEPT_FUNCTION(fread);
   MSAN_MAYBE_INTERCEPT_FREAD_UNLOCKED;
   INTERCEPT_FUNCTION(memccpy);

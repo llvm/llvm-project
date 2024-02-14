@@ -255,11 +255,11 @@ char *GetProcSelfMaps();
 void InitializeInterceptors();
 
 void MsanAllocatorInit();
-void MsanDeallocate(BufferedStackTrace *stack, void *ptr);
+void MsanDeallocate(BufferedStackTrace *stack, void *ptr, bool zeroise);
 
-void *msan_malloc(uptr size, BufferedStackTrace *stack);
+void *msan_malloc(uptr size, BufferedStackTrace *stack, bool zeroise);
 void *msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
-void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack);
+void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack, bool zeroise);
 void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
                         BufferedStackTrace *stack);
 void *msan_valloc(uptr size, BufferedStackTrace *stack);
