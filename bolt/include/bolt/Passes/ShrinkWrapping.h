@@ -523,7 +523,7 @@ public:
 
   Expected<bool> perform(bool HotOnly = false);
 
-  static void printStats();
+  static void printStats(BinaryContext &BC);
 };
 
 } // end namespace bolt

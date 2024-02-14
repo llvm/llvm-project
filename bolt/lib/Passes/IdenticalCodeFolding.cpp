@@ -508,14 +508,14 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   });
 
   if (NumFunctionsFolded)
-    outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
-           << OriginalFunctionCount << " functions in " << Iteration
-           << " passes. " << NumJTFunctionsFolded
-           << " functions had jump tables.\n"
-           << "BOLT-INFO: Removing all identical functions will save "
-           << format("%.2lf", (double)BytesSavedEstimate / 1024)
-           << " KB of code space. Folded functions were called " << NumCalled
-           << " times based on profile.\n";
+    BC.outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
+              << OriginalFunctionCount << " functions in " << Iteration
+              << " passes. " << NumJTFunctionsFolded
+              << " functions had jump tables.\n"
+              << "BOLT-INFO: Removing all identical functions will save "
+              << format("%.2lf", (double)BytesSavedEstimate / 1024)
+              << " KB of code space. Folded functions were called " << NumCalled
+              << " times based on profile.\n";
 
   return Error::success();
 }

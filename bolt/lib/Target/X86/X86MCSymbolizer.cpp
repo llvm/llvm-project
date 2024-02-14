@@ -137,6 +137,7 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
     auto PairOrErr = handleGOTPC64(*Relocation, InstAddress);
     if (auto E = PairOrErr.takeError()) {
       Function.setSimple(false);
+      BC.logBOLTErrorsAndQuitOnFatal(std::move(E));
       return false;
     }
     auto [Sym, Addend] = *PairOrErr;
