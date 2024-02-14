@@ -230,6 +230,35 @@ class CompleteTagDeclsScope : public ClangASTImporter::NewDeclListener {
   clang::ASTContext *m_src_ctx;
   ClangASTImporter &importer;
 
+  void CompleteDecl(
+      Decl *decl,
+      lldb_private::ClangASTImporter::ASTContextMetadata const &to_context_md) {
+    // The decl that should be completed has to be imported into the target
+    // context from some other context.
+    assert(to_context_md.hasOrigin(decl));
+    // We should only complete decls coming from the source context.
+    assert(to_context_md.getOrigin(decl).ctx == m_src_ctx);
+
+    Decl *original_decl = to_context_md.getOrigin(decl).decl;
+
+    // Complete the decl now.
+    TypeSystemClang::GetCompleteDecl(m_src_ctx, original_decl);
+    if (auto *tag_decl = dyn_cast<TagDecl>(decl)) {
+      if (auto *original_tag_decl = dyn_cast<TagDecl>(original_decl)) {
+        if (original_tag_decl->isCompleteDefinition()) {
+          m_delegate->ImportDefinitionTo(tag_decl, original_tag_decl);
+          tag_decl->setCompleteDefinition(true);
+        }
+      }
+
+      tag_decl->setHasExternalLexicalStorage(false);
+      tag_decl->setHasExternalVisibleStorage(false);
+    } else if (auto *container_decl = dyn_cast<ObjCContainerDecl>(decl)) {
+      container_decl->setHasExternalLexicalStorage(false);
+      container_decl->setHasExternalVisibleStorage(false);
+    }
+  }
+
 public:
   /// Constructs a CompleteTagDeclsScope.
   /// \param importer The ClangASTImporter that we should observe.
@@ -252,30 +281,7 @@ public:
       NamedDecl *decl = m_decls_to_complete.pop_back_val();
       m_decls_already_completed.insert(decl);
 
-      // The decl that should be completed has to be imported into the target
-      // context from some other context.
-      assert(to_context_md->hasOrigin(decl));
-      // We should only complete decls coming from the source context.
-      assert(to_context_md->getOrigin(decl).ctx == m_src_ctx);
-
-      Decl *original_decl = to_context_md->getOrigin(decl).decl;
-
-      // Complete the decl now.
-      TypeSystemClang::GetCompleteDecl(m_src_ctx, original_decl);
-      if (auto *tag_decl = dyn_cast<TagDecl>(decl)) {
-        if (auto *original_tag_decl = dyn_cast<TagDecl>(original_decl)) {
-          if (original_tag_decl->isCompleteDefinition()) {
-            m_delegate->ImportDefinitionTo(tag_decl, original_tag_decl);
-            tag_decl->setCompleteDefinition(true);
-          }
-        }
-
-        tag_decl->setHasExternalLexicalStorage(false);
-        tag_decl->setHasExternalVisibleStorage(false);
-      } else if (auto *container_decl = dyn_cast<ObjCContainerDecl>(decl)) {
-        container_decl->setHasExternalLexicalStorage(false);
-        container_decl->setHasExternalVisibleStorage(false);
-      }
+      CompleteDecl(decl, *to_context_md);
 
       to_context_md->removeOrigin(decl);
     }
