@@ -87,6 +87,9 @@ struct S6 {
 };
 
 S6 s61 {1, 2};
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES-POD: :[[@LINE-2]]:8: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-FIXES: S6 s61 {.i=1, .s.j=2};
 
 struct S7 {
     union {
@@ -96,6 +99,8 @@ struct S7 {
 };
 
 S7 s71 {1};
+// CHECK-MESSAGES-SINGLE-ELEMENT: :[[@LINE-1]]:8: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-FIXES-SINGLE-ELEMENT: S7 s71 {.u.k=1};
 
 struct S8: S7 { int i; };
 

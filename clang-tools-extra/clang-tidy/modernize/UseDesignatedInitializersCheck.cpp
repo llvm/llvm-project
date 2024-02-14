@@ -53,7 +53,7 @@ AST_MATCHER(FieldDecl, isAnonymousDecl) {
     return true;
   }
   if (const auto *Record = Type.getCanonicalType()->getAsRecordDecl()) {
-    return Record->isAnonymousStructOrUnion() || !Record->getIdentifier();
+    return Record->isAnonymousStructOrUnion();
   }
   return false;
 }
