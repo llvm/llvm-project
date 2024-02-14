@@ -2712,12 +2712,12 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     return Visit(C->getCallee());
   }
 
-  if (!NoReturn && !AddEHEdge) {
-    autoCreateBlock();
-    appendCall(Block, C);
+  // if (!NoReturn && !AddEHEdge) {
+  //   autoCreateBlock();
+  //   appendCall(Block, C);
 
-    return VisitChildren(C);
-  }
+  //   return VisitChildren(C);
+  // }
 
   if (Block) {
     Succ = Block;
