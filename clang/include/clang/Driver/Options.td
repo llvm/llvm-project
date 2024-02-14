@@ -309,6 +309,8 @@ class AnalyzerOpts<string base>
   : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
+class InstallAPIOpts<string base>
+  : KeyPathAndMacro<"InstallAPIOpts.", base, "INSTALLAPI_"> {}
 
 // A boolean option which is opt-in in CC1. The positive option exists in CC1 and
 // Args.hasArg(OPT_ffoo) can be used to check that the flag is enabled.
@@ -1114,7 +1116,8 @@ def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
 def cpp_precomp : Flag<["-"], "cpp-precomp">, Group<clang_ignored_f_Group>;
-def current__version : JoinedOrSeparate<["-"], "current_version">;
+def current__version : JoinedOrSeparate<["-"], "current_version">,
+  Visibility<[ClangOption, CC1Option]>;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   HelpText<"Add directory to the C++ SYSTEM include search path">,
   Visibility<[ClangOption, CC1Option]>,
@@ -1529,6 +1532,9 @@ def static_libsan : Flag<["-"], "static-libsan">,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
+def installapi : Flag<["-"], "installapi">,
+  Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
+  HelpText<"Create a text-based stub file by scanning header files">;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
   CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
@@ -4291,7 +4297,9 @@ def verify_pch : Flag<["-"], "verify-pch">, Group<Action_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Load and verify that a pre-compiled header file is not stale">;
 def init : Separate<["-"], "init">;
-def install__name : Separate<["-"], "install_name">;
+def install__name : Separate<["-"], "install_name">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<InstallAPIOpts<"InstallName">>;
 def iprefix : JoinedOrSeparate<["-"], "iprefix">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the -iwithprefix/-iwithprefixbefore prefix">, MetaVarName<"<dir>">;
