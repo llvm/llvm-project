@@ -302,7 +302,7 @@ protected:
   FlashRangeVector m_erased_flash_ranges;
 
   // Number of vfork in process.
-  int m_vfork_in_progress;
+  int m_vfork_in_progress_count;
 
   // Accessors
   bool IsRunning(lldb::StateType state) {

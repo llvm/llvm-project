@@ -124,19 +124,17 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
     if (log)
       LogThreadStopInfo(*log, m_stop_info, "m_stop_info in thread:");
     stop_info = m_stop_info;
+    // Include child process PID/TID for forks.
+    // Client expects "<fork_pid> <fork_tid>" format for parsing.
+    if (stop_info.reason == eStopReasonFork ||
+        stop_info.reason == eStopReasonVFork) {
+      m_stop_description = std::to_string(stop_info.details.fork.child_pid);
+      m_stop_description += " ";
+      m_stop_description += std::to_string(stop_info.details.fork.child_tid);
+    }
     description = m_stop_description;
     if (log)
       LogThreadStopInfo(*log, stop_info, "returned stop_info:");
-
-    // Include child process PID/TID for forks.
-    // Client expects "<fork_pid> <fork_tid>" format.
-    if (stop_info.reason == eStopReasonFork ||
-        stop_info.reason == eStopReasonVFork) {
-      description = std::to_string(stop_info.details.fork.child_pid);
-      description += " ";
-      description += std::to_string(stop_info.details.fork.child_tid);
-    }
-
     return true;
   }
 

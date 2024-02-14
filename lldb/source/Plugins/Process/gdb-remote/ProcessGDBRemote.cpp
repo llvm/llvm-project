@@ -265,7 +265,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_addr_to_mmap_size(), m_thread_create_bp_sp(),
       m_waiting_for_attach(false), m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
-      m_erased_flash_ranges(), m_vfork_in_progress(0) {
+      m_erased_flash_ranges(), m_vfork_in_progress_count(0) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -5673,8 +5673,9 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 }
 
 void ProcessGDBRemote::DidVForkDone() {
-  --m_vfork_in_progress;
-  assert(m_vfork_in_progress >= 0);
+  assert(m_vfork_in_progress_count > 0);
+  if (m_vfork_in_progress_count > 0)
+    --m_vfork_in_progress_count;
 
   // Reenable all software breakpoints that were enabled before vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5685,9 +5686,9 @@ void ProcessGDBRemote::DidExec() {
   // If we are following children, vfork is finished by exec (rather than
   // vforkdone that is submitted for parent).
   if (GetFollowForkMode() == eFollowChild) {
-    if (m_vfork_in_progress > 0)
-      --m_vfork_in_progress;
-    assert(m_vfork_in_progress >= 0);
+    assert(m_vfork_in_progress_count > 0);
+    if (m_vfork_in_progress_count > 0)
+      --m_vfork_in_progress_count;
   }
   Process::DidExec();
 }
