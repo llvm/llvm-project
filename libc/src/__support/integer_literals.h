@@ -92,8 +92,13 @@ template <typename T, int base> struct DigitBuffer {
     if (c == '\'')
       return; // ' is valid but not taken into account.
     const uint8_t value = get_digit_value(c);
-    if (value == 255 || size >= MAX_DIGITS)
+    if (value == 255 || size >= MAX_DIGITS) {
+      // During constant evaluation `__builtin_unreachable` will halt the
+      // compiler as it is not executable. This is preferable over `assert` that
+      // will only trigger in debug mode. Also we can't use `static_assert`
+      // because `value` and `size` are not constant.
       __builtin_unreachable(); // invalid or too many characters.
+    }
     digits[size] = value;
     ++size;
   }
@@ -111,8 +116,8 @@ template <typename T> struct Parser {
 // Specialization for cpp::UInt<N>.
 // Because this code runs at compile time we try to make it efficient. For
 // binary and hexadecimal formats we read digits by chunks of 64 bits and
-// produce the BigInt internal representation direcly. For decimal numbers we go
-// the slow path and use slower BigInt arithmetic.
+// produce the BigInt internal representation direcly. For decimal numbers we
+// go the slow path and use slower BigInt arithmetic.
 template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
   using UIntT = cpp::UInt<N>;
   template <int base> static constexpr UIntT parse(const char *str) {
