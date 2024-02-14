@@ -3246,8 +3246,8 @@ static bool trySimplifyICmpWithAdds(CmpInst::Predicate Pred, Value *LHS,
 
   Value *X;
   const APInt *C1, *C2;
-  if (!match(LHS, m_c_Add(m_Value(X), m_APInt(C1))) ||
-      !match(RHS, m_c_Add(m_Specific(X), m_APInt(C2))))
+  if (!match(LHS, m_Add(m_Value(X), m_APInt(C1))) ||
+      !match(RHS, m_Add(m_Specific(X), m_APInt(C2))))
     return false;
 
   return (C1->slt(*C2) && C1->isNonNegative()) ||
