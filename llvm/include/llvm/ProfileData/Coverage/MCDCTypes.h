@@ -28,6 +28,8 @@ struct DecisionParameters {
   unsigned NumConditions;
 
   DecisionParameters() = delete;
+  DecisionParameters(unsigned BitmapIdx, unsigned NumConditions)
+      : BitmapIdx(BitmapIdx), NumConditions(NumConditions) {}
 };
 
 struct BranchParameters {
@@ -36,6 +38,8 @@ struct BranchParameters {
   ConditionID ID, TrueID, FalseID;
 
   BranchParameters() = delete;
+  BranchParameters(ConditionID ID, ConditionID TrueID, ConditionID FalseID)
+      : ID(ID), TrueID(TrueID), FalseID(FalseID) {}
 };
 
 /// The type of MC/DC-specific parameters.
