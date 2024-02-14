@@ -444,7 +444,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     if (!FuncsFile) {
       errs() << "BOLT-ERROR: ordered functions file "
              << opts::GenerateFunctionOrderFile << " cannot be opened\n";
-      exit(1);
+      return createFatalBOLTError("");
     }
   }
 
@@ -455,7 +455,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     if (!LinkSectionsFile) {
       errs() << "BOLT-ERROR: link sections file " << opts::LinkSectionsFile
              << " cannot be opened\n";
-      exit(1);
+      return createFatalBOLTError("");
     }
   }
 
