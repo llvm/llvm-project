@@ -1,7 +1,6 @@
 ! Offloading test checking interaction of pointer
 ! and target with target where 3-D bounds have 
 ! been specified
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

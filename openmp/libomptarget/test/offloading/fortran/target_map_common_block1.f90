@@ -1,4 +1,3 @@
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

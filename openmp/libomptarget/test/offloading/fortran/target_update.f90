@@ -1,7 +1,5 @@
 ! Offloading test for the `target update` directive.
 
-! XFAIL: amdgcn-amd-amdhsa
-
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

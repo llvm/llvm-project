@@ -1,5 +1,4 @@
 ! Basic offloading test with a target region
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu

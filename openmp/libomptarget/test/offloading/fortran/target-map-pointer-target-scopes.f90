@@ -1,6 +1,5 @@
 ! Offloading test checking interaction of pointer
 ! and target with target across multiple scopes 
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

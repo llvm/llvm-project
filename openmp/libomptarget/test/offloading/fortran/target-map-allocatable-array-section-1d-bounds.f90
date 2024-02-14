@@ -1,7 +1,6 @@
 ! Offloading test checking interaction of a
 ! two 1-D allocatable arrays with a target region
 ! while providing the map upper and lower bounds
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

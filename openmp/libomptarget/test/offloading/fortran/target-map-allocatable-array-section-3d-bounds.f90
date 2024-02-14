@@ -1,7 +1,6 @@
 ! Offloading test checking interaction of allocatables
 ! with multi-dimensional bounds (3-D in this case) and
 ! a target region
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

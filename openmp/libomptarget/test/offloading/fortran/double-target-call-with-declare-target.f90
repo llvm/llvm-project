@@ -2,7 +2,6 @@
 ! declare target Fortran array and writing some values to 
 ! it before checking the host correctly receives the 
 ! correct updates made on the device.
-! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
