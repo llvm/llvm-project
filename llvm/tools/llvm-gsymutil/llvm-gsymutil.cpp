@@ -527,20 +527,23 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     });
     if (!AggregateJsonFile.empty()) {
       std::error_code EC;
-      raw_fd_ostream JsonStream(AggregateJsonFile, EC,
-                                sys::fs::OF_Text | sys::fs::OF_None);
+      raw_fd_ostream JsonStream(AggregateJsonFile, EC, sys::fs::OF_Text);
       if (EC) {
         OS << "error opening aggregate error json file '" << AggregateJsonFile
            << "' for writing: " << EC.message() << '\n';
         return 1;
       }
       JsonStream << "{\"errors\":[\n";
+      bool prev = false;
       Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
-        JsonStream << "\"category\":\"";
+        if (prev)
+          JsonStream << ",\n";
+        JsonStream << "{\"category\":\"";
         llvm::printEscapedString(category, JsonStream);
-        JsonStream << "\",\"count\":" << count;
+        JsonStream << "\",\"count\":" << count << "}";
+        prev = true;
       });
-      JsonStream << "]}\n";
+      JsonStream << "\n]}\n";
     }
     return 0;
   }
