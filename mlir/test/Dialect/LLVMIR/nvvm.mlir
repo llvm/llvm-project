@@ -43,6 +43,18 @@ func.func @llvm_nvvm_barrier0() {
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_barrier
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
+  // CHECK: nvvm.barrier 
+  nvvm.barrier 
+  // CHECK: nvvm.barrier id = %[[barId]]
+  nvvm.barrier id = %barId
+  // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier id = %barId number_of_threads = %numberOfThreads
+  llvm.return
+}
+
 // CHECK-LABEL: @llvm_nvvm_cluster_arrive
 func.func @llvm_nvvm_cluster_arrive() {
   // CHECK: nvvm.cluster.arrive
