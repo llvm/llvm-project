@@ -96,7 +96,7 @@ class DXILOperation<string name, int opCode, DXILOpClass opClass, DXILOpCategory
 class LLVMIntrinsic<Intrinsic llvm_intrinsic_> { Intrinsic llvm_intrinsic = llvm_intrinsic_; }
 
 def Sin : DXILOperation<"Sin", 13, UnaryClass, UnaryFloatCategory, "returns sine(theta) for theta in radians.",
-  [llvm_half_ty,llvm_float_ty], ReadNone,
+  [llvm_half_ty, llvm_float_ty], ReadNone,
   [
     DXILOpParameter<0, llvm_anyfloat_ty, "", "operation result">,
     DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
@@ -105,46 +105,46 @@ def Sin : DXILOperation<"Sin", 13, UnaryClass, UnaryFloatCategory, "returns sine
   ["floats"]>,
   LLVMIntrinsic<int_sin>;
 
-def UMax : DXILOperation< "UMax", 39,  BinaryClass,  BinaryUintCategory, "unsigned integer maximum. UMax(a,b) = a > b ? a : b",
-    [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty],  ReadNone,
+def UMax : DXILOperation< "UMax", 39, BinaryClass, BinaryUintCategory, "unsigned integer maximum. UMax(a,b) = a > b ? a : b",
+    [llvm_i16_ty, llvm_i32_ty, llvm_i64_ty], ReadNone,
   [
-    DXILOpParameter<0,  llvm_anyint_ty,  "",  "operation result">,
-    DXILOpParameter<1,  llvm_i32_ty,  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  llvm_anyint_ty,  "a",  "input value">,
-    DXILOpParameter<3,  llvm_anyint_ty,  "b",  "input value">
+    DXILOpParameter<0, llvm_anyint_ty, "", "operation result">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_anyint_ty, "a", "input value">,
+    DXILOpParameter<3, llvm_anyint_ty, "b", "input value">
   ],
   ["uints"]>,
   LLVMIntrinsic<int_umax>;
 
-def ThreadId : DXILOperation< "ThreadId", 93,  ThreadIdClass, ComputeIDCategory, "reads the thread ID", [llvm_i32_ty],  ReadNone,
+def ThreadId : DXILOperation< "ThreadId", 93, ThreadIdClass, ComputeIDCategory, "reads the thread ID", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  llvm_i32_ty,  "",  "thread ID component">,
-    DXILOpParameter<1,  llvm_i32_ty,  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  llvm_i32_ty,  "component",  "component to read (x,y,z)">
+    DXILOpParameter<0, llvm_i32_ty, "", "thread ID component">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_i32_ty, "component", "component to read (x,y,z)">
   ]>,
   LLVMIntrinsic<int_dx_thread_id>;
 
-def GroupId : DXILOperation< "GroupId", 94,  GroupIdClass, ComputeIDCategory, "reads the group ID (SV_GroupID)", [llvm_i32_ty],  ReadNone,
+def GroupId : DXILOperation< "GroupId", 94, GroupIdClass, ComputeIDCategory, "reads the group ID (SV_GroupID)", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  llvm_i32_ty,  "",  "group ID component">,
-    DXILOpParameter<1,  llvm_i32_ty,  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  llvm_i32_ty,  "component",  "component to read">
+    DXILOpParameter<0, llvm_i32_ty, "", "group ID component">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_i32_ty, "component", "component to read">
   ]>,
   LLVMIntrinsic<int_dx_group_id>;
 
-def ThreadIdInGroup : DXILOperation< "ThreadIdInGroup", 95,  ThreadIdInGroupClass, ComputeIDCategory,
-  "reads the thread ID within the group (SV_GroupThreadID)", [llvm_i32_ty],  ReadNone,
+def ThreadIdInGroup : DXILOperation< "ThreadIdInGroup", 95, ThreadIdInGroupClass, ComputeIDCategory,
+  "reads the thread ID within the group (SV_GroupThreadID)", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  llvm_i32_ty,  "",  "thread ID in group component">,
-    DXILOpParameter<1,  llvm_i32_ty,  "opcode",  "DXIL opcode">,
-    DXILOpParameter<2,  llvm_i32_ty,  "component",  "component to read (x,y,z)">
+    DXILOpParameter<0, llvm_i32_ty, "", "thread ID in group component">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">,
+    DXILOpParameter<2, llvm_i32_ty, "component", "component to read (x,y,z)">
   ]>,
   LLVMIntrinsic<int_dx_thread_id_in_group>;
 
-def FlattenedThreadIdInGroup : DXILOperation< "FlattenedThreadIdInGroup", 96,  FlattenedThreadIdInGroupClass, ComputeIDCategory,
-   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", [llvm_i32_ty],  ReadNone,
+def FlattenedThreadIdInGroup : DXILOperation< "FlattenedThreadIdInGroup", 96, FlattenedThreadIdInGroupClass, ComputeIDCategory,
+   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", [llvm_i32_ty], ReadNone,
   [
-    DXILOpParameter<0,  llvm_i32_ty,  "",  "result">,
-    DXILOpParameter<1,  llvm_i32_ty,  "opcode",  "DXIL opcode">
+    DXILOpParameter<0, llvm_i32_ty, "", "result">,
+    DXILOpParameter<1, llvm_i32_ty, "opcode", "DXIL opcode">
   ]>,
   LLVMIntrinsic<int_dx_flattened_thread_id_in_group>;

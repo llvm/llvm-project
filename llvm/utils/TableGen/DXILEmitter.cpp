@@ -80,7 +80,7 @@ struct DXILOperationDesc {
  @param typeNameStr Type name string
  @return ParameterKind As defined in llvm/Support/DXILABI.h
 */
-static ParameterKind getDXILTypeNameToKind(StringRef typeNameStr) {
+static ParameterKind lookupParameterKind(StringRef typeNameStr) {
   auto paramKind = StringSwitch<ParameterKind>(typeNameStr)
                        .Case("llvm_void_ty", ParameterKind::VOID)
                        .Case("llvm_half_ty", ParameterKind::HALF)
@@ -131,7 +131,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   for (unsigned I = 0; I < OverloadTypeList->size(); ++I) {
     Record *R = OverloadTypeList->getElementAsRecord(I);
-    OverloadTypes.emplace_back(getDXILTypeNameToKind(R->getNameInitAsString()));
+    OverloadTypes.emplace_back(lookupParameterKind(R->getNameInitAsString()));
   }
   Attr = StringRef(R->getValue("Attribute")->getNameInitAsString());
 }
@@ -139,8 +139,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 DXILParameter::DXILParameter(const Record *R) {
   Name = R->getValueAsString("Name");
   Pos = R->getValueAsInt("Pos");
-  Kind = getDXILTypeNameToKind(
-      R->getValue("ParamType")->getValue()->getAsString());
+  Kind =
+      lookupParameterKind(R->getValue("ParamType")->getValue()->getAsString());
   if (R->getValue("Doc"))
     Doc = R->getValueAsString("Doc");
   IsConst = R->getValueAsBit("IsConstant");
