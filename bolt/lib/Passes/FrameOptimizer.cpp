@@ -285,7 +285,8 @@ Error FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
   {
     NamedRegionTimer T1("shrinkwrapping", "shrink wrapping", "FOP",
                         "FOP breakdown", opts::TimeOpts);
-    performShrinkWrapping(*RA, *FA, BC);
+    if (Error E = performShrinkWrapping(*RA, *FA, BC))
+      return Error(std::move(E));
   }
 
   outs() << "BOLT-INFO: FOP optimized " << NumRedundantLoads
@@ -306,9 +307,9 @@ Error FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
   return Error::success();
 }
 
-void FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,
-                                               const FrameAnalysis &FA,
-                                               BinaryContext &BC) {
+Error FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,
+                                                const FrameAnalysis &FA,
+                                                BinaryContext &BC) {
   // Initialize necessary annotations to allow safe parallel accesses to
   // annotation index in MIB
   BC.MIB->getOrCreateAnnotationIndex(CalleeSavedAnalysis::getSaveTagName());
@@ -358,12 +359,21 @@ void FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,
 
   const bool HotOnly = opts::FrameOptimization == FOP_HOT;
 
+  Error SWError = Error::success();
+
   ParallelUtilities::WorkFuncWithAllocTy WorkFunction =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId) {
         DataflowInfoManager Info(BF, &RA, &FA, AllocatorId);
         ShrinkWrapping SW(FA, BF, Info, AllocatorId);
 
-        if (SW.perform(HotOnly)) {
+        auto ChangedOrErr = SW.perform(HotOnly);
+        if (auto E = ChangedOrErr.takeError()) {
+          std::lock_guard<std::mutex> Lock(FuncsChangedMutex);
+          SWError = joinErrors(std::move(SWError), Error(std::move(E)));
+          return;
+        }
+        const bool Changed = *ChangedOrErr;
+        if (Changed) {
           std::lock_guard<std::mutex> Lock(FuncsChangedMutex);
           FuncsChanged.insert(&BF);
           LLVM_DEBUG(LogFunc(BF));
@@ -379,6 +389,7 @@ void FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,
     for (const auto &Elmt : Top10Funcs)
       outs() << Elmt.first << " : " << Elmt.second->getPrintName() << "\n";
   }
+  return SWError;
 }
 
 } // namespace bolt
