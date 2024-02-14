@@ -342,11 +342,8 @@ static std::initializer_list<LLT> AllS64Vectors = {V2S64, V3S64, V4S64, V5S64,
 
 // Checks whether a type is in the list of legal register types.
 static bool isRegisterClassType(LLT Ty) {
-  if (Ty.isVector() && Ty.getElementType().isPointer())
-    Ty = LLT::fixed_vector(Ty.getNumElements(),
-                           LLT::scalar(Ty.getScalarSizeInBits()));
-  else if (Ty.isPointer())
-    Ty = LLT::scalar(Ty.getScalarSizeInBits());
+  if (Ty.isPointerOrPointerVector())
+    Ty = Ty.changeElementType(LLT::scalar(Ty.getScalarSizeInBits()));
 
   return is_contained(AllS32Vectors, Ty) || is_contained(AllS64Vectors, Ty) ||
          is_contained(AllScalarTypes, Ty) || is_contained(AllS16Vectors, Ty);
