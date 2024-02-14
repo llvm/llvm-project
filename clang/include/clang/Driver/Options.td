@@ -149,9 +149,15 @@ def d_Group : OptionGroup<"<d group>">, Group<Preprocessor_Group>,
 Flags allowing the state of the preprocessor to be dumped in various ways.}]>;
 
 def Diag_Group : OptionGroup<"<W/R group>">, Group<CompileOnly_Group>,
-                 DocName<"Diagnostic options">, DocBrief<StringForProgram<[{
-Flags controlling which warnings, errors, and remarks %Program will generate.
-See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.}]>.str>;
+                 DocName<"Diagnostic options">,
+                 DocBrief<!strconcat(StringForProgram<
+"Flags controlling which warnings, errors, and remarks %Program will generate. ">.str,
+                  // When in clang link directly to the page.
+                  !cond(!eq(GlobalDocumentation.Program, "Clang"):
+"See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.",
+                  // When elsewhere the link will not work.
+                  true:
+"See Clang's Diagnostic Reference for a full list of warning and remark flags."))>;
 
 def R_Group : OptionGroup<"<R group>">, Group<Diag_Group>, DocFlatten;
 def R_value_Group : OptionGroup<"<R (with value) group>">, Group<R_Group>,
