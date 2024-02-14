@@ -744,8 +744,8 @@ public:
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
-  /// and not nested regions. Updates to regions will still require notification
-  /// through other more specific hooks above.
+  /// and not nested regions. Updates to regions will still require
+  /// notification through other more specific hooks above.
   void startOpModification(Operation *op) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
@@ -760,11 +760,6 @@ public:
 private:
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
-
-  void moveOpBefore(Operation *op, Block *block,
-                    Block::iterator iterator) override;
-  void moveOpAfter(Operation *op, Block *block,
-                   Block::iterator iterator) override;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };
