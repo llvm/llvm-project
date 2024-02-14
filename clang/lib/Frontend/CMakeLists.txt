@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   RemoteCachingService
   Support
   TargetParser
+  TextAPI
   )
 
 add_clang_library(clangFrontend
@@ -37,6 +38,7 @@ add_clang_library(clangFrontend
   IncludeTreePPActions.cpp
   InitPreprocessor.cpp
   LayoutOverrideSource.cpp
+  InstallAPIConsumer.cpp
   LogDiagnosticPrinter.cpp
   ModuleDependencyCollector.cpp
   MultiplexConsumer.cpp
@@ -63,6 +65,7 @@ add_clang_library(clangFrontend
   clangBasic
   clangDriver
   clangEdit
+  clangInstallAPI
   clangLex
   clangParse
   clangSema
