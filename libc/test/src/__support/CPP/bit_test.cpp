@@ -226,4 +226,10 @@ TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypes) {
     EXPECT_EQ(first_trailing_zero<T>(~(T(1) << i)), i + 1);
 }
 
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypes) {
+  EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
+    EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
+}
+
 } // namespace LIBC_NAMESPACE::cpp
