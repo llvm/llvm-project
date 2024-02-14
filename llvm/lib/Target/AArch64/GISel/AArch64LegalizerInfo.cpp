@@ -622,9 +622,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         LLT DstTy = Query.Types[0];
         LLT SrcTy = Query.Types[1];
-        return DstTy.isVector() && (SrcTy.getSizeInBits() > 128 ||
-                                    (DstTy.getScalarSizeInBits() * 2 <
-                                     SrcTy.getScalarSizeInBits()));
+        return DstTy.isVector() && SrcTy.getSizeInBits() > 128 &&
+               DstTy.getScalarSizeInBits() * 2 <= SrcTy.getScalarSizeInBits();
       })
 
       .alwaysLegal();
