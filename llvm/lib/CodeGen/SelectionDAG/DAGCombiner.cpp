@@ -11144,6 +11144,23 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::CTPOP, DL, VT, {N0}))
     return C;
 
+  // If the source is being shifted, but doesn't affect any active bits,
+  // then we can call CTPOP on the shift source directly.
+  if (N0.getOpcode() == ISD::SRL || N0.getOpcode() == ISD::SHL) {
+    if (ConstantSDNode *AmtC = isConstOrConstSplat(N0.getOperand(1))) {
+      const APInt &Amt = AmtC->getAPIntValue();
+      if (Amt.ult(NumBits)) {
+        KnownBits KnownSrc = DAG.computeKnownBits(N0.getOperand(0));
+        if ((N0.getOpcode() == ISD::SRL &&
+             Amt.ule(KnownSrc.countMinTrailingZeros())) ||
+            (N0.getOpcode() == ISD::SHL &&
+             Amt.ule(KnownSrc.countMinLeadingZeros()))) {
+          return DAG.getNode(ISD::CTPOP, DL, VT, N0.getOperand(0));
+        }
+      }
+    }
+  }
+
   // If the upper bits are known to be zero, then see if its profitable to
   // only count the lower bits.
   if (VT.isScalarInteger() && NumBits > 8 && (NumBits & 1) == 0) {
