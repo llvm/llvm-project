@@ -139,7 +139,7 @@ class DXILOperationDesc {
 }
 
 class DXILOperation<string name, int opCode, DXILOpClass opClass, DXILOpCategory opCategory, string doc,
-              list<DXILScalarType> oloadTypes, EnumAttr attrs, list<DXILOpParameter> params,
+              list<DXILType> oloadTypes, EnumAttr attrs, list<DXILOpParameter> params,
               list<string> statsGroup = []> : DXILOperationDesc {
   let OpName = name;
   let OpCode = opCode;
