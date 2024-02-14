@@ -236,6 +236,13 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
   return first_leading_zero(static_cast<T>(~value));
 }
 
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr int first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max()
+             ? 0
+             : countr_zero(static_cast<T>(~value)) + 1;
+}
+
 } // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
