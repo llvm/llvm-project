@@ -317,6 +317,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1300:
+      Features["gfx13-insts"] = true;
+      [[fallthrough]];
     case GK_GFX1210:
       Features["ci-insts"] = true;
       Features["dot7-insts"] = true;
