@@ -78,8 +78,8 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1201 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1201 %s
 
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx9-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX9_GENERIC %s
-; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx10.1-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX10_1_GENERIC %s
-; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx10.3-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX10_3_GENERIC %s
+; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx10-1-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX10_1_GENERIC %s
+; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx10-3-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX10_3_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx11-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX11_GENERIC %s
 
 ; FIXME: With the default attributes the eflags are not accurate for
