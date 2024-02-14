@@ -36,11 +36,13 @@ AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
 AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 
 AST_MATCHER(InitListExpr, isFullyDesignated) {
-  const InitListExpr *SyntacticForm =
-      Node.isSyntacticForm() ? &Node : Node.getSyntacticForm();
-  return std::all_of(
-      SyntacticForm->begin(), SyntacticForm->end(),
-      [](auto *InitExpr) { return isa<DesignatedInitExpr>(InitExpr); });
+  if (const InitListExpr *SyntacticForm =
+          Node.isSyntacticForm() ? &Node : Node.getSyntacticForm()) {
+    return std::all_of(
+        SyntacticForm->begin(), SyntacticForm->end(),
+        [](auto *InitExpr) { return isa<DesignatedInitExpr>(InitExpr); });
+  }
+  return true;
 }
 
 AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
