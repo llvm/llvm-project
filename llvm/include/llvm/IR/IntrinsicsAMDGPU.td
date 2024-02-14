@@ -612,6 +612,15 @@ def int_amdgcn_cvt_sr_bf8_f16 : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f16">;
 
+class AMDGPUCvtScaleIntrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
+  [DstTy], [llvm_v3i32_ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_"#name>;
+
+def int_amdgcn_cvt_scale_pk_f16_bf6 : AMDGPUCvtScaleIntrinsic<llvm_v16f16_ty, "cvt_scale_pk_f16_bf6">;
+def int_amdgcn_cvt_scale_pk_bf16_bf6 : AMDGPUCvtScaleIntrinsic<llvm_v16bf16_ty, "cvt_scale_pk_bf16_bf6">;
+def int_amdgcn_cvt_scale_pk_f16_fp6 : AMDGPUCvtScaleIntrinsic<llvm_v16f16_ty, "cvt_scale_pk_f16_fp6">;
+def int_amdgcn_cvt_scale_pk_bf16_fp6 : AMDGPUCvtScaleIntrinsic<llvm_v16bf16_ty, "cvt_scale_pk_bf16_fp6">;
+
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
