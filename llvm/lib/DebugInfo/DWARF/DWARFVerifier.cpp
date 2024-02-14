@@ -2039,7 +2039,7 @@ void DWARFVerifier::summarize() {
   if (!DumpOpts.AggregateErrJsonFile.empty()) {
     std::error_code EC;
     raw_fd_ostream JsonStream(DumpOpts.AggregateErrJsonFile, EC,
-                              sys::fs::OF_Text | sys::fs::OF_None);
+                              sys::fs::OF_Text);
     if (EC) {
       error() << "error opening aggregate error json file '"
               << DumpOpts.AggregateErrJsonFile
@@ -2047,12 +2047,16 @@ void DWARFVerifier::summarize() {
       return;
     }
     JsonStream << "{\"errors\":[\n";
+    bool prev = false;
     ErrorCategory.EnumerateResults([&](StringRef category, unsigned count) {
-      JsonStream << "\"category\":\"";
+      if (prev)
+        JsonStream << ",\n";
+      JsonStream << "{\"category\":\"";
       llvm::printEscapedString(category, JsonStream);
-      JsonStream << "\",\"count\":" << count;
+      JsonStream << "\",\"count\":" << count << "}";
+      prev = true;
     });
-    JsonStream << "]}\n";
+    JsonStream << "\n]}\n";
   }
 }
 

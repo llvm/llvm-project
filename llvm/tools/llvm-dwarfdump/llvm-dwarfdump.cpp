@@ -297,7 +297,8 @@ static opt<ErrorDetailLevel> ErrorDetails(
     cat(DwarfDumpCategory));
 static opt<std::string> AggregationJsonFile(
     "aggregate-output-file", cl::init(""),
-    cl::desc("Output JSON-formatted error summary to the specified file."),
+    cl::desc("When using --verify, output JSON-formatted error summary to the "
+             "specified file."),
     cl::value_desc("filename.json"), cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
@@ -353,6 +354,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
                        ErrorDetails != NoDetailsOrSummary;
     DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
                                    ErrorDetails != NoDetailsOnlySummary;
+    DumpOpts.AggregateErrJsonFile = AggregationJsonFile;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -841,7 +843,8 @@ int main(int argc, char **argv) {
   if (!Verify && ErrorDetails != Unspecified)
     WithColor::warning() << "-error-detail has no affect without -verify";
   if (!Verify && !AggregationJsonFile.empty())
-    WithColor::warning() << "-aggregation-json has no affect without -verify";
+    WithColor::warning()
+        << "-aggregate-output-file has no affect without -verify";
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);
