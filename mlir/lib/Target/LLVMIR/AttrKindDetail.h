@@ -61,7 +61,8 @@ getAttrKindToNameMapping() {
 
 /// Returns a dense map from LLVM attribute name to their kind in LLVM IR
 /// dialect.
-static llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind>
+[[maybe_unused]] static llvm::DenseMap<llvm::StringRef,
+                                       llvm::Attribute::AttrKind>
 getAttrNameToKindMapping() {
   static auto attrNameToKindMapping = []() {
     llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind> nameKindMap;
