@@ -1,4 +1,4 @@
-// RUN: %clang --target=aarch64-none-linux-gnu -march=armv9-a+sme -O3 -S -Xclang -verify %s
+// RUN: %clang --target=aarch64-none-linux-gnu -march=armv9-a+sme -S -Xclang -verify %s
 
 // Conflicting attributes when using always_inline
 __attribute__((always_inline)) __arm_locally_streaming

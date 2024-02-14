@@ -1,4 +1,4 @@
-// RUN: %clang --target=aarch64-none-linux-gnu -march=armv9-a+sme -O3 -S -Xclang -verify %s
+// RUN: %clang --target=aarch64-none-linux-gnu -march=armv9-a+sme -S -Xclang -verify %s
 
 __attribute__((always_inline)) __arm_new("za")
 void inline_new_za(void)  { }
