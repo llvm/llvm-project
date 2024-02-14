@@ -303,9 +303,9 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
+
 #ifdef INSTR_PROF_SECT_ENTRY
 #define INSTR_PROF_DATA_DEFINED
-
 INSTR_PROF_SECT_ENTRY(IPSK_data, \
                       INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), \
                       INSTR_PROF_DATA_COFF, "__DATA,")
@@ -348,6 +348,7 @@ INSTR_PROF_SECT_ENTRY(IPSK_covname, \
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
+
 
 #ifdef INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_DATA_DEFINED
@@ -519,6 +520,7 @@ getValueProfRecordHeaderSize(uint32_t NumValueSites);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
 #endif  /* INSTR_PROF_VALUE_PROF_DATA */
+
 
 #ifdef INSTR_PROF_COMMON_API_IMPL
 #define INSTR_PROF_DATA_DEFINED
@@ -982,4 +984,3 @@ InstrProfIsSingleValRange(uint64_t Value) {
 }
 
 #endif /* INSTR_PROF_VALUE_PROF_MEMOP_API */
-

@@ -156,7 +156,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
                    Header->NumCounters * __llvm_profile_counter_entry_size();
   SrcBitmapStart = SrcCountersEnd;
   SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
-
   SrcValueProfDataStart =
       SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)

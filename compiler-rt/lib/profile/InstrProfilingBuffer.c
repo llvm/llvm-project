@@ -74,6 +74,7 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End) {
   return __llvm_profile_get_num_data(Begin, End) * sizeof(__llvm_profile_data);
 }
+
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
                                        const VTableProfData *End) {
