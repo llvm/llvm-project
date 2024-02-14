@@ -3004,7 +3004,7 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
 
   if (TPIDR2->Uses == 0) {
     BB->remove_instr(&MI);
-    MFI.RemoveStackObject(TPIDR2->Addr);
+    MFI.RemoveStackObject(TPIDR2->FrameIndex);
     return BB;
   }
 
@@ -3027,9 +3027,8 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), AArch64::SP)
       .addReg(MSub);
 
-  uint64_t TPIDR2Object = TPIDR2->Addr;
-
-  MFI.CreateVariableSizedObject(Align(1), nullptr);
+  unsigned TPIDR2Object = TPIDR2->FrameIndex;
+  MFI.CreateVariableSizedObject(Align(16), nullptr);
 
   Register Zero32 = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
   MachineInstrBuilder Wzr =
@@ -7093,47 +7092,6 @@ AArch64TargetLowering::CCAssignFnForReturn(CallingConv::ID CC) const {
   }
 }
 
-
-unsigned
-AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
-                                              SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-
-  // Allocate a lazy-save buffer object of size SVL.B * SVL.B (worst-case)
-  SDValue N = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                          DAG.getConstant(1, DL, MVT::i32));
-  SDValue NN = DAG.getNode(ISD::MUL, DL, MVT::i64, N, N);
-  SDValue Ops[] = {Chain, NN, DAG.getConstant(1, DL, MVT::i64)};
-  SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
-  SDValue Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL, VTs, Ops);
-  Chain = Buffer.getValue(1);
-  MFI.CreateVariableSizedObject(Align(1), nullptr);
-
-  // Allocate an additional TPIDR2 object on the stack (16 bytes)
-  unsigned TPIDR2Obj = MFI.CreateStackObject(16, Align(16), false);
-
-  // Store the buffer pointer to the TPIDR2 stack object.
-  MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, TPIDR2Obj);
-  SDValue Ptr = DAG.getFrameIndex(
-      TPIDR2Obj,
-      DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-  Chain = DAG.getStore(Chain, DL, Buffer, Ptr, MPI);
-
-  // Set the reserved bytes (10-15) to zero
-  EVT PtrTy = Ptr.getValueType();
-  SDValue ReservedPtr =
-      DAG.getNode(ISD::ADD, DL, PtrTy, Ptr, DAG.getConstant(10, DL, PtrTy));
-  Chain = DAG.getStore(Chain, DL, DAG.getConstant(0, DL, MVT::i16), ReservedPtr,
-                       MPI);
-  ReservedPtr =
-      DAG.getNode(ISD::ADD, DL, PtrTy, Ptr, DAG.getConstant(12, DL, PtrTy));
-  Chain = DAG.getStore(Chain, DL, DAG.getConstant(0, DL, MVT::i32), ReservedPtr,
-                       MPI);
-
-  return TPIDR2Obj;
-}
-
 static bool isPassedInFPR(EVT VT) {
   return VT.isFixedLengthVector() ||
          (VT.isFloatingPoint() && !VT.isScalableVector());
@@ -7555,7 +7513,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     Chain = SDValue(
         DAG.getMachineNode(AArch64::ExpandZABuffer, DL, MVT::Other, Chain), 0);
     TPIDR2Object TPIDR2;
-    TPIDR2.Addr = MFI.CreateStackObject(16, Align(16), false);
+    TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
     FuncInfo->setTPIDR2Obj(TPIDR2);
   }
 
@@ -8242,10 +8200,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
   if (RequiresLazySave) {
-    TPIDR2Object TPIDR2 = *FuncInfo->getTPIDR2Obj();
-    MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, TPIDR2.Addr);
+    const TPIDR2Object TPIDR2 = *FuncInfo->getTPIDR2Obj();
+    MachinePointerInfo MPI =
+        MachinePointerInfo::getStack(MF, TPIDR2.FrameIndex);
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
-        TPIDR2.Addr,
+        TPIDR2.FrameIndex,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
     SDValue NumZaSaveSlicesAddr =
         DAG.getNode(ISD::ADD, DL, TPIDR2ObjAddr.getValueType(), TPIDR2ObjAddr,
@@ -8801,7 +8760,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // RESTORE_ZA pseudo.
     SDValue Glue;
     SDValue TPIDR2Block = DAG.getFrameIndex(
-        TPIDR2.Addr,
+        TPIDR2.FrameIndex,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
     Result = DAG.getCopyToReg(Result, DL, AArch64::X0, TPIDR2Block, Glue);
     Result =

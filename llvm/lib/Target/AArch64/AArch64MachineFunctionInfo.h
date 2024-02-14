@@ -37,8 +37,8 @@ class AArch64Subtarget;
 class MachineInstr;
 
 struct TPIDR2Object {
-  uint64_t Addr = 0;
-  uint32_t Uses = 0;
+  unsigned FrameIndex = 0;
+  unsigned Uses = 0;
 };
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
