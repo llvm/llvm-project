@@ -5,7 +5,7 @@
 
 struct Graph {
     int n; // 0-indexed
-    std::vector<std::vector<int>> G;
+    std::vector<std::set<int>> G;
     std::vector<int> d, fa;
 
     const int INF = 0x3f3f3f3f;
@@ -15,13 +15,9 @@ struct Graph {
         bool operator<(const Node &b) const { return d > b.d; }
     };
 
-    Graph(int n) : n(n) {
-        G.resize(n);
-        d.resize(n);
-        fa.resize(n);
-    }
+    Graph(int n) : n(n), G(n), d(n), fa(n) {}
 
-    void addEdge(int u, int v) { G[u].push_back(v); }
+    void addEdge(int u, int v) { G[u].insert(v); }
 
     void dij(int s) {
         std::fill(d.begin(), d.end(), INF);
