@@ -1511,6 +1511,70 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "AMDGPUTransformOps",
+    srcs = glob([
+        "lib/Dialect/AMDGPU/TransformOps/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/AMDGPU/TransformOps/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+        ":AMDGPUTransformOpsIncGen",
+        ":AMDGPUTransforms",
+        ":AffineDialect",
+        ":Analysis",
+        ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
+        ":GPUCommonTransforms",
+        ":GPUCompilationAttrInterfacesIncGen",
+        ":GPUDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LinalgDialect",
+        ":MemRefDialect",
+        ":SCFDialect",
+        ":SCFTransforms",
+        ":Support",
+        ":TransformDialect",
+        ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "AMDGPUTransformOpsTdFiles",
+    srcs = glob([
+        "include/mlir/Dialect/AMDGPU/TransformOps/*.td",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUTransformOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.td",
+    deps = [
+        ":AMDGPUTransformOpsTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "AMDGPUPassIncGen",
     tbl_outs = [
@@ -4614,6 +4678,7 @@ cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
+        ":AMDGPUTransformOps",
         ":AffineTransformOps",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
@@ -8961,6 +9026,7 @@ cc_library(
     deps = [
         ":AMDGPUDialect",
         ":AMDGPUToROCDL",
+        ":AMDGPUTransformOps",
         ":AMDGPUTransforms",
         ":AMXDialect",
         ":AMXTransforms",
