@@ -336,6 +336,9 @@ Moved checkers
 Sanitizers
 ----------
 
+- Added ``-fsanitize=signed-integer-wrap`` to catch suspicious signed arithmetic
+  that results in wraparound caused by ``-fwrapv``.
+
 Python Binding Changes
 ----------------------
 
