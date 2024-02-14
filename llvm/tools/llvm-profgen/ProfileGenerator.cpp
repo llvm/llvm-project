@@ -196,6 +196,33 @@ void ProfileGeneratorBase::showDensitySuggestion(double Density) {
            << "% total samples: " << format("%.1f", Density) << "\n";
 }
 
+bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
+  for (const auto &Prefix : FuncPrefixsToFilter) {
+    if (FS.getFuncName().starts_with(Prefix))
+      return true;
+  }
+
+  // Filter the function profiles for the inlinees.
+  for (auto &Callees :
+       const_cast<CallsiteSampleMap &>(FS.getCallsiteSamples())) {
+    auto &CalleesMap = Callees.second;
+    for (auto I = CalleesMap.begin(); I != CalleesMap.end();) {
+      auto Tmp = I++;
+      if (filterAmbiguousProfile(Tmp->second))
+        CalleesMap.erase(Tmp);
+    }
+  }
+  return false;
+}
+
+void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
+  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+    auto Tmp = I++;
+    if (filterAmbiguousProfile(Tmp->second))
+      ProfileMap.erase(Tmp);
+  }
+}
+
 double ProfileGeneratorBase::calculateDensity(const SampleProfileMap &Profiles,
                                               uint64_t HotCntThreshold) {
   double Density = DBL_MAX;
@@ -491,6 +518,7 @@ void ProfileGenerator::generateProfile() {
 void ProfileGenerator::postProcessProfiles() {
   computeSummaryAndThreshold(ProfileMap);
   trimColdProfiles(ProfileMap, ColdCountThreshold);
+  filterAmbiguousProfile(ProfileMap);
   calculateAndShowDensity(ProfileMap);
 }
 
@@ -1024,6 +1052,7 @@ void CSProfileGenerator::postProcessProfiles() {
     CSConverter.convertCSProfiles();
     FunctionSamples::ProfileIsCS = false;
   }
+  filterAmbiguousProfile(ProfileMap);
 }
 
 void ProfileGeneratorBase::computeSummaryAndThreshold(
