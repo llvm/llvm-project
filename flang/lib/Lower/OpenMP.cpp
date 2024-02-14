@@ -40,6 +40,12 @@ static llvm::cl::opt<bool> treatIndexAsSection(
     llvm::cl::desc("In the OpenMP data clauses treat `a(N)` as `a(N:N)`."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool> enableDelayedPrivatization(
+    "openmp-enable-delayed-privatization",
+    llvm::cl::desc(
+        "Emit `[first]private` variables as clauses on the MLIR ops."),
+    llvm::cl::init(false));
+
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
               Fortran::semantics::Symbol>;
@@ -147,6 +153,24 @@ static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 
 class DataSharingProcessor {
+public:
+  /// Collects all the information needed for delayed privatization. This can be
+  /// used by ops with data-sharing clauses to proplery generate theirs regions
+  /// (e.g. add region arguments) and map the original SSA values to their
+  /// corresponding OMP region operands.
+  struct DelayedPrivatizationInfo {
+    // The list of symbols referring to delayed privatizer ops (i.e.
+    // `omp.private` ops).
+    llvm::SmallVector<mlir::SymbolRefAttr> privatizers;
+    // SSA values that correspond to "original" values being privatized.
+    // "Original" here means the SSA value outside the OpenMP region from which
+    // a clone is created inside the region.
+    llvm::SmallVector<mlir::Value> originalAddresses;
+    // Fortran symbols corresponding to the above SSA values.
+    llvm::SmallVector<const Fortran::semantics::Symbol *> symbols;
+  };
+
+private:
   bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
   mlir::OpBuilder::InsertPoint insPt;
@@ -161,6 +185,11 @@ class DataSharingProcessor {
   const Fortran::parser::OmpClauseList &opClauseList;
   Fortran::lower::pft::Evaluation &eval;
 
+  bool useDelayedPrivatization;
+  Fortran::lower::SymMap *symTable;
+
+  DelayedPrivatizationInfo delayedPrivatizationInfo;
+
   bool needBarrier();
   void collectSymbols(Fortran::semantics::Symbol::Flag flag);
   void collectOmpObjectListSymbol(
@@ -171,10 +200,13 @@ class DataSharingProcessor {
   void collectDefaultSymbols();
   void privatize();
   void defaultPrivatize();
+  void doPrivatize(const Fortran::semantics::Symbol *sym);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const Fortran::semantics::Symbol *sym);
-  void copyFirstPrivateSymbol(const Fortran::semantics::Symbol *sym);
+  void
+  copyFirstPrivateSymbol(const Fortran::semantics::Symbol *sym,
+                         mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr);
   void copyLastPrivateSymbol(const Fortran::semantics::Symbol *sym,
                              mlir::OpBuilder::InsertPoint *lastPrivIP);
   void insertDeallocs();
@@ -182,10 +214,14 @@ class DataSharingProcessor {
 public:
   DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
                        const Fortran::parser::OmpClauseList &opClauseList,
-                       Fortran::lower::pft::Evaluation &eval)
+                       Fortran::lower::pft::Evaluation &eval,
+                       bool useDelayedPrivatization = false,
+                       Fortran::lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter),
         firOpBuilder(converter.getFirOpBuilder()), opClauseList(opClauseList),
-        eval(eval) {}
+        eval(eval), useDelayedPrivatization(useDelayedPrivatization),
+        symTable(symTable) {}
+
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
   // firstprivates. Step1 is performed at the place where process/processStep1
@@ -203,6 +239,10 @@ public:
   void setLoopIV(mlir::Value iv) {
     assert(!loopIV && "Loop iteration variable already set");
     loopIV = iv;
+  }
+
+  const DelayedPrivatizationInfo &getDelayedPrivatizationInfo() const {
+    return delayedPrivatizationInfo;
   }
 };
 
@@ -250,9 +290,10 @@ void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
-    const Fortran::semantics::Symbol *sym) {
+    const Fortran::semantics::Symbol *sym,
+    mlir::OpBuilder::InsertPoint *copyAssignIP) {
   if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate))
-    converter.copyHostAssociateVar(*sym);
+    converter.copyHostAssociateVar(*sym, copyAssignIP);
 }
 
 void DataSharingProcessor::copyLastPrivateSymbol(
@@ -491,14 +532,10 @@ void DataSharingProcessor::privatize() {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-      for (const auto &mem : commonDet->objects()) {
-        cloneSymbol(&*mem);
-        copyFirstPrivateSymbol(&*mem);
-      }
-    } else {
-      cloneSymbol(sym);
-      copyFirstPrivateSymbol(sym);
-    }
+      for (const auto &mem : commonDet->objects())
+        doPrivatize(&*mem);
+    } else
+      doPrivatize(sym);
   }
 }
 
@@ -522,11 +559,96 @@ void DataSharingProcessor::defaultPrivatize() {
         !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
         !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
-        !privatizedSymbols.contains(sym)) {
-      cloneSymbol(sym);
-      copyFirstPrivateSymbol(sym);
-    }
+        !privatizedSymbols.contains(sym))
+      doPrivatize(sym);
   }
+}
+
+void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
+  if (!useDelayedPrivatization) {
+    cloneSymbol(sym);
+    copyFirstPrivateSymbol(sym);
+    return;
+  }
+
+  Fortran::lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  assert(hsb && "Host symbol box not found");
+
+  mlir::Type symType = hsb.getAddr().getType();
+  mlir::Location symLoc = hsb.getAddr().getLoc();
+  std::string privatizerName = sym->name().ToString() + ".privatizer";
+  bool isFirstPrivate =
+      sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
+
+  mlir::omp::PrivateClauseOp privatizerOp = [&]() {
+    auto moduleOp = firOpBuilder.getModule();
+
+    auto uniquePrivatizerName = fir::getTypeAsString(
+        symType, converter.getKindMap(),
+        sym->name().ToString() +
+            (isFirstPrivate ? "_firstprivate" : "_private"));
+
+    if (auto existingPrivatizer =
+            moduleOp.lookupSymbol<mlir::omp::PrivateClauseOp>(
+                uniquePrivatizerName))
+      return existingPrivatizer;
+
+    auto ip = firOpBuilder.saveInsertionPoint();
+    firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
+                                   moduleOp.getBodyRegion().front().begin());
+    auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
+        symLoc, uniquePrivatizerName, symType,
+        isFirstPrivate ? mlir::omp::DataSharingClauseType ::FirstPrivate
+                       : mlir::omp::DataSharingClauseType::Private);
+
+    symTable->pushScope();
+
+    // Populate the `alloc` region.
+    {
+      mlir::Region &allocRegion = result.getAllocRegion();
+      mlir::Block *allocEntryBlock = firOpBuilder.createBlock(
+          &allocRegion, /*insertPt=*/{}, symType, symLoc);
+
+      firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
+      symTable->addSymbol(*sym, allocRegion.getArgument(0));
+      symTable->pushScope();
+      cloneSymbol(sym);
+      firOpBuilder.create<mlir::omp::YieldOp>(
+          hsb.getAddr().getLoc(),
+          symTable->shallowLookupSymbol(*sym).getAddr());
+      symTable->popScope();
+    }
+
+    // Poplate the `copy` region if this is a `firstprivate`.
+    if (isFirstPrivate) {
+      mlir::Region &copyRegion = result.getCopyRegion();
+      // First block argument corresponding to the original/host value while
+      // second block argument corresponding to the privatized value.
+      mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
+          &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
+      firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
+      symTable->addSymbol(*sym, copyRegion.getArgument(0),
+                          /*force=*/true);
+      symTable->pushScope();
+      symTable->addSymbol(*sym, copyRegion.getArgument(1));
+      auto ip = firOpBuilder.saveInsertionPoint();
+      copyFirstPrivateSymbol(sym, &ip);
+
+      firOpBuilder.create<mlir::omp::YieldOp>(
+          hsb.getAddr().getLoc(),
+          symTable->shallowLookupSymbol(*sym).getAddr());
+      symTable->popScope();
+    }
+
+    symTable->popScope();
+    firOpBuilder.restoreInsertionPoint(ip);
+    return result;
+  }();
+
+  delayedPrivatizationInfo.privatizers.push_back(
+      mlir::SymbolRefAttr::get(privatizerOp));
+  delayedPrivatizationInfo.originalAddresses.push_back(hsb.getAddr());
+  delayedPrivatizationInfo.symbols.push_back(sym);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2585,6 +2707,7 @@ genOrderedRegionOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::ParallelOp
 genParallelOp(Fortran::lower::AbstractConverter &converter,
+              Fortran::lower::SymMap &symTable,
               Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, bool genNested,
               mlir::Location currentLocation,
@@ -2617,8 +2740,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   auto reductionCallback = [&](mlir::Operation *op) {
     llvm::SmallVector<mlir::Location> locs(reductionVars.size(),
                                            currentLocation);
-    auto block = converter.getFirOpBuilder().createBlock(&op->getRegion(0), {},
-                                                         reductionTypes, locs);
+    auto *block = converter.getFirOpBuilder().createBlock(&op->getRegion(0), {},
+                                                          reductionTypes, locs);
     for (auto [arg, prv] :
          llvm::zip_equal(reductionSymbols, block->getArguments())) {
       converter.bindSymbol(*arg, prv);
@@ -2626,13 +2749,78 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
     return reductionSymbols;
   };
 
-  return genOpWithBody<mlir::omp::ParallelOp>(
+  OpWithBodyGenInfo genInfo =
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
           .setClauses(&clauseList)
           .setReductions(&reductionSymbols, &reductionTypes)
-          .setGenRegionEntryCb(reductionCallback),
+          .setGenRegionEntryCb(reductionCallback);
+
+  if (!enableDelayedPrivatization) {
+    return genOpWithBody<mlir::omp::ParallelOp>(
+        genInfo,
+        /*resultTypes=*/mlir::TypeRange(), ifClauseOperand,
+        numThreadsClauseOperand, allocateOperands, allocatorOperands,
+        reductionVars,
+        reductionDeclSymbols.empty()
+            ? nullptr
+            : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                   reductionDeclSymbols),
+        procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
+        /*privatizers=*/nullptr);
+  }
+
+  bool privatize = !outerCombined;
+  DataSharingProcessor dsp(converter, clauseList, eval,
+                           /*useDelayedPrivatization=*/true, &symTable);
+
+  if (privatize)
+    dsp.processStep1();
+
+  const auto &delayedPrivatizationInfo = dsp.getDelayedPrivatizationInfo();
+
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
+    auto parallelOp = llvm::cast<mlir::omp::ParallelOp>(op);
+
+    llvm::SmallVector<mlir::Location> reductionLocs(reductionVars.size(),
+                                                    currentLocation);
+
+    auto privateVars = parallelOp.getPrivateVars();
+    auto &region = parallelOp.getRegion();
+
+    llvm::SmallVector<mlir::Type> privateVarTypes = reductionTypes;
+    privateVarTypes.reserve(privateVarTypes.size() + privateVars.size());
+    llvm::transform(privateVars, std::back_inserter(privateVarTypes),
+                    [](mlir::Value v) { return v.getType(); });
+
+    llvm::SmallVector<mlir::Location> privateVarLocs = reductionLocs;
+    privateVarLocs.reserve(privateVarLocs.size() + privateVars.size());
+    llvm::transform(privateVars, std::back_inserter(privateVarLocs),
+                    [](mlir::Value v) { return v.getLoc(); });
+
+    converter.getFirOpBuilder().createBlock(&region, /*insertPt=*/{},
+                                            privateVarTypes, privateVarLocs);
+
+    llvm::SmallVector<const Fortran::semantics::Symbol *> allSymbols =
+        reductionSymbols;
+    allSymbols.append(delayedPrivatizationInfo.symbols);
+    for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
+      converter.bindSymbol(*arg, prv);
+    }
+
+    return allSymbols;
+  };
+
+  // TODO Merge with the reduction CB.
+  genInfo.setGenRegionEntryCb(genRegionEntryCB).setDataSharingProcessor(&dsp);
+
+  llvm::SmallVector<mlir::Attribute> privatizers(
+      delayedPrivatizationInfo.privatizers.begin(),
+      delayedPrivatizationInfo.privatizers.end());
+
+  return genOpWithBody<mlir::omp::ParallelOp>(
+      genInfo,
       /*resultTypes=*/mlir::TypeRange(), ifClauseOperand,
       numThreadsClauseOperand, allocateOperands, allocatorOperands,
       reductionVars,
@@ -2640,8 +2828,11 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                  reductionDeclSymbols),
-      procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
-      /*privatizers=*/nullptr);
+      procBindKindAttr, delayedPrivatizationInfo.originalAddresses,
+      delayedPrivatizationInfo.privatizers.empty()
+          ? nullptr
+          : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                 privatizers));
 }
 
 static mlir::omp::SectionOp
@@ -3635,7 +3826,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     if ((llvm::omp::allParallelSet & llvm::omp::loopConstructSet)
             .test(ompDirective)) {
       validDirective = true;
-      genParallelOp(converter, semaCtx, eval, /*genNested=*/false,
+      genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/false,
                     currentLocation, loopOpClauseList,
                     /*outerCombined=*/true);
     }
@@ -3724,8 +3915,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                        currentLocation);
     break;
   case llvm::omp::Directive::OMPD_parallel:
-    genParallelOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
-                  beginClauseList);
+    genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/true,
+                  currentLocation, beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_single:
     genSingleOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
@@ -3782,7 +3973,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           .test(directive.v)) {
     bool outerCombined =
         directive.v != llvm::omp::Directive::OMPD_target_parallel;
-    genParallelOp(converter, semaCtx, eval, /*genNested=*/false,
+    genParallelOp(converter, symTable, semaCtx, eval, /*genNested=*/false,
                   currentLocation, beginClauseList, outerCombined);
     combinedDirective = true;
   }
@@ -3865,7 +4056,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Parallel wrapper of PARALLEL SECTIONS construct
   if (dir == llvm::omp::Directive::OMPD_parallel_sections) {
-    genParallelOp(converter, semaCtx, eval,
+    genParallelOp(converter, symTable, semaCtx, eval,
                   /*genNested=*/false, currentLocation, sectionsClauseList,
                   /*outerCombined=*/true);
   } else {
