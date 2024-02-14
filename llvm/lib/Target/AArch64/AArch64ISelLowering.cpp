@@ -12935,42 +12935,74 @@ static SDValue NormalizeBuildVector(SDValue Op,
   return DAG.getBuildVector(VT, dl, Ops);
 }
 
-static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG) {
+static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
+                                   const AArch64Subtarget *ST) {
   EVT VT = Op.getValueType();
+  assert((VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128) &&
+         "Expected a legal NEON vector");
 
   APInt DefBits(VT.getSizeInBits(), 0);
   APInt UndefBits(VT.getSizeInBits(), 0);
   BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
   if (resolveBuildVector(BVN, DefBits, UndefBits)) {
-    SDValue NewOp;
-    if ((NewOp = tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MOVImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm8(AArch64ISD::MOVI, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImmFP(AArch64ISD::FMOV, Op, DAG, DefBits)))
-      return NewOp;
+    auto TryMOVIWithBits = [&](APInt DefBits) {
+      SDValue NewOp;
+      if ((NewOp =
+               tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm321s(AArch64ISD::MOVImsl, Op, DAG, DefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm16(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
+          (NewOp = tryAdvSIMDModImm8(AArch64ISD::MOVI, Op, DAG, DefBits)) ||
+          (NewOp = tryAdvSIMDModImmFP(AArch64ISD::FMOV, Op, DAG, DefBits)))
+        return NewOp;
 
-    DefBits = ~DefBits;
-    if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::MVNIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MVNImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MVNIshift, Op, DAG, DefBits)))
-      return NewOp;
+      APInt NotDefBits = ~DefBits;
+      if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::MVNIshift, Op, DAG,
+                                      NotDefBits)) ||
+          (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MVNImsl, Op, DAG,
+                                        NotDefBits)) ||
+          (NewOp =
+               tryAdvSIMDModImm16(AArch64ISD::MVNIshift, Op, DAG, NotDefBits)))
+        return NewOp;
+      return SDValue();
+    };
+    if (SDValue R = TryMOVIWithBits(DefBits))
+      return R;
+    if (SDValue R = TryMOVIWithBits(UndefBits))
+      return R;
 
-    DefBits = UndefBits;
-    if ((NewOp = tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MOVImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm8(AArch64ISD::MOVI, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImmFP(AArch64ISD::FMOV, Op, DAG, DefBits)))
-      return NewOp;
+    // See if a fneg of the constant can be materialized with a MOVI, etc
+    auto TryWithFNeg = [&](APInt DefBits, MVT FVT) {
+      // FNegate each sub-element of the constant
+      assert(VT.getSizeInBits() % FVT.getScalarSizeInBits() == 0);
+      APInt Neg = APInt::getHighBitsSet(FVT.getSizeInBits(), 1)
+                      .zext(VT.getSizeInBits());
+      APInt NegBits(VT.getSizeInBits(), 0);
+      unsigned NumElts = VT.getSizeInBits() / FVT.getScalarSizeInBits();
+      for (unsigned i = 0; i < NumElts; i++)
+        NegBits |= Neg << (FVT.getScalarSizeInBits() * i);
+      NegBits = DefBits ^ NegBits;
 
-    DefBits = ~UndefBits;
-    if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::MVNIshift, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm321s(AArch64ISD::MVNImsl, Op, DAG, DefBits)) ||
-        (NewOp = tryAdvSIMDModImm16(AArch64ISD::MVNIshift, Op, DAG, DefBits)))
-      return NewOp;
+      // Try to create the new constants with MOVI, and if so generate a fneg
+      // for it.
+      if (SDValue NewOp = TryMOVIWithBits(NegBits)) {
+        SDLoc DL(Op);
+        MVT VFVT = NumElts == 1 ? FVT : MVT::getVectorVT(FVT, NumElts);
+        return DAG.getNode(
+            AArch64ISD::NVCAST, DL, VT,
+            DAG.getNode(ISD::FNEG, DL, VFVT,
+                        DAG.getNode(AArch64ISD::NVCAST, DL, VFVT, NewOp)));
+      }
+      return SDValue();
+    };
+    SDValue R;
+    if ((R = TryWithFNeg(DefBits, MVT::f32)) ||
+        (R = TryWithFNeg(DefBits, MVT::f64)) ||
+        (ST->hasFullFP16() && (R = TryWithFNeg(DefBits, MVT::f16))))
+      return R;
   }
 
   return SDValue();
@@ -13019,7 +13051,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
         return Op;
   }
 
-  if (SDValue V = ConstantBuildVector(Op, DAG))
+  if (SDValue V = ConstantBuildVector(Op, DAG, Subtarget))
     return V;
 
   // Scan through the operands to find some interesting properties we can
@@ -13244,7 +13276,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       ConstantValueAPInt = C->getAPIntValue().zextOrTrunc(BitSize);
     if (!isNullConstant(ConstantValue) && !isNullFPConstant(ConstantValue) &&
         !ConstantValueAPInt.isAllOnes()) {
-      Val = ConstantBuildVector(Val, DAG);
+      Val = ConstantBuildVector(Val, DAG, Subtarget);
       if (!Val)
         // Otherwise, materialize the constant and splat it.
         Val = DAG.getNode(AArch64ISD::DUP, dl, VT, ConstantValue);
@@ -23145,9 +23177,12 @@ static SDValue performDUPCombine(SDNode *N,
 }
 
 /// Get rid of unnecessary NVCASTs (that don't change the type).
-static SDValue performNVCASTCombine(SDNode *N) {
+static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
   if (N->getValueType(0) == N->getOperand(0).getValueType())
     return N->getOperand(0);
+  if (N->getOperand(0).getOpcode() == AArch64ISD::NVCAST)
+    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), N->getValueType(0),
+                       N->getOperand(0).getOperand(0));
 
   return SDValue();
 }
@@ -24141,7 +24176,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
-    return performNVCASTCombine(N);
+    return performNVCASTCombine(N, DAG);
   case AArch64ISD::SPLICE:
     return performSpliceCombine(N, DAG);
   case AArch64ISD::UUNPKLO:
