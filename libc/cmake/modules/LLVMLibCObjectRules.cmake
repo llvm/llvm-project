@@ -49,6 +49,10 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-ffreestanding")
     endif()
 
+    if(LIBC_COMPILER_HAS_FIXED_POINT)
+      list(APPEND compile_options "-ffixed-point")
+    endif()
+
     list(APPEND compile_options "-fno-builtin")
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
