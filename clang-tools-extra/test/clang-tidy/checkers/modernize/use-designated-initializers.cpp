@@ -56,6 +56,13 @@ S3 s32 = {{.i = 1, 2}};
 // CHECK-MESSAGES-POD: :[[@LINE-4]]:20: warning: use designated init expression [modernize-use-designated-initializers]
 // CHECK-FIXES: S3 s32 = {.s2={.i = 1, .j=2}};
 
+S3 s33 = {{2}, .d=3.1};
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES-POD: :[[@LINE-3]]:11: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-MESSAGES-POD: :[[@LINE-4]]:11: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-FIXES: S3 s33 = {.s2={.i=2}, .d=3.1};
+
 struct S4 {
     double d;
     private: static int i;
