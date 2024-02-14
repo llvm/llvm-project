@@ -7,18 +7,6 @@
 # RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo=invalid-type --regex 2>&1 | FileCheck %s --check-prefix=TYPE
 # TYPE: error: 'invalid-type' is not a valid symbol visibility
 
-# Check if using the option multiple times generates an error message
-# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols=hidden \
-# RUN:                       --set-symbols-visibility=%t.symbols=default \
-# RUN:                       --regex 2>&1 | FileCheck %s --check-prefix=MULTIPLE
-# RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo=hidden \
-# RUN:                       --set-symbol-visibility=bar=default \
-# RUN:                       --regex 2>&1 | FileCheck %s --check-prefix=MULTIPLE
-# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols=hidden \
-# RUN:                       --set-symbol-visibility=bar=default \
-# RUN:                       --regex 2>&1 | FileCheck %s --check-prefix=MULTIPLE
-# MULTIPLE: error: multiple specifications of visibility type
-
 # Check if not using the proper format with character '=' generates an error
 # RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | FileCheck %s --check-prefix=FORMAT
 # RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo default 2>&1 | FileCheck %s --check-prefix=FORMAT

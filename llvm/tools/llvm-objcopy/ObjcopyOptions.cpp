@@ -978,9 +978,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Config.SymbolsToAdd.push_back(*SymInfo);
   }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbol_visibility)) {
-    if (!ELFConfig.SymbolsToSetVisibility.empty())
-      return createStringError(errc::invalid_argument,
-                               "multiple specifications of visibility type");
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
                                "bad format for --set-symbol-visibility");
@@ -994,9 +991,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return std::move(E);
   }
   for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbols_visibility)) {
-    if (!ELFConfig.SymbolsToSetVisibility.empty())
-      return createStringError(errc::invalid_argument,
-                               "multiple specifications of visibility type");
     if (!StringRef(Arg->getValue()).contains('='))
       return createStringError(errc::invalid_argument,
                                "bad format for --set-symbols-visibility");
