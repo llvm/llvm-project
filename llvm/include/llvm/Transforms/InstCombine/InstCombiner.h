@@ -170,45 +170,6 @@ public:
     }
   }
 
-  /// Given an exploded icmp instruction, return true if the comparison only
-  /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
-  /// the result of the comparison is true when the input value is signed.
-  static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
-                             bool &TrueIfSigned) {
-    switch (Pred) {
-    case ICmpInst::ICMP_SLT: // True if LHS s< 0
-      TrueIfSigned = true;
-      return RHS.isZero();
-    case ICmpInst::ICMP_SLE: // True if LHS s<= -1
-      TrueIfSigned = true;
-      return RHS.isAllOnes();
-    case ICmpInst::ICMP_SGT: // True if LHS s> -1
-      TrueIfSigned = false;
-      return RHS.isAllOnes();
-    case ICmpInst::ICMP_SGE: // True if LHS s>= 0
-      TrueIfSigned = false;
-      return RHS.isZero();
-    case ICmpInst::ICMP_UGT:
-      // True if LHS u> RHS and RHS == sign-bit-mask - 1
-      TrueIfSigned = true;
-      return RHS.isMaxSignedValue();
-    case ICmpInst::ICMP_UGE:
-      // True if LHS u>= RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-      TrueIfSigned = true;
-      return RHS.isMinSignedValue();
-    case ICmpInst::ICMP_ULT:
-      // True if LHS u< RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-      TrueIfSigned = false;
-      return RHS.isMinSignedValue();
-    case ICmpInst::ICMP_ULE:
-      // True if LHS u<= RHS and RHS == sign-bit-mask - 1
-      TrueIfSigned = false;
-      return RHS.isMaxSignedValue();
-    default:
-      return false;
-    }
-  }
-
   /// Add one to a Constant
   static Constant *AddOne(Constant *C) {
     return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));
