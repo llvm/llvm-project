@@ -216,6 +216,10 @@ OPTIONS
   This can be used to perform lookups as if the object were relocated by the
   offset.
 
+.. option:: --approximate-line-info=<before/after>
+
+  Search the object to find the approximate non-zero line numbers nearest to for a given address.
+
 .. option:: --basenames, -s
 
   Print just the file's name without any directories, instead of the

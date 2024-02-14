@@ -194,7 +194,8 @@ static SMLoc findDebugLineInformationForInstructionAt(
 
   SMLoc NullResult = DebugLineTableRowRef::NULL_ROW.toSMLoc();
   uint32_t RowIndex = LineTable->lookupAddress(
-      {Address, object::SectionedAddress::UndefSection});
+      {Address, object::SectionedAddress::UndefSection},
+      DILineInfoSpecifier::ApproximateLineKind::None);
   if (RowIndex == LineTable->UnknownRowIndex)
     return NullResult;
 

@@ -152,14 +152,16 @@ struct DILineInfoSpecifier {
     RelativeFilePath,
     AbsoluteFilePath
   };
+  enum ApproximateLineKind { None, Before, After };
   using FunctionNameKind = DINameKind;
-
   FileLineInfoKind FLIKind;
   FunctionNameKind FNKind;
+  ApproximateLineKind ALKind;
 
   DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::RawValue,
-                      FunctionNameKind FNKind = FunctionNameKind::None)
-      : FLIKind(FLIKind), FNKind(FNKind) {}
+                      FunctionNameKind FNKind = FunctionNameKind::None,
+                      ApproximateLineKind ALKind = ApproximateLineKind::None)
+      : FLIKind(FLIKind), FNKind(FNKind), ALKind(ALKind) {}
 
   inline bool operator==(const DILineInfoSpecifier &RHS) const {
     return FLIKind == RHS.FLIKind && FNKind == RHS.FNKind;
