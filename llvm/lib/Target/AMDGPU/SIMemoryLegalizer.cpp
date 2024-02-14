@@ -2503,14 +2503,15 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-<<<<<<< HEAD
 bool SIGfx12CacheControl::expandSystemScopeStore(
     MachineBasicBlock::iterator &MI) const {
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
   if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
     return insertWaitsBeforeSystemScopeStore(MI);
+  return false;
+}
 
-=======
+
 bool SIGfx6CacheControl ::handleNonAtomicForPreciseMemory(
     MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoadOrStore());
@@ -2593,7 +2594,7 @@ bool SIGfx10CacheControl ::handleNonAtomicForPreciseMemory(
       }
     }
 
-    // For some instructions, mayLoad() and mayStore() can be both true.
+    // For some vector instructions, mayLoad() and mayStore() can be both true.
     if (Inst.mayStore()) {     // vector store; an instruction can be both
                                // load/store
       if (TII->isVMEM(Inst)) { // VMEM store
@@ -2650,15 +2651,80 @@ bool SIGfx10CacheControl ::handleAtomicForPreciseMemory(
 
 bool SIGfx12CacheControl ::handleNonAtomicForPreciseMemory(
     MachineBasicBlock::iterator &MI) {
-  // To be implemented.
-  return false;
+  assert(MI->mayLoadOrStore());
+
+  MachineInstr &Inst = *MI;
+  unsigned WaitType = 0;
+  // For some vector instructions, mayLoad() and mayStore() can be both true.
+  bool LoadAndStore = false;
+
+  if (TII->isSMRD(Inst)) { // scalar
+    if (Inst.mayStore())
+      return false;
+
+    WaitType = AMDGPU::S_WAIT_KMCNT;
+  } else { // vector
+    if (Inst.mayLoad() && Inst.mayStore()) {
+      WaitType = AMDGPU::S_WAIT_LOADCNT;
+      LoadAndStore = true;
+    } else if (Inst.mayLoad()) { // vector load
+      if (TII->isVMEM(Inst)) {   // VMEM load
+        WaitType = AMDGPU::S_WAIT_LOADCNT;
+      } else if (TII->isFLAT(Inst)) { // Flat load
+        WaitType = AMDGPU::S_WAIT_LOADCNT_DSCNT;
+      } else { // LDS load
+        WaitType = AMDGPU::S_WAIT_DSCNT;
+      }
+    } else {                   // vector store
+      if (TII->isVMEM(Inst)) { // VMEM store
+        WaitType = AMDGPU::S_WAIT_STORECNT;
+      } else if (TII->isFLAT(Inst)) { // Flat store
+        WaitType = AMDGPU::S_WAIT_STORECNT_DSCNT;
+      } else {
+        WaitType = AMDGPU::S_WAIT_DSCNT;
+      }
+    }
+  }
+
+  assert(WaitType != 0);
+
+  MachineBasicBlock &MBB = *MI->getParent();
+
+  unsigned Enc = 0;
+  if (WaitType == AMDGPU::S_WAIT_LOADCNT_DSCNT) {
+    AMDGPU::Waitcnt Wait;
+    Wait.DsCnt = 0;
+    Wait.LoadCnt = 0;
+    Enc = AMDGPU::encodeLoadcntDscnt(IV, Wait);
+  } else if (WaitType == AMDGPU::S_WAIT_STORECNT_DSCNT) {
+    AMDGPU::Waitcnt Wait;
+    Wait.DsCnt = 0;
+    Wait.StoreCnt = 0;
+    Enc = AMDGPU::encodeStorecntDscnt(IV, Wait);
+  }
+
+  BuildMI(MBB, ++MI, DebugLoc(), TII->get(WaitType)).addImm(Enc);
+  --MI;
+  if (LoadAndStore) {
+    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAIT_STORECNT))
+        .addImm(Enc);
+    --MI;
+  }
+  return true;
 }
 
 bool SIGfx12CacheControl ::handleAtomicForPreciseMemory(
     MachineBasicBlock::iterator &MI, bool ret) {
-  // To be implemented.
->>>>>>> Merge code for precise mem with the existing SICacheControl classes.
-  return false;
+  assert(MI->mayLoadOrStore());
+
+  MachineBasicBlock &MBB = *MI->getParent();
+  if (ret) {
+    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAIT_LOADCNT)).addImm(0);
+  } else {
+    BuildMI(MBB, ++MI, DebugLoc(), TII->get(AMDGPU::S_WAIT_STORECNT)).addImm(0);
+  }
+  --MI;
+  return true;
 }
 
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
@@ -2840,13 +2906,10 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent ||
         MOI.getFailureOrdering() == AtomicOrdering::Acquire ||
         MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent) {
-      if (PM)
-        Changed |= CC->handleAtomicForPreciseMemory(MI, isAtomicRet(*MI));
-      else
-        Changed |= CC->insertWait(
-            MI, MOI.getScope(), MOI.getInstrAddrSpace(),
-            isAtomicRet(*MI) ? SIMemOp::LOAD : SIMemOp::STORE,
-            MOI.getIsCrossAddressSpaceOrdering(), Position::AFTER);
+      Changed |=
+          CC->insertWait(MI, MOI.getScope(), MOI.getInstrAddrSpace(),
+                         isAtomicRet(*MI) ? SIMemOp::LOAD : SIMemOp::STORE,
+                         MOI.getIsCrossAddressSpaceOrdering(), Position::AFTER);
       Changed |= CC->insertAcquire(MI, MOI.getScope(),
                                    MOI.getOrderingAddrSpace(),
                                    Position::AFTER);
