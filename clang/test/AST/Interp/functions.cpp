@@ -381,6 +381,81 @@ namespace Variadic {
 
   constexpr int (*VFP)(...) = variadic_function2;
   static_assert(VFP() == 12, "");
+
+  /// Member functions
+  struct Foo {
+    int a = 0;
+    constexpr void bla(...) {}
+    constexpr S bla2(...) {
+      return S{12, true};
+    }
+    constexpr Foo(...) : a(1337) {}
+    constexpr Foo(void *c, bool b, void*p, ...) : a('a' + b) {}
+    constexpr Foo(int a, const S* s, ...) : a(a) {}
+  };
+
+  constexpr int foo2() {
+    Foo f(1, nullptr);
+    auto s = f.bla2(1, 2, S{1, false});
+    return s.a + s.b;
+  }
+  static_assert(foo2() == 13, "");
+
+  constexpr Foo _f = 123;
+  static_assert(_f.a == 1337, "");
+
+  constexpr Foo __f(nullptr, false, nullptr, nullptr, 'a', Foo());
+  static_assert(__f.a ==  'a', "");
+
+
+#if __cplusplus >= 202002L
+namespace VariadicVirtual {
+  class A {
+  public:
+    constexpr virtual void foo(int &a, ...) {
+      a = 1;
+    }
+  };
+
+  class B : public A {
+  public:
+    constexpr void foo(int &a, ...) override {
+      a = 2;
+    }
+  };
+
+  constexpr int foo() {
+    B b;
+    int a;
+    b.foo(a, 1,2,nullptr);
+    return a;
+  }
+  static_assert(foo() == 2, "");
+} // VariadicVirtual
+
+namespace VariadicQualified {
+  class A {
+      public:
+      constexpr virtual int foo(...) const {
+          return 5;
+      }
+  };
+  class B : public A {};
+  class C : public B {
+      public:
+      constexpr int foo(...) const override {
+          return B::foo(1,2,3); // B doesn't have a foo(), so this should call A::foo().
+      }
+      constexpr int foo2() const {
+        return this->A::foo(1,2,3,this);
+      }
+  };
+  constexpr C c;
+  static_assert(c.foo() == 5);
+  static_assert(c.foo2() == 5);
+} // VariadicQualified
+#endif
+
 }
 
 namespace Packs {

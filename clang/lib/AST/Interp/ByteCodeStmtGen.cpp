@@ -126,7 +126,7 @@ bool ByteCodeStmtGen<Emitter>::emitLambdaStaticInvokerBody(
       return false;
   }
 
-  if (!this->emitCall(Func, LambdaCallOp))
+  if (!this->emitCall(Func, 0, LambdaCallOp))
     return false;
 
   this->emitCleanup();
