@@ -103,14 +103,13 @@ INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
 #else
 #define INSTR_PROF_VTABLE_DATA_DEFINED
 #endif
-INSTR_PROF_VTABLE_DATA(
-    const uint64_t, llvm::Type::getInt64Ty(Ctx), VTableNameHash,
-    ConstantInt::get(llvm::Type::getInt64Ty(Ctx),
+INSTR_PROF_VTABLE_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), \
+                       VTableNameHash, ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                      IndexedInstrProf::ComputeHash(PGOVTableName)))
-INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx),
+INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
                        VTablePointer, VTableAddr)
-INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize,
-                       ConstantInt::get(llvm::Type::getInt32Ty(Ctx),
+INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize, \
+                       ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                                         VTableSizeVal))
 #undef INSTR_PROF_VTABLE_DATA
 /* INSTR_PROF_VTABLE_DATA end. */
@@ -306,7 +305,6 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 
 #ifdef INSTR_PROF_SECT_ENTRY
 #define INSTR_PROF_DATA_DEFINED
-
 INSTR_PROF_SECT_ENTRY(IPSK_data, \
                       INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), \
                       INSTR_PROF_DATA_COFF, "__DATA,")
@@ -349,6 +347,7 @@ INSTR_PROF_SECT_ENTRY(IPSK_covname, \
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
+
 
 #ifdef INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_DATA_DEFINED
@@ -520,6 +519,7 @@ getValueProfRecordHeaderSize(uint32_t NumValueSites);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
 #endif  /* INSTR_PROF_VALUE_PROF_DATA */
+
 
 #ifdef INSTR_PROF_COMMON_API_IMPL
 #define INSTR_PROF_DATA_DEFINED

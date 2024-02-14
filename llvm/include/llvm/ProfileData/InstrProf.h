@@ -1062,7 +1062,7 @@ struct Header {
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;
   uint64_t TemporalProfTracesOffset;
-  uint64_t VTableNamesOffset; // Organize virtual table names.
+  uint64_t VTableNamesOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
@@ -1207,6 +1207,7 @@ template <class IntPtrT> struct alignas(8) VTableProfileData {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
 };
+
 // File header structure of the LLVM profile data in raw format.
 // The definition should match the header referenced in
 // compiler-rt/lib/profile/InstrProfilingFile.c  and

@@ -19,7 +19,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
@@ -614,6 +613,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (IndexedInstrProf::ProfVersion::CurrentVersion >= 12) {
     VTableNamesSectionStart = OS.tell();
 
+    // Use an empty string as compressed vtable names and get the necessary
+    // profile format change in place for version 12.
+    // TODO: Store the list of vtable names in InstrProfWriter and use the
+    // real compressed name.
     std::string CompressedVTableNames;
 
     uint64_t CompressedStringLen = CompressedVTableNames.length();
@@ -626,7 +629,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.writeByte(static_cast<uint8_t>(c));
 
     // Pad up to a multiple of 8.
-    // InstrProfReader could read bytes according to 'CompressedStringLen'.
+    // InstrProfReader would read bytes according to 'CompressedStringLen'.
     uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
 
     for (uint64_t K = CompressedStringLen; K < PaddedLength; K++) {

@@ -664,7 +664,7 @@ private:
   /// When a symtab is constructed from profiles by llvm-profdata, the list of
   /// names could be decompressed based on `VTableNamePtr` and
   /// `CompressedVTableNamesLen`.
-  /// A compiler that reads  indexed profiles could construct symtab from module
+  /// A compiler that reads indexed profiles could construct symtab from module
   /// IR so it doesn't need the decompressed names.
   const char *VTableNamePtr = nullptr;
   /// The length of compressed vtable names.

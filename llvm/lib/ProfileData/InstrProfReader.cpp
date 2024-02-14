@@ -367,7 +367,10 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
         } else if (ValueKind == IPVK_VTableTarget) {
-          // do nothing
+          if (InstrProfSymtab::isExternalSymbol(VD.first))
+            Value = 0;
+          else
+            Value = IndexedInstrProf::ComputeHash(VD.first);
         } else {
           READ_NUM(VD.first, Value);
         }

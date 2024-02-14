@@ -113,8 +113,7 @@ getDistanceFromCounterToValueProf(const __llvm_profile_header *const Header) {
   // for runtime profile merge. To merge runtime addresses from multiple
   // profiles collected from the same instrumented binary, the binary should be
   // loaded at fixed base address (e.g., build with -no-pie, or run with ASLR
-  // disabled).
-  // In this set-up these three sections remain unchanged.
+  // disabled). In this set-up these three sections remain unchanged.
   const uint64_t VTableSectionSize =
       Header->NumVTables * sizeof(VTableProfData);
   const uint64_t PaddingBytesAfterVTableSection =
