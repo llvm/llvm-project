@@ -2670,3 +2670,8 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
     OS << " tbuffer";
   dumpName(D);
 }
+
+void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
+  OS << " " << S->getDirectiveKind();
+  // TODO OpenACC: Dump clauses as well.
+}
