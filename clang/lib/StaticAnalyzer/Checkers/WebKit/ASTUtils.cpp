@@ -19,6 +19,10 @@ namespace clang {
 std::pair<const Expr *, bool>
 tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
   while (E) {
+    if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
+      E = tempExpr->getSubExpr();
+      continue;
+    }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =
@@ -62,6 +66,8 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
           E = call->getArg(0);
           continue;
         }
+        if (isReturnValueRefCounted(callee))
+          return {E, true};
 
         if (isPtrConversion(callee)) {
           E = call->getArg(0);
