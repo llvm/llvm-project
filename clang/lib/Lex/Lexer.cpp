@@ -2274,8 +2274,8 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
         Diag(PrefixEnd, diag::err_invalid_char_raw_delim)
           << StringRef(PrefixEnd, 1);
       } else {
-        Diag(PrefixEnd, diag::err_invalid_nexline_raw_delim);
-	}
+        Diag(PrefixEnd, diag::err_invalid_newline_raw_delim);
+      }
     }
 
     // Search for the next '"' in hopes of salvaging the lexer. Unfortunately,
