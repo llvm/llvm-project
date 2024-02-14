@@ -47,10 +47,6 @@ AST_MATCHER(InitListExpr, isFullyDesignated) {
 
 AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
 
-AST_MATCHER_FUNCTION(::internal::Matcher<CXXRecordDecl>, hasBaseWithFields) {
-  return hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
-}
-
 AST_MATCHER(FieldDecl, isAnonymousDecl) {
   if (const auto *Record =
           Node.getType().getCanonicalType()->getAsRecordDecl()) {
@@ -70,10 +66,12 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
+  const auto HasBaseWithFields =
+      hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
   Finder->addMatcher(
       initListExpr(
           hasType(cxxRecordDecl(RestrictToPODTypes ? isPOD() : isAggregate(),
-                                unless(hasBaseWithFields()),
+                                unless(HasBaseWithFields),
                                 unless(has(fieldDecl(isAnonymousDecl()))))
                       .bind("type")),
           unless(IgnoreSingleElementAggregates ? hasSingleElement()
