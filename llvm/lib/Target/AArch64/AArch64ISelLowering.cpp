@@ -26815,7 +26815,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   SmallVector<SDValue, 8> TBLMask;
   // If MinSVESize is not equal to MaxSVESize then we need to know which
   // TBL mask element needs adjustment.
-  SmallVector<SDValue, 8> MulByVLMask;
+  SmallVector<SDValue, 8> AddRuntimeVLMask;
 
   // Bail out for 8-bits element types, because with 2048-bit SVE register
   // size 8 bits is only sufficient to index into the first source vector.
@@ -26826,22 +26826,19 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
     // Handling poison index value.
     if (Index < 0)
       Index = 0;
-    // If we refer to the second operand then we have to add elements
-    // number in hardware register minus number of elements in a type in
-    // case if MinSVESize equals to MaxSVESize, otherwise just add normalized
-    // value and record this element in MulByVLMask to be adjusted in the
-    // runtime.
+    // If the mask refers to elements in the second operand, then we have to
+    // offset the index by the number of elements in a vector. If this is number
+    // is not known at compile-time, we need to maintain a mask with 'VL' values
+    // to add at runtime.
     if ((unsigned)Index >= ElementsPerVectorReg) {
-      if (!MinMaxEqual) {
-        Index = Index - ElementsPerVectorReg;
-        MulByVLMask.push_back(DAG.getConstant(1, DL, MVT::i64));
-      } else {
+      if (MinMaxEqual) {
         Index += IndexLen - ElementsPerVectorReg;
+      } else {
+        Index = Index - ElementsPerVectorReg;
+        AddRuntimeVLMask.push_back(DAG.getConstant(1, DL, MVT::i64));
       }
-    } else {
-      if (!MinMaxEqual)
-        MulByVLMask.push_back(DAG.getConstant(0, DL, MVT::i64));
-    }
+    } else if (!MinMaxEqual)
+      AddRuntimeVLMask.push_back(DAG.getConstant(0, DL, MVT::i64));
     // For 8-bit elements and 1024-bit SVE registers and MaxOffset equals
     // to 255, this might point to the last element of in the second operand
     // of the shufflevector, thus we are rejecting this transform.
@@ -26857,7 +26854,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   for (unsigned i = 0; i < IndexLen - ElementsPerVectorReg; ++i) {
     TBLMask.push_back(DAG.getConstant((int)MaxOffset, DL, MVT::i64));
     if (!MinMaxEqual)
-      MulByVLMask.push_back(DAG.getConstant(0, DL, MVT::i64));
+      AddRuntimeVLMask.push_back(DAG.getConstant(0, DL, MVT::i64));
   }
 
   EVT MaskContainerVT = getContainerForFixedLengthVector(DAG, MaskType);
@@ -26873,17 +26870,17 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
                     Op1, SVEMask);
   else if (Subtarget.hasSVE2()) {
     if (!MinMaxEqual) {
-      SDValue VScale =
-          (BitsPerElt == 64)
-              ? DAG.getVScale(DL, MVT::i64, APInt(64, 128 / BitsPerElt))
-              : DAG.getVScale(DL, MVT::i32, APInt(32, 128 / BitsPerElt));
+      unsigned MinNumElts = AArch64::SVEBitsPerBlock / BitsPerElt;
+      SDValue VScale = (BitsPerElt == 64)
+                           ? DAG.getVScale(DL, MVT::i64, APInt(64, MinNumElts))
+                           : DAG.getVScale(DL, MVT::i32, APInt(32, MinNumElts));
       SDValue VecMask =
           DAG.getBuildVector(MaskType, DL, ArrayRef(TBLMask.data(), IndexLen));
       SDValue MulByMask = DAG.getNode(
           ISD::MUL, DL, MaskType,
           DAG.getNode(ISD::SPLAT_VECTOR, DL, MaskType, VScale),
           DAG.getBuildVector(MaskType, DL,
-                             ArrayRef(MulByVLMask.data(), IndexLen)));
+                             ArrayRef(AddRuntimeVLMask.data(), IndexLen)));
       SDValue UpdatedVecMask =
           DAG.getNode(ISD::ADD, DL, MaskType, VecMask, MulByMask);
       SVEMask = convertToScalableVector(
