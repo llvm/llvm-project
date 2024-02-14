@@ -1355,6 +1355,18 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
              from, m_source_ctx, &to->getASTContext());
   }
 
+  if (auto *to_namespace_decl = dyn_cast<NamespaceDecl>(to)) {
+    m_main.BuildNamespaceMap(to_namespace_decl);
+    to_namespace_decl->setHasExternalVisibleStorage();
+  }
+
+  MarkDeclImported(from, to);
+}
+
+void ClangASTImporter::ASTImporterDelegate::MarkDeclImported(Decl *from,
+                                                             Decl *to) {
+  Log *log = GetLog(LLDBLog::Expressions);
+
   if (auto *to_tag_decl = dyn_cast<TagDecl>(to)) {
     to_tag_decl->setHasExternalLexicalStorage();
     to_tag_decl->getPrimaryContext()->setMustBuildLookupTable();
@@ -1367,11 +1379,6 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
         (to_tag_decl->hasExternalVisibleStorage() ? " Visible" : ""),
         (from_tag_decl->isCompleteDefinition() ? "complete" : "incomplete"),
         (to_tag_decl->isCompleteDefinition() ? "complete" : "incomplete"));
-  }
-
-  if (auto *to_namespace_decl = dyn_cast<NamespaceDecl>(to)) {
-    m_main.BuildNamespaceMap(to_namespace_decl);
-    to_namespace_decl->setHasExternalVisibleStorage();
   }
 
   if (auto *to_container_decl = dyn_cast<ObjCContainerDecl>(to)) {
