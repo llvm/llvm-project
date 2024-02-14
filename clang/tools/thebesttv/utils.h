@@ -8,6 +8,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -67,6 +68,8 @@ struct NamedLocation : public Location {
 };
 
 struct GlobalStat {
+    std::unique_ptr<CompilationDatabase> cb;
+
     fs::path buildPath;
 
     std::map<std::string, std::set<std::string>> callGraph;

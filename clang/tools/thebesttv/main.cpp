@@ -145,17 +145,16 @@ void printCloc(const std::vector<std::string> &allFiles) {
 
 int main(int argc, const char **argv) {
     Global.buildPath = fs::canonical(fs::absolute(argv[1]));
-    std::unique_ptr<CompilationDatabase> cb =
-        getCompilationDatabase(Global.buildPath);
+    Global.cb = getCompilationDatabase(Global.buildPath);
 
     // print all files in compilation database
-    const auto &allFiles = cb->getAllFiles();
+    const auto &allFiles = Global.cb->getAllFiles();
     llvm::errs() << "All files (" << allFiles.size() << "):\n";
     for (auto &file : allFiles)
         llvm::errs() << "  " << file << "\n";
 
     llvm::errs() << "\n--- Building ATS from files ---\n";
-    ClangTool Tool(*cb, allFiles);
+    ClangTool Tool(*Global.cb, allFiles);
 
     // 生成所有函数的调用图
     Tool.run(newFrontendActionFactory<GenWholeProgramCallGraphAction>().get());

@@ -1,5 +1,7 @@
 #include "CallGraph.h"
 
+#include "utils.h"
+
 std::string
 GenWholeProgramCallGraphVisitor::getMangledName(const FunctionDecl *decl) {
     auto mangleContext = Context->createMangleContext();
@@ -102,10 +104,14 @@ std::unique_ptr<clang::ASTConsumer>
 GenWholeProgramCallGraphAction::CreateASTConsumer(
     clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
 
+    static const int total = Global.cb->getAllFiles().size();
+    static int fileCnt = 0;
+    fileCnt++;
+
     SourceManager &sm = Compiler.getSourceManager();
     const FileEntry *fileEntry = sm.getFileEntryForID(sm.getMainFileID());
     std::string filePath(fileEntry->tryGetRealPathName());
-    llvm::errs() << filePath << "\n";
+    llvm::errs() << "[" << fileCnt << "/" << total << "] " << filePath << "\n";
 
     return std::make_unique<GenWholeProgramCallGraphConsumer>(
         &Compiler.getASTContext(), filePath);
