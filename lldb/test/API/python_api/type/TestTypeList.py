@@ -155,7 +155,7 @@ class TypeAndTypeListTestCase(TestBase):
         pointer_type = pointer.GetType()
         self.assertTrue(pointer_type)
         self.DebugSBType(pointer_type)
-        pointer_info_type = pointer_type.template_args[0]
+        pointer_info_type = pointer_type.template_args[1]
         self.assertTrue(pointer_info_type)
         self.DebugSBType(pointer_info_type)
 
