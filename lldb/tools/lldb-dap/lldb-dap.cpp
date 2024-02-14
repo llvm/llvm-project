@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "Watchpoint.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 
 #include <cassert>
 #include <climits>
@@ -2770,13 +2771,24 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
                                           ? std::string(error_cstr)
                                           : "evaluation failed");
     } else {
-      uint64_t value_as_unsigned = value.GetValueAsUnsigned();
-      if (value_as_unsigned == 0) {
+      uint64_t load_addr = value.GetValueAsUnsigned();
+      addr = llvm::utohexstr(load_addr);
+      lldb::SBMemoryRegionInfo region;
+      lldb::SBError err =
+          g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+      if (err.Success()) {
+        if (!(region.IsReadable() || region.IsWritable())) {
+          body.try_emplace("dataId", nullptr);
+          body.try_emplace("description",
+                           "memory region for address " + addr +
+                               " has no read or write permissions");
+        }
+      } else {
         body.try_emplace("dataId", nullptr);
         body.try_emplace("description",
-                         "unable to evaluate expression to an address.");
+                         "unable to get memory region info for address " +
+                             addr);
       }
-      addr = llvm::utohexstr(value_as_unsigned);
     }
   } else {
     body.try_emplace("dataId", nullptr);
