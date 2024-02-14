@@ -137,15 +137,18 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
 #ifdef _WIN32
         if (EC.value() == WSAEADDRINUSE) {
 #else
-      if (EC == std::errc::address_in_use) {
+        if (EC == std::errc::address_in_use) {
 #endif
           exit(EXIT_SUCCESS);
         } else if (EC == std::errc::file_exists) {
           if (std::remove(SocketPath.c_str()) != 0) {
-            llvm::errs() << "Failed to remove file: " << strerror(errno)
-                         << '\n';
+            llvm::errs() << "Failed to remove " << SocketPath << ": "
+                         << strerror(errno) << '\n';
             exit(EXIT_FAILURE);
           }
+          // If a previous module build daemon invocation crashes, the socket
+          // file will need to be removed before the address can be binded to
+          verboseLog("Removing ineligible file: " + SocketPath);
         } else {
           llvm::errs() << "MBD failed to create unix socket: "
                        << SE.getMessage() << ": " << EC.message() << '\n';
@@ -153,7 +156,7 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
         }
       });
     } else {
-      verboseLog("mbd created and binded to socket at: " + SocketPath);
+      verboseLog("MBD created and binded to socket at: " + SocketPath);
       ServerListener.emplace(std::move(*MaybeServerListener));
       break;
     }

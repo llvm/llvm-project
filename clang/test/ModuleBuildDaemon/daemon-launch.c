@@ -9,7 +9,8 @@
 // RUN: timeout --signal=SIGTERM 2 %clang -cc1modbuildd mbd-launch -v || true
 // RUN: cat mbd-launch/mbd.out | sed 's:\\\\\?:/:g' | FileCheck %s
 
-// CHECK: mbd created and binded to socket at: mbd-launch/mbd.sock
+// CHECK: MBD created and binded to socket at: mbd-launch/mbd.sock
+// CHECK-NEXT: Signal received, shutting down
 
 // Make sure mbd.err is empty
 // RUN: [ ! -s "mbd-launch/mbd.err" ] && true || false
