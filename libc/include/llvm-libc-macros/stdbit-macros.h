@@ -86,6 +86,21 @@ inline unsigned stdc_first_leading_zero(unsigned long x) {
 inline unsigned stdc_first_leading_zero(unsigned long long x) {
   return stdc_first_leading_zero_ull(x);
 }
+inline unsigned stdc_first_leading_one(unsigned char x) {
+  return stdc_first_leading_one_uc(x);
+}
+inline unsigned stdc_first_leading_one(unsigned short x) {
+  return stdc_first_leading_one_us(x);
+}
+inline unsigned stdc_first_leading_one(unsigned x) {
+  return stdc_first_leading_one_ui(x);
+}
+inline unsigned stdc_first_leading_one(unsigned long x) {
+  return stdc_first_leading_one_ul(x);
+}
+inline unsigned stdc_first_leading_one(unsigned long long x) {
+  return stdc_first_leading_one_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -122,6 +137,13 @@ inline unsigned stdc_first_leading_zero(unsigned long long x) {
       unsigned: stdc_first_leading_zero_ui,                                    \
       unsigned long: stdc_first_leading_zero_ul,                               \
       unsigned long long: stdc_first_leading_zero_ull)(x)
+#define stdc_first_leading_one(x)                                              \
+  _Generic((x),                                                                \
+      unsigned char: stdc_first_leading_one_uc,                                \
+      unsigned short: stdc_first_leading_one_us,                               \
+      unsigned: stdc_first_leading_one_ui,                                     \
+      unsigned long: stdc_first_leading_one_ul,                                \
+      unsigned long long: stdc_first_leading_one_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H

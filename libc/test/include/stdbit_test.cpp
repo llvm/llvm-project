@@ -50,6 +50,13 @@ unsigned stdc_first_leading_zero_ul(unsigned long) noexcept { return 0xEDU; }
 unsigned stdc_first_leading_zero_ull(unsigned long long) noexcept {
   return 0xEFU;
 }
+unsigned stdc_first_leading_one_uc(unsigned char) noexcept { return 0xFAU; }
+unsigned stdc_first_leading_one_us(unsigned short) noexcept { return 0xFBU; }
+unsigned stdc_first_leading_one_ui(unsigned) noexcept { return 0xFCU; }
+unsigned stdc_first_leading_one_ul(unsigned long) noexcept { return 0xFDU; }
+unsigned stdc_first_leading_one_ull(unsigned long long) noexcept {
+  return 0xFFU;
+}
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -92,4 +99,12 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstLeadingZero) {
   EXPECT_EQ(stdc_first_leading_zero(0U), 0xECU);
   EXPECT_EQ(stdc_first_leading_zero(0UL), 0xEDU);
   EXPECT_EQ(stdc_first_leading_zero(0ULL), 0xEFU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstLeadingOne) {
+  EXPECT_EQ(stdc_first_leading_one(static_cast<unsigned char>(0U)), 0xFAU);
+  EXPECT_EQ(stdc_first_leading_one(static_cast<unsigned short>(0U)), 0xFBU);
+  EXPECT_EQ(stdc_first_leading_one(0U), 0xFCU);
+  EXPECT_EQ(stdc_first_leading_one(0UL), 0xFDU);
+  EXPECT_EQ(stdc_first_leading_one(0ULL), 0xFFU);
 }

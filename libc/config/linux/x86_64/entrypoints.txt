@@ -117,6 +117,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_first_leading_zero_ui
     libc.src.stdbit.stdc_first_leading_zero_ul
     libc.src.stdbit.stdc_first_leading_zero_ull
+    libc.src.stdbit.stdc_first_leading_one_uc
+    libc.src.stdbit.stdc_first_leading_one_us
+    libc.src.stdbit.stdc_first_leading_one_ui
+    libc.src.stdbit.stdc_first_leading_one_ul
+    libc.src.stdbit.stdc_first_leading_one_ull
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
