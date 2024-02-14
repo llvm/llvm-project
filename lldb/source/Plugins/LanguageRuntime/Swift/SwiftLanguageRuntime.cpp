@@ -922,8 +922,14 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
                                likely_module_names);
   }
 
-  if (info_id)
-    if (auto *swift_metadata_cache = GetSwiftMetadataCache())
+  if (!info_id) {
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "Error while loading reflection metadata in \"{0}\"",
+             module_sp->GetObjectName());
+    return false;
+  }
+
+  if (auto *swift_metadata_cache = GetSwiftMetadataCache())
       swift_metadata_cache->registerModuleWithReflectionInfoID(module_sp,
                                                                *info_id);
 
