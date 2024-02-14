@@ -5,14 +5,13 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-LABEL: name: f1
   ; GFX90A: bb.0.bb:
   ; GFX90A-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr15, $sgpr10_sgpr11
+  ; GFX90A-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr15, $sgpr10_sgpr11
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $sgpr32 = S_MOV_B32 0
   ; GFX90A-NEXT:   $flat_scr_lo = S_ADD_U32 $sgpr10, $sgpr15, implicit-def $scc
   ; GFX90A-NEXT:   $flat_scr_hi = S_ADDC_U32 $sgpr11, 0, implicit-def dead $scc, implicit $scc
-  ; GFX90A-NEXT:   $sgpr2 = S_MOV_B32 4294967295, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GFX90A-NEXT:   $sgpr3 = S_MOV_B32 14680064, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GFX90A-NEXT:   $sgpr0_sgpr1 = COPY $flat_scr, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX90A-NEXT:   $sgpr0 = S_ADD_U32 $sgpr0, $sgpr15, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX90A-NEXT:   $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT:   renamable $sgpr10_sgpr11 = COPY $sgpr8_sgpr9
   ; GFX90A-NEXT:   renamable $vgpr31 = COPY $vgpr0, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr33 = S_LOAD_DWORD_IMM renamable $sgpr6_sgpr7, 24, 0 :: (dereferenceable invariant load (s32) from %ir.arg4.kernarg.offset.align.down, align 8, addrspace 4)

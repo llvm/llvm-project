@@ -1228,3 +1228,14 @@ namespace InheritedConstructor {
     constexpr S s(1);
   }
 }
+
+namespace InvalidCtorInitializer {
+  struct X {
+    int Y;
+    constexpr X() // expected-note {{declared here}}
+        : Y(fo_o_()) {} // both-error {{use of undeclared identifier 'fo_o_'}}
+  };
+  // no crash on evaluating the constexpr ctor.
+  constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}} \
+                           // expected-note {{undefined constructor 'X'}}
+}

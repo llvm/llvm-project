@@ -2137,26 +2137,24 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // If Src is a fixed vector and Dst is a scalable vector, and both have the
     // same element type, use the llvm.vector.insert intrinsic to perform the
     // bitcast.
-    if (const auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
-      if (const auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(DstTy)) {
-        // If we are casting a fixed i8 vector to a scalable 16 x i1 predicate
+    if (auto *FixedSrcTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      if (auto *ScalableDstTy = dyn_cast<llvm::ScalableVectorType>(DstTy)) {
+        // If we are casting a fixed i8 vector to a scalable i1 predicate
         // vector, use a vector insert and bitcast the result.
-        bool NeedsBitCast = false;
-        auto PredType = llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-        llvm::Type *OrigType = DstTy;
-        if (ScalableDst == PredType &&
-            FixedSrc->getElementType() == Builder.getInt8Ty()) {
-          DstTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
-          ScalableDst = cast<llvm::ScalableVectorType>(DstTy);
-          NeedsBitCast = true;
+        if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
+            ScalableDstTy->getElementCount().isKnownMultipleOf(8) &&
+            FixedSrcTy->getElementType()->isIntegerTy(8)) {
+          ScalableDstTy = llvm::ScalableVectorType::get(
+              FixedSrcTy->getElementType(),
+              ScalableDstTy->getElementCount().getKnownMinValue() / 8);
         }
-        if (FixedSrc->getElementType() == ScalableDst->getElementType()) {
-          llvm::Value *UndefVec = llvm::UndefValue::get(DstTy);
+        if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
+          llvm::Value *UndefVec = llvm::UndefValue::get(ScalableDstTy);
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              DstTy, UndefVec, Src, Zero, "cast.scalable");
-          if (NeedsBitCast)
-            Result = Builder.CreateBitCast(Result, OrigType);
+              ScalableDstTy, UndefVec, Src, Zero, "cast.scalable");
+          if (Result->getType() != DstTy)
+            Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
         }
       }
@@ -2165,18 +2163,19 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // If Src is a scalable vector and Dst is a fixed vector, and both have the
     // same element type, use the llvm.vector.extract intrinsic to perform the
     // bitcast.
-    if (const auto *ScalableSrc = dyn_cast<llvm::ScalableVectorType>(SrcTy)) {
-      if (const auto *FixedDst = dyn_cast<llvm::FixedVectorType>(DstTy)) {
-        // If we are casting a scalable 16 x i1 predicate vector to a fixed i8
+    if (auto *ScalableSrcTy = dyn_cast<llvm::ScalableVectorType>(SrcTy)) {
+      if (auto *FixedDstTy = dyn_cast<llvm::FixedVectorType>(DstTy)) {
+        // If we are casting a scalable i1 predicate vector to a fixed i8
         // vector, bitcast the source and use a vector extract.
-        auto PredType = llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-        if (ScalableSrc == PredType &&
-            FixedDst->getElementType() == Builder.getInt8Ty()) {
-          SrcTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
-          ScalableSrc = cast<llvm::ScalableVectorType>(SrcTy);
-          Src = Builder.CreateBitCast(Src, SrcTy);
+        if (ScalableSrcTy->getElementType()->isIntegerTy(1) &&
+            ScalableSrcTy->getElementCount().isKnownMultipleOf(8) &&
+            FixedDstTy->getElementType()->isIntegerTy(8)) {
+          ScalableSrcTy = llvm::ScalableVectorType::get(
+              FixedDstTy->getElementType(),
+              ScalableSrcTy->getElementCount().getKnownMinValue() / 8);
+          Src = Builder.CreateBitCast(Src, ScalableSrcTy);
         }
-        if (ScalableSrc->getElementType() == FixedDst->getElementType()) {
+        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType()) {
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           return Builder.CreateExtractVector(DstTy, Src, Zero, "cast.fixed");
         }

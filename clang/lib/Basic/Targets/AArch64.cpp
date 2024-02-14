@@ -367,8 +367,20 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
-  Builder.defineMacro("__ARM_ARCH",
-                      std::to_string(ArchInfo->Version.getMajor()));
+
+  // __ARM_ARCH is defined as an integer value indicating the current ARM ISA.
+  // For ISAs up to and including v8, __ARM_ARCH is equal to the major version
+  // number. For ISAs from v8.1 onwards, __ARM_ARCH is scaled up to include the
+  // minor version number, e.g. for ARM architecture ARMvX.Y:
+  // __ARM_ARCH = X * 100 + Y.
+  if (ArchInfo->Version.getMajor() == 8 && ArchInfo->Version.getMinor() == 0)
+    Builder.defineMacro("__ARM_ARCH",
+                        std::to_string(ArchInfo->Version.getMajor()));
+  else
+    Builder.defineMacro("__ARM_ARCH",
+                        std::to_string(ArchInfo->Version.getMajor() * 100 +
+                                       ArchInfo->Version.getMinor().value()));
+
   Builder.defineMacro("__ARM_ARCH_PROFILE",
                       std::string("'") + (char)ArchInfo->Profile + "'");
 

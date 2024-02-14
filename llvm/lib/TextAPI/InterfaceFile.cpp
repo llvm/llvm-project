@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include <iomanip>
 #include <sstream>
@@ -349,6 +350,34 @@ InterfaceFile::extract(Architecture Arch) const {
   }
 
   return std::move(IF);
+}
+
+void InterfaceFile::setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                                       const Target &Targ) {
+  if (getFileType() != BA.File)
+    setFileType(BA.File);
+  if (getInstallName().empty())
+    setInstallName(BA.InstallName);
+  if (BA.AppExtensionSafe && !isApplicationExtensionSafe())
+    setApplicationExtensionSafe();
+  if (BA.TwoLevelNamespace && !isTwoLevelNamespace())
+    setTwoLevelNamespace();
+  if (BA.OSLibNotForSharedCache && !isOSLibNotForSharedCache())
+    setOSLibNotForSharedCache();
+  if (getCurrentVersion().empty())
+    setCurrentVersion(BA.CurrentVersion);
+  if (getCompatibilityVersion().empty())
+    setCompatibilityVersion(BA.CompatVersion);
+  if (getSwiftABIVersion() == 0)
+    setSwiftABIVersion(BA.SwiftABI);
+  if (getPath().empty())
+    setPath(BA.Path);
+  if (!BA.ParentUmbrella.empty())
+    addParentUmbrella(Targ, BA.ParentUmbrella);
+  for (const auto &Client : BA.AllowableClients)
+    addAllowableClient(Client, Targ);
+  for (const auto &Lib : BA.RexportedLibraries)
+    addReexportedLibrary(Lib, Targ);
 }
 
 static bool isYAMLTextStub(const FileType &Kind) {

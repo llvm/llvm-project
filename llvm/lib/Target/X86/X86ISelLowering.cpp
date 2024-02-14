@@ -32109,6 +32109,20 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::CTPOP: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    // If we have at most 32 active bits, then perform as i32 CTPOP.
+    // TODO: Perform this in generic legalizer?
+    KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
+    unsigned LZ = Known.countMinLeadingZeros();
+    unsigned TZ = Known.countMinTrailingZeros();
+    if ((LZ + TZ) >= 32) {
+      SDValue Op = DAG.getNode(ISD::SRL, dl, MVT::i64, N->getOperand(0),
+                               DAG.getShiftAmountConstant(TZ, MVT::i64, dl));
+      Op = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Op);
+      Op = DAG.getNode(ISD::CTPOP, dl, MVT::i32, Op);
+      Op = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Op);
+      Results.push_back(Op);
+      return;
+    }
     // Use a v2i64 if possible.
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
@@ -48006,28 +48020,26 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
 // given x, y and z are of type \p VT. We can do so, if operands are either
 // truncates from VT types, the second operand is a vector of constants or can
 // be recursively promoted.
-static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
-                                     unsigned Depth) {
+static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL, EVT VT,
+                                     SelectionDAG &DAG, unsigned Depth) {
   // Limit recursion to avoid excessive compile times.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
 
-  if (N->getOpcode() != ISD::XOR && N->getOpcode() != ISD::AND &&
-      N->getOpcode() != ISD::OR)
+  if (!ISD::isBitwiseLogicOp(N.getOpcode()))
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  SDLoc DL(N);
+  SDValue N0 = N.getOperand(0);
+  SDValue N1 = N.getOperand(1);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegalOrPromote(N->getOpcode(), VT))
+  if (!TLI.isOperationLegalOrPromote(N.getOpcode(), VT))
     return SDValue();
 
-  if (SDValue NN0 = PromoteMaskArithmetic(N0.getNode(), VT, DAG, Depth + 1))
+  if (SDValue NN0 = PromoteMaskArithmetic(N0, DL, VT, DAG, Depth + 1))
     N0 = NN0;
   else {
-    // The Left side has to be a trunc.
+    // The left side has to be a trunc.
     if (N0.getOpcode() != ISD::TRUNCATE)
       return SDValue();
 
@@ -48038,22 +48050,22 @@ static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
     N0 = N0.getOperand(0);
   }
 
-  if (SDValue NN1 = PromoteMaskArithmetic(N1.getNode(), VT, DAG, Depth + 1))
+  if (SDValue NN1 = PromoteMaskArithmetic(N1, DL, VT, DAG, Depth + 1))
     N1 = NN1;
   else {
-    // The right side has to be a 'trunc' or a constant vector.
+    // The right side has to be a 'trunc' or a (foldable) constant.
     bool RHSTrunc = N1.getOpcode() == ISD::TRUNCATE &&
                     N1.getOperand(0).getValueType() == VT;
-    if (!RHSTrunc && !ISD::isBuildVectorOfConstantSDNodes(N1.getNode()))
-      return SDValue();
-
     if (RHSTrunc)
       N1 = N1.getOperand(0);
+    else if (SDValue Cst =
+                 DAG.FoldConstantArithmetic(ISD::ZERO_EXTEND, DL, VT, {N1}))
+      N1 = Cst;
     else
-      N1 = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N1);
+      return SDValue();
   }
 
-  return DAG.getNode(N->getOpcode(), DL, VT, N0, N1);
+  return DAG.getNode(N.getOpcode(), DL, VT, N0, N1);
 }
 
 // On AVX/AVX2 the type v8i1 is legalized to v8i16, which is an XMM sized
@@ -48062,24 +48074,23 @@ static SDValue PromoteMaskArithmetic(SDNode *N, EVT VT, SelectionDAG &DAG,
 // some of the transition sequences.
 // Even with AVX-512 this is still useful for removing casts around logical
 // operations on vXi1 mask types.
-static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
+static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL,
+                                     SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
+  EVT VT = N.getValueType();
   assert(VT.isVector() && "Expected vector type");
+  assert((N.getOpcode() == ISD::ANY_EXTEND ||
+          N.getOpcode() == ISD::ZERO_EXTEND ||
+          N.getOpcode() == ISD::SIGN_EXTEND) && "Invalid Node");
 
-  SDLoc DL(N);
-  assert((N->getOpcode() == ISD::ANY_EXTEND ||
-          N->getOpcode() == ISD::ZERO_EXTEND ||
-          N->getOpcode() == ISD::SIGN_EXTEND) && "Invalid Node");
-
-  SDValue Narrow = N->getOperand(0);
+  SDValue Narrow = N.getOperand(0);
   EVT NarrowVT = Narrow.getValueType();
 
   // Generate the wide operation.
-  SDValue Op = PromoteMaskArithmetic(Narrow.getNode(), VT, DAG, 0);
+  SDValue Op = PromoteMaskArithmetic(Narrow, DL, VT, DAG, 0);
   if (!Op)
     return SDValue();
-  switch (N->getOpcode()) {
+  switch (N.getOpcode()) {
   default: llvm_unreachable("Unexpected opcode");
   case ISD::ANY_EXTEND:
     return Op;
@@ -52550,7 +52561,7 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
 
     // Attempt to promote any comparison mask ops before moving the
     // SIGN_EXTEND_INREG in the way.
-    if (SDValue Promote = PromoteMaskArithmetic(N0.getNode(), DAG, Subtarget))
+    if (SDValue Promote = PromoteMaskArithmetic(N0, dl, DAG, Subtarget))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Promote, N1);
 
     if (N00.getValueType() == MVT::v4i32 && ExtraVT.getSizeInBits() < 128) {
@@ -52771,7 +52782,7 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (VT.isVector()) {
-    if (SDValue R = PromoteMaskArithmetic(N, DAG, Subtarget))
+    if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), DL, DAG, Subtarget))
       return R;
 
     if (N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG)
@@ -52805,7 +52816,7 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   SmallVector<SDValue, 8> Ops;
   EVT VT = V.getValueType();
   EVT EltVT = VT.getVectorElementType();
-  for (auto Op : V->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
       Ops.push_back(DAG.getConstantFP(-Cst->getValueAPF(), SDLoc(Op), EltVT));
     } else {
@@ -52827,8 +52838,8 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   // prefer one of the values. We prefer a constant with a negative value on
   // the first place.
   // N.B. We need to skip undefs that may precede a value.
-  for (auto op : V->op_values()) {
-    if (auto *Cst = dyn_cast<ConstantFPSDNode>(op)) {
+  for (const SDValue &Op : V->op_values()) {
+    if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
       if (Cst->isNegative())
         return SDValue();
       break;
@@ -52985,7 +52996,7 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (VT.isVector())
-    if (SDValue R = PromoteMaskArithmetic(N, DAG, Subtarget))
+    if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), dl, DAG, Subtarget))
       return R;
 
   if (SDValue NewAdd = promoteExtBeforeAdd(N, DAG, Subtarget))
