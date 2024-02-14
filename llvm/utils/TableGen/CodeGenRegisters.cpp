@@ -1985,18 +1985,14 @@ void CodeGenRegBank::computeRegUnitSets() {
     if (!RC.Allocatable || RC.Artificial || !RC.GeneratePressureSet)
       continue;
 
-    // Speculatively grow the RegUnitSets to hold the new set.
-    RegUnitSet &RUSet = RegUnitSets.emplace_back();
-    RUSet.Name = RC.getName();
-
     // Compute a sorted list of units in this class.
+    RegUnitSet RUSet;
+    RUSet.Name = RC.getName();
     RC.buildRegUnitSet(*this, RUSet.Units);
 
     // Find an existing RegUnitSet.
-    std::vector<RegUnitSet>::const_iterator SetI =
-        findRegUnitSet(RegUnitSets, RUSet);
-    if (SetI != std::prev(RegUnitSets.end()))
-      RegUnitSets.pop_back();
+    if (findRegUnitSet(RegUnitSets, RUSet) == RegUnitSets.end())
+      RegUnitSets.push_back(std::move(RUSet));
   }
 
   if (RegUnitSets.empty())
@@ -2042,11 +2038,9 @@ void CodeGenRegBank::computeRegUnitSets() {
       if (Intersection.empty())
         continue;
 
-      // Speculatively grow the RegUnitSets to hold the new set.
-      RegUnitSet &RUSet = RegUnitSets.emplace_back();
+      RegUnitSet RUSet;
       RUSet.Name =
           RegUnitSets[Idx].Name + "_with_" + RegUnitSets[SearchIdx].Name;
-
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),
                      RegUnitSets[SearchIdx].Units.begin(),
@@ -2054,16 +2048,13 @@ void CodeGenRegBank::computeRegUnitSets() {
                      std::inserter(RUSet.Units, RUSet.Units.begin()));
 
       // Find an existing RegUnitSet, or add the union to the unique sets.
-      std::vector<RegUnitSet>::const_iterator SetI =
-          findRegUnitSet(RegUnitSets, RUSet);
-      if (SetI != std::prev(RegUnitSets.end()))
-        RegUnitSets.pop_back();
-      else {
-        LLVM_DEBUG(dbgs() << "UnitSet " << RegUnitSets.size() - 1 << " "
+      if (findRegUnitSet(RegUnitSets, RUSet) == RegUnitSets.end()) {
+        LLVM_DEBUG(dbgs() << "UnitSet " << RegUnitSets.size() << " "
                           << RUSet.Name << ":";
                    for (auto &U
                         : RUSet.Units) printRegUnitName(U);
                    dbgs() << "\n";);
+        RegUnitSets.push_back(std::move(RUSet));
       }
     }
   }
