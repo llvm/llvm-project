@@ -16491,6 +16491,10 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("T A::operator()();", NoSpace);
   verifyFormat("X A::operator++(T);", NoSpace);
   verifyFormat("auto lambda = []() { return 0; };", NoSpace);
+  verifyFormat("#if (foo || bar) && baz\n"
+               "#elif ((a || b) && c) || d\n"
+               "#endif",
+               NoSpace);
 
   FormatStyle Space = getLLVMStyle();
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;
