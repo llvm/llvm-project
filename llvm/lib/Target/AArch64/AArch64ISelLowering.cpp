@@ -25043,12 +25043,13 @@ void AArch64TargetLowering::ReplaceNodeResults(
       Results.push_back(
           LowerToPredicatedOp(SDValue(N, 0), DAG, AArch64ISD::MULHU_PRED));
     return;
-  case ISD::FP_ROUND:{
+  case ISD::FP_ROUND: {
     if (N->getValueType(0) == MVT::f16 && !Subtarget->hasFullFP16()) {
-        // Promote fp16 result to legal type
-        SDLoc DL(N);
-        EVT NVT = getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-        Results.push_back(DAG.getNode(ISD::FP16_TO_FP, DL, NVT, N->getOperand(0)));
+      // Promote fp16 result to legal type
+      SDLoc DL(N);
+      EVT NVT = getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+      Results.push_back(
+          DAG.getNode(ISD::FP16_TO_FP, DL, NVT, N->getOperand(0)));
     }
     return;
   }
