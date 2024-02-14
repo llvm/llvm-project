@@ -291,6 +291,9 @@ bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
           });
     } else
       Err = Linker::linkModules(*M, std::move(LM.Module), LM.LinkFlags);
+
+    if (Err)
+      return true;
   }
 
   LinkModules.clear();
