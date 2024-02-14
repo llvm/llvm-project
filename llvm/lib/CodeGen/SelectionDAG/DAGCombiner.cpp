@@ -12821,13 +12821,11 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
 // ExtendUsesToFormExtLoad - Trying to extend uses of a load to enable this:
 // "fold ({s|z|a}ext (load x)) -> ({s|z|a}ext (truncate ({s|z|a}extload x)))"
 // transformation. Returns true if extension are possible and the above
-// mentioned transformation is profitable. If ChangeToSExt is non-null, it will
-// be set to true if a signed setcc is found. Caller should use a sextload.
+// mentioned transformation is profitable.
 static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
                                     unsigned ExtOpc,
                                     SmallVectorImpl<SDNode *> &ExtendNodes,
-                                    const TargetLowering &TLI,
-                                    bool *ChangeToSExt = nullptr) {
+                                    const TargetLowering &TLI) {
   bool HasCopyToRegUses = false;
   bool isTruncFree = TLI.isTruncateFree(VT, N0.getValueType());
   for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end(); UI != UE;
@@ -12840,12 +12838,9 @@ static bool ExtendUsesToFormExtLoad(EVT VT, SDNode *N, SDValue N0,
     // FIXME: Only extend SETCC N, N and SETCC N, c for now.
     if (ExtOpc != ISD::ANY_EXTEND && User->getOpcode() == ISD::SETCC) {
       ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
-      if (ExtOpc == ISD::ZERO_EXTEND && ISD::isSignedIntSetCC(CC)) {
+      if (ExtOpc == ISD::ZERO_EXTEND && ISD::isSignedIntSetCC(CC))
         // Sign bits will be lost after a zext.
-        if (!ChangeToSExt)
-          return false;
-        *ChangeToSExt = true;
-      }
+        return false;
       bool Add = false;
       for (unsigned i = 0; i != 2; ++i) {
         SDValue UseOp = User->getOperand(i);
@@ -13167,32 +13162,44 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc,
                                   bool NonNegZExt = false) {
+  if (!ISD::isNON_EXTLoad(N0.getNode()) ||
+      !ISD::isUNINDEXEDLoad(N0.getNode()))
+    return {};
+
+  // If this is zext nneg, see if it would make sense to treat it as a sext.
+  if (NonNegZExt) {
+    assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
+           "Unexpected load type or opcode");
+    for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end(); UI != UE;
+         ++UI) {
+      SDNode *User = *UI;
+      if (User->getOpcode() == ISD::SETCC) {
+        ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
+        if (ISD::isSignedIntSetCC(CC)) {
+          ExtLoadType = ISD::SEXTLOAD;
+          ExtOpc = ISD::SIGN_EXTEND;
+          break;
+        }
+      }
+    }
+  }
+
   // TODO: isFixedLengthVector() should be removed and any negative effects on
   // code generation being the result of that target's implementation of
   // isVectorLoadExtDesirable().
-  if (!ISD::isNON_EXTLoad(N0.getNode()) ||
-      !ISD::isUNINDEXEDLoad(N0.getNode()) ||
-      ((LegalOperations || VT.isFixedLengthVector() ||
-        !cast<LoadSDNode>(N0)->isSimple()) &&
-       !TLI.isLoadExtLegal(ExtLoadType, VT, N0.getValueType())))
+  if ((LegalOperations || VT.isFixedLengthVector() ||
+       !cast<LoadSDNode>(N0)->isSimple()) &&
+      !TLI.isLoadExtLegal(ExtLoadType, VT, N0.getValueType()))
     return {};
 
-  bool ChangeToSExt = false;
   bool DoXform = true;
   SmallVector<SDNode *, 4> SetCCs;
   if (!N0.hasOneUse())
-    DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ExtOpc, SetCCs, TLI,
-                                      NonNegZExt ? &ChangeToSExt : nullptr);
+    DoXform = ExtendUsesToFormExtLoad(VT, N, N0, ExtOpc, SetCCs, TLI);
   if (VT.isVector())
     DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
   if (!DoXform)
     return {};
-
-  // Change extension type if we found a signed setcc.
-  if (ChangeToSExt) {
-    ExtOpc = ISD::SIGN_EXTEND;
-    ExtLoadType = ISD::SEXTLOAD;
-  }
 
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
   SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
