@@ -6842,21 +6842,21 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   if (IdentifierInfo *II = NewTD->getIdentifier())
     if (!NewTD->isInvalidDecl() &&
         NewTD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-      switch (II->getInterestingIdentifierID()) {
-      case tok::InterestingIdentifierKind::FILE:
+      switch (II->getNotableIdentifierID()) {
+      case tok::NotableIdentifierKind::FILE:
         Context.setFILEDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::jmp_buf:
+      case tok::NotableIdentifierKind::jmp_buf:
         Context.setjmp_bufDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::sigjmp_buf:
+      case tok::NotableIdentifierKind::sigjmp_buf:
         Context.setsigjmp_bufDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::ucontext_t:
+      case tok::NotableIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::float_t:
-      case tok::InterestingIdentifierKind::double_t:
+      case tok::NotableIdentifierKind::float_t:
+      case tok::NotableIdentifierKind::double_t:
         NewTD->addAttr(AvailableOnlyInDefaultEvalMethodAttr::Create(Context));
         break;
       default:

@@ -3599,8 +3599,8 @@ class ASTIdentifierTableTrait {
   bool isInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset) {
     II->getObjCOrBuiltinID();
     bool IsInteresting =
-        II->getInterestingIdentifierID() !=
-            tok::InterestingIdentifierKind::not_interesting ||
+        II->getNotableIdentifierID() !=
+            tok::NotableIdentifierKind::not_notable ||
         II->getBuiltinID() != Builtin::ID::NotBuiltin ||
         II->getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
     if (MacroOffset || II->isPoisoned() || (!IsModule && IsInteresting) ||
