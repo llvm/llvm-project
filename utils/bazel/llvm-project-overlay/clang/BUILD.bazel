@@ -1863,6 +1863,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TextAPI",
         "//llvm:config",
     ],
 )
@@ -2064,7 +2065,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ast",
+        ":basic",
         ":support",
+        "//llvm:Support",
         "//llvm:TextAPI",
     ],
 )
