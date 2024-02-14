@@ -689,8 +689,8 @@ private:
   CodeGenModule &CGM;
 
   llvm::SmallVector<DecisionIDPair> DecisionStack;
+  MCDC::State &MCDCState;
   llvm::DenseMap<const Stmt *, mcdc::ConditionID> &CondIDs;
-  llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
   mcdc::ConditionID NextID = 1;
   bool NotMapped = false;
 
@@ -703,12 +703,9 @@ private:
   }
 
 public:
-  MCDCCoverageBuilder(
-      CodeGenModule &CGM,
-      llvm::DenseMap<const Stmt *, mcdc::ConditionID> &CondIDMap,
-      llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap)
-      : CGM(CGM), DecisionStack(1, DecisionStackSentinel), CondIDs(CondIDMap),
-        MCDCBitmapMap(MCDCBitmapMap) {}
+  MCDCCoverageBuilder(CodeGenModule &CGM, MCDC::State &MCDCState)
+      : CGM(CGM), DecisionStack(1, DecisionStackSentinel), MCDCState(MCDCState),
+        CondIDs(MCDCState.CondIDMap) {}
 
   /// Return whether the build of the control flow map is at the top-level
   /// (root) of a logical operator nest in a boolean expression prior to the
@@ -745,7 +742,8 @@ public:
       return;
 
     // If binary expression is disqualified, don't do mapping.
-    if (!isBuilding() && !MCDCBitmapMap.contains(CodeGenFunction::stripCond(E)))
+    if (!isBuilding() &&
+        !MCDCState.BitmapMap.contains(CodeGenFunction::stripCond(E)))
       NotMapped = true;
 
     // Don't go any further if we don't need to map condition IDs.
@@ -818,8 +816,7 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
 
-  /// The map of statements to bitmap coverage object values.
-  llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
+  MCDC::State &MCDCState;
 
   /// A stack of currently live regions.
   llvm::SmallVector<SourceMappingRegion> RegionStack;
@@ -863,7 +860,7 @@ struct CounterCoverageMappingBuilder
     return Counter::getCounter(CounterMap[S]);
   }
 
-  unsigned getRegionBitmap(const Stmt *S) { return MCDCBitmapMap[S]; }
+  unsigned getRegionBitmap(const Stmt *S) { return MCDCState.BitmapMap[S]; }
 
   /// Push a region onto the stack.
   ///
@@ -1341,12 +1338,9 @@ struct CounterCoverageMappingBuilder
   CounterCoverageMappingBuilder(
       CoverageMappingModuleGen &CVM,
       llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
-      llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap,
-      llvm::DenseMap<const Stmt *, mcdc::ConditionID> &CondIDMap,
-      SourceManager &SM, const LangOptions &LangOpts)
+      MCDC::State &MCDCState, SourceManager &SM, const LangOptions &LangOpts)
       : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
-        MCDCBitmapMap(MCDCBitmapMap),
-        MCDCBuilder(CVM.getCodeGenModule(), CondIDMap, MCDCBitmapMap) {}
+        MCDCState(MCDCState), MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
 
   /// Write the mapping data to the output stream
   void write(llvm::raw_ostream &OS) {
@@ -2350,9 +2344,9 @@ unsigned CoverageMappingModuleGen::getFileID(FileEntryRef File) {
 
 void CoverageMappingGen::emitCounterMapping(const Decl *D,
                                             llvm::raw_ostream &OS) {
-  assert(CounterMap && MCDCBitmapMap);
-  CounterCoverageMappingBuilder Walker(CVM, *CounterMap, *MCDCBitmapMap,
-                                       *CondIDMap, SM, LangOpts);
+  assert(CounterMap && MCDCState);
+  CounterCoverageMappingBuilder Walker(CVM, *CounterMap, *MCDCState, SM,
+                                       LangOpts);
   Walker.VisitDecl(D);
   Walker.write(OS);
 }
