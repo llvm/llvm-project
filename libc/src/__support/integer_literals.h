@@ -54,9 +54,10 @@ LIBC_INLINE constexpr T accumulate(int base, const uint8_t *digits,
 // A static buffer to hold the digits for a T.
 template <typename T, int base> struct DigitBuffer {
   static_assert(base == 2 || base == 10 || base == 16);
-  // Base 2: one char provides exactly one bit.
-  // Base 10: one char provides between three and four bits.
-  // Base 16: one char provides exactly four bits.
+  // One character provides log2(base) bits.
+  // Base 2 and 16 provide exactly one and four bits per character respectively.
+  // For base 10, a character provides log2(10) ≈ 3.32... which we round to 3
+  // for the purpose of buffer allocation.
   LIBC_INLINE_VAR static constexpr size_t BITS_PER_DIGIT = base == 2    ? 1
                                                            : base == 10 ? 3
                                                            : base == 16 ? 4
