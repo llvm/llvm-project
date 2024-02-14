@@ -114,13 +114,14 @@ template <typename T> struct Parser {
   }
 };
 
-// Specialization for cpp::UInt<N>.
+// Specialization for cpp::BigInt<N, false, uint64_t>.
 // Because this code runs at compile time we try to make it efficient. For
 // binary and hexadecimal formats we read digits by chunks of 64 bits and
 // produce the BigInt internal representation direcly. For decimal numbers we
 // go the slow path and use slower BigInt arithmetic.
-template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
-  using UIntT = cpp::UInt<N>;
+template <size_t N>
+struct Parser<LIBC_NAMESPACE::cpp::BigInt<N, false, uint64_t>> {
+  using UIntT = cpp::BigInt<N, false, uint64_t>;
   template <int base> static constexpr UIntT parse(const char *str) {
     const DigitBuffer<UIntT, base> buffer(str);
     if constexpr (base == 10) {
@@ -129,7 +130,7 @@ template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
     } else {
       // Fast path, we consume blocks of uint64_t and creates the BigInt's
       // internal representation directly.
-      using U64ArrayT = cpp::array<uint64_t, UIntT::WORDCOUNT>;
+      using U64ArrayT = cpp::array<uint64_t, UIntT::WORD_COUNT>;
       U64ArrayT array;
       size_t size = buffer.size;
       const uint8_t *digit_ptr = buffer.digits + size;
