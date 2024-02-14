@@ -1593,8 +1593,11 @@ mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
   // keep assertion for now.
   assert(!UnimplementedFeature::tryEmitAsConstant());
   Expr::EvalResult Result;
-  if (E->EvaluateAsInt(Result, CGF.getContext(), Expr::SE_AllowSideEffects))
-    assert(0 && "NYI");
+  if (E->EvaluateAsInt(Result, CGF.getContext(), Expr::SE_AllowSideEffects)) {
+    llvm::APSInt Value = Result.Val.getInt();
+    CGF.buildIgnoredExpr(E->getBase());
+    return Builder.getConstInt(CGF.getLoc(E->getExprLoc()), Value);
+  }
   return buildLoadOfLValue(E);
 }
 
