@@ -868,9 +868,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned UsualArrayDeleteWantsSize : 1;
 
-    /// What kind of initializer do we have? Could be none, parens, or braces.
-    /// In storage, we distinguish between "none, and no initializer expr", and
-    /// "none, but an implicit initializer expr".
+    // Is initializer expr present?
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasInitializer : 1;
+
+    /// What kind of initializer syntax used? Could be none, parens, or braces.
     LLVM_PREFERRED_TYPE(CXXNewInitializationStyle)
     unsigned StoredInitializationStyle : 2;
 
@@ -1631,8 +1633,10 @@ public:
                               SourceLocation RB);
 
   // Build an empty compound statement with a location.
-  explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
+  explicit CompoundStmt(SourceLocation Loc) : CompoundStmt(Loc, Loc) {}
+
+  CompoundStmt(SourceLocation Loc, SourceLocation EndLoc)
+      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(EndLoc) {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.HasFPFeatures = 0;
   }

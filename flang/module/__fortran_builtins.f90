@@ -32,6 +32,10 @@ module __fortran_builtins
     integer(kind=int64), private :: __count
   end type
 
+  type :: __builtin_notify_type
+    integer(kind=int64), private :: __count
+  end type
+
   type :: __builtin_lock_type
     integer(kind=int64), private :: __count
   end type

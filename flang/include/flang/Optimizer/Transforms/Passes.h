@@ -10,6 +10,7 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include <memory>
@@ -75,6 +76,7 @@ std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
 
+std::unique_ptr<mlir::Pass> createOMPDescriptorMapInfoGenPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();
@@ -82,6 +84,17 @@ createOMPMarkDeclareTargetPass();
 std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
+
+struct FunctionAttrTypes {
+  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind =
+      mlir::LLVM::framePointerKind::FramePointerKind::None;
+};
+
+std::unique_ptr<mlir::Pass> createFunctionAttrPass();
+std::unique_ptr<mlir::Pass>
+createFunctionAttrPass(FunctionAttrTypes &functionAttr, bool noInfsFPMath,
+                       bool noNaNsFPMath, bool approxFuncFPMath,
+                       bool noSignedZerosFPMath, bool unsafeFPMath);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

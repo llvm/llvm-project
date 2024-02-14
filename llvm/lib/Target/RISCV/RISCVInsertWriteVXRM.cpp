@@ -198,13 +198,23 @@ char RISCVInsertWriteVXRM::ID = 0;
 INITIALIZE_PASS(RISCVInsertWriteVXRM, DEBUG_TYPE, RISCV_INSERT_WRITE_VXRM_NAME,
                 false, false)
 
+static bool ignoresVXRM(const MachineInstr &MI) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VNCLIP_WI:
+  case RISCV::VNCLIPU_WI:
+    return MI.getOperand(3).getImm() == 0;
+  }
+}
+
 bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   bool NeedVXRMWrite = false;
   for (const MachineInstr &MI : MBB) {
     int VXRMIdx = RISCVII::getVXRMOpNum(MI.getDesc());
-    if (VXRMIdx >= 0) {
+    if (VXRMIdx >= 0 && !ignoresVXRM(MI)) {
       unsigned NewVXRMImm = MI.getOperand(VXRMIdx).getImm();
 
       if (!BBInfo.VXRMUse.isValid())
@@ -356,7 +366,7 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
 
   for (MachineInstr &MI : MBB) {
     int VXRMIdx = RISCVII::getVXRMOpNum(MI.getDesc());
-    if (VXRMIdx >= 0) {
+    if (VXRMIdx >= 0 && !ignoresVXRM(MI)) {
       unsigned NewVXRMImm = MI.getOperand(VXRMIdx).getImm();
 
       if (PendingInsert || !Info.isStatic() ||

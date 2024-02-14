@@ -363,8 +363,8 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: then.0.0:
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
-; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
+; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -464,8 +464,8 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: then.0.0:
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
-; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
+; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = select vp<[[OR]]>, ir<%c.1>, ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -572,8 +572,8 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: then.0.0:
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
-; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
+; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK5:%.+]]> = select vp<[[MASK4]]>, ir<%c.0>, ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -683,8 +683,8 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.3:
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<[[PRED1]]>, vp<[[PRED2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK]]>, ir<%c.0>, ir<false>
+; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<[[PRED1]]>, vp<[[PRED2]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -974,7 +974,8 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%0> = load ir<%gep>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
+; CHECK-NEXT:   WIDEN ir<%0> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%pred> = fcmp oeq ir<%0>, ir<0.000000e+00>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = not ir<%pred>
 ; CHECK-NEXT: Successor(s): pred.store
@@ -1114,7 +1115,8 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION ir<%start>, -1
 ; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds ir<%ptr.iv>, ir<-1>
-; CHECK-NEXT:     WIDEN ir<%l> = load ir<%ptr.iv.next>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%ptr.iv.next>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
 ; CHECK-NEXT:     EMIT vp<[[NEG:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:   Successor(s): pred.store

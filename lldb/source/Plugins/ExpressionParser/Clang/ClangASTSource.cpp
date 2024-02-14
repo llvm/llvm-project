@@ -571,8 +571,8 @@ bool ClangASTSource::IgnoreName(const ConstString name,
 
   // The ClangASTSource is not responsible for finding $-names.
   return name_string_ref.empty() ||
-         (ignore_all_dollar_names && name_string_ref.startswith("$")) ||
-         name_string_ref.startswith("_$");
+         (ignore_all_dollar_names && name_string_ref.starts_with("$")) ||
+         name_string_ref.starts_with("_$");
 }
 
 void ClangASTSource::FindExternalVisibleDecls(

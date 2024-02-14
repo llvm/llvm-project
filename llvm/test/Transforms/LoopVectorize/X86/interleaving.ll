@@ -27,8 +27,8 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[STRIDED_VEC3]], [[STRIDED_VEC]]
 ; SSE-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC2]]
 ; SSE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 16
 ; SSE-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP7]], align 4
-; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 4
 ; SSE-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
 ; SSE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; SSE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -77,12 +77,12 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[STRIDED_VEC9]], [[STRIDED_VEC5]]
 ; AVX1-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC6]]
 ; AVX1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 16
+; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 32
+; AVX1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 48
 ; AVX1-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP15]], align 4
-; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 4
 ; AVX1-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP16]], align 4
-; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 8
 ; AVX1-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP17]], align 4
-; AVX1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 12
 ; AVX1-NEXT:    store <4 x i32> [[TMP14]], ptr [[TMP18]], align 4
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; AVX1-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -131,12 +131,12 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[TMP13:%.*]] = add nsw <8 x i32> [[STRIDED_VEC9]], [[STRIDED_VEC5]]
 ; AVX2-NEXT:    [[TMP14:%.*]] = add nsw <8 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC6]]
 ; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 32
+; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 64
+; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 96
 ; AVX2-NEXT:    store <8 x i32> [[TMP11]], ptr [[TMP15]], align 4
-; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 8
 ; AVX2-NEXT:    store <8 x i32> [[TMP12]], ptr [[TMP16]], align 4
-; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 16
 ; AVX2-NEXT:    store <8 x i32> [[TMP13]], ptr [[TMP17]], align 4
-; AVX2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 24
 ; AVX2-NEXT:    store <8 x i32> [[TMP14]], ptr [[TMP18]], align 4
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; AVX2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

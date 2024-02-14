@@ -1,4 +1,4 @@
-//===-- Fix-sized Monotonic HashTable ---------------------------*- C++ -*-===//
+//===-- Resizable Monotonic HashTable ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -333,7 +333,7 @@ public:
     return {0, full_capacity() - available_slots,
             Group::load_aligned(&control(0)).occupied(), *this};
   }
-  iterator end() const { return {0, 0, {0}, *this}; }
+  iterator end() const { return {0, 0, {BitMask{0}}, *this}; }
 
   LIBC_INLINE ENTRY *find(const char *key) {
     uint64_t primary = oneshot_hash(key);

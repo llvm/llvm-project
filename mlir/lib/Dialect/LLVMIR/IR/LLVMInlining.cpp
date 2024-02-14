@@ -50,11 +50,31 @@ static bool hasLifetimeMarkers(LLVM::AllocaOp allocaOp) {
 static void
 handleInlinedAllocas(Operation *call,
                      iterator_range<Region::iterator> inlinedBlocks) {
+  // Locate the entry block of the closest callsite ancestor that has either the
+  // IsolatedFromAbove or AutomaticAllocationScope trait. In pure LLVM dialect
+  // programs, this is the LLVMFuncOp containing the call site. However, in
+  // mixed-dialect programs, the callsite might be nested in another operation
+  // that carries one of these traits. In such scenarios, this traversal stops
+  // at the closest ancestor with either trait, ensuring visibility post
+  // relocation and respecting allocation scopes.
+  Block *callerEntryBlock = nullptr;
+  Operation *currentOp = call;
+  while (Operation *parentOp = currentOp->getParentOp()) {
+    if (parentOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>() ||
+        parentOp->mightHaveTrait<OpTrait::AutomaticAllocationScope>()) {
+      callerEntryBlock = &currentOp->getParentRegion()->front();
+      break;
+    }
+    currentOp = parentOp;
+  }
+
+  // Avoid relocating the alloca operations if the call has been inlined into
+  // the entry block already, which is typically the encompassing
+  // LLVM function, or if the relevant entry block cannot be identified.
   Block *calleeEntryBlock = &(*inlinedBlocks.begin());
-  Block *callerEntryBlock = &(*calleeEntryBlock->getParent()->begin());
-  if (calleeEntryBlock == callerEntryBlock)
-    // Nothing to do.
+  if (!callerEntryBlock || callerEntryBlock == calleeEntryBlock)
     return;
+
   SmallVector<std::tuple<LLVM::AllocaOp, IntegerAttr, bool>> allocasToMove;
   bool shouldInsertLifetimes = false;
   bool hasDynamicAlloca = false;
@@ -643,6 +663,10 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
                  << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
       return false;
     }
+    if (funcOp.isVarArg()) {
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: callable is variadic\n");
+      return false;
+    }
     // TODO: Generate aliasing metadata from noalias argument/result attributes.
     if (auto attrs = funcOp.getArgAttrs()) {
       for (DictionaryAttr attrDict : attrs->getAsRange<DictionaryAttr>()) {
@@ -684,7 +708,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    return true;
+    // The inliner cannot handle variadic function arguments.
+    return !isa<LLVM::VaStartOp>(op);
   }
 
   /// Handle the given inlined return by replacing it with a branch. This

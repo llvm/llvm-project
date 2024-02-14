@@ -58,7 +58,7 @@ public:
         constexpr explicit duration(const Rep2& r,
             typename enable_if
             <
-               is_convertible<Rep2, rep>::value &&
+               is_convertible<const Rep2&, rep>::value &&
                (treat_as_floating_point<rep>::value ||
                !treat_as_floating_point<rep>::value && !treat_as_floating_point<Rep2>::value)
             >::type* = 0);
@@ -295,6 +295,10 @@ using sys_days    = sys_time<days>;                     // C++20
 template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const sys_time<Duration>& tp);
+
+template<class charT, class traits>                    // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const sys_days& dp);
 
 class file_clock                                        // C++20
 {

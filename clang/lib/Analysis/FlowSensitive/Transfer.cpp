@@ -42,6 +42,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   assert(BlockIt != CFCtx.getStmtToBlock().end());
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
+  if (BlockIt->getSecond()->getBlockID() == CurBlockID)
+    return &CurState.Env;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
   if (!(State))
     return nullptr;
@@ -339,8 +341,7 @@ public:
 
     switch (S->getOpcode()) {
     case UO_Deref: {
-      const auto *SubExprVal =
-          cast_or_null<PointerValue>(Env.getValue(*SubExpr));
+      const auto *SubExprVal = Env.get<PointerValue>(*SubExpr);
       if (SubExprVal == nullptr)
         break;
 
@@ -467,8 +468,7 @@ public:
       const Expr *Arg = S->getArg(0);
       assert(Arg != nullptr);
 
-      auto *ArgLoc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg));
+      auto *ArgLoc = Env.get<RecordStorageLocation>(*Arg);
       if (ArgLoc == nullptr)
         return;
 
@@ -489,7 +489,6 @@ public:
     if (S->getType()->isRecordType()) {
       auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
       Env.setValue(*S, InitialVal);
-      copyRecord(InitialVal.getLoc(), Env.getResultObjectLocation(*S), Env);
     }
 
     transferInlineCall(S, ConstructorDecl);
@@ -516,14 +515,12 @@ public:
 
       RecordStorageLocation *LocSrc = nullptr;
       if (Arg1->isPRValue()) {
-        if (auto *Val = cast_or_null<RecordValue>(Env.getValue(*Arg1)))
+        if (auto *Val = Env.get<RecordValue>(*Arg1))
           LocSrc = &Val->getLoc();
       } else {
-        LocSrc =
-            cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+        LocSrc = Env.get<RecordStorageLocation>(*Arg1);
       }
-      auto *LocDst =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
+      auto *LocDst = Env.get<RecordStorageLocation>(*Arg0);
 
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
@@ -538,8 +535,30 @@ public:
         return;
 
       copyRecord(*LocSrc, *LocDst, Env);
-      Env.setStorageLocation(*S, *LocDst);
+
+      // If the expr is a glvalue, we can reasonably assume the operator is
+      // returning T& and thus we can assign it `LocDst`.
+      if (S->isGLValue()) {
+        Env.setStorageLocation(*S, *LocDst);
+      } else if (S->getType()->isRecordType()) {
+        // Make sure that we have a `RecordValue` for this expression so that
+        // `Environment::getResultObjectLocation()` is able to return a location
+        // for it.
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
+      }
+
+      return;
     }
+
+    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
+    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
+    // can return a value.
+    VisitCallExpr(S);
+  }
+
+  void VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+    propagateValue(*RBO->getSemanticForm(), *RBO, Env);
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
@@ -582,6 +601,14 @@ public:
       Env.setValue(*S, *ArgVal);
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
       transferInlineCall(S, F);
+
+      // If this call produces a prvalue of record type, make sure that we have
+      // a `RecordValue` for it. This is required so that
+      // `Environment::getResultObjectLocation()` is able to return a location
+      // for this `CallExpr`.
+      if (S->getType()->isRecordType() && S->isPRValue())
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
     }
   }
 
@@ -669,7 +696,7 @@ public:
         auto Init = Inits[InitIdx++];
         assert(Base.getType().getCanonicalType() ==
                Init->getType().getCanonicalType());
-        auto* BaseVal = cast_or_null<RecordValue>(Env.getValue(*Init));
+        auto *BaseVal = Env.get<RecordValue>(*Init);
         if (!BaseVal)
           BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
         // Take ownership of the fields of the `RecordValue` for the base class

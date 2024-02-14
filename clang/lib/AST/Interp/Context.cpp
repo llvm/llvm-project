@@ -30,23 +30,12 @@ Context::~Context() {}
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
   Function *Func = P->getFunction(FD);
-  if (!Func || !Func->hasBody()) {
-    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD)) {
-      Func = *R;
-    } else {
-      handleAllErrors(R.takeError(), [&Parent](ByteCodeGenError &Err) {
-        Parent.FFDiag(Err.getRange().getBegin(),
-                      diag::err_experimental_clang_interp_failed)
-            << Err.getRange();
-      });
-      return false;
-    }
-  }
+  if (!Func || !Func->hasBody())
+    Func = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
   APValue DummyResult;
-  if (!Run(Parent, Func, DummyResult)) {
+  if (!Run(Parent, Func, DummyResult))
     return false;
-  }
 
   return Func->isConstexpr();
 }
@@ -54,36 +43,92 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
-  if (Check(Parent, C.interpretExpr(E))) {
-    assert(Stk.empty());
-#ifndef NDEBUG
-    // Make sure we don't rely on some value being still alive in
-    // InterpStack memory.
+
+  auto Res = C.interpretExpr(E);
+
+  if (Res.isInvalid()) {
     Stk.clear();
-#endif
-    return true;
+    return false;
   }
 
+  assert(Stk.empty());
+#ifndef NDEBUG
+  // Make sure we don't rely on some value being still alive in
+  // InterpStack memory.
   Stk.clear();
-  return false;
+#endif
+
+  // Implicit lvalue-to-rvalue conversion.
+  if (E->isGLValue()) {
+    std::optional<APValue> RValueResult = Res.toRValue();
+    if (!RValueResult) {
+      return false;
+    }
+    Result = *RValueResult;
+  } else {
+    Result = Res.toAPValue();
+  }
+
+  return true;
+}
+
+bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
+  assert(Stk.empty());
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+
+  auto Res = C.interpretExpr(E);
+  if (Res.isInvalid()) {
+    Stk.clear();
+    return false;
+  }
+
+  assert(Stk.empty());
+#ifndef NDEBUG
+  // Make sure we don't rely on some value being still alive in
+  // InterpStack memory.
+  Stk.clear();
+#endif
+  Result = Res.toAPValue();
+  return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
-  if (Check(Parent, C.interpretDecl(VD))) {
-    assert(Stk.empty());
-#ifndef NDEBUG
-    // Make sure we don't rely on some value being still alive in
-    // InterpStack memory.
+
+  auto Res = C.interpretDecl(VD);
+  if (Res.isInvalid()) {
     Stk.clear();
-#endif
-    return true;
+    return false;
   }
 
+  assert(Stk.empty());
+#ifndef NDEBUG
+  // Make sure we don't rely on some value being still alive in
+  // InterpStack memory.
   Stk.clear();
-  return false;
+#endif
+
+  // Ensure global variables are fully initialized.
+  if (shouldBeGloballyIndexed(VD) &&
+      (VD->getType()->isRecordType() || VD->getType()->isArrayType() ||
+       VD->getType()->isAnyComplexType())) {
+    assert(Res.isLValue());
+
+    if (!VD->getType()->isAnyComplexType() &&
+        !Res.checkFullyInitialized(C.getState()))
+      return false;
+
+    // lvalue-to-rvalue conversion.
+    std::optional<APValue> RValueResult = Res.toRValue();
+    if (!RValueResult)
+      return false;
+    Result = *RValueResult;
+
+  } else
+    Result = Res.toAPValue();
+  return true;
 }
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
@@ -234,12 +279,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
     return Func;
 
   if (!Func || WasNotDefined) {
-    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD))
-      Func = *R;
-    else {
-      llvm::consumeError(R.takeError());
-      return nullptr;
-    }
+    if (auto F = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD))
+      Func = F;
   }
 
   return Func;

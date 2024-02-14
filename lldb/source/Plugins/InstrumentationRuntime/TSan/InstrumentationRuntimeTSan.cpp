@@ -592,9 +592,10 @@ addr_t InstrumentationRuntimeTSan::GetFirstNonInternalFramePc(
     if (skip_one_frame && i == 0)
       continue;
 
-    addr_t addr;
-    if (!trace_array->GetItemAtIndexAsInteger(i, addr))
+    auto maybe_addr = trace_array->GetItemAtIndexAsInteger<addr_t>(i);
+    if (!maybe_addr)
       continue;
+    addr_t addr = *maybe_addr;
 
     lldb_private::Address so_addr;
     if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(

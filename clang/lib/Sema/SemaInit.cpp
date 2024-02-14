@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -25,6 +26,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -465,8 +467,7 @@ class InitListChecker {
   void FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
                                const InitializedEntity &ParentEntity,
                                InitListExpr *ILE, bool &RequiresSecondPass,
-                               bool FillWithNoInit = false,
-                               bool WarnIfMissing = false);
+                               bool FillWithNoInit = false);
   void FillInEmptyInitializations(const InitializedEntity &Entity,
                                   InitListExpr *ILE, bool &RequiresSecondPass,
                                   InitListExpr *OuterILE, unsigned OuterIndex,
@@ -655,16 +656,11 @@ void InitListChecker::FillInEmptyInitForBase(
   }
 }
 
-static bool hasAnyDesignatedInits(const InitListExpr *IL) {
-  return llvm::any_of(*IL, [=](const Stmt *Init) {
-    return isa_and_nonnull<DesignatedInitExpr>(Init);
-  });
-}
-
-void InitListChecker::FillInEmptyInitForField(
-    unsigned Init, FieldDecl *Field, const InitializedEntity &ParentEntity,
-    InitListExpr *ILE, bool &RequiresSecondPass, bool FillWithNoInit,
-    bool WarnIfMissing) {
+void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
+                                        const InitializedEntity &ParentEntity,
+                                              InitListExpr *ILE,
+                                              bool &RequiresSecondPass,
+                                              bool FillWithNoInit) {
   SourceLocation Loc = ILE->getEndLoc();
   unsigned NumInits = ILE->getNumInits();
   InitializedEntity MemberEntity
@@ -732,52 +728,15 @@ void InitListChecker::FillInEmptyInitForField(
 
     if (hadError || VerifyOnly) {
       // Do nothing
-    } else {
-      if (WarnIfMissing) {
-        auto CheckAnonMember = [&](const FieldDecl *FD,
-                                   auto &&CheckAnonMember) -> FieldDecl * {
-          FieldDecl *Uninitialized = nullptr;
-          RecordDecl *RD = FD->getType()->getAsRecordDecl();
-          assert(RD && "Not anonymous member checked?");
-          for (auto *F : RD->fields()) {
-            FieldDecl *UninitializedFieldInF = nullptr;
-            if (F->isAnonymousStructOrUnion())
-              UninitializedFieldInF = CheckAnonMember(F, CheckAnonMember);
-            else if (!F->isUnnamedBitfield() &&
-                     !F->getType()->isIncompleteArrayType() &&
-                     !F->hasInClassInitializer())
-              UninitializedFieldInF = F;
-
-            if (RD->isUnion() && !UninitializedFieldInF)
-              return nullptr;
-            if (!Uninitialized)
-              Uninitialized = UninitializedFieldInF;
-          }
-          return Uninitialized;
-        };
-
-        FieldDecl *FieldToDiagnose = nullptr;
-        if (Field->isAnonymousStructOrUnion())
-          FieldToDiagnose = CheckAnonMember(Field, CheckAnonMember);
-        else if (!Field->isUnnamedBitfield() &&
-                 !Field->getType()->isIncompleteArrayType())
-          FieldToDiagnose = Field;
-
-        if (FieldToDiagnose)
-          SemaRef.Diag(Loc, diag::warn_missing_field_initializers)
-              << FieldToDiagnose;
-      }
-
-      if (Init < NumInits) {
-        ILE->setInit(Init, MemberInit.getAs<Expr>());
-      } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
-        // Empty initialization requires a constructor call, so
-        // extend the initializer list to include the constructor
-        // call and make a note that we'll need to take another pass
-        // through the initializer list.
-        ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
-        RequiresSecondPass = true;
-      }
+    } else if (Init < NumInits) {
+      ILE->setInit(Init, MemberInit.getAs<Expr>());
+    } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
+      // Empty initialization requires a constructor call, so
+      // extend the initializer list to include the constructor
+      // call and make a note that we'll need to take another pass
+      // through the initializer list.
+      ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
+      RequiresSecondPass = true;
     }
   } else if (InitListExpr *InnerILE
                = dyn_cast<InitListExpr>(ILE->getInit(Init))) {
@@ -845,36 +804,9 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
         }
       }
     } else {
-      InitListExpr *SForm =
-          ILE->isSyntacticForm() ? ILE : ILE->getSyntacticForm();
       // The fields beyond ILE->getNumInits() are default initialized, so in
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
-
-      // Some checks that are required for missing fields warning are bound to
-      // how many elements the initializer list originally was provided; perform
-      // them before the list is expanded.
-      bool WarnIfMissingField =
-          !SForm->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
-          ILE->getNumInits();
-
-      // Disable check for missing fields when designators are used in C to
-      // match gcc behaviour.
-      // FIXME: Should we emulate possible gcc warning bug?
-      WarnIfMissingField &=
-          SemaRef.getLangOpts().CPlusPlus || !hasAnyDesignatedInits(SForm);
-
-      if (OuterILE) {
-        // When nested designators are present, there might be two nested init
-        // lists created and only outer will contain designated initializer
-        // expression, so check outer list as well.
-        InitListExpr *OuterSForm = OuterILE->isSyntacticForm()
-                                       ? OuterILE
-                                       : OuterILE->getSyntacticForm();
-        WarnIfMissingField &= SemaRef.getLangOpts().CPlusPlus ||
-                              !hasAnyDesignatedInits(OuterSForm);
-      }
-
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
         ++NumElems;
@@ -902,7 +834,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
           return;
 
         FillInEmptyInitForField(Init, Field, Entity, ILE, RequiresSecondPass,
-                                FillWithNoInit, WarnIfMissingField);
+                                FillWithNoInit);
         if (hadError)
           return;
 
@@ -1015,6 +947,13 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
                                  /*FillWithNoInit =*/true);
     }
   }
+}
+
+static bool hasAnyDesignatedInits(const InitListExpr *IL) {
+  for (const Stmt *Init : *IL)
+    if (isa_and_nonnull<DesignatedInitExpr>(Init))
+      return true;
+  return false;
 }
 
 InitListChecker::InitListChecker(
@@ -2288,7 +2227,11 @@ void InitListChecker::CheckStructUnionTypes(
   size_t NumRecordDecls = llvm::count_if(RD->decls(), [&](const Decl *D) {
     return isa<FieldDecl>(D) || isa<RecordDecl>(D);
   });
+  bool CheckForMissingFields =
+    !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
   bool HasDesignatedInit = false;
+
+  llvm::SmallPtrSet<FieldDecl *, 4> InitializedFields;
 
   while (Index < IList->getNumInits()) {
     Expr *Init = IList->getInit(Index);
@@ -2313,17 +2256,24 @@ void InitListChecker::CheckStructUnionTypes(
 
       // Find the field named by the designated initializer.
       DesignatedInitExpr::Designator *D = DIE->getDesignator(0);
-      if (!VerifyOnly && D->isFieldDesignator() && !DesignatedInitFailed) {
+      if (!VerifyOnly && D->isFieldDesignator()) {
         FieldDecl *F = D->getFieldDecl();
-        QualType ET = SemaRef.Context.getBaseElementType(F->getType());
-        if (checkDestructorReference(ET, InitLoc, SemaRef)) {
-          hadError = true;
-          return;
+        InitializedFields.insert(F);
+        if (!DesignatedInitFailed) {
+          QualType ET = SemaRef.Context.getBaseElementType(F->getType());
+          if (checkDestructorReference(ET, InitLoc, SemaRef)) {
+            hadError = true;
+            return;
+          }
         }
       }
 
       InitializedSomething = true;
 
+      // Disable check for missing fields when designators are used.
+      // This matches gcc behaviour.
+      if (!SemaRef.getLangOpts().CPlusPlus)
+        CheckForMissingFields = false;
       continue;
     }
 
@@ -2402,6 +2352,7 @@ void InitListChecker::CheckStructUnionTypes(
     CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
+    InitializedFields.insert(*Field);
 
     if (RD->isUnion() && StructuredList) {
       // Initialize the first field within the union.
@@ -2409,6 +2360,28 @@ void InitListChecker::CheckStructUnionTypes(
     }
 
     ++Field;
+  }
+
+  // Emit warnings for missing struct field initializers.
+  if (!VerifyOnly && InitializedSomething && CheckForMissingFields &&
+      !RD->isUnion()) {
+    // It is possible we have one or more unnamed bitfields remaining.
+    // Find first (if any) named field and emit warning.
+    for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
+                                                           : Field,
+                                    end = RD->field_end();
+         it != end; ++it) {
+      if (HasDesignatedInit && InitializedFields.count(*it))
+        continue;
+
+      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
+          !it->getType()->isIncompleteArrayType()) {
+        SemaRef.Diag(IList->getSourceRange().getEnd(),
+                     diag::warn_missing_field_initializers)
+            << *it;
+        break;
+      }
+    }
   }
 
   // Check that any remaining fields can be value-initialized if we're not
@@ -5458,18 +5431,12 @@ static void TryOrBuildParenListInitialization(
   auto HandleInitializedEntity = [&](const InitializedEntity &SubEntity,
                                      const InitializationKind &SubKind,
                                      Expr *Arg, Expr **InitExpr = nullptr) {
-    InitializationSequence IS = [&]() {
-      if (Arg)
-        return InitializationSequence(S, SubEntity, SubKind, Arg);
-      return InitializationSequence(S, SubEntity, SubKind, std::nullopt);
-    }();
+    InitializationSequence IS = InitializationSequence(
+        S, SubEntity, SubKind, Arg ? MultiExprArg(Arg) : std::nullopt);
 
     if (IS.Failed()) {
       if (!VerifyOnly) {
-        if (Arg)
-          IS.Diagnose(S, SubEntity, SubKind, Arg);
-        else
-          IS.Diagnose(S, SubEntity, SubKind, std::nullopt);
+        IS.Diagnose(S, SubEntity, SubKind, Arg ? ArrayRef(Arg) : std::nullopt);
       } else {
         Sequence.SetFailed(
             InitializationSequence::FK_ParenthesizedListInitFailed);
@@ -5479,10 +5446,8 @@ static void TryOrBuildParenListInitialization(
     }
     if (!VerifyOnly) {
       ExprResult ER;
-      if (Arg)
-        ER = IS.Perform(S, SubEntity, SubKind, Arg);
-      else
-        ER = IS.Perform(S, SubEntity, SubKind, std::nullopt);
+      ER = IS.Perform(S, SubEntity, SubKind,
+                      Arg ? MultiExprArg(Arg) : std::nullopt);
       if (InitExpr)
         *InitExpr = ER.get();
       else
@@ -5531,7 +5496,7 @@ static void TryOrBuildParenListInitialization(
         return;
     }
     //   ...and value-initialized for each k < i <= n;
-    if (ArrayLength > Args.size()) {
+    if (ArrayLength > Args.size() || Entity.isVariableLengthArrayNew()) {
       InitializedEntity SubEntity = InitializedEntity::InitializeElement(
           S.getASTContext(), Args.size(), Entity);
       InitializationKind SubKind = InitializationKind::CreateValue(
@@ -5548,6 +5513,14 @@ static void TryOrBuildParenListInitialization(
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
     bool IsUnion = RT->isUnionType();
     const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+    if (RD->isInvalidDecl()) {
+      // Exit early to avoid confusion when processing members.
+      // We do the same for braced list initialization in
+      // `CheckStructUnionTypes`.
+      Sequence.SetFailed(
+          clang::InitializationSequence::FK_ParenthesizedListInitFailed);
+      return;
+    }
 
     if (!IsUnion) {
       for (const CXXBaseSpecifier &Base : RD->bases()) {
@@ -7611,14 +7584,27 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
     Path.pop_back();
   };
 
-  if (ObjectArg && implicitObjectParamIsLifetimeBound(Callee))
-    VisitLifetimeBoundArg(Callee, ObjectArg);
-
   bool CheckCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
-                    RD->hasAttr<CoroReturnTypeAttr>();
+                    RD->hasAttr<CoroReturnTypeAttr>() &&
+                    !Callee->hasAttr<CoroDisableLifetimeBoundAttr>();
   }
+
+  if (ObjectArg) {
+    bool CheckCoroObjArg = CheckCoroCall;
+    // Coroutine lambda objects with empty capture list are not lifetimebound.
+    if (auto *LE = dyn_cast<LambdaExpr>(ObjectArg->IgnoreImplicit());
+        LE && LE->captures().empty())
+      CheckCoroObjArg = false;
+    // Allow `get_return_object()` as the object param (__promise) is not
+    // lifetimebound.
+    if (Sema::CanBeGetReturnObject(Callee))
+      CheckCoroObjArg = false;
+    if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
+      VisitLifetimeBoundArg(Callee, ObjectArg);
+  }
+
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());
        I != N; ++I) {
@@ -8505,6 +8491,10 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   // are done in both CreateMaterializeTemporaryExpr and MaybeBindToTemporary,
   // but there may be a chance to merge them.
   Cleanup.setExprNeedsCleanups(false);
+  if (isInLifetimeExtendingContext()) {
+    auto &Record = ExprEvalContexts.back();
+    Record.ForRangeLifetimeExtendTemps.push_back(MTE);
+  }
   return MTE;
 }
 
@@ -10404,11 +10394,6 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
-static bool NarrowingErrs(const LangOptions &L) {
-  return L.CPlusPlus11 &&
-         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015));
-}
-
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -10429,6 +10414,19 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     return;
   }
 
+  auto MakeDiag = [&](bool IsConstRef, unsigned DefaultDiagID,
+                      unsigned ConstRefDiagID, unsigned WarnDiagID) {
+    unsigned DiagID;
+    auto &L = S.getLangOpts();
+    if (L.CPlusPlus11 &&
+        (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
+      DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
+    else
+      DiagID = WarnDiagID;
+    return S.Diag(PostInit->getBeginLoc(), DiagID)
+           << PostInit->getSourceRange();
+  };
+
   // C++11 [dcl.init.list]p7: Check whether this is a narrowing conversion.
   APValue ConstantValue;
   QualType ConstantType;
@@ -10439,39 +10437,40 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // No narrowing occurred.
     return;
 
-  case NK_Type_Narrowing:
+  case NK_Type_Narrowing: {
     // This was a floating-to-integer conversion, which is always considered a
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
-    S.Diag(PostInit->getBeginLoc(), NarrowingErrs(S.getLangOpts())
-                                        ? diag::ext_init_list_type_narrowing
-                                        : diag::warn_init_list_type_narrowing)
-        << PostInit->getSourceRange()
+    QualType T = EntityType.getNonReferenceType();
+    MakeDiag(T != EntityType, diag::ext_init_list_type_narrowing,
+             diag::ext_init_list_type_narrowing_const_reference,
+             diag::warn_init_list_type_narrowing)
         << PreNarrowingType.getLocalUnqualifiedType()
-        << EntityType.getNonReferenceType().getLocalUnqualifiedType();
+        << T.getLocalUnqualifiedType();
     break;
+  }
 
-  case NK_Constant_Narrowing:
+  case NK_Constant_Narrowing: {
     // A constant value was narrowed.
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? diag::ext_init_list_constant_narrowing
-               : diag::warn_init_list_constant_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(EntityType.getNonReferenceType() != EntityType,
+             diag::ext_init_list_constant_narrowing,
+             diag::ext_init_list_constant_narrowing_const_reference,
+             diag::warn_init_list_constant_narrowing)
         << ConstantValue.getAsString(S.getASTContext(), ConstantType)
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
+  }
 
-  case NK_Variable_Narrowing:
+  case NK_Variable_Narrowing: {
     // A variable's value may have been narrowed.
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? diag::ext_init_list_variable_narrowing
-               : diag::warn_init_list_variable_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(EntityType.getNonReferenceType() != EntityType,
+             diag::ext_init_list_variable_narrowing,
+             diag::ext_init_list_variable_narrowing_const_reference,
+             diag::warn_init_list_variable_narrowing)
         << PreNarrowingType.getLocalUnqualifiedType()
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
+  }
   }
 
   SmallString<128> StaticCast;
@@ -10590,7 +10589,7 @@ static bool isOrIsDerivedFromSpecializationOf(CXXRecordDecl *RD,
 
 QualType Sema::DeduceTemplateSpecializationFromInitializer(
     TypeSourceInfo *TSInfo, const InitializedEntity &Entity,
-    const InitializationKind &Kind, MultiExprArg Inits, ParenListExpr *PL) {
+    const InitializationKind &Kind, MultiExprArg Inits) {
   auto *DeducedTST = dyn_cast<DeducedTemplateSpecializationType>(
       TSInfo->getType()->getContainedDeducedType());
   assert(DeducedTST && "not a deduced template specialization type");
@@ -10736,7 +10735,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     bool HasAnyDeductionGuide = false;
 
     auto SynthesizeAggrGuide = [&](InitListExpr *ListInit) {
-      auto *RD = cast<CXXRecordDecl>(Template->getTemplatedDecl());
+      auto *Pattern = Template;
+      while (Pattern->getInstantiatedFromMemberTemplate()) {
+        if (Pattern->isMemberSpecialization())
+          break;
+        Pattern = Pattern->getInstantiatedFromMemberTemplate();
+      }
+
+      auto *RD = cast<CXXRecordDecl>(Pattern->getTemplatedDecl());
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
       QualType Ty = Context.getRecordType(RD);
@@ -10821,9 +10827,12 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     if (getLangOpts().CPlusPlus20 && !HasAnyDeductionGuide) {
       if (ListInit && ListInit->getNumInits()) {
         SynthesizeAggrGuide(ListInit);
-      } else if (PL && PL->getNumExprs()) {
-        InitListExpr TempListInit(getASTContext(), PL->getLParenLoc(),
-                                  PL->exprs(), PL->getRParenLoc());
+      } else if (Inits.size()) { // parenthesized expression-list
+        // Inits are expressions inside the parentheses. We don't have
+        // the parentheses source locations, use the begin/end of Inits as the
+        // best heuristic.
+        InitListExpr TempListInit(getASTContext(), Inits.front()->getBeginLoc(),
+                                  Inits, Inits.back()->getEndLoc());
         SynthesizeAggrGuide(&TempListInit);
       }
     }

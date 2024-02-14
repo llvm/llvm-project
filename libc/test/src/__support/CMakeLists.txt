@@ -42,6 +42,8 @@ add_libc_test(
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128
+  # FIXME Test segfaults on gfx90a GPU
+  UNIT_TEST_ONLY
 )
 
 add_libc_test(
@@ -92,6 +94,17 @@ add_libc_test(
     uint_test.cpp
   DEPENDS
     libc.src.__support.uint
+    libc.src.__support.CPP.optional
+)
+
+add_libc_test(
+  integer_literals_test
+  SUITE
+    libc-support-tests
+  SRCS
+    integer_literals_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
     libc.src.__support.CPP.optional
 )
 

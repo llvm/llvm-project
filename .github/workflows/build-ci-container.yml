@@ -1,0 +1,108 @@
+name: Build CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+
+jobs:
+  # TODO(boomanaiden154): Switch this back to a single stage build when we can
+  # run this on the self-hosted runners and don't have to do it this way to
+  # avoid timeouts.
+  build-ci-container-stage1:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci/
+      - name: Change podman Root Direcotry
+        run: |
+          mkdir -p ~/.config/containers
+          sudo mkdir -p /mnt/podman
+          sudo chown `whoami`:`whoami` /mnt/podman
+          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
+          podman info
+      - name: Build container stage1
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build -t stage1-toolchain --target stage1-toolchain -f stage1.Dockerfile .
+      - name: Save container image
+        run: |
+          podman save stage1-toolchain > stage1-toolchain.tar
+      - name: Upload container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-toolchain
+          path: stage1-toolchain.tar
+          retention-days: 1
+  build-ci-container-stage2:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    needs: build-ci-container-stage1
+    permissions:
+      packages: write
+    steps:
+      - name: Write Variables
+        id: vars
+        run: |
+          tag=`date +%s`
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
+          echo "container-name=$container_name" >> $GITHUB_OUTPUT
+          echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
+
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci/
+
+      - name: Change podman Root Direcotry
+        run: |
+          mkdir -p ~/.config/containers
+          sudo mkdir -p /mnt/podman
+          sudo chown `whoami`:`whoami` /mnt/podman
+          cp ./.github/workflows/containers/github-action-ci/storage.conf ~/.config/containers/storage.conf
+          podman info
+
+      - name: Download stage1-toolchain
+        uses: actions/download-artifact@v4
+        with:
+          name: stage1-toolchain
+
+      - name: Load stage1-toolchain
+        run: |
+          podman load -i stage1-toolchain.tar
+
+      - name: Build Container
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build -t ${{ steps.vars.outputs.container-name-tag }} -f stage2.Dockerfile .
+          podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
+
+      - name: Test Container
+        run: |
+          for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
+            podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+          done
+
+      - name: Push Container
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
+          podman push ${{ steps.vars.outputs.container-name-tag }}
+          podman push ${{ steps.vars.outputs.container-name }}:latest

@@ -3,7 +3,7 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define void @_Z28test_goto_loop_unroll_factorILi22EiEvPKT0_iPKc(i32* nocapture readonly %first) #0 {
+define void @_Z28test_goto_loop_unroll_factorILi22EiEvPKT0_iPKc(ptr nocapture readonly %first) #0 {
 entry:
   br i1 false, label %loop2_start, label %if.end5
 
@@ -29,39 +29,39 @@ vector.body:                                      ; preds = %vector.body, %loop_
   %vec.phi70 = phi <4 x i32> [ %41, %vector.body ], [ zeroinitializer, %loop_start.preheader ]
   %vec.phi71 = phi <4 x i32> [ %42, %vector.body ], [ zeroinitializer, %loop_start.preheader ]
   %.sum = add i64 0, 4
-  %wide.load72 = load <4 x i32>, <4 x i32>* null, align 4
+  %wide.load72 = load <4 x i32>, ptr null, align 4
   %.sum109 = add i64 0, 8
-  %0 = getelementptr i32, i32* %first, i64 %.sum109
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load73 = load <4 x i32>, <4 x i32>* %1, align 4
+  %0 = getelementptr i32, ptr %first, i64 %.sum109
+  %1 = bitcast ptr %0 to ptr
+  %wide.load73 = load <4 x i32>, ptr %1, align 4
   %.sum110 = add i64 0, 12
-  %2 = getelementptr i32, i32* %first, i64 %.sum110
-  %3 = bitcast i32* %2 to <4 x i32>*
-  %wide.load74 = load <4 x i32>, <4 x i32>* %3, align 4
+  %2 = getelementptr i32, ptr %first, i64 %.sum110
+  %3 = bitcast ptr %2 to ptr
+  %wide.load74 = load <4 x i32>, ptr %3, align 4
   %.sum112 = add i64 0, 20
-  %4 = getelementptr i32, i32* %first, i64 %.sum112
-  %5 = bitcast i32* %4 to <4 x i32>*
-  %wide.load76 = load <4 x i32>, <4 x i32>* %5, align 4
+  %4 = getelementptr i32, ptr %first, i64 %.sum112
+  %5 = bitcast ptr %4 to ptr
+  %wide.load76 = load <4 x i32>, ptr %5, align 4
   %.sum114 = add i64 0, 28
-  %6 = getelementptr i32, i32* %first, i64 %.sum114
-  %7 = bitcast i32* %6 to <4 x i32>*
-  %wide.load78 = load <4 x i32>, <4 x i32>* %7, align 4
+  %6 = getelementptr i32, ptr %first, i64 %.sum114
+  %7 = bitcast ptr %6 to ptr
+  %wide.load78 = load <4 x i32>, ptr %7, align 4
   %.sum115 = add i64 0, 32
-  %8 = getelementptr i32, i32* %first, i64 %.sum115
-  %9 = bitcast i32* %8 to <4 x i32>*
-  %wide.load79 = load <4 x i32>, <4 x i32>* %9, align 4
+  %8 = getelementptr i32, ptr %first, i64 %.sum115
+  %9 = bitcast ptr %8 to ptr
+  %wide.load79 = load <4 x i32>, ptr %9, align 4
   %.sum116 = add i64 0, 36
-  %10 = getelementptr i32, i32* %first, i64 %.sum116
-  %11 = bitcast i32* %10 to <4 x i32>*
-  %wide.load80 = load <4 x i32>, <4 x i32>* %11, align 4
+  %10 = getelementptr i32, ptr %first, i64 %.sum116
+  %11 = bitcast ptr %10 to ptr
+  %wide.load80 = load <4 x i32>, ptr %11, align 4
   %.sum117 = add i64 0, 40
-  %12 = getelementptr i32, i32* %first, i64 %.sum117
-  %13 = bitcast i32* %12 to <4 x i32>*
-  %wide.load81 = load <4 x i32>, <4 x i32>* %13, align 4
+  %12 = getelementptr i32, ptr %first, i64 %.sum117
+  %13 = bitcast ptr %12 to ptr
+  %wide.load81 = load <4 x i32>, ptr %13, align 4
   %.sum118 = add i64 0, 44
-  %14 = getelementptr i32, i32* %first, i64 %.sum118
-  %15 = bitcast i32* %14 to <4 x i32>*
-  %wide.load82 = load <4 x i32>, <4 x i32>* %15, align 4
+  %14 = getelementptr i32, ptr %first, i64 %.sum118
+  %15 = bitcast ptr %14 to ptr
+  %wide.load82 = load <4 x i32>, ptr %15, align 4
   %16 = mul <4 x i32> %wide.load72, <i32 269850533, i32 269850533, i32 269850533, i32 269850533>
   %17 = mul <4 x i32> %wide.load73, <i32 269850533, i32 269850533, i32 269850533, i32 269850533>
   %18 = mul <4 x i32> %wide.load74, <i32 269850533, i32 269850533, i32 269850533, i32 269850533>

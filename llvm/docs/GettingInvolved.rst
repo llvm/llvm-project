@@ -230,6 +230,10 @@ what to add to your calendar invite.
      - Every 2nd Tuesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
+   * - Floating Point Working Group
+     - Every 3rd Wednesday of the month
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
 
 .. _office-hours:
 
@@ -241,10 +245,11 @@ on a regular schedule, to anyone who is looking for some guidance. Please find
 the list of who is available when, through which medium, and what their area of
 expertise is. Don't be too shy to dial in!
 
-The :doc:`CodeOfConduct` applies to all office hours.
+Office hours are also listed on the :ref:`llvm-community-calendar`. Of course,
+people take time off from time to time, so if you dial in and you don't find
+anyone present, chances are they happen to be off that day.
 
-Of course, people take time off from time to time, so if you dial in and you
-don't find anyone present, chances are they happen to be off that day.
+The :doc:`CodeOfConduct` applies to all office hours.
 
 .. list-table:: LLVM office hours
   :widths: 15 40 15 15 15
@@ -326,6 +331,11 @@ don't find anyone present, chances are they happen to be off that day.
     - GlobalISel questions.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
+    - English
+  * - Rotating hosts
+    - Getting Started, beginner questions, new contributors.
+    - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.
+    - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
     - English
 
 
@@ -442,6 +452,11 @@ also be seen inline below:
 .. raw:: html
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+
+Note that the web view of the LLVM community calendar shows events in
+Coordinated Universal Time (UTC). If you use Google Calendar, consider
+subscribing to it with the + button in the bottom-right corner to view all
+events in your local timezone alongside your other calendars.
 
 .. _llvm-community-calendar-host-guidance:
 

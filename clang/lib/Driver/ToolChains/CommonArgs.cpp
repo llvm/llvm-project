@@ -317,9 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.starts_with("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
@@ -729,6 +727,33 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.isPS();
 }
 
+bool tools::isTLSDESCEnabled(const ToolChain &TC,
+                             const llvm::opt::ArgList &Args) {
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+  Arg *A = Args.getLastArg(options::OPT_mtls_dialect_EQ);
+  if (!A)
+    return Triple.hasDefaultTLSDESC();
+  StringRef V = A->getValue();
+  bool SupportedArgument = false, EnableTLSDESC = false;
+  bool Unsupported = !Triple.isOSBinFormatELF();
+  if (Triple.isRISCV()) {
+    SupportedArgument = V == "desc" || V == "trad";
+    EnableTLSDESC = V == "desc";
+  } else if (Triple.isX86()) {
+    SupportedArgument = V == "gnu";
+  } else {
+    Unsupported = true;
+  }
+  if (Unsupported) {
+    TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << Triple.getTriple();
+  } else if (!SupportedArgument) {
+    TC.getDriver().Diag(diag::err_drv_unsupported_option_argument_for_target)
+        << A->getSpelling() << V << Triple.getTriple();
+  }
+  return EnableTLSDESC;
+}
+
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
@@ -736,6 +761,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
+  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" &&
       !ToolChain.getTriple().isOSOpenBSD()) {
@@ -765,7 +792,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   } else {
     // Tell LLD to find and use .llvm.lto section in regular relocatable object
     // files
-    if (Args.hasArg(options::OPT_ffat_lto_objects))
+    if (IsFatLTO)
       CmdArgs.push_back("--fat-lto-objects");
   }
 
@@ -779,6 +806,28 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_gdwarf_aranges)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          "-generate-arange-section"));
+  }
+
+  // Pass vector library arguments to LTO.
+  Arg *ArgVecLib = Args.getLastArg(options::OPT_fveclib);
+  if (ArgVecLib && ArgVecLib->getNumValues() == 1) {
+    // Map the vector library names from clang front-end to opt front-end. The
+    // values are taken from the TargetLibraryInfo class command line options.
+    std::optional<StringRef> OptVal =
+        llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
+            .Case("Accelerate", "Accelerate")
+            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("MASSV", "MASSV")
+            .Case("SVML", "SVML")
+            .Case("SLEEF", "sleefgnuabi")
+            .Case("Darwin_libsystem_m", "Darwin_libsystem_m")
+            .Case("ArmPL", "ArmPL")
+            .Case("none", "none")
+            .Default(std::nullopt);
+
+    if (OptVal)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to
@@ -825,7 +874,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Matrix intrinsic lowering happens at link time with ThinLTO. Enable
   // LowerMatrixIntrinsicsPass, which is transitively called by
   // buildThinLTODefaultPipeline under EnableMatrix.
-  if (IsThinLTO && Args.hasArg(options::OPT_fenable_matrix))
+  if ((IsThinLTO || IsFatLTO || IsUnifiedLTO) &&
+        Args.hasArg(options::OPT_fenable_matrix))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 
@@ -985,6 +1035,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-emulated-tls"));
   }
+  if (isTLSDESCEnabled(ToolChain, Args))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-tlsdesc"));
 
   if (Args.hasFlag(options::OPT_fstack_size_section,
                    options::OPT_fno_stack_size_section, false))
@@ -1133,6 +1186,16 @@ static bool isWholeArchivePresent(const ArgList &Args) {
   return WholeArchiveActive;
 }
 
+/// Determine if driver is invoked to create a shared object library (-static)
+static bool isSharedLinkage(const ArgList &Args) {
+  return Args.hasArg(options::OPT_shared);
+}
+
+/// Determine if driver is invoked to create a static object library (-shared)
+static bool isStaticLinkage(const ArgList &Args) {
+  return Args.hasArg(options::OPT_static);
+}
+
 /// Add Fortran runtime libs for MSVC
 static void addFortranRuntimeLibsMSVC(const ArgList &Args,
                                       llvm::opt::ArgStringList &CmdArgs) {
@@ -1164,6 +1227,16 @@ static void addFortranRuntimeLibsMSVC(const ArgList &Args,
 // Add FortranMain runtime lib
 static void addFortranMain(const ToolChain &TC, const ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) {
+  // 0. Shared-library linkage
+  // If we are attempting to link a library, we should not add
+  // -lFortran_main.a to the link line, as the `main` symbol is not
+  // required for a library and should also be provided by one of
+  // the translation units of the code that this shared library
+  // will be linked against eventually.
+  if (isSharedLinkage(Args) || isStaticLinkage(Args)) {
+    return;
+  }
+
   // 1. MSVC
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     addFortranRuntimeLibsMSVC(Args, CmdArgs);
@@ -1171,18 +1244,31 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   }
 
   // 2. GNU and similar
+  const Driver &D = TC.getDriver();
+  const char *FortranMainLinkFlag = "-lFortran_main";
+
+  // Warn if the user added `-lFortran_main` - this library is an implementation
+  // detail of Flang and should be handled automaticaly by the driver.
+  for (const char *arg : CmdArgs) {
+    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
+      D.Diag(diag::warn_drv_deprecated_custom)
+          << FortranMainLinkFlag
+          << "see the Flang driver documentation for correct usage";
+  }
+
   // The --whole-archive option needs to be part of the link line to make
   // sure that the main() function from Fortran_main.a is pulled in by the
   // linker. However, it shouldn't be used if it's already active.
-  // TODO: Find an equivalent of `--whole-archive` for Darwin.
-  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX()) {
+  // TODO: Find an equivalent of `--whole-archive` for Darwin and AIX.
+  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
+      !TC.getTriple().isOSAIX()) {
     CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back(FortranMainLinkFlag);
     CmdArgs.push_back("--no-whole-archive");
     return;
   }
 
-  CmdArgs.push_back("-lFortran_main");
+  CmdArgs.push_back(FortranMainLinkFlag);
 }
 
 /// Add Fortran runtime libs
@@ -1317,28 +1403,28 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
-    if (SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsAsanRt()) {
       SharedRuntimes.push_back("asan");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
-    if (SanArgs.needsMemProfRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsMemProfRt()) {
       SharedRuntimes.push_back("memprof");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("memprof-preinit");
     }
-    if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsUbsanRt()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
       else
         SharedRuntimes.push_back("ubsan_standalone");
     }
-    if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsScudoRt()) {
       SharedRuntimes.push_back("scudo_standalone");
     }
-    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+    if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
-    if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsHwasanRt()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
       else
@@ -1349,7 +1435,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
 
   // The stats_client library is also statically linked into DSOs.
-  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsStatsRt())
     StaticRuntimes.push_back("stats_client");
 
   // Always link the static runtime regardless of DSO or executable.
@@ -1365,20 +1451,19 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   // Each static runtime that has a DSO counterpart above is excluded below,
   // but runtimes that exist only as static are not affected by needsSharedRt.
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsAsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsAsanRt()) {
     StaticRuntimes.push_back("asan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt() &&
-      SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt()) {
     StaticRuntimes.push_back("memprof");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("memprof_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt()) {
     if (SanArgs.needsHwasanAliasesRt()) {
       StaticRuntimes.push_back("hwasan_aliases");
       if (SanArgs.linkCXXRuntimes())
@@ -1389,22 +1474,21 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("hwasan_cxx");
     }
   }
-  if (SanArgs.needsDfsanRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsDfsanRt())
     StaticRuntimes.push_back("dfsan");
-  if (SanArgs.needsLsanRt() && SanArgs.linkRuntimes())
+  if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsMsanRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt() &&
-      SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
@@ -1413,24 +1497,24 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsSafeStackRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");
   }
-  if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt() && SanArgs.linkRuntimes())) {
-    if (SanArgs.needsCfiRt() && SanArgs.linkRuntimes())
+  if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
+    if (SanArgs.needsCfiRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt() && SanArgs.linkRuntimes()) {
+    if (SanArgs.needsCfiDiagRt()) {
       StaticRuntimes.push_back("cfi_diag");
       if (SanArgs.linkCXXRuntimes())
         StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
-  if (SanArgs.needsStatsRt() && SanArgs.linkRuntimes()) {
+  if (SanArgs.needsStatsRt()) {
     NonWholeStaticRuntimes.push_back("stats");
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
-  if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt()) {
     StaticRuntimes.push_back("scudo_standalone");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("scudo_standalone_cxx");
@@ -1441,13 +1525,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   SmallVector<StringRef, 4> SharedRuntimes, StaticRuntimes,
       NonWholeStaticRuntimes, HelperStaticRuntimes, RequiredSymbols;
-  collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
-                           NonWholeStaticRuntimes, HelperStaticRuntimes,
-                           RequiredSymbols);
+  if (SanArgs.linkRuntimes()) {
+    collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
+                             NonWholeStaticRuntimes, HelperStaticRuntimes,
+                             RequiredSymbols);
+  }
 
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
@@ -2367,8 +2453,7 @@ static void GetSDLFromOffloadArchive(
       FoundAOB = true;
     }
   } else {
-    if (Lib.starts_with("-l"))
-      Lib = Lib.drop_front(2);
+    Lib.consume_front("-l");
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
       auto LibFile = (Lib.starts_with(":") ? Lib.drop_front()
@@ -2565,7 +2650,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
   const unsigned MinCodeObjVer = 4;
-  const unsigned MaxCodeObjVer = 5;
+  const unsigned MaxCodeObjVer = 6;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==
@@ -2576,6 +2661,12 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
       if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
         D.Diag(diag::err_drv_invalid_int_value)
             << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+
+      // COV6 is only supported by LLVM at the time of writing this, and it's
+      // expected to take some time before all ROCm components fully
+      // support it. In the meantime, make sure users are aware of this.
+      if (CodeObjVer == 6)
+        D.Diag(diag::warn_drv_amdgpu_cov6);
     }
   }
 }
@@ -2703,5 +2794,30 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
     for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
       Arg->claim();
     }
+  }
+}
+
+void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
+                               options::OPT_mno_outline_atomics)) {
+    // Option -moutline-atomics supported for AArch64 target only.
+    if (!Triple.isAArch64()) {
+      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
+          << Triple.getArchName() << A->getOption().getName();
+    } else {
+      if (A->getOption().matches(options::OPT_moutline_atomics)) {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("+outline-atomics");
+      } else {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("-outline-atomics");
+      }
+    }
+  } else if (Triple.isAArch64() && TC.IsAArch64OutlineAtomicsDefault(Args)) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+outline-atomics");
   }
 }

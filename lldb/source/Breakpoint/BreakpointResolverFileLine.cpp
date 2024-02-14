@@ -206,7 +206,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
       [path_separator](llvm::StringRef a, llvm::StringRef b,
                        bool case_sensitive) -> std::optional<llvm::StringRef> {
     if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b)) {
-      if (a.empty() || a.endswith(path_separator)) {
+      if (a.empty() || a.ends_with(path_separator)) {
         return a;
       }
     }

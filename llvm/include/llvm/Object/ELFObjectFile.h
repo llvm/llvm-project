@@ -64,6 +64,7 @@ class ELFObjectFileBase : public ObjectFile {
   SubtargetFeatures getLoongArchFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
+  StringRef getNVPTXCPUName() const;
 
 protected:
   ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source);
@@ -102,6 +103,8 @@ public:
 
   virtual uint16_t getEMachine() const = 0;
 
+  virtual uint8_t getEIdentABIVersion() const = 0;
+
   std::vector<ELFPltEntry> getPltEntries() const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
@@ -109,11 +112,12 @@ public:
   Expected<std::vector<VersionEntry>> readDynsymVersions() const;
 
   /// Returns a vector of all BB address maps in the object file. When
-  // `TextSectionIndex` is specified, only returns the BB address maps
-  // corresponding to the section with that index. When `PGOAnalyses`is
-  // specified, the vector is cleared then filled with extra PGO data.
-  // `PGOAnalyses` will always be the same length as the return value on
-  // success, otherwise it is empty.
+  /// `TextSectionIndex` is specified, only returns the BB address maps
+  /// corresponding to the section with that index. When `PGOAnalyses`is
+  /// specified (PGOAnalyses is not nullptr), the vector is cleared then filled
+  /// with extra PGO data. `PGOAnalyses` will always be the same length as the
+  /// return value when it is requested assuming no error occurs. Upon failure,
+  /// `PGOAnalyses` will be emptied.
   Expected<std::vector<BBAddrMap>>
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt,
                 std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
@@ -249,6 +253,7 @@ ELFObjectFileBase::symbols() const {
 template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
   uint16_t getEType() const override;
+  uint8_t getEIdentABIVersion() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -453,6 +458,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
+  Triple::OSType getOS() const override;
   Expected<uint64_t> getStartAddress() const override;
 
   unsigned getPlatformFlags() const override { return EF.getHeader().e_flags; }
@@ -640,6 +646,10 @@ uint16_t ELFObjectFile<ELFT>::getEMachine() const {
 
 template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
   return EF.getHeader().e_type;
+}
+
+template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentABIVersion() const {
+  return EF.getHeader().e_ident[ELF::EI_ABIVERSION];
 }
 
 template <class ELFT>
@@ -1348,6 +1358,12 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     return Triple::UnknownArch;
   }
 
+  case ELF::EM_CUDA: {
+    if (EF.getHeader().e_ident[ELF::EI_CLASS] == ELF::ELFCLASS32)
+      return Triple::nvptx;
+    return Triple::nvptx64;
+  }
+
   case ELF::EM_BPF:
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;
 
@@ -1371,6 +1387,35 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
 
   default:
     return Triple::UnknownArch;
+  }
+}
+
+template <class ELFT> Triple::OSType ELFObjectFile<ELFT>::getOS() const {
+  switch (EF.getHeader().e_ident[ELF::EI_OSABI]) {
+  case ELF::ELFOSABI_NETBSD:
+    return Triple::NetBSD;
+  case ELF::ELFOSABI_LINUX:
+    return Triple::Linux;
+  case ELF::ELFOSABI_HURD:
+    return Triple::Hurd;
+  case ELF::ELFOSABI_SOLARIS:
+    return Triple::Solaris;
+  case ELF::ELFOSABI_AIX:
+    return Triple::AIX;
+  case ELF::ELFOSABI_FREEBSD:
+    return Triple::FreeBSD;
+  case ELF::ELFOSABI_OPENBSD:
+    return Triple::OpenBSD;
+  case ELF::ELFOSABI_CUDA:
+    return Triple::CUDA;
+  case ELF::ELFOSABI_AMDGPU_HSA:
+    return Triple::AMDHSA;
+  case ELF::ELFOSABI_AMDGPU_PAL:
+    return Triple::AMDPAL;
+  case ELF::ELFOSABI_AMDGPU_MESA3D:
+    return Triple::Mesa3D;
+  default:
+    return Triple::UnknownOS;
   }
 }
 

@@ -57,7 +57,7 @@ end subroutine
 program p
   ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant 4 : index
   ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 3 : index
-  ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant -1 : i32
+  ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant 6 : i32
   ! CHECK: %[[VAL_5:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> {bindc_name = "c1", uniq_name = "_QFEc1"}
   ! CHECK: %[[VAL_6:.*]] = fir.address_of(@_QFEc2) : !fir.ref<!fir.array<3x!fir.char<1,4>>>
   ! CHECK: %[[VAL_7:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
@@ -91,7 +91,7 @@ end program p
 
 ! CHECK-LABEL: func @_QPcharlit() {
 subroutine charlit
-  ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant -1 : i32
+  ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant 6 : i32
   ! CHECK-DAG: %[[VAL_3:.*]] = arith.constant 3 : index
   ! CHECK-DAG: %[[VAL_4:.*]] = arith.constant false
   ! CHECK-DAG: %[[VAL_5:.*]] = arith.constant 4 : index

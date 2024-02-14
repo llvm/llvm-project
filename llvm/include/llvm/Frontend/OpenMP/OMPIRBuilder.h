@@ -83,11 +83,20 @@ BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 /// are ones that are not dependent on the configuration.
 class OpenMPIRBuilderConfig {
 public:
-  /// Flag for specifying if the compilation is done for embedded device code
-  /// or host code.
+  /// Flag to define whether to generate code for the role of the OpenMP host
+  /// (if set to false) or device (if set to true) in an offloading context. It
+  /// is set when the -fopenmp-is-target-device compiler frontend option is
+  /// specified.
   std::optional<bool> IsTargetDevice;
 
-  /// Flag for specifying if the compilation is done for an accelerator.
+  /// Flag for specifying if the compilation is done for an accelerator. It is
+  /// set according to the architecture of the target triple and currently only
+  /// true when targeting AMDGPU or NVPTX. Today, these targets can only perform
+  /// the role of an OpenMP target device, so `IsTargetDevice` must also be true
+  /// if `IsGPU` is true. This restriction might be lifted if an accelerator-
+  /// like target with the ability to work as the OpenMP host is added, or if
+  /// the capabilities of the currently supported GPU architectures are
+  /// expanded.
   std::optional<bool> IsGPU;
 
   // Flag for specifying if offloading is mandatory.
@@ -2562,6 +2571,13 @@ public:
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
                       AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
                       bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
+  InsertPointTy createAtomicCompare(const LocationDescription &Loc,
+                                    AtomicOpValue &X, AtomicOpValue &V,
+                                    AtomicOpValue &R, Value *E, Value *D,
+                                    AtomicOrdering AO,
+                                    omp::OMPAtomicCompareOp Op,
+                                    bool IsXBinopExpr, bool IsPostfixUpdate,
+                                    bool IsFailOnly, AtomicOrdering Failure);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

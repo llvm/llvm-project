@@ -28,8 +28,8 @@ def NO_RET_ATOMIC_ADD : I<(outs), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
 // GISEL-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/1, /*MergeInsnID's*/0,
-// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 let HasNoUse = true in
 defm atomic_load_add_no_ret : binary_atomic_op<atomic_load_add>;
 

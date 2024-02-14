@@ -18,7 +18,7 @@
 /*  Constant                                         Value
     __cpp_lib_adaptor_iterator_pair_constructor      202106L [C++23]
     __cpp_lib_addressof_constexpr                    201603L [C++17]
-    __cpp_lib_allocate_at_least                      202106L [C++23]
+    __cpp_lib_allocate_at_least                      202302L [C++23]
     __cpp_lib_allocator_traits_is_always_equal       201411L [C++17]
     __cpp_lib_any                                    201606L [C++17]
     __cpp_lib_apply                                  201603L [C++17]
@@ -186,6 +186,7 @@
     __cpp_lib_smart_ptr_owner_equality               202306L [C++26]
     __cpp_lib_source_location                        201907L [C++20]
     __cpp_lib_span                                   202002L [C++20]
+    __cpp_lib_span_at                                202311L [C++26]
     __cpp_lib_span_initializer_list                  202311L [C++26]
     __cpp_lib_spanstream                             202106L [C++23]
     __cpp_lib_ssize                                  201902L [C++20]
@@ -879,6 +880,10 @@
 #   error "__cpp_lib_span should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_span_initializer_list
 #   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
@@ -1566,11 +1571,17 @@
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++14"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++14"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++14"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++14"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_ranges
@@ -1714,6 +1725,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -2174,7 +2189,7 @@
 #   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++17"
 #   endif
@@ -2183,7 +2198,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
@@ -2559,11 +2574,17 @@
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++17"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++17"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++17"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_ranges
@@ -2662,11 +2683,17 @@
 #   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
-# ifndef __cpp_lib_scoped_lock
-#   error "__cpp_lib_scoped_lock should be defined in c++17"
-# endif
-# if __cpp_lib_scoped_lock != 201703L
-#   error "__cpp_lib_scoped_lock should have the value 201703L in c++17"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should be defined in c++17"
+#   endif
+#   if __cpp_lib_scoped_lock != 201703L
+#     error "__cpp_lib_scoped_lock should have the value 201703L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_semaphore
@@ -2731,6 +2758,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -3353,7 +3384,7 @@
 #   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++20"
 #   endif
@@ -3362,7 +3393,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
@@ -3822,11 +3853,17 @@
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++20"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++20"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++20"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_ranges
@@ -3931,11 +3968,17 @@
 #   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
-# ifndef __cpp_lib_scoped_lock
-#   error "__cpp_lib_scoped_lock should be defined in c++20"
-# endif
-# if __cpp_lib_scoped_lock != 201703L
-#   error "__cpp_lib_scoped_lock should have the value 201703L in c++20"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should be defined in c++20"
+#   endif
+#   if __cpp_lib_scoped_lock != 201703L
+#     error "__cpp_lib_scoped_lock should have the value 201703L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
@@ -4027,6 +4070,10 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++20"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -4262,8 +4309,8 @@
 # ifndef __cpp_lib_allocate_at_least
 #   error "__cpp_lib_allocate_at_least should be defined in c++23"
 # endif
-# if __cpp_lib_allocate_at_least != 202106L
-#   error "__cpp_lib_allocate_at_least should have the value 202106L in c++23"
+# if __cpp_lib_allocate_at_least != 202302L
+#   error "__cpp_lib_allocate_at_least should have the value 202302L in c++23"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -4733,7 +4780,7 @@
 #   error "__cpp_lib_expected should have the value 202211L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++23"
 #   endif
@@ -4742,7 +4789,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
@@ -5243,24 +5290,24 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++23"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++23"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++23"
 # endif
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++23"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++23"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++23"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_ranges
@@ -5449,11 +5496,17 @@
 #   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
-# ifndef __cpp_lib_scoped_lock
-#   error "__cpp_lib_scoped_lock should be defined in c++23"
-# endif
-# if __cpp_lib_scoped_lock != 201703L
-#   error "__cpp_lib_scoped_lock should have the value 201703L in c++23"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should be defined in c++23"
+#   endif
+#   if __cpp_lib_scoped_lock != 201703L
+#     error "__cpp_lib_scoped_lock should have the value 201703L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
@@ -5545,6 +5598,10 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++23"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -5831,8 +5888,8 @@
 # ifndef __cpp_lib_allocate_at_least
 #   error "__cpp_lib_allocate_at_least should be defined in c++26"
 # endif
-# if __cpp_lib_allocate_at_least != 202106L
-#   error "__cpp_lib_allocate_at_least should have the value 202106L in c++26"
+# if __cpp_lib_allocate_at_least != 202302L
+#   error "__cpp_lib_allocate_at_least should have the value 202302L in c++26"
 # endif
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
@@ -6332,7 +6389,7 @@
 #   error "__cpp_lib_expected should have the value 202211L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY
+# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++26"
 #   endif
@@ -6341,7 +6398,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
@@ -6496,16 +6553,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))
 #   ifndef __cpp_lib_fstream_native_handle
 #     error "__cpp_lib_fstream_native_handle should be defined in c++26"
 #   endif
 #   if __cpp_lib_fstream_native_handle != 202306L
 #     error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_fstream_native_handle
-#     error "__cpp_lib_fstream_native_handle should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_fstream_native_handle should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))' is not met!"
 #   endif
 # endif
 
@@ -6950,24 +7007,24 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++26"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++26"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++26"
 # endif
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++26"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++26"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++26"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_ranges
@@ -7164,24 +7221,24 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should be defined in c++26"
-#   endif
-#   if __cpp_lib_saturation_arithmetic != 202311L
-#     error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should be defined in c++26"
+# endif
+# if __cpp_lib_saturation_arithmetic != 202311L
+#   error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
 # endif
 
-# ifndef __cpp_lib_scoped_lock
-#   error "__cpp_lib_scoped_lock should be defined in c++26"
-# endif
-# if __cpp_lib_scoped_lock != 201703L
-#   error "__cpp_lib_scoped_lock should have the value 201703L in c++26"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should be defined in c++26"
+#   endif
+#   if __cpp_lib_scoped_lock != 201703L
+#     error "__cpp_lib_scoped_lock should have the value 201703L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_scoped_lock
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
@@ -7284,17 +7341,18 @@
 #   error "__cpp_lib_span should have the value 202002L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_span_initializer_list
-#     error "__cpp_lib_span_initializer_list should be defined in c++26"
-#   endif
-#   if __cpp_lib_span_initializer_list != 202311L
-#     error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_span_initializer_list
-#     error "__cpp_lib_span_initializer_list should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should be defined in c++26"
+# endif
+# if __cpp_lib_span_at != 202311L
+#   error "__cpp_lib_span_at should have the value 202311L in c++26"
+# endif
+
+# ifndef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should be defined in c++26"
+# endif
+# if __cpp_lib_span_initializer_list != 202311L
+#   error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

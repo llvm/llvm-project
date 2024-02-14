@@ -65,13 +65,11 @@ BreakpointResolverAddress::SerializeToStructuredData() {
       new StructuredData::Dictionary());
   SectionSP section_sp = m_addr.GetSection();
   if (section_sp) {
-    ModuleSP module_sp = section_sp->GetModule();
-    ConstString module_name;
-    if (module_sp)
-      module_name.SetCString(module_name.GetCString());
-
-    options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
-                                   module_name.GetCString());
+    if (ModuleSP module_sp = section_sp->GetModule()) {
+      const FileSpec &module_fspec = module_sp->GetFileSpec();
+      options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
+                                     module_fspec.GetPath().c_str());
+    }
     options_dict_sp->AddIntegerItem(GetKey(OptionNames::AddressOffset),
                                     m_addr.GetOffset());
   } else {

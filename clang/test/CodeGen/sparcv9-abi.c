@@ -53,7 +53,7 @@ struct large {
   int x;
 };
 
-// CHECK-LABEL: define{{.*}} void @f_large(ptr noalias sret(%struct.large) align 8 %agg.result, ptr noundef %x)
+// CHECK-LABEL: define{{.*}} void @f_large(ptr dead_on_unwind noalias writable sret(%struct.large) align 8 %agg.result, ptr noundef %x)
 struct large f_large(struct large x) {
   x.a += *x.b;
   x.b = 0;

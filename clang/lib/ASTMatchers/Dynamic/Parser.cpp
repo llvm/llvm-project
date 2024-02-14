@@ -299,10 +299,8 @@ private:
 
   /// Consume all leading whitespace from \c Code.
   void consumeWhitespace() {
-    Code = Code.drop_while([](char c) {
-      // Don't trim newlines.
-      return StringRef(" \t\v\f\r").contains(c);
-    });
+    // Don't trim newlines.
+    Code = Code.ltrim(" \t\v\f\r");
   }
 
   SourceLocation currentLocation() {

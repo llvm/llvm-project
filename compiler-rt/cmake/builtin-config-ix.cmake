@@ -35,10 +35,12 @@ asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
-builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_SME
+builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
 "
-asm(\".arch armv9-a+sme\");
-asm(\"smstart\");
+void foo(void)  __arm_streaming_compatible {
+  asm(\".arch armv9-a+sme\");
+  asm(\"smstart\");
+}
 ")
 
 if(ANDROID)

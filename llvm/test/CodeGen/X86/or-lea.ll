@@ -825,3 +825,23 @@ entry:
   %or = or i64 %sub, 549755813889   ; 0x8000000001
   ret i64 %or
 }
+
+define i32 @or_shift1_disjoint(i32 %x, i32 %y) {
+; X86-LABEL: or_shift1_disjoint:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: or_shift1_disjoint:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rsi,%rdi,2), %eax
+; X64-NEXT:    retq
+  %shl = shl i32 %x, 1
+  %or = or disjoint i32 %y, %shl
+  ret i32 %or
+}
+

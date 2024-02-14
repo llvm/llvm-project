@@ -15,7 +15,7 @@
 #include <__utility/integer_sequence.h>
 #include <cstddef>
 #include <experimental/__config>
-#include <experimental/__simd/internal_declaration.h>
+#include <experimental/__simd/declaration.h>
 #include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>
 
@@ -38,11 +38,11 @@ struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
   _Tp __data __attribute__((__vector_size__(std::__bit_ceil((sizeof(_Tp) * _Np)))));
 
   _LIBCPP_HIDE_FROM_ABI _Tp __get(size_t __idx) const noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     return __data[__idx];
   }
   _LIBCPP_HIDE_FROM_ABI void __set(size_t __idx, _Tp __v) noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     __data[__idx] = __v;
   }
 };
@@ -73,6 +73,12 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
     return __generate_init(std::forward<_Generator>(__g), std::make_index_sequence<_Np>());
   }
+
+  template <class _Up>
+  static _LIBCPP_HIDE_FROM_ABI void __load(_SimdStorage& __s, const _Up* __mem) noexcept {
+    for (size_t __i = 0; __i < _Np; __i++)
+      __s.__data[__i] = static_cast<_Tp>(__mem[__i]);
+  }
 };
 
 template <class _Tp, int _Np>
@@ -86,6 +92,11 @@ struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
       __result.__set(__i, __all_bits_v);
     }
     return __result;
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI void __load(_MaskStorage& __s, const bool* __mem) noexcept {
+    for (size_t __i = 0; __i < _Np; __i++)
+      __s.__data[__i] = experimental::__set_all_bits<_Tp>(__mem[__i]);
   }
 };
 

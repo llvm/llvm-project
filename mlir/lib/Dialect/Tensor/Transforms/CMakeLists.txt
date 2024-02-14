@@ -4,10 +4,10 @@ add_mlir_dialect_library(MLIRTensorTransforms
   ConcatOpPatterns.cpp
   EmptyOpPatterns.cpp
   ExtractSliceFromReshapeUtils.cpp
-  FoldIntoPackAndUnpackPatterns.cpp
   FoldTensorSubsetOps.cpp
   IndependenceTransforms.cpp
   MergeConsecutiveInsertExtractSlicePatterns.cpp
+  PackAndUnpackPatterns.cpp
   ReshapePatterns.cpp
   RewriteAsConstant.cpp
   SwapExtractSliceWithProducerPatterns.cpp
@@ -27,6 +27,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRArithUtils
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
+  MLIRDialectUtils
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect

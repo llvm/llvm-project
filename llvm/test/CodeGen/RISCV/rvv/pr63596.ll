@@ -14,16 +14,16 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    lhu s2, 0(a0)
 ; CHECK-NEXT:    lhu a0, 2(a0)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fsw fa0, 8(sp)
 ; CHECK-NEXT:    fmv.w.x fa0, s2
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fsw fa0, 0(sp)
 ; CHECK-NEXT:    fmv.w.x fa0, s1
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fsw fa0, 12(sp)
 ; CHECK-NEXT:    fmv.w.x fa0, s0
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fsw fa0, 4(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma

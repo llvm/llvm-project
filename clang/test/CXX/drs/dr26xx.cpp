@@ -24,7 +24,7 @@ using enum E;
 #endif
 }
 
-namespace dr2628 { // dr2628: no open
+namespace dr2628 { // dr2628: no
                    // this was reverted for the 16.x release
                    // due to regressions, see the issue for more details:
                    // https://github.com/llvm/llvm-project/issues/60777
@@ -106,11 +106,11 @@ int \N{Λ} = 0;
 // expected-error@-2 {{expected unqualified-id}}
 const char* emoji = "\N{🤡}";
 // expected-error@-1 {{'🤡' is not a valid Unicode character name}}
-// expected-note@-2 {{did you mean OX ('🐂' U+1F402)?}}
-// expected-note@-3 {{did you mean ANT ('🐜' U+1F41C)?}}
-// expected-note@-4 {{did you mean ARC ('⌒' U+2312)?}}
-// expected-note@-5 {{did you mean AXE ('🪓' U+1FA93)?}}
-// expected-note@-6 {{did you mean BAT ('🦇' U+1F987)?}}
+//   expected-note@-2 {{did you mean OX ('🐂' U+1F402)?}}
+//   expected-note@-3 {{did you mean ANT ('🐜' U+1F41C)?}}
+//   expected-note@-4 {{did you mean ARC ('⌒' U+2312)?}}
+//   expected-note@-5 {{did you mean AXE ('🪓' U+1FA93)?}}
+//   expected-note@-6 {{did you mean BAT ('🦇' U+1F987)?}}
 
 #define z(x) 0
 #define dr2640_a z(
@@ -197,7 +197,7 @@ J j = { "ghi" };
 #endif
 }
 
-namespace dr2672 { // dr2672: 18 open
+namespace dr2672 { // dr2672: 18
 #if __cplusplus >= 202002L
 template <class T>
 void f(T) requires requires { []() { T::invalid; } (); };
@@ -211,7 +211,7 @@ void f(...);
 
 template <class T>
 void bar(T) requires requires {
-   decltype([]() -> T {})::foo();
+   []() -> decltype(T::foo()) {};
 };
 void bar(...);
 

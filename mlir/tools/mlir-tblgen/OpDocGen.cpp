@@ -123,6 +123,12 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
   os << "```\n\n";
 }
 
+/// Place `text` between backticks so that the Markdown processor renders it as
+/// inline code.
+static std::string backticks(const std::string &text) {
+  return '`' + text + '`';
+}
+
 static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
   // TODO: We should link to the trait/documentation of it. That also means we
   // should add descriptions to traits that can be queried.
@@ -155,14 +161,14 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
           os << effect << " on " << rec->getValueAsString("resource");
         });
         os << "}";
-        effects.insert(os.str());
+        effects.insert(backticks(os.str()));
         name.append(llvm::formatv(" ({0})", traitName).str());
       }
-      interfaces.insert(name);
+      interfaces.insert(backticks(name));
       continue;
     }
 
-    traits.insert(name);
+    traits.insert(backticks(name));
   }
   if (!traits.empty()) {
     llvm::interleaveComma(traits, os << "\nTraits: ");

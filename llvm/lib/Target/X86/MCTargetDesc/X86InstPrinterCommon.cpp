@@ -30,7 +30,9 @@ void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
   bool Flavor = MI->getOpcode() == X86::CMPCCXADDmr32 ||
-                MI->getOpcode() == X86::CMPCCXADDmr64;
+                MI->getOpcode() == X86::CMPCCXADDmr64 ||
+                MI->getOpcode() == X86::CMPCCXADDmr32_EVEX ||
+                MI->getOpcode() == X86::CMPCCXADDmr64_EVEX;
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;
@@ -368,6 +370,9 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
     O << "\trepne\t";
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
+
+  if (TSFlags & X86II::EVEX_NF)
+    O << "\t{nf}";
 
   // These all require a pseudo prefix
   if ((Flags & X86::IP_USE_VEX) ||

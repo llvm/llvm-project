@@ -35,7 +35,7 @@
 
 // The ELF ID should be defined at compile-time by the build system.
 #ifndef TARGET_ELF_ID
-#define TARGET_ELF_ID 0
+#define TARGET_ELF_ID ELF::EM_NONE
 #endif
 
 namespace llvm {
@@ -73,8 +73,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
     Func = (void (*)())Global.getPtr();
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /* Unknown */ 2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /* Unknown */ 2;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
 
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;
@@ -111,8 +111,9 @@ private:
 /// Class implementing the GenELF64 device images properties.
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
-  GenELF64DeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), DynLib() {}
+  GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                        const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -141,15 +142,14 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   std::string getComputeUnitKind() const override { return "generic-64bit"; }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel =
         Plugin::get().allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
       return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(KernelEntry.name);
+    new (GenELF64Kernel) GenELF64KernelTy(Name);
 
     return *GenELF64Kernel;
   }
@@ -163,7 +163,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image =
         Plugin::get().allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
@@ -215,6 +215,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -382,6 +383,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     ompt::connectLibrary();
 #endif
 
+#ifdef USES_DYNAMIC_FFI
+    if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
+      return std::move(Err);
+#endif
+
     return NUM_DEVICES;
   }
 
@@ -397,9 +403,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
-    return true;
-  }
+  Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
   Triple::ArchType getTripleArch() const override {
     return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;

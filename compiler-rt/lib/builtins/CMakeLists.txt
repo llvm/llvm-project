@@ -271,7 +271,7 @@ endif()
 
 # These files are used on 32-bit and 64-bit x86.
 set(x86_ARCH_SOURCES
-  cpu_model.c
+  cpu_model/x86.c
   )
 
 if (NOT MSVC)
@@ -556,13 +556,14 @@ endif()
 set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
-  cpu_model.c
+  cpu_model/aarch64.c
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+if(COMPILER_RT_HAS_AARCH64_SME AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
   message(STATUS "AArch64 SME ABI routines enabled")
+  set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
 else()
   message(STATUS "AArch64 SME ABI routines disabled")
 endif()
@@ -909,11 +910,6 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   endif()
   add_dependencies(compiler-rt builtins-standalone-atomic)
 endif()
-
-# TODO: COMPILER_RT_BUILD_CRT used to be a cached variable so we need to unset
-# it first so cmake_dependent_option can set the local variable of the same
-# name. This statement can be removed in the future.
-unset(COMPILER_RT_BUILD_CRT CACHE)
 
 cmake_dependent_option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON "COMPILER_RT_HAS_CRT" OFF)
 

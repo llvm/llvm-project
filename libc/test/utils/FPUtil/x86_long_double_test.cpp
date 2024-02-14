@@ -22,12 +22,12 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   constexpr uint32_t COUNT = 100'000;
 
   FPBits bits(0.0l);
-  bits.set_biased_exponent(FPBits::MAX_EXPONENT);
+  bits.set_biased_exponent(FPBits::MAX_BIASED_EXPONENT);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent has the max value and the implicit bit is 0,
     // then the number is a NaN for all values of mantissa.
     bits.set_mantissa(i);
-    long double nan = bits;
+    long double nan = bits.get_val();
     ASSERT_NE(static_cast<int>(isnan(nan)), 0);
     ASSERT_TRUE(bits.is_nan());
   }
@@ -38,7 +38,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     // then the number is a NaN for all non-zero values of mantissa.
     // Note the initial value of |i| of 1 to avoid a zero mantissa.
     bits.set_mantissa(i);
-    long double nan = bits;
+    long double nan = bits.get_val();
     ASSERT_NE(static_cast<int>(isnan(nan)), 0);
     ASSERT_TRUE(bits.is_nan());
   }
@@ -49,7 +49,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     // If exponent is non-zero and also not max, and the implicit bit is 0,
     // then the number is a NaN for all values of mantissa.
     bits.set_mantissa(i);
-    long double nan = bits;
+    long double nan = bits.get_val();
     ASSERT_NE(static_cast<int>(isnan(nan)), 0);
     ASSERT_TRUE(bits.is_nan());
   }
@@ -60,7 +60,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     // If exponent is non-zero and also not max, and the implicit bit is 1,
     // then the number is normal value for all values of mantissa.
     bits.set_mantissa(i);
-    long double valid = bits;
+    long double valid = bits.get_val();
     ASSERT_EQ(static_cast<int>(isnan(valid)), 0);
     ASSERT_FALSE(bits.is_nan());
   }
@@ -70,7 +70,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is zero, then the number is a valid but denormal value.
     bits.set_mantissa(i);
-    long double valid = bits;
+    long double valid = bits.get_val();
     ASSERT_EQ(static_cast<int>(isnan(valid)), 0);
     ASSERT_FALSE(bits.is_nan());
   }
@@ -80,7 +80,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is zero, then the number is a valid but denormal value.
     bits.set_mantissa(i);
-    long double valid = bits;
+    long double valid = bits.get_val();
     ASSERT_EQ(static_cast<int>(isnan(valid)), 0);
     ASSERT_FALSE(bits.is_nan());
   }

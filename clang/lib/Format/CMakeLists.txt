@@ -11,6 +11,7 @@ add_clang_library(clangFormat
   IntegerLiteralSeparatorFixer.cpp
   MacroCallReconstructor.cpp
   MacroExpander.cpp
+  MatchFilePath.cpp
   NamespaceEndCommentsFixer.cpp
   ObjCPropertyAttributeOrderFixer.cpp
   QualifierAlignmentFixer.cpp

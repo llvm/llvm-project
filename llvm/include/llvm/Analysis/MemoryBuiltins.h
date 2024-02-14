@@ -187,80 +187,119 @@ Value *lowerObjectSizeCall(
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
     SmallVectorImpl<Instruction *> *InsertedInstructions = nullptr);
 
-using SizeOffsetType = std::pair<APInt, APInt>;
+/// SizeOffsetType - A base template class for the object size visitors. Used
+/// here as a self-documenting way to handle the values rather than using a
+/// \p std::pair.
+template <typename T, class C> struct SizeOffsetType {
+public:
+  T Size;
+  T Offset;
+
+  SizeOffsetType() = default;
+  SizeOffsetType(T Size, T Offset) : Size(Size), Offset(Offset) {}
+
+  bool knownSize() const { return C::known(Size); }
+  bool knownOffset() const { return C::known(Offset); }
+  bool anyKnown() const { return knownSize() || knownOffset(); }
+  bool bothKnown() const { return knownSize() && knownOffset(); }
+
+  bool operator==(const SizeOffsetType<T, C> &RHS) const {
+    return Size == RHS.Size && Offset == RHS.Offset;
+  }
+  bool operator!=(const SizeOffsetType<T, C> &RHS) const {
+    return !(*this == RHS);
+  }
+};
+
+/// SizeOffsetAPInt - Used by \p ObjectSizeOffsetVisitor, which works with
+/// \p APInts.
+struct SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
+  SizeOffsetAPInt() = default;
+  SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
+
+  static bool known(APInt V) { return V.getBitWidth() > 1; }
+};
 
 /// Evaluate the size and offset of an object pointed to by a Value*
 /// statically. Fails if size or offset are not known at compile time.
 class ObjectSizeOffsetVisitor
-  : public InstVisitor<ObjectSizeOffsetVisitor, SizeOffsetType> {
+    : public InstVisitor<ObjectSizeOffsetVisitor, SizeOffsetAPInt> {
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
   ObjectSizeOpts Options;
   unsigned IntTyBits;
   APInt Zero;
-  SmallDenseMap<Instruction *, SizeOffsetType, 8> SeenInsts;
+  SmallDenseMap<Instruction *, SizeOffsetAPInt, 8> SeenInsts;
   unsigned InstructionsVisited;
 
   APInt align(APInt Size, MaybeAlign Align);
 
-  SizeOffsetType unknown() {
-    return std::make_pair(APInt(), APInt());
-  }
+  static SizeOffsetAPInt unknown() { return SizeOffsetAPInt(); }
 
 public:
   ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
                           LLVMContext &Context, ObjectSizeOpts Options = {});
 
-  SizeOffsetType compute(Value *V);
-
-  static bool knownSize(const SizeOffsetType &SizeOffset) {
-    return SizeOffset.first.getBitWidth() > 1;
-  }
-
-  static bool knownOffset(const SizeOffsetType &SizeOffset) {
-    return SizeOffset.second.getBitWidth() > 1;
-  }
-
-  static bool bothKnown(const SizeOffsetType &SizeOffset) {
-    return knownSize(SizeOffset) && knownOffset(SizeOffset);
-  }
+  SizeOffsetAPInt compute(Value *V);
 
   // These are "private", except they can't actually be made private. Only
   // compute() should be used by external users.
-  SizeOffsetType visitAllocaInst(AllocaInst &I);
-  SizeOffsetType visitArgument(Argument &A);
-  SizeOffsetType visitCallBase(CallBase &CB);
-  SizeOffsetType visitConstantPointerNull(ConstantPointerNull&);
-  SizeOffsetType visitExtractElementInst(ExtractElementInst &I);
-  SizeOffsetType visitExtractValueInst(ExtractValueInst &I);
-  SizeOffsetType visitGlobalAlias(GlobalAlias &GA);
-  SizeOffsetType visitGlobalVariable(GlobalVariable &GV);
-  SizeOffsetType visitIntToPtrInst(IntToPtrInst&);
-  SizeOffsetType visitLoadInst(LoadInst &I);
-  SizeOffsetType visitPHINode(PHINode&);
-  SizeOffsetType visitSelectInst(SelectInst &I);
-  SizeOffsetType visitUndefValue(UndefValue&);
-  SizeOffsetType visitInstruction(Instruction &I);
+  SizeOffsetAPInt visitAllocaInst(AllocaInst &I);
+  SizeOffsetAPInt visitArgument(Argument &A);
+  SizeOffsetAPInt visitCallBase(CallBase &CB);
+  SizeOffsetAPInt visitConstantPointerNull(ConstantPointerNull &);
+  SizeOffsetAPInt visitExtractElementInst(ExtractElementInst &I);
+  SizeOffsetAPInt visitExtractValueInst(ExtractValueInst &I);
+  SizeOffsetAPInt visitGlobalAlias(GlobalAlias &GA);
+  SizeOffsetAPInt visitGlobalVariable(GlobalVariable &GV);
+  SizeOffsetAPInt visitIntToPtrInst(IntToPtrInst &);
+  SizeOffsetAPInt visitLoadInst(LoadInst &I);
+  SizeOffsetAPInt visitPHINode(PHINode &);
+  SizeOffsetAPInt visitSelectInst(SelectInst &I);
+  SizeOffsetAPInt visitUndefValue(UndefValue &);
+  SizeOffsetAPInt visitInstruction(Instruction &I);
 
 private:
-  SizeOffsetType findLoadSizeOffset(
+  SizeOffsetAPInt findLoadSizeOffset(
       LoadInst &LoadFrom, BasicBlock &BB, BasicBlock::iterator From,
-      SmallDenseMap<BasicBlock *, SizeOffsetType, 8> &VisitedBlocks,
+      SmallDenseMap<BasicBlock *, SizeOffsetAPInt, 8> &VisitedBlocks,
       unsigned &ScannedInstCount);
-  SizeOffsetType combineSizeOffset(SizeOffsetType LHS, SizeOffsetType RHS);
-  SizeOffsetType computeImpl(Value *V);
-  SizeOffsetType computeValue(Value *V);
+  SizeOffsetAPInt combineSizeOffset(SizeOffsetAPInt LHS, SizeOffsetAPInt RHS);
+  SizeOffsetAPInt computeImpl(Value *V);
+  SizeOffsetAPInt computeValue(Value *V);
   bool CheckedZextOrTrunc(APInt &I);
 };
 
-using SizeOffsetEvalType = std::pair<Value *, Value *>;
+/// SizeOffsetValue - Used by \p ObjectSizeOffsetEvaluator, which works with
+/// \p Values.
+struct SizeOffsetWeakTrackingVH;
+struct SizeOffsetValue : public SizeOffsetType<Value *, SizeOffsetValue> {
+  SizeOffsetValue() : SizeOffsetType(nullptr, nullptr) {}
+  SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
+  SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
+
+  static bool known(Value *V) { return V != nullptr; }
+};
+
+/// SizeOffsetWeakTrackingVH - Used by \p ObjectSizeOffsetEvaluator in a
+/// \p DenseMap.
+struct SizeOffsetWeakTrackingVH
+    : public SizeOffsetType<WeakTrackingVH, SizeOffsetWeakTrackingVH> {
+  SizeOffsetWeakTrackingVH() : SizeOffsetType(nullptr, nullptr) {}
+  SizeOffsetWeakTrackingVH(Value *Size, Value *Offset)
+      : SizeOffsetType(Size, Offset) {}
+  SizeOffsetWeakTrackingVH(const SizeOffsetValue &SOV)
+      : SizeOffsetType(SOV.Size, SOV.Offset) {}
+
+  static bool known(WeakTrackingVH V) { return V.pointsToAliveValue(); }
+};
 
 /// Evaluate the size and offset of an object pointed to by a Value*.
 /// May create code to compute the result at run-time.
 class ObjectSizeOffsetEvaluator
-  : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetEvalType> {
+    : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetValue> {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  using WeakEvalType = std::pair<WeakTrackingVH, WeakTrackingVH>;
+  using WeakEvalType = SizeOffsetWeakTrackingVH;
   using CacheMapTy = DenseMap<const Value *, WeakEvalType>;
   using PtrSetTy = SmallPtrSet<const Value *, 8>;
 
@@ -275,45 +314,27 @@ class ObjectSizeOffsetEvaluator
   ObjectSizeOpts EvalOpts;
   SmallPtrSet<Instruction *, 8> InsertedInstructions;
 
-  SizeOffsetEvalType compute_(Value *V);
+  SizeOffsetValue compute_(Value *V);
 
 public:
-  static SizeOffsetEvalType unknown() {
-    return std::make_pair(nullptr, nullptr);
-  }
-
   ObjectSizeOffsetEvaluator(const DataLayout &DL, const TargetLibraryInfo *TLI,
                             LLVMContext &Context, ObjectSizeOpts EvalOpts = {});
 
-  SizeOffsetEvalType compute(Value *V);
+  static SizeOffsetValue unknown() { return SizeOffsetValue(); }
 
-  bool knownSize(SizeOffsetEvalType SizeOffset) {
-    return SizeOffset.first;
-  }
-
-  bool knownOffset(SizeOffsetEvalType SizeOffset) {
-    return SizeOffset.second;
-  }
-
-  bool anyKnown(SizeOffsetEvalType SizeOffset) {
-    return knownSize(SizeOffset) || knownOffset(SizeOffset);
-  }
-
-  bool bothKnown(SizeOffsetEvalType SizeOffset) {
-    return knownSize(SizeOffset) && knownOffset(SizeOffset);
-  }
+  SizeOffsetValue compute(Value *V);
 
   // The individual instruction visitors should be treated as private.
-  SizeOffsetEvalType visitAllocaInst(AllocaInst &I);
-  SizeOffsetEvalType visitCallBase(CallBase &CB);
-  SizeOffsetEvalType visitExtractElementInst(ExtractElementInst &I);
-  SizeOffsetEvalType visitExtractValueInst(ExtractValueInst &I);
-  SizeOffsetEvalType visitGEPOperator(GEPOperator &GEP);
-  SizeOffsetEvalType visitIntToPtrInst(IntToPtrInst&);
-  SizeOffsetEvalType visitLoadInst(LoadInst &I);
-  SizeOffsetEvalType visitPHINode(PHINode &PHI);
-  SizeOffsetEvalType visitSelectInst(SelectInst &I);
-  SizeOffsetEvalType visitInstruction(Instruction &I);
+  SizeOffsetValue visitAllocaInst(AllocaInst &I);
+  SizeOffsetValue visitCallBase(CallBase &CB);
+  SizeOffsetValue visitExtractElementInst(ExtractElementInst &I);
+  SizeOffsetValue visitExtractValueInst(ExtractValueInst &I);
+  SizeOffsetValue visitGEPOperator(GEPOperator &GEP);
+  SizeOffsetValue visitIntToPtrInst(IntToPtrInst &);
+  SizeOffsetValue visitLoadInst(LoadInst &I);
+  SizeOffsetValue visitPHINode(PHINode &PHI);
+  SizeOffsetValue visitSelectInst(SelectInst &I);
+  SizeOffsetValue visitInstruction(Instruction &I);
 };
 
 } // end namespace llvm

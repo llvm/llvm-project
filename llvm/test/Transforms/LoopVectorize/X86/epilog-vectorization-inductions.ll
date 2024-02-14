@@ -174,12 +174,12 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[K]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP15]], align 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 16
-; CHECK-NEXT:    store <16 x i16> [[TMP8]], ptr [[TMP16]], align 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 32
-; CHECK-NEXT:    store <16 x i16> [[TMP9]], ptr [[TMP17]], align 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[TMP11]], i32 48
+; CHECK-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP15]], align 2
+; CHECK-NEXT:    store <16 x i16> [[TMP8]], ptr [[TMP16]], align 2
+; CHECK-NEXT:    store <16 x i16> [[TMP9]], ptr [[TMP17]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP10]], ptr [[TMP18]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i16> [[STEP_ADD5]], [[DOTSPLAT3]]

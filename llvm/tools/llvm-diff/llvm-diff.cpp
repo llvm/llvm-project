@@ -42,8 +42,7 @@ static std::unique_ptr<Module> readModule(LLVMContext &Context,
 static void diffGlobal(DifferenceEngine &Engine, Module &L, Module &R,
                        StringRef Name) {
   // Drop leading sigils from the global name.
-  if (Name.starts_with("@"))
-    Name = Name.substr(1);
+  Name.consume_front("@");
 
   Function *LFn = L.getFunction(Name);
   Function *RFn = R.getFunction(Name);

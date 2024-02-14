@@ -330,10 +330,6 @@ extern cl::opt<std::string> ViewBlockFreqFuncName;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
-static cl::opt<bool>
-    PGOOldCFGHashing("pgo-instr-old-cfg-hashing", cl::init(false), cl::Hidden,
-                     cl::desc("Use the old CFG function hashing"));
-
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
@@ -621,9 +617,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : F) {
-    const Instruction *TI = BB.getTerminator();
-    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
-      BasicBlock *Succ = TI->getSuccessor(I);
+    for (BasicBlock *Succ : successors(&BB)) {
       auto BI = findBBInfo(Succ);
       if (BI == nullptr)
         continue;
@@ -635,33 +629,24 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   JC.update(Indexes);
 
   JamCRC JCH;
-  if (PGOOldCFGHashing) {
-    // Hash format for context sensitive profile. Reserve 4 bits for other
-    // information.
-    FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
-                   (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
-                   //(uint64_t)ValueSites[IPVK_MemOPSize].size() << 40 |
-                   (uint64_t)MST.numEdges() << 32 | JC.getCRC();
+  // The higher 32 bits.
+  auto updateJCH = [&JCH](uint64_t Num) {
+    uint8_t Data[8];
+    support::endian::write64le(Data, Num);
+    JCH.update(Data);
+  };
+  updateJCH((uint64_t)SIVisitor.getNumOfSelectInsts());
+  updateJCH((uint64_t)ValueSites[IPVK_IndirectCallTarget].size());
+  updateJCH((uint64_t)ValueSites[IPVK_MemOPSize].size());
+  if (BCI) {
+    updateJCH(BCI->getInstrumentedBlocksHash());
   } else {
-    // The higher 32 bits.
-    auto updateJCH = [&JCH](uint64_t Num) {
-      uint8_t Data[8];
-      support::endian::write64le(Data, Num);
-      JCH.update(Data);
-    };
-    updateJCH((uint64_t)SIVisitor.getNumOfSelectInsts());
-    updateJCH((uint64_t)ValueSites[IPVK_IndirectCallTarget].size());
-    updateJCH((uint64_t)ValueSites[IPVK_MemOPSize].size());
-    if (BCI) {
-      updateJCH(BCI->getInstrumentedBlocksHash());
-    } else {
-      updateJCH((uint64_t)MST.numEdges());
-    }
-
-    // Hash format for context sensitive profile. Reserve 4 bits for other
-    // information.
-    FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
+    updateJCH((uint64_t)MST.numEdges());
   }
+
+  // Hash format for context sensitive profile. Reserve 4 bits for other
+  // information.
+  FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
 
   // Reserve bit 60-63 for other information purpose.
   FunctionHash &= 0x0FFFFFFFFFFFFFFF;
@@ -671,12 +656,10 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
                     << " CRC = " << JC.getCRC()
                     << ", Selects = " << SIVisitor.getNumOfSelectInsts()
                     << ", Edges = " << MST.numEdges() << ", ICSites = "
-                    << ValueSites[IPVK_IndirectCallTarget].size());
-  if (!PGOOldCFGHashing) {
-    LLVM_DEBUG(dbgs() << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
-                      << ", High32 CRC = " << JCH.getCRC());
-  }
-  LLVM_DEBUG(dbgs() << ", Hash = " << FunctionHash << "\n";);
+                    << ValueSites[IPVK_IndirectCallTarget].size()
+                    << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
+                    << ", High32 CRC = " << JCH.getCRC()
+                    << ", Hash = " << FunctionHash << "\n";);
 
   if (PGOTraceFuncHash != "-" && F.getName().contains(PGOTraceFuncHash))
     dbgs() << "Funcname=" << F.getName() << ", Hash=" << FunctionHash

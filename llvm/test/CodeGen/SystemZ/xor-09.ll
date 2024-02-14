@@ -15,3 +15,17 @@ define i128 @f1(i128 %a, i128 %b) {
   %res = xor i128 %a, %b
   ret i128 %res
 }
+
+; Verify that xor with a large constant does not crash.
+define i128 @f2(i128 %x) {
+; CHECK-LABEL: f2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, .LCPI1_0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vx %v0, %v0, %v1
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %res = xor i128 %x, 17440380254424117642
+  ret i128 %res
+}

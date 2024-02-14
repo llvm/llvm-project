@@ -61,7 +61,7 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
 
   for (const auto &enum_value : enum_values) {
     llvm::StringRef this_enum(enum_value.string_value);
-    if (this_enum.startswith(s))
+    if (this_enum.starts_with(s))
       return enum_value.value;
   }
 
@@ -93,8 +93,7 @@ Status OptionArgParser::ToFormat(const char *s, lldb::Format &format,
         *byte_size_ptr = 0;
     }
 
-    const bool partial_match_ok = true;
-    if (!FormatManager::GetFormatFromCString(s, partial_match_ok, format)) {
+    if (!FormatManager::GetFormatFromCString(s, format)) {
       StreamString error_strm;
       error_strm.Printf(
           "Invalid format character or name '%s'. Valid values are:\n", s);

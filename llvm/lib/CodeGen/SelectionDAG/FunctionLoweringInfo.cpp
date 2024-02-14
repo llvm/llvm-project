@@ -249,7 +249,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
-      if (isa<FuncletPadInst>(PadInst))
+      if (isa<FuncletPadInst>(PadInst) &&
+          Personality != EHPersonality::Wasm_CXX)
         assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
@@ -377,8 +378,7 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
   Register FirstReg;
-  for (unsigned Value = 0, e = ValueVTs.size(); Value != e; ++Value) {
-    EVT ValueVT = ValueVTs[Value];
+  for (EVT ValueVT : ValueVTs) {
     MVT RegisterVT = TLI->getRegisterType(Ty->getContext(), ValueVT);
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);
@@ -432,7 +432,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
 
   if (TLI->getNumRegisters(PN->getContext(), IntVT) != 1)
     return;
-  IntVT = TLI->getTypeToTransformTo(PN->getContext(), IntVT);
+  IntVT = TLI->getRegisterType(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
   auto It = ValueMap.find(PN);

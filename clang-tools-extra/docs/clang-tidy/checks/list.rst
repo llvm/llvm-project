@@ -83,6 +83,7 @@ Clang-Tidy Checks
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
+   :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
@@ -149,11 +150,11 @@ Clang-Tidy Checks
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl21-cpp <cert/dcl21-cpp>`, "Yes"
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-env33-c <cert/env33-c>`,
@@ -336,6 +337,8 @@ Clang-Tidy Checks
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
+   :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
+   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`,
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
    :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
@@ -362,9 +365,11 @@ Clang-Tidy Checks
    :doc:`readability-operators-representation <readability/operators-representation>`, "Yes"
    :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes"
+   :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes"
    :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes"
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
+   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
@@ -380,6 +385,7 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
 
@@ -439,6 +445,7 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-nullability.NullableDereferenced <clang-analyzer/nullability.NullableDereferenced>`, `Clang Static Analyzer nullability.NullableDereferenced <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullabledereferenced>`_,
    :doc:`clang-analyzer-nullability.NullablePassedToNonnull <clang-analyzer/nullability.NullablePassedToNonnull>`, `Clang Static Analyzer nullability.NullablePassedToNonnull <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablepassedtononnull>`_,
    :doc:`clang-analyzer-nullability.NullableReturnedFromNonnull <clang-analyzer/nullability.NullableReturnedFromNonnull>`, `Clang Static Analyzer nullability.NullableReturnedFromNonnull <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullablereturnedfromnonnull>`_,
+   :doc:`clang-analyzer-optin.core.EnumCastOutOfRange <clang-analyzer/optin.core.EnumCastOutOfRange>`, `Clang Static Analyzer optin.core.EnumCastOutOfRange <https://clang.llvm.org/docs/analyzer/checkers.html#optin-core-enumcastoutofrange>`_,
    :doc:`clang-analyzer-optin.cplusplus.UninitializedObject <clang-analyzer/optin.cplusplus.UninitializedObject>`, `Clang Static Analyzer optin.cplusplus.UninitializedObject <https://clang.llvm.org/docs/analyzer/checkers.html#optin-cplusplus-uninitializedobject>`_,
    :doc:`clang-analyzer-optin.cplusplus.VirtualCall <clang-analyzer/optin.cplusplus.VirtualCall>`, `Clang Static Analyzer optin.cplusplus.VirtualCall <https://clang.llvm.org/docs/analyzer/checkers.html#optin-cplusplus-virtualcall>`_,
    :doc:`clang-analyzer-optin.mpi.MPI-Checker <clang-analyzer/optin.mpi.MPI-Checker>`, `Clang Static Analyzer optin.mpi.MPI-Checker <https://clang.llvm.org/docs/analyzer/checkers.html#optin-mpi-mpi-checker>`_,
@@ -478,6 +485,7 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-osx.coreFoundation.containers.OutOfBounds <clang-analyzer/osx.coreFoundation.containers.OutOfBounds>`, `Clang Static Analyzer osx.coreFoundation.containers.OutOfBounds <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-containers-outofbounds>`_,
    :doc:`clang-analyzer-osx.coreFoundation.containers.PointerSizedValues <clang-analyzer/osx.coreFoundation.containers.PointerSizedValues>`, `Clang Static Analyzer osx.coreFoundation.containers.PointerSizedValues <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-containers-pointersizedvalues>`_,
    :doc:`clang-analyzer-security.FloatLoopCounter <clang-analyzer/security.FloatLoopCounter>`, `Clang Static Analyzer security.FloatLoopCounter <https://clang.llvm.org/docs/analyzer/checkers.html#security-floatloopcounter>`_,
+   :doc:`clang-analyzer-security.cert.env.InvalidPtr <clang-analyzer/security.cert.env.InvalidPtr>`, `Clang Static Analyzer security.cert.env.InvalidPtr <https://clang.llvm.org/docs/analyzer/checkers.html#security-cert-env-invalidptr>`_,
    :doc:`clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling <clang-analyzer/security.insecureAPI.DeprecatedOrUnsafeBufferHandling>`, `Clang Static Analyzer security.insecureAPI.DeprecatedOrUnsafeBufferHandling <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-deprecatedorunsafebufferhandling>`_,
    :doc:`clang-analyzer-security.insecureAPI.UncheckedReturn <clang-analyzer/security.insecureAPI.UncheckedReturn>`, `Clang Static Analyzer security.insecureAPI.UncheckedReturn <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-uncheckedreturn>`_,
    :doc:`clang-analyzer-security.insecureAPI.bcmp <clang-analyzer/security.insecureAPI.bcmp>`, `Clang Static Analyzer security.insecureAPI.bcmp <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-bcmp>`_,
@@ -492,9 +500,11 @@ Clang-Tidy Checks
    :doc:`clang-analyzer-security.insecureAPI.strcpy <clang-analyzer/security.insecureAPI.strcpy>`, `Clang Static Analyzer security.insecureAPI.strcpy <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-strcpy>`_,
    :doc:`clang-analyzer-security.insecureAPI.vfork <clang-analyzer/security.insecureAPI.vfork>`, `Clang Static Analyzer security.insecureAPI.vfork <https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-vfork>`_,
    :doc:`clang-analyzer-unix.API <clang-analyzer/unix.API>`, `Clang Static Analyzer unix.API <https://clang.llvm.org/docs/analyzer/checkers.html#unix-api>`_,
+   :doc:`clang-analyzer-unix.Errno <clang-analyzer/unix.Errno>`, `Clang Static Analyzer unix.Errno <https://clang.llvm.org/docs/analyzer/checkers.html#unix-errno>`_,
    :doc:`clang-analyzer-unix.Malloc <clang-analyzer/unix.Malloc>`, `Clang Static Analyzer unix.Malloc <https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc>`_,
    :doc:`clang-analyzer-unix.MallocSizeof <clang-analyzer/unix.MallocSizeof>`, `Clang Static Analyzer unix.MallocSizeof <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mallocsizeof>`_,
    :doc:`clang-analyzer-unix.MismatchedDeallocator <clang-analyzer/unix.MismatchedDeallocator>`, `Clang Static Analyzer unix.MismatchedDeallocator <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator>`_,
+   :doc:`clang-analyzer-unix.StdCLibraryFunctions <clang-analyzer/unix.StdCLibraryFunctions>`, `Clang Static Analyzer unix.StdCLibraryFunctions <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stdclibraryfunctions>`_,
    :doc:`clang-analyzer-unix.Vfork <clang-analyzer/unix.Vfork>`, `Clang Static Analyzer unix.Vfork <https://clang.llvm.org/docs/analyzer/checkers.html#unix-vfork>`_,
    :doc:`clang-analyzer-unix.cstring.BadSizeArg <clang-analyzer/unix.cstring.BadSizeArg>`, `Clang Static Analyzer unix.cstring.BadSizeArg <https://clang.llvm.org/docs/analyzer/checkers.html#unix-cstring-badsizearg>`_,
    :doc:`clang-analyzer-unix.cstring.NullArg <clang-analyzer/unix.cstring.NullArg>`, `Clang Static Analyzer unix.cstring.NullArg <https://clang.llvm.org/docs/analyzer/checkers.html#unix-cstring-nullarg>`_,

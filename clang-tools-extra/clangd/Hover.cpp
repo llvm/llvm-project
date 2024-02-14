@@ -1194,7 +1194,7 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
 
   const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes().get());
+      include_cleaner::headersForSymbol(Sym, SM, &AST.getPragmaIncludes());
   if (RankedProviders.empty())
     return;
 
@@ -1254,7 +1254,7 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
   llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||

@@ -19,7 +19,7 @@ operations, and then applying loop unrolling to the inner loops produced by the
 previous transformations. As such, it is not intended as a replacement for the
 pass infrastructure, nor for the pattern rewriting infrastructure. In the most
 common case, the transform IR will be processed and applied to the payload IR by
-a pass. Transformations expressed by the transform dialect may be implemented
+a pass. Transformations expressed by the Transform dialect may be implemented
 using the pattern infrastructure or any other relevant MLIR component.
 
 The following IR gives a rough idea of what the operations in this dialect
@@ -271,7 +271,7 @@ operation lists.
 
 ## Handle Invalidation
 
-The execution model of the transform dialect allows a payload IR operation to be
+The execution model of the Transform dialect allows a payload IR operation to be
 associated with _multiple_ handles as well as nested payload IR operations to be
 associated with different handles. Similarly, a payload IR value may be
 associated with multiple transform IR value handles. When a transform IR
@@ -373,13 +373,13 @@ to specify which transformations the pass should run. The transform dialect
 provides a uniform, extensible mechanism for controlling transformations in
 such cases.
 
-The transform dialect is supposed to be consumed by an "interpreter" pass
+The Transform dialect is supposed to be consumed by an "interpreter" pass
 that drives the application of transformations. To ensure extensibility and
 composability, this pass is not expected to actually perform the
 transformations specified by the ops. Instead, the transformations are
 implemented by the transform ops themselves via `TransformOpInterface`. The
 pass serves as the entry point, handles the flow of transform operations and
-takes care of bookkeeping. As such, the transform dialect does not provide
+takes care of bookkeeping. As such, the Transform dialect does not provide
 the interpreter pass. Instead, it provides a set of utilities that can be
 used by clients to define their own interpreter passes or as part of a more
 complex pass. For example, the mapping between values in the transform IR
@@ -422,6 +422,10 @@ ops rather than having the methods directly act on the payload IR.
 ## Bufferization Transform Operations
 
 [include "Dialects/BufferizationTransformOps.md"]
+
+## Debug Transform Operations
+
+[include "Dialects/DebugExtensionOps.md"]
 
 ## Func Transform Operations
 

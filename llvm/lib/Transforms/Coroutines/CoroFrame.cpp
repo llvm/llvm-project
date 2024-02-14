@@ -963,18 +963,15 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    SmallVector<DbgDeclareInst *, 1> DDIs;
-    SmallVector<DPValue *, 1> DPVs;
-    findDbgDeclares(DDIs, V, &DPVs);
-    auto CacheIt = [&DIVarCache, V](auto &Container) {
+    auto CacheIt = [&DIVarCache, V](const auto &Container) {
       auto *I = llvm::find_if(Container, [](auto *DDI) {
         return DDI->getExpression()->getNumElements() == 0;
       });
       if (I != Container.end())
         DIVarCache.insert({V, (*I)->getVariable()});
     };
-    CacheIt(DDIs);
-    CacheIt(DPVs);
+    CacheIt(findDbgDeclares(V));
+    CacheIt(findDPVDeclares(V));
   }
 }
 
@@ -1125,9 +1122,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   assert(PromiseAlloca &&
          "Coroutine with switch ABI should own Promise alloca");
 
-  SmallVector<DbgDeclareInst *, 1> DIs;
-  SmallVector<DPValue *, 1> DPVs;
-  findDbgDeclares(DIs, PromiseAlloca, &DPVs);
+  TinyPtrVector<DbgDeclareInst *> DIs = findDbgDeclares(PromiseAlloca);
+  TinyPtrVector<DPValue *> DPVs = findDPVDeclares(PromiseAlloca);
 
   DILocalVariable *PromiseDIVariable = nullptr;
   DILocation *DILoc = nullptr;
@@ -1293,8 +1289,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //   struct f.frame {
 //     ResumeFnTy ResumeFnAddr;
 //     ResumeFnTy DestroyFnAddr;
-//     int ResumeIndex;
 //     ... promise (if present) ...
+//     int ResumeIndex;
 //     ... spills ...
 //   };
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,
@@ -1865,15 +1861,14 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
 
-        SmallVector<DbgDeclareInst *, 1> DIs;
-        SmallVector<DPValue *, 1> DPVs;
-        findDbgDeclares(DIs, Def, &DPVs);
+        TinyPtrVector<DbgDeclareInst *> DIs = findDbgDeclares(Def);
+        TinyPtrVector<DPValue *> DPVs = findDPVDeclares(Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
         // be a direct dbg.declare. Walk up the load chain to find one from an
         // alias.
         if (F->getSubprogram()) {
           auto *CurDef = Def;
-          while (DIs.empty() && isa<LoadInst>(CurDef)) {
+          while (DIs.empty() && DPVs.empty() && isa<LoadInst>(CurDef)) {
             auto *LdInst = cast<LoadInst>(CurDef);
             // Only consider ptr to ptr same type load.
             if (LdInst->getPointerOperandType() != LdInst->getType())
@@ -1881,9 +1876,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             CurDef = LdInst->getPointerOperand();
             if (!isa<AllocaInst, LoadInst>(CurDef))
               break;
-            DIs.clear();
-            DPVs.clear();
-            findDbgDeclares(DIs, CurDef, &DPVs);
+            DIs = findDbgDeclares(CurDef);
+            DPVs = findDPVDeclares(CurDef);
           }
         }
 
@@ -2022,8 +2016,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       auto *FramePtr = GetFramePointer(Alloca);
       auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr = Builder.CreateGEP(Type::getInt8Ty(C), FramePtr,
-                                         ConstantInt::get(ITy, Value));
+      auto *AliasPtr =
+          Builder.CreatePtrAdd(FramePtr, ConstantInt::get(ITy, Value));
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(CB, U); });
     }
@@ -2951,9 +2945,14 @@ void coro::salvageDebugInfo(
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
     std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      // Update DILocation only in O0 since it is easy to get out of sync in
+      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
+      // an example.
+      if (!OptimizeFrame && I->getDebugLoc())
+        DVI.setDebugLoc(I->getDebugLoc());
+    } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
       DVI.moveBefore(*(*InsertPt)->getParent(), *InsertPt);
@@ -2967,7 +2966,7 @@ void coro::salvageDebugInfo(
   Function *F = DPV.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
-  bool SkipOutermostLoad = DPV.getType() == DPValue::LocationType::Declare;
+  bool SkipOutermostLoad = DPV.isDbgDeclare();
   Value *OriginalStorage = DPV.getVariableLocationOp(0);
 
   auto SalvagedInfo = ::salvageDebugInfoImpl(
@@ -2986,9 +2985,14 @@ void coro::salvageDebugInfo(
   // dbg.declare does.
   if (DPV.getType() == DPValue::LocationType::Declare) {
     std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      // Update DILocation only in O0 since it is easy to get out of sync in
+      // optimizations. See https://github.com/llvm/llvm-project/pull/75104 for
+      // an example.
+      if (!OptimizeFrame && I->getDebugLoc())
+        DPV.setDebugLoc(I->getDebugLoc());
+    } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
       DPV.removeFromParent();

@@ -6,8 +6,9 @@
 define ptr @f() {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; CHECK-NEXT:    leaq g@GOTOFF(%rax), %rax
+; CHECK-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rcx
+; CHECK-NEXT:    movabsq $g@GOTOFF, %rax
+; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq
   ret ptr @g
 }

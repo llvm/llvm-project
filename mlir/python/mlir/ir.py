@@ -263,6 +263,11 @@ def _typeArrayAttr(x, context):
     return _arrayAttr([TypeAttr.get(t, context=context) for t in x], context)
 
 
+@register_attribute_builder("MemRefTypeAttr")
+def _memref_type_attr(x, context):
+    return _typeAttr(x, context)
+
+
 try:
     import numpy as np
 

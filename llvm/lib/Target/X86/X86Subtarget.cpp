@@ -69,11 +69,11 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
+  CodeModel::Model CM = TM.getCodeModel();
   // Tagged globals have non-zero upper bits, which makes direct references
-  // require a 64-bit immediate.  On the small code model this causes relocation
-  // errors, so we go through the GOT instead.
-  if (AllowTaggedGlobals && TM.getCodeModel() == CodeModel::Small && GV &&
-      !isa<Function>(GV))
+  // require a 64-bit immediate. With the small/medium code models this causes
+  // relocation errors, so we go through the GOT instead.
+  if (AllowTaggedGlobals && CM != CodeModel::Large && GV && !isa<Function>(GV))
     return X86II::MO_GOTPCREL_NORELAX;
 
   // If we're not PIC, it's not very interesting.
@@ -83,7 +83,6 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   if (is64Bit()) {
     // 64-bit ELF PIC local references may use GOTOFF relocations.
     if (isTargetELF()) {
-      CodeModel::Model CM = TM.getCodeModel();
       assert(CM != CodeModel::Tiny &&
              "Tiny codesize model not supported on X86");
       // In the large code model, all text is far from any global data, so we

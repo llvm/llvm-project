@@ -294,7 +294,7 @@ define <8 x i32> @pr24458(<8 x float> %n) {
 define <3 x i16> @trunc_inselt_undef(i32 %x) {
 ; CHECK-LABEL: @trunc_inselt_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> undef, i16 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> <i16 undef, i16 poison, i16 undef>, i16 [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;
   %vec = insertelement <3 x i32> poison, i32 %x, i32 1

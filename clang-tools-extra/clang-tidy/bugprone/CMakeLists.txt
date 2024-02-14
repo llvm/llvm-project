@@ -12,6 +12,7 @@ add_clang_library(clangTidyBugproneModule
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp
   CastingThroughVoidCheck.cpp
+  ChainedComparisonCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
   DanglingHandleCheck.cpp
@@ -79,6 +80,7 @@ add_clang_library(clangTidyBugproneModule
   UnhandledSelfAssignmentCheck.cpp
   UniquePtrArrayMismatchCheck.cpp
   UnsafeFunctionsCheck.cpp
+  UnusedLocalNonTrivialVariableCheck.cpp
   UnusedRaiiCheck.cpp
   UnusedReturnValueCheck.cpp
   UseAfterMoveCheck.cpp

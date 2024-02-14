@@ -169,9 +169,9 @@ builtin.module {
   // CHECK-LABEL: @read_2d_with_mask(
   //  CHECK-SAME:     %[[sz0:.*]]: index, %[[sz1:.*]]: index, %[[a:.*]]: memref<1024x1024xf32>
   func.func @read_2d_with_mask(%sz0: index, %sz1: index, %a: memref<1024x1024xf32>) {
-    // CHECK: %[[c0:.*]] = arith.constant 0 : index
-    // CHECK: %[[c1:.*]] = arith.constant 1 : index
-    // CHECK: %[[c2:.*]] = arith.constant 2 : index
+    // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+    // CHECK-DAG: %[[c2:.*]] = arith.constant 2 : index
     %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
     %c0 = arith.constant 0 : index
     %cst_0 = arith.constant 0.000000e+00 : f32
@@ -215,9 +215,9 @@ builtin.module {
   // CHECK-LABEL: @read_3d_with_mask(
   //  CHECK-SAME:     %[[sz0:.*]]: index, %[[sz1:.*]]: index, %[[sz2:.*]]: index, %[[a:.*]]: memref<1024x1024x1024xf32>
   func.func @read_3d_with_mask(%sz0: index, %sz1: index, %sz2: index, %a: memref<1024x1024x1024xf32>) {
-    // CHECK: %[[c0:.*]] = arith.constant 0 : index
-    // CHECK: %[[c1:.*]] = arith.constant 1 : index
-    // CHECK: %[[c2:.*]] = arith.constant 2 : index
+    // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+    // CHECK-DAG: %[[c2:.*]] = arith.constant 2 : index
     %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
     %c0 = arith.constant 0 : index
     %cst_0 = arith.constant 0.000000e+00 : f32

@@ -259,10 +259,13 @@ public:
         file->codeSection->Content.slice(inputSectionOffset, function->Size);
     debugName = function->DebugName;
     comdat = function->Comdat;
+    assert(s.Kind != WasmSignature::Placeholder);
   }
 
   InputFunction(StringRef name, const WasmSignature &s)
-      : InputChunk(nullptr, InputChunk::Function, name), signature(s) {}
+      : InputChunk(nullptr, InputChunk::Function, name), signature(s) {
+    assert(s.Kind == WasmSignature::Function);
+  }
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::Function ||

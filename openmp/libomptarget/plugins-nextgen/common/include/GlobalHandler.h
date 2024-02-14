@@ -47,9 +47,6 @@ public:
   GlobalTy(const std::string &Name, uint32_t Size, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
-  GlobalTy(const __tgt_offload_entry &Entry)
-      : Name(Entry.name), Size(Entry.size), Ptr(Entry.addr) {}
-
   const std::string &getName() const { return Name; }
   uint32_t getSize() const { return Size; }
   void *getPtr() const { return Ptr; }
@@ -89,9 +86,6 @@ public:
 /// global metadata (size, addr) from the device.
 /// \see getGlobalMetadataFromDevice
 class GenericGlobalHandlerTy {
-  /// Map to store the ELF object files that have been loaded.
-  llvm::DenseMap<int32_t, ELF64LEObjectFile> ELFObjectFiles;
-
   /// Actually move memory between host and device. See readGlobalFromDevice and
   /// writeGlobalToDevice for the interface description.
   Error moveGlobalBetweenDeviceAndHost(GenericDeviceTy &Device,
@@ -109,10 +103,8 @@ class GenericGlobalHandlerTy {
 public:
   virtual ~GenericGlobalHandlerTy() {}
 
-  /// Get the cached ELF64LEObjectFile previosuly created for a specific
-  /// device image or create it if did not exist.
-  const ELF64LEObjectFile *
-  getOrCreateELFObjectFile(const GenericDeviceTy &Device, DeviceImageTy &Image);
+  /// Helper function for getting an ELF from a device image.
+  Expected<ELF64LEObjectFile> getELFObjectFile(DeviceImageTy &Image);
 
   /// Returns whether the symbol named \p SymName is present in the given \p
   /// Image.
@@ -143,7 +135,7 @@ public:
                              const GlobalTy &HostGlobal,
                              const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
-                                          /* D2H */ true);
+                                          /*D2H=*/true);
   }
 
   /// Copy the memory associated with a global from the device to its
@@ -152,7 +144,7 @@ public:
   Error readGlobalFromDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
                              const GlobalTy &HostGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          /* D2H */ true);
+                                          /*D2H=*/true);
   }
 
   /// Copy the memory associated with a global from the host to its counterpart
@@ -161,7 +153,7 @@ public:
   Error writeGlobalToDevice(GenericDeviceTy &Device, const GlobalTy &HostGlobal,
                             const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
-                                          /* D2H */ false);
+                                          /*D2H=*/false);
   }
 
   /// Copy the memory associated with a global from the host to its counterpart
@@ -170,7 +162,7 @@ public:
   Error writeGlobalToDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
                             const GlobalTy &HostGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          /* D2H */ false);
+                                          /*D2H=*/false);
   }
 };
 

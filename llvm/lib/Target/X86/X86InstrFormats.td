@@ -180,7 +180,7 @@ class OperandSize<bits<2> val> {
   bits<2> Value = val;
 }
 def OpSizeFixed  : OperandSize<0>; // Never needs a 0x66 prefix.
-def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
+def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32/64-bit mode.
 def OpSize32     : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
 
 // Address size for encodings that change based on mode.
@@ -234,7 +234,9 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                 // based on address size of the mode?
   bits<2> AdSizeBits = AdSize.Value;
 
-  Prefix OpPrefix = NoPrfx; // Which prefix byte does this inst have?
+  Encoding OpEnc = EncNormal; // Encoding used by this instruction
+  // Which prefix byte does this inst have?
+  Prefix OpPrefix = !if(!eq(OpEnc, EncNormal), NoPrfx, PS);
   bits<3> OpPrefixBits = OpPrefix.Value;
   Map OpMap = OB;           // Which opcode map does this inst have?
   bits<4> OpMapBits = OpMap.Value;
@@ -243,11 +245,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasLockPrefix = 0;    // Does this inst have a 0xF0 prefix?
   Domain ExeDomain = d;
   bit hasREPPrefix = 0;     // Does this inst have a REP prefix?
-  Encoding OpEnc = EncNormal; // Encoding used by this instruction
   bits<2> OpEncBits = OpEnc.Value;
   bit IgnoresW = 0;         // Does this inst ignore REX_W field?
-  bit EVEX_W1_VEX_W0 = 0;   // This EVEX inst with VEX.W==1 can become a VEX
-                            // instruction with VEX.W == 0.
   bit hasVEX_4V = 0;        // Does this inst require the VEX.VVVV field?
   bit hasVEX_L = 0;         // Does this inst use large (256-bit) registers?
   bit ignoresVEX_L = 0;     // Does this instruction ignore the L-bit
@@ -255,6 +254,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasEVEX_Z = 0;        // Does this inst set the EVEX_Z field?
   bit hasEVEX_L2 = 0;       // Does this inst set the EVEX_L2 field?
   bit hasEVEX_B = 0;        // Does this inst set the EVEX_B field?
+  bit hasEVEX_NF = 0;       // Does this inst set the EVEX_NF field?
   bits<3> CD8_Form = 0;     // Compressed disp8 form - vector-width.
   // Declare it int rather than bits<4> so that all bits are defined when
   // assigning to bits<7>.
@@ -277,10 +277,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
 
-  // Used to prevent an explicit EVEX2VEX override for this instruction.
-  string EVEX2VEXOverride = ?;
-
-  bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
   ExplicitOpPrefix explicitOpPrefix = NoExplicitOpPrefix;
   bits<2> explicitOpPrefixBits = explicitOpPrefix.Value;
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
@@ -308,4 +304,5 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{48}    = hasEVEX_RC;
   let TSFlags{49}    = hasNoTrackPrefix;
   let TSFlags{51-50} = explicitOpPrefixBits;
+  let TSFlags{52}    = hasEVEX_NF;
 }

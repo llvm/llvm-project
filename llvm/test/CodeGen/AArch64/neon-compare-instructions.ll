@@ -1772,6 +1772,44 @@ define <2 x i64> @cmltz2xi64(<2 x i64> %A) {
   ret <2 x i64> %tmp4
 }
 
+define <8 x i1> @not_cmle8xi8(<8 x i8> %0) {
+; CHECK-SD-LABEL: not_cmle8xi8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v1.2s, #1
+; CHECK-SD-NEXT:    cmgt v0.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: not_cmle8xi8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI133_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI133_0]
+; CHECK-GI-NEXT:    cmgt v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
+  %cmp.i = icmp slt <8 x i8> %0, <i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0>
+  ret <8 x i1> %cmp.i
+}
+
+define <4 x i1> @not_cmle16xi8(<4 x i32> %0) {
+; CHECK-SD-LABEL: not_cmle16xi8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v1.8h, #1
+; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: not_cmle16xi8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    adrp x8, .LCPI134_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI134_0]
+; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    ret
+entry:
+  %bc = bitcast <16 x i8> <i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0> to <4 x i32>
+  %cmp.i = icmp slt <4 x i32> %0, %bc
+  ret <4 x i1> %cmp.i
+}
+
 define <8 x i8> @cmltz8xi8_alt(<8 x i8> %A) {
 ; CHECK-SD-LABEL: cmltz8xi8_alt:
 ; CHECK-SD:       // %bb.0:
@@ -2065,8 +2103,8 @@ define <2 x i64> @cmhsz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmhsz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI153_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI153_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI155_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI155_0]
 ; CHECK-GI-NEXT:    cmhs v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp uge <2 x i64> %A, <i64 2, i64 2>
@@ -2151,8 +2189,8 @@ define <2 x i64> @cmhiz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmhiz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI160_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI160_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI162_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI162_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp ugt <2 x i64> %A, <i64 1, i64 1>
@@ -2327,8 +2365,8 @@ define <2 x i64> @cmloz2xi64(<2 x i64> %A) {
 ;
 ; CHECK-GI-LABEL: cmloz2xi64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI174_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI174_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI176_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI176_0]
 ; CHECK-GI-NEXT:    cmhi v0.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    ret
   %tmp3 = icmp ult <2 x i64> %A, <i64 2, i64 2>
@@ -4514,10 +4552,6 @@ define <4 x i64> @fcmoeq4xdouble(<4 x double> %A, <4 x double> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmeq v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    fcmeq v1.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    shl v1.2d, v1.2d, #63
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #63
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp oeq <4 x double> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i64>
@@ -4535,10 +4569,6 @@ define <8 x i32> @fcmoeq8xfloat(<8 x float> %A, <8 x float> %B) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    fcmeq v1.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp oeq <8 x float> %A, %B
   %tmp4 = sext <8 x i1> %tmp3 to <8 x i32>

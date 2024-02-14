@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zve64f,+f -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-F,RV64,RV64F
 ; RUN: llc -mtriple=riscv32 -mattr=+v,+d -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-D,RV32,RV32D
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-D,RV64,RV64D
-; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
-; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
+; RUN: llc -mtriple=riscv32 -mattr=+v,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
 
 define <vscale x 1 x i8> @cttz_nxv1i8(<vscale x 1 x i8> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv1i8:

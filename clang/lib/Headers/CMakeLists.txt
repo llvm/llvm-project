@@ -139,6 +139,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  adcintrin.h
   adxintrin.h
   ammintrin.h
   amxcomplexintrin.h
@@ -379,8 +380,8 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-fp16 arm_fp16.td arm_fp16.h)
   # Generate arm_sve.h
   clang_generate_header(-gen-arm-sve-header arm_sve.td arm_sve.h)
-  # Generate arm_sme_draft_spec_subject_to_change.h
-  clang_generate_header(-gen-arm-sme-header arm_sme.td arm_sme_draft_spec_subject_to_change.h)
+  # Generate arm_sme.h
+  clang_generate_header(-gen-arm-sme-header arm_sme.td arm_sme.h)
   # Generate arm_bf16.h
   clang_generate_header(-gen-arm-bf16 arm_bf16.td arm_bf16.h)
   # Generate arm_mve.h
@@ -403,7 +404,7 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
 
   list(APPEND aarch64_only_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/arm_sve.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/arm_sme_draft_spec_subject_to_change.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/arm_sme.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_bf16.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_vector_types.h"
     )

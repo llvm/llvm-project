@@ -3431,6 +3431,47 @@ TEST_F(AArch64GISelMITest, LowerUDIVREM) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test G_SELECT lowering.
+// Note: This is for testing the legalizer, aarch64 does not lower scalar
+// selects like this.
+TEST_F(AArch64GISelMITest, LowerSelect) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_SELECT).lower(); });
+
+  LLT S1 = LLT::scalar(1);
+  LLT S32 = LLT::scalar(32);
+  auto Tst = B.buildTrunc(S1, Copies[0]);
+  auto SrcA = B.buildTrunc(S32, Copies[1]);
+  auto SrcB = B.buildTrunc(S32, Copies[2]);
+  auto SELECT = B.buildInstr(TargetOpcode::G_SELECT, {S32}, {Tst, SrcA, SrcB});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*SELECT, 0, S32));
+
+  auto CheckStr = R"(
+  CHECK: [[TST:%[0-9]+]]:_(s1) = G_TRUNC
+  CHECK: [[TRUE:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[FALSE:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[MSK:%[0-9]+]]:_(s32) = G_SEXT [[TST]]
+  CHECK: [[M:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+  CHECK: [[NEGMSK:%[0-9]+]]:_(s32) = G_XOR [[MSK]]:_, [[M]]:_
+  CHECK: [[TVAL:%[0-9]+]]:_(s32) = G_AND [[TRUE]]:_, [[MSK]]:_
+  CHECK: [[FVAL:%[0-9]+]]:_(s32) = G_AND [[FALSE]]:_, [[NEGMSK]]:_
+  CHECK: [[RES:%[0-9]+]]:_(s32) = G_OR [[TVAL]]:_, [[FVAL]]:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 // Test widening of G_UNMERGE_VALUES
 TEST_F(AArch64GISelMITest, WidenUnmerge) {
   setUp();
@@ -3656,12 +3697,14 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
 
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
+  LostDebugLocObserver DummyLocObserver("");
 
   LLVMContext &Ctx = MF->getFunction().getContext();
   auto *RetTy = Type::getVoidTy(Ctx);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C));
+            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C,
+                          DummyLocObserver, nullptr));
 
   auto CheckStr = R"(
   CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp

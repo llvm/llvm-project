@@ -214,7 +214,8 @@ void BreakpointResolver::SetSCMatchesByLine(
     auto worklist_begin = std::partition(
         all_scs.begin(), all_scs.end(), [&](const SymbolContext &sc) {
           if (sc.line_entry.file == match.line_entry.file ||
-              sc.line_entry.original_file == match.line_entry.original_file) {
+              *sc.line_entry.original_file_sp ==
+                  *match.line_entry.original_file_sp) {
             // When a match is found, keep track of the smallest line number.
             closest_line = std::min(closest_line, sc.line_entry.line);
             return false;
