@@ -1,0 +1,10 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+
+module {
+  cir.func @test_unreachable() {
+    cir.unreachable
+  }
+
+  //      MLIR: llvm.func @test_unreachable()
+  // MLIR-NEXT:   llvm.unreachable
+}

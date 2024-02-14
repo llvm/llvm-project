@@ -1,0 +1,9 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+cir.func @test() {
+  cir.unreachable
+}
+
+//      CHECK: cir.func @test
+// CHECK-NEXT:   cir.unreachable

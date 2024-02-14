@@ -757,7 +757,9 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
     EnterNewDeleteCleanup(*this, E, allocation, allocSize, allocAlign,
                           allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
-    // FIXME: cleanupDominator = Builder.CreateUnreachable();
+    cleanupDominator =
+        builder.create<mlir::cir::UnreachableOp>(getLoc(E->getSourceRange()))
+            .getOperation();
   }
 
   assert((allocSize == allocSizeWithoutCookie) ==

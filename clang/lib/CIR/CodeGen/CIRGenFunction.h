@@ -1516,6 +1516,10 @@ public:
                           AggValueSlot::Overlap_t MayOverlap,
                           bool isVolatile = false);
 
+  /// Emit a reached-unreachable diagnostic if \p Loc is valid and runtime
+  /// checking is enabled. Otherwise, just emit an unreachable instruction.
+  void buildUnreachable(SourceLocation Loc);
+
   ///
   /// Cleanups
   /// --------

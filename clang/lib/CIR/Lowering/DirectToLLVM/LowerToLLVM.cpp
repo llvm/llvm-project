@@ -2206,6 +2206,19 @@ public:
   }
 };
 
+class CIRUnreachableLowering
+    : public mlir::OpConversionPattern<mlir::cir::UnreachableOp> {
+public:
+  using OpConversionPattern<mlir::cir::UnreachableOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::UnreachableOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::UnreachableOp>(op);
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -2221,8 +2234,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
       CIRVectorInsertLowering, CIRVectorExtractLowering, CIRVectorCmpOpLowering,
-      CIRStackSaveLowering, CIRStackRestoreLowering>(converter,
-                                                     patterns.getContext());
+      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
