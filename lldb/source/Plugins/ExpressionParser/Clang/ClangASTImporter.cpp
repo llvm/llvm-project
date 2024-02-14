@@ -815,21 +815,8 @@ bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
 
 bool ClangASTImporter::CompleteTagDeclWithOrigin(clang::TagDecl *decl,
                                                  clang::TagDecl *origin_decl) {
-  clang::ASTContext *origin_ast_ctx = &origin_decl->getASTContext();
-
-  if (!TypeSystemClang::GetCompleteDecl(origin_ast_ctx, origin_decl))
-    return false;
-
-  ImporterDelegateSP delegate_sp(
-      GetDelegate(&decl->getASTContext(), origin_ast_ctx));
-
-  if (delegate_sp)
-    delegate_sp->ImportDefinitionTo(decl, origin_decl);
-
-  ASTContextMetadataSP context_md = GetContextMetadata(&decl->getASTContext());
-
-  context_md->setOrigin(decl, DeclOrigin(origin_ast_ctx, origin_decl));
-  return true;
+  SetDeclOrigin(decl, origin_decl);
+  return CompleteTagDecl(decl);
 }
 
 bool ClangASTImporter::CompleteObjCInterfaceDecl(
