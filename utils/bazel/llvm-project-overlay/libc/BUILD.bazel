@@ -473,6 +473,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_integer_literals",
+    hdrs = ["src/__support/integer_literals.h"],
+    deps = [
+        ":__support_cpp_limits",
+        ":__support_uint128",
+    ],
+)
+
+libc_support_library(
     name = "__support_str_to_num_result",
     hdrs = ["src/__support/str_to_num_result.h"],
     deps = [":__support_macros_attributes"],

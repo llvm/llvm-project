@@ -317,8 +317,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
                 "MCDCConditionID shouldn't be zero");
           Params = mcdc::BranchParameters{
               static_cast<int16_t>(static_cast<int16_t>(ID1) - 1),
-              static_cast<int16_t>(static_cast<int16_t>(TID1) - 1),
-              static_cast<int16_t>(static_cast<int16_t>(FID1) - 1)};
+              {static_cast<int16_t>(static_cast<int16_t>(FID1) - 1),
+               static_cast<int16_t>(static_cast<int16_t>(TID1) - 1)}};
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;

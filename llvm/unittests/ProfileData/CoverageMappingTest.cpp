@@ -201,14 +201,12 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
   }
 
   void addMCDCBranchCMR(Counter C1, Counter C2, mcdc::ConditionID ID,
-                        mcdc::ConditionID TrueID, mcdc::ConditionID FalseID,
-                        StringRef File, unsigned LS, unsigned CS, unsigned LE,
-                        unsigned CE) {
+                        mcdc::ConditionIDs Conds, StringRef File, unsigned LS,
+                        unsigned CS, unsigned LE, unsigned CE) {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeBranchRegion(
-        C1, C2, FileID, LS, CS, LE, CE,
-        mcdc::BranchParameters{ID, TrueID, FalseID}));
+        C1, C2, FileID, LS, CS, LE, CE, mcdc::BranchParameters{ID, Conds}));
   }
 
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
@@ -874,9 +872,9 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
   addCMR(Counter::getCounter(3), "file", 1, 1, 5, 5);
 
   addMCDCDecisionCMR(0, 2, "file", 7, 1, 7, 6);
-  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, 1, -1,
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "file", 7, 2, 7, 3);
-  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, -1, -1,
+  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
                    "file", 7, 4, 7, 5);
 
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
@@ -902,10 +900,10 @@ TEST_P(CoverageMappingTest, decision_before_expansion) {
   addExpansionCMR("foo", "B", 4, 19, 4, 20);
   addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
   addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
-  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, 1, -1,
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "A", 1, 14, 1, 17);
   addCMR(Counter::getCounter(1), "B", 1, 14, 1, 17);
-  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 1, -1, -1,
+  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 1, {-1, -1},
                    "B", 1, 14, 1, 17);
 
   // InputFunctionCoverageData::Regions is rewritten after the write.

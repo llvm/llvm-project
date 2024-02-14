@@ -258,8 +258,8 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
         ParamsShouldBeNull = false;
         assert(BranchParams.ID >= 0);
         unsigned ID1 = BranchParams.ID + 1;
-        unsigned TID1 = BranchParams.TrueID + 1;
-        unsigned FID1 = BranchParams.FalseID + 1;
+        unsigned TID1 = BranchParams.Conds[true] + 1;
+        unsigned FID1 = BranchParams.Conds[false] + 1;
         encodeULEB128(ID1, OS);
         encodeULEB128(TID1, OS);
         encodeULEB128(FID1, OS);

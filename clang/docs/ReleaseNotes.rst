@@ -56,6 +56,12 @@ Clang Frontend Potentially Breaking Changes
   ``ArrayRef<TemplateArgument>`` reduces AST memory usage by 0.4% when compiling clang, and is
   expected to show similar improvements on other workloads.
 
+- The ``-Wgnu-binary-literal`` diagnostic group no longer controls any
+  diagnostics. Binary literals are no longer a GNU extension, they're now a C23
+  extension which is controlled via ``-pedantic`` or ``-Wc23-extensions``. Use
+  of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
+  which may break existing uses with ``-Werror``.
+
 Target OS macros extension
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
@@ -113,9 +119,14 @@ C Language Changes
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- No longer diagnose use of binary literals as an extension in C23 mode. Fixes
+  `#72017 <https://github.com/llvm/llvm-project/issues/72017>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+
+- Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
+  counters.
 
 New Compiler Flags
 ------------------
@@ -155,6 +166,8 @@ Improvements to Clang's diagnostics
 
 - The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
    of ``-Wconversion``. Fixes `#69444 <https://github.com/llvm/llvm-project/issues/69444>`_.
+
+- Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -254,6 +267,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed the incorrect definition of the __ARM_ARCH macro for architectures greater than or equal to v8.1.
 
 Android Support
 ^^^^^^^^^^^^^^^
