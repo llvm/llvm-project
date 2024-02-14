@@ -38,9 +38,9 @@ AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 AST_MATCHER(InitListExpr, isFullyDesignated) {
   if (const InitListExpr *SyntacticForm =
           Node.isSyntacticForm() ? &Node : Node.getSyntacticForm()) {
-    return std::all_of(
-        SyntacticForm->begin(), SyntacticForm->end(),
-        [](auto *InitExpr) { return isa<DesignatedInitExpr>(InitExpr); });
+    return llvm::all_of(SyntacticForm->children(), [](auto *InitExpr) {
+      return isa<DesignatedInitExpr>(InitExpr);
+    });
   }
   return true;
 }
