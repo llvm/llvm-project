@@ -12276,12 +12276,6 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     }
   }
 
-  if (isREVMask(ShuffleMask, VT, 64))
-    return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1, V2);
-  if (isREVMask(ShuffleMask, VT, 32))
-    return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1, V2);
-  if (isREVMask(ShuffleMask, VT, 16))
-    return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1, V2);
 
   if (((VT.getVectorNumElements() == 8 && VT.getScalarSizeInBits() == 16) ||
        (VT.getVectorNumElements() == 16 && VT.getScalarSizeInBits() == 8)) &&
@@ -12290,6 +12284,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(AArch64ISD::EXT, dl, VT, Rev, Rev,
                        DAG.getConstant(8, dl, MVT::i32));
   }
+  
+  if (isREVMask(ShuffleMask, VT, 64))
+    return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1, V2);
+  if (isREVMask(ShuffleMask, VT, 32))
+    return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1, V2);
+  if (isREVMask(ShuffleMask, VT, 16))
+    return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1, V2);
 
   bool ReverseEXT;
   unsigned Imm;
