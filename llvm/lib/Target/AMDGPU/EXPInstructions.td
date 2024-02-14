@@ -101,7 +101,7 @@ defm EXP      : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 defm EXP_DONE : EXP_Real_si, EXP_Real_vi, EXP_Real_gfx10;
 
 //===----------------------------------------------------------------------===//
-// GFX11, GFX12.
+// GFX11, GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
 multiclass EXP_Real_gfx11 {
@@ -117,7 +117,7 @@ multiclass EXP_Real_gfx11 {
 multiclass VEXPORT_Real_gfx12 {
   defvar ps = !cast<EXP_Pseudo>(NAME);
   def _gfx12 : EXP_Real_Row<NAME, SIEncodingFamily.GFX12, "export">,
-    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus]> {
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Only]> {
     let AssemblerPredicate = isGFX12Only;
     let DecoderNamespace = "GFX12";
     let row = ps.row;
@@ -125,10 +125,21 @@ multiclass VEXPORT_Real_gfx12 {
   }
 }
 
-defm EXP          : EXP_Real_gfx11, VEXPORT_Real_gfx12;
-defm EXP_DONE     : EXP_Real_gfx11, VEXPORT_Real_gfx12;
-defm EXP_ROW      : EXP_Real_gfx11, VEXPORT_Real_gfx12;
-defm EXP_ROW_DONE : EXP_Real_gfx11, VEXPORT_Real_gfx12;
+multiclass VEXPORT_Real_gfx13 {
+  defvar ps = !cast<EXP_Pseudo>(NAME);
+  def _gfx13 : EXP_Real_Row<NAME, SIEncodingFamily.GFX13, "export">,
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX13Only]> {
+    let AssemblerPredicate = isGFX13Only;
+    let DecoderNamespace = "GFX13";
+    let row = ps.row;
+    let done = ps.done;
+  }
+}
+
+defm EXP          : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+defm EXP_DONE     : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+defm EXP_ROW      : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
+defm EXP_ROW_DONE : EXP_Real_gfx11, VEXPORT_Real_gfx12, VEXPORT_Real_gfx13;
 
 //===----------------------------------------------------------------------===//
 // EXP Patterns
