@@ -350,6 +350,8 @@ struct WasmGlobal {
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
   StringRef SymbolName; // from the "linking" section
+  uint32_t Offset;
+  uint32_t Size;
 };
 
 struct WasmTag {
@@ -453,6 +455,7 @@ struct WasmSymbolInfo {
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
   };
+  uint32_t Size;
 };
 
 enum class NameType {
