@@ -66,9 +66,10 @@ static void findAffectedValues(Value *Cond,
         // A > C3 && A < C4.
         if (match(A, m_Add(m_Value(X), m_ConstantInt())))
           AddAffected(X);
-        // Handle icmp slt/sgt (bitcast X to int), 0/-1
-        if (match(A, m_ElementWiseBitCast(m_Value(X))) &&
-            (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT))
+        // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported by
+        // computeKnownFPClass().
+        if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT) &&
+            match(A, m_ElementWiseBitCast(m_Value(X))))
           Affected.push_back(X);
       }
     } else if (match(Cond, m_CombineOr(m_FCmp(Pred, m_Value(A), m_Constant()),
