@@ -32,6 +32,7 @@ public:
 private:
   bool IgnoreSingleElementAggregates;
   bool RestrictToPODTypes;
+  bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::modernize

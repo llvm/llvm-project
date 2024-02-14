@@ -29,6 +29,9 @@ static constexpr bool IgnoreSingleElementAggregatesDefault = true;
 static constexpr char RestrictToPODTypesName[] = "RestrictToPODTypes";
 static constexpr bool RestrictToPODTypesDefault = false;
 
+static constexpr char IgnoreMacrosName[] = "IgnoreMacros";
+static constexpr bool IgnoreMacrosDefault = true;
+
 namespace {
 
 AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
@@ -55,7 +58,8 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
                                          IgnoreSingleElementAggregatesName,
                                          IgnoreSingleElementAggregatesDefault)),
       RestrictToPODTypes(
-          Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)) {}
+          Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)),
+      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasBaseWithFields =
@@ -88,6 +92,9 @@ void UseDesignatedInitializersCheck::check(
     const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
         clang::tooling::getUnwrittenDesignators(SyntacticInitList);
     if (isFullyUndesignated(SyntacticInitList)) {
+      if (IgnoreMacros && InitList->getBeginLoc().isMacroID()) {
+        return;
+      }
       DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(), "use designated initializer list");
       for (const Stmt *InitExpr : *SyntacticInitList) {
@@ -95,15 +102,19 @@ void UseDesignatedInitializersCheck::check(
             InitExpr->getBeginLoc(),
             Designators.at(InitExpr->getBeginLoc()) + "=");
       }
-    } else {
-      for (const auto *InitExpr : *SyntacticInitList) {
-        if (!isa<DesignatedInitExpr>(InitExpr)) {
-          diag(InitExpr->getBeginLoc(), "use designated init expression")
-              << FixItHint::CreateInsertion(
-                     InitExpr->getBeginLoc(),
-                     Designators.at(InitExpr->getBeginLoc()) + "=");
-        }
+      return;
+    }
+    for (const auto *InitExpr : *SyntacticInitList) {
+      if (isa<DesignatedInitExpr>(InitExpr)) {
+        continue;
       }
+      if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID()) {
+        continue;
+      }
+      diag(InitExpr->getBeginLoc(), "use designated init expression")
+          << FixItHint::CreateInsertion(
+                 InitExpr->getBeginLoc(),
+                 Designators.at(InitExpr->getBeginLoc()) + "=");
     }
   }
 }
@@ -113,6 +124,7 @@ void UseDesignatedInitializersCheck::storeOptions(
   Options.store(Opts, IgnoreSingleElementAggregatesName,
                 IgnoreSingleElementAggregates);
   Options.store(Opts, RestrictToPODTypesName, RestrictToPODTypes);
+  Options.store(Opts, IgnoreMacrosName, IgnoreMacros);
 }
 
 } // namespace clang::tidy::modernize

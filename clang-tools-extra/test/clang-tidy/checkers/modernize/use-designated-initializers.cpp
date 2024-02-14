@@ -7,6 +7,9 @@
 // RUN: %check_clang_tidy -check-suffixes=POD -std=c++17 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.RestrictToPODTypes, value: true}]}" \
 // RUN:     -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,MACROS -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.IgnoreMacros, value: false}]}" \
+// RUN:     -- -fno-delayed-template-parsing
 
 struct S1 {};
 
@@ -170,5 +173,11 @@ S13 s131 {1, 2};
 #define B .j=1
 
 S9 s92 {A, B};
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use designated init expression [modernize-use-designated-initializers]
-// CHECK-FIXES: S9 s92 {.i=A, B};
+// CHECK-MESSAGES-MACROS: :[[@LINE-1]]:9: warning: use designated init expression [modernize-use-designated-initializers]
+// CHECK-MESSAGES-MACROS: :[[@LINE-5]]:11: note: expanded from macro 'A'
+
+#define DECLARE_S93 S9 s93 {1, 2}
+
+DECLARE_S93;
+// CHECK-MESSAGES-MACROS: :[[@LINE-1]]:1: warning: use designated initializer list [modernize-use-designated-initializers]
+// CHECK-MESSAGES-MACROS: :[[@LINE-4]]:28: note: expanded from macro 'DECLARE_S93'

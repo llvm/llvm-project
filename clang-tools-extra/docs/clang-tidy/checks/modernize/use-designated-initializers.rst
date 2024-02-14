@@ -45,6 +45,11 @@ declaration of ``S``.
 Options
 -------
 
+.. option::  IgnoreMacros
+
+  The value `false` specifies that components of initializer lists expanded
+  from macros are not checked. The default value is `true`.
+
 .. option:: IgnoreSingleElementAggregates
 
     The value `false` specifies that even initializers for aggregate types
