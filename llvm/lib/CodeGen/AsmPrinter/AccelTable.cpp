@@ -431,8 +431,7 @@ void DebugNamesAbbrev::Profile(FoldingSetNodeID &ID) const {
   ID.AddInteger(DieTag);
   for (const DebugNamesAbbrev::AttributeEncoding &Enc : AttrVect) {
     ID.AddInteger(Enc.Index);
-    if (Enc.Index == dwarf::DW_IDX_parent)
-      ID.AddInteger(Enc.Form);
+    ID.AddInteger(Enc.Form);
   }
 }
 
