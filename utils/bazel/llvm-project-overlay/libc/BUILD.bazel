@@ -296,6 +296,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_convertible.h",
         "src/__support/CPP/type_traits/is_destructible.h",
         "src/__support/CPP/type_traits/is_enum.h",
+        "src/__support/CPP/type_traits/is_fixed_point.h",
         "src/__support/CPP/type_traits/is_floating_point.h",
         "src/__support/CPP/type_traits/is_function.h",
         "src/__support/CPP/type_traits/is_integral.h",
