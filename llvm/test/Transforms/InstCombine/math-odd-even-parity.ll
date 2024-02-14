@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare double @erf(double)
+declare double @cos(double)
+declare double @fabs(double)
 
 declare void @use(double) nounwind
 
@@ -16,6 +18,18 @@ define double @test_erf(double %x) {
   %res = tail call reassoc double @erf(double %neg_x)
   %neg_res = fneg double %res
   ret double %neg_res
+}
+
+; Check even parity: cos(fabs(x)) == cos(x)
+define double @test_cos_fabs(double %x) {
+; CHECK-LABEL: define double @test_cos_fabs(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @cos(double [[X]])
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %fabs_res = call double @fabs(double %x)
+  %res = tail call reassoc double @cos(double %fabs_res)
+  ret double %res
 }
 
 ; Do nothing in case of multi-use
