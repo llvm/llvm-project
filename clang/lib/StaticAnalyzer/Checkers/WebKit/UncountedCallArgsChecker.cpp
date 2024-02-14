@@ -216,7 +216,9 @@ public:
     const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
-    auto Report = std::make_unique<BasicBugReport>(Bug, "Call argument for 'this' parameter is uncounted and unsafe.", BSLoc);
+    auto Report = std::make_unique<BasicBugReport>(
+        Bug, "Call argument for 'this' parameter is uncounted and unsafe.",
+        BSLoc);
     Report->addRange(CallArg->getSourceRange());
     BR->emitReport(std::move(Report));
   }
