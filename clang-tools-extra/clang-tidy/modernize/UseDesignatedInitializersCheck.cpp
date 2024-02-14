@@ -97,6 +97,7 @@ void UseDesignatedInitializersCheck::check(
       }
       DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(), "use designated initializer list");
+      Diag << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
         Diag << FixItHint::CreateInsertion(
             InitExpr->getBeginLoc(),
@@ -112,6 +113,7 @@ void UseDesignatedInitializersCheck::check(
         continue;
       }
       diag(InitExpr->getBeginLoc(), "use designated init expression")
+          << InitExpr->getSourceRange()
           << FixItHint::CreateInsertion(
                  InitExpr->getBeginLoc(),
                  Designators.at(InitExpr->getBeginLoc()) + "=");
