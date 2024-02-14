@@ -648,7 +648,7 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     Reqs.addRequirements(getSymbolicOperandRequirements(
         SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
   } else if (Dec == SPIRV::Decoration::LinkageAttributes) {
-    int64_t LinkageOp = MI.getOperand(DecIndex + 2).getImm();
+    int64_t LinkageOp = MI.getOperand(MI.getNumOperands() - 1).getImm();
     SPIRV::LinkageType::LinkageType LnkType =
         static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
     if (LnkType == SPIRV::LinkageType::LinkOnceODR)
