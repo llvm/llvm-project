@@ -17,9 +17,9 @@ int s0(int a, int b) {
   return x;
 }
 
-// CIR-O0:   cir.func @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra( {inline = #cir.inline<no>, optnone = #cir.optnone} )
+// CIR-O0:   cir.func @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra( {inline = #cir.inline<no>, nothrow = #cir.nothrow, optnone = #cir.optnone} )
 // CIR-O2-NOT:   cir.func @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} optnone
 
 // LLVM-O0: define i32 @_Z2s0ii(i32 %0, i32 %1) #[[#ATTR:]]
-// LLVM-O0: attributes #[[#ATTR]] = { noinline optnone }
-// LLVM-O2-NOT: attributes #[[#]] = { noinline optnone }
+// LLVM-O0: attributes #[[#ATTR]] = { noinline nounwind optnone }
+// LLVM-O2-NOT: attributes #[[#]] = { noinline nounwind optnone }

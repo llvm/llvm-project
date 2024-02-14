@@ -2010,9 +2010,37 @@ mlir::Location CIRGenModule::getLocForFunction(const clang::FunctionDecl *FD) {
   return theModule->getLoc();
 }
 
+/// Determines whether the language options require us to model
+/// unwind exceptions.  We treat -fexceptions as mandating this
+/// except under the fragile ObjC ABI with only ObjC exceptions
+/// enabled.  This means, for example, that C with -fexceptions
+/// enables this.
+/// TODO(cir): can be shared with traditional LLVM codegen.
+static bool hasUnwindExceptions(const LangOptions &LangOpts) {
+  // If exceptions are completely disabled, obviously this is false.
+  if (!LangOpts.Exceptions)
+    return false;
+
+  // If C++ exceptions are enabled, this is true.
+  if (LangOpts.CXXExceptions)
+    return true;
+
+  // If ObjC exceptions are enabled, this depends on the ABI.
+  if (LangOpts.ObjCExceptions) {
+    return LangOpts.ObjCRuntime.hasUnwindExceptions();
+  }
+
+  return true;
+}
+
 void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
                                              const clang::FunctionDecl *FD) {
   mlir::NamedAttrList attrs;
+
+  if (!hasUnwindExceptions(getLangOpts())) {
+    auto attr = mlir::cir::NoThrowAttr::get(builder.getContext());
+    attrs.set(attr.getMnemonic(), attr);
+  }
 
   if (!FD) {
     // If we don't have a declaration to control inlining, the function isn't

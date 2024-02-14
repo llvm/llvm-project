@@ -519,6 +519,10 @@ def OptNoneAttr : CIRUnitAttr<"OptNone", "optnone"> {
   let storageType = [{ OptNoneAttr }];
 }
 
+def NoThrowAttr : CIRUnitAttr<"NoThrow", "nothrow"> {
+  let storageType = [{ NoThrowAttr }];
+}
+
 def GlobalCtorAttr : CIR_Attr<"GlobalCtor", "globalCtor"> {
   let summary = "Indicates a function is a global constructor.";
   let description = [{
