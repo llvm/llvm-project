@@ -22,12 +22,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static const char *IgnoreSingleElementAggregatesName =
+static constexpr char IgnoreSingleElementAggregatesName[] =
     "IgnoreSingleElementAggregates";
-static const bool IgnoreSingleElementAggregatesDefault = true;
+static constexpr bool IgnoreSingleElementAggregatesDefault = true;
 
-static const char *RestrictToPODTypesName = "RestrictToPODTypes";
-static const bool RestrictToPODTypesDefault = false;
+static constexpr char RestrictToPODTypesName[] = "RestrictToPODTypes";
+static constexpr bool RestrictToPODTypesDefault = false;
 
 UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
