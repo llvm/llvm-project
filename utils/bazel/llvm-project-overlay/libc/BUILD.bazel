@@ -296,6 +296,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_convertible.h",
         "src/__support/CPP/type_traits/is_destructible.h",
         "src/__support/CPP/type_traits/is_enum.h",
+        "src/__support/CPP/type_traits/is_fixed_point.h",
         "src/__support/CPP/type_traits/is_floating_point.h",
         "src/__support/CPP/type_traits/is_function.h",
         "src/__support/CPP/type_traits/is_integral.h",
@@ -469,6 +470,15 @@ libc_support_library(
     hdrs = ["src/__support/UInt128.h"],
     deps = [
         ":__support_uint",
+    ],
+)
+
+libc_support_library(
+    name = "__support_integer_literals",
+    hdrs = ["src/__support/integer_literals.h"],
+    deps = [
+        ":__support_cpp_limits",
+        ":__support_uint128",
     ],
 )
 
@@ -2803,6 +2813,7 @@ libc_function(
     name = "read",
     srcs = ["src/unistd/linux/read.cpp"],
     hdrs = ["src/unistd/read.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_macros_sanitizer",
@@ -2928,6 +2939,7 @@ libc_function(
     name = "write",
     srcs = ["src/unistd/linux/write.cpp"],
     hdrs = ["src/unistd/write.h"],
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -3216,6 +3228,7 @@ libc_function(
     name = "epoll_wait",
     srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
     hdrs = ["src/sys/epoll/epoll_wait.h"],
+    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -3226,6 +3239,7 @@ libc_function(
     name = "epoll_pwait",
     srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
     hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    weak = True,
     deps = [
         ":__support_osutil_syscall",
         ":errno",
@@ -3238,6 +3252,7 @@ libc_function(
 #     name = "epoll_pwait2",
 #     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
 #     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     weak = True,
 #     deps = [
 #         ":__support_osutil_syscall",
 #         ":errno",

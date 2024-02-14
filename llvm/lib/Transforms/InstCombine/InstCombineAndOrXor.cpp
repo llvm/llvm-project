@@ -3660,19 +3660,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
-  // A | ~(A | B) -> A | ~B
-  // A | ~(A ^ B) -> A | ~B
-  if (match(Op1, m_Not(m_Value(A))))
-    if (BinaryOperator *B = dyn_cast<BinaryOperator>(A))
-      if ((Op0 == B->getOperand(0) || Op0 == B->getOperand(1)) &&
-          Op1->hasOneUse() && (B->getOpcode() == Instruction::Or ||
-                               B->getOpcode() == Instruction::Xor)) {
-        Value *NotOp = Op0 == B->getOperand(0) ? B->getOperand(1) :
-                                                 B->getOperand(0);
-        Value *Not = Builder.CreateNot(NotOp, NotOp->getName() + ".not");
-        return BinaryOperator::CreateOr(Not, Op0);
-      }
-
   if (SwappedForXor)
     std::swap(Op0, Op1);
 
@@ -4463,7 +4450,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     }
 
     // ~(X + C) --> ~C - X
-    if (match(NotVal, m_c_Add(m_Value(X), m_ImmConstant(C))))
+    if (match(NotVal, m_Add(m_Value(X), m_ImmConstant(C))))
       return BinaryOperator::CreateSub(ConstantExpr::getNot(C), X);
 
     // ~(X - Y) --> ~X + Y

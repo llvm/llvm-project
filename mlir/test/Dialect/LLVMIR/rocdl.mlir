@@ -35,6 +35,18 @@ func.func @rocdl.barrier() {
   llvm.return
 }
 
+func.func @rocdl.sched_barrier() {
+  // CHECK: rocdl.sched.barrier
+  rocdl.sched.barrier 0
+  llvm.return
+}
+
+func.func @rocdl.setprio() {
+  // CHECK: rocdl.s.setprio
+  rocdl.s.setprio 0
+  llvm.return
+}
+
 func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32xf32>, %arg3 : i32,
                    %arg4 : vector<16xf32>, %arg5 : vector<4xf32>,

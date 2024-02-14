@@ -737,7 +737,7 @@
 
 // Test whether predefines are as expected when targeting cortex-m55 (softfp FP ABI as default).
 // RUN: %clang -target arm-eabi -mcpu=cortex-m55 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=M55 %s
-// M55: #define __ARM_ARCH 8
+// M55: #define __ARM_ARCH 801
 // M55: #define __ARM_ARCH_8_1M_MAIN__ 1
 // M55: #define __ARM_ARCH_EXT_IDIV__ 1
 // M55-NOT: __ARM_ARCH_ISA_ARM
@@ -764,7 +764,7 @@
 // KRAIT-ALLOW-FP-INSTR:#define  __ARM_VFPV4__ 1
 
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M %s
-// CHECK-V81M: #define __ARM_ARCH 8
+// CHECK-V81M: #define __ARM_ARCH 801
 // CHECK-V81M: #define __ARM_ARCH_8_1M_MAIN__ 1
 // CHECK-V81M: #define __ARM_ARCH_ISA_THUMB 2
 // CHECK-V81M: #define __ARM_ARCH_PROFILE 'M'
@@ -821,14 +821,14 @@
 // CHECK-V8M-CDE-MASK2: #define __ARM_FEATURE_CDE_COPROC 0xff
 
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81A %s
-// CHECK-V81A: #define __ARM_ARCH 8
+// CHECK-V81A: #define __ARM_ARCH 801
 // CHECK-V81A: #define __ARM_ARCH_8_1A__ 1
 // CHECK-V81A: #define __ARM_ARCH_PROFILE 'A'
 // CHECK-V81A: #define __ARM_FEATURE_QRDMX 1
 // CHECK-V81A: #define __ARM_FP 0xe
 
 // RUN: %clang -target armv8.2a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V82A %s
-// CHECK-V82A: #define __ARM_ARCH 8
+// CHECK-V82A: #define __ARM_ARCH 802
 // CHECK-V82A: #define __ARM_ARCH_8_2A__ 1
 // CHECK-V82A: #define __ARM_ARCH_PROFILE 'A'
 // CHECK-V82A: #define __ARM_FEATURE_QRDMX 1
@@ -838,67 +838,67 @@
 // CHECK-DRIVERKIT-NOT: #define __ARM_PCS_VFP 1
 
 // RUN: %clang -target armv8.3a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V83A %s
-// CHECK-V83A: #define __ARM_ARCH 8
+// CHECK-V83A: #define __ARM_ARCH 803
 // CHECK-V83A: #define __ARM_ARCH_8_3A__ 1
 // CHECK-V83A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv8.4a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V84A %s
-// CHECK-V84A: #define __ARM_ARCH 8
+// CHECK-V84A: #define __ARM_ARCH 804
 // CHECK-V84A: #define __ARM_ARCH_8_4A__ 1
 // CHECK-V84A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv8.5a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V85A %s
-// CHECK-V85A: #define __ARM_ARCH 8
+// CHECK-V85A: #define __ARM_ARCH 805
 // CHECK-V85A: #define __ARM_ARCH_8_5A__ 1
 // CHECK-V85A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv8.6a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V86A %s
-// CHECK-V86A: #define __ARM_ARCH 8
+// CHECK-V86A: #define __ARM_ARCH 806
 // CHECK-V86A: #define __ARM_ARCH_8_6A__ 1
 // CHECK-V86A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv8.7a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V87A %s
-// CHECK-V87A: #define __ARM_ARCH 8
+// CHECK-V87A: #define __ARM_ARCH 807
 // CHECK-V87A: #define __ARM_ARCH_8_7A__ 1
 // CHECK-V87A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv8.8a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V88A %s
-// CHECK-V88A: #define __ARM_ARCH 8
+// CHECK-V88A: #define __ARM_ARCH 808
 // CHECK-V88A: #define __ARM_ARCH_8_8A__ 1
 // CHECK-V88A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv8.9a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V89A %s
-// CHECK-V89A: #define __ARM_ARCH 8
+// CHECK-V89A: #define __ARM_ARCH 809
 // CHECK-V89A: #define __ARM_ARCH_8_9A__ 1
 // CHECK-V89A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv9a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V9A %s
-// CHECK-V9A: #define __ARM_ARCH 9
+// CHECK-V9A: #define __ARM_ARCH 900
 // CHECK-V9A: #define __ARM_ARCH_9A__ 1
 // CHECK-V9A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv9.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V91A %s
-// CHECK-V91A: #define __ARM_ARCH 9
+// CHECK-V91A: #define __ARM_ARCH 901
 // CHECK-V91A: #define __ARM_ARCH_9_1A__ 1
 // CHECK-V91A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv9.2a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V92A %s
-// CHECK-V92A: #define __ARM_ARCH 9
+// CHECK-V92A: #define __ARM_ARCH 902
 // CHECK-V92A: #define __ARM_ARCH_9_2A__ 1
 // CHECK-V92A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv9.3a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V93A %s
-// CHECK-V93A: #define __ARM_ARCH 9
+// CHECK-V93A: #define __ARM_ARCH 903
 // CHECK-V93A: #define __ARM_ARCH_9_3A__ 1
 // CHECK-V93A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv9.4a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V94A %s
-// CHECK-V94A: #define __ARM_ARCH 9
+// CHECK-V94A: #define __ARM_ARCH 904
 // CHECK-V94A: #define __ARM_ARCH_9_4A__ 1
 // CHECK-V94A: #define __ARM_ARCH_PROFILE 'A'
 
 // RUN: %clang -target armv9.5a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V95A %s
-// CHECK-V95A: #define __ARM_ARCH 9
+// CHECK-V95A: #define __ARM_ARCH 905
 // CHECK-V95A: #define __ARM_ARCH_9_5A__ 1
 // CHECK-V95A: #define __ARM_ARCH_PROFILE 'A'
 
