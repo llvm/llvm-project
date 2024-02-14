@@ -159,6 +159,48 @@ define i32 @ashr_add_nuw(i32 %x, ptr %p) {
   ret i32 %r
 }
 
+; Preserve nuw and exact flags.
+
+define i32 @shl_nuw_add_nuw(i32 %x) {
+; CHECK-LABEL: @shl_nuw_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = shl nuw i32 1, %a
+  ret i32 %r
+}
+
+define i32 @shl_nsw_add_nuw(i32 %x) {
+; CHECK-LABEL: @shl_nsw_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = shl nsw i32 -1, %a
+  ret i32 %r
+}
+
+define i32 @lshr_exact_add_nuw(i32 %x) {
+; CHECK-LABEL: @lshr_exact_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = lshr exact i32 4, %a
+  ret i32 %r
+}
+
+define i32 @ashr_exact_add_nuw(i32 %x) {
+; CHECK-LABEL: @ashr_exact_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = ashr exact i32 -4, %a
+  ret i32 %r
+}
+
 ; negative test - must have 'nuw'
 
 define i32 @shl_add_nsw(i32 %x) {

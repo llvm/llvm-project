@@ -173,9 +173,9 @@ define double @foo4(double %x0, ptr %ptr1, ptr %ptr2, ptr %ptr3, <vscale x 8 x d
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x2]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2
-  store volatile <vscale x 2 x double> %x3, <vscale x 2 x double>* %ptr3
+  store volatile <vscale x 8 x double> %x1, ptr %ptr1
+  store volatile <vscale x 8 x double> %x2, ptr %ptr2
+  store volatile <vscale x 2 x double> %x3, ptr %ptr3
   ret double %x0
 }
 
@@ -198,8 +198,8 @@ define double @foo5(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, ptr %p
 ; CHECK-NEXT:    st1d { z5.d }, p0, [x7, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 8 x double> %x1, <vscale x 8 x double>* %ptr1
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr2
+  store volatile <vscale x 8 x double> %x1, ptr %ptr1
+  store volatile <vscale x 8 x double> %x2, ptr %ptr2
   ret double %x0
 }
 
@@ -219,8 +219,8 @@ define double @foo6(double %x0, double %x1, ptr %ptr1, ptr %ptr2, <vscale x 8 x 
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 8 x double> %x2, <vscale x 8 x double>* %ptr1
-  store volatile <vscale x 6 x double> %x3, <vscale x 6 x double>* %ptr2
+  store volatile <vscale x 8 x double> %x2, ptr %ptr1
+  store volatile <vscale x 6 x double> %x3, ptr %ptr2
   ret double %x0
 }
 
@@ -244,15 +244,15 @@ define void @aavpcs1(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %
 ; CHECK-NEXT:    st1w { z3.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x i32> %s7, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s7, ptr %ptr
+  store volatile <vscale x 4 x i32> %s8, ptr %ptr
+  store volatile <vscale x 4 x i32> %s9, ptr %ptr
+  store volatile <vscale x 4 x i32> %s11, ptr %ptr
+  store volatile <vscale x 4 x i32> %s12, ptr %ptr
+  store volatile <vscale x 4 x i32> %s13, ptr %ptr
+  store volatile <vscale x 4 x i32> %s14, ptr %ptr
+  store volatile <vscale x 4 x i32> %s15, ptr %ptr
+  store volatile <vscale x 4 x i32> %s16, ptr %ptr
   ret void
 }
 
@@ -282,15 +282,15 @@ define void @aavpcs2(float %s0, float %s1, float %s2, float %s3, float %s4, floa
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s7, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s7, ptr %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret void
 }
 
@@ -322,15 +322,15 @@ define void @aavpcs3(float %s0, float %s1, float %s2, float %s3, float %s4, floa
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s10, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret void
 }
 
@@ -354,15 +354,15 @@ define void @aavpcs4(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %
 ; CHECK-NEXT:    st1w { z24.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x i32> %s8, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s9, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s10, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s11, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s12, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s13, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s14, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s15, <vscale x 4 x i32>* %ptr
-  store volatile <vscale x 4 x i32> %s16, <vscale x 4 x i32>* %ptr
+  store volatile <vscale x 4 x i32> %s8, ptr %ptr
+  store volatile <vscale x 4 x i32> %s9, ptr %ptr
+  store volatile <vscale x 4 x i32> %s10, ptr %ptr
+  store volatile <vscale x 4 x i32> %s11, ptr %ptr
+  store volatile <vscale x 4 x i32> %s12, ptr %ptr
+  store volatile <vscale x 4 x i32> %s13, ptr %ptr
+  store volatile <vscale x 4 x i32> %s14, ptr %ptr
+  store volatile <vscale x 4 x i32> %s15, ptr %ptr
+  store volatile <vscale x 4 x i32> %s16, ptr %ptr
   ret void
 }
 
@@ -394,15 +394,15 @@ define <vscale x 4 x float> @aavpcs5(float %s0, float %s1, float %s2, float %s3,
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s10, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret <vscale x 4 x float> %s8
 }
 
@@ -432,15 +432,15 @@ define void @aapcs1(float %s0, float %s1, float %s2, float %s3, float %s4, float
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x9]
 ; CHECK-NEXT:    ret
 entry:
-  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr
-  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr
+  store volatile <vscale x 4 x float> %s8, ptr %ptr
+  store volatile <vscale x 4 x float> %s9, ptr %ptr
+  store volatile <vscale x 4 x float> %s10, ptr %ptr
+  store volatile <vscale x 4 x float> %s11, ptr %ptr
+  store volatile <vscale x 4 x float> %s12, ptr %ptr
+  store volatile <vscale x 4 x float> %s13, ptr %ptr
+  store volatile <vscale x 4 x float> %s14, ptr %ptr
+  store volatile <vscale x 4 x float> %s15, ptr %ptr
+  store volatile <vscale x 4 x float> %s16, ptr %ptr
   ret void
 }
 

@@ -21,6 +21,7 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -28,12 +29,14 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cstddef>
+#include <iterator>
 #include <optional>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
+#include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace mlir::omp;
@@ -427,6 +430,71 @@ static void printScheduleClause(OpAsmPrinter &p, Operation *op,
 // Parser, printer and verifier for ReductionVarList
 //===----------------------------------------------------------------------===//
 
+ParseResult
+parseReductionClause(OpAsmParser &parser, Region &region,
+                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                     SmallVectorImpl<Type> &types, ArrayAttr &reductionSymbols,
+                     SmallVectorImpl<OpAsmParser::Argument> &privates) {
+  if (failed(parser.parseOptionalKeyword("reduction")))
+    return failure();
+
+  SmallVector<SymbolRefAttr> reductionVec;
+
+  if (failed(
+          parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Paren, [&]() {
+            if (parser.parseAttribute(reductionVec.emplace_back()) ||
+                parser.parseOperand(operands.emplace_back()) ||
+                parser.parseArrow() ||
+                parser.parseArgument(privates.emplace_back()) ||
+                parser.parseColonType(types.emplace_back()))
+              return failure();
+            return success();
+          })))
+    return failure();
+
+  for (auto [prv, type] : llvm::zip_equal(privates, types)) {
+    prv.type = type;
+  }
+  SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
+  reductionSymbols = ArrayAttr::get(parser.getContext(), reductions);
+  return success();
+}
+
+static void printReductionClause(OpAsmPrinter &p, Operation *op,
+                                 ValueRange reductionArgs, ValueRange operands,
+                                 TypeRange types, ArrayAttr reductionSymbols) {
+  p << "reduction(";
+  llvm::interleaveComma(
+      llvm::zip_equal(reductionSymbols, operands, reductionArgs, types), p,
+      [&p](auto t) {
+        auto [sym, op, arg, type] = t;
+        p << sym << " " << op << " -> " << arg << " : " << type;
+      });
+  p << ") ";
+}
+
+static ParseResult
+parseParallelRegion(OpAsmParser &parser, Region &region,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                    SmallVectorImpl<Type> &types, ArrayAttr &reductionSymbols) {
+
+  llvm::SmallVector<OpAsmParser::Argument> privates;
+  if (succeeded(parseReductionClause(parser, region, operands, types,
+                                     reductionSymbols, privates)))
+    return parser.parseRegion(region, privates);
+
+  return parser.parseRegion(region);
+}
+
+static void printParallelRegion(OpAsmPrinter &p, Operation *op, Region &region,
+                                ValueRange operands, TypeRange types,
+                                ArrayAttr reductionSymbols) {
+  if (reductionSymbols)
+    printReductionClause(p, op, region.front().getArguments(), operands, types,
+                         reductionSymbols);
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
+
 /// reduction-entry-list ::= reduction-entry
 ///                        | reduction-entry-list `,` reduction-entry
 /// reduction-entry ::= symbol-ref `->` ssa-id `:` type
@@ -561,7 +629,7 @@ static LogicalResult verifyDependVarList(Operation *op,
       return op->emitOpError() << "expected as many depend values"
                                   " as depend variables";
   } else {
-    if (depends)
+    if (depends && !depends->empty())
       return op->emitOpError() << "unexpected depend values";
     return success();
   }
@@ -965,19 +1033,31 @@ LogicalResult DataOp::verify() {
 }
 
 LogicalResult EnterDataOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult ExitDataOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult UpdateDataOp::verify() {
-  return verifyMapClause(*this, getMotionOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 LogicalResult TargetOp::verify() {
-  return verifyMapClause(*this, getMapOperands());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars) ? verifyDependVars
+                                  : verifyMapClause(*this, getMapOperands());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1083,6 +1163,84 @@ LogicalResult SingleOp::verify() {
 /// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` inclusive? steps
 /// steps := `step` `(`ssa-id-list`)`
 ParseResult
+parseWsLoop(OpAsmParser &parser, Region &region,
+            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerBound,
+            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperBound,
+            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
+            SmallVectorImpl<Type> &loopVarTypes,
+            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionOperands,
+            SmallVectorImpl<Type> &reductionTypes, ArrayAttr &reductionSymbols,
+            UnitAttr &inclusive) {
+
+  // Parse an optional reduction clause
+  llvm::SmallVector<OpAsmParser::Argument> privates;
+  bool hasReduction = succeeded(
+      parseReductionClause(parser, region, reductionOperands, reductionTypes,
+                           reductionSymbols, privates));
+
+  if (parser.parseKeyword("for"))
+    return failure();
+
+  // Parse an opening `(` followed by induction variables followed by `)`
+  SmallVector<OpAsmParser::Argument> ivs;
+  Type loopVarType;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
+      parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
+      parser.parseOperandList(lowerBound, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.parseKeyword("to") ||
+      parser.parseOperandList(upperBound, ivs.size(),
+                              OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("inclusive")))
+    inclusive = UnitAttr::get(parser.getBuilder().getContext());
+
+  // Parse step values.
+  if (parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  // Now parse the body.
+  loopVarTypes = SmallVector<Type>(ivs.size(), loopVarType);
+  for (auto &iv : ivs)
+    iv.type = loopVarType;
+
+  SmallVector<OpAsmParser::Argument> regionArgs{ivs};
+  if (hasReduction)
+    llvm::copy(privates, std::back_inserter(regionArgs));
+
+  return parser.parseRegion(region, regionArgs);
+}
+
+void printWsLoop(OpAsmPrinter &p, Operation *op, Region &region,
+                 ValueRange lowerBound, ValueRange upperBound, ValueRange steps,
+                 TypeRange loopVarTypes, ValueRange reductionOperands,
+                 TypeRange reductionTypes, ArrayAttr reductionSymbols,
+                 UnitAttr inclusive) {
+  if (reductionSymbols) {
+    auto reductionArgs =
+        region.front().getArguments().drop_front(loopVarTypes.size());
+    printReductionClause(p, op, reductionArgs, reductionOperands,
+                         reductionTypes, reductionSymbols);
+  }
+
+  p << " for ";
+  auto args = region.front().getArguments().drop_back(reductionOperands.size());
+  p << " (" << args << ") : " << args[0].getType() << " = (" << lowerBound
+    << ") to (" << upperBound << ") ";
+  if (inclusive)
+    p << "inclusive ";
+  p << "step (" << steps << ") ";
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
+
+/// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
+/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` inclusive? steps
+/// steps := `step` `(`ssa-id-list`)`
+ParseResult
 parseLoopControl(OpAsmParser &parser, Region &region,
                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerBound,
                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperBound,
@@ -1114,6 +1272,7 @@ parseLoopControl(OpAsmParser &parser, Region &region,
   loopVarTypes = SmallVector<Type>(ivs.size(), loopVarType);
   for (auto &iv : ivs)
     iv.type = loopVarType;
+
   return parser.parseRegion(region, ivs);
 }
 
@@ -1150,6 +1309,22 @@ LogicalResult SimdLoopOp::verify() {
     return failure();
   if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
     return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for Distribute construct [2.9.4.1]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DistributeOp::verify() {
+  if (this->getChunkSize() && !this->getDistScheduleStatic())
+    return emitOpError() << "chunk size set without "
+                            "dist_schedule_static being present";
+
+  if (getAllocateVars().size() != getAllocatorsVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
   return success();
 }
 
@@ -1575,6 +1750,73 @@ LogicalResult DataBoundsOp::verify() {
   auto upperbound = getUpperBound();
   if (!extent && !upperbound)
     return emitError("expected extent or upperbound.");
+  return success();
+}
+
+LogicalResult PrivateClauseOp::verify() {
+  Type symType = getType();
+
+  auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
+    if (!terminator->hasSuccessors() && !llvm::isa<YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `omp.yield` op.";
+
+    YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
+    TypeRange yieldedTypes = yieldOp.getResults().getTypes();
+
+    if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
+      return success();
+
+    auto error = mlir::emitError(yieldOp.getLoc())
+                 << "Invalid yielded value. Expected type: " << symType
+                 << ", got: ";
+
+    if (yieldedTypes.empty())
+      error << "None";
+    else
+      error << yieldedTypes;
+
+    return error;
+  };
+
+  auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
+                          StringRef regionName) -> LogicalResult {
+    assert(!region.empty());
+
+    if (region.getNumArguments() != expectedNumArgs)
+      return mlir::emitError(region.getLoc())
+             << "`" << regionName << "`: "
+             << "expected " << expectedNumArgs
+             << " region arguments, got: " << region.getNumArguments();
+
+    for (Block &block : region) {
+      // MLIR will verify the absence of the terminator for us.
+      if (!block.mightHaveTerminator())
+        continue;
+
+      if (failed(verifyTerminator(block.getTerminator())))
+        return failure();
+    }
+
+    return success();
+  };
+
+  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc")))
+    return failure();
+
+  DataSharingClauseType dsType = getDataSharingType();
+
+  if (dsType == DataSharingClauseType::Private && !getCopyRegion().empty())
+    return emitError("`private` clauses require only an `alloc` region.");
+
+  if (dsType == DataSharingClauseType::FirstPrivate && getCopyRegion().empty())
+    return emitError(
+        "`firstprivate` clauses require both `alloc` and `copy` regions.");
+
+  if (dsType == DataSharingClauseType::FirstPrivate &&
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy")))
+    return failure();
+
   return success();
 }
 

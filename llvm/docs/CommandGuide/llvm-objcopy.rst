@@ -117,6 +117,11 @@ multiple file formats.
  If specified, symbol and section names specified by other switches are treated
  as extended POSIX regular expression patterns.
 
+.. option:: --remove-symbol-prefix <prefix>
+
+Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
+not start with ``<prefix>``.
+
 .. option:: --remove-section <section>, -R
 
  Remove the specified section from the output. Can be specified multiple times
@@ -539,8 +544,13 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf32-sparc`
 - `elf32-sparcel`
 
-Additionally, all targets except `binary` and `ihex` can have `-freebsd` as a
-suffix.
+The following formats are suppoprted by :program:`llvm-objcopy` for the
+:option:`--output-target` only:
+
+- `srec`
+
+Additionally, all targets except `binary`, `ihex`, and `srec` can have
+`-freebsd` as a suffix.
 
 BINARY INPUT AND OUTPUT
 -----------------------

@@ -23,11 +23,14 @@
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <optional>
 
 using namespace llvm;
@@ -39,6 +42,9 @@ namespace clang {
 namespace replace {
 
 namespace detail {
+
+static constexpr std::array<StringRef, 2> AllowedExtensions = {".yaml", ".yml"};
+
 template <typename TranslationUnits>
 static std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TranslationUnits &TUs,
@@ -56,7 +62,7 @@ static std::error_code collectReplacementsFromDirectory(
       continue;
     }
 
-    if (extension(I->path()) != ".yaml")
+    if (!is_contained(AllowedExtensions, extension(I->path())))
       continue;
 
     TUFiles.push_back(I->path());

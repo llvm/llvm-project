@@ -508,7 +508,7 @@ define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
 ; GFX12-NEXT:    s_endpgm
   %fmed3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float %z)
   %div2 = fmul float %fmed3, 2.0
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 

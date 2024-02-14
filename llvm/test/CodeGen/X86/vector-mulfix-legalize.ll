@@ -13,7 +13,7 @@ declare <4 x i16> @llvm.umul.fix.sat.v4i16(<4 x i16>, <4 x i16>, i32 immarg)
 define <4 x i16> @smulfix(<4 x i16> %a) {
 ; CHECK-LABEL: smulfix:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,3,4,u,u,u,u]
+; CHECK-NEXT:    movq {{.*#+}} xmm1 = [1,2,3,4,0,0,0,0]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pmullw %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $15, %xmm2
@@ -28,7 +28,7 @@ define <4 x i16> @smulfix(<4 x i16> %a) {
 define <4 x i16> @umulfix(<4 x i16> %a) {
 ; CHECK-LABEL: umulfix:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,3,4,u,u,u,u]
+; CHECK-NEXT:    movq {{.*#+}} xmm1 = [1,2,3,4,0,0,0,0]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pmullw %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $15, %xmm2

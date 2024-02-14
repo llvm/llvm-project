@@ -90,7 +90,7 @@ entry:
 define i16 @xor16ri8(i16 noundef %a) {
 ; CHECK-LABEL: xor16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xf7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -101,7 +101,7 @@ entry:
 define i32 @xor32ri8(i32 noundef %a) {
 ; CHECK-LABEL: xor32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xf7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %xor = xor i32 %a, 123
@@ -111,7 +111,7 @@ entry:
 define i64 @xor64ri8(i64 noundef %a) {
 ; CHECK-LABEL: xor64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xf7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %xor = xor i64 %a, 123
@@ -222,7 +222,7 @@ entry:
 define i32 @xor32mi8(ptr %a) {
 ; CHECK-LABEL: xor32mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0x37,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x37,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -233,7 +233,7 @@ entry:
 define i64 @xor64mi8(ptr %a) {
 ; CHECK-LABEL: xor64mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorq $123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x37,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorq $123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x37,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
@@ -312,7 +312,7 @@ define i1 @xorflag16rr(i16 %a, i16 %b) {
 ; CHECK-LABEL: xorflag16rr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %edi, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x31,0xfe]
-; CHECK-NEXT:    xorw $-1, %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xf0,0xff,0xff]
+; CHECK-NEXT:    xorw $-1, %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf0,0xff]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
@@ -373,7 +373,7 @@ define i1 @xorflag16rm(ptr %ptr, i16 %b) {
 ; CHECK-LABEL: xorflag16rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorw (%rdi), %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x33,0x37]
-; CHECK-NEXT:    xorw $-1, %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xf0,0xff,0xff]
+; CHECK-NEXT:    xorw $-1, %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf0,0xff]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
@@ -480,7 +480,7 @@ define i1 @xorflag64ri(i64 %a) {
 define i1 @xorflag16ri8(i16 %a) {
 ; CHECK-LABEL: xorflag16ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xf7,0x84,0xff]
+; CHECK-NEXT:    xorw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xf7,0x84]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
@@ -495,7 +495,7 @@ define i1 @xorflag16ri8(i16 %a) {
 define i1 @xorflag32ri8(i32 %a) {
 ; CHECK-LABEL: xorflag32ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xf7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %ecx, d64(%rip) # encoding: [0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
@@ -509,7 +509,7 @@ define i1 @xorflag32ri8(i32 %a) {
 define i1 @xorflag64ri8(i64 %a) {
 ; CHECK-LABEL: xorflag64ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xf7,0x7b,0x00,0x00,0x00]
+; CHECK-NEXT:    xorq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xf7,0x7b]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte

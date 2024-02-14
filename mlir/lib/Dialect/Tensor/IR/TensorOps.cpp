@@ -2663,8 +2663,8 @@ struct InsertSliceOpSourceCastInserter final
     if (!hasValidSizesOffsets(newSrcShape))
       return failure();
 
-    RankedTensorType newSrcType =
-        RankedTensorType::get(newSrcShape, srcType.getElementType());
+    RankedTensorType newSrcType = RankedTensorType::get(
+        newSrcShape, srcType.getElementType(), srcType.getEncoding());
     if (srcType == newSrcType ||
         !preservesStaticInformation(srcType, newSrcType) ||
         !tensor::CastOp::areCastCompatible(srcType, newSrcType))
@@ -3158,19 +3158,23 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     // Extract the static info from the high and low operands.
     SmallVector<int64_t> constOperandsLow;
+    SmallVector<Value> newLows;
     for (auto operand : padTensorOp.getLow()) {
       APSInt intOp;
       if (!matchPattern(operand, m_ConstantInt(&intOp))) {
         constOperandsLow.push_back(ShapedType::kDynamic);
+        newLows.push_back(operand);
         continue;
       }
       constOperandsLow.push_back(intOp.getExtValue());
     }
     SmallVector<int64_t> constOperandsHigh;
+    SmallVector<Value> newHighs;
     for (auto operand : padTensorOp.getHigh()) {
       APSInt intOp;
       if (!matchPattern(operand, m_ConstantInt(&intOp))) {
         constOperandsHigh.push_back(ShapedType::kDynamic);
+        newHighs.push_back(operand);
         continue;
       }
       constOperandsHigh.push_back(intOp.getExtValue());
@@ -3222,7 +3226,7 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
         newOutDims, padTensorOp.getType().getElementType());
     auto newOp = rewriter.create<PadOp>(
         padTensorOp->getLoc(), newResultType, input, staticLow, staticHigh,
-        padTensorOp.getLow(), padTensorOp.getHigh(), padTensorOp.getNofold(),
+        newLows, newHighs, padTensorOp.getNofold(),
         getPrunedAttributeList(padTensorOp, PadOp::getAttributeNames()));
 
     IRMapping mapper;

@@ -1176,6 +1176,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk118shared_timed_mutex8try_lockEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118shared_timed_mutexC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118shared_timed_mutexC2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk119__is_posix_terminalEP7__sFILE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119__shared_mutex_base11lock_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119__shared_mutex_base13unlock_sharedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119__shared_mutex_base15try_lock_sharedEv', 'type': 'FUNC'}

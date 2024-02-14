@@ -141,7 +141,7 @@ class Directive<string d> {
   // allowedClauses and requiredClauses lists.
 
   // List of allowed clauses for the directive.
-  list<VersionedClause> allowedClauses = [];
+  list<VersionedClause>  allowedClauses = [];
 
   // List of clauses that are allowed to appear only once.
   list<VersionedClause> allowedOnceClauses = [];

@@ -59,7 +59,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-NEXT:         DW_IDX_die_offset: [[TYPEDIE]]
-; CHECK-NEXT:         DW_IDX_parent: true
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -71,17 +71,17 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-NEXT:         Tag: DW_TAG_variable
 ; CHECK-NEXT:         DW_IDX_die_offset: [[VARDIE]]
-; CHECK-NEXT:         DW_IDX_parent: true
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Name 3 {
 ; CHECK-NEXT:       Hash: 0x7C96FE71
 ; CHECK-NEXT:       String: {{.+}} "func"
-; CHECK-NEXT:       Entry @ {{.+}} {
+; CHECK-NEXT:       Entry @ [[FUNC_ENTRY:0x.+]] {
 ; CHECK-NEXT:         Abbrev: [[ABBREV_SP]]
 ; CHECK-NEXT:         Tag: DW_TAG_subprogram
 ; CHECK-NEXT:         DW_IDX_die_offset: [[SPDIE]]
-; CHECK-NEXT:         DW_IDX_parent: true
+; CHECK-NEXT:         DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
@@ -96,7 +96,7 @@
 ; CHECK-NEXT:         Abbrev: [[ABBREV_LABEL]]
 ; CHECK-NEXT:         Tag: DW_TAG_label
 ; CHECK-NEXT:         DW_IDX_die_offset: [[LABELDIE]]
-; CHECK-NEXT:         DW_IDX_parent: 0x{{.*}}
+; CHECK-NEXT:         DW_IDX_parent: Entry @ [[FUNC_ENTRY]]
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]

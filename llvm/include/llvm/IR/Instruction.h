@@ -40,6 +40,8 @@ template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
+iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange(DPMarker *);
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
                                                   ilist_iterator_bits<true>> {
@@ -76,7 +78,9 @@ public:
       bool InsertAtHead = false);
 
   /// Return a range over the DPValues attached to this instruction.
-  iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const;
+  iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const {
+    return llvm::getDbgValueRange(DbgMarker);
+  }
 
   /// Return an iterator to the position of the "Next" DPValue after this
   /// instruction, or std::nullopt. This is the position to pass to
@@ -85,6 +89,12 @@ public:
 
   /// Returns true if any DPValues are attached to this instruction.
   bool hasDbgValues() const;
+
+  /// Transfer any DPValues on the position \p It onto this instruction,
+  /// by simply adopting the sequence of DPValues (which is efficient) if
+  /// possible, by merging two sequences otherwise.
+  void adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
+                      bool InsertAtHead);
 
   /// Erase any DPValues attached to this instruction.
   void dropDbgValues();

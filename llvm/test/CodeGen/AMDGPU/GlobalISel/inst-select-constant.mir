@@ -523,7 +523,6 @@ body: |
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.2(0x80000000)
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ;
   ; WAVE32-LABEL: name: zext_sgpr_s1_to_sgpr_s32
@@ -538,7 +537,6 @@ body: |
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.2(0x80000000)
-  ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   bb.0:

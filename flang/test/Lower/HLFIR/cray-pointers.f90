@@ -125,7 +125,6 @@ end subroutine test5
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest5Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 9 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<9x!fir.type<_QFtest5Tt{r:f32,i:i32}>> {bindc_name = "v", uniq_name = "_QFtest5Ev"}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_6]] : (index, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest5Ev"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>
@@ -206,7 +205,6 @@ end subroutine test7
 ! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) {uniq_name = "_QFtest7Earr"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
 ! CHECK:    %[[VAL_6:.*]] = arith.constant 5 : index
-! CHECK:    %[[VAL_7:.*]] = fir.alloca !fir.array<5xi32> {bindc_name = "pte", uniq_name = "_QFtest7Epte"}
 ! CHECK:    %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest7Epte"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:    %[[VAL_10:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
@@ -229,7 +227,6 @@ end subroutine test8
 ! CHECK-LABEL:     func.func @_QPtest8(
 ! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:    %[[VAL_2:.*]] = arith.constant 5 : index
-! CHECK:    %[[VAL_3:.*]] = fir.alloca !fir.array<5xi32> {bindc_name = "pte", uniq_name = "_QFtest8Epte"}
 ! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest8Epte"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:    %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
@@ -260,7 +257,6 @@ end subroutine test9
 ! CHECK-LABEL:     func.func @_QPtest9(
 ! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:    %[[VAL_2:.*]] = arith.constant 5 : index
-! CHECK:    %[[VAL_3:.*]] = fir.alloca !fir.array<5xi32> {bindc_name = "pte", uniq_name = "_QFtest9Epte"}
 ! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest9Epte"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:    %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
@@ -291,7 +287,6 @@ subroutine test10()
 end subroutine test10
 ! CHECK-LABEL:  func.func @_QPtest10(
 ! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
-! CHECK:    %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "pte", uniq_name = "_QFtest10Epte"}
 ! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest10Epte"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:    %[[VAL_4:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:    %[[VAL_5:.*]] = fir.embox %[[VAL_4]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
@@ -320,7 +315,6 @@ subroutine test11()
 end subroutine test11
 ! CHECK-LABEL:  func.func @_QPtest11(
 ! CHECK:    %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
-! CHECK:    %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "pte", uniq_name = "_QFtest11Epte"}
 ! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest11Epte"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:    %[[VAL_4:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:    %[[VAL_5:.*]] = fir.embox %[[VAL_4]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>

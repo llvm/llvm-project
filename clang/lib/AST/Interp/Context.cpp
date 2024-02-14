@@ -34,9 +34,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     Func = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
   APValue DummyResult;
-  if (!Run(Parent, Func, DummyResult)) {
+  if (!Run(Parent, Func, DummyResult))
     return false;
-  }
 
   return Func->isConstexpr();
 }
@@ -112,11 +111,13 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #endif
 
   // Ensure global variables are fully initialized.
-  if (shouldBeGloballyIndexed(VD) && !Res.isInvalid() &&
-      (VD->getType()->isRecordType() || VD->getType()->isArrayType())) {
+  if (shouldBeGloballyIndexed(VD) &&
+      (VD->getType()->isRecordType() || VD->getType()->isArrayType() ||
+       VD->getType()->isAnyComplexType())) {
     assert(Res.isLValue());
 
-    if (!Res.checkFullyInitialized(C.getState()))
+    if (!VD->getType()->isAnyComplexType() &&
+        !Res.checkFullyInitialized(C.getState()))
       return false;
 
     // lvalue-to-rvalue conversion.

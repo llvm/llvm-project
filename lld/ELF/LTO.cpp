@@ -61,6 +61,8 @@ static lto::Config createConfig() {
   c.Options.FunctionSections = true;
   c.Options.DataSections = true;
 
+  c.Options.BBAddrMap = config->ltoBBAddrMap;
+
   // Check if basic block sections must be used.
   // Allowed values for --lto-basic-block-sections are "all", "labels",
   // "<file name specifying basic block ids>", or none.  This is the equivalent

@@ -23,11 +23,17 @@
 // CHECK-CC-S-EL-LTO-SAME: -emit-llvm
 // CHECK-CC-S-EL-LTO-SAME: -ffat-lto-objects
 
-/// When fat LTO is enabled wihtout -S we expect native object output and -ffat-lto-object to be passed to cc1.
+/// When fat LTO is enabled without -S we expect native object output and -ffat-lto-object to be passed to cc1.
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -c 2>&1 | FileCheck %s -check-prefix=CHECK-CC-C-LTO
 // CHECK-CC-C-LTO: -cc1
-// CHECK-CC-C-LTO: -emit-obj
-// CHECK-CC-C-LTO: -ffat-lto-objects
+// CHECK-CC-C-LTO-SAME: -emit-obj
+// CHECK-CC-C-LTO-SAME: -ffat-lto-objects
+
+/// When fat LTO is enabled with -c and -emit-llvm we expect bitcode output and -ffat-lto-object to be passed to cc1.
+// RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -c -emit-llvm 2>&1 | FileCheck %s -check-prefix=CHECK-CC-C-EL-LTO
+// CHECK-CC-C-EL-LTO: -cc1
+// CHECK-CC-C-EL-LTO-SAME: -emit-llvm-bc
+// CHECK-CC-C-EL-LTO-SAME: -ffat-lto-objects
 
 /// Make sure we don't have a warning for -ffat-lto-objects being unused
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ffat-lto-objects -fdriver-only -Werror -v %s -c 2>&1 | FileCheck %s -check-prefix=CHECK-CC-NOLTO

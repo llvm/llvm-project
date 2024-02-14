@@ -234,8 +234,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (options.defaultMemorySpace.has_value()) {
-    memorySpace = *options.defaultMemorySpace;
+  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+    memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
   }
@@ -505,6 +505,9 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // of the source.
     for (Operation *pos = cloneOp->getNextNode(); pos != redundantDealloc;
          pos = pos->getNextNode()) {
+      // Bail if we run out of operations while looking for a deallocation op.
+      if (!pos)
+        return failure();
       auto effectInterface = dyn_cast<MemoryEffectOpInterface>(pos);
       if (!effectInterface)
         continue;

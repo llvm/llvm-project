@@ -41,8 +41,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-// This function is explicity instantiated in ARM.cpp, don't do it here to avoid
-// warnings with MSVC.
+// This function is explicitly instantiated in ARM.cpp, don't do it here to
+// avoid warnings with MSVC.
 extern template void ObjFile<ELF32LE>::importCmseSymbols();
 extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
@@ -323,7 +323,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
 
-// This function is explicity instantiated in ARM.cpp. Mark it extern here,
+// This function is explicitly instantiated in ARM.cpp. Mark it extern here,
 // to avoid warnings when building with MSVC.
 extern template void ObjFile<ELF32LE>::importCmseSymbols();
 extern template void ObjFile<ELF32BE>::importCmseSymbols();
@@ -1614,6 +1614,8 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
     return EM_RISCV;
   case Triple::sparcv9:
     return EM_SPARCV9;
+  case Triple::systemz:
+    return EM_S390;
   case Triple::x86:
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
@@ -1788,7 +1790,12 @@ void BinaryFile::parse() {
 }
 
 InputFile *elf::createInternalFile(StringRef name) {
-  return make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  auto *file =
+      make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  // References from an internal file do not lead to --warn-backrefs
+  // diagnostics.
+  file->groupId = 0;
+  return file;
 }
 
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,

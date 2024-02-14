@@ -973,9 +973,14 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               }
             }
           } else {
-            // Non-scalar MASK= -> [COUNT(mask)]
-            ActualArguments toCount{ActualArgument{common::Clone(
-                DEREF(call.arguments().at(1).value().UnwrapExpr()))}};
+            // Non-scalar MASK= -> [COUNT(mask, KIND=extent_kind)]
+            ActualArgument kindArg{
+                AsGenericExpr(Constant<ExtentType>{ExtentType::kind})};
+            kindArg.set_keyword(context_->SaveTempName("kind"));
+            ActualArguments toCount{
+                ActualArgument{common::Clone(
+                    DEREF(call.arguments().at(1).value().UnwrapExpr()))},
+                std::move(kindArg)};
             auto specific{context_->intrinsics().Probe(
                 CallCharacteristics{"count"}, toCount, *context_)};
             CHECK(specific);

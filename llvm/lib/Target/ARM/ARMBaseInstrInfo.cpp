@@ -1304,7 +1304,7 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-unsigned ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default: break;
@@ -1356,7 +1356,7 @@ unsigned ARMBaseInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned ARMBaseInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+Register ARMBaseInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                     int &FrameIndex) const {
   SmallVector<const MachineMemOperand *, 1> Accesses;
   if (MI.mayStore() && hasStoreToStackSlot(MI, Accesses) &&
@@ -1555,7 +1555,7 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default: break;
@@ -1613,7 +1613,7 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned ARMBaseInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+Register ARMBaseInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                      int &FrameIndex) const {
   SmallVector<const MachineMemOperand *, 1> Accesses;
   if (MI.mayLoad() && hasLoadFromStackSlot(MI, Accesses) &&
@@ -3308,7 +3308,7 @@ bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
   return true;
 }
 
-bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool ARMBaseInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
   // Fold large immediates into add, sub, or, xor.

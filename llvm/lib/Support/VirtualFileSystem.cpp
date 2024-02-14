@@ -480,6 +480,13 @@ OverlayFileSystem::getRealPath(const Twine &Path,
   return errc::no_such_file_or_directory;
 }
 
+void OverlayFileSystem::visitChildFileSystems(VisitCallbackTy Callback) {
+  for (IntrusiveRefCntPtr<FileSystem> FS : overlays_range()) {
+    Callback(*FS);
+    FS->visitChildFileSystems(Callback);
+  }
+}
+
 void OverlayFileSystem::printImpl(raw_ostream &OS, PrintType Type,
                                   unsigned IndentLevel) const {
   printIndent(OS, IndentLevel);
@@ -1581,6 +1588,13 @@ void RedirectingFileSystem::printEntry(raw_ostream &OS,
   }
 }
 
+void RedirectingFileSystem::visitChildFileSystems(VisitCallbackTy Callback) {
+  if (ExternalFS) {
+    Callback(*ExternalFS);
+    ExternalFS->visitChildFileSystems(Callback);
+  }
+}
+
 /// A helper class to hold the common YAML parsing state.
 class llvm::vfs::RedirectingFileSystemParser {
   yaml::Stream &Stream;
@@ -2263,12 +2277,18 @@ RedirectingFileSystem::makeCanonical(SmallVectorImpl<char> &Path) const {
 
 ErrorOr<RedirectingFileSystem::LookupResult>
 RedirectingFileSystem::lookupPath(StringRef Path) const {
+  // RedirectOnly means the VFS is always used.
+  if (UsageTrackingActive && Redirection == RedirectKind::RedirectOnly)
+    HasBeenUsed = true;
+
   sys::path::const_iterator Start = sys::path::begin(Path);
   sys::path::const_iterator End = sys::path::end(Path);
   llvm::SmallVector<Entry *, 32> Entries;
   for (const auto &Root : Roots) {
     ErrorOr<RedirectingFileSystem::LookupResult> Result =
         lookupPathImpl(Start, End, Root.get(), Entries);
+    if (UsageTrackingActive && Result && isa<RemapEntry>(Result->E))
+      HasBeenUsed = true;
     if (Result || Result.getError() != llvm::errc::no_such_file_or_directory) {
       Result->Parents = std::move(Entries);
       return Result;
@@ -2334,7 +2354,6 @@ static Status getRedirectedFileStatus(const Twine &OriginalPath,
     S = Status::copyWithNewName(S, OriginalPath);
   else
     S.ExposesExternalVFSPath = true;
-  S.IsVFSMapped = true;
   return S;
 }
 
@@ -2763,10 +2782,9 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 
     StringRef RPath = Entry.RPath;
     if (UseOverlayRelative) {
-      unsigned OverlayDirLen = OverlayDir.size();
-      assert(RPath.substr(0, OverlayDirLen) == OverlayDir &&
+      assert(RPath.starts_with(OverlayDir) &&
              "Overlay dir must be contained in RPath");
-      RPath = RPath.slice(OverlayDirLen, RPath.size());
+      RPath = RPath.slice(OverlayDir.size(), RPath.size());
     }
 
     bool IsCurrentDirEmpty = true;
@@ -2797,10 +2815,9 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       }
       StringRef RPath = Entry.RPath;
       if (UseOverlayRelative) {
-        unsigned OverlayDirLen = OverlayDir.size();
-        assert(RPath.substr(0, OverlayDirLen) == OverlayDir &&
+        assert(RPath.starts_with(OverlayDir) &&
                "Overlay dir must be contained in RPath");
-        RPath = RPath.slice(OverlayDirLen, RPath.size());
+        RPath = RPath.slice(OverlayDir.size(), RPath.size());
       }
       if (!Entry.IsDirectory) {
         writeEntry(path::filename(Entry.VPath), RPath);
@@ -2864,3 +2881,9 @@ recursive_directory_iterator::increment(std::error_code &EC) {
 
   return *this;
 }
+
+const char FileSystem::ID = 0;
+const char OverlayFileSystem::ID = 0;
+const char ProxyFileSystem::ID = 0;
+const char InMemoryFileSystem::ID = 0;
+const char RedirectingFileSystem::ID = 0;

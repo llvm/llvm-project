@@ -37,6 +37,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -134,22 +135,11 @@ static bool isConstant(const Fortran::semantics::Symbol &sym) {
          sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
 }
 
-/// Is this a compiler generated symbol to describe derived types ?
-static bool isRuntimeTypeInfoData(const Fortran::semantics::Symbol &sym) {
-  // So far, use flags to detect if this symbol were generated during
-  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
-  // symbols are injected in the user scopes defining the described derived
-  // types. A robustness improvement for this test could be to get hands on the
-  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
-  // belongs to this structure.
-  return sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated) &&
-         sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
-}
-
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage);
+                                  mlir::StringAttr linkage,
+                                  fir::CUDADataAttributeAttr cudaAttr = {});
 
 static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::semantics::Symbol &sym) {
@@ -473,7 +463,8 @@ void Fortran::lower::createGlobalInitialization(
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage) {
+                                  mlir::StringAttr linkage,
+                                  fir::CUDADataAttributeAttr cudaAttr) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
@@ -511,8 +502,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     }
   }
   if (!global)
-    global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                  mlir::Attribute{}, isConst, var.isTarget());
+    global =
+        builder.createGlobal(loc, symTy, globalName, linkage, mlir::Attribute{},
+                             isConst, var.isTarget(), cudaAttr);
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
     const auto *details =
@@ -626,7 +618,7 @@ getLinkageAttribute(fir::FirOpBuilder &builder,
   // unit. It desired to avoid having to link against module that only define a
   // type. Therefore the runtime type info is generated everywhere it is needed
   // with `linkonce_odr` LLVM linkage.
-  if (var.hasSymbol() && isRuntimeTypeInfoData(var.getSymbol()))
+  if (var.isRuntimeTypeInfoData())
     return builder.createLinkOnceODRLinkage();
   if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
@@ -683,6 +675,13 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
   bool isTarg = var.isTarget();
+
+  // Do not allocate storage for cray pointee. The address inside the cray
+  // pointer will be used instead when using the pointee. Allocating space
+  // would be a waste of space, and incorrect if the pointee is a non dummy
+  // assumed-size (possible with cray pointee).
+  if (ultimateSymbol.test(Fortran::semantics::Symbol::Flag::CrayPointee))
+    return builder.create<fir::ZeroOp>(loc, fir::ReferenceType::get(ty));
 
   // Let the builder do all the heavy lifting.
   if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
@@ -1454,6 +1453,15 @@ static void lowerExplicitLowerBounds(
   assert(result.empty() || result.size() == box.dynamicBound().size());
 }
 
+/// Return -1 for the last dimension extent/upper bound of assumed-size arrays.
+/// This value is required to fulfill the requirements for assumed-rank
+/// associated with assumed-size (see for instance UBOUND in 16.9.196, and
+/// CFI_desc_t requirements in 18.5.3 point 5.).
+static mlir::Value getAssumedSizeExtent(mlir::Location loc,
+                                        fir::FirOpBuilder &builder) {
+  return builder.createIntegerConstant(loc, builder.getIndexType(), -1);
+}
+
 /// Lower explicit extents into \p result if this is an explicit-shape or
 /// assumed-size array. Does nothing if this is not an explicit-shape or
 /// assumed-size array.
@@ -1484,8 +1492,7 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
         result.emplace_back(
             computeExtent(builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isStar()) {
-      // Assumed extent is undefined. Must be provided by user's code.
-      result.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
+      result.emplace_back(getAssumedSizeExtent(loc, builder));
     }
   }
   assert(result.empty() || result.size() == box.dynamicBound().size());
@@ -1513,15 +1520,13 @@ lowerExplicitCharLen(Fortran::lower::AbstractConverter &converter,
   return mlir::Value{};
 }
 
-/// Treat negative values as undefined. Assumed size arrays will return -1 from
-/// the front end for example. Using negative values can produce hard to find
-/// bugs much further along in the compilation.
+/// Assumed size arrays last extent is -1 in the front end.
 static mlir::Value genExtentValue(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type idxTy,
                                   long frontEndExtent) {
   if (frontEndExtent >= 0)
     return builder.createIntegerConstant(loc, idxTy, frontEndExtent);
-  return builder.create<fir::UndefOp>(loc, idxTy);
+  return getAssumedSizeExtent(loc, builder);
 }
 
 /// If a symbol is an array, it may have been declared with unknown extent
@@ -1578,6 +1583,13 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
+fir::CUDADataAttributeAttr Fortran::lower::translateSymbolCUDADataAttribute(
+    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym);
+  return fir::getCUDADataAttribute(mlirContext, cudaAttr);
+}
+
 /// Map a symbol to its FIR address and evaluated specification expressions.
 /// Not for symbols lowered to fir.box.
 /// Will optionally create fir.declare.
@@ -1617,6 +1629,9 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         sym);
 
     if (isCrayPointee) {
       mlir::Type baseType =
@@ -1663,7 +1678,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       return;
     }
     auto newBase = builder.create<hlfir::DeclareOp>(
-        loc, base, name, shapeOrShift, lenParams, attributes);
+        loc, base, name, shapeOrShift, lenParams, attributes, cudaAttr);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -1708,9 +1723,12 @@ void Fortran::lower::genDeclareSymbol(
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(
             builder.getContext(), sym.GetUltimate(), extraFlags);
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
-        hlfir::genDeclare(loc, builder, exv, name, attributes);
+        hlfir::genDeclare(loc, builder, exv, name, attributes, cudaAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -1820,6 +1838,9 @@ void Fortran::lower::mapSymbolAttributes(
     }
     return;
   }
+
+  if (Fortran::evaluate::IsAssumedRank(sym))
+    TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
 
   Fortran::lower::BoxAnalyzer ba;
   ba.analyze(sym);
@@ -2000,7 +2021,7 @@ void Fortran::lower::mapSymbolAttributes(
             builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
         shapes.emplace_back(dimInfo.getResult(1));
       } else if (spec->ubound().isStar()) {
-        shapes.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
+        shapes.emplace_back(getAssumedSizeExtent(loc, builder));
       } else {
         llvm::report_fatal_error("unknown bound category");
       }
@@ -2047,7 +2068,7 @@ void Fortran::lower::mapSymbolAttributes(
         } else {
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isStar() && "expected assumed size");
-          extents.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
+          extents.emplace_back(getAssumedSizeExtent(loc, builder));
         }
       }
     }
@@ -2202,7 +2223,10 @@ void Fortran::lower::defineModuleVariable(
     // Do nothing. Mapping will be done on user side.
   } else {
     std::string globalName = converter.mangleName(sym);
-    defineGlobal(converter, var, globalName, linkage);
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(
+            converter.getFirOpBuilder().getContext(), sym);
+    defineGlobal(converter, var, globalName, linkage, cudaAttr);
   }
 }
 

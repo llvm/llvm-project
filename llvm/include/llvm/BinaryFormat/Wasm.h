@@ -56,9 +56,25 @@ enum : unsigned {
   WASM_TYPE_F32 = 0x7D,
   WASM_TYPE_F64 = 0x7C,
   WASM_TYPE_V128 = 0x7B,
+  WASM_TYPE_NULLFUNCREF = 0x73,
+  WASM_TYPE_NULLEXTERNREF = 0x72,
+  WASM_TYPE_NULLREF = 0x71,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXTERNREF = 0x6F,
+  WASM_TYPE_ANYREF = 0x6E,
+  WASM_TYPE_EQREF = 0x6D,
+  WASM_TYPE_I31REF = 0x6C,
+  WASM_TYPE_STRUCTREF = 0x6B,
+  WASM_TYPE_ARRAYREF = 0x6A,
+  WASM_TYPE_EXNREF = 0x69,
+  WASM_TYPE_NONNULLABLE = 0x64,
+  WASM_TYPE_NULLABLE = 0x63,
   WASM_TYPE_FUNC = 0x60,
+  WASM_TYPE_ARRAY = 0x5E,
+  WASM_TYPE_STRUCT = 0x5F,
+  WASM_TYPE_SUB = 0x50,
+  WASM_TYPE_SUB_FINAL = 0x4F,
+  WASM_TYPE_REC = 0x4E,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
 
@@ -93,6 +109,20 @@ enum : unsigned {
   WASM_OPCODE_I64_SUB = 0x7d,
   WASM_OPCODE_I64_MUL = 0x7e,
   WASM_OPCODE_REF_NULL = 0xd0,
+  WASM_OPCODE_REF_FUNC = 0xd2,
+  WASM_OPCODE_GC_PREFIX = 0xfb,
+};
+
+// Opcodes in the GC-prefixed space (0xfb)
+enum : unsigned {
+  WASM_OPCODE_STRUCT_NEW = 0x00,
+  WASM_OPCODE_STRUCT_NEW_DEFAULT = 0x01,
+  WASM_OPCODE_ARRAY_NEW = 0x06,
+  WASM_OPCODE_ARRAY_NEW_DEFAULT = 0x07,
+  WASM_OPCODE_ARRAY_NEW_FIXED = 0x08,
+  WASM_OPCODE_REF_I31 = 0x1c,
+  // any.convert_extern and extern.convert_any don't seem to be supported by
+  // Binaryen.
 };
 
 // Opcodes used in synthetic functions.
@@ -127,7 +157,8 @@ enum : unsigned {
 
 enum : unsigned {
   WASM_ELEM_SEGMENT_IS_PASSIVE = 0x01,
-  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02,
+  WASM_ELEM_SEGMENT_IS_DECLARATIVE = 0x02,   // if passive == 1
+  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
 const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
@@ -229,6 +260,9 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
+  // Unmodeled value types include ref types with heap types other than
+  // func or extern, and type-specialized funcrefs
+  OTHERREF = 0xff,
 };
 
 struct WasmDylinkImportInfo {
@@ -297,6 +331,8 @@ struct WasmInitExprMVP {
   } Value;
 };
 
+// Extended-const init exprs and exprs with GC types are not explicitly
+// modeled, but the raw body of the expr is attached.
 struct WasmInitExpr {
   uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
                     // one instruction)
@@ -367,6 +403,11 @@ struct WasmDataSegment {
   uint32_t Comdat; // from the "comdat info" section
 };
 
+// Represents a Wasm element segment, with some limitations compared the spec:
+// 1) Does not model passive or declarative segments (Segment will end up with
+// an Offset field of i32.const 0)
+// 2) Does not model init exprs (Segment will get an empty Functions list)
+// 2) Does not model types other than basic funcref/externref (see ValType)
 struct WasmElemSegment {
   uint32_t Flags;
   uint32_t TableNumber;
@@ -426,16 +467,24 @@ struct WasmDebugName {
   StringRef Name;
 };
 
+// Info from the linking metadata section of a wasm object file.
 struct WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
-  std::vector<WasmSymbolInfo> SymbolTable;
+  // The linking section also contains a symbol table. This info (represented
+  // in a WasmSymbolInfo struct) is stored inside the WasmSymbol object instead
+  // of in this structure; this allows vectors of WasmSymbols and
+  // WasmLinkingDatas to be reallocated.
 };
 
 struct WasmSignature {
   SmallVector<ValType, 1> Returns;
   SmallVector<ValType, 4> Params;
+  // LLVM can parse types other than functions encoded in the type section,
+  // but does not actually model them. Instead a placeholder signature is
+  // created in the Object's signature list.
+  enum { Function, Tag, Placeholder } Kind = Function;
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State = Plain;
 

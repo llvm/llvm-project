@@ -634,9 +634,9 @@ void mlir::collapseParallelLoops(
   SmallVector<Value, 3> lowerBounds, upperBounds, steps;
   auto cst0 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 0);
   auto cst1 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-  for (unsigned i = 0, e = sortedDimensions.size(); i < e; ++i) {
+  for (auto &sortedDimension : sortedDimensions) {
     Value newUpperBound = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-    for (auto idx : sortedDimensions[i]) {
+    for (auto idx : sortedDimension) {
       newUpperBound = outsideBuilder.create<arith::MulIOp>(
           loc, newUpperBound, normalizedUpperBounds[idx]);
     }
@@ -933,11 +933,11 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
   fusedMapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
 
   // Map shared outs.
-  fusedMapping.map(target.getOutputBlockArguments(),
-                   fusedLoop.getOutputBlockArguments().slice(0, numTargetOuts));
+  fusedMapping.map(target.getRegionIterArgs(),
+                   fusedLoop.getRegionIterArgs().slice(0, numTargetOuts));
   fusedMapping.map(
-      source.getOutputBlockArguments(),
-      fusedLoop.getOutputBlockArguments().slice(numTargetOuts, numSourceOuts));
+      source.getRegionIterArgs(),
+      fusedLoop.getRegionIterArgs().slice(numTargetOuts, numSourceOuts));
 
   // Append everything except the terminator into the fused operation.
   rewriter.setInsertionPointToStart(fusedLoop.getBody());
