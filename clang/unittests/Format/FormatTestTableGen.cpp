@@ -40,6 +40,10 @@ protected:
     EXPECT_EQ(Code.str(), format(Code)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code)));
   }
+
+  static void verifyFormat(llvm::StringRef Result, llvm::StringRef MessedUp) {
+    EXPECT_EQ(Result, format(MessedUp));
+  }
 };
 
 TEST_F(FormatTestTableGen, FormatStringBreak) {
@@ -109,24 +113,26 @@ TEST_F(FormatTestTableGen, SimpleValue1_SingleLiterals) {
 }
 
 TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
-  // verifyFormat does not understand multiline TableGen code-literals
+  // test::messUp does not understand multiline TableGen code-literals.
+  // We have to give the result and the strings to format manually.
   std::string DefWithCode =
       "def SimpleValueCode {\n"
       "  let Code =\n"
       "      [{ A TokCode is  nothing more than a multi-line string literal "
       "delimited by \\[{ and }\\]. It  can break across lines and the line "
-      "breaks are retained in the string. "
+      "breaks are retained in the string. \n"
       "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}];\n"
       "}\n";
-  std::string DefWithCodeMessingUp =
-      "def SimpleValueCode {\n"
-      "  let   Code=       "
-      "[{ A TokCode is  nothing more than a multi-line string literal "
+  std::string DefWithCodeMessedUp =
+      "def SimpleValueCode {  let  \n"
+      "Code=       \n"
+      "               [{ A TokCode is  nothing more than a multi-line string literal "
       "delimited by \\[{ and }\\]. It  can break across lines and the line "
-      "breaks are retained in the string. "
-      "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}];\n"
+      "breaks are retained in the string. \n"
+      "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}] \n"
+      " ;  \n"
       "   }    \n";
-  EXPECT_EQ(DefWithCode, format(DefWithCodeMessingUp));
+  verifyFormat(DefWithCode, DefWithCodeMessedUp);
 }
 
 TEST_F(FormatTestTableGen, SimpleValue2) {
