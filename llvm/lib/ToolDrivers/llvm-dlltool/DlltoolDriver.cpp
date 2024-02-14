@@ -110,6 +110,46 @@ std::optional<std::string> getPrefix(StringRef Argv0) {
   return ProgName.str();
 }
 
+bool parseModuleDefinition(StringRef DefFileName, MachineTypes Machine,
+                           bool AddUnderscores,
+                           std::vector<COFFShortExport> &Exports,
+                           std::string &OutputFile) {
+  std::unique_ptr<MemoryBuffer> MB = openFile(DefFileName);
+  if (!MB)
+    return false;
+
+  if (!MB->getBufferSize()) {
+    llvm::errs() << "definition file empty\n";
+    return false;
+  }
+
+  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
+      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
+  if (!Def) {
+    llvm::errs() << "error parsing definition\n"
+                 << errorToErrorCode(Def.takeError()).message() << "\n";
+    return false;
+  }
+
+  if (OutputFile.empty())
+    OutputFile = std::move(Def->OutputFile);
+
+  // If ExtName is set (if the "ExtName = Name" syntax was used), overwrite
+  // Name with ExtName and clear ExtName. When only creating an import
+  // library and not linking, the internal name is irrelevant. This avoids
+  // cases where writeImportLibrary tries to transplant decoration from
+  // symbol decoration onto ExtName.
+  for (COFFShortExport &E : Def->Exports) {
+    if (!E.ExtName.empty()) {
+      E.Name = E.ExtName;
+      E.ExtName.clear();
+    }
+  }
+
+  Exports = std::move(Def->Exports);
+  return true;
+}
+
 } // namespace
 
 int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
@@ -141,16 +181,6 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     return 1;
   }
 
-  std::unique_ptr<MemoryBuffer> MB =
-      openFile(Args.getLastArg(OPT_d)->getValue());
-  if (!MB)
-    return 1;
-
-  if (!MB->getBufferSize()) {
-    llvm::errs() << "definition file empty\n";
-    return 1;
-  }
-
   COFF::MachineTypes Machine = getDefaultMachine();
   if (std::optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
     Triple T(*Prefix);
@@ -166,40 +196,23 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   bool AddUnderscores = !Args.hasArg(OPT_no_leading_underscore);
-  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
-      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
 
-  if (!Def) {
-    llvm::errs() << "error parsing definition\n"
-                 << errorToErrorCode(Def.takeError()).message() << "\n";
-    return 1;
-  }
-
-  // Do this after the parser because parseCOFFModuleDefinition sets OutputFile.
+  std::string OutputFile;
   if (auto *Arg = Args.getLastArg(OPT_D))
-    Def->OutputFile = Arg->getValue();
+    OutputFile = Arg->getValue();
 
-  if (Def->OutputFile.empty()) {
+  std::vector<COFFShortExport> Exports;
+  if (!parseModuleDefinition(Args.getLastArg(OPT_d)->getValue(), Machine,
+                             AddUnderscores, Exports, OutputFile))
+    return 1;
+
+  if (OutputFile.empty()) {
     llvm::errs() << "no DLL name specified\n";
     return 1;
   }
 
-  std::string Path = std::string(Args.getLastArgValue(OPT_l));
-
-  // If ExtName is set (if the "ExtName = Name" syntax was used), overwrite
-  // Name with ExtName and clear ExtName. When only creating an import
-  // library and not linking, the internal name is irrelevant. This avoids
-  // cases where writeImportLibrary tries to transplant decoration from
-  // symbol decoration onto ExtName.
-  for (COFFShortExport& E : Def->Exports) {
-    if (!E.ExtName.empty()) {
-      E.Name = E.ExtName;
-      E.ExtName.clear();
-    }
-  }
-
   if (Machine == IMAGE_FILE_MACHINE_I386 && Args.hasArg(OPT_k)) {
-    for (COFFShortExport& E : Def->Exports) {
+    for (COFFShortExport &E : Exports) {
       if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
       E.SymbolName = E.Name;
@@ -215,8 +228,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Path.empty() && writeImportLibrary(Def->OutputFile, Path, Def->Exports,
-                                          Machine, /*MinGW=*/true))
+  std::string Path = std::string(Args.getLastArgValue(OPT_l));
+  if (!Path.empty() && writeImportLibrary(OutputFile, Path, Exports, Machine,
+                                          /*MinGW=*/true))
     return 1;
   return 0;
 }
