@@ -350,7 +350,7 @@ llvm.func @bar() {
 
   // call and extract the values from the structure
   %2 = llvm.call @foo(%0, %1)
-     : (i32, i32) -> !llvm.struct<(i32, i64)>
+     : (i32, i64) -> !llvm.struct<(i32, i64)>
   %3 = llvm.extractvalue %2[0] : !llvm.struct<(i32, i64)>
   %4 = llvm.extractvalue %2[1] : !llvm.struct<(i32, i64)>
 
