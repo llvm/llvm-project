@@ -82,21 +82,22 @@ struct DXILOperationDesc {
 */
 static ParameterKind getDXILTypeNameToKind(StringRef typeNameStr) {
   auto paramKind = StringSwitch<ParameterKind>(typeNameStr)
-      .Case("VoidTy", ParameterKind::VOID)
-      .Case("Float16Ty", ParameterKind::HALF)
-      .Case("Float32Ty", ParameterKind::FLOAT)
-      .Case("Float64Ty", ParameterKind::DOUBLE)
-      .Case("Int1Ty", ParameterKind::I1)
-      .Case("Int8Ty", ParameterKind::I8)
-      .Case("Int16Ty", ParameterKind::I16)
-      .Case("Int32Ty", ParameterKind::I32)
-      .Case("Int64Ty", ParameterKind::I64)
-      .Case("OverloadTy", ParameterKind::OVERLOAD)
-      .Case("HandleTy", ParameterKind::DXIL_HANDLE)
-      .Case("CbufferTy", ParameterKind::CBUFFER_RET)
-      .Case("ResourceTy", ParameterKind::RESOURCE_RET)
-      .Default(ParameterKind::INVALID);
-  assert( paramKind != ParameterKind::INVALID && "Unsupported DXIL Type specified");
+                       .Case("VoidTy", ParameterKind::VOID)
+                       .Case("Float16Ty", ParameterKind::HALF)
+                       .Case("Float32Ty", ParameterKind::FLOAT)
+                       .Case("Float64Ty", ParameterKind::DOUBLE)
+                       .Case("Int1Ty", ParameterKind::I1)
+                       .Case("Int8Ty", ParameterKind::I8)
+                       .Case("Int16Ty", ParameterKind::I16)
+                       .Case("Int32Ty", ParameterKind::I32)
+                       .Case("Int64Ty", ParameterKind::I64)
+                       .Case("OverloadTy", ParameterKind::OVERLOAD)
+                       .Case("HandleTy", ParameterKind::DXIL_HANDLE)
+                       .Case("CbufferTy", ParameterKind::CBUFFER_RET)
+                       .Case("ResourceTy", ParameterKind::RESOURCE_RET)
+                       .Default(ParameterKind::INVALID);
+  assert(paramKind != ParameterKind::INVALID &&
+         "Unsupported DXIL Type specified");
   return paramKind;
 }
 
@@ -137,7 +138,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 DXILParameter::DXILParameter(const Record *R) {
   Name = R->getValueAsString("Name");
   Pos = R->getValueAsInt("Pos");
-  Kind = getDXILTypeNameToKind(R->getValue("ParamType")->getValue()->getAsString());
+  Kind = getDXILTypeNameToKind(
+      R->getValue("ParamType")->getValue()->getAsString());
   if (R->getValue("Doc"))
     Doc = R->getValueAsString("Doc");
   IsConst = R->getValueAsBit("IsConstant");
