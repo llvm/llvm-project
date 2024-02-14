@@ -13,14 +13,14 @@ import platform
 import sys
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 import lldbsuite
 
 
 # The test suite.
-suite = unittest2.TestSuite()
+suite = unittest.TestSuite()
 
 # The list of categories we said we care about
 categories_list = None
