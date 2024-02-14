@@ -820,47 +820,41 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*allowHigherAlign*/ false);
 }
 
-class SMEAttributes {
-public:
-  bool IsStreaming = false;
-  bool IsStreamingCompatible = false;
-  bool HasNewZA = false;
+static bool isStreaming(const FunctionDecl *F) {
+  if (F->hasAttr<ArmLocallyStreamingAttr>())
+    return true;
+  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
+    return T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask;
+  return false;
+}
 
-  SMEAttributes(const FunctionDecl *F) {
-    if (F->hasAttr<ArmLocallyStreamingAttr>())
-      IsStreaming = true;
-    if (auto *NewAttr = F->getAttr<ArmNewAttr>()) {
-      if (NewAttr->isNewZA())
-        HasNewZA = true;
-    }
-    if (const auto *T = F->getType()->getAs<FunctionProtoType>()) {
-      if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
-        IsStreaming = true;
-      if (T->getAArch64SMEAttributes() &
-          FunctionType::SME_PStateSMCompatibleMask)
-        IsStreamingCompatible = true;
-    }
-  }
-};
+static bool isStreamingCompatible(const FunctionDecl *F) {
+  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
+    return T->getAArch64SMEAttributes() &
+           FunctionType::SME_PStateSMCompatibleMask;
+  return false;
+}
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
     const FunctionDecl *Callee, const CallArgList &Args) const {
-  if (!Callee->hasAttr<AlwaysInlineAttr>())
+  if (!Caller || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  SMEAttributes CalleeAttrs(Callee);
-  SMEAttributes CallerAttrs(Caller);
+  bool CallerIsStreaming = isStreaming(Caller);
+  bool CalleeIsStreaming = isStreaming(Callee);
+  bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
+  bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
 
-  if (!CalleeAttrs.IsStreamingCompatible &&
-      (CallerAttrs.IsStreaming != CalleeAttrs.IsStreaming ||
-       CallerAttrs.IsStreamingCompatible))
+  if (!CalleeIsStreamingCompatible &&
+      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible))
     CGM.getDiags().Report(CallLoc,
                           diag::err_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
-  if (CalleeAttrs.HasNewZA)
-    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
-        << Callee->getDeclName();
+  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
+    if (NewAttr->isNewZA())
+      CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+          << Callee->getDeclName();
 }
 
 std::unique_ptr<TargetCodeGenInfo>
