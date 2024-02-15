@@ -19,7 +19,7 @@
 namespace llvm::coverage::mcdc {
 
 /// The ID for MCDCBranch.
-using ConditionID = unsigned int;
+using ConditionID = int16_t;
 using ConditionIDs = std::array<ConditionID, 2>;
 
 struct DecisionParameters {
@@ -27,7 +27,7 @@ struct DecisionParameters {
   unsigned BitmapIdx;
 
   /// Number of Conditions used for a Decision Region.
-  unsigned NumConditions;
+  uint16_t NumConditions;
 
   DecisionParameters() = delete;
   DecisionParameters(unsigned BitmapIdx, unsigned NumConditions)

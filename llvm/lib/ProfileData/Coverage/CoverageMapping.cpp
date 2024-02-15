@@ -272,17 +272,17 @@ private:
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
-  void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
+  void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
                        unsigned Index) {
-    assert((Index & (1 << (ID - 1))) == 0);
+    assert((Index & (1 << ID)) == 0);
 
     for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
       static_assert(MCDCRecord::MCDC_False == 0);
       static_assert(MCDCRecord::MCDC_True == 1);
-      Index |= MCDCCond << (ID - 1);
-      TV[ID - 1] = MCDCCond;
+      Index |= MCDCCond << ID;
+      TV[ID] = MCDCCond;
       auto NextID = CondsMap[ID][MCDCCond];
-      if (NextID > 0) {
+      if (NextID >= 0) {
         buildTestVector(TV, NextID, Index);
         continue;
       }
@@ -299,17 +299,17 @@ private:
     }
 
     // Reset back to DontCare.
-    TV[ID - 1] = MCDCRecord::MCDC_DontCare;
+    TV[ID] = MCDCRecord::MCDC_DontCare;
   }
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
   /// vector at the corresponding index was executed during a test run.
   void findExecutedTestVectors() {
     // Walk the binary decision diagram to enumerate all possible test vectors.
-    // We start at the root node (ID == 1) with all values being DontCare.
+    // We start at the root node (ID == 0) with all values being DontCare.
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 1, 0);
+    buildTestVector(TV, 0, 0);
   }
 
   // Find an independence pair for each condition:
@@ -371,7 +371,7 @@ public:
     for (const auto *B : Branches) {
       const auto &BranchParams = B->getBranchParams();
       CondsMap[BranchParams.ID] = BranchParams.Conds;
-      PosToID[I] = BranchParams.ID - 1;
+      PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
@@ -566,10 +566,10 @@ private:
       assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
 
       auto ConditionID = Branch.getBranchParams().ID;
-      assert(ConditionID > 0 && "ConditionID should begin with 1");
+      assert(ConditionID >= 0 && "ConditionID should be positive");
 
       if (ConditionIDs.contains(ConditionID) ||
-          ConditionID > DecisionParams.NumConditions)
+          ConditionID >= DecisionParams.NumConditions)
         return NotProcessed;
 
       if (!this->dominates(Branch))
@@ -577,9 +577,9 @@ private:
 
       assert(MCDCBranches.size() < DecisionParams.NumConditions);
 
-      // Put `ID=1` in front of `MCDCBranches` for convenience
+      // Put `ID=0` in front of `MCDCBranches` for convenience
       // even if `MCDCBranches` is not topological.
-      if (ConditionID == 1)
+      if (ConditionID == 0)
         MCDCBranches.insert(MCDCBranches.begin(), &Branch);
       else
         MCDCBranches.push_back(&Branch);
