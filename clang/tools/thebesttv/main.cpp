@@ -144,6 +144,11 @@ void printCloc(const std::vector<std::string> &allFiles) {
 }
 
 int main(int argc, const char **argv) {
+    if (argc != 2) {
+        llvm::errs() << "Usage: " << argv[0] << " <build-path>\n";
+        return 1;
+    }
+
     Global.buildPath = fs::canonical(fs::absolute(argv[1]));
     Global.cb = getCompilationDatabase(Global.buildPath);
 
