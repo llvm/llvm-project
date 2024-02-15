@@ -3877,6 +3877,47 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Vec, DAG, Subtarget);
   }
 
+  // For m1 vectors, if we have non-undef values in both halves of our vector,
+  // split the vector into low and high halves, build them separately, then
+  // use a vselect to combine them.  For long vectors, this cuts the critical
+  // path of the vslide1down sequence in half, and gives us an opportunity
+  // to special case each half independently.  Note that we don't change the
+  // length of the sub-vectors here, so if both fallback to the generic
+  // vslide1down path, we should be able to fold the vselect into the final
+  // vslidedown (for the undef tail) for the first half w/ masking.
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumUndefElts =
+      count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
+  unsigned NumDefElts = NumElts - NumUndefElts;
+  if (NumDefElts >= 8 && NumDefElts > NumElts / 2 &&
+      ContainerVT.bitsLE(getLMUL1VT(ContainerVT))) {
+    SmallVector<SDValue> SubVecAOps, SubVecBOps;
+    SmallVector<SDValue> MaskVals;
+    SDValue UndefElem = DAG.getUNDEF(Op->getOperand(0)->getValueType(0));
+    SubVecAOps.reserve(NumElts);
+    SubVecBOps.reserve(NumElts);
+    for (unsigned i = 0; i < NumElts; i++) {
+      SDValue Elem = Op->getOperand(i);
+      if (i < NumElts / 2) {
+        SubVecAOps.push_back(Elem);
+        SubVecBOps.push_back(UndefElem);
+      } else {
+        SubVecAOps.push_back(UndefElem);
+        SubVecBOps.push_back(Elem);
+      }
+      bool SelectMaskVal = (i < NumElts / 2);
+      MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    }
+    assert(SubVecAOps.size() == NumElts && SubVecBOps.size() == NumElts &&
+           MaskVals.size() == NumElts);
+
+    SDValue SubVecA = DAG.getBuildVector(VT, DL, SubVecAOps);
+    SDValue SubVecB = DAG.getBuildVector(VT, DL, SubVecBOps);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, SubVecA, SubVecB);
+  }
+
   // Cap the cost at a value linear to the number of elements in the vector.
   // The default lowering is to use the stack.  The vector store + scalar loads
   // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
@@ -9727,12 +9768,15 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (OrigIdx == 0)
     return Op;
 
-  // If the subvector vector is a fixed-length type, we cannot use subregister
-  // manipulation to simplify the codegen; we don't know which register of a
-  // LMUL group contains the specific subvector as we only know the minimum
-  // register size. Therefore we must slide the vector group down the full
-  // amount.
-  if (SubVecVT.isFixedLengthVector()) {
+  const unsigned MinVLen = Subtarget.getRealMinVLen();
+  const unsigned MaxVLen = Subtarget.getRealMaxVLen();
+
+  // If the subvector vector is a fixed-length type and we don't know VLEN
+  // exactly, we cannot use subregister manipulation to simplify the codegen; we
+  // don't know which register of a LMUL group contains the specific subvector
+  // as we only know the minimum register size. Therefore we must slide the
+  // vector group down the full amount.
+  if (SubVecVT.isFixedLengthVector() && MinVLen != MaxVLen) {
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VecVT);
@@ -9764,19 +9808,48 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return DAG.getBitcast(Op.getValueType(), Slidedown);
   }
 
+  if (VecVT.isFixedLengthVector()) {
+    VecVT = getContainerForFixedLengthVector(VecVT);
+    Vec = convertToScalableVector(VecVT, Vec, DAG, Subtarget);
+  }
+
+  MVT ContainerSubVecVT = SubVecVT;
+  if (SubVecVT.isFixedLengthVector())
+    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
+
   unsigned SubRegIdx, RemIdx;
-  std::tie(SubRegIdx, RemIdx) =
-      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-          VecVT, SubVecVT, OrigIdx, TRI);
+  // extract_subvector scales the index by vscale is the subvector is scalable,
+  // and decomposeSubvectorInsertExtractToSubRegs takes this into account. So if
+  // we have a fixed length subvector, we need to adjust the index by 1/vscale.
+  if (SubVecVT.isFixedLengthVector()) {
+    assert(MinVLen == MaxVLen);
+    unsigned Vscale = MinVLen / RISCV::RVVBitsPerBlock;
+    std::tie(SubRegIdx, RemIdx) =
+        RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+            VecVT, ContainerSubVecVT, OrigIdx / Vscale, TRI);
+    RemIdx = (RemIdx * Vscale) + (OrigIdx % Vscale);
+  } else {
+    std::tie(SubRegIdx, RemIdx) =
+        RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+            VecVT, ContainerSubVecVT, OrigIdx, TRI);
+  }
 
   // If the Idx has been completely eliminated then this is a subvector extract
   // which naturally aligns to a vector register. These can easily be handled
   // using subregister manipulation.
-  if (RemIdx == 0)
+  if (RemIdx == 0) {
+    if (SubVecVT.isFixedLengthVector()) {
+      Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, ContainerSubVecVT, Vec);
+      return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
+    }
     return Op;
+  }
 
-  // Else SubVecVT is a fractional LMUL and may need to be slid down.
-  assert(RISCVVType::decodeVLMUL(getLMUL(SubVecVT)).second);
+  // Else SubVecVT is M1 or smaller and may need to be slid down: if SubVecVT
+  // was > M1 then the index would need to be a multiple of VLMAX, and so would
+  // divide exactly.
+  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
+         getLMUL(ContainerSubVecVT) == RISCVII::VLMUL::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -9791,10 +9864,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
-  SDValue SlidedownAmt =
-      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
+  SDValue SlidedownAmt;
+  if (SubVecVT.isFixedLengthVector())
+    SlidedownAmt = DAG.getConstant(RemIdx, DL, Subtarget.getXLenVT());
+  else
+    SlidedownAmt =
+        DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
 
   auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
+  if (SubVecVT.isFixedLengthVector())
+    VL = getVLOp(SubVecVT.getVectorNumElements(), InterSubVT, DL, DAG,
+                 Subtarget);
   SDValue Slidedown =
       getVSlidedown(DAG, Subtarget, DL, InterSubVT, DAG.getUNDEF(InterSubVT),
                     Vec, SlidedownAmt, Mask, VL);
@@ -11067,8 +11147,8 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
       // Slide off any elements from past EVL that were reversed into the low
       // elements.
       unsigned MinElts = GatherVT.getVectorMinNumElements();
-      SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                                  DAG.getConstant(MinElts, DL, XLenVT));
+      SDValue VLMax =
+          DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), MinElts));
       SDValue Diff = DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, EVL);
 
       Result = getVSlidedown(DAG, Subtarget, DL, GatherVT,

@@ -205,7 +205,7 @@ public:
     for (unsigned i = 0;; ++i) {
       assert(i < OperandList.size() && "Invalid flat operand #");
       if (OperandList[i].MIOperandNo + OperandList[i].MINumOperands > Op)
-        return std::make_pair(i, Op - OperandList[i].MIOperandNo);
+        return std::pair(i, Op - OperandList[i].MIOperandNo);
     }
   }
 

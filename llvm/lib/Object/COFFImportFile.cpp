@@ -625,8 +625,8 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
-                         ArrayRef<COFFShortExport> NativeExports,
-                         MachineTypes Machine, bool MinGW) {
+                         MachineTypes Machine, bool MinGW,
+                         ArrayRef<COFFShortExport> NativeExports) {
 
   MachineTypes NativeMachine =
       isArm64EC(Machine) ? IMAGE_FILE_MACHINE_ARM64 : Machine;

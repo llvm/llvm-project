@@ -911,11 +911,12 @@ enum RankFlags {
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_NOT_SPECIAL = 1 << 17,
-  RF_LARGE = 1 << 14,
-  RF_WRITE = 1 << 13,
-  RF_EXEC_WRITE = 1 << 12,
-  RF_EXEC = 1 << 11,
-  RF_RODATA = 1 << 10,
+  RF_LARGE_ALT = 1 << 15,
+  RF_WRITE = 1 << 14,
+  RF_EXEC_WRITE = 1 << 13,
+  RF_EXEC = 1 << 12,
+  RF_RODATA = 1 << 11,
+  RF_LARGE = 1 << 10,
   RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
@@ -973,12 +974,15 @@ static unsigned getSectionRank(OutputSection &osec) {
     // .dynstr and .dynsym can be away from .text.
     if (osec.type == SHT_PROGBITS)
       rank |= RF_RODATA;
-    // Place .lrodata after .lbss like GNU ld. An alternative layout is to place
-    // .lrodata before .rodata (one fewer PT_LOAD), but does not alleviate
-    // relocation overflow pressure for absolute relocations referencing small
-    // data from -fno-pic relocatable files.
+    // Among PROGBITS sections, place .lrodata further from .text.
+    // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
+    // layout has one extra PT_LOAD, but alleviates relocation overflow
+    // pressure for absolute relocations referencing small data from -fno-pic
+    // relocatable files.
     if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
-      rank |= RF_LARGE;
+      rank |= config->zLrodataAfterBss ? RF_LARGE_ALT : 0;
+    else
+      rank |= config->zLrodataAfterBss ? 0 : RF_LARGE;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
@@ -991,10 +995,15 @@ static unsigned getSectionRank(OutputSection &osec) {
       osec.relro = true;
     else
       rank |= RF_NOT_RELRO;
-    // Place .lbss/.lrodata/.ldata after .bss. .bss/.lbss being adjacent reuses
-    // the NOBITS size optimization.
-    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
-      rank |= osec.type == SHT_NOBITS ? 1 : RF_LARGE;
+    // Place .ldata and .lbss after .bss. Making .bss closer to .text
+    // alleviates relocation overflow pressure.
+    // For -z lrodata-after-bss, place .lbss/.lrodata/.ldata after .bss.
+    // .bss/.lbss being adjacent reuses the NOBITS size optimization.
+    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64) {
+      rank |= config->zLrodataAfterBss
+                  ? (osec.type == SHT_NOBITS ? 1 : RF_LARGE_ALT)
+                  : RF_LARGE;
+    }
   }
 
   // Within TLS sections, or within other RelRo sections, or within non-RelRo

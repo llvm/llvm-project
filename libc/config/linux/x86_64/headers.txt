@@ -16,6 +16,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.spawn
     libc.include.setjmp
     libc.include.stdbit
+    libc.include.stdfix
     libc.include.stdio
     libc.include.stdlib
     libc.include.string

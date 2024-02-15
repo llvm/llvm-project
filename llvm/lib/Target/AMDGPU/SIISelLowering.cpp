@@ -468,6 +468,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // On SI this is s_memtime and s_memrealtime on VI.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+
+  if (Subtarget->hasSMemRealTime() ||
+      Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11)
+    setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Custom);
 
   if (Subtarget->has16BitInsts()) {
@@ -2826,8 +2830,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc) {
     allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
     allocateHSAUserSGPRs(CCInfo, MF, *TRI, *Info);
-    if (IsKernel && Subtarget->hasKernargPreload() &&
-        !Subtarget->needsKernargPreloadBackwardsCompatibility())
+    if (IsKernel && Subtarget->hasKernargPreload())
       allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, Ins, MF, *TRI, *Info);
 
     allocateLDSKernelId(CCInfo, MF, *TRI, *Info);
