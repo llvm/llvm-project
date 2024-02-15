@@ -34,6 +34,12 @@ static constexpr bool IgnoreMacrosDefault = true;
 
 namespace {
 
+unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
+  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
+    return isa<DesignatedInitExpr>(InitExpr);
+  });
+}
+
 AST_MATCHER(CXXRecordDecl, isAggregate) { return Node.isAggregate(); }
 
 AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
@@ -41,9 +47,7 @@ AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 AST_MATCHER(InitListExpr, isFullyDesignated) {
   if (const InitListExpr *SyntacticForm =
           Node.isSyntacticForm() ? &Node : Node.getSyntacticForm()) {
-    return llvm::all_of(*SyntacticForm, [](auto *InitExpr) {
-      return isa<DesignatedInitExpr>(InitExpr);
-    });
+    return getNumberOfDesignated(SyntacticForm) == SyntacticForm->getNumInits();
   }
   return true;
 }
@@ -78,12 +82,6 @@ void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static bool isFullyUndesignated(const InitListExpr *SyntacticInitList) {
-  return llvm::all_of(*SyntacticInitList, [](auto *InitExpr) {
-    return !isa<DesignatedInitExpr>(InitExpr);
-  });
-}
-
 void UseDesignatedInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitList = Result.Nodes.getNodeAs<InitListExpr>("init");
@@ -95,19 +93,33 @@ void UseDesignatedInitializersCheck::check(
   if (!SyntacticInitList) {
     return;
   }
-  const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
-      clang::tooling::getUnwrittenDesignators(SyntacticInitList);
-  if (isFullyUndesignated(SyntacticInitList)) {
+  std::optional<llvm::DenseMap<clang::SourceLocation, std::string>>
+      Designators{};
+  const auto LazyDesignators = [SyntacticInitList, &Designators] {
+    return Designators
+               ? Designators
+               : Designators.emplace(clang::tooling::getUnwrittenDesignators(
+                     SyntacticInitList));
+  };
+  const unsigned NumberOfDesignated = getNumberOfDesignated(SyntacticInitList);
+  if (0 == NumberOfDesignated) {
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID()) {
+      return;
+    }
+    if (SyntacticInitList->getNumInits() - NumberOfDesignated >
+        LazyDesignators()->size()) {
       return;
     }
     DiagnosticBuilder Diag =
         diag(InitList->getLBraceLoc(), "use designated initializer list");
     Diag << InitList->getSourceRange();
     for (const Stmt *InitExpr : *SyntacticInitList) {
-      Diag << FixItHint::CreateInsertion(
-          InitExpr->getBeginLoc(),
-          Designators.at(InitExpr->getBeginLoc()) + "=");
+      const std::string Designator =
+          LazyDesignators()->at(InitExpr->getBeginLoc());
+      if (!Designator.empty()) {
+        Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
+                                           Designator + "=");
+      }
     }
     return;
   }
@@ -118,11 +130,15 @@ void UseDesignatedInitializersCheck::check(
     if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID()) {
       continue;
     }
-    diag(InitExpr->getBeginLoc(), "use designated init expression")
-        << InitExpr->getSourceRange()
-        << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                      Designators.at(InitExpr->getBeginLoc()) +
-                                          "=");
+    DiagnosticBuilder Diag =
+        diag(InitExpr->getBeginLoc(), "use designated init expression");
+    Diag << InitExpr->getSourceRange();
+    const std::string Designator =
+        LazyDesignators()->at(InitExpr->getBeginLoc());
+    if (!Designator.empty()) {
+      Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
+                                         Designator + "=");
+    }
   }
 }
 
