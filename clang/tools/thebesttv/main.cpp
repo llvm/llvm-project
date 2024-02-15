@@ -7,7 +7,6 @@
 #include <iostream>
 #include <unistd.h>
 
-#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Program.h"
 
 class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
