@@ -664,9 +664,10 @@ public:
     QualType Type = S->getType();
 
     if (!Type->isStructureOrClassType()) {
-      if (auto *Val = Env.createValue(Type))
-        Env.setValue(*S, *Val);
-
+      // Until array initialization is implemented, we don't need to care about
+      // cases where `getNumInits() > 1`.
+      if (S->getNumInits() == 1)
+        propagateValueOrStorageLocation(*S->getInit(0), *S, Env);
       return;
     }
 

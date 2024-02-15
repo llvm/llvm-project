@@ -30,6 +30,16 @@ void func() {
   // expected-note@+1{{to match this '('}}
 #pragma acc parallel( clause list
   for(;;){}
+  // expected-error@+2{{expected clause-list or newline in OpenACC directive}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
+#pragma acc parallel() clause list
+  for(;;){}
+  // expected-error@+3{{expected clause-list or newline in OpenACC directive}}
+  // expected-error@+2{{expected ')'}}
+  // expected-note@+1{{to match this '('}}
+  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+#pragma acc parallel( clause list
+  for(;;){}
   // expected-error@+3{{expected clause-list or newline in OpenACC directive}}
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
   // expected-warning@+1{{OpenACC construct 'serial' not yet implemented, pragma ignored}}

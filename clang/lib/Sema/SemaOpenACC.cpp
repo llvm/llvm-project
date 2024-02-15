@@ -18,7 +18,7 @@
 using namespace clang;
 
 namespace {
-bool DiagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
+bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
                                     SourceLocation StartLoc, bool IsStmt) {
   switch (K) {
   default:
@@ -37,8 +37,6 @@ bool DiagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
 
 bool Sema::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
                               SourceLocation StartLoc) {
-  // TODO OpenACC: this will probably want to take the Directive Kind as well to
-  // help with legalization.
   if (ClauseKind == OpenACCClauseKind::Invalid)
     return false;
   // For now just diagnose that it is unsupported and leave the parsing to do
@@ -47,7 +45,6 @@ bool Sema::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
   // success.
   return Diag(StartLoc, diag::warn_acc_clause_unimplemented) << ClauseKind;
 }
-
 void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
                                  SourceLocation StartLoc) {
   switch (K) {
@@ -67,43 +64,31 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
   }
 }
 
-void Sema::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
-                                          SourceLocation StartLoc,
-                                          SourceLocation EndLoc) {
-  // TODO OpenACC: This should likely return something with the modified
-  // declaration. At the moment, only handle appertainment.
-  DiagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
+bool Sema::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
+                                          SourceLocation StartLoc) {
+  return diagnoseConstructAppertainment(&this, K, StartLoc, /*IsStmt=*/true);
 }
 
-void Sema::ActOnEndOpenACCDeclDirective() {
-  // TODO OpenACC: Should diagnose anything having to do with the associated
-  // statement, or any clause diagnostics that can only be done at the 'end' of
-  // the directive.  We should also close any 'block' marking now that the decl
-  // parsing is complete.
-}
-
-StmtResult Sema::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                                SourceLocation StartLoc,
-                                                SourceLocation EndLoc) {
-  if (DiagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true))
-    return StmtError();
+StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
+                                              SourceLocation StartLoc,
+                                              SourceLocation EndLoc,
+                                              StmtResult AssocStmt) {
   switch (K) {
-  case OpenACCDirectiveKind::Invalid:
-    return StmtError();
-  default:
-    return StmtEmpty();
-  case OpenACCDirectiveKind::Parallel:
-    return OpenACCComputeConstruct::Create(getASTContext(), K, StartLoc,
-                                           EndLoc);
+    default:
+      return StmtEmpty();
+    case OpenACCDirectiveKind::Invalid:
+      return StmtError();
+    case OpenACCDirectiveKind::Parallel:
+      return OpenACCComputeConstruct::Create(getASTContext(), K, StartLoc, EndLoc, AssocStmt);
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
-StmtResult
-Sema::ActOnOpenACCAssociatedStmt(OpenACCAssociatedStmtConstruct *Construct,
-                                 Stmt *AssocStmt) {
-  assert(Construct && AssocStmt && "Invalid construct or statement");
+StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
+                                            StmtResult AssocStmt) {
   switch (Construct->getDirectiveKind()) {
+  default:
+  llvm_unreachable("Unimplemented associated statement application");
   case OpenACCDirectiveKind::Parallel:
     // There really isn't any checking here that could happen. As long as we
     // have a statement to associate, this should be fine.
@@ -114,19 +99,14 @@ Sema::ActOnOpenACCAssociatedStmt(OpenACCAssociatedStmtConstruct *Construct,
     // FIXME: Should we reject DeclStmt's here? The standard isn't clear, and
     // an interpretation of it is to allow this and treat the initializer as
     // the 'structured block'.
-    Context.setOpenACCStructuredBlock(cast<OpenACCComputeConstruct>(Construct),
-                                      AssocStmt);
-    break;
-  default:
-    llvm_unreachable("Unimplemented associated statement application");
+    return AssocStmt;
   }
-  // TODO: ERICH: Implement.
-  return Construct;
+  llvm_unreachable("Invalid associated statement application");
 }
 
-void Sema::ActOnEndOpenACCStmtDirective(StmtResult Stmt) {
-  // TODO OpenACC: Should diagnose anything having to do with the associated
-  // statement, or any clause diagnostics that can only be done at the 'end' of
-  // the directive. We should also close any 'block' marking now that the
-  // statement parsing is complete.
+bool Sema::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
+                                          SourceLocation StartLoc) {
+  return diagnoseConstructAppertainment(&this, K, StartLoc, /*IsStmt=*/false);
 }
+
+DeclGroupRef Sema::ActOnEndOpenACCDeclDirective() { return DeclGroupRef{}; }

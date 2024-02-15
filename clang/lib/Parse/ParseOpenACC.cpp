@@ -550,6 +550,11 @@ void SkipUntilEndOfDirective(Parser &P) {
     P.ConsumeAnyToken();
 }
 
+bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
+  // TODO OpenACC: Implement.
+  return false;
+}
+
 } // namespace
 
 // OpenACC 3.3, section 1.7:
@@ -747,12 +752,9 @@ bool Parser::ParseOpenACCClause(OpenACCDirectiveKind DirKind) {
   // Consume the clause name.
   SourceLocation ClauseLoc = ConsumeToken();
 
-  bool ParamsResult = ParseOpenACCClauseParams(DirKind, Kind);
-
-  // TODO OpenACC: this whole function should return a 'clause' type optional
-  // instead of bool, so we likely want to return the clause here.
+  bool Result = ParseOpenACCClauseParams(DirKind, Kind);
   getActions().ActOnOpenACCClause(Kind, ClauseLoc);
-  return ParamsResult;
+  return Result;
 }
 
 bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
@@ -1184,6 +1186,7 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
          "Didn't parse all OpenACC Clauses");
   SourceLocation EndLoc = ConsumeAnnotationToken();
   assert(EndLoc.isValid());
+
   return OpenACCDirectiveParseInfo{DirKind, StartLoc, EndLoc};
 }
 
@@ -1195,12 +1198,13 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
   ConsumeAnnotationToken();
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
-  getActions().ActOnStartOpenACCDeclDirective(DirInfo.DirKind, DirInfo.StartLoc,
-                                              DirInfo.EndLoc);
-  // TODO OpenACC: Handle the declaration here.
-  getActions().ActOnEndOpenACCDeclDirective();
 
-  return nullptr;
+  if (getActions().ActOnStartOpenACCDeclDirective(DirInfo.DirKind,
+                                                  DirInfo.StartLoc))
+    return nullptr;
+
+  // TODO OpenACC: Do whatever decl parsing is required here.
+  return DeclGroupPtrTy::make(getActions().ActOnEndOpenACCDeclDirective());
 }
 
 // Parse OpenACC Directive on a Statement.
@@ -1211,21 +1215,18 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   ConsumeAnnotationToken();
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
-  StmtResult Result = getActions().ActOnStartOpenACCStmtDirective(
-      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.EndLoc);
+  if (getActions().ActOnStartOpenACCDeclDirective(DirInfo.DirKind,
+                                                  DirInfo.StartLoc))
+    return StmtError();
 
-  // Parse associated statements if we are parsing a construct that takes a
-  // statement.
-  if (Result.isUsable()) {
-    if (auto *ASC = dyn_cast<OpenACCAssociatedStmtConstruct>(Result.get())) {
-      ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
-      StmtResult AssocStmt = ParseStatement();
+  StmtResult AssocStmt;
 
-      if (AssocStmt.isUsable())
-        Result = getActions().ActOnOpenACCAssociatedStmt(ASC, AssocStmt.get());
-    }
+  if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
+    ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
+    AssocStmt = getActions().ActOnOpenACCAssociatedStmt(DirInfo.DirKind,
+                                                        ParseStatement());
   }
-  getActions().ActOnEndOpenACCStmtDirective(Result);
 
-  return Result;
+  return getActions().ActOnEndOpenACCStmtDirective(
+      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.EndLoc, AssocStmt);
 }

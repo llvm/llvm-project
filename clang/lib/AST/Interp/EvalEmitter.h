@@ -34,7 +34,8 @@ public:
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
 
-  EvaluationResult interpretExpr(const Expr *E);
+  EvaluationResult interpretExpr(const Expr *E,
+                                 bool ConvertResultToRValue = false);
   EvaluationResult interpretDecl(const VarDecl *VD);
 
   InterpState &getState() { return S; }
@@ -86,6 +87,8 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  /// Whether the result should be converted to an RValue.
+  bool ConvertResultToRValue = false;
 
   /// Temporaries which require storage.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;

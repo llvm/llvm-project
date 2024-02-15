@@ -625,12 +625,17 @@ atomic {
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: reduction(@add_f32 -> %{{.+}} : !llvm.ptr)
-  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
+  // CHECK: reduction(@add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
-    %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction %{{.+}}, %{{.+}}
-    omp.reduction %1, %0 : f32, !llvm.ptr
+    // CHECK: %[[CST:.+]] = arith.constant 2.0{{.*}} : f32
+    %cst = arith.constant 2.0 : f32
+    // CHECK: %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> f32
+    %lprv = llvm.load %prv : !llvm.ptr -> f32
+    // CHECK: %[[RES:.+]] = llvm.fadd %[[LPRV]], %[[CST]] : f32
+    %res = llvm.fadd %lprv, %cst: f32
+    // CHECK: llvm.store %[[RES]], %[[PRV]] :  f32, !llvm.ptr
+    llvm.store %res, %prv :  f32, !llvm.ptr
     omp.yield
   }
   return
@@ -788,12 +793,15 @@ combiner {
 // CHECK-LABEL: func @wsloop_reduction2
 func.func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %0 = memref.alloca() : memref<1xf32>
-  // CHECK: omp.wsloop reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
-  omp.wsloop reduction(@add2_f32 -> %0 : memref<1xf32>)
+  // CHECK: omp.wsloop reduction(@add2_f32 %{{.+}} -> %{{.+}} : memref<1xf32>)
+  omp.wsloop reduction(@add2_f32 %0 -> %prv : memref<1xf32>)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction
-    omp.reduction %1, %0 : f32, memref<1xf32>
+    %2 = arith.constant 0 : index
+    %3 = memref.load %prv[%2] : memref<1xf32>
+    // CHECK: llvm.fadd
+    %4 = llvm.fadd %1, %3 : f32
+    memref.store %4, %prv[%2] : memref<1xf32>
     omp.yield
   }
   return
@@ -1608,6 +1616,23 @@ func.func @omp_single_multiple_blocks() {
   omp.single {
     cf.br ^bb2
     ^bb2:
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func private @copy_i32(memref<i32>, memref<i32>)
+
+// CHECK-LABEL: func @omp_single_copyprivate
+func.func @omp_single_copyprivate(%data_var: memref<i32>) {
+  omp.parallel {
+    // CHECK: omp.single copyprivate(%{{.*}} -> @copy_i32 : memref<i32>) {
+    omp.single copyprivate(%data_var -> @copy_i32 : memref<i32>) {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
     // CHECK: omp.terminator
     omp.terminator
   }

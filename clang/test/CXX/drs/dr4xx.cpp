@@ -1055,7 +1055,7 @@ namespace dr471 { // dr471: 2.8
   //   expected-note@#dr471-G-using {{declared private here}}
 }
 
-namespace dr472 { // dr472: no drafting
+namespace dr472 { // dr472: no drafting 2011-04
 struct B {
   int i; // #dr472-i
 };

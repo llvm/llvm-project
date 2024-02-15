@@ -8041,9 +8041,6 @@ public:
                                      SourceLocation RParenLoc, bool Failed);
   void DiagnoseStaticAssertDetails(const Expr *E);
 
-  FriendDecl *CheckFriendTypeDecl(SourceLocation LocStart,
-                                  SourceLocation FriendLoc,
-                                  TypeSourceInfo *TSInfo);
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                             MultiTemplateParamsArg TemplateParams);
   NamedDecl *ActOnFriendFunctionDecl(Scope *S, Declarator &D,
@@ -12719,35 +12716,32 @@ public:
   void ActOnOpenACCConstruct(OpenACCDirectiveKind K, SourceLocation StartLoc);
 
   /// Called after the directive, including its clauses, have been parsed and
-  /// parsing has consumed the 'annot_pragma_openacc_end' token, so we are safe
-  /// to allocate all trailing storage. This DOES happen before any associated
-  /// declarations or statements have been parsed. This function is only called
-  /// when we are parsing a 'statement' context.
-  StmtResult ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                            SourceLocation StartLoc,
-                                            SourceLocation EndLoc);
+  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
+  /// happen before any associated declarations or statements have been parsed.
+  /// This function is only called when we are parsing a 'statement' context.
+  bool ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
+                                      SourceLocation StartLoc);
 
   /// Called after the directive, including its clauses, have been parsed and
-  /// parsing has consumed the 'annot_pragma_openacc_end' token, so we are safe
-  /// to allocate all trailing storage. This DOES happen before any associated
-  /// declarations or statements have been parsed. This function is only called
-  /// when we are parsing a 'Decl' context.
-  void ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
-                                      SourceLocation StartLoc,
-                                      SourceLocation EndLoc);
+  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
+  /// happen before any associated declarations or statements have been parsed.
+  /// This function is only called when we are parsing a 'Decl' context.
+  bool ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
+                                      SourceLocation StartLoc);
   /// Called when we encounter an associated statement for our construct, this
-  /// should check legality of the statement as it appertains to this Construct,
-  /// and returns the modified Construct.
-  StmtResult
-  ActOnOpenACCAssociatedStmt(OpenACCAssociatedStmtConstruct *Construct,
-                             Stmt *AssocStmt);
+  /// should check legality of the statement as it appertains to this Construct.
+  StmtResult ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
+                                        StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  void ActOnEndOpenACCStmtDirective(StmtResult Construct);
+  StmtResult ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
+                                          SourceLocation StartLoc,
+                                          SourceLocation EndLoc,
+                                          StmtResult AssocStmt);
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  void ActOnEndOpenACCDeclDirective();
+  DeclGroupRef ActOnEndOpenACCDeclDirective();
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {

@@ -1601,7 +1601,10 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import
-          : SPIRV::LinkageType::Export;
+          : (GV->getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+                     STI.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr)
+                 ? SPIRV::LinkageType::LinkOnceODR
+                 : SPIRV::LinkageType::Export);
 
   Register Reg = GR.buildGlobalVariable(ResVReg, ResType, GlobalIdent, GV,
                                         Storage, Init, GlobalVar->isConstant(),
