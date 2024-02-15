@@ -326,32 +326,16 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     switch (Kind) {
     default:
       break;
-    case TTI::SK_ExtractSubvector:
-      if (isa<FixedVectorType>(SubTp) &&
-          LT.second.getVectorElementType() != MVT::i1) {
-        // Whole vector extract - just the vector itself + (possible) vsetvli.
-        if (Index == 0)
-          return TTI::TCC_Free;
-      }
-      break;
     case TTI::SK_InsertSubvector:
       if (auto *FSubTy = dyn_cast<FixedVectorType>(SubTp)) {
         unsigned TpRegs = getRegUsageForType(Tp);
         unsigned SubTpRegs = getRegUsageForType(SubTp);
         unsigned NextSubTpRegs = getRegUsageForType(FixedVectorType::get(
             Tp->getElementType(), FSubTy->getNumElements() + 1));
-        // Whole vector insert - just the vector itself + (possible) vsetvli.
-        if (Index == 0 && (any_of(Args, UndefValue::classof) ||
-                           (SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
-                            TpRegs / SubTpRegs > 1))) {
-          std::pair<InstructionCost, MVT> SubLT =
-              getTypeLegalizationCost(SubTp);
-          return Index == 0 && any_of(Args, UndefValue::classof)
-                     ? TTI::TCC_Free
-                     : SubLT.first * getRISCVInstructionCost(RISCV::VMV_V_V,
-                                                             SubLT.second,
-                                                             CostKind);
-        }
+        // Whole vector insert - just the vector itself.
+        if (Index == 0 && SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
+            TpRegs / SubTpRegs > 1)
+          return TTI::TCC_Free;
       }
       break;
     case TTI::SK_PermuteSingleSrc: {
@@ -460,12 +444,19 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // must be implemented here.
     break;
   case TTI::SK_ExtractSubvector:
+    // Extract at zero is always a subregister extract
+    if (Index == 0)
+      return TTI::TCC_Free;
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
     return LT.first *
            getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI, LT.second, CostKind);
   case TTI::SK_InsertSubvector:
+    if (Index == 0 && any_of(Args, UndefValue::classof))
+      return TTI::TCC_Free;
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2

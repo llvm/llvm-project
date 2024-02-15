@@ -637,7 +637,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
       std::map<std::string, std::string> &BIM =
           BuiltinMap[Ints[i].TargetPrefix];
 
-      if (!BIM.insert(std::make_pair(BuiltinName, Ints[i].EnumName)).second)
+      if (!BIM.insert(std::pair(BuiltinName, Ints[i].EnumName)).second)
         PrintFatalError(Ints[i].TheDef->getLoc(),
                         "Intrinsic '" + Ints[i].TheDef->getName() +
                             "': duplicate " + CompilerName + " builtin name!");
