@@ -88,9 +88,9 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
   ERROR_IF(failed(parser.parseOptionalKeyword(&strVal)),
            "expected valid level property (e.g. nonordered, nonunique or high)")
   if (strVal.compare("nonunique") == 0) {
-    *properties |= static_cast<uint64_t>(LevelPropNonDefault::Nonunique);
+    *properties |= static_cast<uint64_t>(LevelPropertyNondefault::Nonunique);
   } else if (strVal.compare("nonordered") == 0) {
-    *properties |= static_cast<uint64_t>(LevelPropNonDefault::Nonordered);
+    *properties |= static_cast<uint64_t>(LevelPropertyNondefault::Nonordered);
   } else {
     parser.emitError(loc, "unknown level property: ") << strVal;
     return failure();
