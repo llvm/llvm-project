@@ -877,8 +877,7 @@ template <> struct MappingTraits<FormatStyle> {
     if (!IO.outputting()) {
       IO.mapOptional("AlignEscapedNewlinesLeft", Style.AlignEscapedNewlines);
       IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
-      IO.mapOptional("AlwaysBreakAfterReturnType",
-                     Style.AlwaysBreakAfterReturnType);
+      IO.mapOptional("AlwaysBreakAfterReturnType", Style.BreakAfterReturnType);
       IO.mapOptional("AlwaysBreakTemplateDeclarations",
                      Style.BreakTemplateDeclarations);
       IO.mapOptional("BreakBeforeInheritanceComma",
@@ -957,7 +956,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
-    IO.mapOptional("BreakAfterReturnType", Style.AlwaysBreakAfterReturnType);
+    IO.mapOptional("BreakAfterReturnType", Style.BreakAfterReturnType);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
@@ -1127,17 +1126,16 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
-    // AlwaysBreakAfterReturnType was not, initialize the latter from the
-    // former for backwards compatibility.
+    // BreakAfterReturnType was not, initialize the latter from the former for
+    // backwards compatibility.
     if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
-        Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None) {
+        Style.BreakAfterReturnType == FormatStyle::RTBS_None) {
       if (Style.AlwaysBreakAfterDefinitionReturnType ==
           FormatStyle::DRTBS_All) {
-        Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+        Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
       } else if (Style.AlwaysBreakAfterDefinitionReturnType ==
                  FormatStyle::DRTBS_TopLevel) {
-        Style.AlwaysBreakAfterReturnType =
-            FormatStyle::RTBS_TopLevelDefinitions;
+        Style.BreakAfterReturnType = FormatStyle::RTBS_TopLevelDefinitions;
       }
     }
 
@@ -1439,7 +1437,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
-  LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
@@ -1469,6 +1466,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
@@ -1822,12 +1820,12 @@ FormatStyle getMozillaStyle() {
   FormatStyle MozillaStyle = getLLVMStyle();
   MozillaStyle.AllowAllParametersOfDeclarationOnNextLine = false;
   MozillaStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
-  MozillaStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   MozillaStyle.BinPackParameters = false;
   MozillaStyle.BinPackArguments = false;
+  MozillaStyle.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
   MozillaStyle.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
@@ -1871,7 +1869,7 @@ FormatStyle getWebKitStyle() {
 FormatStyle getGNUStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_All;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   Style.BreakBeforeBraces = FormatStyle::BS_GNU;
   Style.BreakBeforeTernaryOperators = true;
@@ -1908,7 +1906,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   Style.AllowShortLoopsOnASingleLine = false;
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
   return Style;
 }
 
