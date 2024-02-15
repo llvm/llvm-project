@@ -137,9 +137,9 @@ func.func @fold_extract_slice(
   //      CHECK:   %[[E:.*]] = tensor.extract_slice %[[ARG0]][3, 4] [%[[DIM]], 42] [1, 1] : tensor<?x128xf32> to tensor<?x42xf32>
 
   //      CHECK:    scf.for %[[IV0:[0-9a-zA-Z]*]] =
-  //      CHECK:      %[[SIZE0:.*]] = affine.min #[[MAP0]](%[[IV0]])[%[[DIM]]
   //      CHECK:      scf.for %[[IV1:[0-9a-zA-Z]*]] =
 
+  //      CHECK:      %[[SIZE0:.*]] = affine.min #[[MAP0]](%[[IV0]])[%[[DIM]]
   // Fold the existing extract slice op into the one created by the tiling.
   //      CHECK:        %[[T0:.*]] = tensor.extract_slice %[[E]]
   // CHECK-SAME:                                          %[[IV0]], %[[IV1]]

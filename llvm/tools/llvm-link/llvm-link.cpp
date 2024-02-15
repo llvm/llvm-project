@@ -129,6 +129,13 @@ static cl::opt<bool> IgnoreNonBitcode(
     cl::desc("Do not report an error for non-bitcode files in archives"),
     cl::Hidden);
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 static ExitOnError ExitOnErr;
 
 // Read the specified bitcode file in and return it. This routine searches the
@@ -464,6 +471,13 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format.
+  if (TryUseNewDbgInfoFormat) {
+    // Turn the new debug-info format on.
+    UseNewDbgInfoFormat = true;
+  }
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),

@@ -10,9 +10,9 @@
 #define LLVM_LIB_DWARFLINKER_PARALLEL_DWARFLINKERUNIT_H
 
 #include "DWARFLinkerGlobalData.h"
-#include "IndexedValuesMap.h"
 #include "OutputSections.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/DWARFLinker/IndexedValuesMap.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"

@@ -435,6 +435,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
+  case Stmt::OpenACCComputeConstructClass:
+    EmitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*S));
+    break;
   }
 }
 
@@ -2399,9 +2402,9 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
         Tmp = Builder.CreatePtrToInt(
             Tmp, llvm::IntegerType::get(CTX, (unsigned)TmpSize));
         Tmp = Builder.CreateTrunc(Tmp, TruncTy);
-      } else if (TruncTy->isIntegerTy()) {
+      } else if (Tmp->getType()->isIntegerTy() && TruncTy->isIntegerTy()) {
         Tmp = Builder.CreateZExtOrTrunc(Tmp, TruncTy);
-      } else if (TruncTy->isVectorTy()) {
+      } else if (Tmp->getType()->isVectorTy() || TruncTy->isVectorTy()) {
         Tmp = Builder.CreateBitCast(Tmp, TruncTy);
       }
     }

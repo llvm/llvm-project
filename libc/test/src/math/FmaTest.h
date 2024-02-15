@@ -23,11 +23,23 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
+  const T min_subnormal = FPBits::min_subnormal(Sign::POS).get_val();
+  const T min_normal = FPBits::min_normal(Sign::POS).get_val();
+  const T max_normal = FPBits::max_normal(Sign::POS).get_val();
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
 
   StorageType get_random_bit_pattern() {
     StorageType bits{0};
@@ -50,14 +62,13 @@ public:
     EXPECT_FP_EQ(func(inf, neg_inf, nan), nan);
 
     // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), FPBits::min_denormal(), FPBits::min_denormal()),
-                 T(FPBits(StorageType(2))));
+    EXPECT_FP_EQ(func(T(0.5), min_subnormal, min_subnormal),
+                 FPBits(StorageType(2)).get_val());
     // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + StorageType(1)));
-    EXPECT_FP_EQ(
-        func(T(1) / T(FPBits::MIN_NORMAL << 1), v, FPBits::min_normal()), v);
+    T v = FPBits(MIN_NORMAL + StorageType(1)).get_val();
+    EXPECT_FP_EQ(func(T(1) / T(MIN_NORMAL << 1), v, min_normal), v);
     // Test overflow.
-    T z = FPBits::max_normal();
+    T z = max_normal;
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
     // Exact cancellation.
     EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));
@@ -66,13 +77,11 @@ public:
 
   void test_subnormal_range(Func func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
-         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(get_random_bit_pattern())), y = T(FPBits(v)),
-        z = T(FPBits(w));
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
+         v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(get_random_bit_pattern()).get_val(), y = FPBits(v).get_val(),
+        z = FPBits(w).get_val();
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
                                      0.5);
@@ -81,13 +90,11 @@ public:
 
   void test_normal_range(Func func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
-         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w)),
-        z = T(FPBits(get_random_bit_pattern()));
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+         v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val(),
+        z = FPBits(get_random_bit_pattern()).get_val();
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
                                      0.5);

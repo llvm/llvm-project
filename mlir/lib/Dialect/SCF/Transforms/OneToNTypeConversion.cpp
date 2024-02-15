@@ -111,7 +111,7 @@ public:
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();
@@ -131,7 +131,7 @@ public:
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();

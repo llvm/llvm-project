@@ -5,6 +5,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t -DDIFFERENT %t/B.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/B.cppm -verify
+//
+// Testing the behavior of `-fskip-odr-check-in-gmf`
+// RUN: %clang_cc1 -std=c++20 -fskip-odr-check-in-gmf %t/A.cppm -emit-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 -fskip-odr-check-in-gmf -fprebuilt-module-path=%t -I%t  \
+// RUN:    -DDIFFERENT -DSKIP_ODR_CHECK_IN_GMF %t/B.cppm -verify
+
 
 //--- foo.h
 #ifndef FOO_H
@@ -70,7 +76,10 @@ module;
 export module B;
 import A;
 
-#ifdef DIFFERENT
+#ifdef SKIP_ODR_CHECK_IN_GMF
+// expected-error@B.cppm:* {{call to object of type '__fn' is ambiguous}}
+// expected-note@* 1+{{candidate function}}
+#elif defined(DIFFERENT)
 // expected-error@foo.h:41 {{'__fn::operator()' from module 'A.<global>' is not present in definition of '__fn' provided earlier}}
 // expected-note@* 1+{{declaration of 'operator()' does not match}}
 #else

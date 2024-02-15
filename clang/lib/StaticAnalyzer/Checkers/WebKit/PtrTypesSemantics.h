@@ -50,6 +50,9 @@ std::optional<bool> isUncountedPtr(const clang::Type* T);
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
 
+/// \returns true if \p F returns a ref-counted object, false if not.
+bool isReturnValueRefCounted(const clang::FunctionDecl *F);
+
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfRefCounted(const clang::CXXMethodDecl* Method);
 

@@ -911,11 +911,12 @@ static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
       ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
 }
 
-OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
+OperationFingerPrint::OperationFingerPrint(Operation *topOp,
+                                           bool includeNested) {
   llvm::SHA1 hasher;
 
-  // Hash each of the operations based upon their mutable bits:
-  topOp->walk([&](Operation *op) {
+  // Helper function that hashes an operation based on its mutable bits:
+  auto addOperationToHash = [&](Operation *op) {
     //   - Operation pointer
     addDataToHash(hasher, op);
     //   - Parent operation pointer (to take into account the nesting structure)
@@ -944,6 +945,12 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
     //   - Result types
     for (Type t : op->getResultTypes())
       addDataToHash(hasher, t);
-  });
+  };
+
+  if (includeNested)
+    topOp->walk(addOperationToHash);
+  else
+    addOperationToHash(topOp);
+
   hash = hasher.result();
 }

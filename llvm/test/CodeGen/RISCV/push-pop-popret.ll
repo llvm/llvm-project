@@ -12,9 +12,9 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN: | FileCheck -check-prefixes=RV64I %s
 
-declare void @test(i8*)
-declare void @callee_void(i8*)
-declare i32 @callee(i8*)
+declare void @test(ptr)
+declare void @callee_void(ptr)
+declare i32 @callee(ptr)
 
 define i32 @foo() {
 ; RV32IZCMP-LABEL: foo:
@@ -87,8 +87,8 @@ define i32 @foo() {
 ; RV64I-NEXT:    addi sp, sp, 528
 ; RV64I-NEXT:    ret
   %1 = alloca [512 x i8]
-  %2 = getelementptr [512 x i8], [512 x i8]* %1, i32 0, i32 0
-  call void @test(i8* %2)
+  %2 = getelementptr [512 x i8], ptr %1, i32 0, i32 0
+  call void @test(ptr %2)
   ret i32 0
 }
 
@@ -208,7 +208,7 @@ define i32 @pushpopret0(i32 signext %size){
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 0
 }
 
@@ -332,7 +332,7 @@ define i32 @pushpopret1(i32 signext %size) {
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 1
 }
 
@@ -456,7 +456,7 @@ define i32 @pushpopretneg1(i32 signext %size) {
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 -1
 }
 
@@ -580,7 +580,7 @@ define i32 @pushpopret2(i32 signext %size) {
 ; RV64I-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
-  call void @callee_void(i8* nonnull %0)
+  call void @callee_void(ptr nonnull %0)
   ret i32 2
 }
 
@@ -696,7 +696,7 @@ define dso_local i32 @tailcall(i32 signext %size) local_unnamed_addr #0 {
 ; RV64I-NEXT:    tail callee
 entry:
   %0 = alloca i8, i32 %size, align 16
-  %1 = tail call i32 @callee(i8* nonnull %0)
+  %1 = tail call i32 @callee(ptr nonnull %0)
   ret i32 %1
 }
 
@@ -983,10 +983,10 @@ define i32 @nocompress(i32 signext %size) {
 ; RV64I-NEXT:    tail callee
 entry:
   %0 = alloca i8, i32 %size, align 16
-  %val = load [5 x i32], [5 x i32]* @var
-  call void @callee_void(i8* nonnull %0)
-  store volatile [5 x i32] %val, [5 x i32]* @var
-  %1 = tail call i32 @callee(i8* nonnull %0)
+  %val = load [5 x i32], ptr @var
+  call void @callee_void(ptr nonnull %0)
+  store volatile [5 x i32] %val, ptr @var
+  %1 = tail call i32 @callee(ptr nonnull %0)
   ret i32 %1
 }
 
@@ -1743,7 +1743,7 @@ define void @foo_with_irq() nounwind "interrupt"="user" {
 ; RV64I-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    mret
-  %call = call i32 bitcast (i32 (...)* @foo_test_irq to i32 ()*)()
+  %call = call i32 @foo_test_irq()
   ret void
 }
 
@@ -1789,7 +1789,7 @@ define void @foo_no_irq() nounwind{
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %call = call i32 bitcast (i32 (...)* @foo_test_irq to i32 ()*)()
+  %call = call i32 @foo_test_irq()
   ret void
 }
 
@@ -2537,8 +2537,8 @@ define void @callee_with_irq() nounwind "interrupt"="user" {
 ; RV64I-NEXT:    ld t6, 48(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 272
 ; RV64I-NEXT:    mret
-  %val = load [32 x i32], [32 x i32]* @var_test_irq
-  store volatile [32 x i32] %val, [32 x i32]* @var_test_irq
+  %val = load [32 x i32], ptr @var_test_irq
+  store volatile [32 x i32] %val, ptr @var_test_irq
   ret void
 }
 
@@ -3094,8 +3094,8 @@ define void @callee_no_irq() nounwind{
 ; RV64I-NEXT:    ld s11, 56(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 160
 ; RV64I-NEXT:    ret
-  %val = load [32 x i32], [32 x i32]* @var_test_irq
-  store volatile [32 x i32] %val, [32 x i32]* @var_test_irq
+  %val = load [32 x i32], ptr @var_test_irq
+  store volatile [32 x i32] %val, ptr @var_test_irq
   ret void
 }
 
@@ -3217,4 +3217,75 @@ entry:
   %0 = tail call ptr @llvm.frameaddress.p0(i32 0)
   call void @bar(ptr %0, ptr %var)
   ret i32 %x
+}
+
+define void @spill_x10() {
+; RV32IZCMP-LABEL: spill_x10:
+; RV32IZCMP:       # %bb.0: # %entry
+; RV32IZCMP-NEXT:    cm.push {ra, s0-s11}, -64
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 64
+; RV32IZCMP-NEXT:    .cfi_offset s10, -8
+; RV32IZCMP-NEXT:    #APP
+; RV32IZCMP-NEXT:    li s10, 0
+; RV32IZCMP-NEXT:    #NO_APP
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 64
+;
+; RV64IZCMP-LABEL: spill_x10:
+; RV64IZCMP:       # %bb.0: # %entry
+; RV64IZCMP-NEXT:    cm.push {ra, s0-s11}, -112
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 112
+; RV64IZCMP-NEXT:    .cfi_offset s10, -16
+; RV64IZCMP-NEXT:    #APP
+; RV64IZCMP-NEXT:    li s10, 0
+; RV64IZCMP-NEXT:    #NO_APP
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
+;
+; RV32IZCMP-SR-LABEL: spill_x10:
+; RV32IZCMP-SR:       # %bb.0: # %entry
+; RV32IZCMP-SR-NEXT:    cm.push {ra, s0-s11}, -64
+; RV32IZCMP-SR-NEXT:    .cfi_def_cfa_offset 64
+; RV32IZCMP-SR-NEXT:    .cfi_offset s10, -8
+; RV32IZCMP-SR-NEXT:    #APP
+; RV32IZCMP-SR-NEXT:    li s10, 0
+; RV32IZCMP-SR-NEXT:    #NO_APP
+; RV32IZCMP-SR-NEXT:    cm.popret {ra, s0-s11}, 64
+;
+; RV64IZCMP-SR-LABEL: spill_x10:
+; RV64IZCMP-SR:       # %bb.0: # %entry
+; RV64IZCMP-SR-NEXT:    cm.push {ra, s0-s11}, -112
+; RV64IZCMP-SR-NEXT:    .cfi_def_cfa_offset 112
+; RV64IZCMP-SR-NEXT:    .cfi_offset s10, -16
+; RV64IZCMP-SR-NEXT:    #APP
+; RV64IZCMP-SR-NEXT:    li s10, 0
+; RV64IZCMP-SR-NEXT:    #NO_APP
+; RV64IZCMP-SR-NEXT:    cm.popret {ra, s0-s11}, 112
+;
+; RV32I-LABEL: spill_x10:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw s10, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset s10, -4
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    li s10, 0
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    lw s10, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: spill_x10:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd s10, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset s10, -8
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    li s10, 0
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ld s10, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+entry:
+  tail call void asm sideeffect "li s10, 0", "~{s10}"()
+  ret void
 }

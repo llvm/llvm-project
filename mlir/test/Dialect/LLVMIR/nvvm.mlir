@@ -43,10 +43,24 @@ func.func @llvm_nvvm_barrier0() {
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_barrier
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
+  // CHECK: nvvm.barrier 
+  nvvm.barrier 
+  // CHECK: nvvm.barrier id = %[[barId]]
+  nvvm.barrier id = %barId
+  // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]]
+  nvvm.barrier id = %barId number_of_threads = %numberOfThreads
+  llvm.return
+}
+
 // CHECK-LABEL: @llvm_nvvm_cluster_arrive
 func.func @llvm_nvvm_cluster_arrive() {
   // CHECK: nvvm.cluster.arrive
   nvvm.cluster.arrive
+  // CHECK: nvvm.cluster.arrive {aligned}
+  nvvm.cluster.arrive {aligned}
   llvm.return
 }
 
@@ -54,6 +68,8 @@ func.func @llvm_nvvm_cluster_arrive() {
 func.func @llvm_nvvm_cluster_arrive_relaxed() {
   // CHECK: nvvm.cluster.arrive.relaxed
   nvvm.cluster.arrive.relaxed
+  // CHECK: nvvm.cluster.arrive.relaxed {aligned}
+  nvvm.cluster.arrive.relaxed {aligned}
   llvm.return
 }
 
@@ -61,6 +77,8 @@ func.func @llvm_nvvm_cluster_arrive_relaxed() {
 func.func @llvm_nvvm_cluster_wait() {
   // CHECK: nvvm.cluster.wait
   nvvm.cluster.wait
+  // CHECK: nvvm.cluster.wait {aligned}
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 
@@ -465,4 +483,30 @@ gpu.module @module_1 [#nvvm.target<chip = "sm_90", features = "+ptx70", link = [
 }
 
 gpu.module @module_2 [#nvvm.target<chip = "sm_90">, #nvvm.target<chip = "sm_80">, #nvvm.target<chip = "sm_70">] {
+}
+
+// CHECK-LABEL : nvvm.grid_constant
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.grid_constant"' attribute must be present only on kernel arguments}}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.grid_constant"' attribute requires the argument to also have attribute 'llvm.byval'}}
+llvm.func @kernel_func(%arg0: !llvm.ptr {nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'"nvvm.grid_constant"' must be a unit attribute}}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant = true}) attributes {nvvm.kernel} {
+  llvm.return
 }

@@ -296,6 +296,10 @@ pipeline, immediately after the link stage. The ``internalize`` pass is also
 recommended to remove unused math functions from the resulting PTX. For an
 input IR module ``module.bc``, the following compilation flow is recommended:
 
+The ``NVVMReflect`` pass will attempt to remove dead code even without
+optimizations. This allows potentially incompatible instructions to be avoided
+at all optimizations levels by using the ``__CUDA_ARCH`` argument.
+
 1. Save list of external functions in ``module.bc``
 2. Link ``module.bc`` with ``libdevice.compute_XX.YY.bc``
 3. Internalize all functions not in list from (1)

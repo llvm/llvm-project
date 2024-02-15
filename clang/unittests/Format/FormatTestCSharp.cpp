@@ -1304,6 +1304,18 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
                "}",
                Style);
 
+  // When the "where" line is not to be formatted, following lines should not
+  // take on its indentation.
+  verifyFormat("class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "  int f() {}\n"
+               "}",
+               "class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "  int f() {}\n"
+               "}",
+               Style, {tooling::Range(43, 13)});
+
   verifyFormat("class Dictionary<TKey, TVal>\n"
                "    where TKey : IComparable<TKey>\n"
                "    where TVal : IMyInterface {\n"

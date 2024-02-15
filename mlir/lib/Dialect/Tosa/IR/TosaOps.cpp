@@ -25,6 +25,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -107,7 +108,7 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
   }
 
   LogicalResult upgradeFromVersion(Operation *topLevelOp,
-                                   const DialectVersion &version_) const final {
+                                   const DialectVersion &version) const final {
     return success();
   }
 };
@@ -453,12 +454,12 @@ static void
 buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                               Type outputType, Value input,
                               DenseArrayAttr kernel, DenseArrayAttr stride,
-                              DenseArrayAttr pad, TypeAttr acc_type) {
+                              DenseArrayAttr pad, TypeAttr accType) {
   result.addOperands(input);
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
-  result.addAttribute("acc_type", acc_type);
+  result.addAttribute("acc_type", accType);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);

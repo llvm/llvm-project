@@ -67,6 +67,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # stdbit.h entrypoints
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
@@ -95,6 +102,13 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
+
+    # sys/epoll.h entrypoints
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.src.sys.epoll.epoll_wait
+    # libc.src.sys.epoll.epoll_pwait
+    # libc.src.sys.epoll.epoll_pwait2
+
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -115,18 +129,124 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acosf
+    libc.src.math.acoshf
+    libc.src.math.asinf
+    libc.src.math.asinhf
+    libc.src.math.atanf
+    libc.src.math.atanhf
+    libc.src.math.ceil
+    libc.src.math.ceilf
+    libc.src.math.ceill
+    libc.src.math.copysign
+    libc.src.math.copysignf
+    libc.src.math.copysignl
+    libc.src.math.cosf
+    libc.src.math.coshf
+    libc.src.math.erff
+    libc.src.math.exp
+    libc.src.math.exp10
+    libc.src.math.exp10f
+    libc.src.math.exp2
+    libc.src.math.exp2f
+    libc.src.math.expf
+    libc.src.math.expm1
+    libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
+    libc.src.math.floor
+    libc.src.math.floorf
+    libc.src.math.floorl
+    libc.src.math.fma
+    libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
     libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
     libc.src.math.fminl
+    libc.src.math.fmod
+    libc.src.math.fmodf
+    libc.src.math.frexp
+    libc.src.math.frexpf
+    libc.src.math.frexpl
+    libc.src.math.hypot
+    libc.src.math.hypotf
+    libc.src.math.ilogb
+    libc.src.math.ilogbf
+    libc.src.math.ilogbl
+    libc.src.math.ldexp
+    libc.src.math.ldexpf
+    libc.src.math.ldexpl
+    libc.src.math.llrint
+    libc.src.math.llrintf
+    libc.src.math.llrintl
+    libc.src.math.llround
+    libc.src.math.llroundf
+    libc.src.math.llroundl
+    libc.src.math.log
+    libc.src.math.log10
+    libc.src.math.log10f
+    libc.src.math.log1p
+    libc.src.math.log1pf
+    libc.src.math.log2
+    libc.src.math.log2f
+    libc.src.math.logb
+    libc.src.math.logbf
+    libc.src.math.logbl
+    libc.src.math.logf
+    libc.src.math.lrint
+    libc.src.math.lrintf
+    libc.src.math.lrintl
+    libc.src.math.lround
+    libc.src.math.lroundf
+    libc.src.math.lroundl
+    libc.src.math.modf
+    libc.src.math.modff
+    libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
+    libc.src.math.nearbyint
+    libc.src.math.nearbyintf
+    libc.src.math.nearbyintl
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.powf
+    libc.src.math.remainder
+    libc.src.math.remainderf
+    libc.src.math.remainderl
+    libc.src.math.remquo
+    libc.src.math.remquof
+    libc.src.math.remquol
+    libc.src.math.rint
+    libc.src.math.rintf
+    libc.src.math.rintl
+    libc.src.math.round
+    libc.src.math.roundf
+    libc.src.math.roundl
+    libc.src.math.scalbn
+    libc.src.math.scalbnf
+    libc.src.math.scalbnl
+    libc.src.math.sincosf
+    libc.src.math.sinf
+    libc.src.math.sinhf
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.sqrtl
+    libc.src.math.tanf
+    libc.src.math.tanhf
+    libc.src.math.trunc
+    libc.src.math.truncf
+    libc.src.math.truncl
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

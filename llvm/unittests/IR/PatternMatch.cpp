@@ -530,6 +530,48 @@ TEST_F(PatternMatchTest, ZExtSExtSelf) {
   EXPECT_TRUE(m_ZExtOrSExtOrSelf(m_One()).match(One64S));
 }
 
+TEST_F(PatternMatchTest, BitCast) {
+  Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
+  Value *ScalableDouble = ConstantFP::get(
+      VectorType::get(IRB.getDoubleTy(), 2, /*Scalable=*/true), APFloat(1.0));
+  // scalar -> scalar
+  Value *DoubleToI64 = IRB.CreateBitCast(OneDouble, IRB.getInt64Ty());
+  // scalar -> vector
+  Value *DoubleToV2I32 = IRB.CreateBitCast(
+      OneDouble, VectorType::get(IRB.getInt32Ty(), 2, /*Scalable=*/false));
+  // vector -> scalar
+  Value *V2I32ToDouble = IRB.CreateBitCast(DoubleToV2I32, IRB.getDoubleTy());
+  // vector -> vector (same count)
+  Value *V2I32ToV2Float = IRB.CreateBitCast(
+      DoubleToV2I32, VectorType::get(IRB.getFloatTy(), 2, /*Scalable=*/false));
+  // vector -> vector (different count)
+  Value *V2I32TOV4I16 = IRB.CreateBitCast(
+      DoubleToV2I32, VectorType::get(IRB.getInt16Ty(), 4, /*Scalable=*/false));
+  // scalable vector -> scalable vector (same count)
+  Value *NXV2DoubleToNXV2I64 = IRB.CreateBitCast(
+      ScalableDouble, VectorType::get(IRB.getInt64Ty(), 2, /*Scalable=*/true));
+  // scalable vector -> scalable vector (different count)
+  Value *NXV2I64ToNXV4I32 = IRB.CreateBitCast(
+      NXV2DoubleToNXV2I64,
+      VectorType::get(IRB.getInt32Ty(), 4, /*Scalable=*/true));
+
+  EXPECT_TRUE(m_BitCast(m_Value()).match(DoubleToI64));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(DoubleToV2I32));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(V2I32ToDouble));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(V2I32ToV2Float));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(V2I32TOV4I16));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(NXV2DoubleToNXV2I64));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(NXV2I64ToNXV4I32));
+
+  EXPECT_TRUE(m_ElementWiseBitCast(m_Value()).match(DoubleToI64));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(DoubleToV2I32));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(V2I32ToDouble));
+  EXPECT_TRUE(m_ElementWiseBitCast(m_Value()).match(V2I32ToV2Float));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(V2I32TOV4I16));
+  EXPECT_TRUE(m_ElementWiseBitCast(m_Value()).match(NXV2DoubleToNXV2I64));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(NXV2I64ToNXV4I32));
+}
+
 TEST_F(PatternMatchTest, Power2) {
   Value *C128 = IRB.getInt32(128);
   Value *CNeg128 = ConstantExpr::getNeg(cast<Constant>(C128));
@@ -1845,6 +1887,28 @@ TEST_F(PatternMatchTest, ConstExpr) {
   // or a constant that contains a constant expression.
   EXPECT_TRUE(match(S, m_ConstantExpr()));
   EXPECT_TRUE(match(V, m_ConstantExpr()));
+}
+
+TEST_F(PatternMatchTest, PtrAdd) {
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *IdxTy = Type::getInt64Ty(Ctx);
+  Constant *Null = Constant::getNullValue(PtrTy);
+  Constant *Offset = ConstantInt::get(IdxTy, 42);
+  Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
+  Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
+  Value *PtrAddConst =
+      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+
+  Value *A, *B;
+  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, Null);
+  EXPECT_EQ(B, Offset);
+
+  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, Null);
+  EXPECT_EQ(B, Offset);
+
+  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
 }
 
 } // anonymous namespace.

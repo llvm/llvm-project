@@ -37,6 +37,7 @@ static_library("CPlusPlus") {
     "LibCxxSpan.cpp",
     "LibCxxTuple.cpp",
     "LibCxxUnorderedMap.cpp",
+    "LibCxxValarray.cpp",
     "LibCxxVariant.cpp",
     "LibCxxVector.cpp",
     "LibStdcpp.cpp",

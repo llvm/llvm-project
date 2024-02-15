@@ -345,6 +345,10 @@ static cl::opt<bool>
                                cl::desc("instrument dynamic allocas"),
                                cl::Hidden, cl::init(true));
 
+static cl::opt<bool> ClInstrumentUninterestingAllocas(
+    "asan-instrument-uninteresting-allocas",
+    cl::desc("Do not instrument uninteresting allocas"), cl::Hidden);
+
 static cl::opt<AsanCtorKind> ClConstructorKind(
     "asan-constructor-kind",
     cl::desc("Sets the ASan constructor kind"),
@@ -1250,12 +1254,13 @@ void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   InstrumentationIRBuilder IRB(MI);
   if (isa<MemTransferInst>(MI)) {
     IRB.CreateCall(isa<MemMoveInst>(MI) ? AsanMemmove : AsanMemcpy,
-                   {MI->getOperand(0), MI->getOperand(1),
+                   {IRB.CreateAddrSpaceCast(MI->getOperand(0), PtrTy),
+                    IRB.CreateAddrSpaceCast(MI->getOperand(1), PtrTy),
                     IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
         AsanMemset,
-        {MI->getOperand(0),
+        {IRB.CreateAddrSpaceCast(MI->getOperand(0), PtrTy),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   }
@@ -1303,7 +1308,7 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // will not cause memory violations. This greatly speeds up the instrumented
   // executable at -O0.
   if (auto AI = dyn_cast_or_null<AllocaInst>(Ptr))
-    if (!isInterestingAlloca(*AI))
+    if (!ClInstrumentUninterestingAllocas && !isInterestingAlloca(*AI))
       return true;
 
   if (SSGI != nullptr && SSGI->stackAccessIsSafe(*Inst) &&
@@ -1582,8 +1587,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
       InstrumentedAddress = IRB.CreateExtractElement(Addr, Index);
     } else if (Stride) {
       Index = IRB.CreateMul(Index, Stride);
-      Addr = IRB.CreateBitCast(Addr, PointerType::getUnqual(*C));
-      InstrumentedAddress = IRB.CreateGEP(Type::getInt8Ty(*C), Addr, {Index});
+      InstrumentedAddress = IRB.CreatePtrAdd(Addr, Index);
     } else {
       InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
     }
@@ -2070,6 +2074,8 @@ bool ModuleAddressSanitizer::ShouldUseMachOGlobalsSection() const {
   if (TargetTriple.isWatchOS() && !TargetTriple.isOSVersionLT(2))
     return true;
   if (TargetTriple.isDriverKit())
+    return true;
+  if (TargetTriple.isXROS())
     return true;
 
   return false;

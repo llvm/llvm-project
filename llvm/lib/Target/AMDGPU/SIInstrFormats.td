@@ -69,10 +69,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
-  // Most sopk treat the immediate as a signed 16-bit, however some
-  // use it as unsigned.
-  field bit SOPKZext = 0;
-
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
@@ -81,10 +77,6 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Whether the operands can be ignored when computing the
   // instruction size.
   field bit FixedSize = 0;
-
-  // This bit tells the assembler to use the 32-bit encoding in case it
-  // is unable to infer the encoding from the operands.
-  field bit VOPAsmPrefer32Bit = 0;
 
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
@@ -161,6 +153,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // ds_gws_* instructions.
   field bit GWS = 0;
 
+  // This bit indicates that this is one of SWMMAC instructions.
+  field bit IsSWMMAC = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -206,10 +201,15 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
-  let TSFlags{38} = SOPKZext;
+  // Reserved, must be 0.
+  let TSFlags{38} = 0;
+
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
-  let TSFlags{41} = VOPAsmPrefer32Bit;
+
+  // Reserved, must be 0.
+  let TSFlags{41} = 0;
+
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
@@ -247,6 +247,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{61} = IsNeverUniform;
   
   let TSFlags{62} = GWS;
+
+  let TSFlags{63} = IsSWMMAC;
 
   let SchedRW = [Write32Bit];
 

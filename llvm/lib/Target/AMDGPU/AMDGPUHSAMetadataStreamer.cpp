@@ -532,7 +532,8 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto CodeObjectVersion =
+      AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
@@ -677,6 +678,16 @@ void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
 
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV6
+//===----------------------------------------------------------------------===//
+
+void MetadataStreamerMsgPackV6::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
+  getRootMetadata("amdhsa.version") = Version;
+}
 
 } // end namespace HSAMD
 } // end namespace AMDGPU

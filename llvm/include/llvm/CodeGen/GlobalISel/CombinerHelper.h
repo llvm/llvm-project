@@ -20,8 +20,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
 #include <functional>
 
@@ -814,6 +814,12 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Combine ands,
+  bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine ors,
+  bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -919,6 +925,12 @@ private:
                              bool AllowUndefs);
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
+
+  /// Fold (icmp Pred1 V1, C1) && (icmp Pred2 V2, C2)
+  /// or   (icmp Pred1 V1, C1) || (icmp Pred2 V2, C2)
+  /// into a single comparison using range-based reasoning.
+  bool tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
+                                      BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

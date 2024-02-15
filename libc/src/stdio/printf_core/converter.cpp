@@ -58,6 +58,8 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'o':
   case 'x':
   case 'X':
+  case 'b':
+  case 'B':
     return convert_int(writer, to_conv);
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
   case 'f':
