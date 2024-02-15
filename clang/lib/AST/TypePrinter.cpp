@@ -1635,6 +1635,13 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (Policy.ForcePrintingAsElaboratedType) {
+      if (Qualifier)
+        OS << "class ";
+      else
+        OS << "struct ";
+      return printBefore(T->getNamedType(), OS);
+    }
     if (Qualifier)
       Qualifier->print(OS, Policy);
   }
