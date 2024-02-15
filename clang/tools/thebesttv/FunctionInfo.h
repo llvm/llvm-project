@@ -57,6 +57,7 @@ struct Graph {
     }
 };
 
+/*
 struct DfsTraverse {
     DfsTraverse(const Graph &G) : G(G) {}
 
@@ -109,6 +110,7 @@ struct DfsTraverse {
         }
     }
 };
+*/
 
 struct BlockGraph {
     const CFG *cfg;
