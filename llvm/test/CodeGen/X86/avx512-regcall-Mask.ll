@@ -138,6 +138,7 @@ define dso_local i64 @caller_argv64i1() #0 {
 ; WIN64-NEXT:    movq %rax, %rcx
 ; WIN64-NEXT:    movq %rax, %rdx
 ; WIN64-NEXT:    movq %rax, %rdi
+; WIN64-NEXT:    movq %rax, %rsi
 ; WIN64-NEXT:    movq %rax, %r8
 ; WIN64-NEXT:    movq %rax, %r9
 ; WIN64-NEXT:    movq %rax, %r10
@@ -145,7 +146,6 @@ define dso_local i64 @caller_argv64i1() #0 {
 ; WIN64-NEXT:    movq %rax, %r12
 ; WIN64-NEXT:    movq %rax, %r14
 ; WIN64-NEXT:    movq %rax, %r15
-; WIN64-NEXT:    movq %rax, %rsi
 ; WIN64-NEXT:    callq test_argv64i1
 ; WIN64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; WIN64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
@@ -178,13 +178,13 @@ define dso_local i64 @caller_argv64i1() #0 {
 ; LINUXOSX64-NEXT:    movq %rax, %rcx
 ; LINUXOSX64-NEXT:    movq %rax, %rdx
 ; LINUXOSX64-NEXT:    movq %rax, %rdi
+; LINUXOSX64-NEXT:    movq %rax, %rsi
 ; LINUXOSX64-NEXT:    movq %rax, %r8
 ; LINUXOSX64-NEXT:    movq %rax, %r9
 ; LINUXOSX64-NEXT:    movq %rax, %r12
 ; LINUXOSX64-NEXT:    movq %rax, %r13
 ; LINUXOSX64-NEXT:    movq %rax, %r14
 ; LINUXOSX64-NEXT:    movq %rax, %r15
-; LINUXOSX64-NEXT:    movq %rax, %rsi
 ; LINUXOSX64-NEXT:    pushq %rax
 ; LINUXOSX64-NEXT:    .cfi_adjust_cfa_offset 8
 ; LINUXOSX64-NEXT:    pushq %rax

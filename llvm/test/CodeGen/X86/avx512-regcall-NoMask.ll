@@ -987,8 +987,6 @@ define dso_local x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rbp
 ; WIN64-NEXT:    pushq %rbx
-; WIN64-NEXT:    # kill: def $edx killed $edx def $rdx
-; WIN64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; WIN64-NEXT:    # kill: def $r15d killed $r15d def $r15
 ; WIN64-NEXT:    # kill: def $r14d killed $r14d def $r14
 ; WIN64-NEXT:    # kill: def $r12d killed $r12d def $r12
@@ -996,7 +994,9 @@ define dso_local x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %
 ; WIN64-NEXT:    # kill: def $r10d killed $r10d def $r10
 ; WIN64-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; WIN64-NEXT:    # kill: def $r8d killed $r8d def $r8
+; WIN64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; WIN64-NEXT:    # kill: def $edi killed $edi def $rdi
+; WIN64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; WIN64-NEXT:    leal (%rdx,%rdi), %ebx
 ; WIN64-NEXT:    movl %edx, %ebp
 ; WIN64-NEXT:    subl %edi, %ebp
@@ -1032,14 +1032,14 @@ define dso_local x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %
 ;
 ; LINUXOSX64-LABEL: testi32_inp:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    # kill: def $edx killed $edx def $rdx
-; LINUXOSX64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; LINUXOSX64-NEXT:    # kill: def $r14d killed $r14d def $r14
 ; LINUXOSX64-NEXT:    # kill: def $r13d killed $r13d def $r13
 ; LINUXOSX64-NEXT:    # kill: def $r12d killed $r12d def $r12
 ; LINUXOSX64-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; LINUXOSX64-NEXT:    # kill: def $r8d killed $r8d def $r8
+; LINUXOSX64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; LINUXOSX64-NEXT:    # kill: def $edi killed $edi def $rdi
+; LINUXOSX64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; LINUXOSX64-NEXT:    leal (%rdx,%rdi), %r10d
 ; LINUXOSX64-NEXT:    movl %edx, %r11d
 ; LINUXOSX64-NEXT:    subl %edi, %r11d

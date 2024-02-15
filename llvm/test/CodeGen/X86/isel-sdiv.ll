@@ -22,8 +22,8 @@ define i8 @test_sdiv_i8(i8 %arg1, i8 %arg2) nounwind {
 ; GISEL-X86-LABEL: test_sdiv_i8:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    cbtw
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    cbtw
 ; GISEL-X86-NEXT:    idivb %cl
 ; GISEL-X86-NEXT:    retl
   %ret = sdiv i8 %arg1, %arg2

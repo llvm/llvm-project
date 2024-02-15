@@ -37,7 +37,6 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    .cfi_offset %r14, -32
 ; LINUX-NEXT:    .cfi_offset %r15, -24
 ; LINUX-NEXT:    .cfi_offset %rbp, -16
-; LINUX-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; LINUX-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -46,6 +45,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; LINUX-NEXT:    movq %r9, %r14
 ; LINUX-NEXT:    movq %r8, %r15
 ; LINUX-NEXT:    movq %rcx, %r12
@@ -82,7 +82,6 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    movq %r13, %rdx
 ; LINUX-NEXT:    movq %r12, %rcx
 ; LINUX-NEXT:    movq %r15, %r8
-; LINUX-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; LINUX-NEXT:    movq %r14, %r9
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
@@ -92,6 +91,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; LINUX-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; LINUX-NEXT:    addq $360, %rsp # imm = 0x168
 ; LINUX-NEXT:    .cfi_def_cfa_offset 56
 ; LINUX-NEXT:    popq %rbx
@@ -130,7 +130,6 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    .cfi_offset %r14, -32
 ; LINUX-X32-NEXT:    .cfi_offset %r15, -24
 ; LINUX-X32-NEXT:    .cfi_offset %rbp, -16
-; LINUX-X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -139,6 +138,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; LINUX-X32-NEXT:    movq %r9, %r14
 ; LINUX-X32-NEXT:    movq %r8, %r15
 ; LINUX-X32-NEXT:    movq %rcx, %r12
@@ -175,7 +175,6 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    movq %r13, %rdx
 ; LINUX-X32-NEXT:    movq %r12, %rcx
 ; LINUX-X32-NEXT:    movq %r15, %r8
-; LINUX-X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; LINUX-X32-NEXT:    movq %r14, %r9
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
@@ -185,6 +184,7 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm6 # 16-byte Reload
 ; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
+; LINUX-X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; LINUX-X32-NEXT:    addl $344, %esp # imm = 0x158
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
 ; LINUX-X32-NEXT:    popq %rbx

@@ -441,16 +441,15 @@ define <2 x i64> @udivrem_identity_const(<2 x i1> %c, <2 x i64> %x) {
 ; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm1, %rax
 ; CHECK-X64-V4-NEXT:    xorl %edx, %edx
 ; CHECK-X64-V4-NEXT:    divq %rcx
-; CHECK-X64-V4-NEXT:    movq %rax, %rcx
-; CHECK-X64-V4-NEXT:    movq %rdx, %rsi
-; CHECK-X64-V4-NEXT:    vmovq %xmm0, %rdi
+; CHECK-X64-V4-NEXT:    movq %rdx, %rcx
+; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm2
+; CHECK-X64-V4-NEXT:    vmovq %xmm0, %rsi
 ; CHECK-X64-V4-NEXT:    vmovq %xmm1, %rax
 ; CHECK-X64-V4-NEXT:    xorl %edx, %edx
-; CHECK-X64-V4-NEXT:    divq %rdi
-; CHECK-X64-V4-NEXT:    vmovq %rcx, %xmm0
-; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm1
-; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; CHECK-X64-V4-NEXT:    vmovq %rsi, %xmm1
+; CHECK-X64-V4-NEXT:    divq %rsi
+; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm0
+; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-X64-V4-NEXT:    vmovq %rcx, %xmm1
 ; CHECK-X64-V4-NEXT:    vmovq %rdx, %xmm2
 ; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; CHECK-X64-V4-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
@@ -498,16 +497,15 @@ define <2 x i64> @sdivrem_identity_const(<2 x i1> %c, <2 x i64> %x) {
 ; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm1, %rax
 ; CHECK-X64-V4-NEXT:    cqto
 ; CHECK-X64-V4-NEXT:    idivq %rcx
-; CHECK-X64-V4-NEXT:    movq %rax, %rcx
-; CHECK-X64-V4-NEXT:    movq %rdx, %rsi
-; CHECK-X64-V4-NEXT:    vmovq %xmm0, %rdi
+; CHECK-X64-V4-NEXT:    movq %rdx, %rcx
+; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm2
+; CHECK-X64-V4-NEXT:    vmovq %xmm0, %rsi
 ; CHECK-X64-V4-NEXT:    vmovq %xmm1, %rax
 ; CHECK-X64-V4-NEXT:    cqto
-; CHECK-X64-V4-NEXT:    idivq %rdi
-; CHECK-X64-V4-NEXT:    vmovq %rcx, %xmm0
-; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm1
-; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; CHECK-X64-V4-NEXT:    vmovq %rsi, %xmm1
+; CHECK-X64-V4-NEXT:    idivq %rsi
+; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm0
+; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-X64-V4-NEXT:    vmovq %rcx, %xmm1
 ; CHECK-X64-V4-NEXT:    vmovq %rdx, %xmm2
 ; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; CHECK-X64-V4-NEXT:    vpaddq %xmm1, %xmm0, %xmm0

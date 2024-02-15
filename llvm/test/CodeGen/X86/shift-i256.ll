@@ -11,7 +11,7 @@ define void @shift1(i256 %x, i256 %a, ptr nocapture %r) nounwind readnone {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $92, %esp
+; CHECK-NEXT:    subl $100, %esp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -42,64 +42,71 @@ define void @shift1(i256 %x, i256 %a, ptr nocapture %r) nounwind readnone {
 ; CHECK-NEXT:    andb $7, %al
 ; CHECK-NEXT:    shrb $3, %cl
 ; CHECK-NEXT:    movzbl %cl, %ebp
-; CHECK-NEXT:    movl 32(%esp,%ebp), %esi
-; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 40(%esp,%ebp), %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl %ecx, %edx
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shrl %cl, %esi
+; CHECK-NEXT:    shrl %cl, %edx
+; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    notb %dl
-; CHECK-NEXT:    movl 36(%esp,%ebp), %ecx
-; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    leal (%ecx,%ecx), %edi
+; CHECK-NEXT:    movl 44(%esp,%ebp), %ecx
+; CHECK-NEXT:    leal (%ecx,%ecx), %esi
+; CHECK-NEXT:    movl %ecx, %ebx
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl 40(%esp,%ebp), %esi
+; CHECK-NEXT:    shll %cl, %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 48(%esp,%ebp), %esi
+; CHECK-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl %cl, %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 52(%esp,%ebp), %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    leal (%ecx,%ecx), %esi
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    shll %cl, %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 56(%esp,%ebp), %esi
 ; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    movl 44(%esp,%ebp), %ecx
-; CHECK-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; CHECK-NEXT:    leal (%ecx,%ecx), %edi
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl 48(%esp,%ebp), %ebx
-; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shrl %cl, %ebx
-; CHECK-NEXT:    movl 52(%esp,%ebp), %edi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 60(%esp,%ebp), %edi
 ; CHECK-NEXT:    leal (%edi,%edi), %esi
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    orl %ebx, %esi
 ; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    shrdl %cl, %edx, %ebx
+; CHECK-NEXT:    movl %ebx, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; CHECK-NEXT:    shrdl %cl, %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; CHECK-NEXT:    shrdl %cl, %edx, (%esp) # 4-byte Folded Spill
-; CHECK-NEXT:    movl 28(%esp,%ebp), %edx
-; CHECK-NEXT:    movl 56(%esp,%ebp), %ebx
+; CHECK-NEXT:    movl 64(%esp,%ebp), %ebx
 ; CHECK-NEXT:    shrdl %cl, %ebx, %edi
+; CHECK-NEXT:    movl 36(%esp,%ebp), %edx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; CHECK-NEXT:    shrdl %cl, %ebp, %edx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; CHECK-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    orl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    sarl %cl, %ebx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %ebx, 28(%eax)
 ; CHECK-NEXT:    movl %edi, 24(%eax)
-; CHECK-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; CHECK-NEXT:    movl %ecx, 16(%eax)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 16(%eax)
+; CHECK-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; CHECK-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-NEXT:    movl %edx, (%eax)
 ; CHECK-NEXT:    movl %esi, 20(%eax)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; CHECK-NEXT:    movl %ecx, 12(%eax)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; CHECK-NEXT:    movl %ecx, 4(%eax)
-; CHECK-NEXT:    addl $92, %esp
+; CHECK-NEXT:    movl %ebp, 4(%eax)
+; CHECK-NEXT:    addl $100, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
@@ -202,8 +209,8 @@ define i256 @shift2(i256 %c) nounwind
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $92, %esp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    subl $100, %esp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -220,68 +227,75 @@ define i256 @shift2(i256 %c) nounwind
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb %al, %ch
-; CHECK-NEXT:    andb $7, %ch
-; CHECK-NEXT:    shrb $3, %al
-; CHECK-NEXT:    negb %al
-; CHECK-NEXT:    movsbl %al, %eax
-; CHECK-NEXT:    movl 68(%esp,%eax), %edx
-; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    andb $7, %al
+; CHECK-NEXT:    shrb $3, %cl
+; CHECK-NEXT:    negb %cl
+; CHECK-NEXT:    movsbl %cl, %ebp
+; CHECK-NEXT:    movl 76(%esp,%ebp), %edx
+; CHECK-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shll %cl, %edx
-; CHECK-NEXT:    notb %cl
-; CHECK-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; CHECK-NEXT:    movl 64(%esp,%eax), %ebp
-; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    shrl %ebp
-; CHECK-NEXT:    shrl %cl, %ebp
-; CHECK-NEXT:    orl %edx, %ebp
-; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl 76(%esp,%eax), %edx
 ; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shll %cl, %edx
-; CHECK-NEXT:    movl 72(%esp,%eax), %ebx
-; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    shrl %ebx
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
-; CHECK-NEXT:    shrl %cl, %ebx
-; CHECK-NEXT:    orl %edx, %ebx
-; CHECK-NEXT:    movl 84(%esp,%eax), %esi
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    notb %dl
+; CHECK-NEXT:    movl 72(%esp,%ebp), %esi
 ; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    shrl %esi
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    shrl %cl, %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 84(%esp,%ebp), %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    movl 80(%esp,%eax), %edi
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    shrl %edx
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
-; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 80(%esp,%ebp), %ecx
+; CHECK-NEXT:    movl %ecx, %ebx
+; CHECK-NEXT:    movl %ecx, %esi
+; CHECK-NEXT:    shrl %ebx
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    shrl %cl, %ebx
+; CHECK-NEXT:    movl 92(%esp,%ebp), %edi
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll %cl, %edi
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl 88(%esp,%ebp), %edi
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    shrl %edi
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    shldl %cl, %edx, %esi
+; CHECK-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; CHECK-NEXT:    shldl %cl, %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    movl 96(%esp,%ebp), %edx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; CHECK-NEXT:    shldl %cl, %esi, %edx
+; CHECK-NEXT:    movl 68(%esp,%ebp), %esi
+; CHECK-NEXT:    movl %esi, %ebp
+; CHECK-NEXT:    shll %cl, %ebp
 ; CHECK-NEXT:    shldl %cl, %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; CHECK-NEXT:    shldl %cl, %esi, %edi
-; CHECK-NEXT:    movl 60(%esp,%eax), %ebp
-; CHECK-NEXT:    movl 88(%esp,%eax), %esi
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    shldl %cl, %eax, %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %esi, 28(%eax)
-; CHECK-NEXT:    movl %edi, 20(%eax)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; CHECK-NEXT:    movl %esi, 12(%eax)
-; CHECK-NEXT:    movl %ebp, %esi
-; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    shldl %cl, %ebp, %edi
-; CHECK-NEXT:    movl %edi, 4(%eax)
-; CHECK-NEXT:    movl %esi, (%eax)
-; CHECK-NEXT:    movl %edx, 24(%eax)
-; CHECK-NEXT:    movl %ebx, 16(%eax)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; CHECK-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
+; CHECK-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %edx, 28(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; CHECK-NEXT:    movl %edx, 20(%eax)
+; CHECK-NEXT:    movl (%esp), %edx # 4-byte Reload
+; CHECK-NEXT:    movl %edx, 12(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; CHECK-NEXT:    movl %edx, 4(%eax)
+; CHECK-NEXT:    movl %ebp, (%eax)
+; CHECK-NEXT:    movl %edi, 24(%eax)
+; CHECK-NEXT:    movl %ebx, 16(%eax)
 ; CHECK-NEXT:    movl %ecx, 8(%eax)
-; CHECK-NEXT:    addl $92, %esp
+; CHECK-NEXT:    addl $100, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
