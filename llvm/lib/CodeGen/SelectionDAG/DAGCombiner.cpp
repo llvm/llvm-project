@@ -12971,12 +12971,12 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   SDValue BasePtr = LN0->getBasePtr();
   for (unsigned Idx = 0; Idx < NumSplits; Idx++) {
     const unsigned Offset = Idx * Stride;
-    const Align Align = commonAlignment(LN0->getAlign(), Offset);
 
-    SDValue SplitLoad = DAG.getExtLoad(
-        ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(), BasePtr,
-        LN0->getPointerInfo().getWithOffset(Offset), SplitSrcVT, Align,
-        LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
+    SDValue SplitLoad =
+        DAG.getExtLoad(ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(),
+                       BasePtr, LN0->getPointerInfo().getWithOffset(Offset),
+                       SplitSrcVT, LN0->getOriginalAlign(),
+                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
 
     BasePtr = DAG.getMemBasePlusOffset(BasePtr, TypeSize::getFixed(Stride), DL);
 
