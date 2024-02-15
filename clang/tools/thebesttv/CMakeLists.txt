@@ -8,6 +8,7 @@ add_clang_tool(thebesttv
 
 # add debug
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O0")
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 target_link_libraries(thebesttv
     PRIVATE
