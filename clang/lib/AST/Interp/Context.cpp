@@ -44,7 +44,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
-  auto Res = C.interpretExpr(E);
+  auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
   if (Res.isInvalid()) {
     Stk.clear();
@@ -58,16 +58,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   Stk.clear();
 #endif
 
-  // Implicit lvalue-to-rvalue conversion.
-  if (E->isGLValue()) {
-    std::optional<APValue> RValueResult = Res.toRValue();
-    if (!RValueResult) {
-      return false;
-    }
-    Result = *RValueResult;
-  } else {
-    Result = Res.toAPValue();
-  }
+  Result = Res.toAPValue();
 
   return true;
 }
@@ -120,7 +111,8 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
         !Res.checkFullyInitialized(C.getState()))
       return false;
 
-    // lvalue-to-rvalue conversion.
+    // lvalue-to-rvalue conversion. We do this manually here so we can
+    // examine the result above before converting and returning it.
     std::optional<APValue> RValueResult = Res.toRValue();
     if (!RValueResult)
       return false;

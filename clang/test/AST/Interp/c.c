@@ -125,3 +125,16 @@ struct XY { int before; struct XX xx, *xp; float* after; } xy[] = {
   0,              // all-warning {{initializer overrides prior initialization of this subobject}}
   &xy[2].xx.a, &xy[2].xx, &global_float
 };
+
+void t14(void) {
+  int array[256] = { 0 }; // expected-note {{array 'array' declared here}} \
+                          // pedantic-expected-note {{array 'array' declared here}} \
+                          // ref-note {{array 'array' declared here}} \
+                          // pedantic-ref-note {{array 'array' declared here}}
+  const char b = -1;
+  int val = array[b]; // expected-warning {{array index -1 is before the beginning of the array}} \
+                      // pedantic-expected-warning {{array index -1 is before the beginning of the array}} \
+                      // ref-warning {{array index -1 is before the beginning of the array}} \
+                      // pedantic-ref-warning {{array index -1 is before the beginning of the array}}
+
+}
