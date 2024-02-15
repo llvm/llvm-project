@@ -480,7 +480,8 @@ struct TestFlattenVectorTransferPatterns
   }
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateFlattenVectorTransferPatterns(patterns);
+    constexpr unsigned targetVectorBitwidth = 512;
+    populateFlattenVectorTransferPatterns(patterns, targetVectorBitwidth);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
