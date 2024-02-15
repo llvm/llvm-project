@@ -1343,9 +1343,6 @@ New features
   of static analysis tools, such as the Clang Static Analyzer.
   `Documentation <https://clang.llvm.org/docs/AttributeReference.html#suppress>`__.
 
-- Added support for the ``cleanup`` attribute.
-  `Documentation <https://clang.llvm.org/docs/AttributeReference.html#cleanup>`__.
-
 - Support "Deducing this" (P0847R7). (Worked out of the box)
   (`af4751738db8 <https://github.com/llvm/llvm-project/commit/af4751738db89a142a8880c782d12d4201b222a8>`__)
 
