@@ -139,30 +139,17 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
 
   bool Changed = false;
 
-  // In scenarios where a Switch Instruction has an unreachable default
-  // successor, substituting the unreachable instruction with an exit
-  // instruction introduces an additional block in the Control Flow Graph
-  // (CFG), thereby negatively impacting performance. To mitigate this
-  // undesirable impact, we proactively refrain from processing blocks that
-  // serve as successors to the unreachable default in the switch instruction.
-  // It is noteworthy that these blocks are subsequently optimized out by other
-  // passes in the optimization pipeline.
-
-  SmallPtrSet<const BasicBlock *, 4> BlocksToAvoid;
-
-  for (auto &BB : F)
-    for (auto &I : BB) {
-      if (auto SI = dyn_cast<SwitchInst>(&I)) {
-        const auto DefaultSuccessorBlock = SI->getDefaultDest();
-        if (DefaultSuccessorBlock->size() == 1 &&
-            dyn_cast<UnreachableInst>(DefaultSuccessorBlock->begin())) {
-          BlocksToAvoid.insert(DefaultSuccessorBlock);
-        }
-      }
-    }
+  // In scenarios where a BasicBlock contains only one unreachable instruction,
+  // the joint action of nvptx-isel and unreachable-mbb-elimination
+  // effectively optimizes the BasicBlock out. However, adding an exit
+  // command to such a BasicBlock, as suggested by this pass, preserves it
+  // within the Control Flow Graph (CFG), thereby negatively impacting size and
+  // performance. To counteract this undesirable consequence, we choose to
+  // refrain from processing BasicBlocks with just one unreachable instruction
+  // in this pass.
 
   for (auto &BB : F) {
-    if (BlocksToAvoid.find(&BB) != BlocksToAvoid.end())
+    if ((BB.size() == 1) && (isa<UnreachableInst>(BB.front())))
       continue;
     for (auto &I : BB) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
