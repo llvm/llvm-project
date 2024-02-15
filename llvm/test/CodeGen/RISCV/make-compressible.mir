@@ -3,6 +3,10 @@
 # RUN:   -run-pass=riscv-make-compressible | FileCheck --check-prefix=RV32 %s
 # RUN: llc -o - %s -mtriple=riscv64 -mattr=+c,+f,+d -simplify-mir \
 # RUN:   -run-pass=riscv-make-compressible | FileCheck --check-prefix=RV64 %s
+# RUN: llc -o - %s -mtriple=riscv32 -mattr=+zca,+zcf,+zcd -simplify-mir \
+# RUN:   -run-pass=riscv-make-compressible | FileCheck --check-prefix=RV32 %s
+# RUN: llc -o - %s -mtriple=riscv64 -mattr=+zca,+zcd -simplify-mir \
+# RUN:   -run-pass=riscv-make-compressible | FileCheck --check-prefix=RV64 %s
 --- |
 
   define void @store_common_value(ptr %a, ptr %b, ptr %c) #0 {
