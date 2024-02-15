@@ -574,6 +574,110 @@ static LogicalResult verifyReductionVarList(Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, printer and verifier for CopyPrivateVarList
+//===----------------------------------------------------------------------===//
+
+/// copyprivate-entry-list ::= copyprivate-entry
+///                          | copyprivate-entry-list `,` copyprivate-entry
+/// copyprivate-entry ::= ssa-id `->` symbol-ref `:` type
+static ParseResult parseCopyPrivateVarList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+    SmallVectorImpl<Type> &types, ArrayAttr &copyPrivateSymbols) {
+  SmallVector<SymbolRefAttr> copyPrivateFuncsVec;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseOperand(operands.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseAttribute(copyPrivateFuncsVec.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  SmallVector<Attribute> copyPrivateFuncs(copyPrivateFuncsVec.begin(),
+                                          copyPrivateFuncsVec.end());
+  copyPrivateSymbols = ArrayAttr::get(parser.getContext(), copyPrivateFuncs);
+  return success();
+}
+
+/// Print CopyPrivate clause
+static void printCopyPrivateVarList(OpAsmPrinter &p, Operation *op,
+                                    OperandRange copyPrivateVars,
+                                    TypeRange copyPrivateTypes,
+                                    std::optional<ArrayAttr> copyPrivateFuncs) {
+  if (!copyPrivateFuncs.has_value())
+    return;
+  llvm::interleaveComma(
+      llvm::zip(copyPrivateVars, *copyPrivateFuncs, copyPrivateTypes), p,
+      [&](const auto &args) {
+        p << std::get<0>(args) << " -> " << std::get<1>(args) << " : "
+          << std::get<2>(args);
+      });
+}
+
+/// Verifies CopyPrivate Clause
+static LogicalResult
+verifyCopyPrivateVarList(Operation *op, OperandRange copyPrivateVars,
+                         std::optional<ArrayAttr> copyPrivateFuncs) {
+  size_t copyPrivateFuncsSize =
+      copyPrivateFuncs.has_value() ? copyPrivateFuncs->size() : 0;
+  if (copyPrivateFuncsSize != copyPrivateVars.size())
+    return op->emitOpError() << "inconsistent number of copyPrivate vars (= "
+                             << copyPrivateVars.size()
+                             << ") and functions (= " << copyPrivateFuncsSize
+                             << "), both must be equal";
+  if (!copyPrivateFuncs.has_value())
+    return success();
+
+  for (auto copyPrivateVarAndFunc :
+       llvm::zip(copyPrivateVars, *copyPrivateFuncs)) {
+    auto symbolRef =
+        llvm::cast<SymbolRefAttr>(std::get<1>(copyPrivateVarAndFunc));
+    std::optional<std::variant<mlir::func::FuncOp, mlir::LLVM::LLVMFuncOp>>
+        funcOp;
+    if (mlir::func::FuncOp mlirFuncOp =
+            SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(op,
+                                                                     symbolRef))
+      funcOp = mlirFuncOp;
+    else if (mlir::LLVM::LLVMFuncOp llvmFuncOp =
+                 SymbolTable::lookupNearestSymbolFrom<mlir::LLVM::LLVMFuncOp>(
+                     op, symbolRef))
+      funcOp = llvmFuncOp;
+
+    auto getNumArguments = [&] {
+      return std::visit([](auto &f) { return f.getNumArguments(); }, *funcOp);
+    };
+
+    auto getArgumentType = [&](unsigned i) {
+      return std::visit([i](auto &f) { return f.getArgumentTypes()[i]; },
+                        *funcOp);
+    };
+
+    if (!funcOp)
+      return op->emitOpError() << "expected symbol reference " << symbolRef
+                               << " to point to a copy function";
+
+    if (getNumArguments() != 2)
+      return op->emitOpError()
+             << "expected copy function " << symbolRef << " to have 2 operands";
+
+    Type argTy = getArgumentType(0);
+    if (argTy != getArgumentType(1))
+      return op->emitOpError() << "expected copy function " << symbolRef
+                               << " arguments to have the same type";
+
+    Type varType = std::get<0>(copyPrivateVarAndFunc).getType();
+    if (argTy != varType)
+      return op->emitOpError()
+             << "expected copy function arguments' type (" << argTy
+             << ") to be the same as copyprivate variable's type (" << varType
+             << ")";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser, printer and verifier for DependVarList
 //===----------------------------------------------------------------------===//
 
@@ -1152,7 +1256,8 @@ LogicalResult SingleOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
-  return success();
+  return verifyCopyPrivateVarList(*this, getCopyprivateVars(),
+                                  getCopyprivateFuncs());
 }
 
 //===----------------------------------------------------------------------===//
