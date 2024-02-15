@@ -68,11 +68,11 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !llvm.module.flags = !{!18, !19, !20}
 
 !0 = !{!"versions- cm3: d5.10.0 llvm: 9.0"}
-!1 = distinct !DICompileUnit(language: DW_LANG_Modula3, file: !2, producer: "cm3", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = distinct !DICompileUnit(language: DW_LANG_Modula3, file: !2, producer: "cm3", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3)
 !2 = !DIFile(filename: "Main.m3", directory: "/home/cm3/settest/src")
 !3 = !{!4}
 !4 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum", scope: !5, file: !2, line: 11, size: 8, align: 8, elements: !9)
-!5 = distinct !DISubprogram(name: "Test", linkageName: "Main__Test", scope: !2, file: !2, line: 11, type: !6, scopeLine: 11, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !3)
+!5 = distinct !DISubprogram(name: "Test", linkageName: "Main__Test", scope: !2, file: !2, line: 11, type: !6, scopeLine: 11, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !8)
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{}

@@ -162,7 +162,7 @@ public:
   bool insert(const value_type &X) {
     if constexpr (canBeSmall())
       if (isSmall()) {
-        if (llvm::find(vector_, X) == vector_.end()) {
+        if (!llvm::is_contained(vector_, X)) {
           vector_.push_back(X);
           if (vector_.size() > N)
             makeBig();

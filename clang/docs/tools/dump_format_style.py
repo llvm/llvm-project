@@ -308,6 +308,7 @@ class OptionsReader:
         enum = None
         nested_struct = None
         version = None
+        deprecated = False
 
         for line in self.header:
             self.lineno += 1
@@ -327,6 +328,8 @@ class OptionsReader:
                     match = re.match(r"/// \\version\s*(?P<version>[0-9.]+)*", line)
                     if match:
                         version = match.group("version")
+                elif line.startswith("/// @deprecated"):
+                    deprecated = True
                 elif line.startswith("///"):
                     comment += self.__clean_comment_line(line)
                 elif line.startswith("enum"):
@@ -345,6 +348,9 @@ class OptionsReader:
                     field_type, field_name = re.match(
                         r"([<>:\w(,\s)]+)\s+(\w+);", line
                     ).groups()
+                    if deprecated:
+                        field_type = "deprecated"
+                        deprecated = False
 
                     if not version:
                         self.__warning(f"missing version for {field_name}", line)
@@ -456,6 +462,7 @@ class OptionsReader:
                 "std::vector<IncludeCategory>",
                 "std::vector<RawStringFormat>",
                 "std::optional<unsigned>",
+                "deprecated",
             ]:
                 if option.type in enums:
                     option.enum = enums[option.type]
@@ -474,7 +481,7 @@ with open(INCLUDE_STYLE_FILE) as f:
 opts = sorted(opts, key=lambda x: x.name)
 options_text = "\n\n".join(map(str, opts))
 
-with open(DOC_FILE) as f:
+with open(DOC_FILE, encoding="utf-8") as f:
     contents = f.read()
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)

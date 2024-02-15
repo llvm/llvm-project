@@ -324,6 +324,7 @@ public:
 class ObjCStubsSection final : public SyntheticSection {
 public:
   ObjCStubsSection();
+  void initialize();
   void addEntry(Symbol *sym);
   uint64_t getSize() const override;
   bool isNeeded() const override { return !symbols.empty(); }
@@ -332,11 +333,13 @@ public:
   void setUp();
 
   static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static bool isObjCStubSymbol(Symbol *sym);
+  static StringRef getMethname(Symbol *sym);
 
 private:
   std::vector<Defined *> symbols;
-  std::vector<uint32_t> offsets;
-  int objcMsgSendGotIndex = 0;
+  llvm::DenseMap<llvm::CachedHashStringRef, InputSection *> methnameToSelref;
+  Symbol *objcMsgSend = nullptr;
 };
 
 // Note that this section may also be targeted by non-lazy bindings. In
@@ -792,7 +795,6 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   ObjCStubsSection *objcStubs = nullptr;
-  ConcatInputSection *objcSelrefs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;

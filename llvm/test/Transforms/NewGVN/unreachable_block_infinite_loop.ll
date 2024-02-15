@@ -17,13 +17,13 @@ entry:
   br label %bb0
 
 bb1:
-  %ptr1 = ptrtoint i32* %ptr2 to i64
-  %ptr2 = inttoptr i64 %ptr1 to i32*
+  %ptr1 = ptrtoint ptr %ptr2 to i64
+  %ptr2 = inttoptr i64 %ptr1 to ptr
   br i1 undef, label %bb0, label %bb1
 
 bb0:
-  %phi = phi i32* [ undef, %entry ], [ %ptr2, %bb1 ]
-  %load = load i32, i32* %phi
+  %phi = phi ptr [ undef, %entry ], [ %ptr2, %bb1 ]
+  %load = load i32, ptr %phi
   ret i32 %load
 }
 
@@ -32,12 +32,12 @@ entry:
   br label %bb0
 
 bb1:
-  %ptr1 = getelementptr i32, i32* %ptr2, i32 0
-  %ptr2 = getelementptr i32, i32* %ptr1, i32 0
+  %ptr1 = getelementptr i32, ptr %ptr2, i32 0
+  %ptr2 = getelementptr i32, ptr %ptr1, i32 0
   br i1 undef, label %bb0, label %bb1
 
 bb0:
-  %phi = phi i32* [ undef, %entry ], [ %ptr2, %bb1 ]
-  %load = load i32, i32* %phi
+  %phi = phi ptr [ undef, %entry ], [ %ptr2, %bb1 ]
+  %load = load i32, ptr %phi
   ret i32 %load
 }

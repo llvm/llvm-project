@@ -47,10 +47,10 @@ public:
   StringRef getPassName() const override { return "RISC-V Fold Masks"; }
 
 private:
-  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef);
-  bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef);
+  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef) const;
+  bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef) const;
 
-  bool isAllOnesMask(MachineInstr *MaskDef);
+  bool isAllOnesMask(MachineInstr *MaskDef) const;
 };
 
 } // namespace
@@ -59,7 +59,7 @@ char RISCVFoldMasks::ID = 0;
 
 INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
 
-bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
+bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) const {
   if (!MaskDef)
     return false;
   assert(MaskDef->isCopy() && MaskDef->getOperand(0).getReg() == RISCV::V0);
@@ -89,7 +89,8 @@ bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskDef) {
 
 // Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
 // (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
+bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI,
+                                        MachineInstr *V0Def) const {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
     NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                      \
@@ -133,7 +134,7 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
 }
 
 bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
-                                       MachineInstr *MaskDef) {
+                                       MachineInstr *MaskDef) const {
   const RISCV::RISCVMaskedPseudoInfo *I =
       RISCV::getMaskedPseudoInfo(MI.getOpcode());
   if (!I)
@@ -146,7 +147,8 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
   // everything else.  See the comment on RISCVMaskedPseudo for details.
   const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-  const bool HasPolicyOp = RISCVII::hasVecPolicyOp(MCID.TSFlags);
+  [[maybe_unused]] const bool HasPolicyOp =
+      RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
 #ifndef NDEBUG
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());

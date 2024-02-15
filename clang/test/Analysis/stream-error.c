@@ -191,6 +191,48 @@ void error_fputs(void) {
   fputs("ABC", F); // expected-warning {{Stream might be already closed}}
 }
 
+void error_fprintf(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fprintf(F, "aaa");
+  if (Ret >= 0) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+    fprintf(F, "bbb");                         // no-warning
+  } else {
+    clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    fprintf(F, "bbb");              // expected-warning {{might be 'indeterminate'}}
+  }
+  fclose(F);
+  fprintf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+}
+
+void error_fscanf(int *A) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fscanf(F, "a%ib", A);
+  if (Ret >= 0) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+    fscanf(F, "bbb");                          // no-warning
+  } else {
+    if (ferror(F)) {
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      fscanf(F, "bbb");               // expected-warning {{might be 'indeterminate'}}
+    } else if (feof(F)) {
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      fscanf(F, "bbb");               // expected-warning {{is in EOF state}}
+      clang_analyzer_eval(feof(F));   // expected-warning {{TRUE}}
+    } else {
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      fscanf(F, "bbb");               // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+  fscanf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+}
+
 void error_ungetc() {
   FILE *F = tmpfile();
   if (!F)
@@ -205,6 +247,50 @@ void error_ungetc() {
   fputc('Y', F);                             // no-warning
   fclose(F);
   ungetc('A', F); // expected-warning {{Stream might be already closed}}
+}
+
+void error_getdelim(char *P, size_t Sz) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  ssize_t Ret = getdelim(&P, &Sz, '\t', F);
+  if (Ret >= 0) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(Ret == -1);            // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{TRUE}}
+    if (feof(F)) {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+      getdelim(&P, &Sz, '\n', F);     // expected-warning {{Read function called when stream is in EOF state}}
+    } else {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+      getdelim(&P, &Sz, '\n', F);     // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+  getdelim(&P, &Sz, '\n', F);         // expected-warning {{Stream might be already closed}}
+}
+
+void error_getline(char *P, size_t Sz) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  ssize_t Ret = getline(&P, &Sz, F);
+  if (Ret >= 0) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(Ret == -1);            // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{TRUE}}
+    if (feof(F)) {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+      getline(&P, &Sz, F);            // expected-warning {{Read function called when stream is in EOF state}}
+    } else {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+      getline(&P, &Sz, F);            // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+  getline(&P, &Sz, F);                // expected-warning {{Stream might be already closed}}
 }
 
 void write_after_eof_is_allowed(void) {
@@ -403,32 +489,6 @@ void error_ftello(void) {
   clang_analyzer_eval(feof(F));              // expected-warning {{FALSE}}
   clang_analyzer_eval(ferror(F));            // expected-warning {{TRUE}}
   fclose(F);
-}
-
-void error_fflush_after_fclose(void) {
-  FILE *F = tmpfile();
-  int Ret;
-  fflush(NULL);                      // no-warning
-  if (!F)
-    return;
-  if ((Ret = fflush(F)) != 0)
-    clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
-  fclose(F);
-  fflush(F);                         // expected-warning {{Stream might be already closed}}
-}
-
-void error_fflush_on_open_failed_stream(void) {
-  FILE *F = tmpfile();
-  if (!F) {
-    fflush(F); // no-warning
-    return;
-  }
-  fclose(F);
-}
-
-void error_fflush_on_unknown_stream(FILE *F) {
-  fflush(F);   // no-warning
-  fclose(F);   // no-warning
 }
 
 void error_fflush_on_non_null_stream_clear_error_states(void) {

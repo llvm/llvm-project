@@ -433,6 +433,20 @@ let Class = DecltypeType in {
   }]>;
 }
 
+let Class = PackIndexingType in {
+  def : Property<"pattern", QualType> {
+    let Read = [{ node->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ node->getIndexExpr() }];
+  }
+
+  def : Creator<[{
+    return ctx.getPackIndexingType(pattern, indexExpression);
+  }]>;
+}
+
+
 let Class = UnaryTransformType in {
   def : Property<"baseType", QualType> {
     let Read = [{ node->getBaseType() }];

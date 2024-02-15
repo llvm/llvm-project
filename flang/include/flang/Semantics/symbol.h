@@ -362,11 +362,10 @@ public:
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
-  bool CanBeAssumedShape() const {
+  bool IsAssumedShape() const {
     return isDummy() && shape_.CanBeAssumedShape();
   }
   bool CanBeDeferredShape() const { return shape_.CanBeDeferredShape(); }
-  bool IsAssumedSize() const { return isDummy() && shape_.CanBeAssumedSize(); }
   bool IsAssumedRank() const { return isDummy() && shape_.IsAssumedRank(); }
   std::optional<common::CUDADataAttr> cudaDataAttr() const {
     return cudaDataAttr_;
@@ -638,7 +637,9 @@ public:
   const SymbolVector &uses() const { return uses_; }
 
   // specific and derivedType indicate a specific procedure or derived type
-  // with the same name as this generic. Only one of them may be set.
+  // with the same name as this generic. Only one of them may be set in
+  // a scope that declares them, but both can be set during USE association
+  // when generics are combined.
   Symbol *specific() { return specific_; }
   const Symbol *specific() const { return specific_; }
   void set_specific(Symbol &specific);

@@ -10,9 +10,10 @@ program openacc_loop_validity
   type atype
     real(8), dimension(10) :: arr
     real(8) :: s
+    integer :: n
   end type atype
 
-  integer :: i, j, b, gang_size, vector_size, worker_size
+  integer :: i, j, k, b, gang_size, vector_size, worker_size
   integer, parameter :: N = 256
   integer, dimension(N) :: c
   logical, dimension(N) :: d, e
@@ -314,6 +315,43 @@ program openacc_loop_validity
   !$acc loop device_type(multicore) collapse(2)
   DO i = 1, n
     DO j = 1, n
+    END DO
+  END DO
+
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(2)
+  DO i = 1, n
+    DO j = 1, c(i)
+    END DO
+  END DO
+
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(2)
+  DO i = 1, n
+    DO j = 1, i
+    END DO
+  END DO
+
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(2)
+  DO i = 1, n
+    DO j = 1, ta(i)%n
+    END DO
+  END DO
+
+  !ERROR: Trip count must be computable and invariant
+  !$acc parallel loop collapse(2)
+  DO i = 1, n
+    DO j = 1, ta(i)%n
+    END DO
+  END DO
+
+  !ERROR: Trip count must be computable and invariant
+  !$acc loop collapse(3)
+  DO i = 1, n
+    DO j = 1, n
+      DO k = 1, i
+      END DO
     END DO
   END DO
 

@@ -2424,7 +2424,10 @@ only be a power of 2 between 64 and 65536.
 For types where LMUL!=1, ``__riscv_v_fixed_vlen`` needs to be scaled by the LMUL
 of the type before passing to the attribute.
 
-``vbool*_t`` types are not supported at this time.
+For ``vbool*_t`` types, ``__riscv_v_fixed_vlen`` needs to be divided by the
+number from the type name. For example, ``vbool8_t`` needs to use
+``__riscv_v_fixed_vlen`` / 8. If the resulting value is not a multiple of 8,
+the type is not supported for that value of ``__riscv_v_fixed_vlen``.
 }];
 }
 
@@ -2514,6 +2517,14 @@ function it instructs compiler to emit multiple function versions based on
 priority and target features availability. One of the versions is always
 ( implicitly or explicitly ) the ``default`` (fallback). Attribute strings can
 contain dependent features names joined by the "+" sign.
+
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -3621,7 +3632,7 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 
 def MSInheritanceDocs : Documentation {
   let Category = DocCatDecl;
-  let Heading = "__single_inhertiance, __multiple_inheritance, __virtual_inheritance";
+  let Heading = "__single_inheritance, __multiple_inheritance, __virtual_inheritance";
   let Content = [{
 This collection of keywords is enabled under ``-fms-extensions`` and controls
 the pointer-to-member representation used on ``*-*-win32`` targets.
@@ -5310,6 +5321,29 @@ Putting the attribute on a compound statement suppresses all warnings in scope:
     }
   }
 
+The attribute can also be placed on entire declarations of functions, classes,
+variables, member variables, and so on, to suppress warnings related
+to the declarations themselves. When used this way, the attribute additionally
+suppresses all warnings in the lexical scope of the declaration:
+
+.. code-block:: c++
+
+  class [[clang::suppress]] C {
+    int foo() {
+      int *x = nullptr;
+      ...
+      return *x;  // warnings suppressed in the entire class scope
+    }
+
+    int bar();
+  };
+
+  int C::bar() {
+    int *x = nullptr;
+    ...
+    return *x;  // warning NOT suppressed! - not lexically nested in 'class C{}'
+  }
+
 Some static analysis warnings are accompanied by one or more notes, and the
 line of code against which the warning is emitted isn't necessarily the best
 for suppression purposes. In such cases the tools are allowed to implement
@@ -5503,6 +5537,23 @@ experimental at this time.
   }];
 }
 
+def PreserveNoneDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 target, this attribute changes the calling convention of a function.
+The ``preserve_none`` calling convention tries to preserve as few general
+registers as possible. So all general registers are caller saved registers. It
+also uses more general registers to pass arguments. This attribute doesn't
+impact floating-point registers (XMMs/YMMs). Floating-point registers still
+follow the c calling convention.
+
+- Only RSP and RBP are preserved by callee.
+
+- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+  be used to pass function arguments.
+  }];
+}
+
 def DeprecatedDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -5554,6 +5605,25 @@ def LTOVisibilityDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 See :doc:`LTOVisibility`.
+  }];
+}
+
+def TypeVisibilityDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``type_visibility`` attribute allows the visibility of a type and its vague
+linkage objects (vtable, typeinfo, typeinfo name) to be controlled separately from
+the visibility of functions and data members of the type.
+
+For example, this can be used to give default visibility to the typeinfo and the vtable
+of a type while still keeping hidden visibility on its member functions and static data
+members.
+
+This attribute can only be applied to types and namespaces.
+
+If both ``visibility`` and ``type_visibility`` are applied to a type or a namespace, the
+visibility specified with the ``type_visibility`` attribute overrides the visibility
+provided with the regular ``visibility`` attribute.
   }];
 }
 
@@ -6861,30 +6931,73 @@ without changing modes.
   }];
 }
 
-def ArmSmeSharedZADocs : Documentation {
+def ArmInDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
-The ``__arm_shared_za`` keyword applies to prototyped function types and specifies
-that the function shares SME's matrix storage (ZA) with its caller.  This
-means that:
+The ``__arm_in`` keyword applies to prototyped function types and specifies
+that the function shares a given state S with its caller.  For ``__arm_in``, the
+function takes the state S as input and returns with the state S unchanged.
 
-* the function requires that the processor implements the Scalable Matrix
-  Extension (SME).
+The attribute takes string arguments to instruct the compiler which state
+is shared.  The supported states for S are:
 
-* the function enters with ZA in an active state.
+* ``"za"`` for Matrix Storage (requires SME)
 
-* the function returns with ZA in an active state.
+The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
+``__arm_preserves(S)`` are all mutually exclusive for the same state S.
   }];
 }
 
-def ArmSmePreservesZADocs : Documentation {
+def ArmOutDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
-The ``__arm_preserves_za`` keyword applies to prototyped function types and
-specifies that the function does not modify ZA state.
+The ``__arm_out`` keyword applies to prototyped function types and specifies
+that the function shares a given state S with its caller.  For ``__arm_out``,
+the function ignores the incoming state for S and returns new state for S.
+
+The attribute takes string arguments to instruct the compiler which state
+is shared.  The supported states for S are:
+
+* ``"za"`` for Matrix Storage (requires SME)
+
+The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
+``__arm_preserves(S)`` are all mutually exclusive for the same state S.
   }];
 }
 
+def ArmInOutDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_inout`` keyword applies to prototyped function types and specifies
+that the function shares a given state S with its caller.  For ``__arm_inout``,
+the function takes the state S as input and returns new state for S.
+
+The attribute takes string arguments to instruct the compiler which state
+is shared.  The supported states for S are:
+
+* ``"za"`` for Matrix Storage (requires SME)
+
+The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
+``__arm_preserves(S)`` are all mutually exclusive for the same state S.
+  }];
+}
+
+def ArmPreservesDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_preserves`` keyword applies to prototyped function types and
+specifies that the function does not read a given state S and returns
+with state S unchanged.
+
+The attribute takes string arguments to instruct the compiler which state
+is shared.  The supported states for S are:
+
+* ``"za"`` for Matrix Storage (requires SME)
+
+The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
+``__arm_preserves(S)`` are all mutually exclusive for the same state S.
+  }];
+}
 
 def ArmSmeLocallyStreamingDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
@@ -6907,13 +7020,18 @@ at the end of the function.
   }];
 }
 
-def ArmSmeNewZADocs : Documentation {
+def ArmNewDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
-The ``__arm_new_za`` keyword applies to function declarations and specifies
-that the function will be set up with a fresh ZA context.
+The ``__arm_new`` keyword applies to function declarations and specifies
+that the function will create a new scope for state S.
 
-This means that:
+The attribute takes string arguments to instruct the compiler for which state
+to create new scope.  The supported states for S are:
+
+* ``"za"`` for Matrix Storage (requires SME)
+
+For state ``"za"``, this means that:
 
 * the function requires that the target processor implements the Scalable Matrix
   Extension (SME).
@@ -6924,8 +7042,8 @@ This means that:
 
 * the function will disable PSTATE.ZA (by setting it to 0) before returning.
 
-For ``__arm_new_za`` functions Clang will set up the ZA context automatically
-on entry to the function, and disable it before returning. For example, if ZA is
+For ``__arm_new("za")`` functions Clang will set up the ZA context automatically
+on entry to the function and disable it before returning. For example, if ZA is
 in a dormant state Clang will generate the code to commit a lazy-save and set up
 a new ZA state before executing user code.
   }];

@@ -192,15 +192,10 @@ class ProcResourceUnits<ProcResourceKind kind, int num> {
   SchedMachineModel SchedModel = ?;
 }
 
-// EponymousProcResourceKind helps implement ProcResourceUnits by
-// allowing a ProcResourceUnits definition to reference itself. It
-// should not be referenced anywhere else.
-def EponymousProcResourceKind : ProcResourceKind;
-
 // Subtargets typically define processor resource kind and number of
 // units in one place.
 class ProcResource<int num> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num>;
+  ProcResourceUnits<!cast<ProcResourceKind>(NAME), num>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
@@ -658,7 +653,8 @@ def OneUse : OneUsePred;
 //   return true;
 // }
 // ```
-class Fusion<list<FusionPredicate> predicates> {
+class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
+  : SubtargetFeature<name, fieldName, "true", desc> {
   list<FusionPredicate> Predicates = predicates;
 }
 
@@ -679,21 +675,23 @@ class Fusion<list<FusionPredicate> predicates> {
 //   return true;
 // }
 // ```
-class SimpleFusion<MCInstPredicate firstPred, MCInstPredicate secondPred,
+class SimpleFusion<string name, string fieldName, string desc,
+                   MCInstPredicate firstPred, MCInstPredicate secondPred,
                    list<FusionPredicate> prolog = [],
                    list<FusionPredicate> epilog = []>
-  : Fusion<!listconcat(
-                  prolog,
-                  [
-                    SecondFusionPredicateWithMCInstPredicate<secondPred>,
-                    WildcardTrue,
-                    FirstFusionPredicateWithMCInstPredicate<firstPred>,
-                    SecondFusionPredicateWithMCInstPredicate<
-                      CheckAny<[
-                        CheckIsVRegOperand<0>,
-                        CheckSameRegOperand<0, 1>
-                      ]>>,
-                    OneUse,
-                    TieReg<0, 1>,
-                  ],
-                  epilog)>;
+  : Fusion<name, fieldName, desc,
+           !listconcat(
+              prolog,
+              [
+                SecondFusionPredicateWithMCInstPredicate<secondPred>,
+                WildcardTrue,
+                FirstFusionPredicateWithMCInstPredicate<firstPred>,
+                SecondFusionPredicateWithMCInstPredicate<
+                  CheckAny<[
+                    CheckIsVRegOperand<0>,
+                    CheckSameRegOperand<0, 1>
+                  ]>>,
+                OneUse,
+                TieReg<0, 1>,
+              ],
+              epilog)>;

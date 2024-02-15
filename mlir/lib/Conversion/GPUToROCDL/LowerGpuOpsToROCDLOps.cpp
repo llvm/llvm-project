@@ -67,8 +67,8 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
 Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
                 const unsigned indexBitwidth) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
-  Value zero = rewriter.createOrFold<arith::ConstantIntOp>(loc, 0, 32);
-  Value minus1 = rewriter.createOrFold<arith::ConstantIntOp>(loc, -1, 32);
+  Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
+  Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
   Value mbcntLo = rewriter.create<ROCDL::MbcntLoOp>(loc, int32Type,
                                                     ValueRange{minus1, zero});
   Value laneId = rewriter.create<ROCDL::MbcntHiOp>(loc, int32Type,
@@ -89,8 +89,8 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
     // followed by: %lid = call @llvm.amdgcn.mbcnt.hi(-1, %mlo)
 
     Type intTy = IntegerType::get(context, 32);
-    Value zero = rewriter.createOrFold<arith::ConstantIntOp>(loc, 0, 32);
-    Value minus1 = rewriter.createOrFold<arith::ConstantIntOp>(loc, -1, 32);
+    Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
+    Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
     Value mbcntLo =
         rewriter.create<ROCDL::MbcntLoOp>(loc, intTy, ValueRange{minus1, zero});
     Value laneId = rewriter.create<ROCDL::MbcntHiOp>(

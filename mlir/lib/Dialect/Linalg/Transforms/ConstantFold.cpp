@@ -57,7 +57,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
     // Mixed and buffer sematics aren't supported.
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     // Only support ops generating one output for now.

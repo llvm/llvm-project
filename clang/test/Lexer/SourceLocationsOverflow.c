@@ -1,6 +1,6 @@
 // RUN: not %clang %s -S -o - 2>&1 | FileCheck %s
 // CHECK: In file included from {{.*}}SourceLocationsOverflow.c
-// CHECK-NEXT: inc1.h{{.*}}: fatal error: sorry, the translation unit is too large for Clang to process: ran out of source locations
+// CHECK-NEXT: inc1.h{{.*}}: fatal error: translation unit is too large for Clang to process: ran out of source locations
 // CHECK-NEXT: #include "inc2.h"
 // CHECK-NEXT:          ^
 // CHECK-NEXT: note: 214{{.......}}B in local locations, 0B in locations loaded from AST files, for a total of 214{{.......}}B (99% of available space)

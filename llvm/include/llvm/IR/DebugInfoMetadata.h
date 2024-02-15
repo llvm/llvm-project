@@ -323,6 +323,10 @@ public:
   // This node has no operands to replace.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
+  SmallVector<DPValue *> getAllDPValueUsers() {
+    return Context.getReplaceableUses()->getAllDPValueUsers();
+  }
+
   static DIAssignID *getDistinct(LLVMContext &Context) {
     return getImpl(Context, Distinct);
   }

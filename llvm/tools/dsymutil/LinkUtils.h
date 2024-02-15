@@ -32,8 +32,8 @@ enum class DsymutilAccelTableKind : uint8_t {
 };
 
 enum class DsymutilDWARFLinkerType : uint8_t {
-  Apple, /// Apple`s implementation of DWARFLinker.
-  LLVM   /// LLVM implementation of DWARFLinker.
+  Classic, /// Classic implementation of DWARFLinker.
+  Parallel /// Implementation of DWARFLinker heavily using parallel execution.
 };
 
 struct LinkOptions {
@@ -63,7 +63,7 @@ struct LinkOptions {
   bool KeepFunctionForStatic = false;
 
   /// Type of DWARFLinker to use.
-  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Apple;
+  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Classic;
 
   /// Use a 64-bit header when emitting universal binaries.
   bool Fat64 = false;

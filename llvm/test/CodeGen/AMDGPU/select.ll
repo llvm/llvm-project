@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; Normally icmp + select is optimized to select_cc, when this happens the

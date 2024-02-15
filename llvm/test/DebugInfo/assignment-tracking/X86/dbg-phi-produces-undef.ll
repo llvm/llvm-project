@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s
+
 ;; Hand written test because the scenario is unlikely. Check that the "value"
 ;; of a debug def PHIs is "undef" (because we don't actually track PHIs).
 ;;

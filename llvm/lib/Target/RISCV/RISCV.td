@@ -31,12 +31,20 @@ include "RISCVInstrInfo.td"
 include "GISel/RISCVRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
+// RISC-V macro fusions.
+//===----------------------------------------------------------------------===//
+
+include "RISCVMacroFusion.td"
+
+//===----------------------------------------------------------------------===//
 // RISC-V Scheduling Models
 //===----------------------------------------------------------------------===//
 
 include "RISCVSchedRocket.td"
 include "RISCVSchedSiFive7.td"
+include "RISCVSchedSiFiveP400.td"
 include "RISCVSchedSyntacoreSCR1.td"
+include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.

@@ -666,7 +666,7 @@ static std::string mangleCoveragePath(StringRef Filename, bool PreservePaths) {
 
   if (S < I)
     Result.append(S, I);
-  return std::string(Result.str());
+  return std::string(Result);
 }
 
 std::string Context::getCoveragePath(StringRef filename,

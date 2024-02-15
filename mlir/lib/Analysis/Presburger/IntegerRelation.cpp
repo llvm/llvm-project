@@ -66,6 +66,14 @@ void IntegerRelation::setSpaceExceptLocals(const PresburgerSpace &oSpace) {
   space.insertVar(VarKind::Local, 0, newNumLocals);
 }
 
+void IntegerRelation::setId(VarKind kind, unsigned i, Identifier id) {
+  assert(space.isUsingIds() &&
+         "space must be using identifiers to set an identifier");
+  assert(kind != VarKind::Local && "local variables cannot have identifiers");
+  assert(i < space.getNumVarKind(kind) && "invalid variable index");
+  space.getId(kind, i) = id;
+}
+
 void IntegerRelation::append(const IntegerRelation &other) {
   assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
 

@@ -173,6 +173,8 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
 // DEF:      odsState.addAttributes(attributes);
 
+// DEF:      void AOp::populateDefaultAttrs
+
 // Test the above but with prefix.
 
 def Test2_Dialect : Dialect {
@@ -286,6 +288,17 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DEF:      void AgetOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
 // DEF:      odsState.addAttributes(attributes);
+
+// Test the above but using properties.
+def ApropOp : NS_Op<"a_prop_op", []> {
+  let arguments = (ins
+      Property<"unsigned">:$aAttr,
+      DefaultValuedAttr<SomeAttr, "4.2">:$bAttr
+  );
+}
+
+// DEF-LABEL: ApropOp definitions
+// DEF:       void ApropOp::populateDefaultProperties
 
 def SomeTypeAttr : TypeAttrBase<"SomeType", "some type attribute">;
 

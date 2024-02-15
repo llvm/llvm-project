@@ -1,11 +1,11 @@
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-WGP %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode < %s | FileCheck -check-prefixes=GCN,ALIGNED,ALIGNED-CU %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,UNALIGNED %s
 
 ; GCN-LABEL: test_local_misaligned_v2:
 ; GCN-DAG: ds_{{read2|load_2addr}}_b32
