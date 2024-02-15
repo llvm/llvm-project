@@ -2574,12 +2574,12 @@ define i16 @add_sub_zext_constant(i8 %x) {
 
 define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
 ; CHECK-LABEL: @add_to_or_scalable(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 1 x i32> [[SHL]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 1 x i32> [[SHL]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[ADD]]
 ;
-  %shl = shl <vscale x 1 x i32> %in, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-  %add = add <vscale x 1 x i32> %shl, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  %shl = shl <vscale x 1 x i32> %in, splat (i32 1)
+  %add = add <vscale x 1 x i32> %shl, splat (i32 1)
   ret <vscale x 1 x i32> %add
 }
 

@@ -577,7 +577,7 @@ define <vscale x 1 x i32> @ScalableAll111(<vscale x 1 x i32> %in) {
 ; CHECK-LABEL: @ScalableAll111(
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[IN:%.*]]
 ;
-  %out = and <vscale x 1 x i32> %in, bitcast (<vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -1, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer) to <vscale x 1 x i32>)
+  %out = and <vscale x 1 x i32> %in, bitcast (<vscale x 2 x i16> splat (i16 -1) to <vscale x 1 x i32>)
   ret <vscale x 1 x i32> %out
 }
 
