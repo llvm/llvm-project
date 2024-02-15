@@ -9,7 +9,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // NOMCDC-NOT: __profbm_test
 
 // MCDC BOOKKEEPING.
-// MCDC: @__profbm_test = private global [3 x i8] zeroinitializer
+// MCDC: @__profbm_test = private global [2 x i8] zeroinitializer
 
 // ALLOCATE MCDC TEMP AND ZERO IT.
 // MCDC-LABEL: @test(
@@ -39,7 +39,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
-// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 1) to i64), %[[LAB2]]
+// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr @__profbm_test to i64), %[[LAB2]]
 // MCDC:  %[[LAB4:[0-9]+]] = inttoptr i64 %[[LAB3]] to ptr
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
@@ -71,7 +71,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC-DAG:  %[[TEMP:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
 // MCDC:  %[[LAB2:[0-9]+]] = zext i32 %[[LAB1]] to i64
-// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr getelementptr inbounds ([3 x i8], ptr @__profbm_test, i32 0, i32 2) to i64), %[[LAB2]]
+// MCDC:  %[[LAB3:[0-9]+]] = add i64 ptrtoint (ptr @__profbm_test to i64), %[[LAB2]]
 // MCDC:  %[[LAB4:[0-9]+]] = inttoptr i64 %[[LAB3]] to ptr
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8

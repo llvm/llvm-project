@@ -387,34 +387,31 @@ public:
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
-        BitmapIdx(DecisionParams.BitmapIdx * CHAR_BIT),
-        Folded(NumConditions, false), IndependencePairs(NumConditions) {}
+        BitmapIdx(DecisionParams.BitmapIdx), Folded(NumConditions, false),
+        IndependencePairs(NumConditions) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
-                       int TVIdx, unsigned Index) {
-    assert((Index & (1 << ID)) == 0);
-
+                       int TVIdx) {
     for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
       static_assert(MCDCRecord::MCDC_False == 0);
       static_assert(MCDCRecord::MCDC_True == 1);
-      Index |= MCDCCond << ID;
       TV[ID] = MCDCCond;
       auto NextID = NextIDs[ID][MCDCCond];
       auto NextTVIdx = TVIdx + Indices[ID][MCDCCond];
       assert(NextID == SavedNodes[ID].NextIDs[MCDCCond]);
       if (NextID >= 0) {
-        buildTestVector(TV, NextID, NextTVIdx, Index);
+        buildTestVector(TV, NextID, NextTVIdx);
         continue;
       }
 
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
 
-      if (!Bitmap[BitmapIdx + Index])
+      if (!Bitmap[BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
@@ -437,7 +434,7 @@ private:
     // `TVIdx` starts with 0 and is in the traversal.
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 0, 0, 0);
+    buildTestVector(TV, 0, 0);
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
   }
@@ -615,21 +612,12 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
 static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
                                  const CoverageMappingRecord &Record) {
   unsigned MaxBitmapIdx = 0;
-  unsigned NumConditions = 0;
-  // Scan max(BitmapIdx).
-  // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
-  // and `MaxBitmapIdx is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
-    if (Region.Kind != CounterMappingRegion::MCDCDecisionRegion)
-      continue;
-    const auto &DecisionParams = Region.getDecisionParams();
-    if (MaxBitmapIdx <= DecisionParams.BitmapIdx) {
-      MaxBitmapIdx = DecisionParams.BitmapIdx;
-      NumConditions = DecisionParams.NumConditions;
-    }
+    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion)
+      MaxBitmapIdx =
+          std::max(MaxBitmapIdx, Region.getDecisionParams().BitmapIdx);
   }
-  unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
-  return MaxBitmapIdx * CHAR_BIT + SizeInBits;
+  return MaxBitmapIdx;
 }
 
 namespace {

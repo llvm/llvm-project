@@ -872,7 +872,7 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
   addCMR(Counter::getCounter(2), "file", 1, 1, 5, 5);
   addCMR(Counter::getCounter(3), "file", 1, 1, 5, 5);
 
-  addMCDCDecisionCMR(0, 2, "file", 7, 1, 7, 6);
+  addMCDCDecisionCMR(3, 2, "file", 7, 1, 7, 6);
   addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "file", 7, 2, 7, 3);
   addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
