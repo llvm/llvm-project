@@ -840,10 +840,10 @@ int main(int argc, char **argv) {
                           "-verbose is currently not supported";
     return 1;
   }
-  if (!Verify && ErrorDetails != Unspecified)
-    WithColor::warning() << "-error-detail has no affect without -verify";
-  if (!Verify && !JsonSummaryFile.empty())
-    WithColor::warning() << "-json-summary-file has no affect without -verify";
+  // -error-detail and -json-summary-file both imply -verify
+  if (ErrorDetails != Unspecified || !JsonSummaryFile.empty()) {
+    Verify = true;
+  }
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);

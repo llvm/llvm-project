@@ -2040,7 +2040,7 @@ void DWARFVerifier::summarize() {
     std::error_code EC;
     raw_fd_ostream JsonStream(DumpOpts.JsonSummaryFile, EC, sys::fs::OF_Text);
     if (EC) {
-      error() << "error opening aggregate error json file '"
+      error() << "unable to open json summary file '"
               << DumpOpts.JsonSummaryFile << "' for writing: " << EC.message()
               << '\n';
       return;
