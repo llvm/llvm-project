@@ -271,21 +271,4 @@ int main(int argc, const char **argv) {
     }
 
     return 0;
-
-    /*
-    llvm::errs() << "\n--- FindVarVisitor ---\n";
-    std::string root_dir = "/home/thebesttv/vul/llvm-project/graph-generation/";
-    std::string file1 = root_dir + "test4.cpp";
-    std::string file2 = root_dir + "test5.cpp";
-
-    locateVariable(functionsInFile, file1, 2, 7);
-    locateVariable(functionsInFile, file1, 2, 14);
-    locateVariable(functionsInFile, file1, 15, 10);
-
-    locateVariable(functionsInFile, file2, 5, 7);
-    locateVariable(functionsInFile, file2, 5, 11);
-    locateVariable(functionsInFile, file2, 5, 15);
-
-    findPathBetween(functionsInFile, file1, 3, 19, file1, 15, 10);
-    */
 }
