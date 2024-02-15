@@ -187,6 +187,14 @@ namespace FunctionReturnType {
   static_assert(!!op, "");
   constexpr int (*op2)(int, int) = nullptr;
   static_assert(!op2, "");
+
+  int m() { return 5;} // ref-note {{declared here}} \
+                       // expected-note {{declared here}}
+  constexpr int (*invalidFnPtr)() = m;
+  static_assert(invalidFnPtr() == 5, ""); // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{non-constexpr function 'm'}} \
+                                 // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{non-constexpr function 'm'}}
 }
 
 namespace Comparison {

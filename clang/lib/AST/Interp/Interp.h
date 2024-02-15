@@ -2071,8 +2071,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize) {
   const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
 
   const Function *F = FuncPtr.getFunction();
-  if (!F || !F->isConstexpr())
-    return false;
+  assert(F);
 
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
