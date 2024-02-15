@@ -340,16 +340,9 @@ RT_API_ATTRS void Destroy(const Descriptor &descriptor, bool finalize,
 RT_API_ATTRS bool HasDynamicComponent(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived = addendum->derivedType()) {
-      const Descriptor &componentDesc{derived->component()};
-      std::size_t myComponents{componentDesc.Elements()};
-      for (std::size_t k{0}; k < myComponents; ++k) {
-        const auto &comp{
-            *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-        if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
-            comp.genre() == typeInfo::Component::Genre::Automatic) {
-          return true;
-        }
-      }
+      // Destruction is needed if and only if there are direct or indirect
+      // allocatable or automatic components.
+      return !derived->noDestructionNeeded();
     }
   }
   return false;
