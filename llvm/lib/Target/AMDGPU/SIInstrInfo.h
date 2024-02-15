@@ -711,7 +711,7 @@ public:
   // SI_SPILL_S32_TO_VGPR and SI_RESTORE_S32_FROM_VGPR form a special case of
   // SGPRs spilling to VGPRs which are SGPR spills but from VALU instructions
   // therefore we need an explicit check for them since just checking if the
-  // Spill bit is set and what instruction type it came from miss classifies
+  // Spill bit is set and what instruction type it came from misclassifies
   // them.
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
