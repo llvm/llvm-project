@@ -134,6 +134,7 @@ module {
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
     %u = tensor.cast %dm : tensor<?x?xf64> to tensor<*xf64>
     call @printMemrefF64(%u) : (tensor<*xf64>) -> ()
+    bufferization.dealloc_tensor %dm : tensor<?x?xf64>
     return
   }
 
