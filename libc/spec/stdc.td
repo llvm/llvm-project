@@ -26,6 +26,11 @@ def StdC : StandardSpec<"stdc"> {
       []
   >;
 
+  FunctionAttrSpec ConstAttr = FunctionAttrSpec<"__LIBC_CONST_ATTR", [
+    Cxx11FunctionAttr<"const", "gnu">,
+    GnuFunctionAttr<"const">,
+  ]>;
+
   HeaderSpec CType = HeaderSpec<
       "ctype.h",
       [], // Macros
@@ -366,7 +371,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ceill", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
 
-          FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
