@@ -55,6 +55,7 @@ using namespace mlir::linalg;
 static FailureOr<Operation *>
 vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
                      ArrayRef<int64_t> inputVecSizes = {},
+                     ArrayRef<bool> inputVecScalableFlags = {},
                      bool flatten1DDepthwiseConv = false);
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
@@ -1713,20 +1714,30 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
   return success();
 }
 
-static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
-  if (auto conv = dyn_cast<linalg::DepthwiseConv1DNwcWcOp>(op.getOperation())) {
-    // Support dynamic shapes in 1D depthwise convolution, but only in the
-    // _channel_ dimension. That's exclusively to support scalable
-    // vectorisation.
-    auto lhsShaped = op.getDpsInputOperand(0)->get();
-    ArrayRef<int64_t> lhsShape =
-        cast<ShapedType>(lhsShaped.getType()).getShape();
-    auto shapeWithoutCh = lhsShape.drop_back(1);
-    if (ShapedType::isDynamicShape(shapeWithoutCh))
-      return failure();
-
-    return success();
+static LogicalResult vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv) {
+  if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv.getOperation())) {
+    LDBG("Not a depth-wise 1D conv, dynamic shapes are not supported\n");
+    return failure();
   }
+
+  // Support dynamic shapes in 1D depthwise convolution, but only in the
+  // _channel_ dimension. That's exclusively to support scalable
+  // vectorisation.
+  auto lhs = conv.getDpsInputOperand(0)->get();
+  ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
+  auto shapeWithoutCh = lhsShape.drop_back(1);
+  if (ShapedType::isDynamicShape(shapeWithoutCh)) {
+    LDBG("Dynamically-shaped op vectorization precondition failed: only "
+         "channel dim can be dynamic\n");
+    return failure();
+  }
+
+  return success();
+}
+
+static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
+  if (isa<ConvolutionOpInterface>(op.getOperation()))
+    return vectorizeDynamicConvOpPrecondition(op);
 
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
   // linalg.copy ops and ops that implement ContractionOpInterface for now.
@@ -2016,7 +2027,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
             // inference.
             if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
-                  rewriter, linalgOp, inputVectorSizes, flatten1DDepthwiseConv);
+                  rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
+                  flatten1DDepthwiseConv);
               if (succeeded(convOr)) {
                 llvm::append_range(results, (*convOr)->getResults());
                 return success();
@@ -3150,19 +3162,21 @@ struct Conv1DGenerator
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
   FailureOr<Operation *> depthwiseConv(uint64_t channelDimVecSize,
+                                       bool channelDimScalableFlag,
                                        bool flatten) {
     if (!valid)
       return rewriter.notifyMatchFailure(op, "unvectorizable depthwise conv");
 
     bool scalableChDim = false;
+    bool useMasking = false;
     int64_t nSize, wSize, cSize, kwSize;
     // kernel{kw, c}
     bindShapeDims(rhsShapedType, kwSize, cSize);
-    // Dynamic channel size implies scalable vectorisation
     if (ShapedType::isDynamic(cSize)) {
       assert(channelDimVecSize != 0 && "Channel dim vec size must be > 0");
       cSize = channelDimVecSize;
-      scalableChDim = true;
+      scalableChDim = channelDimScalableFlag;
+      useMasking = true;
     }
     // out{n, w, c}
     bindShapeDims(resShapedType, nSize, wSize);
@@ -3197,13 +3211,10 @@ struct Conv1DGenerator
     auto maybeMaskXferOp = [&](ArrayRef<int64_t> maskShape,
                                ArrayRef<bool> scalableDims,
                                Operation *opToMask) {
-      bool scalableChDim = scalableDims.back();
-      if (!scalableChDim)
+      if (!useMasking)
         return opToMask;
-
       auto maskType =
           VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
-
       SmallVector<OpFoldResult> mixedSourceDims =
           hasTensorSemantics
               ? TypeSwitch<Operation *, SmallVector<OpFoldResult>>(opToMask)
@@ -3479,6 +3490,7 @@ struct Conv1DGenerator
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
   FailureOr<Operation *> generateDilatedConv(uint64_t vecChDimSize = 0,
+                                             bool vecChDimScalableFlag = true,
                                              bool flatten = false) {
     AffineExpr n, w, c, kw;
     bindDims(ctx, n, w, c, kw);
@@ -3490,7 +3502,7 @@ struct Conv1DGenerator
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return depthwiseConv(vecChDimSize, flatten);
+      return depthwiseConv(vecChDimSize, vecChDimScalableFlag, flatten);
 
     return rewriter.notifyMatchFailure(op, "not a depthwise::Nwc layout");
   }
@@ -3556,10 +3568,9 @@ private:
 
 /// Helper function to vectorize a LinalgOp with convolution semantics.
 // TODO: extend the generic vectorization to support windows and drop this.
-static FailureOr<Operation *>
-vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
-                     ArrayRef<int64_t> inputVecSizes,
-                     bool flatten1DDepthwiseConv) {
+static FailureOr<Operation *> vectorizeConvolution(
+    RewriterBase &rewriter, LinalgOp op, ArrayRef<int64_t> inputVecSizes,
+    ArrayRef<bool> inputScalableVecDims, bool flatten1DDepthwiseConv) {
   // The ConvolutionOpInterface gives us guarantees of existence for
   // strides/dilations. However, we do not need to rely on those, we can
   // simply use them if present, otherwise use the default and let the generic
@@ -3586,12 +3597,15 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
     return res;
 
   uint64_t vecChDimSize = ShapedType::kDynamic;
+  bool vecChDimScalableFlag = false;
   if (!inputVecSizes.empty()) {
     // Only use the input vector size corresponding to the channel dim. Other
     // vector dims will be inferred from the Ops.
     vecChDimSize = inputVecSizes[2];
+    vecChDimScalableFlag = inputScalableVecDims[2];
   }
-  return e.generateDilatedConv(vecChDimSize, flatten1DDepthwiseConv);
+  return e.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
+                               flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
