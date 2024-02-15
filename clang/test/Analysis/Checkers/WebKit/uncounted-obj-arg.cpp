@@ -107,7 +107,7 @@ public:
     return 0;
   }
   void *trivial15() { return static_cast<void*>(this); }
-  unsigned long trivial16() { return reinterpret_cast<unsigned long>(this); }
+  unsigned long trivial16() { return *reinterpret_cast<unsigned long*>(this); }
   RefCounted& trivial17() const { return const_cast<RefCounted&>(*this); }
   RefCounted& trivial18() const { RELEASE_ASSERT(this, "this must be not null"); return const_cast<RefCounted&>(*this); }
   void trivial19() const { return; }
