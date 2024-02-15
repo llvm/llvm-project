@@ -415,8 +415,8 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    already duplicated
   //  - call both from Sema and from here
 
-  const DeclRefExpr *BaseDRE =
-      dyn_cast_or_null<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
+  const auto *BaseDRE =
+      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
   if (!BaseDRE)
     return false;
   if (!BaseDRE->getDecl())
