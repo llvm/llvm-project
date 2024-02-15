@@ -339,7 +339,7 @@ public:
     if (!TrivialThis)
       return false;
 
-    auto* Callee = MCE->getMethodDecl();
+    auto *Callee = MCE->getMethodDecl();
     if (!Callee)
       return false;
 
