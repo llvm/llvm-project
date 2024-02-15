@@ -83,11 +83,11 @@ void unsafe_method_invocation_single_param() {
 
 }
 
-void unsafe_method_invocation_single_param_array() {
+void unsafe_method_invocation_single_param_array(int idx) {
   int p[32];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::array<int, 32> p"
 
-  int tmp = p[5];
+  int tmp = p[idx];
   foo(p);
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:8-[[@LINE-1]]:8}:".data()"
 }
@@ -126,14 +126,14 @@ void unsafe_method_invocation_double_param() {
   m1(q, q, 8);
 }
 
-void unsafe_method_invocation_double_param_array() {
+void unsafe_method_invocation_double_param_array(int idx) {
   int p[14];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::array<int, 14> p"
 
   int q[40];
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::array<int, 40> q"
 
-  q[5] = p[5];
+  q[idx] = p[idx];
 
   m1(p, p, 10);
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:".data()"
