@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LE
 ; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mattr=+altivec,+direct-move -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=BE
 
-; FIXME: This is miscompile.
-
 ; LE-LABEL: .LCPI0_0:
 ; LE-NEXT: 	.byte	31
 ; LE-NEXT: 	.byte	15
@@ -14,13 +12,13 @@
 ; LE-NEXT: 	.byte	28
 ; LE-NEXT: 	.byte	12
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 
 ; BE-LABEL: .LCPI0_0:
 ; BE-NEXT: 	.byte	0

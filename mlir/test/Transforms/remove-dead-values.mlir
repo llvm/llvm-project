@@ -335,3 +335,25 @@ func.func @main(%arg3 : i32, %arg4 : i1) {
   %non_live_0 = func.call @clean_region_branch_op_erase_it(%arg3, %arg4) : (i32, i1) -> (i32)
   return
 }
+
+// -----
+
+#map = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
+func.func @kernel(%arg0: memref<18xf32>) {
+  %c1 = arith.constant 1 : index
+  %c18 = arith.constant 18 : index
+  gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c18, %arg10 = %c18, %arg11 = %c18) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1, %arg13 = %c1, %arg14 = %c1) {
+    %c1_0 = arith.constant 1 : index
+    %c0_1 = arith.constant 0 : index
+    %cst_2 = arith.constant 25.4669495 : f32
+    %6 = affine.apply #map(%arg3)[%c1_0, %c0_1]
+    memref.store %cst_2, %arg0[%6] : memref<18xf32>
+    gpu.terminator
+  } {SCFToGPU_visited}
+  return
+}
+
+// CHECK-LABEL: func.func @kernel(%arg0: memref<18xf32>) {
+// CHECK: gpu.launch blocks
+// CHECK: memref.store
+// CHECK-NEXT: gpu.terminator

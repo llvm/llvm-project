@@ -15,6 +15,25 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
+emitc.func @func(%arg0 : i32) {
+  emitc.call_opaque "foo"(%arg0) : (i32) -> ()
+  emitc.return
+}
+
+emitc.func @return_i32() -> i32 attributes {specifiers = ["static","inline"]} {
+  %0 = emitc.call_opaque "foo"(): () -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func @call() -> i32 {
+  %0 = emitc.call @return_i32() : () -> (i32)
+  emitc.return %0 : i32
+}
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
+
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
   return
@@ -166,3 +185,14 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
   }
   return
 }
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "extern \"C\" {"
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "}  // extern \"C\""
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "typedef int32_t i32;"
+emitc.verbatim "typedef float f32;"

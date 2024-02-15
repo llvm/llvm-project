@@ -1,8 +1,8 @@
-; RUN: not llc < %s -march=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=VI %s
 
-; RUN: not llc < %s -march=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
-; RUN: not llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN --check-prefix=NOSI %s
+; RUN: not llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs 2>&1 | FileCheck --check-prefix=NOGCN %s
 
 ; GCN-LABEL: {{^}}inline_reg_constraints:
 ; GCN: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]

@@ -186,7 +186,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
                             CLANG_VERSION_MAJOR_STRING);
   }
 
-  return std::string(P.str());
+  return std::string(P);
 }
 
 Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
@@ -1310,10 +1310,23 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
       A->claim();
 
-      // TODO: Specify Vulkan target environment somewhere in the triple.
       if (Args.hasArg(options::OPT_spirv)) {
         llvm::Triple T(TargetTriple);
         T.setArch(llvm::Triple::spirv);
+        T.setOS(llvm::Triple::Vulkan);
+
+        // Set specific Vulkan version if applicable.
+        if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
+          const llvm::StringSet<> ValidValues = {"vulkan1.2", "vulkan1.3"};
+          if (ValidValues.contains(A->getValue())) {
+            T.setOSName(A->getValue());
+          } else {
+            Diag(diag::err_drv_invalid_value)
+                << A->getAsString(Args) << A->getValue();
+          }
+          A->claim();
+        }
+
         TargetTriple = T.str();
       }
     } else {
@@ -1430,11 +1443,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC = getToolChain(
       *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
-  if (TC.getTriple().isAndroid()) {
-    llvm::Triple Triple = TC.getTriple();
+  // Check if the environment version is valid except wasm case.
+  llvm::Triple Triple = TC.getTriple();
+  if (!Triple.isWasm()) {
     StringRef TripleVersionName = Triple.getEnvironmentVersionString();
-
-    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
+    StringRef TripleObjectFormat =
+        Triple.getObjectFormatTypeName(Triple.getObjectFormat());
+    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
+        TripleVersionName != TripleObjectFormat) {
       Diags.Report(diag::err_drv_triple_version_invalid)
           << TripleVersionName << TC.getTripleString();
       ContainsError = true;
@@ -1831,7 +1847,7 @@ void Driver::generateCompilationDiagnostics(
       ScriptOS << "\n# Additional information: " << AdditionalInformation
                << "\n";
     if (Report)
-      Report->TemporaryFiles.push_back(std::string(Script.str()));
+      Report->TemporaryFiles.push_back(std::string(Script));
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
@@ -4173,6 +4189,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
       }
 
+      if (isa<InstallAPIJobAction>(Current)) {
+        Current = nullptr;
+        break;
+      }
+
       // FIXME: Should we include any prior module file outputs as inputs of
       // later actions in the same command line?
 
@@ -4303,6 +4324,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (!MergerInputs.empty())
       Actions.push_back(
           C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
+  } else if (Args.hasArg(options::OPT_installapi)) {
+    // TODO: Lift restriction once operation can handle multiple inputs.
+    assert(Inputs.size() == 1 && "InstallAPI action can only handle 1 input");
+    const auto [InputType, InputArg] = Inputs.front();
+    Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
+    Actions.push_back(
+        C.MakeAction<InstallAPIJobAction>(Current, types::TY_TextAPI));
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
@@ -4746,15 +4774,18 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
+    if (Args.hasArg(options::OPT_installapi))
+      return C.MakeAction<InstallAPIJobAction>(Input, types::TY_TextAPI);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_S))
-        Output = types::TY_LTO_IR;
-      else if (Args.hasArg(options::OPT_ffat_lto_objects))
+      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+          !Args.hasArg(options::OPT_emit_llvm))
         Output = types::TY_PP_Asm;
+      else if (Args.hasArg(options::OPT_S))
+        Output = types::TY_LTO_IR;
       else
         Output = types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -6073,17 +6104,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   SmallString<128> R(ResourceDir);
   llvm::sys::path::append(R, Name);
   if (llvm::sys::fs::exists(Twine(R)))
-    return std::string(R.str());
+    return std::string(R);
 
   SmallString<128> P(TC.getCompilerRTPath());
   llvm::sys::path::append(P, Name);
   if (llvm::sys::fs::exists(Twine(P)))
-    return std::string(P.str());
+    return std::string(P);
 
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);
   if (llvm::sys::fs::exists(Twine(D)))
-    return std::string(D.str());
+    return std::string(D);
 
   if (auto P = SearchPaths(TC.getLibraryPaths()))
     return *P;
@@ -6120,11 +6151,11 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     if (llvm::sys::fs::is_directory(PrefixDir)) {
       SmallString<128> P(PrefixDir);
       if (ScanDirForExecutable(P, Name))
-        return std::string(P.str());
+        return std::string(P);
     } else {
       SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
-        return std::string(P.str());
+        return std::string(P);
     }
   }
 
@@ -6140,7 +6171,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     for (const auto &Path : List) {
       SmallString<128> P(Path);
       if (ScanDirForExecutable(P, TargetSpecificExecutable))
-        return std::string(P.str());
+        return std::string(P);
     }
 
     // Fall back to the path
@@ -6160,7 +6191,7 @@ std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
     return "";
   }
 
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
@@ -6171,7 +6202,7 @@ std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
     return "";
   }
 
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
@@ -6193,7 +6224,7 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
       Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");
   }
-  return std::string(Output.str());
+  return std::string(Output);
 }
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,
@@ -6213,6 +6244,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::XROS:
     case llvm::Triple::DriverKit:
       TC = std::make_unique<toolchains::DarwinClang>(*this, Target, Args);
       break;
@@ -6423,7 +6455,7 @@ bool Driver::ShouldUseClangCompiler(const JobAction &JA) const {
   // And say "no" if this is not a kind of action clang understands.
   if (!isa<PreprocessJobAction>(JA) && !isa<PrecompileJobAction>(JA) &&
       !isa<CompileJobAction>(JA) && !isa<BackendJobAction>(JA) &&
-      !isa<ExtractAPIJobAction>(JA))
+      !isa<ExtractAPIJobAction>(JA) && !isa<InstallAPIJobAction>(JA))
     return false;
 
   return true;
@@ -6467,18 +6499,15 @@ bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Minor))
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Micro))
     return false;
@@ -6506,9 +6535,8 @@ bool Driver::GetReleaseVersion(StringRef Str,
     Digits[CurDigit] = Digit;
     if (Str.empty())
       return true;
-    if (Str[0] != '.')
+    if (!Str.consume_front("."))
       return false;
-    Str = Str.drop_front(1);
     CurDigit++;
   }
 

@@ -1383,6 +1383,31 @@ void CXXRecordDecl::addedMember(Decl *D) {
   }
 }
 
+bool CXXRecordDecl::isLiteral() const {
+  const LangOptions &LangOpts = getLangOpts();
+  if (!(LangOpts.CPlusPlus20 ? hasConstexprDestructor()
+                             : hasTrivialDestructor()))
+    return false;
+
+  if (hasNonLiteralTypeFieldsOrBases()) {
+    // CWG2598
+    // is an aggregate union type that has either no variant
+    // members or at least one variant member of non-volatile literal type,
+    if (!isUnion())
+      return false;
+    bool HasAtLeastOneLiteralMember =
+        fields().empty() || any_of(fields(), [this](const FieldDecl *D) {
+          return !D->getType().isVolatileQualified() &&
+                 D->getType()->isLiteralType(getASTContext());
+        });
+    if (!HasAtLeastOneLiteralMember)
+      return false;
+  }
+
+  return isAggregate() || (isLambda() && LangOpts.CPlusPlus17) ||
+         hasConstexprNonCopyMoveConstructor() || hasTrivialDefaultConstructor();
+}
+
 void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
   DD->setIneligibleOrNotSelected(false);
   addedEligibleSpecialMemberFunction(DD, SMF_Destructor);
@@ -2054,7 +2079,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
         //   A class is abstract if it contains or inherits at least one
         //   pure virtual function for which the final overrider is pure
         //   virtual.
-        if (SO->second.front().Method->isPure()) {
+        if (SO->second.front().Method->isPureVirtual()) {
           data().Abstract = true;
           Done = true;
           break;
@@ -2273,7 +2298,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // If the member function is marked 'final', we know that it can't be
   // overridden and can therefore devirtualize it unless it's pure virtual.
   if (hasAttr<FinalAttr>())
-    return isPure() ? nullptr : this;
+    return isPureVirtual() ? nullptr : this;
 
   // If Base is unknown, we cannot devirtualize.
   if (!Base)
@@ -2302,7 +2327,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // If that method is pure virtual, we can't devirtualize. If this code is
   // reached, the result would be UB, not a direct call to the derived class
   // function, and we can't assume the derived class function is defined.
-  if (DevirtualizedMethod->isPure())
+  if (DevirtualizedMethod->isPureVirtual())
     return nullptr;
 
   // If that method is marked final, we can devirtualize it.

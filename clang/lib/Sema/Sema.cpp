@@ -957,7 +957,7 @@ static bool MethodsAndNestedClassesComplete(const CXXRecordDecl *RD,
        I != E && Complete; ++I) {
     if (const CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(*I))
       Complete = M->isDefined() || M->isDefaulted() ||
-                 (M->isPure() && !isa<CXXDestructorDecl>(M));
+                 (M->isPureVirtual() && !isa<CXXDestructorDecl>(M));
     else if (const FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(*I))
       // If the template function is marked as late template parsed at this
       // point, it has not been instantiated and therefore we have not
@@ -1393,7 +1393,8 @@ void Sema::ActOnEndOfTranslationUnit() {
               Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
                   << /*function=*/0 << DiagD << DiagRange;
           }
-        } else {
+        } else if (!FD->isTargetMultiVersion() ||
+                   FD->isTargetMultiVersionDefault()) {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
                 << /*function=*/0 << DiagD << DiagRange;
@@ -1943,6 +1944,21 @@ Sema::SemaDiagnosticBuilder Sema::Diag(SourceLocation Loc, unsigned DiagID,
   return DB;
 }
 
+static bool typeIsOrContainsFloat(const Type &Ty) {
+  if (Ty.isFloatingType())
+    return true;
+
+  if (const RecordDecl *Decl = Ty.getAsRecordDecl()) {
+    for (const FieldDecl *FD : Decl->fields()) {
+      const Type &FieldType = *FD->getType();
+      if (typeIsOrContainsFloat(FieldType))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   if (isUnevaluatedContext() || Ty.isNull())
     return;
@@ -2086,6 +2102,25 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
           !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
         Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+    }
+
+    // Don't allow any floating-point types (including structs containing
+    // floats) for ABIs which do not support them.
+    if (!TI.hasFPTypes() && typeIsOrContainsFloat(*UnqualTy)) {
+      PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type_for_abi);
+
+      if (D)
+        PD << D;
+      else
+        PD << "expression";
+
+      if (Diag(Loc, PD, FD) << Ty << TI.getABI()) {
+        if (D)
+          D->setInvalidDecl();
+      }
+
+      if (D)
+        targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
   };
 
@@ -2758,7 +2793,7 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
     return false;
 
   LookupQualifiedName(LR, DC);
-  bool Result = std::all_of(LR.begin(), LR.end(), [](Decl *Dcl) {
+  bool Result = llvm::all_of(LR, [](Decl *Dcl) {
     if (NamedDecl *ND = dyn_cast<NamedDecl>(Dcl)) {
       ND = ND->getUnderlyingDecl();
       return isa<FunctionDecl>(ND) || isa<FunctionTemplateDecl>(ND) ||

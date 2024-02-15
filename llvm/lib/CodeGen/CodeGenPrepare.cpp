@@ -34,12 +34,12 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -972,10 +972,9 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
   // that leads to this block.
   // FIXME: Is this really needed? Is this a correctness issue?
   for (BasicBlock *Pred : predecessors(BB)) {
-    if (auto *CBI = dyn_cast<CallBrInst>((Pred)->getTerminator()))
-      for (unsigned i = 0, e = CBI->getNumSuccessors(); i != e; ++i)
-        if (DestBB == CBI->getSuccessor(i))
-          return false;
+    if (isa<CallBrInst>(Pred->getTerminator()) &&
+        llvm::is_contained(successors(Pred), DestBB))
+      return false;
   }
 
   // Try to skip merging if the unique predecessor of BB is terminated by a
@@ -2523,8 +2522,40 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   return false;
 }
 
+static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
+                                          const CallInst *CI) {
+  assert(CI && CI->use_empty());
+
+  if (const auto *II = dyn_cast<IntrinsicInst>(CI))
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::memset:
+    case Intrinsic::memcpy:
+    case Intrinsic::memmove:
+      return true;
+    default:
+      return false;
+    }
+
+  LibFunc LF;
+  Function *Callee = CI->getCalledFunction();
+  if (Callee && TLInfo && TLInfo->getLibFunc(*Callee, LF))
+    switch (LF) {
+    case LibFunc_strcpy:
+    case LibFunc_strncpy:
+    case LibFunc_strcat:
+    case LibFunc_strncat:
+      return true;
+    default:
+      return false;
+    }
+
+  return false;
+}
+
 /// Look for opportunities to duplicate return instructions to the predecessor
-/// to enable tail call optimizations. The case it is currently looking for is:
+/// to enable tail call optimizations. The case it is currently looking for is
+/// the following one. Known intrinsics or library function that may be tail
+/// called are taken into account as well.
 /// @code
 /// bb0:
 ///   %tmp0 = tail call i32 @f0()
@@ -2581,8 +2612,6 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     }
 
     PN = dyn_cast<PHINode>(V);
-    if (!PN)
-      return false;
   }
 
   if (PN && PN->getParent() != BB)
@@ -2621,8 +2650,30 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
       // Make sure the phi value is indeed produced by the tail call.
       if (CI && CI->hasOneUse() && CI->getParent() == PredBB &&
           TLI->mayBeEmittedAsTailCall(CI) &&
-          attributesPermitTailCall(F, CI, RetI, *TLI))
+          attributesPermitTailCall(F, CI, RetI, *TLI)) {
         TailCallBBs.push_back(PredBB);
+      } else {
+        // Consider the cases in which the phi value is indirectly produced by
+        // the tail call, for example when encountering memset(), memmove(),
+        // strcpy(), whose return value may have been optimized out. In such
+        // cases, the value needs to be the first function argument.
+        //
+        // bb0:
+        //   tail call void @llvm.memset.p0.i64(ptr %0, i8 0, i64 %1)
+        //   br label %return
+        // return:
+        //   %phi = phi ptr [ %0, %bb0 ], [ %2, %entry ]
+        if (PredBB && PredBB->getSingleSuccessor() == BB)
+          CI = dyn_cast_or_null<CallInst>(
+              PredBB->getTerminator()->getPrevNonDebugInstruction(true));
+
+        if (CI && CI->use_empty() &&
+            isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
+            IncomingVal == CI->getArgOperand(0) &&
+            TLI->mayBeEmittedAsTailCall(CI) &&
+            attributesPermitTailCall(F, CI, RetI, *TLI))
+          TailCallBBs.push_back(PredBB);
+      }
     }
   } else {
     SmallPtrSet<BasicBlock *, 4> VisitedBBs;
@@ -2632,8 +2683,14 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
       if (Instruction *I = Pred->rbegin()->getPrevNonDebugInstruction(true)) {
         CallInst *CI = dyn_cast<CallInst>(I);
         if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI))
-          TailCallBBs.push_back(Pred);
+            attributesPermitTailCall(F, CI, RetI, *TLI)) {
+          // Either we return void or the return value must be the first
+          // argument of a known intrinsic or library function.
+          if (!V || (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
+                     V == CI->getArgOperand(0))) {
+            TailCallBBs.push_back(Pred);
+          }
+        }
       }
     }
   }
@@ -5553,7 +5610,6 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     } else {
       Type *I8PtrTy =
           Builder.getPtrTy(Addr->getType()->getPointerAddressSpace());
-      Type *I8Ty = Builder.getInt8Ty();
 
       // Start with the base register. Do this first so that subsequent address
       // matching finds it last, which will prevent it from trying to match it
@@ -5597,8 +5653,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
           // SDAG consecutive load/store merging.
           if (ResultPtr->getType() != I8PtrTy)
             ResultPtr = Builder.CreatePointerCast(ResultPtr, I8PtrTy);
-          ResultPtr = Builder.CreateGEP(I8Ty, ResultPtr, ResultIndex,
-                                        "sunkaddr", AddrMode.InBounds);
+          ResultPtr = Builder.CreatePtrAdd(ResultPtr, ResultIndex, "sunkaddr",
+                                           AddrMode.InBounds);
         }
 
         ResultIndex = V;
@@ -5609,8 +5665,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       } else {
         if (ResultPtr->getType() != I8PtrTy)
           ResultPtr = Builder.CreatePointerCast(ResultPtr, I8PtrTy);
-        SunkAddr = Builder.CreateGEP(I8Ty, ResultPtr, ResultIndex, "sunkaddr",
-                                     AddrMode.InBounds);
+        SunkAddr = Builder.CreatePtrAdd(ResultPtr, ResultIndex, "sunkaddr",
+                                        AddrMode.InBounds);
       }
 
       if (SunkAddr->getType() != Addr->getType()) {
@@ -6014,7 +6070,9 @@ bool CodeGenPrepare::tryToPromoteExts(
     // cut this search path, because it means we degrade the code quality.
     // With exactly 2, the transformation is neutral, because we will merge
     // one extension but leave one. However, we optimistically keep going,
-    // because the new extension may be removed too.
+    // because the new extension may be removed too. Also avoid replacing a
+    // single free extension with multiple extensions, as this increases the
+    // number of IR instructions while not providing any savings.
     long long TotalCreatedInstsCost = CreatedInstsCost + NewCreatedInstsCost;
     // FIXME: It would be possible to propagate a negative value instead of
     // conservatively ceiling it to 0.
@@ -6022,7 +6080,8 @@ bool CodeGenPrepare::tryToPromoteExts(
         std::max((long long)0, (TotalCreatedInstsCost - ExtCost));
     if (!StressExtLdPromotion &&
         (TotalCreatedInstsCost > 1 ||
-         !isPromotedInstructionLegal(*TLI, *DL, PromotedVal))) {
+         !isPromotedInstructionLegal(*TLI, *DL, PromotedVal) ||
+         (ExtCost == 0 && NewExts.size() > 1))) {
       // This promotion is not profitable, rollback to the previous state, and
       // save the current extension in ProfitablyMovedExts as the latest
       // speculative promotion turned out to be unprofitable.
@@ -6169,7 +6228,6 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       Type *PtrIdxTy = DL->getIndexType(GEP->getType());
       Type *I8PtrTy =
           PointerType::get(Ctx, GEP->getType()->getPointerAddressSpace());
-      Type *I8Ty = Type::getInt8Ty(Ctx);
 
       BasicBlock::iterator NewBaseInsertPt;
       BasicBlock *NewBaseInsertBB;
@@ -6198,7 +6256,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       if (NewBaseGEP->getType() != I8PtrTy)
         NewBaseGEP = NewBaseBuilder.CreatePointerCast(NewBaseGEP, I8PtrTy);
       NewBaseGEP =
-          NewBaseBuilder.CreateGEP(I8Ty, NewBaseGEP, BaseIndex, "splitgep");
+          NewBaseBuilder.CreatePtrAdd(NewBaseGEP, BaseIndex, "splitgep");
       NewGEPBases.insert(NewBaseGEP);
       return;
     };
@@ -6235,9 +6293,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       }
 
       // Generate a new GEP to replace the current one.
-      LLVMContext &Ctx = GEP->getContext();
       Type *PtrIdxTy = DL->getIndexType(GEP->getType());
-      Type *I8Ty = Type::getInt8Ty(Ctx);
 
       if (!NewBaseGEP) {
         // Create a new base if we don't have one yet.  Find the insertion
@@ -6250,7 +6306,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       if (Offset != BaseOffset) {
         // Calculate the new offset for the new GEP.
         Value *Index = ConstantInt::get(PtrIdxTy, Offset - BaseOffset);
-        NewGEP = Builder.CreateGEP(I8Ty, NewBaseGEP, Index);
+        NewGEP = Builder.CreatePtrAdd(NewBaseGEP, Index);
       }
       replaceAllUsesWith(GEP, NewGEP, FreshBBs, IsHugeFunc);
       LargeOffsetGEPID.erase(GEP);
@@ -8457,7 +8513,8 @@ bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
 // FIXME: should updating debug-info really cause the "changed" flag to fire,
 // which can cause a function to be reprocessed?
 bool CodeGenPrepare::fixupDPValue(DPValue &DPV) {
-  if (DPV.Type != DPValue::LocationType::Value)
+  if (DPV.Type != DPValue::LocationType::Value &&
+      DPV.Type != DPValue::LocationType::Assign)
     return false;
 
   // Does this DPValue refer to a sunk address calculation?

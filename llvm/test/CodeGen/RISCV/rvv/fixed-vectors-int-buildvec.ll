@@ -663,56 +663,22 @@ define void @buildvec_seq2_v16i8_v2i64(ptr %x) {
 }
 
 define void @buildvec_seq_v9i8(ptr %x) {
-; RV32-LABEL: buildvec_seq_v9i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 3
-; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV32-NEXT:    li a1, 146
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmerge.vim v8, v8, 2, v0
-; RV32-NEXT:    vsetivli zero, 9, e8, m1, ta, ma
-; RV32-NEXT:    vse8.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64V-LABEL: buildvec_seq_v9i8:
-; RV64V:       # %bb.0:
-; RV64V-NEXT:    li a1, 73
-; RV64V-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64V-NEXT:    vmv.s.x v0, a1
-; RV64V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64V-NEXT:    vmv.v.i v8, 3
-; RV64V-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV64V-NEXT:    li a1, 146
-; RV64V-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64V-NEXT:    vmv.s.x v0, a1
-; RV64V-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV64V-NEXT:    vmerge.vim v8, v8, 2, v0
-; RV64V-NEXT:    vsetivli zero, 9, e8, m1, ta, ma
-; RV64V-NEXT:    vse8.v v8, (a0)
-; RV64V-NEXT:    ret
-;
-; RV64ZVE32-LABEL: buildvec_seq_v9i8:
-; RV64ZVE32:       # %bb.0:
-; RV64ZVE32-NEXT:    li a1, 73
-; RV64ZVE32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; RV64ZVE32-NEXT:    vmv.s.x v0, a1
-; RV64ZVE32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64ZVE32-NEXT:    vmv.v.i v8, 3
-; RV64ZVE32-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV64ZVE32-NEXT:    li a1, 146
-; RV64ZVE32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64ZVE32-NEXT:    vmv.s.x v0, a1
-; RV64ZVE32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV64ZVE32-NEXT:    vmerge.vim v8, v8, 2, v0
-; RV64ZVE32-NEXT:    vsetivli zero, 9, e8, m1, ta, ma
-; RV64ZVE32-NEXT:    vse8.v v8, (a0)
-; RV64ZVE32-NEXT:    ret
+; CHECK-LABEL: buildvec_seq_v9i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 73
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    li a1, 146
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
+; CHECK-NEXT:    vsetivli zero, 9, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
   store <9 x i8> <i8 1, i8 2, i8 3, i8 1, i8 2, i8 3, i8 1, i8 2, i8 3>, ptr %x
   ret void
 }
@@ -1211,4 +1177,437 @@ define <8 x i64> @v8xi64_exact_undef_prefix(i64 %a, i64 %b, i64 %c, i64 %d) vsca
   %v3 = insertelement <8 x i64> %v2, i64 %c, i32 6
   %v4 = insertelement <8 x i64> %v3, i64 %d, i32 7
   ret <8 x i64> %v4
+}
+
+
+define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
+; CHECK-LABEL: buildvec_v16i8_loads_contigous:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a1, 1(a0)
+; CHECK-NEXT:    lbu a2, 2(a0)
+; CHECK-NEXT:    lbu a3, 3(a0)
+; CHECK-NEXT:    lbu a4, 4(a0)
+; CHECK-NEXT:    lbu a5, 5(a0)
+; CHECK-NEXT:    lbu a6, 6(a0)
+; CHECK-NEXT:    lbu a7, 7(a0)
+; CHECK-NEXT:    lbu t0, 9(a0)
+; CHECK-NEXT:    lbu t1, 10(a0)
+; CHECK-NEXT:    lbu t2, 11(a0)
+; CHECK-NEXT:    lbu t3, 12(a0)
+; CHECK-NEXT:    lbu t4, 13(a0)
+; CHECK-NEXT:    lbu t5, 14(a0)
+; CHECK-NEXT:    lbu t6, 15(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), zero
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a4
+; CHECK-NEXT:    vlse8.v v9, (a0), zero
+; CHECK-NEXT:    vslide1down.vx v8, v8, a5
+; CHECK-NEXT:    vslide1down.vx v8, v8, a6
+; CHECK-NEXT:    vslide1down.vx v10, v8, a7
+; CHECK-NEXT:    vslide1down.vx v8, v9, t0
+; CHECK-NEXT:    vslide1down.vx v8, v8, t1
+; CHECK-NEXT:    vslide1down.vx v8, v8, t2
+; CHECK-NEXT:    vslide1down.vx v8, v8, t3
+; CHECK-NEXT:    vslide1down.vx v8, v8, t4
+; CHECK-NEXT:    vslide1down.vx v8, v8, t5
+; CHECK-NEXT:    vslide1down.vx v8, v8, t6
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
+; CHECK-NEXT:    ret
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %p3 = getelementptr i8, ptr %p, i32 2
+  %p4 = getelementptr i8, ptr %p, i32 3
+  %p5 = getelementptr i8, ptr %p, i32 4
+  %p6 = getelementptr i8, ptr %p, i32 5
+  %p7 = getelementptr i8, ptr %p, i32 6
+  %p8 = getelementptr i8, ptr %p, i32 7
+  %p9 = getelementptr i8, ptr %p, i32 8
+  %p10 = getelementptr i8, ptr %p, i32 9
+  %p11 = getelementptr i8, ptr %p, i32 10
+  %p12 = getelementptr i8, ptr %p, i32 11
+  %p13 = getelementptr i8, ptr %p, i32 12
+  %p14 = getelementptr i8, ptr %p, i32 13
+  %p15 = getelementptr i8, ptr %p, i32 14
+  %p16 = getelementptr i8, ptr %p, i32 15
+
+  %ld1 = load i8, ptr %p
+  %ld2 = load i8, ptr %p2
+  %ld3 = load i8, ptr %p3
+  %ld4 = load i8, ptr %p4
+  %ld5 = load i8, ptr %p5
+  %ld6 = load i8, ptr %p6
+  %ld7 = load i8, ptr %p7
+  %ld8 = load i8, ptr %p8
+  %ld9 = load i8, ptr %p9
+  %ld10 = load i8, ptr %p10
+  %ld11 = load i8, ptr %p11
+  %ld12 = load i8, ptr %p12
+  %ld13 = load i8, ptr %p13
+  %ld14 = load i8, ptr %p14
+  %ld15 = load i8, ptr %p15
+  %ld16 = load i8, ptr %p16
+
+  %v1 = insertelement <16 x i8> poison, i8 %ld1, i32 0
+  %v2 = insertelement <16 x i8> %v1, i8 %ld2, i32 1
+  %v3 = insertelement <16 x i8> %v2, i8 %ld3, i32 2
+  %v4 = insertelement <16 x i8> %v3, i8 %ld4, i32 3
+  %v5 = insertelement <16 x i8> %v4, i8 %ld5, i32 4
+  %v6 = insertelement <16 x i8> %v5, i8 %ld6, i32 5
+  %v7 = insertelement <16 x i8> %v6, i8 %ld7, i32 6
+  %v8 = insertelement <16 x i8> %v7, i8 %ld8, i32 7
+  %v9 = insertelement <16 x i8> %v8, i8 %ld9, i32 8
+  %v10 = insertelement <16 x i8> %v9, i8 %ld10, i32 9
+  %v11 = insertelement <16 x i8> %v10, i8 %ld11, i32 10
+  %v12 = insertelement <16 x i8> %v11, i8 %ld12, i32 11
+  %v13 = insertelement <16 x i8> %v12, i8 %ld13, i32 12
+  %v14 = insertelement <16 x i8> %v13, i8 %ld14, i32 13
+  %v15 = insertelement <16 x i8> %v14, i8 %ld15, i32 14
+  %v16 = insertelement <16 x i8> %v15, i8 %ld16, i32 15
+  ret <16 x i8> %v16
+}
+
+
+define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
+; CHECK-LABEL: buildvec_v16i8_loads_gather:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a1, 1(a0)
+; CHECK-NEXT:    lbu a2, 22(a0)
+; CHECK-NEXT:    lbu a3, 31(a0)
+; CHECK-NEXT:    lbu a4, 44(a0)
+; CHECK-NEXT:    lbu a5, 55(a0)
+; CHECK-NEXT:    lbu a6, 623(a0)
+; CHECK-NEXT:    lbu a7, 75(a0)
+; CHECK-NEXT:    lbu t0, 93(a0)
+; CHECK-NEXT:    lbu t1, 105(a0)
+; CHECK-NEXT:    lbu t2, 161(a0)
+; CHECK-NEXT:    lbu t3, 124(a0)
+; CHECK-NEXT:    lbu t4, 163(a0)
+; CHECK-NEXT:    lbu t5, 144(a0)
+; CHECK-NEXT:    lbu t6, 154(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), zero
+; CHECK-NEXT:    addi a0, a0, 82
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a4
+; CHECK-NEXT:    vlse8.v v9, (a0), zero
+; CHECK-NEXT:    vslide1down.vx v8, v8, a5
+; CHECK-NEXT:    vslide1down.vx v8, v8, a6
+; CHECK-NEXT:    vslide1down.vx v10, v8, a7
+; CHECK-NEXT:    vslide1down.vx v8, v9, t0
+; CHECK-NEXT:    vslide1down.vx v8, v8, t1
+; CHECK-NEXT:    vslide1down.vx v8, v8, t2
+; CHECK-NEXT:    vslide1down.vx v8, v8, t3
+; CHECK-NEXT:    vslide1down.vx v8, v8, t4
+; CHECK-NEXT:    vslide1down.vx v8, v8, t5
+; CHECK-NEXT:    vslide1down.vx v8, v8, t6
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
+; CHECK-NEXT:    ret
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %p3 = getelementptr i8, ptr %p, i32 22
+  %p4 = getelementptr i8, ptr %p, i32 31
+  %p5 = getelementptr i8, ptr %p, i32 44
+  %p6 = getelementptr i8, ptr %p, i32 55
+  %p7 = getelementptr i8, ptr %p, i32 623
+  %p8 = getelementptr i8, ptr %p, i32 75
+  %p9 = getelementptr i8, ptr %p, i32 82
+  %p10 = getelementptr i8, ptr %p, i32 93
+  %p11 = getelementptr i8, ptr %p, i32 105
+  %p12 = getelementptr i8, ptr %p, i32 161
+  %p13 = getelementptr i8, ptr %p, i32 124
+  %p14 = getelementptr i8, ptr %p, i32 163
+  %p15 = getelementptr i8, ptr %p, i32 144
+  %p16 = getelementptr i8, ptr %p, i32 154
+
+  %ld1 = load i8, ptr %p
+  %ld2 = load i8, ptr %p2
+  %ld3 = load i8, ptr %p3
+  %ld4 = load i8, ptr %p4
+  %ld5 = load i8, ptr %p5
+  %ld6 = load i8, ptr %p6
+  %ld7 = load i8, ptr %p7
+  %ld8 = load i8, ptr %p8
+  %ld9 = load i8, ptr %p9
+  %ld10 = load i8, ptr %p10
+  %ld11 = load i8, ptr %p11
+  %ld12 = load i8, ptr %p12
+  %ld13 = load i8, ptr %p13
+  %ld14 = load i8, ptr %p14
+  %ld15 = load i8, ptr %p15
+  %ld16 = load i8, ptr %p16
+
+  %v1 = insertelement <16 x i8> poison, i8 %ld1, i32 0
+  %v2 = insertelement <16 x i8> %v1, i8 %ld2, i32 1
+  %v3 = insertelement <16 x i8> %v2, i8 %ld3, i32 2
+  %v4 = insertelement <16 x i8> %v3, i8 %ld4, i32 3
+  %v5 = insertelement <16 x i8> %v4, i8 %ld5, i32 4
+  %v6 = insertelement <16 x i8> %v5, i8 %ld6, i32 5
+  %v7 = insertelement <16 x i8> %v6, i8 %ld7, i32 6
+  %v8 = insertelement <16 x i8> %v7, i8 %ld8, i32 7
+  %v9 = insertelement <16 x i8> %v8, i8 %ld9, i32 8
+  %v10 = insertelement <16 x i8> %v9, i8 %ld10, i32 9
+  %v11 = insertelement <16 x i8> %v10, i8 %ld11, i32 10
+  %v12 = insertelement <16 x i8> %v11, i8 %ld12, i32 11
+  %v13 = insertelement <16 x i8> %v12, i8 %ld13, i32 12
+  %v14 = insertelement <16 x i8> %v13, i8 %ld14, i32 13
+  %v15 = insertelement <16 x i8> %v14, i8 %ld15, i32 14
+  %v16 = insertelement <16 x i8> %v15, i8 %ld16, i32 15
+  ret <16 x i8> %v16
+}
+
+define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
+; CHECK-LABEL: buildvec_v16i8_undef_low_half:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, 82
+; CHECK-NEXT:    lbu a2, 93(a0)
+; CHECK-NEXT:    lbu a3, 105(a0)
+; CHECK-NEXT:    lbu a4, 161(a0)
+; CHECK-NEXT:    lbu a5, 124(a0)
+; CHECK-NEXT:    lbu a6, 163(a0)
+; CHECK-NEXT:    lbu a7, 144(a0)
+; CHECK-NEXT:    lbu a0, 154(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a1), zero
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a4
+; CHECK-NEXT:    vslide1down.vx v8, v8, a5
+; CHECK-NEXT:    vslide1down.vx v8, v8, a6
+; CHECK-NEXT:    vslide1down.vx v8, v8, a7
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %p9 = getelementptr i8, ptr %p, i32 82
+  %p10 = getelementptr i8, ptr %p, i32 93
+  %p11 = getelementptr i8, ptr %p, i32 105
+  %p12 = getelementptr i8, ptr %p, i32 161
+  %p13 = getelementptr i8, ptr %p, i32 124
+  %p14 = getelementptr i8, ptr %p, i32 163
+  %p15 = getelementptr i8, ptr %p, i32 144
+  %p16 = getelementptr i8, ptr %p, i32 154
+
+  %ld9 = load i8, ptr %p9
+  %ld10 = load i8, ptr %p10
+  %ld11 = load i8, ptr %p11
+  %ld12 = load i8, ptr %p12
+  %ld13 = load i8, ptr %p13
+  %ld14 = load i8, ptr %p14
+  %ld15 = load i8, ptr %p15
+  %ld16 = load i8, ptr %p16
+
+  %v9 = insertelement <16 x i8> poison, i8 %ld9, i32 8
+  %v10 = insertelement <16 x i8> %v9, i8 %ld10, i32 9
+  %v11 = insertelement <16 x i8> %v10, i8 %ld11, i32 10
+  %v12 = insertelement <16 x i8> %v11, i8 %ld12, i32 11
+  %v13 = insertelement <16 x i8> %v12, i8 %ld13, i32 12
+  %v14 = insertelement <16 x i8> %v13, i8 %ld14, i32 13
+  %v15 = insertelement <16 x i8> %v14, i8 %ld15, i32 14
+  %v16 = insertelement <16 x i8> %v15, i8 %ld16, i32 15
+  ret <16 x i8> %v16
+}
+
+define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
+; CHECK-LABEL: buildvec_v16i8_undef_high_half:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a1, 1(a0)
+; CHECK-NEXT:    lbu a2, 22(a0)
+; CHECK-NEXT:    lbu a3, 31(a0)
+; CHECK-NEXT:    lbu a4, 44(a0)
+; CHECK-NEXT:    lbu a5, 55(a0)
+; CHECK-NEXT:    lbu a6, 623(a0)
+; CHECK-NEXT:    lbu a7, 75(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), zero
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a4
+; CHECK-NEXT:    vslide1down.vx v8, v8, a5
+; CHECK-NEXT:    vslide1down.vx v8, v8, a6
+; CHECK-NEXT:    vslide1down.vx v8, v8, a7
+; CHECK-NEXT:    vslidedown.vi v8, v8, 8
+; CHECK-NEXT:    ret
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %p3 = getelementptr i8, ptr %p, i32 22
+  %p4 = getelementptr i8, ptr %p, i32 31
+  %p5 = getelementptr i8, ptr %p, i32 44
+  %p6 = getelementptr i8, ptr %p, i32 55
+  %p7 = getelementptr i8, ptr %p, i32 623
+  %p8 = getelementptr i8, ptr %p, i32 75
+
+  %ld1 = load i8, ptr %p
+  %ld2 = load i8, ptr %p2
+  %ld3 = load i8, ptr %p3
+  %ld4 = load i8, ptr %p4
+  %ld5 = load i8, ptr %p5
+  %ld6 = load i8, ptr %p6
+  %ld7 = load i8, ptr %p7
+  %ld8 = load i8, ptr %p8
+
+  %v1 = insertelement <16 x i8> poison, i8 %ld1, i32 0
+  %v2 = insertelement <16 x i8> %v1, i8 %ld2, i32 1
+  %v3 = insertelement <16 x i8> %v2, i8 %ld3, i32 2
+  %v4 = insertelement <16 x i8> %v3, i8 %ld4, i32 3
+  %v5 = insertelement <16 x i8> %v4, i8 %ld5, i32 4
+  %v6 = insertelement <16 x i8> %v5, i8 %ld6, i32 5
+  %v7 = insertelement <16 x i8> %v6, i8 %ld7, i32 6
+  %v8 = insertelement <16 x i8> %v7, i8 %ld8, i32 7
+  ret <16 x i8> %v8
+}
+
+define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
+; CHECK-LABEL: buildvec_v16i8_undef_edges:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, 31
+; CHECK-NEXT:    lbu a2, 44(a0)
+; CHECK-NEXT:    lbu a3, 55(a0)
+; CHECK-NEXT:    lbu a4, 623(a0)
+; CHECK-NEXT:    lbu a5, 75(a0)
+; CHECK-NEXT:    lbu a6, 93(a0)
+; CHECK-NEXT:    lbu a7, 105(a0)
+; CHECK-NEXT:    lbu t0, 161(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a1), zero
+; CHECK-NEXT:    addi a0, a0, 82
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vlse8.v v9, (a0), zero
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a4
+; CHECK-NEXT:    vslide1down.vx v10, v8, a5
+; CHECK-NEXT:    vslide1down.vx v8, v9, a6
+; CHECK-NEXT:    vslide1down.vx v8, v8, a7
+; CHECK-NEXT:    vslide1down.vx v8, v8, t0
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
+; CHECK-NEXT:    ret
+  %p4 = getelementptr i8, ptr %p, i32 31
+  %p5 = getelementptr i8, ptr %p, i32 44
+  %p6 = getelementptr i8, ptr %p, i32 55
+  %p7 = getelementptr i8, ptr %p, i32 623
+  %p8 = getelementptr i8, ptr %p, i32 75
+  %p9 = getelementptr i8, ptr %p, i32 82
+  %p10 = getelementptr i8, ptr %p, i32 93
+  %p11 = getelementptr i8, ptr %p, i32 105
+  %p12 = getelementptr i8, ptr %p, i32 161
+
+  %ld4 = load i8, ptr %p4
+  %ld5 = load i8, ptr %p5
+  %ld6 = load i8, ptr %p6
+  %ld7 = load i8, ptr %p7
+  %ld8 = load i8, ptr %p8
+  %ld9 = load i8, ptr %p9
+  %ld10 = load i8, ptr %p10
+  %ld11 = load i8, ptr %p11
+  %ld12 = load i8, ptr %p12
+
+  %v4 = insertelement <16 x i8> poison, i8 %ld4, i32 3
+  %v5 = insertelement <16 x i8> %v4, i8 %ld5, i32 4
+  %v6 = insertelement <16 x i8> %v5, i8 %ld6, i32 5
+  %v7 = insertelement <16 x i8> %v6, i8 %ld7, i32 6
+  %v8 = insertelement <16 x i8> %v7, i8 %ld8, i32 7
+  %v9 = insertelement <16 x i8> %v8, i8 %ld9, i32 8
+  %v10 = insertelement <16 x i8> %v9, i8 %ld10, i32 9
+  %v11 = insertelement <16 x i8> %v10, i8 %ld11, i32 10
+  %v12 = insertelement <16 x i8> %v11, i8 %ld12, i32 11
+  ret <16 x i8> %v12
+}
+
+define <16 x i8> @buildvec_v16i8_loads_undef_scattered(ptr %p) {
+; CHECK-LABEL: buildvec_v16i8_loads_undef_scattered:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a1, 1(a0)
+; CHECK-NEXT:    lbu a2, 44(a0)
+; CHECK-NEXT:    lbu a3, 55(a0)
+; CHECK-NEXT:    lbu a4, 75(a0)
+; CHECK-NEXT:    lbu a5, 93(a0)
+; CHECK-NEXT:    lbu a6, 124(a0)
+; CHECK-NEXT:    lbu a7, 144(a0)
+; CHECK-NEXT:    lbu t0, 154(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), zero
+; CHECK-NEXT:    addi a0, a0, 82
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    vlse8.v v9, (a0), zero
+; CHECK-NEXT:    vslide1down.vx v8, v8, a3
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vslide1down.vx v10, v8, a4
+; CHECK-NEXT:    vslide1down.vx v8, v9, a5
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    vslide1down.vx v8, v8, a6
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vslide1down.vx v8, v8, a7
+; CHECK-NEXT:    vslide1down.vx v8, v8, t0
+; CHECK-NEXT:    li a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v10, 8, v0.t
+; CHECK-NEXT:    ret
+  %p2 = getelementptr i8, ptr %p, i32 1
+  %p3 = getelementptr i8, ptr %p, i32 22
+  %p4 = getelementptr i8, ptr %p, i32 31
+  %p5 = getelementptr i8, ptr %p, i32 44
+  %p6 = getelementptr i8, ptr %p, i32 55
+  %p7 = getelementptr i8, ptr %p, i32 623
+  %p8 = getelementptr i8, ptr %p, i32 75
+  %p9 = getelementptr i8, ptr %p, i32 82
+  %p10 = getelementptr i8, ptr %p, i32 93
+  %p11 = getelementptr i8, ptr %p, i32 105
+  %p12 = getelementptr i8, ptr %p, i32 161
+  %p13 = getelementptr i8, ptr %p, i32 124
+  %p14 = getelementptr i8, ptr %p, i32 163
+  %p15 = getelementptr i8, ptr %p, i32 144
+  %p16 = getelementptr i8, ptr %p, i32 154
+
+  %ld1 = load i8, ptr %p
+  %ld2 = load i8, ptr %p2
+  %ld3 = load i8, ptr %p3
+  %ld4 = load i8, ptr %p4
+  %ld5 = load i8, ptr %p5
+  %ld6 = load i8, ptr %p6
+  %ld7 = load i8, ptr %p7
+  %ld8 = load i8, ptr %p8
+  %ld9 = load i8, ptr %p9
+  %ld10 = load i8, ptr %p10
+  %ld11 = load i8, ptr %p11
+  %ld12 = load i8, ptr %p12
+  %ld13 = load i8, ptr %p13
+  %ld14 = load i8, ptr %p14
+  %ld15 = load i8, ptr %p15
+  %ld16 = load i8, ptr %p16
+
+  %v1 = insertelement <16 x i8> poison, i8 %ld1, i32 0
+  %v2 = insertelement <16 x i8> %v1, i8 %ld2, i32 1
+  %v3 = insertelement <16 x i8> %v2, i8 undef, i32 2
+  %v4 = insertelement <16 x i8> %v3, i8 undef, i32 3
+  %v5 = insertelement <16 x i8> %v4, i8 %ld5, i32 4
+  %v6 = insertelement <16 x i8> %v5, i8 %ld6, i32 5
+  %v7 = insertelement <16 x i8> %v6, i8 undef, i32 6
+  %v8 = insertelement <16 x i8> %v7, i8 %ld8, i32 7
+  %v9 = insertelement <16 x i8> %v8, i8 %ld9, i32 8
+  %v10 = insertelement <16 x i8> %v9, i8 %ld10, i32 9
+  %v11 = insertelement <16 x i8> %v10, i8 undef, i32 10
+  %v12 = insertelement <16 x i8> %v11, i8 undef, i32 11
+  %v13 = insertelement <16 x i8> %v12, i8 %ld13, i32 12
+  %v14 = insertelement <16 x i8> %v13, i8 undef, i32 13
+  %v15 = insertelement <16 x i8> %v14, i8 %ld15, i32 14
+  %v16 = insertelement <16 x i8> %v15, i8 %ld16, i32 15
+  ret <16 x i8> %v16
 }

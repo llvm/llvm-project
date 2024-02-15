@@ -378,7 +378,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
     uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
 
     Symbol *sym = file->getSymbol(rel);
-    if (!config->isPic && sym->isDefined())
+    if (!ctx.isPic && sym->isDefined())
       continue;
 
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
@@ -390,7 +390,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
     writeSleb128(os, offset, "offset");
 
     // In PIC mode we need to add the __memory_base
-    if (config->isPic) {
+    if (ctx.isPic) {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (isTLS())
         writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "tls_base");
@@ -417,7 +417,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
         writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
-      assert(config->isPic);
+      assert(ctx.isPic);
       const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)

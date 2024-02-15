@@ -274,8 +274,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       break;
     }
 
-    if (auto *Mod0 = TII->getNamedOperand(OrigMI,
-                                          AMDGPU::OpName::src0_modifiers)) {
+    auto *Mod0 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0_modifiers);
+    if (Mod0) {
       assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
                                           AMDGPU::OpName::src0_modifiers));
       assert(HasVOP3DPP ||
@@ -298,8 +298,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     DPPInst->getOperand(NumOperands).setIsKill(false);
     ++NumOperands;
 
-    if (auto *Mod1 = TII->getNamedOperand(OrigMI,
-                                          AMDGPU::OpName::src1_modifiers)) {
+    auto *Mod1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1_modifiers);
+    if (Mod1) {
       assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
                                           AMDGPU::OpName::src1_modifiers));
       assert(HasVOP3DPP ||
@@ -330,8 +330,9 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.add(*Src1);
       ++NumOperands;
     }
-    if (auto *Mod2 =
-            TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2_modifiers)) {
+
+    auto *Mod2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2_modifiers);
+    if (Mod2) {
       assert(NumOperands ==
              AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::src2_modifiers));
       assert(HasVOP3DPP ||
@@ -350,6 +351,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.add(*Src2);
       ++NumOperands;
     }
+
     if (HasVOP3DPP) {
       auto *ClampOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::clamp);
       if (ClampOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::clamp)) {
@@ -366,9 +368,14 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       }
       // Validate OP_SEL has to be set to all 0 and OP_SEL_HI has to be set to
       // all 1.
-      if (auto *OpSelOpr =
-              TII->getNamedOperand(OrigMI, AMDGPU::OpName::op_sel)) {
-        auto OpSel = OpSelOpr->getImm();
+      if (TII->getNamedOperand(OrigMI, AMDGPU::OpName::op_sel)) {
+        int64_t OpSel = 0;
+        OpSel |= (Mod0 ? (!!(Mod0->getImm() & SISrcMods::OP_SEL_0) << 0) : 0);
+        OpSel |= (Mod1 ? (!!(Mod1->getImm() & SISrcMods::OP_SEL_0) << 1) : 0);
+        OpSel |= (Mod2 ? (!!(Mod2->getImm() & SISrcMods::OP_SEL_0) << 2) : 0);
+        if (Mod0 && TII->isVOP3(OrigMI) && !TII->isVOP3P(OrigMI))
+          OpSel |= !!(Mod0->getImm() & SISrcMods::DST_OP_SEL) << 3;
+
         if (OpSel != 0) {
           LLVM_DEBUG(dbgs() << "  failed: op_sel must be zero\n");
           Fail = true;
@@ -377,9 +384,12 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
         if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::op_sel))
           DPPInst.addImm(OpSel);
       }
-      if (auto *OpSelHiOpr =
-              TII->getNamedOperand(OrigMI, AMDGPU::OpName::op_sel_hi)) {
-        auto OpSelHi = OpSelHiOpr->getImm();
+      if (TII->getNamedOperand(OrigMI, AMDGPU::OpName::op_sel_hi)) {
+        int64_t OpSelHi = 0;
+        OpSelHi |= (Mod0 ? (!!(Mod0->getImm() & SISrcMods::OP_SEL_1) << 0) : 0);
+        OpSelHi |= (Mod1 ? (!!(Mod1->getImm() & SISrcMods::OP_SEL_1) << 1) : 0);
+        OpSelHi |= (Mod2 ? (!!(Mod2->getImm() & SISrcMods::OP_SEL_1) << 2) : 0);
+
         // Only vop3p has op_sel_hi, and all vop3p have 3 operands, so check
         // the bitmask for 3 op_sel_hi bits set
         assert(Src2 && "Expected vop3p with 3 operands");

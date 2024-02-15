@@ -58,3 +58,14 @@ such headers between C code, and C++ code.
 Similarly, the ``main()`` function is ignored. Its second and third parameters
 can be either ``char* argv[]`` or ``char** argv``, but cannot be
 ``std::array<>``.
+
+.. option:: AllowStringArrays
+
+  When set to `true` (default is `false`), variables of character array type
+  with deduced length, initialized directly from string literals, will be ignored.
+  This option doesn't affect cases where length can't be deduced, resembling
+  pointers, as seen in class members and parameters. Example:
+
+  .. code:: c++
+
+    const char name[] = "Some name";

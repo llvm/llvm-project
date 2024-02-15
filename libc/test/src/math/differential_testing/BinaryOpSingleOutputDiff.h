@@ -109,10 +109,13 @@ public:
     std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ StorageType(0),
-                      /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
+                      /* endingBit= */ FPBits::max_subnormal().uintval(),
+                      1'000'001, log);
     log << "\n Performance tests with inputs in normal range:\n";
-    run_perf_in_range(myFunc, otherFunc, /* startingBit= */ FPBits::MIN_NORMAL,
-                      /* endingBit= */ FPBits::MAX_NORMAL, 100'000'001, log);
+    run_perf_in_range(myFunc, otherFunc,
+                      /* startingBit= */ FPBits::min_normal().uintval(),
+                      /* endingBit= */ FPBits::max_normal().uintval(),
+                      100'000'001, log);
     log << "\n Performance tests with inputs in normal range with exponents "
            "close to each other:\n";
     run_perf_in_range(
@@ -126,11 +129,12 @@ public:
     log << " Diff tests with inputs in denormal range:\n";
     diffCount += run_diff_in_range(
         myFunc, otherFunc, /* startingBit= */ StorageType(0),
-        /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
+        /* endingBit= */ FPBits::max_subnormal().uintval(), 1'000'001, log);
     log << "\n Diff tests with inputs in normal range:\n";
     diffCount += run_diff_in_range(
-        myFunc, otherFunc, /* startingBit= */ FPBits::MIN_NORMAL,
-        /* endingBit= */ FPBits::MAX_NORMAL, 100'000'001, log);
+        myFunc, otherFunc,
+        /* startingBit= */ FPBits::min_normal().uintval(),
+        /* endingBit= */ FPBits::max_normal().uintval(), 100'000'001, log);
     log << "\n Diff tests with inputs in normal range with exponents "
            "close to each other:\n";
     diffCount += run_diff_in_range(

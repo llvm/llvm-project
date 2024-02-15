@@ -55,6 +55,9 @@ static cl::opt<unsigned> InlineCallPenaltyChangeSM(
     "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
     cl::desc("Penalty of inlining a call that requires a change to PSTATE.SM"));
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -230,14 +233,20 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CalleeAttrs.hasNewZABody())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresSMChange(CalleeAttrs,
-                                   /*BodyOverridesInterface=*/true)) {
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -1621,6 +1630,36 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
+static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *A, *B;
+  Type *RetTy = II.getType();
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
+
+  // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
+  // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+  if ((match(II.getArgOperand(0),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
+       match(II.getArgOperand(1),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
+    auto *TyA = cast<ScalableVectorType>(A->getType());
+    if (TyA == B->getType() &&
+        RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
+      auto *SubVec = IC.Builder.CreateInsertVector(
+          RetTy, PoisonValue::get(RetTy), A, IC.Builder.getInt64(0));
+      auto *ConcatVec = IC.Builder.CreateInsertVector(
+          RetTy, SubVec, B, IC.Builder.getInt64(TyA->getMinNumElements()));
+      ConcatVec->takeName(&II);
+      return IC.replaceInstUsesWith(II, ConcatVec);
+    }
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // zip1(uzp1(A, B), uzp2(A, B)) --> A
@@ -2003,6 +2042,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_uzp1:
+    return instCombineSVEUzp1(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
@@ -3176,14 +3217,47 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (Ty->isPtrOrPtrVectorTy())
     return LT.first;
 
-  // Check truncating stores and extending loads.
-  if (useNeonVector(Ty) &&
-      Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
-    // v4i8 types are lowered to scalar a load/store and sshll/xtn.
-    if (VT == MVT::v4i8)
-      return 2;
-    // Otherwise we need to scalarize.
-    return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+  if (useNeonVector(Ty)) {
+    // Check truncating stores and extending loads.
+    if (Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
+      // v4i8 types are lowered to scalar a load/store and sshll/xtn.
+      if (VT == MVT::v4i8)
+        return 2;
+      // Otherwise we need to scalarize.
+      return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+    }
+    EVT EltVT = VT.getVectorElementType();
+    unsigned EltSize = EltVT.getScalarSizeInBits();
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
+        VT.getVectorNumElements() >= (128 / EltSize) || !Alignment ||
+        *Alignment != Align(1))
+      return LT.first;
+    // FIXME: v3i8 lowering currently is very inefficient, due to automatic
+    // widening to v4i8, which produces suboptimal results.
+    if (VT.getVectorNumElements() == 3 && EltVT == MVT::i8)
+      return LT.first;
+
+    // Check non-power-of-2 loads/stores for legal vector element types with
+    // NEON. Non-power-of-2 memory ops will get broken down to a set of
+    // operations on smaller power-of-2 ops, including ld1/st1.
+    LLVMContext &C = Ty->getContext();
+    InstructionCost Cost(0);
+    SmallVector<EVT> TypeWorklist;
+    TypeWorklist.push_back(VT);
+    while (!TypeWorklist.empty()) {
+      EVT CurrVT = TypeWorklist.pop_back_val();
+      unsigned CurrNumElements = CurrVT.getVectorNumElements();
+      if (isPowerOf2_32(CurrNumElements)) {
+        Cost += 1;
+        continue;
+      }
+
+      unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
+      TypeWorklist.push_back(EVT::getVectorVT(C, EltVT, PrevPow2));
+      TypeWorklist.push_back(
+          EVT::getVectorVT(C, EltVT, CurrNumElements - PrevPow2));
+    }
+    return Cost;
   }
 
   return LT.first;
@@ -3767,6 +3841,10 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  // Treat extractsubvector as single op permutation.
+  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
+  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+    Kind = TTI::SK_PermuteSingleSrc;
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -3929,6 +4007,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
+  // Restore optimal kind.
+  if (IsExtractSubvector)
+    Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
@@ -4013,4 +4094,16 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
+}
+
+bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
+  // For the binary operators (e.g. or) we need to be more careful than
+  // selects, here we only transform them if they are already at a natural
+  // break point in the code - the end of a block with an unconditional
+  // terminator.
+  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
+      isa<BranchInst>(I->getNextNode()) &&
+      cast<BranchInst>(I->getNextNode())->isUnconditional())
+    return true;
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -global-isel=0 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefixes=GCN,SDAG %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -global-isel=1 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefixes=GCN,GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -global-isel=0 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -global-isel=1 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefixes=GCN,GISEL %s
 
 @0 = external dso_local addrspace(4) constant [4 x <2 x float>]
 @1 = external dso_local addrspace(4) constant i32

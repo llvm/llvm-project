@@ -1248,8 +1248,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 LLVMFunctionType CallOp::getCalleeFunctionType() {
   if (getCalleeType())
     return *getCalleeType();
-  else
-    return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
+  return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1444,8 +1443,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 LLVMFunctionType InvokeOp::getCalleeFunctionType() {
   if (getCalleeType())
     return *getCalleeType();
-  else
-    return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
+  return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
 ///===----------------------------------------------------------------------===//

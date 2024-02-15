@@ -65,3 +65,46 @@ func.func @proc_pointer_global() {
 // CHECK: %[[VAL_0:.*]] = fir.address_of(@ProcedurePointer) : !fir.ref<(!fir.ref<i32>) -> f32>
 // CHECK: %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<(!fir.ref<i32>) -> f32>
 }
+
+func.func @block_arg_rewrite(%arg0: !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>,  %cdt : i1) {
+  cf.cond_br %cdt, ^bb1, ^bb2
+^bb1:  // pred: ^bb0
+  cf.br ^bb3(%arg0 : !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
+^bb2:  // pred: ^bb0
+  %8 = fir.absent !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>
+  cf.br ^bb3(%8 : !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
+^bb3(%9: !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>):  // 2 preds: ^bb1, ^bb2
+  cf.br ^bb4
+^bb4:  // pred: ^bb3
+  fir.call @dosomething(%9) : (!fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>) -> ()
+  return
+}
+// CHECK-LABEL:   func.func @block_arg_rewrite(
+// CHECK-SAME:                                 %[[VAL_0:.*]]: !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>,
+// CHECK-SAME:                                 %[[VAL_1:.*]]: i1) {
+// CHECK:           cf.cond_br %[[VAL_1]], ^bb1, ^bb2
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb3(%[[VAL_0]] : !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>)                           
+// CHECK:         ^bb2:
+// CHECK:           %[[VAL_2:.*]] = fir.absent !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>                         
+// CHECK:           cf.br ^bb3(%[[VAL_2]] : !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>)                           
+// CHECK:         ^bb3(%[[VAL_3:.*]]: !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>):
+// CHECK:           cf.br ^bb4
+// CHECK:         ^bb4:
+// CHECK:           fir.call @dosomething(%[[VAL_3]]) : (!fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>) -> ()
+
+func.func private @dosomething(!fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
+
+!t2 = !fir.type<t2{i:!fir.boxproc<() -> ()>}>
+func.func @box_addr_test(%arg0: !fir.box<!t2>) -> !fir.ref<!t2> {
+  %3 = fir.box_addr %arg0 : (!fir.box<!t2>) -> !fir.ref<!t2>
+  return %3 : !fir.ref<!t2>
+}
+// CHECK: func.func @box_addr_test(
+// CHECK:   fir.box_addr %{{.*}} : (!fir.box<!fir.type<t2UnboxProc{i:() -> ()}>>) -> !fir.ref<!fir.type<t2UnboxProc{i:() -> ()}>>
+
+func.func @very_nested_type(%arg0: !fir.type<t0{t01:!fir.type<t01{t02:!fir.type<t02{t3:!fir.type<t3{t4:!fir.type<t4{t5:!fir.type<t5{t6:!fir.type<t6{t7:!fir.type<t7{t8:!fir.type<t8{t9:!fir.type<t9{t10:!fir.type<t10{t11:!fir.type<t11{t12:!fir.type<t12{t13:!fir.type<t13{t14:!fir.type<t14{t15:!fir.type<t15{t16:!fir.type<t16{t17:!fir.type<t17{t18:!fir.type<t18{t19:!fir.type<t19{b:!fir.boxproc<()->()>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>) {
+  return
+}
+// CHECK-LABEL: func.func @very_nested_type(
+// CHECK-SAME: !fir.type<t0UnboxProc{t01:!fir.type<t01UnboxProc{t02:!fir.type<t02UnboxProc{t3:!fir.type<t3UnboxProc{t4:!fir.type<t4UnboxProc{t5:!fir.type<t5UnboxProc{t6:!fir.type<t6UnboxProc{t7:!fir.type<t7UnboxProc{t8:!fir.type<t8UnboxProc{t9:!fir.type<t9UnboxProc{t10:!fir.type<t10UnboxProc{t11:!fir.type<t11UnboxProc{t12:!fir.type<t12UnboxProc{t13:!fir.type<t13UnboxProc{t14:!fir.type<t14UnboxProc{t15:!fir.type<t15UnboxProc{t16:!fir.type<t16UnboxProc{t17:!fir.type<t17UnboxProc{t18:!fir.type<t18UnboxProc{t19:!fir.type<t19UnboxProc{b:() -> ()}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>}>)

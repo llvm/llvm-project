@@ -18,7 +18,6 @@ class TestSBCommandReturnObject(TestBase):
         self.driver_exe = self.getBuildArtifact("command-return-object")
         self.buildDriver("main.cpp", self.driver_exe)
         self.addTearDownHook(lambda: os.remove(self.driver_exe))
-        self.signBinary(self.driver_exe)
 
         if self.TraceOn():
             print("Running test %s" % self.driver_exe)

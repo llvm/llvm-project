@@ -971,14 +971,14 @@ void Module::FindTypes(const TypeQuery &query, TypeResults &results) {
     symbols->FindTypes(query, results);
 }
 
-static Debugger::DebuggerList 
+static Debugger::DebuggerList
 DebuggersOwningModuleRequestingInterruption(Module &module) {
-  Debugger::DebuggerList requestors 
-      = Debugger::DebuggersRequestingInterruption();
+  Debugger::DebuggerList requestors =
+      Debugger::DebuggersRequestingInterruption();
   Debugger::DebuggerList interruptors;
   if (requestors.empty())
     return interruptors;
-    
+
   for (auto debugger_sp : requestors) {
     if (!debugger_sp->InterruptRequested())
       continue;
@@ -993,12 +993,12 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_symfile.load() && can_create) {
-      Debugger::DebuggerList interruptors 
-          = DebuggersOwningModuleRequestingInterruption(*this);
+      Debugger::DebuggerList interruptors =
+          DebuggersOwningModuleRequestingInterruption(*this);
       if (!interruptors.empty()) {
         for (auto debugger_sp : interruptors) {
-          REPORT_INTERRUPTION(*(debugger_sp.get()), 
-                              "Interrupted fetching symbols for module {0}", 
+          REPORT_INTERRUPTION(*(debugger_sp.get()),
+                              "Interrupted fetching symbols for module {0}",
                               this->GetFileSpec());
         }
         return nullptr;

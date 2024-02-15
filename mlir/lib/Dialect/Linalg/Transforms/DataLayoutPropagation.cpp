@@ -369,7 +369,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 ///     } -> tensor<?x?x8x2xf32>
 static FailureOr<GenericOp>
 bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
-                               ControlPropagationFn controlFn) {
+                               const ControlPropagationFn &controlFn) {
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
   if (!genericOp)
     return failure();

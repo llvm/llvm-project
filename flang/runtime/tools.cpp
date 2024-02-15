@@ -173,8 +173,8 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
   ShallowCopy(to, from, to.IsContiguous(), from.IsContiguous());
 }
 
-RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, std::size_t length, Terminator &terminator) {
+RT_API_ATTRS char *EnsureNullTerminated(
+    char *str, std::size_t length, Terminator &terminator) {
   if (std::memchr(str, '\0', length) == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
     std::memcpy(newCmd, str, length);

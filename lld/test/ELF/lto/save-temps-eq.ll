@@ -14,14 +14,14 @@
 ;; Create the .all dir with save-temps saving everything, this will be used to compare
 ;; with the output from individualized save-temps later
 ; RUN: ld.lld main.o thin1.o --save-temps -o %t/all/a.out
-; RUN: mv *.o.* %t/all
+; RUN: mv a.out.lto.* *.o.*.bc %t/all
 ;; Sanity check that everything got moved
 ; RUN: ls | count 2
 
 ;; Check precedence if both --save-temps and --save-temps= are present
 ; RUN: ld.lld main.o thin1.o --save-temps=preopt --save-temps --save-temps=\opt -o %t/all2/a.out
 ; RUN: cmp %t/all2/a.out %t/all/a.out
-; RUN: mv *.o.* %t/all2
+; RUN: mv a.out.lto.* *.o.* %t/all2
 ; RUN: ls | count 2
 ; RUN: diff -r %t/all %t/all2
 
@@ -83,8 +83,8 @@
 ;; Check prelink
 ; RUN: ld.lld main.o thin1.o --save-temps=prelink
 ; RUN: cmp %t/all/a.out a.out && rm -f a.out
-; RUN: cp *.lto.o %t/subset2
-; RUN: mv *.lto.o %t/all3
+; RUN: cp a.out.lto.*.o %t/subset2
+; RUN: mv a.out.lto.*.o %t/all3
 ; RUN: ls | count 2
 
 ;; Check resolution
@@ -104,7 +104,7 @@
 ; RUN: cmp %t/all/a.out a.out && rm -f a.out
 ; RUN: mv *.0.preopt.* %t/subset
 ; RUN: mv *.4.opt* %t/subset
-; RUN: mv *.lto.o %t/subset
+; RUN: mv a.out.lto.*.o %t/subset
 ; RUN: ls | count 2
 ; RUN: diff -r %t/subset2 %t/subset
 

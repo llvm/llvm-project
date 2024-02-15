@@ -95,13 +95,13 @@ module @transforms attributes { transform.with_named_sequence } {
   // This is an action sequence.
   transform.named_sequence @print_elemwise(
       %elemwise_binary: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand
+    transform.debug.emit_remark_at
       %elemwise_binary, "elementwise binary" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_matmul(
       %matmul: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
     transform.yield
   }
 
