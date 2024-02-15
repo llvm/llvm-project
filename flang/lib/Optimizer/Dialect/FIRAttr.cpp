@@ -298,5 +298,6 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 void FIROpsDialect::registerAttributes() {
   addAttributes<ClosedIntervalAttr, ExactTypeAttr, FortranVariableFlagsAttr,
                 LowerBoundAttr, PointIntervalAttr, RealAttr, SubclassAttr,
-                UpperBoundAttr, CUDADataAttributeAttr, CUDAProcAttributeAttr>();
+                UpperBoundAttr, CUDADataAttributeAttr, CUDAProcAttributeAttr,
+                CUDALaunchBoundsAttr>();
 }
