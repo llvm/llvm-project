@@ -476,13 +476,10 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   StringRef reflstr =
       obj_file_format_up->getSectionName(swift::ReflectionSectionKind::reflstr);
 
-  bool hasReflectionSection = false;
-  hasReflectionSection |= findSectionInObject(field_md);
-  hasReflectionSection |= findSectionInObject(assocty);
-  hasReflectionSection |= findSectionInObject(builtin);
-  hasReflectionSection |= findSectionInObject(capture);
-  hasReflectionSection |= findSectionInObject(typeref);
-  hasReflectionSection |= findSectionInObject(reflstr);
+  bool hasReflectionSection =
+      findSectionInObject(field_md) || findSectionInObject(assocty) ||
+      findSectionInObject(builtin) || findSectionInObject(capture) ||
+      findSectionInObject(typeref) || findSectionInObject(reflstr);
   return hasReflectionSection;
 }
 
@@ -888,14 +885,18 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
 
   if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS) {
     if (obj_file->GetType() != ObjectFile::eTypeJIT)
-      if (Log *log = GetLog(LLDBLog::Types))
-        log->Printf("%s: failed to get start address for %s.", __FUNCTION__,
-                    obj_file->GetFileSpec().GetFilename().GetCString());
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "{0}: failed to get start address for \"{1}\".", __FUNCTION__,
+               module_sp->GetObjectName()
+                   ? module_sp->GetObjectName()
+                   : obj_file->GetFileSpec().GetFilename());
     return false;
   }
   bool found = HasReflectionInfo(obj_file);
-  LLDB_LOGF(GetLog(LLDBLog::Types), "%s reflection metadata in \"%s\"",
-            found ? "Adding" : "No", obj_file->GetFileSpec().GetPath().c_str());
+  LLDB_LOG(GetLog(LLDBLog::Types), "{0} reflection metadata in \"{1}\"",
+           found ? "Adding" : "No",
+           module_sp->GetObjectName() ? module_sp->GetObjectName()
+                                      : obj_file->GetFileSpec().GetFilename());
   if (!found)
     return true;
 
@@ -925,8 +926,14 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
                                likely_module_names);
   }
 
-  if (info_id)
-    if (auto *swift_metadata_cache = GetSwiftMetadataCache())
+  if (!info_id) {
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "Error while loading reflection metadata in \"{0}\"",
+             module_sp->GetObjectName());
+    return false;
+  }
+
+  if (auto *swift_metadata_cache = GetSwiftMetadataCache())
       swift_metadata_cache->registerModuleWithReflectionInfoID(module_sp,
                                                                *info_id);
 
