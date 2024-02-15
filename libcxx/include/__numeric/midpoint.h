@@ -71,12 +71,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr enable_if_t<is_floating_point_v<_Fp>, _Fp> midpo
   // typical case: overflow is impossible
   if (std::__fp_abs(__a) <= __hi && std::__fp_abs(__b) <= __hi)
     return (__a + __b) / 2; // always correctly rounded
-  else if (std::__fp_abs(__a) < __lo)
+  if (std::__fp_abs(__a) < __lo)
     return __a + __b / 2; // not safe to halve a
-  else if (std::__fp_abs(__b) < __lo)
+  if (std::__fp_abs(__b) < __lo)
     return __a / 2 + __b; // not safe to halve b
-  else
-    return __a / 2 + __b / 2; // otherwise correctly rounded
+
+  return __a / 2 + __b / 2; // otherwise correctly rounded
 }
 
 #endif // _LIBCPP_STD_VER >= 20
