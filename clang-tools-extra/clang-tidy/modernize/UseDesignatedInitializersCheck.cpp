@@ -48,7 +48,9 @@ AST_MATCHER(InitListExpr, isFullyDesignated) {
   return true;
 }
 
-AST_MATCHER(InitListExpr, hasSingleElement) { return Node.getNumInits() == 1; }
+AST_MATCHER(InitListExpr, hasMoreThanOneElement) {
+  return Node.getNumInits() > 1;
+}
 
 } // namespace
 
@@ -70,8 +72,7 @@ void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
           hasType(cxxRecordDecl(RestrictToPODTypes ? isPOD() : isAggregate(),
                                 unless(HasBaseWithFields))
                       .bind("type")),
-          unless(IgnoreSingleElementAggregates ? hasSingleElement()
-                                               : unless(anything())),
+          IgnoreSingleElementAggregates ? hasMoreThanOneElement() : anything(),
           unless(isFullyDesignated()))
           .bind("init"),
       this);
