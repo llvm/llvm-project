@@ -301,7 +301,7 @@ public:
 
   /// Check if the `LevelType` is in the `LevelFormat`.
   template <LevelFormat fmt>
-  bool isa() const {
+  constexpr bool isa() const {
     return getLvlFmt() == fmt;
   }
 
