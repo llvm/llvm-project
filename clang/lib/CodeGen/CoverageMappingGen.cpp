@@ -190,8 +190,7 @@ public:
   }
 
   const auto &getMCDCDecisionParams() const {
-    return CounterMappingRegion::getParams<const mcdc::DecisionParameters>(
-        MCDCParams);
+    return mcdc::getParams<const mcdc::DecisionParameters>(MCDCParams);
   }
 
   const mcdc::Parameters &getMCDCParams() const { return MCDCParams; }
