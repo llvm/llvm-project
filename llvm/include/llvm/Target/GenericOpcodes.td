@@ -1374,7 +1374,7 @@ def G_BRCOND : GenericInstruction {
 // Generic indirect branch.
 def G_BRINDIRECT : GenericInstruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins type0:$src1);
+  let InOperandList = (ins ptype0:$src1);
   let hasSideEffects = false;
   let isBranch = true;
   let isTerminator = true;

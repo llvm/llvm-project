@@ -30,6 +30,10 @@ private:
 public:
   X86LegalizerInfo(const X86Subtarget &STI, const X86TargetMachine &TM);
 
+  bool legalizeBrJT(LegalizerHelper &Helper, MachineInstr &MI) const;
+
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
 };
