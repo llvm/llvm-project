@@ -2757,12 +2757,7 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
       size = llvm::utostr(byte_size);
     }
   } else if (variablesReference == 0 && frame.IsValid()) {
-    // Name might be an expression. In this case we assume that name is composed
-    // of the number of bytes to watch and expression, separated by '@':
-    // "${size}@${expression}"
-    llvm::StringRef expr;
-    std::tie(size, expr) = name.split('@');
-    lldb::SBValue value = frame.EvaluateExpression(expr.data());
+    lldb::SBValue value = frame.EvaluateExpression(name.data());
     if (value.GetError().Fail()) {
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
@@ -2782,6 +2777,16 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
           body.try_emplace("description",
                            "memory region for address " + addr +
                                " has no read or write permissions");
+        } else {
+          lldb::SBData data = value.GetPointeeData();
+          if (data.IsValid())
+            size = llvm::utostr(data.GetByteSize());
+          else {
+            body.try_emplace("dataId", nullptr);
+            body.try_emplace("description",
+                             "unable to get byte size for expression: " +
+                                 name.str());
+          }
         }
       } else {
         body.try_emplace("dataId", nullptr);

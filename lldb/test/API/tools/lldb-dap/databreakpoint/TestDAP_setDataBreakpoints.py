@@ -24,8 +24,8 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         self.dap_server.get_stackFrame()
         # Test setting write watchpoint using expressions: &x, arr+2
-        response_x = self.dap_server.request_dataBreakpointInfo(0, "4@&x")
-        response_arr_2 = self.dap_server.request_dataBreakpointInfo(0, "4@arr+2")
+        response_x = self.dap_server.request_dataBreakpointInfo(0, "&x")
+        response_arr_2 = self.dap_server.request_dataBreakpointInfo(0, "arr+2")
         # Test response from dataBreakpointInfo request.
         self.assertEquals(response_x["body"]["dataId"].split("/")[1], "4")
         self.assertEquals(response_x["body"]["accessTypes"], self.accessTypes)
