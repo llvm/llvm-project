@@ -153,19 +153,12 @@ struct FunctionInfo {
             return nullptr;
 
         // get location
-        FullSourceLoc FullLocation =
-            D->getASTContext().getFullLoc(D->getBeginLoc());
-        if (FullLocation.isInvalid() || !FullLocation.hasManager())
+        std::unique_ptr<Location> pLoc =
+            Location::fromSourceLocation(D->getASTContext(), D->getBeginLoc());
+        if (!pLoc)
             return nullptr;
 
         std::string name = D->getQualifiedNameAsString();
-        int line = FullLocation.getSpellingLineNumber();
-        int column = FullLocation.getSpellingColumnNumber();
-        const FileEntry *fileEntry = FullLocation.getFileEntry();
-        if (!fileEntry)
-            return nullptr;
-        StringRef file = fileEntry->tryGetRealPathName();
-        requireTrue(!file.empty());
 
         // build CFG
         CFG *cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
@@ -185,9 +178,9 @@ struct FunctionInfo {
         FunctionInfo *fi = new FunctionInfo();
         fi->D = D;
         fi->name = name;
-        fi->file = file;
-        fi->line = line;
-        fi->column = column;
+        fi->file = pLoc->file;
+        fi->line = pLoc->line;
+        fi->column = pLoc->column;
         fi->cfg = cfg;
         fi->buildStmtBlockPairs();
         fi->bg = bg;

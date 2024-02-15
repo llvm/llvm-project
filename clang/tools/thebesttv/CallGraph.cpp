@@ -24,17 +24,10 @@ GenWholeProgramCallGraphVisitor::getMangledName(const FunctionDecl *decl) {
 };
 
 bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
-
-    FullSourceLoc FullLocation =
-        D->getASTContext().getFullLoc(D->getBeginLoc());
-    if (FullLocation.isInvalid() || !FullLocation.hasManager())
+    std::unique_ptr<Location> pLoc =
+        Location::fromSourceLocation(D->getASTContext(), D->getBeginLoc());
+    if (!pLoc)
         return true;
-    const FileEntry *fileEntry = FullLocation.getFileEntry();
-    if (!fileEntry)
-        return true;
-    StringRef _file = fileEntry->tryGetRealPathName();
-    requireTrue(!_file.empty());
-    std::string file(_file);
 
     /**
      * 目前，跳过不在当前文件的函数
@@ -46,7 +39,7 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
      * See: Is it a good practice to place C++ definitions in header files?
      *      https://stackoverflow.com/a/583271
      */
-    if (filePath != file)
+    if (filePath != pLoc->file)
         return true;
 
     if (!D->isThisDeclarationADefinition())
@@ -66,9 +59,7 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
     if (idOfFunction.find(fullSignature) != idOfFunction.end())
         return true;
 
-    NamedLocation *loc =
-        new NamedLocation(file, FullLocation.getLineNumber(),
-                          FullLocation.getColumnNumber(), fullSignature);
+    NamedLocation *loc = new NamedLocation(*pLoc, fullSignature);
 
     idOfFunction[fullSignature] = functionCnt++;
     functionLocations.push_back(loc);

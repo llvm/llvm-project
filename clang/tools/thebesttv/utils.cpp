@@ -25,21 +25,24 @@ std::string getFullSignature(const FunctionDecl *D) {
     return fullSignature;
 }
 
-Location::Location() : Location("", -1, -1) {}
+std::unique_ptr<Location>
+Location::fromSourceLocation(const ASTContext &Context,
+                             const SourceLocation &loc) {
+    FullSourceLoc FullLocation = Context.getFullLoc(loc);
+    if (FullLocation.isInvalid() || !FullLocation.hasManager())
+        return nullptr;
 
-Location::Location(std::string file, int line, int column)
-    : file(file), line(line), column(column) {}
+    const FileEntry *fileEntry = FullLocation.getFileEntry();
+    if (!fileEntry)
+        return nullptr;
 
-bool Location::operator==(const Location &other) const {
-    return file == other.file && line == other.line && column == other.column;
-}
+    StringRef _file = fileEntry->tryGetRealPathName();
+    if (_file.empty())
+        return nullptr;
+    std::string file(_file);
 
-NamedLocation::NamedLocation() : NamedLocation("", -1, -1, "") {}
+    int line = FullLocation.getSpellingLineNumber();
+    int column = FullLocation.getSpellingColumnNumber();
 
-NamedLocation::NamedLocation(std::string file, int line, int column,
-                             std::string name)
-    : Location(file, line, column), name(name) {}
-
-bool NamedLocation::operator==(const NamedLocation &other) const {
-    return Location::operator==(other) && name == other.name;
+    return std::make_unique<Location>(file, line, column);
 }

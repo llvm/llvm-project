@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <filesystem>
+#include <memory>
 #include <queue>
 #include <set>
 #include <string>
@@ -53,19 +54,35 @@ struct Location {
     int line;
     int column;
 
-    Location();
-    Location(std::string file, int line, int column);
+    Location() : Location("", -1, -1) {}
 
-    bool operator==(const Location &other) const;
+    Location(const std::string &file, int line, int column)
+        : file(file), line(line), column(column) {}
+
+    bool operator==(const Location &other) const {
+        return file == other.file && line == other.line &&
+               column == other.column;
+    }
+
+    static std::unique_ptr<Location>
+    fromSourceLocation(const ASTContext &Context, const SourceLocation &loc);
 };
 
 struct NamedLocation : public Location {
     std::string name;
 
-    NamedLocation();
-    NamedLocation(std::string file, int line, int column, std::string name);
+    NamedLocation() : NamedLocation("", -1, -1, "") {}
 
-    bool operator==(const NamedLocation &other) const;
+    NamedLocation(const std::string &file, int line, int column,
+                  const std::string &name)
+        : Location(file, line, column), name(name) {}
+
+    NamedLocation(const Location &loc, const std::string &name)
+        : Location(loc), name(name) {}
+
+    bool operator==(const NamedLocation &other) const {
+        return Location::operator==(other) && name == other.name;
+    }
 };
 
 struct GlobalStat {
