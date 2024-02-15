@@ -11,6 +11,12 @@ void Call3(half2 H) {
   Fn3(H);
 }
 
+void Fn5(double2 D);
+
+void Call5(half2 H) {
+  Fn5(H);
+}
+
 void Fn4(int64_t2 L);
 void Fn4(int2 I);
 

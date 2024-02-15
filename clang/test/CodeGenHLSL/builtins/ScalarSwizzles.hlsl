@@ -120,9 +120,8 @@ float2 HowManyFloats(float V) {
 // CHECK: [[vec1:%.*]] = load <1 x double>, ptr [[Tmp]], align 8
 // CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
 // CHECK: [[vec3f:%.*]] = fptrunc <3 x double> [[vec3]] to <3 x float>
-// ret <3 x float> [[vec3f]]
+// CHECK: ret <3 x float> [[vec3f]]
 
-// ret <3 x float> [[Vec3F3]]
 float3 AllRighty() {
   return 1..rrr;
 }

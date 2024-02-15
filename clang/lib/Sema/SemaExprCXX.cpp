@@ -4790,9 +4790,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   if (SCS.Element != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
-    // vectors or matrices. HLSL matrices aren't yet supported so this code only
-    // handles vectors for now.
-
+    // vectors or matrices.
+    
+    // TODO: Support HLSL matrices.
+    assert(From->getType()->isMatrixType() || ToType->isMatrixType() &&
+           "Element conversion for matrix types is not implemented yet.");
     assert(From->getType()->isVectorType() && ToType->isVectorType() &&
            "Element conversion is only supported for vector types.");
     assert(From->getType()->getAs<VectorType>()->getNumElements() ==
@@ -4802,9 +4804,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     QualType FromElTy = From->getType()->getAs<VectorType>()->getElementType();
     unsigned NumElts = ToType->getAs<VectorType>()->getNumElements();
     switch (SCS.Element) {
-    case ICK_Identity:
-      // Nothing to do.
-      break;
     case ICK_Boolean_Conversion:
       // Perform half-to-boolean conversion via float.
       if (FromElTy->isHalfType()) {
@@ -4853,6 +4852,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                               /*BasePath=*/nullptr, CCK)
                 .get();
       break;
+    case ICK_Identity:
     default:
       llvm_unreachable("Improper element standard conversion");
     }
