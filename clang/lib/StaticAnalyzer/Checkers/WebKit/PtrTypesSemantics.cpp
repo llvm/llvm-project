@@ -348,7 +348,7 @@ public:
     return TrivialFunctionAnalysis::isTrivialImpl(MCE->getDirectCallee(),
                                                   Cache);
   }
-  
+
   bool checkArguments(const CallExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
