@@ -327,7 +327,7 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
     return TII->isInlineConstant(C->getAPIntValue());
 
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+    return TII->isInlineConstant(C->getValueAPF());
 
   return false;
 }
