@@ -27,19 +27,12 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
 
     bool findMatch(const Stmt *S, const NamedDecl *decl,
                    const SourceLocation &loc) {
-        FullSourceLoc FullLocation = Context->getFullLoc(loc);
-        if (!FullLocation.hasManager() || !FullLocation.isValid())
+        std::unique_ptr<Location> pLoc =
+            Location::fromSourceLocation(*Context, loc);
+        if (!pLoc)
             return false;
 
-        const FileEntry *fileEntry = FullLocation.getFileEntry();
-        if (!fileEntry)
-            return false;
-        std::string file = std::string(fileEntry->tryGetRealPathName());
-        int line = FullLocation.getLineNumber();
-        int column = FullLocation.getColumnNumber();
-
-        Location varLoc = Location(file, line, column);
-        bool match = varLoc == targetLoc;
+        bool match = (*pLoc) == targetLoc;
         if (match)
             found = decl->getNameAsString();
 

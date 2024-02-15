@@ -76,14 +76,11 @@ class FunctionDeclVisitor : public RecursiveASTVisitor<FunctionDeclVisitor>,
         : HasContextVisitor(Context) {}
 
     bool VisitFunctionDecl(FunctionDecl *D) {
-        FullSourceLoc FullLocation = Context->getFullLoc(D->getBeginLoc());
-        requireTrue(FullLocation.hasManager(), "no source manager!");
-        if (FullLocation.isInvalid())
-            return true;
+        std::unique_ptr<Location> pLoc =
+            Location::fromSourceLocation(*Context, D->getBeginLoc());
 
         llvm::errs() << "------ FunctionDecl: " << D->getQualifiedNameAsString()
-                     << " at " << FullLocation.getSpellingLineNumber() << ":"
-                     << FullLocation.getSpellingColumnNumber() << "\n";
+                     << " at " << pLoc->line << ":" << pLoc->column << "\n";
 
         if (!D->hasBody())
             return true;
