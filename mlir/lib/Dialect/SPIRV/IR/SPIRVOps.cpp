@@ -458,7 +458,7 @@ ParseResult spirv::CompositeExtractOp::parse(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand compositeInfo;
   Attribute indicesAttr;
   StringRef indicesAttrName =
-      spirv::CompositeExtractOp::getIndicesAttrName(result.name).strref();
+      spirv::CompositeExtractOp::getIndicesAttrName(result.name);
   Type compositeType;
   SMLoc attrLocation;
 
@@ -516,7 +516,7 @@ ParseResult spirv::CompositeInsertOp::parse(OpAsmParser &parser,
   Type objectType, compositeType;
   Attribute indicesAttr;
   StringRef indicesAttrName =
-      spirv::CompositeInsertOp::getIndicesAttrName(result.name).strref();
+      spirv::CompositeInsertOp::getIndicesAttrName(result.name);
   auto loc = parser.getCurrentLocation();
 
   return failure(
@@ -564,7 +564,7 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   Attribute value;
   StringRef valueAttrName =
-      spirv::ConstantOp::getValueAttrName(result.name).strref();
+      spirv::ConstantOp::getValueAttrName(result.name);
   if (parser.parseAttribute(value, valueAttrName, result.attributes))
     return failure();
 
@@ -829,7 +829,7 @@ ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
       return failure();
   }
   result.addAttribute(
-      spirv::EntryPointOp::getInterfaceAttrName(result.name).strref(),
+      spirv::EntryPointOp::getInterfaceAttrName(result.name),
       parser.getBuilder().getArrayAttr(interfaceVars));
   return success();
 }
@@ -883,7 +883,7 @@ ParseResult spirv::ExecutionModeOp::parse(OpAsmParser &parser,
     values.push_back(llvm::cast<IntegerAttr>(value).getInt());
   }
   StringRef valuesAttrName =
-      spirv::ExecutionModeOp::getValuesAttrName(result.name).strref();
+      spirv::ExecutionModeOp::getValuesAttrName(result.name);
   result.addAttribute(valuesAttrName,
                       parser.getBuilder().getI32ArrayAttr(values));
   return success();
@@ -1160,7 +1160,7 @@ ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
   // Parse variable name.
   StringAttr nameAttr;
   StringRef initializerAttrName =
-      spirv::GlobalVariableOp::getInitializerAttrName(result.name).strref();
+      spirv::GlobalVariableOp::getInitializerAttrName(result.name);
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes)) {
     return failure();
@@ -1182,7 +1182,7 @@ ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
 
   Type type;
   StringRef typeAttrName =
-      spirv::GlobalVariableOp::getTypeAttrName(result.name).strref();
+      spirv::GlobalVariableOp::getTypeAttrName(result.name);
   auto loc = parser.getCurrentLocation();
   if (parser.parseColonType(type)) {
     return failure();
@@ -1204,7 +1204,7 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
   printer.printSymbolName(getSymName());
   elidedAttrs.push_back(SymbolTable::getSymbolAttrName());
 
-  StringRef initializerAttrName = this->getInitializerAttrName().strref();
+  StringRef initializerAttrName = this->getInitializerAttrName();
   // Print optional initializer
   if (auto initializer = this->getInitializer()) {
     printer << " " << initializerAttrName << '(';
@@ -1213,7 +1213,7 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
     elidedAttrs.push_back(initializerAttrName);
   }
 
-  StringRef typeAttrName = this->getTypeAttrName().strref();
+  StringRef typeAttrName = this->getTypeAttrName();
   elidedAttrs.push_back(typeAttrName);
   spirv::printVariableDecorations(*this, printer, elidedAttrs);
   printer << " : " << getType();
@@ -1235,7 +1235,7 @@ LogicalResult spirv::GlobalVariableOp::verify() {
   }
 
   if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
-          this->getInitializerAttrName().strref())) {
+          this->getInitializerAttrName())) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
         (*this)->getParentOp(), init.getAttr());
     // TODO: Currently only variable initialization with specialization
@@ -1610,7 +1610,7 @@ ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
   StringAttr nameAttr;
   Attribute valueAttr;
   StringRef defaultValueAttrName =
-      spirv::SpecConstantOp::getDefaultValueAttrName(result.name).strref();
+      spirv::SpecConstantOp::getDefaultValueAttrName(result.name);
 
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes))
