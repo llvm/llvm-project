@@ -23,11 +23,11 @@ let cppNamespace = "::mlir::cir" in {
       InterfaceMethod<"", "mlir::Operation::operand_iterator",
                       "arg_operand_end", (ins)>,
       InterfaceMethod<
-        "Return the operand at index 'i', accounts for indirect call",
-        "mlir::Value", "getArgOperand", (ins "unsigned":$i)>,
+        "Return the operand at index 'i', accounts for indirect call or "
+        "exception info", "mlir::Value", "getArgOperand", (ins "unsigned":$i)>,
       InterfaceMethod<
-        "Return the number of operands, accounts for indirect call",
-        "unsigned", "getNumArgOperands", (ins)>,
+        "Return the number of operands, accounts for indirect call or "
+        "exception info", "unsigned", "getNumArgOperands", (ins)>,
     ];
   }
 
