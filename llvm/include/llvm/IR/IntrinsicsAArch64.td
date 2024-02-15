@@ -703,17 +703,19 @@ def int_aarch64_neon_tbx3 : AdvSIMD_Tbx3_Intrinsic;
 def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
-  class FPCR_Get_Intrinsic
+  class FPENV_Get_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
-  class FPCR_Set_Intrinsic
+  class FPENV_Set_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrNoMem, IntrHasSideEffects]>;
   class RNDR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
-// FPCR
-def int_aarch64_get_fpcr : FPCR_Get_Intrinsic;
-def int_aarch64_set_fpcr : FPCR_Set_Intrinsic;
+// FP environment registers.
+def int_aarch64_get_fpcr : FPENV_Get_Intrinsic;
+def int_aarch64_set_fpcr : FPENV_Set_Intrinsic;
+def int_aarch64_get_fpsr : FPENV_Get_Intrinsic;
+def int_aarch64_set_fpsr : FPENV_Set_Intrinsic;
 
 // Armv8.5-A Random number generation intrinsics
 def int_aarch64_rndr : RNDR_Intrinsic;
