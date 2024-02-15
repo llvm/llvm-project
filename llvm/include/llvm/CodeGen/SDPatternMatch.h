@@ -118,6 +118,25 @@ inline Value_match m_Specific(SDValue N) {
   return Value_match(N);
 }
 
+struct DeferredValue_match {
+  SDValue &MatchVal;
+
+  explicit DeferredValue_match(SDValue &Match) : MatchVal(Match) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return N == MatchVal;
+  }
+};
+
+/// Similar to m_Specific, but the specific value to match is determined by
+/// another sub-pattern in the same sd_match() expression. For instance,
+/// We cannot match `(add V, V)` with `m_Add(m_Value(X), m_Specific(X))` since
+/// `X` is not initialized at the time it got copied into `m_Specific`. Instead,
+/// we should use `m_Add(m_Value(X), m_Deferred(X))`.
+inline DeferredValue_match m_Deferred(SDValue &V) {
+  return DeferredValue_match(V);
+}
+
 struct Opcode_match {
   unsigned Opcode;
 
