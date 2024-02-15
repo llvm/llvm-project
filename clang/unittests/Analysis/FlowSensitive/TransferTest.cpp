@@ -2367,6 +2367,27 @@ TEST(TransferTest, InitListExprAsXValue) {
       });
 }
 
+TEST(TransferTest, InitListExprAsUnion) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    class target {
+      union {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      constexpr target() : F{nullptr} {}
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Just verify that it doesn't crash.
+      });
+}
+
 TEST(TransferTest, CopyConstructor) {
   std::string Code = R"(
     struct A {
