@@ -3637,6 +3637,11 @@ TEST_P(ASTMatchersTest, InStdNamespace) {
                       "  class vector {};"
                       "}",
                       cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+
+  EXPECT_TRUE(matches("namespace std {"
+                      "  extern \"C++\" class vector {};"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
 }
 
 TEST_P(ASTMatchersTest, InAnonymousNamespace) {
