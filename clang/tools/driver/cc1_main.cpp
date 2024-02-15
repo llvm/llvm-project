@@ -25,6 +25,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Tooling/ModuleBuildDaemon/Frontend.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LinkAllPasses.h"
@@ -63,7 +64,7 @@ using namespace llvm::opt;
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
-  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
+  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine *>(UserData);
 
   Diags.Report(diag::err_fe_error_backend) << Message;
 
@@ -139,7 +140,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo->getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
@@ -208,7 +209,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
@@ -217,13 +218,19 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success) {
     Clang->getDiagnosticClient().finish();
     return 1;
+  }
+
+  // Handle module build daemon functionality if enabled
+  if (Clang->getFrontendOpts().ModuleBuildDaemon) {
+    clang::tooling::cc1modbuildd::spawnModuleBuildDaemonAndHandshake(
+        Clang->getInvocation(), Argv0, Clang->getDiagnostics());
   }
 
   // Execute the frontend actions.

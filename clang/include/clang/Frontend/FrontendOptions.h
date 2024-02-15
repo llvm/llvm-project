@@ -386,6 +386,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesShareFileManager : 1;
 
+  /// Connect to module build daemon.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModuleBuildDaemon : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -470,6 +474,10 @@ public:
 
   /// The output file, if any.
   std::string OutputFile;
+
+  /// If given, the path to the module build daemon's output files and socket
+  /// address
+  std::string ModuleBuildDaemonPath;
 
   /// If given, the new suffix for fix-it rewritten files.
   std::string FixItSuffix;

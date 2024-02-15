@@ -17,6 +17,9 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <atomic>
+#include <chrono>
+
 namespace llvm {
 
 class raw_socket_stream;
@@ -31,7 +34,7 @@ public:
 #endif // _WIN32
 
 class ListeningSocket {
-  int FD;
+  std::atomic<int> FD;
   std::string SocketPath;
   ListeningSocket(int SocketFD, StringRef SocketPath);
 #ifdef _WIN32
@@ -39,13 +42,21 @@ class ListeningSocket {
 #endif // _WIN32
 
 public:
+  ~ListeningSocket();
+  ListeningSocket(ListeningSocket &&LS);
+  ListeningSocket(const ListeningSocket &LS) = delete;
+  ListeningSocket &operator=(const ListeningSocket &) = delete;
+
+  void shutdown();
+
+  Expected<std::unique_ptr<raw_socket_stream>>
+  accept(std::optional<std::chrono::microseconds> Timeout = std::nullopt);
+
   static Expected<ListeningSocket> createUnix(
       StringRef SocketPath,
       int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
-  Expected<std::unique_ptr<raw_socket_stream>> accept();
-  ListeningSocket(ListeningSocket &&LS);
-  ~ListeningSocket();
 };
+
 class raw_socket_stream : public raw_fd_stream {
   uint64_t current_pos() const override { return 0; }
 #ifdef _WIN32
@@ -53,6 +64,7 @@ class raw_socket_stream : public raw_fd_stream {
 #endif // _WIN32
 
 public:
+  // TODO: Should probably be private
   raw_socket_stream(int SocketFD);
   /// Create a \p raw_socket_stream connected to the Unix domain socket at \p
   /// SocketPath.
