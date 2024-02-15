@@ -1277,7 +1277,7 @@ void AsmMatcherInfo::buildRegisterClasses(
 
     if (!ContainingSet.empty()) {
       RegisterSets.insert(ContainingSet);
-      RegisterMap.insert(std::make_pair(CGR.TheDef, ContainingSet));
+      RegisterMap.insert(std::pair(CGR.TheDef, ContainingSet));
     }
   }
 
@@ -1298,7 +1298,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->DiagnosticType = "";
     CI->IsOptional = false;
     CI->DefaultMethod = ""; // unused
-    RegisterSetClasses.insert(std::make_pair(RS, CI));
+    RegisterSetClasses.insert(std::pair(RS, CI));
     ++Index;
   }
 
@@ -1340,7 +1340,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
       CI->DiagnosticType = RC.getName();
 
-    RegisterClassClasses.insert(std::make_pair(Def, CI));
+    RegisterClassClasses.insert(std::pair(Def, CI));
   }
 
   // Populate the map for individual registers.
@@ -2193,7 +2193,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         ConversionRow.push_back(SrcOp2);
 
         // Also create an 'enum' for this combination of tied operands.
-        auto Key = std::make_tuple(TiedOp, SrcOp1, SrcOp2);
+        auto Key = std::tuple(TiedOp, SrcOp1, SrcOp2);
         TiedOperandsEnumMap.emplace(Key, TiedTupleName);
         break;
       }
@@ -2342,9 +2342,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
       // For a tied operand, emit a reference to the TiedAsmOperandTable
       // that contains the operand to copy, and the parsed operands to
       // check for their tied constraints.
-      auto Key = std::make_tuple((uint8_t)ConversionTable[Row][i + 1],
-                                 (uint8_t)ConversionTable[Row][i + 2],
-                                 (uint8_t)ConversionTable[Row][i + 3]);
+      auto Key = std::tuple((uint8_t)ConversionTable[Row][i + 1],
+                            (uint8_t)ConversionTable[Row][i + 2],
+                            (uint8_t)ConversionTable[Row][i + 3]);
       auto TiedOpndEnum = TiedOperandsEnumMap.find(Key);
       assert(TiedOpndEnum != TiedOperandsEnumMap.end() &&
              "No record for tied operand pair");
@@ -2812,7 +2812,7 @@ emitMnemonicAliasVariant(raw_ostream &OS, const AsmMatcherInfo &Info,
 
     MatchCode += "return;";
 
-    Cases.push_back(std::make_pair(AliasEntry.first, MatchCode));
+    Cases.push_back(std::pair(AliasEntry.first, MatchCode));
   }
   StringMatcher("Mnemonic", Cases, OS).Emit(Indent);
 }
@@ -2979,7 +2979,7 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
           "std::end(OperandMatchTable),\n";
     OS << "                     Mnemonic, LessOpcodeOperand());\n\n";
   } else {
-    OS << "  auto MnemonicRange = std::make_pair(std::begin(OperandMatchTable),"
+    OS << "  auto MnemonicRange = std::pair(std::begin(OperandMatchTable),"
           " std::end(OperandMatchTable));\n";
     OS << "  if (!Mnemonic.empty())\n";
     OS << "    MnemonicRange =\n";
@@ -3154,7 +3154,7 @@ static void emitMnemonicChecker(raw_ostream &OS, CodeGenTarget &Target,
       OS << "  auto MnemonicRange = "
             "std::equal_range(Start, End, Mnemonic, LessOpcode());\n\n";
     } else {
-      OS << "  auto MnemonicRange = std::make_pair(Start, End);\n";
+      OS << "  auto MnemonicRange = std::pair(Start, End);\n";
       OS << "  unsigned SIndex = Mnemonic.empty() ? 0 : 1;\n";
       OS << "  if (!Mnemonic.empty())\n";
       OS << "    MnemonicRange = "
@@ -3629,7 +3629,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  auto MnemonicRange = "
           "std::equal_range(Start, End, Mnemonic, LessOpcode());\n\n";
   } else {
-    OS << "  auto MnemonicRange = std::make_pair(Start, End);\n";
+    OS << "  auto MnemonicRange = std::pair(Start, End);\n";
     OS << "  unsigned SIndex = Mnemonic.empty() ? 0 : 1;\n";
     OS << "  if (!Mnemonic.empty())\n";
     OS << "    MnemonicRange = "

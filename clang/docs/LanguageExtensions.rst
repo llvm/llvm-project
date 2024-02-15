@@ -2791,8 +2791,8 @@ frequency is fixed, making it suitable for measuring elapsed time.
 
 The ``__builtin_readsteadycounter()`` builtin returns the frequency counter value.
 When not supported by the target, the return value is always zero. This builtin
-takes no arguments and produces an unsigned long long result. The builtin does 
-not guarantee any particular frequency, only that it is stable. Knowledge of the 
+takes no arguments and produces an unsigned long long result. The builtin does
+not guarantee any particular frequency, only that it is stable. Knowledge of the
 counter's true frequency will need to be provided by the user.
 
 Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.

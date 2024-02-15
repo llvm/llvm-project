@@ -11,7 +11,7 @@
 
 #ifdef __clang__
 #if (!defined(__cplusplus) || (__clang_major__ >= 18))
-// _Fract and _Accum types are avaiable
+// _Fract and _Accum types are available
 #define LIBC_COMPILER_HAS_FIXED_POINT
 #endif // __cplusplus
 #endif // __clang__
