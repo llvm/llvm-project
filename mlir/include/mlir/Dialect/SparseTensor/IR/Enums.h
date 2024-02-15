@@ -35,6 +35,7 @@
 #include <cinttypes>
 #include <complex>
 #include <optional>
+#include <vector>
 
 namespace mlir {
 namespace sparse_tensor {
@@ -343,15 +344,29 @@ constexpr std::optional<LevelFormat> getLevelFormat(LevelType lt) {
 /// Convert a LevelFormat to its corresponding LevelType with the given
 /// properties. Returns std::nullopt when the properties are not applicable
 /// for the input level format.
-constexpr std::optional<LevelType> buildLevelType(LevelFormat lf, bool ordered,
-                                                  bool unique, uint64_t n = 0,
-                                                  uint64_t m = 0) {
+inline std::optional<LevelType>
+buildLevelType(LevelFormat lf,
+               const std::vector<LevelPropertyNondefault> &properties,
+               uint64_t n = 0, uint64_t m = 0) {
   uint64_t newN = n << 32;
   uint64_t newM = m << 40;
-  auto lt =
-      static_cast<LevelType>(static_cast<uint64_t>(lf) | (ordered ? 0 : 2) |
-                             (unique ? 0 : 1) | newN | newM);
+  uint64_t ltInt = static_cast<uint64_t>(lf) | newN | newM;
+  for (auto p : properties) {
+    ltInt |= static_cast<uint64_t>(p);
+  }
+  auto lt = static_cast<LevelType>(ltInt);
   return isValidLT(lt) ? std::optional(lt) : std::nullopt;
+}
+
+inline std::optional<LevelType> buildLevelType(LevelFormat lf, bool ordered,
+                                               bool unique, uint64_t n = 0,
+                                               uint64_t m = 0) {
+  std::vector<LevelPropertyNondefault> properties;
+  if (!ordered)
+    properties.push_back(LevelPropertyNondefault::Nonordered);
+  if (!unique)
+    properties.push_back(LevelPropertyNondefault::Nonunique);
+  return buildLevelType(lf, properties, n, m);
 }
 
 //
@@ -379,57 +394,6 @@ static_assert(
          LevelFormat::LooseCompressed &&
      *getLevelFormat(LevelType::NOutOfM) == LevelFormat::NOutOfM),
     "getLevelFormat conversion is broken");
-
-static_assert(
-    (buildLevelType(LevelFormat::Dense, false, true) == std::nullopt &&
-     buildLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
-     buildLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
-     *buildLevelType(LevelFormat::Dense, true, true) == LevelType::Dense &&
-     *buildLevelType(LevelFormat::Compressed, true, true) ==
-         LevelType::Compressed &&
-     *buildLevelType(LevelFormat::Compressed, true, false) ==
-         LevelType::CompressedNu &&
-     *buildLevelType(LevelFormat::Compressed, false, true) ==
-         LevelType::CompressedNo &&
-     *buildLevelType(LevelFormat::Compressed, false, false) ==
-         LevelType::CompressedNuNo &&
-     *buildLevelType(LevelFormat::Singleton, true, true) ==
-         LevelType::Singleton &&
-     *buildLevelType(LevelFormat::Singleton, true, false) ==
-         LevelType::SingletonNu &&
-     *buildLevelType(LevelFormat::Singleton, false, true) ==
-         LevelType::SingletonNo &&
-     *buildLevelType(LevelFormat::Singleton, false, false) ==
-         LevelType::SingletonNuNo &&
-     *buildLevelType(LevelFormat::LooseCompressed, true, true) ==
-         LevelType::LooseCompressed &&
-     *buildLevelType(LevelFormat::LooseCompressed, true, false) ==
-         LevelType::LooseCompressedNu &&
-     *buildLevelType(LevelFormat::LooseCompressed, false, true) ==
-         LevelType::LooseCompressedNo &&
-     *buildLevelType(LevelFormat::LooseCompressed, false, false) ==
-         LevelType::LooseCompressedNuNo &&
-     buildLevelType(LevelFormat::NOutOfM, false, true) == std::nullopt &&
-     buildLevelType(LevelFormat::NOutOfM, true, false) == std::nullopt &&
-     buildLevelType(LevelFormat::NOutOfM, false, false) == std::nullopt &&
-     *buildLevelType(LevelFormat::NOutOfM, true, true) == LevelType::NOutOfM),
-    "buildLevelType conversion is broken");
-
-static_assert(
-    (getN(*buildLevelType(LevelFormat::NOutOfM, true, true, 2, 4)) == 2 &&
-     getM(*buildLevelType(LevelFormat::NOutOfM, true, true, 2, 4)) == 4 &&
-     getN(*buildLevelType(LevelFormat::NOutOfM, true, true, 8, 10)) == 8 &&
-     getM(*buildLevelType(LevelFormat::NOutOfM, true, true, 8, 10)) == 10),
-    "getN/M conversion is broken");
-
-static_assert(
-    (isValidNOutOfMLT(*buildLevelType(LevelFormat::NOutOfM, true, true, 2, 4),
-                      2, 4) &&
-     isValidNOutOfMLT(*buildLevelType(LevelFormat::NOutOfM, true, true, 8, 10),
-                      8, 10) &&
-     !isValidNOutOfMLT(*buildLevelType(LevelFormat::NOutOfM, true, true, 3, 4),
-                       2, 4)),
-    "isValidNOutOfMLT definition is broken");
 
 static_assert(
     (isValidLT(LevelType::Undef) && isValidLT(LevelType::Dense) &&

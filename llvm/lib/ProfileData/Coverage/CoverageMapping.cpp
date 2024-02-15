@@ -226,19 +226,18 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
 MCDCTVIdxBuilder::MCDCTVIdxBuilder(
     std::function<NodeIDs(bool TellSize)> Fetcher, int Offset) {
   // Construct Nodes and set up each InCount
-  int MaxID = -1;
+  mcdc::ConditionID MaxID = -1;
   auto N = std::get<0>(Fetcher(true));
   SmallVector<MCDCNode> Nodes(N);
   Indices.resize(N);
   while (true) {
-    auto [ID1, FalseID1, TrueID1] = Fetcher(false);
-    if (ID1 == 0)
+    auto [ID, FalseID, TrueID] = Fetcher(false);
+    if (ID < 0)
       break;
-    int ID = ID1 - 1;
     MaxID = std::max(MaxID, ID);
     auto &Node = Nodes[ID];
-    Node.NextIDs[0] = FalseID1 - 1;
-    Node.NextIDs[1] = TrueID1 - 1;
+    Node.NextIDs[0] = FalseID;
+    Node.NextIDs[1] = TrueID;
     for (unsigned I = 0; I < 2; ++I) {
 #ifndef NDEBUG
       Indices[ID][I] = INT_MIN;
@@ -350,9 +349,9 @@ public:
       if (TellSize)
         return NodeIDs(Branches.size(), 0, 0);
       if (BranchIdx >= Branches.size())
-        return NodeIDs(0, 0, 0);
+        return NodeIDs(-1, 0, 0);
       const auto &B = Branches[BranchIdx++]->getBranchParams();
-      return NodeIDs(B.ID, B.FalseID, B.TrueID);
+      return NodeIDs(B.ID, B.Conds[false], B.Conds[true]);
     };
   }
 };
@@ -377,8 +376,8 @@ class MCDCRecordProcessor : MCDCTVIdxBuilder {
 
   unsigned BitmapIdx;
 
-  /// Mapping of a condition ID to its corresponding branch region.
-  llvm::DenseMap<int, std::array<int, 2>> NextIDsMap;
+  /// Mapping of a condition ID to its corresponding branch params.
+  llvm::DenseMap<mcdc::ConditionID, mcdc::ConditionIDs> NextIDsMap;
 
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
@@ -405,40 +404,38 @@ public:
         Folded(NumConditions, false), IndependencePairs(NumConditions) {}
 
 private:
-  void recordTestVector(MCDCRecord::TestVector &TV, int TVIdx, unsigned Index,
-                        MCDCRecord::CondState Result) {
-    assert(TVIdxs.insert(TVIdx).second && "Duplicate TVIdx");
-
-    if (!Bitmap[BitmapIdx + Index])
-      return;
-
-    // Copy the completed test vector to the vector of testvectors.
-    ExecVectors.push_back(TV);
-
-    // The final value (T,F) is equal to the last non-dontcare state on the
-    // path (in a short-circuiting system).
-    ExecVectors.back().push_back(Result);
-  }
-
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
-  void buildTestVector(MCDCRecord::TestVector &TV, int ID, int TVIdx,
-                       unsigned Index) {
-    const auto &NextIDs = NextIDsMap[ID];
+  void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
+                       int TVIdx, unsigned Index) {
+    assert((Index & (1 << ID)) == 0);
 
-    for (unsigned I = 0; I < 2; ++I) {
-      auto MCDCCond = (I ? MCDCRecord::MCDC_True : MCDCRecord::MCDC_False);
-      auto NextID = NextIDs[I];
-      assert(NextID == SavedNodes[ID].NextIDs[I]);
-      Index |= I << ID;
+    for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
+      static_assert(MCDCRecord::MCDC_False == 0);
+      static_assert(MCDCRecord::MCDC_True == 1);
+      Index |= MCDCCond << ID;
       TV[ID] = MCDCCond;
+      auto NextID = NextIDsMap[ID][MCDCCond];
+      auto NextTVIdx = TVIdx + Indices[ID][MCDCCond];
+      assert(NextID == SavedNodes[ID].NextIDs[MCDCCond]);
       if (NextID >= 0) {
-        buildTestVector(TV, NextID, TVIdx + Indices[ID][I], Index);
-      } else {
-        assert(TVIdx < SavedNodes[ID].Width);
-        recordTestVector(TV, Indices[ID][I] + TVIdx, Index, MCDCCond);
+        buildTestVector(TV, NextID, NextTVIdx, Index);
+        continue;
       }
+
+      assert(TVIdx < SavedNodes[ID].Width);
+      assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
+
+      if (!Bitmap[BitmapIdx + Index])
+        continue;
+
+      // Copy the completed test vector to the vector of testvectors.
+      ExecVectors.push_back(TV);
+
+      // The final value (T,F) is equal to the last non-dontcare state on the
+      // path (in a short-circuiting system).
+      ExecVectors.back().push_back(MCDCCond);
     }
 
     // Reset back to DontCare.
@@ -516,9 +513,8 @@ public:
     //   from being measured.
     for (const auto *B : Branches) {
       const auto &BranchParams = B->getBranchParams();
-      NextIDsMap[BranchParams.ID - 1] = {int(BranchParams.FalseID) - 1,
-                                         int(BranchParams.TrueID) - 1};
-      PosToID[I] = BranchParams.ID - 1;
+      NextIDsMap[BranchParams.ID] = BranchParams.Conds;
+      PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
@@ -713,10 +709,10 @@ private:
       assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
 
       auto ConditionID = Branch.getBranchParams().ID;
-      assert(ConditionID > 0 && "ConditionID should begin with 1");
+      assert(ConditionID >= 0 && "ConditionID should be positive");
 
       if (ConditionIDs.contains(ConditionID) ||
-          ConditionID > DecisionParams.NumConditions)
+          ConditionID >= DecisionParams.NumConditions)
         return NotProcessed;
 
       if (!this->dominates(Branch))
@@ -724,9 +720,9 @@ private:
 
       assert(MCDCBranches.size() < DecisionParams.NumConditions);
 
-      // Put `ID=1` in front of `MCDCBranches` for convenience
+      // Put `ID=0` in front of `MCDCBranches` for convenience
       // even if `MCDCBranches` is not topological.
-      if (ConditionID == 1)
+      if (ConditionID == 0)
         MCDCBranches.insert(MCDCBranches.begin(), &Branch);
       else
         MCDCBranches.push_back(&Branch);

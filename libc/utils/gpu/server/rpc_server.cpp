@@ -396,62 +396,42 @@ const void *rpc_get_client_buffer(uint32_t device_id) {
 
 uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
 
-using ServerPort = std::variant<rpc::Server<1>::Port *, rpc::Server<32>::Port *,
-                                rpc::Server<64>::Port *>;
+using ServerPort = std::variant<rpc::Server<0>::Port *>;
 
 ServerPort get_port(rpc_port_t ref) {
-  if (ref.lane_size == 1)
-    return reinterpret_cast<rpc::Server<1>::Port *>(ref.handle);
-  else if (ref.lane_size == 32)
-    return reinterpret_cast<rpc::Server<32>::Port *>(ref.handle);
-  else if (ref.lane_size == 64)
-    return reinterpret_cast<rpc::Server<64>::Port *>(ref.handle);
-  else
-    __builtin_unreachable();
+  return reinterpret_cast<rpc::Server<0>::Port *>(ref.handle);
 }
 
 void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
-  auto port = get_port(ref);
-  std::visit(
-      [=](auto &port) {
-        port->send([=](rpc::Buffer *buffer) {
-          callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
-        });
-      },
-      port);
+  auto port = reinterpret_cast<rpc::Server<0>::Port *>(ref.handle);
+  port->send([=](rpc::Buffer *buffer) {
+    callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
+  });
 }
 
 void rpc_send_n(rpc_port_t ref, const void *const *src, uint64_t *size) {
-  auto port = get_port(ref);
-  std::visit([=](auto &port) { port->send_n(src, size); }, port);
+  auto port = reinterpret_cast<rpc::Server<0>::Port *>(ref.handle);
+  port->send_n(src, size);
 }
 
 void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
-  auto port = get_port(ref);
-  std::visit(
-      [=](auto &port) {
-        port->recv([=](rpc::Buffer *buffer) {
-          callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
-        });
-      },
-      port);
+  auto port = reinterpret_cast<rpc::Server<0>::Port *>(ref.handle);
+  port->recv([=](rpc::Buffer *buffer) {
+    callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
+  });
 }
 
 void rpc_recv_n(rpc_port_t ref, void **dst, uint64_t *size, rpc_alloc_ty alloc,
                 void *data) {
-  auto port = get_port(ref);
+  auto port = reinterpret_cast<rpc::Server<0>::Port *>(ref.handle);
   auto alloc_fn = [=](uint64_t size) { return alloc(size, data); };
-  std::visit([=](auto &port) { port->recv_n(dst, size, alloc_fn); }, port);
+  port->recv_n(dst, size, alloc_fn);
 }
 
 void rpc_recv_and_send(rpc_port_t ref, rpc_port_callback_ty callback,
                        void *data) {
-  auto port = get_port(ref);
-  std::visit(
-      [=](auto &port) {
-        port->recv_and_send([=](rpc::Buffer *buffer) {
-          callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
-        });
-      },
-      port);
+  auto port = reinterpret_cast<rpc::Server<0>::Port *>(ref.handle);
+  port->recv_and_send([=](rpc::Buffer *buffer) {
+    callback(reinterpret_cast<rpc_buffer_t *>(buffer), data);
+  });
 }

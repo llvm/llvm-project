@@ -39,7 +39,6 @@
 #include <sstream>
 #include <string>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -260,22 +259,12 @@ struct CounterMappingRegion {
   /// Parameters used for Modified Condition/Decision Coverage
   mcdc::Parameters MCDCParams;
 
-  template <class MaybeConstInnerParameters, class MaybeConstMCDCParameters>
-  static auto &getParams(MaybeConstMCDCParameters &MCDCParams) {
-    using InnerParameters =
-        typename std::remove_const<MaybeConstInnerParameters>::type;
-    MaybeConstInnerParameters *Params =
-        std::get_if<InnerParameters>(&MCDCParams);
-    assert(Params && "InnerParameters unavailable");
-    return *Params;
-  }
-
   const auto &getDecisionParams() const {
-    return getParams<const mcdc::DecisionParameters>(MCDCParams);
+    return mcdc::getParams<const mcdc::DecisionParameters>(MCDCParams);
   }
 
   const auto &getBranchParams() const {
-    return getParams<const mcdc::BranchParameters>(MCDCParams);
+    return mcdc::getParams<const mcdc::BranchParameters>(MCDCParams);
   }
 
   unsigned FileID = 0;
@@ -590,9 +579,9 @@ public:
 
 public:
   /// Inputs: to gather MCDCBranch-like ID to construct the BDD.
-  using NodeIDs = std::tuple<mcdc::ConditionID, // ID1 (ends with 0)
-                             mcdc::ConditionID, // ID1 for False
-                             mcdc::ConditionID  // ID1 for True
+  using NodeIDs = std::tuple<mcdc::ConditionID, // ID (ends with -1)
+                             mcdc::ConditionID, // ID for False
+                             mcdc::ConditionID  // ID for True
                              >;
 
   /// Calculate and assign Indices
