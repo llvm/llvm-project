@@ -6,9 +6,9 @@ declare double @llvm.sqrt.f64(double)
 define double @sqrt_div_fast(double %x, double %y, double %z) {
 ; CHECK-LABEL: @sqrt_div_fast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[DIV]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast double [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.sqrt.f64(double [[TMP0]])
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -36,9 +36,9 @@ entry:
 define double @sqrt_div_reassoc_arcp(double %x, double %y, double %z) {
 ; CHECK-LABEL: @sqrt_div_reassoc_arcp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc arcp double [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[DIV]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc arcp double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv reassoc arcp double [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[TMP0]])
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
@@ -96,9 +96,9 @@ entry:
 define double @sqrt_div_arcp_missing(double %x, double %y, double %z) {
 ; CHECK-LABEL: @sqrt_div_arcp_missing(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[DIV]])
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv reassoc arcp double [[X:%.*]], [[SQRT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv reassoc double [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc arcp double @llvm.sqrt.f64(double [[TMP0]])
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul reassoc arcp double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[DIV1]]
 ;
 entry:
