@@ -3572,7 +3572,21 @@ public:
   StmtResult ParseOpenACCDirectiveStmt();
 
 private:
-  void ParseOpenACCDirective();
+  /// A struct to hold the information that got parsed by ParseOpenACCDirective,
+  /// so that the callers of it can use that to construct the appropriate AST
+  /// nodes.
+  struct OpenACCDirectiveParseInfo {
+    OpenACCDirectiveKind DirKind;
+    SourceLocation StartLoc;
+    SourceLocation EndLoc;
+    // TODO OpenACC: Add Clause list here once we have a type for that.
+    // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
+    // Wait constructs, we likely want to put that information in here as well.
+  };
+
+  /// Parses the OpenACC directive (the entire pragma) including the clause
+  /// list, but does not produce the main AST node.
+  OpenACCDirectiveParseInfo ParseOpenACCDirective();
   /// Helper that parses an ID Expression based on the language options.
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
