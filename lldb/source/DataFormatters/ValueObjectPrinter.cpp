@@ -492,7 +492,7 @@ bool ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
 }
 
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion(
-    bool is_root, TypeSummaryImpl *entry, ValueObject *valobj,
+    bool is_root, TypeSummaryImpl *entry, ValueObject &valobj,
     const std::string &summary) {
   switch (m_mode) {
   case Mode::Always:
@@ -504,7 +504,7 @@ bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion(
       m_count = std::min<decltype(m_count)>(m_count, 1);
     return m_count > 0;
   case Mode::Formatters:
-    if (!entry || entry->DoesPrintChildren(valobj) || summary.empty())
+    if (!entry || entry->DoesPrintChildren(&valobj) || summary.empty())
       return m_count > 0;
     return false;
   }
