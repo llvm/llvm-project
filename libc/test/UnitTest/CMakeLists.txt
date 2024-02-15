@@ -31,6 +31,9 @@ function(add_unittest_framework_library name)
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
+    if(LIBC_COMPILER_HAS_FIXED_POINT)
+      target_compile_options(${lib} PUBLIC -ffixed-point)
+    endif()
   endforeach()
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
   target_compile_options(${name}.hermetic
@@ -68,6 +71,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.fixed_point.fx_rep
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
 )

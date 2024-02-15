@@ -525,7 +525,8 @@ void EventThreadFunction() {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
-          auto bp = lldb::SBBreakpoint::GetBreakpointFromEvent(event);
+          auto bp =
+              Breakpoint(lldb::SBBreakpoint::GetBreakpointFromEvent(event));
           // If the breakpoint was originated from the IDE, it will have the
           // BreakpointBase::GetBreakpointLabel() label attached. Regardless
           // of wether the locations were added or removed, the breakpoint
@@ -541,7 +542,7 @@ void EventThreadFunction() {
             // mapped. Note that CreateBreakpoint doesn't apply source mapping.
             // Besides, the current implementation of VSCode ignores the
             // "source" element of breakpoint events.
-            llvm::json::Value source_bp = CreateBreakpoint(bp);
+            llvm::json::Value source_bp = CreateBreakpoint(&bp);
             source_bp.getAsObject()->erase("source");
 
             body.try_emplace("breakpoint", source_bp);
@@ -2345,7 +2346,7 @@ void request_setBreakpoints(const llvm::json::Object &request) {
               existing_source_bps->second.find(src_bp.line);
           if (existing_bp != existing_source_bps->second.end()) {
             existing_bp->second.UpdateBreakpoint(src_bp);
-            AppendBreakpoint(existing_bp->second.bp, response_breakpoints, path,
+            AppendBreakpoint(&existing_bp->second, response_breakpoints, path,
                              src_bp.line);
             continue;
           }
@@ -2354,7 +2355,7 @@ void request_setBreakpoints(const llvm::json::Object &request) {
         g_dap.source_breakpoints[path][src_bp.line] = src_bp;
         SourceBreakpoint &new_bp = g_dap.source_breakpoints[path][src_bp.line];
         new_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(new_bp.bp, response_breakpoints, path, new_bp.line);
+        AppendBreakpoint(&new_bp, response_breakpoints, path, new_bp.line);
       }
     }
   }
@@ -2567,7 +2568,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
       // handled it here and we don't need to set a new breakpoint below.
       request_bps.erase(request_pos);
       // Add this breakpoint info to the response
-      AppendBreakpoint(pair.second.bp, response_breakpoints);
+      AppendBreakpoint(&pair.second, response_breakpoints);
     }
   }
   // Remove any breakpoints that are no longer in our list
@@ -2581,7 +2582,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
     g_dap.function_breakpoints[pair.first()] = std::move(pair.second);
     FunctionBreakpoint &new_bp = g_dap.function_breakpoints[pair.first()];
     new_bp.SetBreakpoint();
-    AppendBreakpoint(new_bp.bp, response_breakpoints);
+    AppendBreakpoint(&new_bp, response_breakpoints);
   }
 
   llvm::json::Object body;
@@ -3582,8 +3583,8 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; g_dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = g_dap.target.GetBreakpointAtIndex(i);
-    AppendBreakpoint(bp, response_breakpoints);
+    auto bp = Breakpoint(g_dap.target.GetBreakpointAtIndex(i));
+    AppendBreakpoint(&bp, response_breakpoints);
   }
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));

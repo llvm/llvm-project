@@ -482,6 +482,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
     MLIRCAPILinalg
 )
 
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
+  MODULE_NAME _mlirDialectsLLVM
+  ADD_TO_PARENT MLIRPythonSources.Dialects.llvm
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectLLVM.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPILLVM
+)
+
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   MODULE_NAME _mlirDialectsQuant
   ADD_TO_PARENT MLIRPythonSources.Dialects.quant

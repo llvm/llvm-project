@@ -260,7 +260,7 @@ transform::AnnotateOp::apply(transform::TransformRewriter &rewriter,
     }
     attr = params[0];
   }
-  for (auto target : targets)
+  for (auto *target : targets)
     target->setAttr(getName(), attr);
   return DiagnosedSilenceableFailure::success();
 }
@@ -330,7 +330,7 @@ DiagnosedSilenceableFailure transform::ApplyDeadCodeEliminationOp::applyToOne(
   auto eraseOp = [&](Operation *op) {
     // Remove op and nested ops from the worklist.
     op->walk([&](Operation *op) {
-      auto it = llvm::find(worklist, op);
+      const auto *it = llvm::find(worklist, op);
       if (it != worklist.end())
         worklist.erase(it);
     });
@@ -666,7 +666,7 @@ void transform::ApplyToLLVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   Dialect *dialect = getContext()->getLoadedDialect(getDialectName());
   assert(dialect && "expected that dialect is loaded");
-  auto iface = cast<ConvertToLLVMPatternInterface>(dialect);
+  auto *iface = cast<ConvertToLLVMPatternInterface>(dialect);
   // ConversionTarget is currently ignored because the enclosing
   // apply_conversion_patterns op sets up its own ConversionTarget.
   ConversionTarget target(*getContext());
@@ -686,7 +686,7 @@ LogicalResult transform::ApplyToLLVMConversionPatternsOp::verify() {
   if (!dialect)
     return emitOpError("unknown dialect or dialect not loaded: ")
            << getDialectName();
-  auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+  auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
   if (!iface)
     return emitOpError(
                "dialect does not implement ConvertToLLVMPatternInterface or "
@@ -1754,7 +1754,7 @@ DiagnosedSilenceableFailure
 transform::MatchParamCmpIOp::apply(transform::TransformRewriter &rewriter,
                                    transform::TransformResults &results,
                                    transform::TransformState &state) {
-  auto signedAPIntAsString = [&](APInt value) {
+  auto signedAPIntAsString = [&](const APInt &value) {
     std::string str;
     llvm::raw_string_ostream os(str);
     value.print(os, /*isSigned=*/true);
@@ -2223,7 +2223,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
   // - "fail_on_payload_too_small" is set to "false", or
   // - "pass_through_empty_handle" is set to "true" and there are 0 payload ops.
   if (numPayloadOps < getNumResults() && getFailOnPayloadTooSmall() &&
-      !(numPayloadOps == 0 && getPassThroughEmptyHandle()))
+      (numPayloadOps != 0 || !getPassThroughEmptyHandle()))
     return produceNumOpsError();
 
   // Distribute payload ops.
