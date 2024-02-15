@@ -19,6 +19,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -88,7 +89,7 @@ static std::vector<std::string> InputFilenames;
 static std::string ConvertFilename;
 static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
-static std::string AggregateJsonFile;
+static std::string JsonSummaryFile;
 static bool Verify;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
@@ -140,8 +141,8 @@ static void parseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_out_file_EQ))
     OutputFilename = A->getValue();
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_aggregate_error_file_EQ))
-    AggregateJsonFile = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_json_summary_file_EQ))
+    JsonSummaryFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
 
@@ -525,25 +526,25 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
       OS << category << " occurred " << count << " time(s)\n";
     });
-    if (!AggregateJsonFile.empty()) {
+    if (!JsonSummaryFile.empty()) {
       std::error_code EC;
-      raw_fd_ostream JsonStream(AggregateJsonFile, EC, sys::fs::OF_Text);
+      raw_fd_ostream JsonStream(JsonSummaryFile, EC, sys::fs::OF_Text);
       if (EC) {
-        OS << "error opening aggregate error json file '" << AggregateJsonFile
+        OS << "error opening aggregate error json file '" << JsonSummaryFile
            << "' for writing: " << EC.message() << '\n';
         return 1;
       }
-      JsonStream << "{\"errors\":[\n";
-      bool prev = false;
+
+      llvm::json::Object Categories;
       Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
-        if (prev)
-          JsonStream << ",\n";
-        JsonStream << "{\"category\":\"";
-        llvm::printEscapedString(category, JsonStream);
-        JsonStream << "\",\"count\":" << count << "}";
-        prev = true;
+        llvm::json::Object Val;
+        Val.try_emplace("count", count);
+        Categories.try_emplace(category, std::move(Val));
       });
-      JsonStream << "\n]}\n";
+      llvm::json::Object RootNode;
+      RootNode.try_emplace("error-categories", std::move(Categories));
+
+      JsonStream << llvm::json::Value(std::move(RootNode));
     }
     return 0;
   }
