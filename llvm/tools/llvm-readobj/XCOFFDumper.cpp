@@ -984,7 +984,7 @@ const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 };
 
 const EnumEntry<XCOFF::DwarfSectionSubtypeFlags>
-    DwarfSectionSubtypeFlagsNames[] = {
+    DWARFSectionSubtypeFlagsNames[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
         ECase(SSUBTYP_DWINFO),  ECase(SSUBTYP_DWLINE),  ECase(SSUBTYP_DWPBNMS),
@@ -1212,8 +1212,8 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     else {
       W.printEnum("Type", SectionType, ArrayRef(SectionTypeFlagsNames));
       if (SectionType == XCOFF::STYP_DWARF) {
-        W.printEnum("DwarfSubType", SectionSubtype,
-                    ArrayRef(DwarfSectionSubtypeFlagsNames));
+        W.printEnum("DWARFSubType", SectionSubtype,
+                    ArrayRef(DWARFSectionSubtypeFlagsNames));
       }
     }
   }

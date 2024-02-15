@@ -211,19 +211,19 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
       }
     }
     if (InitSections[I].SectionSubtype) {
-      uint32_t DwarfSubtype =
+      uint32_t DWARFSubtype =
           static_cast<uint32_t>(*InitSections[I].SectionSubtype);
       if (InitSections[I].Flags != XCOFF::STYP_DWARF) {
-        ErrHandler("a DwarfSectionSubtype is only allowed for a dwarf section");
+        ErrHandler("a DWARFSectionSubtype is only allowed for a DWARF section");
         return false;
       }
-      unsigned mask = Is64Bit ? XCOFFSectionHeader64::SectionFlagsSubtypeMask
-                              : XCOFFSectionHeader32::SectionFlagsSubtypeMask;
-      if (DwarfSubtype & ~mask) {
-        ErrHandler("the low-order bits of DwarfSectionSubtype must be 0");
+      unsigned Mask = Is64Bit ? XCOFFSectionHeader64::SectionFlagsTypeMask
+                              : XCOFFSectionHeader32::SectionFlagsTypeMask;
+      if (DWARFSubtype & Mask) {
+        ErrHandler("the low-order bits of DWARFSectionSubtype must be 0");
         return false;
       }
-      InitSections[I].Flags |= DwarfSubtype;
+      InitSections[I].Flags |= DWARFSubtype;
     }
   }
   return initRelocations(CurrentOffset);

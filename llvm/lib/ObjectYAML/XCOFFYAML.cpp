@@ -250,7 +250,7 @@ void MappingTraits<XCOFFYAML::Section>::mapping(IO &IO,
   IO.mapOptional("NumberOfRelocations", Sec.NumberOfRelocations);
   IO.mapOptional("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
   IO.mapOptional("Flags", NC->Flags);
-  IO.mapOptional("DwarfSectionSubtype", Sec.SectionSubtype);
+  IO.mapOptional("DWARFSectionSubtype", Sec.SectionSubtype);
   IO.mapOptional("SectionData", Sec.SectionData);
   IO.mapOptional("Relocations", Sec.Relocations);
 }
