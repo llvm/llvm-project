@@ -1944,6 +1944,21 @@ Sema::SemaDiagnosticBuilder Sema::Diag(SourceLocation Loc, unsigned DiagID,
   return DB;
 }
 
+static bool typeIsOrContainsFloat(const Type &Ty) {
+  if (Ty.isFloatingType())
+    return true;
+
+  if (const RecordDecl *Decl = Ty.getAsRecordDecl()) {
+    for (const FieldDecl *FD : Decl->fields()) {
+      const Type &FieldType = *FD->getType();
+      if (typeIsOrContainsFloat(FieldType))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   if (isUnevaluatedContext() || Ty.isNull())
     return;
@@ -2087,6 +2102,25 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap) &&
           !Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
         Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+    }
+
+    // Don't allow any floating-point types (including structs containing
+    // floats) for ABIs which do not support them.
+    if (!TI.hasFPTypes() && typeIsOrContainsFloat(*UnqualTy)) {
+      PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type_for_abi);
+
+      if (D)
+        PD << D;
+      else
+        PD << "expression";
+
+      if (Diag(Loc, PD, FD) << Ty << TI.getABI()) {
+        if (D)
+          D->setInvalidDecl();
+      }
+
+      if (D)
+        targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
   };
 
