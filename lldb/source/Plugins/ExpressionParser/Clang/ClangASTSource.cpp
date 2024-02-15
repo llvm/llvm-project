@@ -22,6 +22,7 @@
 #include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/SourceManager.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
@@ -325,6 +326,45 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
 
   LLDB_LOG(log, "      [COID] After:");
   LLDB_LOG(log, "      [COID] {0}", ClangUtil::DumpDecl(interface_decl));
+}
+
+void ClangASTSource::CompleteRedeclChain(const Decl *d) {
+  if (!TypeSystemClang::UseRedeclCompletion())
+    return;
+
+  if (const clang::TagDecl *td = llvm::dyn_cast<TagDecl>(d)) {
+    if (td->isBeingDefined())
+      return;
+
+    if (td->getDefinition())
+      return;
+
+    m_ast_importer_sp->CompleteTagDecl(const_cast<clang::TagDecl *>(td));
+    if (!td->getDefinition() && m_ast_importer_sp->GetDeclOrigin(td).Valid()) {
+      if (TagDecl *alternate = FindCompleteType(td))
+        m_ast_importer_sp->CompleteTagDeclWithOrigin(
+            const_cast<clang::TagDecl *>(td), alternate);
+    }
+  }
+  if (const auto *od = llvm::dyn_cast<ObjCInterfaceDecl>(d)) {
+    ClangASTImporter::DeclOrigin original =
+        m_ast_importer_sp->GetDeclOrigin(od);
+    if (ObjCInterfaceDecl *orig =
+            dyn_cast_or_null<ObjCInterfaceDecl>(original.decl)) {
+      if (ObjCInterfaceDecl *i = GetCompleteObjCInterface(orig)) {
+        if (i != orig) {
+          m_ast_importer_sp->SetDeclOrigin(d, i);
+          m_ast_importer_sp->CompleteObjCInterfaceDecl(
+              const_cast<clang::ObjCInterfaceDecl *>(od));
+          return;
+        }
+      }
+    }
+    if (od->getDefinition())
+      return;
+    m_ast_importer_sp->CompleteObjCInterfaceDecl(
+        const_cast<clang::ObjCInterfaceDecl *>(od));
+  }
 }
 
 clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(

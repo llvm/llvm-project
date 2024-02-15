@@ -109,6 +109,15 @@ public:
     }
   }
 
+  void CompleteRedeclChain(const clang::Decl *d) override {
+    using namespace clang;
+    auto *const_interface = llvm::dyn_cast<ObjCInterfaceDecl>(d);
+    if (!const_interface)
+      return;
+    auto *interface = const_cast<ObjCInterfaceDecl *>(const_interface);
+    m_decl_vendor.FinishDecl(interface);
+  }
+
   bool layoutRecordType(
       const clang::RecordDecl *Record, uint64_t &Size, uint64_t &Alignment,
       llvm::DenseMap<const clang::FieldDecl *, uint64_t> &FieldOffsets,
