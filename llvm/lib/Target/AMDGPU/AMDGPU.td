@@ -234,14 +234,13 @@ class FeatureMaxHardClauseLength<int size> : SubtargetFeature<
   "Maximum number of instructions in an explicit S_CLAUSE is "#size
 >;
 
+/// Work around a hardware bug on some chips that can be triggered
+/// under certain circumstances when clauses are longer than 32 operations.
 def FeatureMaxHardClauseLength32 : FeatureMaxHardClauseLength<32>;
+/// While the S_CLAUSE instruction permits encoding clause lengths up to 64,
+/// hardware documentation for gfx10+ indicates that 63 is the maximum
+/// permitted clause length.
 def FeatureMaxHardClauseLength63 : FeatureMaxHardClauseLength<63>;
-def FeatureNoHardClauses : SubtargetFeature<
-  "no-hard-clauses",
-  "MaxHardClauseLength",
-  "0",
-  "S_CLAUSE instructions may not be used"
->;
 
 def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "HasNSAtoVMEMBug",
