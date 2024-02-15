@@ -21,6 +21,13 @@ namespace hlsl {
 #define _HLSL_AVAILABILITY(environment, version)                               \
   __attribute__((availability(environment, introduced = version)))
 
+#ifdef __HLSL_ENABLE_16_BIT
+#define _HLSL_16BIT_AVAILABILITY(environment, version)                         \
+  __attribute__((availability(environment, introduced = version)))
+#else
+#define _HLSL_16BIT_AVAILABILITY(environment, version)
+#endif
+
 //===----------------------------------------------------------------------===//
 // abs builtins
 //===----------------------------------------------------------------------===//
@@ -42,20 +49,20 @@ int16_t3 abs(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
+#endif
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 half abs(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 half2 abs(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 half3 abs(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 half4 abs(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int abs(int);
@@ -102,20 +109,18 @@ double4 abs(double4);
 /// the input value, \a Val.
 /// \param Val The input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 half ceil(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 half2 ceil(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 half3 ceil(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 half4 ceil(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 float ceil(float);
@@ -143,20 +148,18 @@ double4 ceil(double4);
 /// \brief Returns the cosine of the input value, \a Val.
 /// \param Val The input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 half cos(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 half2 cos(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 half3 cos(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 half4 cos(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float cos(float);
@@ -185,20 +188,18 @@ double4 cos(double4);
 /// value, \a Val.
 /// \param Val The input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 half floor(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 half2 floor(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 half3 floor(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 half4 floor(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float floor(float);
@@ -229,20 +230,18 @@ double4 floor(double4);
 /// If \a Val is negative, this result is undefined. If \a Val is 0, this
 /// function returns negative infinity.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 half log(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 half2 log(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 half3 log(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 half4 log(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 float log(float);
@@ -273,20 +272,18 @@ double4 log(double4);
 /// If \a Val is negative, this result is undefined. If \a Val is 0, this
 /// function returns negative infinity.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 half log10(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 half2 log10(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 half3 log10(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 half4 log10(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 float log10(float);
@@ -317,20 +314,18 @@ double4 log10(double4);
 /// If \a Val is negative, this result is undefined. If \a Val is 0, this
 /// function returns negative infinity.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 half log2(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 half2 log2(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 half3 log2(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 half4 log2(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 float log2(float);
@@ -359,20 +354,20 @@ double4 log2(double4);
 /// \param X The X input value.
 /// \param Y The Y input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half max(half, half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half2 max(half2, half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half3 max(half3, half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half4 max(half4, half4);
 
+#ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int16_t max(int16_t, int16_t);
@@ -463,20 +458,20 @@ double4 max(double4, double4);
 /// \param X The X input value.
 /// \param Y The Y input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half min(half, half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half2 min(half2, half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half3 min(half3, half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half4 min(half4, half4);
 
+#ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int16_t min(int16_t, int16_t);
@@ -567,20 +562,18 @@ double4 min(double4, double4);
 /// \param Val The input value.
 /// \param Pow The specified power.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 half pow(half, half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 half2 pow(half2, half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 half3 pow(half3, half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 half4 pow(half4, half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 float pow(float, float);
@@ -680,20 +673,18 @@ uint64_t4 reversebits(uint64_t4);
 /// \brief Returns the sine of the input value, \a Val.
 /// \param Val The input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 half sin(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 half2 sin(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 half3 sin(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 half4 sin(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 float sin(float);
@@ -721,11 +712,9 @@ double4 sin(double4);
 /// \brief Returns the square root of the input value, \a Val.
 /// \param Val The input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
 half sqrt(half In);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
 float sqrt(float In);
@@ -741,20 +730,18 @@ double sqrt(double In);
 /// \brief Returns the truncated integer value of the input value, \a Val.
 /// \param Val The input value.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 half trunc(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 half2 trunc(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 half3 trunc(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 half4 trunc(half4);
-#endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 float trunc(float);
