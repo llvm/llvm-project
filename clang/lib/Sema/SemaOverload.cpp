@@ -2529,7 +2529,6 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   if (Context.getLangOpts().HLSL)
     return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
 
-
   return false;
 }
 
