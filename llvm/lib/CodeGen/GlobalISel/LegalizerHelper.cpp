@@ -4700,13 +4700,9 @@ LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
       LLT::fixed_vector(NarrowTy.getSizeInBits() / SrcScalSize, SrcScalSize);
 
   // Split the Src and Dst Reg into smaller registers
-  LLT SrcLeftoverTy;
-  SmallVector<Register> SrcVRegs, SrcLeftoverVRegs, BitcastVRegs;
-  if (!extractParts(SrcReg, SrcTy, SrcNarrowTy, SrcLeftoverTy, SrcVRegs,
-                    SrcLeftoverVRegs, MIRBuilder, MRI))
+  SmallVector<Register> SrcVRegs, BitcastVRegs;
+  if (extractGCDType(SrcVRegs, DstTy, SrcNarrowTy, SrcReg) != SrcNarrowTy)
     return UnableToLegalize;
-
-  assert(SrcLeftoverVRegs.size() == 0 && "Splitting Source register failed");
 
   // Build new smaller bitcast instructions
   // Not supporting Leftover types for now but will have to
