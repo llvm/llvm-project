@@ -327,9 +327,6 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
 }
 
 void ClangASTSource::CompleteRedeclChain(const Decl *d) {
-  if (!TypeSystemClang::UseRedeclCompletion())
-    return;
-
   if (const clang::TagDecl *td = llvm::dyn_cast<TagDecl>(d)) {
     if (td->isBeingDefined())
       return;
@@ -402,8 +399,7 @@ clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
     return nullptr;
 
   ObjCInterfaceDecl *complete_iface_decl(complete_interface_type->getDecl());
-
-  return complete_iface_decl;
+  return complete_iface_decl->getDefinition();
 }
 
 void ClangASTSource::FindExternalLexicalDecls(

@@ -581,7 +581,7 @@ public:
   /// \param type The type which declaration should be redeclared. Has to be
   /// an Objective-C interface type (or Objective-C type), RecordType or
   /// EnumType.
-  void CreateRedeclaration(CompilerType ct);
+  CompilerType CreateRedeclaration(CompilerType ct);
 
   bool LayoutRecordType(
       const clang::RecordDecl *record_decl, uint64_t &size, uint64_t &alignment,

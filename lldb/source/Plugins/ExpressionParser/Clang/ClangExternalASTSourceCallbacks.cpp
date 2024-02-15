@@ -29,9 +29,6 @@ void ClangExternalASTSourceCallbacks::CompleteType(
 
 void ClangExternalASTSourceCallbacks::CompleteRedeclChain(
     const clang::Decl *d) {
-  if (!TypeSystemClang::UseRedeclCompletion())
-    return;
-
   if (const clang::TagDecl *td = llvm::dyn_cast<clang::TagDecl>(d)) {
     if (td->isBeingDefined())
       return;

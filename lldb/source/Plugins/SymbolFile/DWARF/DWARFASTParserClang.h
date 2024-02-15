@@ -130,12 +130,30 @@ protected:
       const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *, clang::Decl *>
       DIEToDeclMap;
 
+  using DIEToRecordMap =
+      llvm::DenseMap<const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *,
+                     clang::TagDecl *>;
+  using DIEToObjCInterfaceMap =
+      llvm::DenseMap<const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *,
+                     clang::ObjCInterfaceDecl *>;
+
   lldb_private::TypeSystemClang &m_ast;
   DIEToDeclMap m_die_to_decl;
   DIEToDeclContextMap m_die_to_decl_ctx;
   DeclContextToDIEMap m_decl_ctx_to_die;
   DIEToModuleMap m_die_to_module;
+  DIEToRecordMap m_die_to_record_map;
+  DIEToObjCInterfaceMap m_die_to_objc_interface_map;
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
+
+  struct TypeToComplete {
+    lldb_private::CompilerType clang_type;
+    lldb_private::plugin::dwarf::DWARFDIE die;
+    lldb::TypeSP type;
+  };
+  std::vector<TypeToComplete> m_to_complete;
+  llvm::DenseSet<const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *>
+      m_currently_parsed_record_dies;
   /// @}
 
   clang::DeclContext *
@@ -227,6 +245,9 @@ protected:
 
   void LinkDeclToDIE(clang::Decl *decl,
                      const lldb_private::plugin::dwarf::DWARFDIE &die);
+
+  void RegisterDIE(lldb_private::plugin::dwarf::DWARFDebugInfoEntry *die,
+                   lldb_private::CompilerType type);
 
   /// If \p type_sp is valid, calculate and set its symbol context scope, and
   /// update the type list for its backing symbol file.
