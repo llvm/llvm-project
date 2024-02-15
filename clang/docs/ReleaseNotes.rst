@@ -127,11 +127,27 @@ C23 Feature Support
 - No longer diagnose use of binary literals as an extension in C23 mode. Fixes
   `#72017 <https://github.com/llvm/llvm-project/issues/72017>`_.
 
+- Corrected parsing behavior for the ``alignas`` specifier/qualifier in C23. We
+  previously handled it as an attribute as in C++, but there are parsing
+  differences. The behavioral differences are:
+
+  .. code-block:: c
+
+     struct alignas(8) /* was accepted, now rejected */ S {
+       char alignas(8) /* was rejected, now accepted */ C;
+     };
+     int i alignas(8) /* was accepted, now rejected */ ;
+
+  Fixes (`#81472 <https://github.com/llvm/llvm-project/issues/81472>`_).
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 - Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
   counters.
+
+- ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
+  builtins are now constexpr and may be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -323,6 +339,8 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+
+- ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 
 clang-format
 ------------
