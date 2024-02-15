@@ -1,8 +1,7 @@
-
 # RUN: yaml2obj %s -o %t.o
 # RUN: echo '.*' > %t.symbols.regex
 
-# Check if the visibility of all symbols is properly set to DEFAULT
+## Check that the visibility of all symbols is properly set to DEFAULT
 # RUN: llvm-objcopy %t.o %t0.o --set-symbols-visibility=%t.symbols.regex=default --regex
 # RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=DEF
 
@@ -19,8 +18,7 @@
 # DEF-DAG: DEFAULT     1 protected_global
 # DEF-DAG: DEFAULT     1 protected_weak
 
-
-# Check if the visibility of all symbols is properly set to HIDDEN
+## Check that the visibility of all symbols is properly set to HIDDEN
 # RUN: llvm-objcopy %t.o %t1.o --set-symbols-visibility=%t.symbols.regex=hidden --regex
 # RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=HID
 
@@ -37,8 +35,7 @@
 # HID-DAG: HIDDEN      1 protected_global
 # HID-DAG: HIDDEN      1 protected_weak
 
-
-# Check if the visibility of all symbols is properly set to PROTECTED
+## Check that the visibility of all symbols is properly set to PROTECTED
 # RUN: llvm-objcopy %t.o %t2.o --set-symbols-visibility=%t.symbols.regex=protected --regex
 # RUN: llvm-readelf -s %t2.o | FileCheck %s --check-prefix=PRO
 
@@ -55,8 +52,7 @@
 # PRO-DAG: PROTECTED   1 protected_global
 # PRO-DAG: PROTECTED   1 protected_weak
 
-
-# Check if the visibility of all symbols is properly set to INTERNAL
+## Check that the visibility of all symbols is properly set to INTERNAL
 # RUN: llvm-objcopy %t.o %t3.o --set-symbols-visibility=%t.symbols.regex=internal --regex
 # RUN: llvm-readelf -s %t3.o | FileCheck %s --check-prefix=INT
 
@@ -73,8 +69,7 @@
 # INT-DAG: INTERNAL    1 protected_global
 # INT-DAG: INTERNAL    1 protected_weak
 
-
-# Check if setting the visibility of certain symbols that were read from
+## Check that setting the visibility of certain symbols that were read from
 # a file does not affect other symbols
 # RUN: echo -e "default_local\ninternal_local" > %t.symbol.list
 # RUN: llvm-objcopy %t.o %t3.o --set-symbols-visibility=%t.symbol.list=hidden
@@ -82,7 +77,7 @@
 
 # FILE-DAG: HIDDEN      1 default_local
 # FILE-DAG: HIDDEN      1 internal_local
-# Unaffected symbols:
+## Unaffected symbols:
 # FILE-DAG: HIDDEN      1 hidden_local
 # FILE-DAG: PROTECTED   1 protected_local
 # FILE-DAG: DEFAULT     1 default_global
@@ -96,13 +91,13 @@
 
 !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
+  - Name:  .text
+    Type:  SHT_PROGBITS
 Symbols:
   - Name:    default_local
     Section: .text

@@ -1,31 +1,36 @@
-
 # RUN: yaml2obj %s -o %t.o
 # RUN: echo 'foo' > %t.symbols
 
-# Check if passing an invalid visibility type generates an error message
-# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols=invalid-type --regex 2>&1 | FileCheck %s --check-prefix=TYPE
-# RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo=invalid-type --regex 2>&1 | FileCheck %s --check-prefix=TYPE
+## Check that passing an invalid visibility type generates an error message
+# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols=invalid-type --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TYPE
+# RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo=invalid-type --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TYPE
 # TYPE: error: 'invalid-type' is not a valid symbol visibility
 
-# Check if not using the proper format with character '=' generates an error
-# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | FileCheck %s --check-prefix=FORMAT
-# RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo default 2>&1 | FileCheck %s --check-prefix=FORMAT
+## Check that omitting the '=' character generates an error
+# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FORMAT
+# RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo default 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FORMAT
 # FORMAT: error: bad format for --set-symbol{{.?}}-visibility
 
-# Check if using an invalid symbol pattern generates an error
+## Check that using an invalid symbol pattern generates an error
 # RUN: echo '*.' > %t.symbols.regex
-# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols.regex=hidden --regex 2>&1 | FileCheck %s --check-prefix=SYMBOL
-# RUN: not llvm-objcopy %t.o --set-symbol-visibility=*.=default --regex 2>&1 | FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols.regex=hidden --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t.o --set-symbol-visibility=*.=default --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
 # SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
 
-# Check passing an invalid filename generates an error
-# RUN: not llvm-objcopy %t.o --set-symbols-visibility=no_file=hidden 2>&1 | FileCheck %s --check-prefix=FILE
+## Check passing an invalid filename generates an error
+# RUN: not llvm-objcopy %t.o --set-symbols-visibility=no_file=hidden 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FILE
 # FILE: error: 'no_file': No such file or directory
-
 
 !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

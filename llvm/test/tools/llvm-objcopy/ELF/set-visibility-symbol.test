@@ -1,8 +1,7 @@
-
 # RUN: yaml2obj %s -o %t.o
 
-# Check if the visibility of a single symbol is set correctly,
-# and none of other symbols are affected
+## Check that the visibility of a single symbol is set correctly,
+# and that no other symbols are affected
 # RUN: cp %t.o %t0.o
 # RUN: llvm-objcopy %t0.o --set-symbol-visibility=default_local=hidden \
 # RUN:                    --set-symbol-visibility=internal_local=protected \
@@ -14,7 +13,7 @@
 # SINGLE-DAG: PROTECTED   1 internal_local
 # SINGLE-DAG: INTERNAL    1 hidden_local
 # SINGLE-DAG: DEFAULT     1 protected_local
-# Unaffected symbols:
+## Unaffected symbols:
 # SINGLE-DAG: DEFAULT     1 default_global
 # SINGLE-DAG: DEFAULT     1 default_weak
 # SINGLE-DAG: INTERNAL    1 internal_global
@@ -24,9 +23,8 @@
 # SINGLE-DAG: PROTECTED   1 protected_global
 # SINGLE-DAG: PROTECTED   1 protected_weak
 
-
-# Check if the visibility of symbols specified by a regex are set correctly,
-# and none of other symbols are affected
+## Check that the visibility of symbols specified by a regex are set correctly,
+# and that no other symbols are affected
 # RUN: llvm-objcopy %t.o %t1.o --set-symbol-visibility=.*_local=hidden --regex
 # RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=REGEX
 
@@ -34,7 +32,7 @@
 # REGEX-DAG: HIDDEN      1 internal_local
 # REGEX-DAG: HIDDEN      1 hidden_local
 # REGEX-DAG: HIDDEN      1 protected_local
-# Unaffected symbols:
+## Unaffected symbols:
 # REGEX-DAG: DEFAULT     1 default_global
 # REGEX-DAG: DEFAULT     1 default_weak
 # REGEX-DAG: INTERNAL    1 internal_global
@@ -44,16 +42,15 @@
 # REGEX-DAG: PROTECTED   1 protected_global
 # REGEX-DAG: PROTECTED   1 protected_weak
 
-
 !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_REL
-  Machine:         EM_X86_64
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
 Sections:
-  - Name:            .text
-    Type:            SHT_PROGBITS
+  - Name:  .text
+    Type:  SHT_PROGBITS
 Symbols:
   - Name:    default_local
     Section: .text
