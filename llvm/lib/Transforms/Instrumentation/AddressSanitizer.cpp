@@ -347,7 +347,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> ClInstrumentUninterestingAllocas(
     "asan-instrument-uninteresting-allocas",
-    cl::desc("Do not instrument uninteresting allocas"), cl::Hidden);
+    cl::desc("Instrument uninteresting allocas"), cl::Hidden);
 
 static cl::opt<AsanCtorKind> ClConstructorKind(
     "asan-constructor-kind",
