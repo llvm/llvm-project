@@ -312,6 +312,9 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     } else
       OS << ", nullptr";
 
+    // Not using Visibility specific text for group help.
+    OS << ", std::make_pair(0, nullptr)";
+
     // The option meta-variable name (unused).
     OS << ", nullptr";
 
@@ -409,6 +412,19 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("HelpText"));
     } else
       OS << ", nullptr";
+
+    // Help text specific to a certain visibility.
+    if (isa<UnsetInit>(R.getValueInit("HelpTextForVisibility")))
+      OS << ", std::make_pair(0, nullptr)";
+    else {
+      const Record *VisibilityHelp = R.getValueAsDef("HelpTextForVisibility");
+      const RecordVal *Visibility = VisibilityHelp->getValue("Visibility");
+      Init *VisibilityInit = Visibility->getValue();
+      std::string VisibilityStr = VisibilityInit->getAsString();
+      StringRef Text = VisibilityHelp->getValueAsString("Text");
+      OS << ", std::make_pair(options::" << VisibilityStr << ", \"" << Text
+         << "\")";
+    }
 
     // The option meta-variable name.
     OS << ", ";
