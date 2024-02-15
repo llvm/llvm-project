@@ -143,9 +143,10 @@ struct __fields {
   // formatters use the colon to mark the beginning of the
   // underlying-format-spec. To avoid parsing ambiguities these formatter
   // specializations prohibit the use of the colon as a fill character.
-  uint16_t __use_range_fill_ : 1 {false};
-  uint16_t __clear_brackets_ : 1 {false};
-  uint16_t __consume_all_    : 1 {false};
+  uint16_t __use_range_fill_            : 1 {false};
+  uint16_t __clear_brackets_            : 1 {false};
+  uint16_t __consume_all_               : 1 {false};
+  uint16_t __has_range_underlying_spec_ : 1 {false};
 };
 
 // By not placing this constant in the formatter class it's not duplicated for
@@ -171,7 +172,8 @@ inline constexpr __fields __fields_pointer{.__zero_padding_ = true, .__type_ = t
 
 #  if _LIBCPP_STD_VER >= 23
 inline constexpr __fields __fields_tuple{.__use_range_fill_ = true, .__clear_brackets_ = true};
-inline constexpr __fields __fields_range{.__use_range_fill_ = true, .__clear_brackets_ = true};
+inline constexpr __fields __fields_range{
+    .__use_range_fill_ = true, .__clear_brackets_ = true, .__has_range_underlying_spec_ = true};
 inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
@@ -355,7 +357,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
     auto __begin = __ctx.begin();
     auto __end   = __ctx.end();
-    if (__begin == __end || *__begin == _CharT('}'))
+    if (__begin == __end || *__begin == _CharT('}') ||
+        (__fields.__has_range_underlying_spec_ && *__begin == _CharT(':')))
       return __begin;
 
     if (__parse_fill_align(__begin, __end, __fields.__use_range_fill_) && __begin == __end)
