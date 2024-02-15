@@ -797,16 +797,8 @@ def i64imm_32bit : ImmLeaf<i64, [{
   return (Imm & 0xffffffffULL) == static_cast<uint64_t>(Imm);
 }]>;
 
-def InlineImm16 : ImmLeaf<i16, [{
-  return isInlineImmediate16(Imm);
-}]>;
-
-def InlineImm32 : ImmLeaf<i32, [{
-  return isInlineImmediate32(Imm);
-}]>;
-
-def InlineImm64 : ImmLeaf<i64, [{
-  return isInlineImmediate64(Imm);
+def InlineImm64 : IntImmLeaf<i64, [{
+  return isInlineImmediate(Imm);
 }]>;
 
 def InlineImmFP32 : FPImmLeaf<f32, [{
