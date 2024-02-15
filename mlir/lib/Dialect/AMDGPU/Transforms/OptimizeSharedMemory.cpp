@@ -149,9 +149,8 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
   return success();
 }
 
-mlir::LogicalResult
-mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
-                                                 Value memrefValue) {
+LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
+                                                         Value memrefValue) {
   auto memRefType = dyn_cast<MemRefType>(memrefValue.getType());
   if (!memRefType ||
       !amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(memRefType))
@@ -218,7 +217,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   return success();
 }
 
-std::optional<mlir::LogicalResult>
+std::optional<LogicalResult>
 amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp) {
   SmallVector<memref::AllocOp> shmAllocOps;
   funcOp.walk([&](memref::AllocOp allocOp) {
