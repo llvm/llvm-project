@@ -113,7 +113,10 @@ struct Value_match {
 /// Match any valid SDValue.
 inline Value_match m_Value() { return Value_match(); }
 
-inline Value_match m_Specific(SDValue N) { return Value_match(N); }
+inline Value_match m_Specific(SDValue N) {
+  assert(N);
+  return Value_match(N);
+}
 
 struct Opcode_match {
   unsigned Opcode;
