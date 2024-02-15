@@ -83,6 +83,7 @@
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
+#include "UnsafeCrtpCheck.h"
 #include "UnsafeFunctionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
 #include "UnusedRaiiCheck.h"
@@ -237,6 +238,8 @@ public:
         "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UniquePtrArrayMismatchCheck>(
         "bugprone-unique-ptr-array-mismatch");
+    CheckFactories.registerCheck<UnsafeCrtpCheck>(
+        "bugprone-unsafe-crtp");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(

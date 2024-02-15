@@ -116,6 +116,11 @@ New checks
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
 
+- New :doc:`bugprone-unsafe-crtp
+  <clang-tidy/checks/bugprone/unsafe-crtp>` check.
+
+  FIXME: add release notes.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

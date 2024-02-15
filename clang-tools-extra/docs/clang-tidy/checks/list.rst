@@ -149,6 +149,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
+   :doc:`bugprone-unsafe-crtp <bugprone/unsafe-crtp>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
