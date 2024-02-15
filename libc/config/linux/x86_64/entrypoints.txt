@@ -442,6 +442,18 @@ if(LIBC_COMPILER_HAS_FLOAT128)
   )
 endif()
 
+if(LIBC_COMPILER_HAS_FIXED_POINT)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # stdfix.h _Fract and _Accum entrypoints
+    libc.src.stdfix.abshk
+    libc.src.stdfix.abshr
+    libc.src.stdfix.absk
+    libc.src.stdfix.absr
+    libc.src.stdfix.abslk
+    libc.src.stdfix.abslr
+  )
+endif()
+
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
