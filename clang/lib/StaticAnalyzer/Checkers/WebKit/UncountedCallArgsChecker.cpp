@@ -32,6 +32,8 @@ class UncountedCallArgsChecker
             "WebKit coding guidelines"};
   mutable BugReporter *BR;
 
+  TrivialFunctionAnalysis TFA;
+
 public:
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -134,6 +136,11 @@ public:
   }
 
   bool shouldSkipCall(const CallExpr *CE) const {
+    const auto *Callee = CE->getDirectCallee();
+
+    if (Callee && TFA.isTrivial(Callee))
+      return true;
+
     if (CE->getNumArgs() == 0)
       return false;
 
@@ -155,7 +162,6 @@ public:
         return false;
     }
 
-    const auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
 
