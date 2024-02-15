@@ -86,22 +86,18 @@ ProgressManager &ProgressManager::Instance() { return InstanceImpl(); }
 
 void ProgressManager::Increment(std::string title) {
   std::lock_guard<std::mutex> lock(m_progress_map_mutex);
-  auto pair = m_progress_category_map.insert(std::pair(title, 1));
-
-  // If pair.first is not empty after insertion it means that that
-  // category was entered for the first time and should not be incremented.
-  if (!pair.second)
-    ++pair.first->second;
+  m_progress_category_map[title]++;
 }
 
 void ProgressManager::Decrement(std::string title) {
   std::lock_guard<std::mutex> lock(m_progress_map_mutex);
   auto pos = m_progress_category_map.find(title);
 
-  if (pos == m_progress_category_map.end() || pos->second == 0)
+  if (pos == m_progress_category_map.end())
     return;
 
-  // Remove the category from the map if the refcount reaches 0.
-  if (--pos->second == 0)
+  if (pos->second <= 1)
     m_progress_category_map.erase(title);
+  else
+    --pos->second;
 }
