@@ -27,6 +27,25 @@ void ClangExternalASTSourceCallbacks::CompleteType(
   m_ast.CompleteObjCInterfaceDecl(objc_decl);
 }
 
+void ClangExternalASTSourceCallbacks::CompleteRedeclChain(
+    const clang::Decl *d) {
+  if (!TypeSystemClang::UseRedeclCompletion())
+    return;
+
+  if (const clang::TagDecl *td = llvm::dyn_cast<clang::TagDecl>(d)) {
+    if (td->isBeingDefined())
+      return;
+    if (td->getDefinition())
+      return;
+    m_ast.CompleteTagDecl(const_cast<clang::TagDecl *>(td));
+  }
+  if (const auto *od = llvm::dyn_cast<clang::ObjCInterfaceDecl>(d)) {
+    if (od->getDefinition())
+      return;
+    m_ast.CompleteObjCInterfaceDecl(const_cast<clang::ObjCInterfaceDecl *>(od));
+  }
+}
+
 bool ClangExternalASTSourceCallbacks::layoutRecordType(
     const clang::RecordDecl *Record, uint64_t &Size, uint64_t &Alignment,
     llvm::DenseMap<const clang::FieldDecl *, uint64_t> &FieldOffsets,
