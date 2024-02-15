@@ -1,6 +1,7 @@
 #include "FunctionInfo.h"
 #include "GenICFG.h"
 #include "ICFG.h"
+#include "PathFinder.h"
 #include "VarFinder.h"
 #include "utils.h"
 #include <fstream>
@@ -160,10 +161,10 @@ void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
 
     llvm::errs() << "u: " << u << ", v: " << v << "\n";
 
-    DfsTraverse dfs(icfg);
-    dfs.search(u, v, 3);
+    ICFGPathFinder pFinder(icfg);
+    pFinder.search(u, v, 3);
 
-    for (const auto &path : dfs.results) {
+    for (const auto &path : pFinder.results) {
         llvm::errs() << "> p:";
         for (int x : path) {
             llvm::errs() << " " << x;
