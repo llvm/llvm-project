@@ -12714,7 +12714,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(2), CarryIn, Info) ||
         !EvaluatePointer(E->getArg(3), CarryOutLValue, Info))
       return false;
-    // Copy the number of bits and sign
+    // Copy the number of bits and sign.
     Result = LHS;
     CarryOut = LHS;
 
@@ -12742,7 +12742,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     // It is possible for both overflows to happen but CGBuiltin uses an OR so
-    // this is consistent
+    // this is consistent.
     CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
     APValue APV{CarryOut};
     if (!handleAssignment(Info, E, CarryOutLValue, ResultType, APV))
