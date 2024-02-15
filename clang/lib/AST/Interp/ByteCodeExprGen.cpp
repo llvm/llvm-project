@@ -2586,7 +2586,7 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
       Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
       IsTemporary, /*IsMutable=*/false, Init);
   if (!D)
-    return {};
+    return std::nullopt;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
