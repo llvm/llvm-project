@@ -172,7 +172,7 @@ const LogRR LOG2_TABLE = {
     //     l = hex(value)[2:]
     //     n = 8
     //     x = [l[i:i + n] for i in range(0, len(l), n)]
-    //     return "0x" + "'".join(x) + "_uint128"
+    //     return "0x" + "'".join(x) + "_u128"
     // for i in range(1, 127):
     //   r = 2^-8 * ceil( 2^8 * (1 - 2^(-8)) / (1 + i*2^(-7)) );
     //   s, m, e = RealField(128)(r).log2().sign_mantissa_exponent();

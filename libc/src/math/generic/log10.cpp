@@ -43,7 +43,7 @@ constexpr double P_ERR = 0x1.0p-51;
 //     l = hex(value)[2:]
 //     n = 8
 //     x = [l[i:i + n] for i in range(0, len(l), n)]
-//     return "0x" + "'".join(x) + "_uint128"
+//     return "0x" + "'".join(x) + "_u128"
 // (s, m, e) = RealField(128)(2).log10().sign_exponent_mantissa();
 // print(format_hex(m));
 const Float128 LOG10_2(Sign::POS, /*exponent=*/-129, /*mantissa=*/
