@@ -192,7 +192,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     addCMR(Counter::getZero(), File, LS, CS, LE, CE, true);
   }
 
-  void addMCDCDecisionCMR(unsigned Mask, unsigned NC, StringRef File,
+  void addMCDCDecisionCMR(unsigned Mask, uint16_t NC, StringRef File,
                           unsigned LS, unsigned CS, unsigned LE, unsigned CE) {
     auto &Regions = InputFunctions.back().Regions;
     unsigned FileID = getFileIndexForFunction(File);
@@ -872,9 +872,9 @@ TEST_P(CoverageMappingTest, non_code_region_bitmask) {
   addCMR(Counter::getCounter(3), "file", 1, 1, 5, 5);
 
   addMCDCDecisionCMR(0, 2, "file", 7, 1, 7, 6);
-  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 1, {0, 2},
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "file", 7, 2, 7, 3);
-  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 2, {0, 0},
+  addMCDCBranchCMR(Counter::getCounter(2), Counter::getCounter(3), 1, {-1, -1},
                    "file", 7, 4, 7, 5);
 
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
@@ -900,10 +900,10 @@ TEST_P(CoverageMappingTest, decision_before_expansion) {
   addExpansionCMR("foo", "B", 4, 19, 4, 20);
   addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
   addCMR(Counter::getCounter(0), "A", 1, 14, 1, 17);
-  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 1, {0, 2},
+  addMCDCBranchCMR(Counter::getCounter(0), Counter::getCounter(1), 0, {-1, 1},
                    "A", 1, 14, 1, 17);
   addCMR(Counter::getCounter(1), "B", 1, 14, 1, 17);
-  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 2, {0, 0},
+  addMCDCBranchCMR(Counter::getCounter(1), Counter::getCounter(2), 1, {-1, -1},
                    "B", 1, 14, 1, 17);
 
   // InputFunctionCoverageData::Regions is rewritten after the write.
