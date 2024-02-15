@@ -375,8 +375,7 @@ int testArrayAccesses(int n, int idx) {
     // Typdefs
     typedef int A[3];
     const A tArr = {4, 5, 6};
-    // expected-warning@-1{{'tArr' is an unsafe buffer that does not perform bounds checks}}
-    foo(tArr[0], tArr[1]);  // expected-note{{used in buffer access here}}
+    foo(tArr[0], tArr[1]);
     return cArr[0][1];      // expected-warning{{unsafe buffer access}}
 }
 

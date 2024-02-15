@@ -421,10 +421,8 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     return false;
   if (!BaseDRE->getDecl())
     return false;
-  auto BaseVarDeclTy = BaseDRE->getDecl()->getType();
-  if (!BaseVarDeclTy->isConstantArrayType())
-    return false;
-  const auto *CATy = dyn_cast_or_null<ConstantArrayType>(BaseVarDeclTy);
+  const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
+      BaseDRE->getDecl()->getType());
   if (!CATy)
     return false;
   const APInt ArrSize = CATy->getSize();
