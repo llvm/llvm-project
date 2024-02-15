@@ -1040,6 +1040,7 @@ multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> 
 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
 defm Import : LinkageTypeOperand<1, [Linkage]>;
+defm LinkOnceODR : LinkageTypeOperand<2, [Linkage]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AccessQualifier enum values and at the same time

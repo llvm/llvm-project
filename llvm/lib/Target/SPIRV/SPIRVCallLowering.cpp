@@ -332,6 +332,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
 
+  // Get access to information about available extensions
+  const auto *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
     const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
@@ -342,15 +346,19 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
              F.getLinkage() == GlobalValue::LinkOnceODRLinkage) {
-    auto LnkTy = F.isDeclaration() ? SPIRV::LinkageType::Import
-                                   : SPIRV::LinkageType::Export;
+    SPIRV::LinkageType::LinkageType LnkTy =
+        F.isDeclaration()
+            ? SPIRV::LinkageType::Import
+            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+                       ST->canUseExtension(
+                           SPIRV::Extension::SPV_KHR_linkonce_odr)
+                   ? SPIRV::LinkageType::LinkOnceODR
+                   : SPIRV::LinkageType::Export);
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
   }
 
   // Handle function pointers decoration
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   bool hasFunctionPointers =
       ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
   if (hasFunctionPointers) {
@@ -393,7 +401,7 @@ void SPIRVCallLowering::produceIndirectPtrTypes(
     // SPIR-V pointer to function type:
     SPIRVType *IndirectFuncPtrTy = GR->getOrCreateSPIRVPointerType(
         SpirvFuncTy, MIRBuilder, SPIRV::StorageClass::Function);
-    // Correct the Calee type
+    // Correct the Callee type
     GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
   }
 }

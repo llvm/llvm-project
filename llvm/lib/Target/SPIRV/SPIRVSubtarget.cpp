@@ -54,6 +54,11 @@ cl::list<SPIRV::Extension::Extension> Extensions(
                    "SPV_KHR_bit_instructions",
                    "This enables bit instructions to be used by SPIR-V modules "
                    "without requiring the Shader capability"),
+        clEnumValN(
+            SPIRV::Extension::SPV_KHR_linkonce_odr, "SPV_KHR_linkonce_odr",
+            "Allows to use the LinkOnceODR linkage type that is to let "
+            "a function or global variable to be merged with other functions "
+            "or global variables of the same name when linkage occurs."),
         clEnumValN(SPIRV::Extension::SPV_INTEL_function_pointers,
                    "SPV_INTEL_function_pointers",
                    "Allows translation of function pointers")));
