@@ -43,7 +43,7 @@ static void findAffectedValues(Value *Cond,
     if (!Visited.insert(V).second)
       continue;
 
-    ICmpInst::Predicate Pred;
+    CmpInst::Predicate Pred;
     Value *A, *B;
     // Only recurse into and/or if it matches the top-level and/or type.
     if (TopLevelIsAnd ? match(V, m_LogicalAnd(m_Value(A), m_Value(B)))
@@ -66,7 +66,17 @@ static void findAffectedValues(Value *Cond,
         // A > C3 && A < C4.
         if (match(A, m_Add(m_Value(X), m_ConstantInt())))
           AddAffected(X);
+        // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported by
+        // computeKnownFPClass().
+        if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT) &&
+            match(A, m_ElementWiseBitCast(m_Value(X))))
+          Affected.push_back(X);
       }
+    } else if (match(Cond, m_CombineOr(m_FCmp(Pred, m_Value(A), m_Constant()),
+                                       m_Intrinsic<Intrinsic::is_fpclass>(
+                                           m_Value(A), m_Constant())))) {
+      // Handle patterns that computeKnownFPClass() support.
+      AddAffected(A);
     }
   }
 }
