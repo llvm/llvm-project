@@ -195,6 +195,7 @@ static void getAArch64MultilibFlags(const Driver &D,
   for (const auto &ArchInfo : AArch64::ArchInfos)
     if (FeatureSet.contains(ArchInfo->ArchFeature))
       ArchName = ArchInfo->Name;
+  assert(!ArchName.empty() && "at least one architecture should be found");
   MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
 }
