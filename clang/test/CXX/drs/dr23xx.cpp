@@ -186,7 +186,7 @@ namespace dr2358 { // dr2358: 16
 // CWG2363 was closed as NAD, but its resolution does affirm that
 // a friend declaration cannot have an opaque-enumm-specifier.
 namespace dr2363 { // dr2363: yes
-
+#if __cplusplus >= 201103L
 enum class E0;
 enum E1 : int;
 
@@ -214,6 +214,7 @@ struct A {
   // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
   // expected-note@-3 {{remove 'enum class' to befriend an enum}}
 };
+#endif
 } // namespace dr2363
 
 namespace dr2370 { // dr2370: no
