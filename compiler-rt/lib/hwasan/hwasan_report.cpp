@@ -240,7 +240,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       // Pick `local_beg` in the same 1 MiB block as `untagged_addr`.
       uptr local_beg =
           RoundDownTo(untagged_addr, kRecordFPModulus) + local_beg_mod;
-      // Now the largest `local_beg <= untagged_addr`. It's either the current
+      // Pick the largest `local_beg <= untagged_addr`. It's either the current
       // one or the one before.
       if (local_beg > untagged_addr)
         local_beg -= kRecordFPModulus;
