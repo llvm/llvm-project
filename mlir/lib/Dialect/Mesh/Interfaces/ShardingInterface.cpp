@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
+#include "mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h"
+
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
-#include <algorithm>
 #include <utility>
 
 #define DEBUG_TYPE "sharding-interface"
@@ -215,11 +217,10 @@ namespace {
 // Update the given `shardingOption` according to `meshAxes` and `loopIdx`
 static LogicalResult fillShardingOption(Operation *op,
                                         ShardingOption &shardingOption,
-                                        FlatSymbolRefAttr cluster,
+                                        FlatSymbolRefAttr mesh,
                                         ArrayRef<MeshAxis> meshAxes,
                                         unsigned loopIdx) {
-  if ((shardingOption.cluster && cluster &&
-       shardingOption.cluster != cluster) ||
+  if ((shardingOption.mesh && mesh && shardingOption.mesh != mesh) ||
       (!shardingOption.shardingArray[loopIdx].empty() &&
        shardingOption.shardingArray[loopIdx] != meshAxes)) {
     LLVM_DEBUG(DBGS() << "sharding option conflicts on loop iterator "
@@ -238,8 +239,8 @@ static LogicalResult fillShardingOption(Operation *op,
       }
     }
   }
-  if (cluster)
-    shardingOption.cluster = cluster;
+  if (mesh)
+    shardingOption.mesh = mesh;
   if (shardingOption.shardingArray[loopIdx].empty())
     shardingOption.shardingArray[loopIdx].append(meshAxes.begin(),
                                                  meshAxes.end());
@@ -281,7 +282,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
       auto dim = cast<AffineDimExpr>(expr);
       unsigned index = dim.getPosition();
       visitedLoopIndices.insert(index);
-      if (failed(fillShardingOption(op, shardingOption, shardAttr.getCluster(),
+      if (failed(fillShardingOption(op, shardingOption, shardAttr.getMesh(),
                                     axes, index)))
         return failure();
     }
@@ -333,8 +334,8 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
       if (loopIndices->size() == 1) {
         unsigned loopIdx = *loopIndices->begin();
         visitedLoopIndices.insert(loopIdx);
-        if (failed(fillShardingOption(op, shardingOption,
-                                      shardAttr.getCluster(), axes, loopIdx)))
+        if (failed(fillShardingOption(op, shardingOption, shardAttr.getMesh(),
+                                      axes, loopIdx)))
           return failure();
       }
       // If multiple loop indices correspond to a dimension of an operand, it is
@@ -392,8 +393,6 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
 // detail::defaultAddShardingAnnotations
 //===----------------------------------------------------------------------===//
 
-namespace {
-
 // To add a `mesh.shard` op for the given result, based on the details provided
 // in `shardingOption`, `map`, and `loopTypes`.
 static LogicalResult addShardOp(OpBuilder &b, OpResult result,
@@ -437,9 +436,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
   }
 
   removeTrailingEmptySubArray(splitAxes);
-  MeshShardingAttr shardAttr =
-      MeshShardingAttr::get(b.getContext(), shardingOption.cluster, splitAxes,
-                            partialAxes, partialType);
+  MeshShardingAttr shardAttr = MeshShardingAttr::get(
+      b.getContext(), shardingOption.mesh, splitAxes, partialAxes, partialType);
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPointAfterValue(result);
   auto shardOp = b.create<ShardOp>(result.getLoc(), resultType, result,
@@ -485,7 +483,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
 
   removeTrailingEmptySubArray(splitAxes);
   MeshShardingAttr shardAttr =
-      MeshShardingAttr::get(b.getContext(), shardingOption.cluster, splitAxes);
+      MeshShardingAttr::get(b.getContext(), shardingOption.mesh, splitAxes);
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(opOperand.getOwner());
   auto shardOp = b.create<ShardOp>(operand.getLoc(), operandType, operand,
@@ -494,8 +492,6 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
 
   return success();
 }
-
-} // namespace
 
 LogicalResult mesh::detail::defaultAddShardingAnnotations(
     Operation *op, OpBuilder &b, const ShardingOption &shardingOption) {
@@ -520,4 +516,61 @@ LogicalResult mesh::detail::defaultAddShardingAnnotations(
   }
 
   return success();
+}
+
+#ifndef NDEBUG
+static bool
+isValueCompatibleWithFullReplicationSharding(Value value,
+                                             MeshShardingAttr sharding) {
+  if (value.getType().isa<RankedTensorType>()) {
+    return sharding && isFullReplication(sharding);
+  }
+
+  return !sharding;
+}
+
+template <typename ValueRange, typename MeshShardingAttrRage>
+static bool areValuesCompatibleWithFullReplicationShardings(
+    ValueRange &&values, MeshShardingAttrRage &&shardings) {
+  if (std::size(values) != std::size(shardings)) {
+    return false;
+  }
+  return llvm::all_of(llvm::zip(std::forward<ValueRange>(values),
+                                std::forward<MeshShardingAttrRage>(shardings)),
+                      [](auto valueAndSharding) {
+                        return isValueCompatibleWithFullReplicationSharding(
+                            std::get<0>(valueAndSharding),
+                            std::get<1>(valueAndSharding));
+                      });
+}
+#endif // NDEBUG
+
+void mesh::spmdizeFullyReplicatedOperation(
+    Operation &op, ArrayRef<Value> spmdizedOperands,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    SymbolTableCollection &symbolTable, OpBuilder &builder) {
+  assert(spmdizedOperands.size() == operandShardings.size());
+  assert(areValuesCompatibleWithFullReplicationShardings(op.getOperands(),
+                                                         operandShardings));
+  assert(areValuesCompatibleWithFullReplicationShardings(op.getResults(),
+                                                         resultShardings));
+  // `clone` will populate the mapping of old to new results.
+  builder.clone(op, spmdizationMap);
+}
+
+void mesh::spmdizeTriviallyShardableOperation(
+    Operation &op, ArrayRef<Value> spmdizedOperands,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    SymbolTableCollection &symbolTable, OpBuilder &builder) {
+  // `clone` will populate the mapping of old to new results.
+  Operation *newOp = builder.clone(op, spmdizationMap);
+  // Set the result types to the sharded counterparts.
+  for (auto [oldResult, newResult, sharding] :
+       llvm::zip(op.getResults(), newOp->getResults(), resultShardings)) {
+    newResult.setType(shardType(newResult.getType(),
+                                getMesh(&op, sharding.getMesh(), symbolTable),
+                                sharding));
+  }
 }

@@ -71,8 +71,8 @@ define <4 x float> @test_mm_fmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-FMA-WIN-LABEL: test_mm_fmadd_ss:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovaps (%rcx), %xmm0 # encoding: [0xc5,0xf8,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovss (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfmadd132ss (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x99,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -101,8 +101,8 @@ define <2 x double> @test_mm_fmadd_sd(<2 x double> %a, <2 x double> %b, <2 x dou
 ; CHECK-FMA-WIN-LABEL: test_mm_fmadd_sd:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovapd (%rcx), %xmm0 # encoding: [0xc5,0xf9,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovsd (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfmadd132sd (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0xf1,0x99,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -183,8 +183,8 @@ define <4 x float> @test_mm_fmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float>
 ; CHECK-FMA-WIN-LABEL: test_mm_fmsub_ss:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovaps (%rcx), %xmm0 # encoding: [0xc5,0xf8,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovss (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfmsub132ss (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x9b,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = (xmm0 * mem) - xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -214,8 +214,8 @@ define <2 x double> @test_mm_fmsub_sd(<2 x double> %a, <2 x double> %b, <2 x dou
 ; CHECK-FMA-WIN-LABEL: test_mm_fmsub_sd:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovapd (%rcx), %xmm0 # encoding: [0xc5,0xf9,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovsd (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfmsub132sd (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0xf1,0x9b,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = (xmm0 * mem) - xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -297,8 +297,8 @@ define <4 x float> @test_mm_fnmadd_ss(<4 x float> %a, <4 x float> %b, <4 x float
 ; CHECK-FMA-WIN-LABEL: test_mm_fnmadd_ss:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovaps (%rcx), %xmm0 # encoding: [0xc5,0xf8,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovss (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfnmadd132ss (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x9d,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = -(xmm0 * mem) + xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -328,8 +328,8 @@ define <2 x double> @test_mm_fnmadd_sd(<2 x double> %a, <2 x double> %b, <2 x do
 ; CHECK-FMA-WIN-LABEL: test_mm_fnmadd_sd:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovapd (%rcx), %xmm0 # encoding: [0xc5,0xf9,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovsd (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfnmadd132sd (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0xf1,0x9d,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = -(xmm0 * mem) + xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -413,8 +413,8 @@ define <4 x float> @test_mm_fnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float
 ; CHECK-FMA-WIN-LABEL: test_mm_fnmsub_ss:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovaps (%rcx), %xmm0 # encoding: [0xc5,0xf8,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovss (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7a,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfnmsub132ss (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x9f,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = -(xmm0 * mem) - xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]
@@ -445,8 +445,8 @@ define <2 x double> @test_mm_fnmsub_sd(<2 x double> %a, <2 x double> %b, <2 x do
 ; CHECK-FMA-WIN-LABEL: test_mm_fnmsub_sd:
 ; CHECK-FMA-WIN:       # %bb.0: # %entry
 ; CHECK-FMA-WIN-NEXT:    vmovapd (%rcx), %xmm0 # encoding: [0xc5,0xf9,0x28,0x01]
-; CHECK-FMA-WIN-NEXT:    vmovsd (%r8), %xmm1 # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
-; CHECK-FMA-WIN-NEXT:    # xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-FMA-WIN-NEXT:    # encoding: [0xc4,0xc1,0x7b,0x10,0x08]
 ; CHECK-FMA-WIN-NEXT:    vfnmsub132sd (%rdx), %xmm1, %xmm0 # encoding: [0xc4,0xe2,0xf1,0x9f,0x02]
 ; CHECK-FMA-WIN-NEXT:    # xmm0 = -(xmm0 * mem) - xmm1
 ; CHECK-FMA-WIN-NEXT:    retq # encoding: [0xc3]

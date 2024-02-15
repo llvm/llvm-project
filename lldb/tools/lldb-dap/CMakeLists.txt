@@ -24,6 +24,7 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
+  Breakpoint.cpp
   BreakpointBase.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
@@ -45,6 +46,12 @@ add_lldb_tool(lldb-dap
     Option
     Support
   )
+
+if(LLDB_DAP_WELCOME_MESSAGE)
+  target_compile_definitions(lldb-dap
+    PRIVATE
+    -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
+endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

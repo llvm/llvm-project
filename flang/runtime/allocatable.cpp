@@ -44,26 +44,23 @@ void RTDEF(AllocatableInitDerived)(Descriptor &descriptor,
 
 void RTDEF(AllocatableInitIntrinsicForAllocate)(Descriptor &descriptor,
     TypeCategory category, int kind, int rank, int corank) {
-  if (descriptor.IsAllocated()) {
-    return;
+  if (!descriptor.IsAllocated()) {
+    RTNAME(AllocatableInitIntrinsic)(descriptor, category, kind, rank, corank);
   }
-  RTNAME(AllocatableInitIntrinsic)(descriptor, category, kind, rank, corank);
 }
 
 void RTDEF(AllocatableInitCharacterForAllocate)(Descriptor &descriptor,
     SubscriptValue length, int kind, int rank, int corank) {
-  if (descriptor.IsAllocated()) {
-    return;
+  if (!descriptor.IsAllocated()) {
+    RTNAME(AllocatableInitCharacter)(descriptor, length, kind, rank, corank);
   }
-  RTNAME(AllocatableInitCharacter)(descriptor, length, kind, rank, corank);
 }
 
 void RTDEF(AllocatableInitDerivedForAllocate)(Descriptor &descriptor,
     const typeInfo::DerivedType &derivedType, int rank, int corank) {
-  if (descriptor.IsAllocated()) {
-    return;
+  if (!descriptor.IsAllocated()) {
+    RTNAME(AllocatableInitDerived)(descriptor, derivedType, rank, corank);
   }
-  RTNAME(AllocatableInitDerived)(descriptor, derivedType, rank, corank);
 }
 
 std::int32_t RTDEF(MoveAlloc)(Descriptor &to, Descriptor &from,
@@ -114,24 +111,26 @@ std::int32_t RTDEF(MoveAlloc)(Descriptor &to, Descriptor &from,
 void RTDEF(AllocatableSetBounds)(Descriptor &descriptor, int zeroBasedDim,
     SubscriptValue lower, SubscriptValue upper) {
   INTERNAL_CHECK(zeroBasedDim >= 0 && zeroBasedDim < descriptor.rank());
-  descriptor.GetDimension(zeroBasedDim).SetBounds(lower, upper);
-  // The byte strides are computed when the object is allocated.
+  if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+    descriptor.GetDimension(zeroBasedDim).SetBounds(lower, upper);
+    // The byte strides are computed when the object is allocated.
+  }
 }
 
 void RTDEF(AllocatableSetDerivedLength)(
     Descriptor &descriptor, int which, SubscriptValue x) {
-  DescriptorAddendum *addendum{descriptor.Addendum()};
-  INTERNAL_CHECK(addendum != nullptr);
-  addendum->SetLenParameterValue(which, x);
+  if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+    DescriptorAddendum *addendum{descriptor.Addendum()};
+    INTERNAL_CHECK(addendum != nullptr);
+    addendum->SetLenParameterValue(which, x);
+  }
 }
 
 void RTDEF(AllocatableApplyMold)(
     Descriptor &descriptor, const Descriptor &mold, int rank) {
-  if (descriptor.IsAllocated()) {
-    // 9.7.1.3 Return so the error can be emitted by AllocatableAllocate.
-    return;
+  if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+    descriptor.ApplyMold(mold, rank);
   }
-  descriptor.ApplyMold(mold, rank);
 }
 
 int RTDEF(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
@@ -139,21 +138,22 @@ int RTDEF(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
-  }
-  if (descriptor.IsAllocated()) {
+  } else if (descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
-  }
-  int stat{ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat)};
-  if (stat == StatOk) {
-    if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
-      if (const auto *derived{addendum->derivedType()}) {
-        if (!derived->noInitializationNeeded()) {
-          stat = Initialize(descriptor, *derived, terminator, hasStat, errMsg);
+  } else {
+    int stat{ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat)};
+    if (stat == StatOk) {
+      if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+        if (const auto *derived{addendum->derivedType()}) {
+          if (!derived->noInitializationNeeded()) {
+            stat =
+                Initialize(descriptor, *derived, terminator, hasStat, errMsg);
+          }
         }
       }
     }
+    return stat;
   }
-  return stat;
 }
 
 int RTDEF(AllocatableAllocateSource)(Descriptor &alloc,
@@ -173,14 +173,14 @@ int RTDEF(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
-  }
-  if (!descriptor.IsAllocated()) {
+  } else if (!descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
+  } else {
+    return ReturnError(terminator,
+        descriptor.Destroy(
+            /*finalize=*/true, /*destroyPointers=*/false, &terminator),
+        errMsg, hasStat);
   }
-  return ReturnError(terminator,
-      descriptor.Destroy(
-          /*finalize=*/true, /*destroyPointers=*/false, &terminator),
-      errMsg, hasStat);
 }
 
 int RTDEF(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,

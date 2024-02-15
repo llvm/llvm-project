@@ -625,6 +625,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key,
@@ -2543,6 +2546,8 @@ using unordered_multimap _LIBCPP_AVAILABILITY_PMR =
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>

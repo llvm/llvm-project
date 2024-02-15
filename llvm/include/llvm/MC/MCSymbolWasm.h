@@ -112,7 +112,7 @@ public:
 
   bool isFunctionTable() const {
     return isTable() && hasTableType() &&
-           getTableType().ElemType == wasm::WASM_TYPE_FUNCREF;
+           getTableType().ElemType == wasm::ValType::FUNCREF;
   }
   void setFunctionTable() {
     setType(wasm::WASM_SYMBOL_TYPE_TABLE);
@@ -144,7 +144,7 @@ public:
     // Declare a table with element type VT and no limits (min size 0, no max
     // size).
     wasm::WasmLimits Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
-    setTableType({uint8_t(VT), Limits});
+    setTableType({VT, Limits});
   }
 };
 

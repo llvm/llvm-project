@@ -162,6 +162,7 @@ sure you don't forget anything:
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
+- If needed, did you add `_LIBCPP_PUSH_MACROS` and `_LIBCPP_POP_MACROS` to the relevant headers?
 
 The review process
 ==================

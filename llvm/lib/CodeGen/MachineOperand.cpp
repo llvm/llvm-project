@@ -206,6 +206,19 @@ void MachineOperand::ChangeToGA(const GlobalValue *GV, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                                unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a block address");
+
+  removeRegFromUses();
+
+  OpKind = MO_BlockAddress;
+  Contents.OffsetedInfo.Val.BA = BA;
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");

@@ -29,6 +29,7 @@ set(sources
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
   X86CmovConversion.cpp
+  X86CodeGenPassBuilder.cpp
   X86DomainReassignment.cpp
   X86DiscriminateMemOps.cpp
   X86LowerTileCopy.cpp
@@ -98,9 +99,11 @@ add_llvm_target(X86CodeGen ${sources}
   CodeGenTypes
   Core
   GlobalISel
+  IRPrinter
   Instrumentation
   MC
   ProfileData
+  Scalar
   SelectionDAG
   Support
   Target

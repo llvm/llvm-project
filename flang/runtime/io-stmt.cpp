@@ -698,9 +698,6 @@ void FormattedIoStatementState<Direction::Input>::GotChar(int n) {
 
 bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
     IoStatementState &io, std::size_t length, bool isCharacter) {
-  if (length == 0) {
-    return true;
-  }
   const ConnectionState &connection{io.GetConnectionState()};
   int space{connection.positionInRecord == 0 ||
       !(isCharacter && lastWasUndelimitedCharacter())};

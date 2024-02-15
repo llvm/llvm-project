@@ -1,5 +1,5 @@
 ; Function Attrs: nounwind
-; RUN: llc < %s -march=r600 -mcpu=redwood  | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood  | FileCheck %s
 ;
 ; CFG flattening should use parallel-or to generate branch conditions and
 ; then merge if-regions with the same bodies.

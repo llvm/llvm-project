@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -48,6 +47,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -1743,11 +1743,14 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   bool IsLoad;
+  bool ReorderWhileClustering;
 
 public:
   BaseMemOpClusterMutation(const TargetInstrInfo *tii,
-                           const TargetRegisterInfo *tri, bool IsLoad)
-      : TII(tii), TRI(tri), IsLoad(IsLoad) {}
+                           const TargetRegisterInfo *tri, bool IsLoad,
+                           bool ReorderWhileClustering)
+      : TII(tii), TRI(tri), IsLoad(IsLoad),
+        ReorderWhileClustering(ReorderWhileClustering) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
@@ -1763,14 +1766,16 @@ protected:
 class StoreClusterMutation : public BaseMemOpClusterMutation {
 public:
   StoreClusterMutation(const TargetInstrInfo *tii,
-                       const TargetRegisterInfo *tri)
-      : BaseMemOpClusterMutation(tii, tri, false) {}
+                       const TargetRegisterInfo *tri,
+                       bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, tri, false, ReorderWhileClustering) {}
 };
 
 class LoadClusterMutation : public BaseMemOpClusterMutation {
 public:
-  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri)
-      : BaseMemOpClusterMutation(tii, tri, true) {}
+  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri,
+                      bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, tri, true, ReorderWhileClustering) {}
 };
 
 } // end anonymous namespace
@@ -1779,15 +1784,19 @@ namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI) {
-  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(TII, TRI)
+                             const TargetRegisterInfo *TRI,
+                             bool ReorderWhileClustering) {
+  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(
+                                  TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI) {
-  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(TII, TRI)
+                              const TargetRegisterInfo *TRI,
+                              bool ReorderWhileClustering) {
+  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(
+                                  TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
@@ -1840,7 +1849,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     SUnit *SUa = MemOpa.SU;
     SUnit *SUb = MemOpb.SU;
-    if (SUa->NodeNum > SUb->NodeNum)
+    if (!ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum)
       std::swap(SUa, SUb);
 
     // FIXME: Is this check really required?
@@ -3795,6 +3804,12 @@ ScheduleDAGMILive *llvm::createGenericSchedLive(MachineSchedContext *C) {
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
   return DAG;
 }
 
@@ -3944,8 +3959,15 @@ void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
 }
 
 ScheduleDAGMI *llvm::createGenericSchedPostRA(MachineSchedContext *C) {
-  return new ScheduleDAGMI(C, std::make_unique<PostGenericScheduler>(C),
-                           /*RemoveKillFlags=*/true);
+  ScheduleDAGMI *DAG =
+      new ScheduleDAGMI(C, std::make_unique<PostGenericScheduler>(C),
+                        /*RemoveKillFlags=*/true);
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  return DAG;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4260,15 +4282,21 @@ static bool sortIntervals(const ResourceSegments::IntervalTy &A,
 }
 
 unsigned ResourceSegments::getFirstAvailableAt(
-    unsigned CurrCycle, unsigned AcquireAtCycle, unsigned Cycle,
+    unsigned CurrCycle, unsigned AcquireAtCycle, unsigned ReleaseAtCycle,
     std::function<ResourceSegments::IntervalTy(unsigned, unsigned, unsigned)>
         IntervalBuilder) const {
   assert(std::is_sorted(std::begin(_Intervals), std::end(_Intervals),
                         sortIntervals) &&
          "Cannot execute on an un-sorted set of intervals.");
+
+  // Zero resource usage is allowed by TargetSchedule.td but we do not construct
+  // a ResourceSegment interval for that situation.
+  if (AcquireAtCycle == ReleaseAtCycle)
+    return CurrCycle;
+
   unsigned RetCycle = CurrCycle;
   ResourceSegments::IntervalTy NewInterval =
-      IntervalBuilder(RetCycle, AcquireAtCycle, Cycle);
+      IntervalBuilder(RetCycle, AcquireAtCycle, ReleaseAtCycle);
   for (auto &Interval : _Intervals) {
     if (!intersects(NewInterval, Interval))
       continue;
@@ -4278,15 +4306,23 @@ unsigned ResourceSegments::getFirstAvailableAt(
     assert(Interval.second > NewInterval.first &&
            "Invalid intervals configuration.");
     RetCycle += (unsigned)Interval.second - (unsigned)NewInterval.first;
-    NewInterval = IntervalBuilder(RetCycle, AcquireAtCycle, Cycle);
+    NewInterval = IntervalBuilder(RetCycle, AcquireAtCycle, ReleaseAtCycle);
   }
   return RetCycle;
 }
 
 void ResourceSegments::add(ResourceSegments::IntervalTy A,
                            const unsigned CutOff) {
-  assert(A.first < A.second && "Cannot add empty resource usage");
+  assert(A.first <= A.second && "Cannot add negative resource usage");
   assert(CutOff > 0 && "0-size interval history has no use.");
+  // Zero resource usage is allowed by TargetSchedule.td, in the case that the
+  // instruction needed the resource to be available but does not use it.
+  // However, ResourceSegment represents an interval that is closed on the left
+  // and open on the right. It is impossible to represent an empty interval when
+  // the left is closed. Do not add it to Intervals.
+  if (A.first == A.second)
+    return;
+
   assert(all_of(_Intervals,
                 [&A](const ResourceSegments::IntervalTy &Interval) -> bool {
                   return !intersects(A, Interval);

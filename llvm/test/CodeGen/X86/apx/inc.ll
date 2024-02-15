@@ -57,7 +57,7 @@ define i16 @inc16m(ptr %ptr) {
 ; CHECK-LABEL: inc16m:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    incl %eax, %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:

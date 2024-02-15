@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Optimizer/Builder/Complex.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Todo.h"
 
 #include <algorithm>
@@ -362,8 +363,21 @@ static mlir::Value genStructureComponentInit(
       loc, fieldTy, name, recTy,
       /*typeParams=*/mlir::ValueRange{} /*TODO*/);
 
-  if (Fortran::semantics::IsAllocatable(sym))
-    TODO(loc, "allocatable component in structure constructor");
+  if (Fortran::semantics::IsAllocatable(sym)) {
+    if (!Fortran::evaluate::IsNullPointer(expr)) {
+      fir::emitFatalError(loc, "constant structure constructor with an "
+                               "allocatable component value that is not NULL");
+    } else {
+      // Handle NULL() initialization
+      mlir::Value componentValue{fir::factory::createUnallocatedBox(
+          builder, loc, componentTy, std::nullopt)};
+      componentValue = builder.createConvert(loc, componentTy, componentValue);
+
+      return builder.create<fir::InsertValueOp>(
+          loc, recTy, res, componentValue,
+          builder.getArrayAttr(field.getAttributes()));
+    }
+  }
 
   if (Fortran::semantics::IsPointer(sym)) {
     if (Fortran::semantics::IsProcedure(sym))

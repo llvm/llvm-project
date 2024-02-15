@@ -1,4 +1,3 @@
-## NOTE: This file needs to be updated after promoted instruction is supported
 # RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
 # RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
 
@@ -98,6 +97,10 @@
 # INTEL: vpslldq	zmm0, zmmword ptr [r16 + r17], 0
 0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00
 
+# ATT:   sarq	$123, 291(%r16,%r17), %r18
+# INTEL: sar	r18, qword ptr [r16 + r17 + 291], 123
+0x62,0xfc,0xe8,0x10,0xc1,0xbc,0x08,0x23,0x01,0x00,0x00,0x7b
+
 ## MRMDestMem4VOp3CC
 
 # ATT:   cmpbexadd	%r18d, %r22d, 291(%r28,%r29,4)
@@ -173,6 +176,12 @@
 # ATT:   xorq	$127, %r16, %r17
 # INTEL: xor	r17, r16, 127
 0x62,0xfc,0xf4,0x10,0x83,0xf0,0x7f
+
+## MRM7r
+
+# ATT:   sarq	$123, %r16, %r17
+# INTEL: sar	r17, r16, 123
+0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b
 
 ## NoCD8
 

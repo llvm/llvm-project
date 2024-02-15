@@ -8,7 +8,7 @@
 // RUN:     -emit-module-interface -o %t/b.pcm \
 // RUN:     -fmodule-file=a=%t/a.pcm
 // RUN: %clang_cc1 %t/b.pcm -std=c++20 -triple %itanium_abi_triple \
-// RUN:     -emit-llvm -o - | FileCheck %t/b.cppm
+// RUN:     -fmodule-file=a=%t/a.pcm -emit-llvm -o - | FileCheck %t/b.cppm
 
 //--- foo.h
 namespace n {

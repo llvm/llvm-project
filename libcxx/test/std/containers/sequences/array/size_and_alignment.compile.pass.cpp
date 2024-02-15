@@ -22,7 +22,10 @@
 #include <array>
 #include <cstddef>
 #include <type_traits>
-#include <__type_traits/datasizeof.h>
+
+#ifdef _LIBCPP_VERSION
+#  include <__type_traits/datasizeof.h>
+#endif
 
 #include "test_macros.h"
 

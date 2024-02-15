@@ -1381,9 +1381,9 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   // Copy the secure gateway entry symbols to the import library symbol table.
   for (auto &p : symtab.cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
-    impSymTab->addSymbol(makeDefined(nullptr, d->getName(), d->computeBinding(),
-                                     /*stOther=*/0, STT_FUNC, d->getVA(),
-                                     d->getSize(), nullptr));
+    impSymTab->addSymbol(makeDefined(
+        ctx.internalFile, d->getName(), d->computeBinding(),
+        /*stOther=*/0, STT_FUNC, d->getVA(), d->getSize(), nullptr));
   }
 
   size_t idx = 0;

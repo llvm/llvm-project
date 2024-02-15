@@ -112,16 +112,19 @@
 ! CHECK-NEXT: -g                      Generate source-level debug information
 ! CHECK-NEXT: --help-hidden           Display help for hidden options
 ! CHECK-NEXT: -help                   Display available options
+! CHECK-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! CHECK-NEXT: -mcode-object-version=<value>
-! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
+! CHECK-NEXT: -mno-outline-atomics    Don't generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -moutline-atomics       Generate local calls to out-of-line atomic operations
 ! CHECK-NEXT: -mrvv-vector-bits=<value>
 ! CHECK-NEXT:                         Specify the size in bits of an RVV vector register
 ! CHECK-NEXT: -msve-vector-bits=<value>
@@ -138,13 +141,14 @@
 ! CHECK-NEXT: -pedantic               Warn on language extensions
 ! CHECK-NEXT: -print-effective-triple Print the effective target triple
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
+! CHECK-NEXT: -pthread                Support POSIX threads in generated code
 ! CHECK-NEXT: -P                      Disable linemarker output in -E mode
 ! CHECK-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -R<remark>              Enable the specified remark
 ! CHECK-NEXT: -save-temps=<value>     Save intermediate compilation results.
-! CHECK-NEXT: -save-temps             Save intermediate compilation results
+! CHECK-NEXT: -save-temps             Alias for --save-temps=cwd
 ! CHECK-NEXT: -std=<value>            Language standard to compile for
 ! CHECK-NEXT: -S                      Only run preprocess and compilation steps
 ! CHECK-NEXT: --target=<value>        Generate code for the given target

@@ -1215,7 +1215,6 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   // Create new fully composed AffineMap for new op to be created.
   assert(newMapOperands.size() == newMemRefRank);
   auto newMap = builder.getMultiDimIdentityMap(newMemRefRank);
-  // TODO: Avoid creating/deleting temporary AffineApplyOps here.
   fullyComposeAffineMapAndOperands(&newMap, &newMapOperands);
   newMap = simplifyAffineMap(newMap);
   canonicalizeMapAndOperands(&newMap, &newMapOperands);

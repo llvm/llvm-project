@@ -100,6 +100,9 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
+// Declare external flag for whether we're using the new debug-info format.
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 enum {
@@ -8027,6 +8030,7 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
     if (Error Err = R->materializeForwardReferencedFunctions())
       return std::move(Err);
   }
+
   return std::move(M);
 }
 
