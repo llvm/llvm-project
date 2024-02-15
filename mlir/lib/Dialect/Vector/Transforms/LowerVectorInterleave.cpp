@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -23,66 +24,62 @@ using namespace mlir::vector;
 
 namespace {
 
-/// Progressive lowering of InterleaveOp.
-///
-/// Each leading dimension is unrolled until the result of the interleave is
-/// rank 1 (or the dimension is scalable, so can't be unrolled).
+/// A one-shot unrolling of vector.interleave to the `targetRank`.
 ///
 /// Example:
 ///
+/// ```mlir
+/// vector.interleave %a, %b : vector<1x2x3x4xi64>
 /// ```
-/// %0 = vector.interleave %lhs, %rhs : vector<2x...8xty>
-/// ```
-/// Becomes:
-/// ```
-/// %lhs_0 = vector.extract %lhs[0]
-/// %rhs_0 = vector.extract %rhs[0]
-/// %lhs_1 = vector.extract %lhs[1]
-/// %rhs_1 = vector.extract %rhs[1]
-/// %zip_0 = vector.interleave %lhs_0, %rhs_0
-/// %zip_1 = vector.interleave %lhs_1, %rhs_1
-/// %res_0 = vector.insert %zip_0, %undef[0]
-///     %0 = vector.insert %zip_1, %res_0[1]
+/// Would be unrolled to:
+/// ```mlir
+/// %result = arith.constant dense<0> : vector<1x2x3x8xi64>
+/// %0 = vector.extract %a[0, 0, 0]                 ─┐
+///        : vector<4xi64> from vector<1x2x3x4xi64>  |
+/// %1 = vector.extract %b[0, 0, 0]                  |
+///        : vector<4xi64> from vector<1x2x3x4xi64>  | - Repeated 6x for
+/// %2 = vector.interleave %0, %1 : vector<4xi64>    |   all leading positions
+/// %3 = vector.insert %2, %result [0, 0, 0]         |
+///        : vector<8xi64> into vector<1x2x3x8xi64>  ┘
 /// ```
 ///
-/// If %zip_0 and %zip_1 still have a rank > 1 they will be unrolled again
-/// following the same pattern.
-class InterleaveOpLowering : public OpRewritePattern<vector::InterleaveOp> {
+/// Note: If any leading dimension before the `targetRank` is scalable the
+/// unrolling will stop before the scalable dimension.
+class UnrollInterleaveOp : public OpRewritePattern<vector::InterleaveOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  UnrollInterleaveOp(int64_t targetRank, MLIRContext *context,
+                     PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit), targetRank(targetRank){};
 
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
     VectorType resultType = op.getResultVectorType();
-    // 1-D vector.interleave ops can be directly lowered to LLVM (later).
-    if (resultType.getRank() == 1)
+    auto unrollIterator = vector::createUnrollIterator(resultType, targetRank);
+    if (!unrollIterator)
       return failure();
 
-    // Below we unroll the leading (or front) dimension. If that dimension is
-    // scalable we can't unroll it.
-    if (resultType.getScalableDims().front())
-      return failure();
-
-    // n-D case: Unroll the leading dimension.
     auto loc = op.getLoc();
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultType, rewriter.getZeroAttr(resultType));
-    for (int idx = 0, end = resultType.getDimSize(0); idx < end; ++idx) {
-      Value extractLhs = rewriter.create<ExtractOp>(loc, op.getLhs(), idx);
-      Value extractRhs = rewriter.create<ExtractOp>(loc, op.getRhs(), idx);
+    for (auto position : *unrollIterator) {
+      Value extractLhs = rewriter.create<ExtractOp>(loc, op.getLhs(), position);
+      Value extractRhs = rewriter.create<ExtractOp>(loc, op.getRhs(), position);
       Value interleave =
           rewriter.create<InterleaveOp>(loc, extractLhs, extractRhs);
-      result = rewriter.create<InsertOp>(loc, interleave, result, idx);
+      result = rewriter.create<InsertOp>(loc, interleave, result, position);
     }
 
     rewriter.replaceOp(op, result);
     return success();
   }
+
+private:
+  int64_t targetRank = 1;
 };
 
 } // namespace
 
 void mlir::vector::populateVectorInterleaveLoweringPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<InterleaveOpLowering>(patterns.getContext(), benefit);
+    RewritePatternSet &patterns, int64_t targetRank, PatternBenefit benefit) {
+  patterns.add<UnrollInterleaveOp>(targetRank, patterns.getContext(), benefit);
 }

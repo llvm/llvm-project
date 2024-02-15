@@ -266,10 +266,11 @@ void populateVectorMaskedLoadStoreEmulationPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
-/// [InterleaveOpLowering]
-/// Progressive lowering of InterleaveOp to ExtractOp + InsertOp + lower-D
-/// InterleaveOp until dim 1.
+/// [UnrollInterleaveOp]
+/// A one-shot unrolling of InterleaveOp to (one or more) ExtractOp +
+/// InterleaveOp (of `targetRank`) + InsertOp.
 void populateVectorInterleaveLoweringPatterns(RewritePatternSet &patterns,
+                                              int64_t targetRank = 1,
                                               PatternBenefit benefit = 1);
 
 } // namespace vector

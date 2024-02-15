@@ -36,6 +36,28 @@ func.func @vector_interleave_2d_scalable(%a: vector<2x[8]xi16>, %b: vector<2x[8]
   return %0 : vector<2x[16]xi16>
 }
 
+// CHECK-LABEL: @vector_interleave_4d
+//  CHECK-SAME:     %[[LHS:.*]]: vector<1x2x3x4xi64>, %[[RHS:.*]]: vector<1x2x3x4xi64>)
+func.func @vector_interleave_4d(%a: vector<1x2x3x4xi64>, %b: vector<1x2x3x4xi64>) -> vector<1x2x3x8xi64>
+{
+  // CHECK: %[[LHS_0:.*]] = vector.extract %[[LHS]][0, 0, 0] : vector<4xi64> from vector<1x2x3x4xi64>
+  // CHECK: %[[RHS_0:.*]] = vector.extract %[[RHS]][0, 0, 0] : vector<4xi64> from vector<1x2x3x4xi64>
+  // CHECK: %[[ZIP_0:.*]] = vector.interleave %[[LHS_0]], %[[RHS_0]] : vector<4xi64>
+  // CHECK: %[[RES_0:.*]] = vector.insert %[[ZIP_0]], %{{.*}} [0, 0, 0] : vector<8xi64> into vector<1x2x3x8xi64>
+  // CHECK-COUNT-5: vector.interleave %{{.*}}, %{{.*}} : vector<4xi64>
+  %0 = vector.interleave %a, %b : vector<1x2x3x4xi64>
+  return %0 : vector<1x2x3x8xi64>
+}
+
+// CHECK-LABEL: @vector_interleave_nd_with_scalable_dim
+func.func @vector_interleave_nd_with_scalable_dim(%a: vector<1x3x[2]x2x3x4xf16>, %b: vector<1x3x[2]x2x3x4xf16>) -> vector<1x3x[2]x2x3x8xf16>
+{
+  // The scalable dim blocks unrolling so only the first two dims are unrolled.
+  // CHECK-COUNT-3: vector.interleave %{{.*}}, %{{.*}} : vector<[2]x2x3x4xf16>
+  %0 = vector.interleave %a, %b : vector<1x3x[2]x2x3x4xf16>
+  return %0 : vector<1x3x[2]x2x3x8xf16>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
