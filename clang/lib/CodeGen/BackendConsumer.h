@@ -35,6 +35,7 @@ class BackendConsumer : public ASTConsumer {
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
   const CASOptions &CASOpts; // MCCAS
+  const FileManager &FileMgr;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
   std::unique_ptr<raw_pwrite_stream> CasIDStream;
   ASTContext *Context;
@@ -79,6 +80,7 @@ public:
                   const TargetOptions &TargetOpts,
                   const LangOptions &LangOpts,
                   const CASOptions &CASOpts,
+		  const FileManager &FileMgr,
                   const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
                   std::unique_ptr<raw_pwrite_stream> OS,
@@ -97,6 +99,7 @@ public:
                   const TargetOptions &TargetOpts,
                   const LangOptions &LangOpts,
                   const CASOptions &CASOpts,
+                  const FileManager &FileMgr,
                   llvm::Module *Module,
                   SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
@@ -119,9 +122,12 @@ public:
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
 
-
- // Links each entry in LinkModules into our module.  Returns true on error.
+  // Links each entry in LinkModules into our module.  Returns true on error.
   bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
+
+  // Load a bitcode module from -mlink-builtin-bitcode option using
+  // methods from a BackendConsumer instead of CompilerInstance
+  bool ReloadModules(llvm::Module *M);
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.

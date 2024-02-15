@@ -555,7 +555,7 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
                                   bool isVolatile, bool RequiresNullTerminator,
-                                  std::optional<cas::ObjectRef> *CASContents) {
+                                  std::optional<cas::ObjectRef> *CASContents) const {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getBufferForFile(Filename, FileSize, RequiresNullTerminator,
                                 isVolatile, CASContents);
