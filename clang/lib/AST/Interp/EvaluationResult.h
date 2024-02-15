@@ -56,8 +56,8 @@ private:
   void setSource(DeclTy D) { Source = D; }
 
   void setValue(const APValue &V) {
+    // V could still be an LValue.
     assert(empty());
-    assert(!V.isLValue());
     Value = std::move(V);
     Kind = RValue;
   }

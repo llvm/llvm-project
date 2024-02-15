@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -Wchar-subscripts -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wchar-subscripts -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 void t1(void) {
   int array[1] = { 0 };
