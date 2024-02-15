@@ -541,12 +541,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Custom);
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
-  setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f64, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
+  if (!Subtarget->hasFullFP16())
+    setOperationAction(ISD::FP_ROUND, MVT::f16, Expand);
+  else
+    setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
 
   setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
   setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
@@ -24616,6 +24619,10 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
   EVT VT = N->getValueType(0);
   EVT SrcVT = Op.getValueType();
 
+  // Default to the generic legalizer
+  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
+    return;
+
   if (VT == MVT::v2i16 && SrcVT == MVT::i32) {
     CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v2i32, MVT::v4i16);
     return;
@@ -25044,14 +25051,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
       Results.push_back(
           LowerToPredicatedOp(SDValue(N, 0), DAG, AArch64ISD::MULHU_PRED));
     return;
-  case ISD::FP_ROUND: {
-    if (N->getValueType(0) == MVT::f16 && !Subtarget->hasFullFP16()) {
-      SDLoc DL(N);
-      Results.push_back(
-          DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i16, N->getOperand(0)));
-    }
-    return;
-  }
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
