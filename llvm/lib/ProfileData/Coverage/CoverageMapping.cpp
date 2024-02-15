@@ -223,33 +223,23 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
-MCDCTVIdxBuilder::MCDCTVIdxBuilder(
-    std::function<NodeIDs(bool TellSize)> Fetcher, int Offset) {
+mcdc::TVIdxBuilder::TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
+                                 int Offset)
+    : Indices(NextIDs.size()) {
   // Construct Nodes and set up each InCount
-  mcdc::ConditionID MaxID = -1;
-  auto N = std::get<0>(Fetcher(true));
+  auto N = NextIDs.size();
   SmallVector<MCDCNode> Nodes(N);
-  Indices.resize(N);
-  while (true) {
-    auto [ID, FalseID, TrueID] = Fetcher(false);
-    if (ID < 0)
-      break;
-    MaxID = std::max(MaxID, ID);
-    auto &Node = Nodes[ID];
-    Node.NextIDs[0] = FalseID;
-    Node.NextIDs[1] = TrueID;
-    for (unsigned I = 0; I < 2; ++I) {
+  for (unsigned ID = 0; ID < N; ++ID) {
+    for (unsigned C = 0; C < 2; ++C) {
 #ifndef NDEBUG
-      Indices[ID][I] = INT_MIN;
+      Indices[ID][C] = INT_MIN;
 #endif
-      auto NextID = Node.NextIDs[I];
+      auto NextID = NextIDs[ID][C];
+      Nodes[ID].NextIDs[C] = NextID;
       if (NextID >= 0)
         ++Nodes[NextID].InCount;
     }
   }
-
-  if (MaxID < 0)
-    return;
 
   // Sort key ordered by <-Width, Ord>
   SmallVector<std::tuple<int,      /// -Width
@@ -334,29 +324,29 @@ MCDCTVIdxBuilder::MCDCTVIdxBuilder(
 
 namespace {
 
-/// Returns the fetcher to return {ID1,TrueID1,FalseID1} from Branches
-class BranchProvider {
-  using NodeIDs = MCDCTVIdxBuilder::NodeIDs;
-  ArrayRef<const CounterMappingRegion *> Branches;
-  unsigned BranchIdx = 0;
+/// Construct this->NextIDs with Branches for TVIdxBuilder to use it
+/// before MCDCRecordProcessor().
+class NextIDsBuilder {
+protected:
+  SmallVector<mcdc::ConditionIDs> NextIDs;
 
 public:
-  BranchProvider(ArrayRef<const CounterMappingRegion *> Branches)
-      : Branches(Branches) {}
-
-  std::function<NodeIDs(bool)> getFetcher() {
-    return [this](bool TellSize) {
-      if (TellSize)
-        return NodeIDs(Branches.size(), 0, 0);
-      if (BranchIdx >= Branches.size())
-        return NodeIDs(-1, 0, 0);
-      const auto &B = Branches[BranchIdx++]->getBranchParams();
-      return NodeIDs(B.ID, B.Conds[false], B.Conds[true]);
-    };
+  NextIDsBuilder(const ArrayRef<const CounterMappingRegion *> Branches)
+      : NextIDs(Branches.size()) {
+#ifndef NDEBUG
+    DenseSet<mcdc::ConditionID> SeenIDs;
+#endif
+    for (const auto *Branch : Branches) {
+      const auto &BranchParams = Branch->getBranchParams();
+      assert(BranchParams.ID >= 0 && "CondID isn't set");
+      assert(SeenIDs.insert(BranchParams.ID).second && "Duplicate CondID");
+      NextIDs[BranchParams.ID] = BranchParams.Conds;
+    }
+    assert(SeenIDs.size() == Branches.size());
   }
 };
 
-class MCDCRecordProcessor : MCDCTVIdxBuilder {
+class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// A bitmap representing the executed test vectors for a boolean expression.
   /// Each index of the bitmap corresponds to a possible test vector. An index
   /// with a bit value of '1' indicates that the corresponding Test Vector
@@ -376,9 +366,6 @@ class MCDCRecordProcessor : MCDCTVIdxBuilder {
 
   unsigned BitmapIdx;
 
-  /// Mapping of a condition ID to its corresponding branch params.
-  llvm::DenseMap<mcdc::ConditionID, mcdc::ConditionIDs> NextIDsMap;
-
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
 
@@ -397,7 +384,7 @@ public:
   MCDCRecordProcessor(const BitVector &Bitmap,
                       const CounterMappingRegion &Region,
                       ArrayRef<const CounterMappingRegion *> Branches)
-      : MCDCTVIdxBuilder(BranchProvider(Branches).getFetcher()), Bitmap(Bitmap),
+      : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         BitmapIdx(DecisionParams.BitmapIdx * CHAR_BIT),
@@ -416,7 +403,7 @@ private:
       static_assert(MCDCRecord::MCDC_True == 1);
       Index |= MCDCCond << ID;
       TV[ID] = MCDCCond;
-      auto NextID = NextIDsMap[ID][MCDCCond];
+      auto NextID = NextIDs[ID][MCDCCond];
       auto NextTVIdx = TVIdx + Indices[ID][MCDCCond];
       assert(NextID == SavedNodes[ID].NextIDs[MCDCCond]);
       if (NextID >= 0) {
@@ -513,7 +500,6 @@ public:
     //   from being measured.
     for (const auto *B : Branches) {
       const auto &BranchParams = B->getBranchParams();
-      NextIDsMap[BranchParams.ID] = BranchParams.Conds;
       PosToID[I] = BranchParams.ID;
       CondLoc[I] = B->startLoc();
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());

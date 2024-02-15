@@ -551,13 +551,14 @@ public:
   }
 };
 
+namespace mcdc {
 /// Compute Indices from Branch-like structure
-class MCDCTVIdxBuilder {
+class TVIdxBuilder {
 public:
   struct MCDCNode {
     int InCount = 0; /// Reference count; temporary use
     int Width;       /// Number of accumulated paths (>= 1)
-    std::array<int, 2> NextIDs;
+    ConditionIDs NextIDs;
   };
 
 #ifndef NDEBUG
@@ -566,7 +567,7 @@ public:
   SmallVector<MCDCNode> SavedNodes;
 #endif
 
-  /// Output: Index for TestVectors bitmap
+  /// Output: Index for TestVectors bitmap (These are not CondIDs)
   SmallVector<std::array<int, 2>> Indices;
 
   /// Output: The number of test vectors.
@@ -578,21 +579,12 @@ public:
       std::numeric_limits<decltype(NumTestVectors)>::max();
 
 public:
-  /// Inputs: to gather MCDCBranch-like ID to construct the BDD.
-  using NodeIDs = std::tuple<mcdc::ConditionID, // ID (ends with -1)
-                             mcdc::ConditionID, // ID for False
-                             mcdc::ConditionID  // ID for True
-                             >;
-
   /// Calculate and assign Indices
-  /// \param Fetcher Function to fetch NodeIDs.
-  ///        returns {size,0,0} with TellSize=ture
-  ///        returns {ID1,TrueID1,FalseID1} as the value
-  ///        returns {0,0,0} as the terminator
+  /// \param NextIDs The list of {FalseID, TrueID} indexed by ID
   /// \param Offset Offset of index to final decisions.
-  MCDCTVIdxBuilder(std::function<NodeIDs(bool TellSize)> Fetcher,
-                   int Offset = 0);
+  TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs, int Offset = 0);
 };
+} // namespace mcdc
 
 /// A Counter mapping context is used to connect the counters, expressions
 /// and the obtained counter values.
