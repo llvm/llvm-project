@@ -35,6 +35,22 @@ static cl::opt<bool>
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
                 cl::Optional, cl::init(false));
 
+static cl::list<SPIRV::Capability::Capability>
+    AvoidCapabilities("avoid-spirv-capabilities",
+                      cl::desc("SPIR-V capabilities to avoid if there are "
+                               "other options enabling a feature"),
+                      cl::ZeroOrMore, cl::Hidden,
+                      cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
+                                            "SPIR-V Shader capability")));
+// Use sets instead of cl::list to check "if contains" condition
+struct AvoidCapabilitiesSet {
+  SmallSet<SPIRV::Capability::Capability, 4> S;
+  AvoidCapabilitiesSet() {
+    for (auto Cap : AvoidCapabilities)
+      S.insert(Cap);
+  }
+};
+
 char llvm::SPIRVModuleAnalysis::ID = 0;
 
 namespace llvm {
@@ -58,6 +74,8 @@ static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
+  static AvoidCapabilitiesSet
+      AvoidCaps; // contains capabilities to avoid if there is another option
   unsigned ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   unsigned ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
   unsigned TargetVer = ST.getSPIRVVersion();
@@ -72,9 +90,26 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       return {false, {}, {}, 0, 0};
     }
   } else if (MinVerOK && MaxVerOK) {
-    for (auto Cap : ReqCaps) { // Only need 1 of the capabilities to work.
+    if (ReqCaps.size() == 1) {
+      auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap))
         return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+    } else {
+      // By SPIR-V specification: "If an instruction, enumerant, or other
+      // feature specifies multiple enabling capabilities, only one such
+      // capability needs to be declared to use the feature." However, one
+      // capability may be preferred over another. We use command line
+      // argument(s) and AvoidCapabilities to avoid selection of certain
+      // capabilities if there are other options.
+      CapabilityList UseCaps;
+      for (auto Cap : ReqCaps)
+        if (Reqs.isCapabilityAvailable(Cap))
+          UseCaps.push_back(Cap);
+      for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
+        auto Cap = UseCaps[i];
+        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
+          return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+      }
     }
   }
   // If there are no capabilities, or we can't satisfy the version or
@@ -432,16 +467,13 @@ void SPIRV::RequirementHandler::getAndAddRequirements(
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
-void SPIRV::RequirementHandler::pruneCapabilities(
+void SPIRV::RequirementHandler::recursiveAddCapabilities(
     const CapabilityList &ToPrune) {
   for (const auto &Cap : ToPrune) {
     AllCaps.insert(Cap);
-    auto FoundIndex = llvm::find(MinimalCaps, Cap);
-    if (FoundIndex != MinimalCaps.end())
-      MinimalCaps.erase(FoundIndex);
     CapabilityList ImplicitDecls =
         getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
-    pruneCapabilities(ImplicitDecls);
+    recursiveAddCapabilities(ImplicitDecls);
   }
 }
 
@@ -452,7 +484,7 @@ void SPIRV::RequirementHandler::addCapabilities(const CapabilityList &ToAdd) {
       continue;
     CapabilityList ImplicitDecls =
         getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
-    pruneCapabilities(ImplicitDecls);
+    recursiveAddCapabilities(ImplicitDecls);
     MinimalCaps.push_back(Cap);
   }
 }
