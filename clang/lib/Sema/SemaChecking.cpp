@@ -7938,7 +7938,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // For variadic functions, we may have more args than parameters.
     // For some K&R functions, we may have less args than parameters.
     const auto N = std::min<unsigned>(Proto->getNumParams(), Args.size());
-    bool AnyScalableArgs = false;
+    bool AnyScalableArgsOrRet = false;
     for (unsigned ArgIdx = 0; ArgIdx < N; ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.
       if (const Expr *Arg = Args[ArgIdx]) {
@@ -7953,7 +7953,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 
         QualType ParamTy = Proto->getParamType(ArgIdx);
         if (ParamTy->isSizelessVectorType())
-          AnyScalableArgs = true;
+          AnyScalableArgsOrRet = true;
         QualType ArgTy = Arg->getType();
         CheckArgAlignment(Arg->getExprLoc(), FDecl, std::to_string(ArgIdx + 1),
                           ArgTy, ParamTy);
@@ -7975,36 +7975,32 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
 
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
-    bool IsCalleeStreaming = ((ExtInfo.AArch64SMEAttributes &
-                               FunctionType::SME_PStateSMEnabledMask) ||
-                              (ExtInfo.AArch64SMEAttributes &
-                               FunctionType::SME_PStateSMCompatibleMask));
+    auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
+    bool IsCalleeStreaming =
+        (ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask);
+    bool IsCalleeStreamingCompatible =
+        (ExtInfo.AArch64SMEAttributes &
+         FunctionType::SME_PStateSMCompatibleMask);
     bool IsBuiltin = (FD && FD->getBuiltinID());
+    AnyScalableArgsOrRet |= Proto->getReturnType()->isSizelessVectorType();
 
+    // If the caller is a function and the callee has a different
+    // non-compitable streaming attribute. If it passed any VL-based arguments
+    // or return VL-based value, then warn that the streaming and non-streaming
+    // vector lengths may be different.
     if (CallerFD && Context.getTargetInfo().hasFeature("sme") && !IsBuiltin) {
-      // If the callee has an AArch64 SME __arm_locally_streaming attribute
-      // warn if this function returns VL-based value or pass any such argument,
-      // the streaming and non-streaming vector lengths may be different.
       ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
-      // If the caller is a non-streaming function and the callee has a
-      // streaming attribute. If it passed any VL-based arguments or return
-      // VL-based value, then warn that the streaming and non-streaming vector
-      // lengths may be different.
-      if (CallerFnType != ArmStreaming) {
-        if (IsCalleeStreaming) {
-          if (AnyScalableArgs)
-            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-          if (Proto->getReturnType()->isSizelessVectorType())
-            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-        }
-      } else if (!IsCalleeStreaming) {
-        // If the callee is a non-streaming function and the caller has
-        // streaming attribute. If it passed any VL-based arguments or return
-        // VL-based value, then warn that the streaming and non-streaming vector
-        // lengths may be different.
-        if (AnyScalableArgs)
+      if (CallerFnType != ArmStreaming &&
+          CallerFnType != ArmStreamingCompatible) {
+        if (IsCalleeStreaming && AnyScalableArgsOrRet)
           Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-        if (Proto->getReturnType()->isSizelessVectorType())
+      } else if (CallerFnType == ArmStreaming && !IsCalleeStreaming &&
+                 !IsCalleeStreamingCompatible) {
+        if (AnyScalableArgsOrRet)
+          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
+      } else if (CallerFnType == ArmStreamingCompatible) {
+        if ((IsCalleeStreaming || !IsCalleeStreamingCompatible) &&
+            AnyScalableArgsOrRet)
           Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
       }
     }

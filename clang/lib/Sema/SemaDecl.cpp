@@ -12403,18 +12403,10 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     bool UsesZT0 = Attr && Attr->isNewZT0();
 
     if (UsesSM) {
-      if (NewFD->getReturnType()->isSizelessVectorType())
-        Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args_returns);
-      auto *FPT = NewFD->getType()->castAs<FunctionProtoType>();
-      bool AnyScalableArgs = false;
-      for (QualType T : FPT->param_types()) {
-        if (T->isSizelessVectorType()) {
-          AnyScalableArgs = true;
-          break;
-        }
-      }
-      if (AnyScalableArgs)
+      if (NewFD->getReturnType()->isSizelessVectorType() ||
+          llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
+            return P->getOriginalType()->isSizelessVectorType();
+          }))
         Diag(NewFD->getLocation(),
              diag::warn_sme_locally_streaming_has_vl_args_returns);
     }

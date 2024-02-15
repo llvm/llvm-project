@@ -3757,11 +3757,13 @@ def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   "passing a VL-dependent argument to/from a function that has a different"
-  " streaming-mode, is undefined behaviour">,
+  " streaming-mode, the streaming and non-streaming vector lengths may be"
+  " different">,
   InGroup<AArch64SMEAttributes>;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "passing/returning a VL-dependent argument from a function"
-  " arm_locally_streaming attribute, is undefined behaviour">,
+  " arm_locally_streaming attribute, the streaming and non-streaming vector"
+  " lengths may be different">,
   InGroup<AArch64SMEAttributes>;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
