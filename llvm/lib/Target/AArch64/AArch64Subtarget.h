@@ -363,6 +363,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
+    case CallingConv::SwiftTail:
       return isTargetWindows();
     case CallingConv::Win64:
       return true;
