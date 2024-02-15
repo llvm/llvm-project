@@ -5758,24 +5758,60 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
 
   if (CV->getSplatValue()) {
     APInt DefBits = APInt::getSplat(DstSize, CV->getUniqueInteger());
-    MachineInstr *NewOp;
-    bool Inv = false;
-    if ((NewOp = tryAdvSIMDModImm64(Dst, DstSize, DefBits, MIRBuilder)) ||
-        (NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp =
-             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp = tryAdvSIMDModImm8(Dst, DstSize, DefBits, MIRBuilder)) ||
-        (NewOp = tryAdvSIMDModImmFP(Dst, DstSize, DefBits, MIRBuilder)))
+    auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
+      MachineInstr *NewOp;
+      bool Inv = false;
+      if ((NewOp = tryAdvSIMDModImm64(Dst, DstSize, DefBits, MIRBuilder)) ||
+          (NewOp =
+               tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp =
+               tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp =
+               tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp = tryAdvSIMDModImm8(Dst, DstSize, DefBits, MIRBuilder)) ||
+          (NewOp = tryAdvSIMDModImmFP(Dst, DstSize, DefBits, MIRBuilder)))
+        return NewOp;
+
+      DefBits = ~DefBits;
+      Inv = true;
+      if ((NewOp =
+               tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp =
+               tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
+          (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)))
+        return NewOp;
+      return nullptr;
+    };
+
+    if (auto *NewOp = TryMOVIWithBits(DefBits))
       return NewOp;
 
-    DefBits = ~DefBits;
-    Inv = true;
-    if ((NewOp = tryAdvSIMDModImm32(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp =
-             tryAdvSIMDModImm321s(Dst, DstSize, DefBits, MIRBuilder, Inv)) ||
-        (NewOp = tryAdvSIMDModImm16(Dst, DstSize, DefBits, MIRBuilder, Inv)))
-      return NewOp;
+    // See if a fneg of the constant can be materialized with a MOVI, etc
+    auto TryWithFNeg = [&](APInt DefBits, int NumBits,
+                           unsigned NegOpc) -> MachineInstr * {
+      // FNegate each sub-element of the constant
+      APInt Neg = APInt::getHighBitsSet(NumBits, 1).zext(DstSize);
+      APInt NegBits(DstSize, 0);
+      unsigned NumElts = DstSize / NumBits;
+      for (unsigned i = 0; i < NumElts; i++)
+        NegBits |= Neg << (NumBits * i);
+      NegBits = DefBits ^ NegBits;
+
+      // Try to create the new constants with MOVI, and if so generate a fneg
+      // for it.
+      if (auto *NewOp = TryMOVIWithBits(NegBits)) {
+        Register NewDst = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
+        NewOp->getOperand(0).setReg(NewDst);
+        return MIRBuilder.buildInstr(NegOpc, {Dst}, {NewDst});
+      }
+      return nullptr;
+    };
+    MachineInstr *R;
+    if ((R = TryWithFNeg(DefBits, 32, AArch64::FNEGv4f32)) ||
+        (R = TryWithFNeg(DefBits, 64, AArch64::FNEGv2f64)) ||
+        (STI.hasFullFP16() &&
+         (R = TryWithFNeg(DefBits, 16, AArch64::FNEGv8f16))))
+      return R;
   }
 
   auto *CPLoad = emitLoadFromConstantPool(CV, MIRBuilder);
