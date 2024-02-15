@@ -28,6 +28,7 @@ on:
       - 'polly/docs/**'
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'llvm/docs/**'
@@ -45,6 +46,7 @@ on:
       - 'polly/docs/**'
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - '.github/workflows/docs.yml'
 
 jobs:
   check-docs-build:
