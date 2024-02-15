@@ -14,6 +14,8 @@
 #define LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 
 #include <array>
+#include <cassert>
+#include <type_traits>
 #include <variant>
 
 namespace llvm::coverage::mcdc {
@@ -48,6 +50,19 @@ struct BranchParameters {
 /// The type of MC/DC-specific parameters.
 using Parameters =
     std::variant<std::monostate, DecisionParameters, BranchParameters>;
+
+/// Check and get underlying params in MCDCParams.
+/// \tparam MaybeConstInnerParameters Type to get. May be const.
+/// \tparam MaybeConstMCDCParameters Expected inferred. May be const.
+/// \param MCDCParams May be const.
+template <class MaybeConstInnerParameters, class MaybeConstMCDCParameters>
+static auto &getParams(MaybeConstMCDCParameters &MCDCParams) {
+  using InnerParameters =
+      typename std::remove_const<MaybeConstInnerParameters>::type;
+  MaybeConstInnerParameters *Params = std::get_if<InnerParameters>(&MCDCParams);
+  assert(Params && "InnerParameters unavailable");
+  return *Params;
+}
 
 } // namespace llvm::coverage::mcdc
 
