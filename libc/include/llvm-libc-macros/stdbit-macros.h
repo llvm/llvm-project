@@ -101,6 +101,21 @@ inline unsigned stdc_first_leading_one(unsigned long x) {
 inline unsigned stdc_first_leading_one(unsigned long long x) {
   return stdc_first_leading_one_ull(x);
 }
+inline unsigned stdc_first_trailing_zero(unsigned char x) {
+  return stdc_first_trailing_zero_uc(x);
+}
+inline unsigned stdc_first_trailing_zero(unsigned short x) {
+  return stdc_first_trailing_zero_us(x);
+}
+inline unsigned stdc_first_trailing_zero(unsigned x) {
+  return stdc_first_trailing_zero_ui(x);
+}
+inline unsigned stdc_first_trailing_zero(unsigned long x) {
+  return stdc_first_trailing_zero_ul(x);
+}
+inline unsigned stdc_first_trailing_zero(unsigned long long x) {
+  return stdc_first_trailing_zero_ull(x);
+}
 #else
 #define stdc_leading_zeros(x)                                                  \
   _Generic((x),                                                                \
@@ -144,6 +159,13 @@ inline unsigned stdc_first_leading_one(unsigned long long x) {
       unsigned: stdc_first_leading_one_ui,                                     \
       unsigned long: stdc_first_leading_one_ul,                                \
       unsigned long long: stdc_first_leading_one_ull)(x)
+#define stdc_first_trailing_zero(x)                                            \
+  _Generic((x),                                                                \
+      unsigned char: stdc_first_trailing_zero_uc,                              \
+      unsigned short: stdc_first_trailing_zero_us,                             \
+      unsigned: stdc_first_trailing_zero_ui,                                   \
+      unsigned long: stdc_first_trailing_zero_ul,                              \
+      unsigned long long: stdc_first_trailing_zero_ull)(x)
 #endif // __cplusplus
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H
