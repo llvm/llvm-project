@@ -7,7 +7,3 @@ target_link_libraries(amdhsa_loader
   gpu_loader
   llvmlibc_rpc_server
 )
-
-if(LIBC_COMPILER_HAS_FIXED_POINT)
-  target_compile_options(amdhsa_loader PRIVATE "-ffixed-point")
-endif()
