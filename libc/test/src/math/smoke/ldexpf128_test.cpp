@@ -1,4 +1,4 @@
-//===-- Unittests for ldexpf ----------------------------------------------===//
+//===-- Unittests for ldexpf128 -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,6 @@
 
 #include "LdExpTest.h"
 
-#include "src/math/ldexpf.h"
+#include "src/math/ldexpf128.h"
 
-LIST_LDEXP_TESTS(float, LIBC_NAMESPACE::ldexpf);
+LIST_LDEXP_TESTS(float128, LIBC_NAMESPACE::ldexpf128);
