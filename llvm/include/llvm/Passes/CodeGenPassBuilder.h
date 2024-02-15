@@ -495,6 +495,9 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
 
+  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
+
   {
     AddIRPass addIRPass(MPM, derived());
     addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
@@ -503,20 +506,25 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   }
 
   AddMachinePass addPass(MPM, derived());
+
+  if (PrintMIR)
+    addPass(PrintMIRPreparePass(Out), /*Force=*/true);
+
   if (auto Err = addCoreISelPasses(addPass))
     return std::move(Err);
 
   if (auto Err = derived().addMachinePasses(addPass))
     return std::move(Err);
 
-  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+  if (PrintAsm) {
     derived().addAsmPrinter(
         addPass, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
           return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
         });
-  } else if (FileType != CodeGenFileType::Null) {
-    addPass(PrintMIRPass(Out), /*Force=*/true);
   }
+
+  if (PrintMIR)
+    addPass(PrintMIRPass(Out), /*Force=*/true);
 
   addPass(FreeMachineFunctionPass());
   return verifyStartStop(*StartStopInfo);
