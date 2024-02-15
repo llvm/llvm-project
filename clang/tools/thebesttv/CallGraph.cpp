@@ -1,5 +1,6 @@
 #include "CallGraph.h"
 
+#include "ICFG.h"
 #include "utils.h"
 
 std::string
@@ -81,6 +82,10 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
         requireTrue(callee != nullptr, "callee is null!");
         Global.callGraph[fullSignature].insert(getFullSignature(callee));
     }
+
+    std::unique_ptr<CFG> cfg = CFG::buildCFG(
+        D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
+    Global.icfg.addFunction(Global.getIdOfFunction(fullSignature), *cfg);
 
     return true;
 }

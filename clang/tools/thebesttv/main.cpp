@@ -1,5 +1,6 @@
 #include "CallGraph.h"
 #include "FunctionInfo.h"
+#include "ICFG.h"
 #include "VarFinder.h"
 #include "utils.h"
 #include <fstream>
@@ -160,6 +161,16 @@ int main(int argc, const char **argv) {
     Tool.run(newFrontendActionFactory<GenWholeProgramCallGraphAction>().get());
 
     printCloc(allFiles);
+
+    {
+        llvm::errs() << "--- ICFG ---\n";
+        llvm::errs() << "  n: " << Global.icfg.n << "\n";
+        int m = 0;
+        for (const auto &edges : Global.icfg.G) {
+            m += edges.size();
+        }
+        llvm::errs() << "  m: " << m << "\n";
+    }
 
     {
         Graph G(Global.functionCnt);

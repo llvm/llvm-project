@@ -3,6 +3,7 @@ add_clang_tool(thebesttv
     main.cpp
     utils.cpp
     CallGraph.cpp
+    ICFG.cpp
 )
 
 # add debug

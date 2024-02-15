@@ -12,10 +12,13 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cassert>
 #include <filesystem>
 #include <queue>
 #include <set>
 #include <string>
+
+#include "ICFG.h"
 
 using namespace clang;
 using namespace clang::tooling;
@@ -85,6 +88,8 @@ struct GlobalStat {
         }
         return it->second;
     }
+
+    ICFG icfg;
 };
 
 #endif
