@@ -491,6 +491,24 @@ void error_ftello(void) {
   fclose(F);
 }
 
+void error_fileno(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  int N = fileno(F);
+  clang_analyzer_eval(N >= 0); // expected-warning {{TRUE}}
+  clang_analyzer_eval(feof(F) && ferror(F)); // expected-warning {{FALSE}}
+  StreamTesterChecker_make_feof_stream(F);
+  N = fileno(F);
+  clang_analyzer_eval(feof(F));              // expected-warning {{TRUE}}
+  clang_analyzer_eval(ferror(F));            // expected-warning {{FALSE}}
+  StreamTesterChecker_make_ferror_stream(F);
+  N = fileno(F);
+  clang_analyzer_eval(feof(F));              // expected-warning {{FALSE}}
+  clang_analyzer_eval(ferror(F));            // expected-warning {{TRUE}}
+  fclose(F);
+}
+
 void error_fflush_on_non_null_stream_clear_error_states(void) {
   FILE *F0 = tmpfile(), *F1 = tmpfile();
   // `fflush` clears a non-EOF stream's error state.
