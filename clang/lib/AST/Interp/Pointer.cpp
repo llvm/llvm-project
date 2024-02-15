@@ -87,20 +87,21 @@ APValue Pointer::toAPValue() const {
 
   if (isZero())
     return APValue(static_cast<const Expr *>(nullptr), CharUnits::Zero(), Path,
-                   false, /*IsNullPtr=*/false);
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
   APValue::LValueBase Base;
-  if (auto *VD = Desc->asValueDecl())
+  if (const auto *VD = Desc->asValueDecl())
     Base = VD;
-  else if (auto *E = Desc->asExpr())
+  else if (const auto *E = Desc->asExpr())
     Base = E;
   else
     llvm_unreachable("Invalid allocation type");
 
-  if (isUnknownSizeArray() || Desc->asExpr())
-    return APValue(Base, CharUnits::Zero(), Path, false, false);
+  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
+    return APValue(Base, CharUnits::Zero(), Path,
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
 
   // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();
@@ -231,11 +232,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
 
     // Primitive values.
     if (std::optional<PrimType> T = Ctx.classify(Ty)) {
-      if (T == PT_Ptr || T == PT_FnPtr) {
-        R = Ptr.toAPValue();
-      } else {
-        TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
-      }
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
       return true;
     }
 
