@@ -351,3 +351,96 @@ namespace EhReturnDataRegno {
     __builtin_eh_return_data_regno(X);  // both-error {{argument to '__builtin_eh_return_data_regno' must be a constant integer}}
   }
 }
+
+/// From test/SemaCXX/builtins.cpp
+namespace test_launder {
+#define TEST_TYPE(Ptr, Type) \
+  static_assert(__is_same(decltype(__builtin_launder(Ptr)), Type), "expected same type")
+
+struct Dummy {};
+
+using FnType = int(char);
+using MemFnType = int (Dummy::*)(char);
+using ConstMemFnType = int (Dummy::*)() const;
+
+void foo() {}
+
+void test_builtin_launder_diags(void *vp, const void *cvp, FnType *fnp,
+                                MemFnType mfp, ConstMemFnType cmfp, int (&Arr)[5]) {
+  __builtin_launder(vp);   // both-error {{void pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(cvp);  // both-error {{void pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(fnp);  // both-error {{function pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(mfp);  // both-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(cmfp); // both-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+  (void)__builtin_launder(&fnp);
+  __builtin_launder(42);      // both-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(nullptr); // both-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(foo);     // both-error {{function pointer argument to '__builtin_launder' is not allowed}}
+  (void)__builtin_launder(Arr);
+}
+
+void test_builtin_launder(char *p, const volatile int *ip, const float *&fp,
+                          double *__restrict dp) {
+  int x;
+  __builtin_launder(x); // both-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+
+  TEST_TYPE(p, char*);
+  TEST_TYPE(ip, const volatile int*);
+  TEST_TYPE(fp, const float*);
+  TEST_TYPE(dp, double *__restrict);
+
+  char *d = __builtin_launder(p);
+  const volatile int *id = __builtin_launder(ip);
+  int *id2 = __builtin_launder(ip); // both-error {{cannot initialize a variable of type 'int *' with an rvalue of type 'const volatile int *'}}
+  const float* fd = __builtin_launder(fp);
+}
+
+void test_launder_return_type(const int (&ArrayRef)[101], int (&MArrRef)[42][13],
+                              void (**&FuncPtrRef)()) {
+  TEST_TYPE(ArrayRef, const int *);
+  TEST_TYPE(MArrRef, int(*)[13]);
+  TEST_TYPE(FuncPtrRef, void (**)());
+}
+
+template <class Tp>
+constexpr Tp *test_constexpr_launder(Tp *tp) {
+  return __builtin_launder(tp);
+}
+constexpr int const_int = 42;
+constexpr int const_int2 = 101;
+constexpr const int *const_ptr = test_constexpr_launder(&const_int);
+static_assert(&const_int == const_ptr, "");
+static_assert(const_ptr != test_constexpr_launder(&const_int2), "");
+
+void test_non_constexpr() {
+  constexpr int i = 42;                            // both-note {{address of non-static constexpr variable 'i' may differ on each invocation}}
+  constexpr const int *ip = __builtin_launder(&i); // both-error {{constexpr variable 'ip' must be initialized by a constant expression}}
+  // both-note@-1 {{pointer to 'i' is not a constant expression}}
+}
+
+constexpr bool test_in_constexpr(const int &i) {
+  return (__builtin_launder(&i) == &i);
+}
+
+static_assert(test_in_constexpr(const_int), "");
+void f() {
+  constexpr int i = 42;
+  static_assert(test_in_constexpr(i), "");
+}
+
+struct Incomplete; // both-note {{forward declaration}}
+struct IncompleteMember {
+  Incomplete &i;
+};
+void test_incomplete(Incomplete *i, IncompleteMember *im) {
+  // both-error@+1 {{incomplete type 'Incomplete' where a complete type is required}}
+  __builtin_launder(i);
+  __builtin_launder(&i); // OK
+  __builtin_launder(im); // OK
+}
+
+void test_noexcept(int *i) {
+  static_assert(noexcept(__builtin_launder(i)), "");
+}
+#undef TEST_TYPE
+} // end namespace test_launder
