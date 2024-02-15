@@ -52,25 +52,7 @@ def CharType : NamedType<"char">;
 def UnsignedCharType : NamedType<"unsigned char">;
 def UnsignedShortType : NamedType<"unsigned short">;
 
-// TODO: Add compatibility layer to use C23 type _Float128 if possible.
 def Float128Type : NamedType<"float128">;
-
-// Fixed point types.
-// From ISO/IEC TR 18037:2008 standard:
-// https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
-def ShortFractType : NamedType<"short fract">;
-def FractType : NamedType<"fract">;
-def LongFractType : NamedType<"long fract">;
-def UnsignedShortFractType : NamedType<"unsigned short fract">;
-def UnsignedFractType : NamedType<"unsigned fract">;
-def UnsignedLongFractType : NamedType<"unsigned long fract">;
-
-def ShortAccumType : NamedType<"short accum">;
-def AccumType : NamedType<"accum">;
-def LongAccumType : NamedType<"long accum">;
-def UnsignedShortAccumType : NamedType<"unsigned short accum">;
-def UnsignedAccumType : NamedType<"unsigned accum">;
-def UnsignedLongAccumType : NamedType<"unsigned long accum">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;
