@@ -132,7 +132,7 @@ struct Parser<LIBC_NAMESPACE::cpp::BigInt<N, false, uint64_t>> {
       // Fast path, we consume blocks of uint64_t and creates the BigInt's
       // internal representation directly.
       using U64ArrayT = cpp::array<uint64_t, UIntT::WORD_COUNT>;
-      U64ArrayT array;
+      U64ArrayT array = {};
       size_t size = buffer.size;
       const uint8_t *digit_ptr = buffer.digits + size;
       for (size_t i = 0; i < array.size(); ++i) {
