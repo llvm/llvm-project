@@ -25,7 +25,7 @@
 # RS-SYMS-DAG: foo3
 
 ## Check --ignore-symbol functionality when changing symbol names
-# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --ignore-symbol=fo.* --regex
+# RUN: llvm-objcopy %t.o %t4.o --redefine-sym=foo1=bar1 --ignore-symbol=fo* --wildcard
 # RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=RS-SYM
 # RS-SYM-DAG: foo1
 # RS-SYM-DAG: foo2
