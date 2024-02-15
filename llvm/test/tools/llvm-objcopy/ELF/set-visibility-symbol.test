@@ -42,6 +42,25 @@
 # REGEX-DAG: PROTECTED   1 protected_global
 # REGEX-DAG: PROTECTED   1 protected_weak
 
+## Check that the visibility of symbols specified by a wildcard are set correctly,
+# and that no other symbols are affected
+# RUN: llvm-objcopy %t.o %t1.o --set-symbol-visibility=*_local=hidden --wildcard
+# RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=WILDCARD
+
+# WILDCARD-DAG: HIDDEN      1 default_local
+# WILDCARD-DAG: HIDDEN      1 internal_local
+# WILDCARD-DAG: HIDDEN      1 hidden_local
+# WILDCARD-DAG: HIDDEN      1 protected_local
+## Unaffected symbols:
+# WILDCARD-DAG: DEFAULT     1 default_global
+# WILDCARD-DAG: DEFAULT     1 default_weak
+# WILDCARD-DAG: INTERNAL    1 internal_global
+# WILDCARD-DAG: INTERNAL    1 internal_weak
+# WILDCARD-DAG: HIDDEN      1 hidden_global
+# WILDCARD-DAG: HIDDEN      1 hidden_weak
+# WILDCARD-DAG: PROTECTED   1 protected_global
+# WILDCARD-DAG: PROTECTED   1 protected_weak
+
 !ELF
 FileHeader:
   Class:   ELFCLASS64
