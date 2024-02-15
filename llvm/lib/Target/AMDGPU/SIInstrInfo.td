@@ -1468,11 +1468,12 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
-  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
-                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
-                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
-                              !if(!eq(VT.Size, 16), op16,
-                              VOPDstS64orS32)))); // else VT == i1
+  RegisterOperand ret = !cond(!eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
+                              !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
+                              !eq(VT.Size, 16)  : op16,
+                              1                 : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
@@ -1556,40 +1557,23 @@ class getSDWASrcForVT <ValueType VT> {
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   RegisterOperand ret =
-  !if(!eq(VT.Size, 128),
-     VRegSrc_128,
-     !if(!eq(VT.Size, 64),
-        !if(VT.isFP,
-           !if(!eq(VT.Value, v2f32.Value),
-               VSrc_v2f32,
-               VSrc_f64),
-           !if(!eq(VT.Value, v2i32.Value),
-               VSrc_v2b32,
-           VSrc_b64)),
-        !if(!eq(VT.Value, i1.Value),
-           SSrc_i1,
-           !if(VT.isFP,
-              !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                 !if(IsTrue16, VSrcT_f16, VSrc_f16),
-                 !if(!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)),
-                    VSrc_v2f16,
-                    !if(!or(!eq(VT.Value, v4f16.Value), !eq(VT.Value, v4bf16.Value)),
-                      AVSrc_64,
-                      VSrc_f32
-                    )
-                 )
-              ),
-              !if(!eq(VT.Value, i16.Value),
-                 !if(IsTrue16, VSrcT_b16, VSrc_b16),
-                 !if(!eq(VT.Value, v2i16.Value),
-                    VSrc_v2b16,
-                    VSrc_b32
-                 )
-              )
-           )
-        )
-     )
-  );
+  !cond(!eq(VT, f64)      : VSrc_f64,
+        !eq(VT, f32)      : VSrc_f32,
+        !eq(VT, f16)      : !if(IsTrue16, VSrcT_f16, VSrc_f16),
+        !eq(VT, bf16)     : !if(IsTrue16, VSrcT_f16, VSrc_f16),
+        !eq(VT, i16)      : !if(IsTrue16, VSrcT_b16, VSrc_b16),
+        !eq(VT, i1)       : SSrc_i1,
+        !eq(VT, v2f32)    : VSrc_v2f32,
+        !eq(VT, v2i32)    : VSrc_v2b32,
+        !eq(VT, v2f16)    : VSrc_v2f16,
+        !eq(VT, v2bf16)   : VSrc_v2f16,
+        !eq(VT, v2i16)    : VSrc_v2b16,
+        !eq(VT, v4f16)    : AVSrc_64,
+        !eq(VT, v4bf16)   : AVSrc_64,
+        !eq(VT.Size, 128) : VRegSrc_128,
+        !eq(VT.Size, 96)  : VRegSrc_96,
+        !eq(VT.Size, 64)  : VSrc_b64,
+        1                 : VSrc_b32);
 }
 
 // Src2 of VOP3 DPP instructions cannot be a literal
