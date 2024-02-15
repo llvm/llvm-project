@@ -59,7 +59,8 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
                                          IgnoreSingleElementAggregatesDefault)),
       RestrictToPODTypes(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)),
-      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)) {}
+      IgnoreMacros(
+          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasBaseWithFields =
