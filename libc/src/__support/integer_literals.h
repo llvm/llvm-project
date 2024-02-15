@@ -22,19 +22,19 @@
 namespace LIBC_NAMESPACE {
 
 LIBC_INLINE constexpr uint8_t operator""_u8(unsigned long long value) {
-  return value;
+  return static_cast<uint8_t>(value);
 }
 
 LIBC_INLINE constexpr uint16_t operator""_u16(unsigned long long value) {
-  return value;
+  return static_cast<uint16_t>(value);
 }
 
 LIBC_INLINE constexpr uint32_t operator""_u32(unsigned long long value) {
-  return value;
+  return static_cast<uint32_t>(value);
 }
 
 LIBC_INLINE constexpr uint64_t operator""_u64(unsigned long long value) {
-  return value;
+  return static_cast<uint64_t>(value);
 }
 
 namespace internal {
@@ -64,6 +64,7 @@ template <typename T, int base> struct DigitBuffer {
                                                                         : 0;
   LIBC_INLINE_VAR static constexpr size_t MAX_DIGITS =
       sizeof(T) * CHAR_BIT / BITS_PER_DIGIT;
+  LIBC_INLINE_VAR static constexpr uint8_t INVALID_DIGIT = 255;
 
   uint8_t digits[MAX_DIGITS] = {};
   size_t size = 0;
@@ -74,7 +75,7 @@ template <typename T, int base> struct DigitBuffer {
   }
 
   // Returns the digit for a particular character.
-  // Returns 255 if the character is invalid.
+  // Returns INVALID_DIGIT if the character is invalid.
   LIBC_INLINE static constexpr uint8_t get_digit_value(const char c) {
     const auto to_lower = [](char c) { return c | 32; };
     const auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
@@ -82,10 +83,10 @@ template <typename T, int base> struct DigitBuffer {
       return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
     };
     if (is_digit(c))
-      return c - '0';
+      return static_cast<uint8_t>(c - '0');
     if (base > 10 && is_alpha(c))
-      return to_lower(c) - 'a' + 10;
-    return 255;
+      return static_cast<uint8_t>(to_lower(c) - 'a' + 10);
+    return INVALID_DIGIT;
   }
 
   // Adds a single character to this buffer.
@@ -93,7 +94,7 @@ template <typename T, int base> struct DigitBuffer {
     if (c == '\'')
       return; // ' is valid but not taken into account.
     const uint8_t value = get_digit_value(c);
-    if (value == 255 || size >= MAX_DIGITS) {
+    if (value == INVALID_DIGIT || size >= MAX_DIGITS) {
       // During constant evaluation `__builtin_unreachable` will halt the
       // compiler as it is not executable. This is preferable over `assert` that
       // will only trigger in debug mode. Also we can't use `static_assert`
@@ -131,7 +132,7 @@ struct Parser<LIBC_NAMESPACE::cpp::BigInt<N, false, uint64_t>> {
       // Fast path, we consume blocks of uint64_t and creates the BigInt's
       // internal representation directly.
       using U64ArrayT = cpp::array<uint64_t, UIntT::WORD_COUNT>;
-      U64ArrayT array;
+      U64ArrayT array = {};
       size_t size = buffer.size;
       const uint8_t *digit_ptr = buffer.digits + size;
       for (size_t i = 0; i < array.size(); ++i) {
