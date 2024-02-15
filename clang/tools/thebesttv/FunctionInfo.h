@@ -145,8 +145,6 @@ struct FunctionInfo {
     std::vector<std::pair<const Stmt *, const CFGBlock *>> stmtBlockPairs;
     BlockGraph *bg;
 
-    CallGraph *cg;
-
     static FunctionInfo *fromDecl(FunctionDecl *D) {
         // ensure that the function has a body
         if (!D->hasBody())
@@ -172,9 +170,6 @@ struct FunctionInfo {
         // build graph for each CFGBlock
         BlockGraph *bg = new BlockGraph(cfg);
 
-        CallGraph *cg = new CallGraph();
-        cg->addToCallGraph(D->getASTContext().getTranslationUnitDecl());
-
         FunctionInfo *fi = new FunctionInfo();
         fi->D = D;
         fi->name = name;
@@ -184,7 +179,6 @@ struct FunctionInfo {
         fi->cfg = cfg;
         fi->buildStmtBlockPairs();
         fi->bg = bg;
-        fi->cg = cg;
         return fi;
     }
 
