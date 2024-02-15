@@ -2223,7 +2223,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
   // - "fail_on_payload_too_small" is set to "false", or
   // - "pass_through_empty_handle" is set to "true" and there are 0 payload ops.
   if (numPayloadOps < getNumResults() && getFailOnPayloadTooSmall() &&
-      !(numPayloadOps == 0 && getPassThroughEmptyHandle()))
+      (numPayloadOps != 0 || !getPassThroughEmptyHandle()))
     return produceNumOpsError();
 
   // Distribute payload ops.
