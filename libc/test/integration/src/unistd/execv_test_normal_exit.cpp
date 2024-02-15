@@ -1,6 +1,6 @@
-#include <signal.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <signal.h> // SIGUSR1
+#include <stdlib.h> // getenv
+#include <unistd.h> // raise
 
 int main() {
   char *env = getenv("EXECV_TEST");

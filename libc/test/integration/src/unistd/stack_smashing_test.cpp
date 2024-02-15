@@ -8,22 +8,16 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/OSUtil/io.h"
-#include "src/pthread/pthread_atfork.h"
-#include "src/signal/raise.h"
-#include "src/sys/wait/wait.h"
-#include "src/sys/wait/wait4.h"
-#include "src/sys/wait/waitpid.h"
-#include "src/unistd/fork.h"
 
 #include "test/IntegrationTest/test.h"
 
 #include <errno.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include <signal.h>   // SIGABRT
+#include <sys/wait.h> // wait
+#include <unistd.h>   // fork
 
 void no_stack_smashing_normal_exit() {
-  pid_t pid = LIBC_NAMESPACE::fork();
+  pid_t pid = fork();
   if (pid == 0) {
     // Child process
     char foo[30];
@@ -33,14 +27,14 @@ void no_stack_smashing_normal_exit() {
   }
   ASSERT_TRUE(pid > 0);
   int status;
-  pid_t cpid = LIBC_NAMESPACE::wait(&status);
+  pid_t cpid = wait(&status);
   ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WIFEXITED(status));
 }
 
 void stack_smashing_abort() {
-  pid_t pid = LIBC_NAMESPACE::fork();
+  pid_t pid = fork();
   if (pid == 0) {
     // Child process
     char foo[30];
@@ -55,7 +49,7 @@ void stack_smashing_abort() {
   }
   ASSERT_TRUE(pid > 0);
   int status;
-  pid_t cpid = LIBC_NAMESPACE::wait(&status);
+  pid_t cpid = wait(&status);
   ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WTERMSIG(status) == SIGABRT);
