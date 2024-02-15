@@ -508,9 +508,9 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELCOO)
 #undef IMPL_DELCOO
 
 char *getTensorFilename(index_type id) {
-  constexpr size_t BUF_SIZE = 80;
-  char var[BUF_SIZE];
-  snprintf(var, BUF_SIZE, "TENSOR%" PRIu64, id);
+  constexpr size_t bufSize = 80;
+  char var[bufSize];
+  snprintf(var, bufSize, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
   if (!env)
     MLIR_SPARSETENSOR_FATAL("Environment variable %s is not set\n", var);

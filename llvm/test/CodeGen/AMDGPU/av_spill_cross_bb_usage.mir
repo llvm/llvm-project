@@ -47,7 +47,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $exec:0x000000000000000F, $sgpr30, $sgpr31, $vgpr0:0x0000000000000003, $vgpr1:0x0000000000000003, $vgpr2:0x0000000000000003, $vgpr3:0x0000000000000003, $vgpr4:0x0000000000000003, $vgpr5:0x0000000000000003, $vgpr6:0x0000000000000003, $vgpr7:0x0000000000000003, $vgpr8:0x0000000000000003, $vgpr9:0x0000000000000003, $vgpr40, $sgpr30_sgpr31, $vgpr10_vgpr11:0x000000000000000F, $vgpr14_vgpr15:0x000000000000000F, $vgpr41_vgpr42:0x000000000000000F, $vgpr43_vgpr44:0x000000000000000F, $vgpr45_vgpr46:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F
+  ; GCN-NEXT:   liveins: $exec, $sgpr30, $sgpr31, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr40, $sgpr30_sgpr31, $vgpr10_vgpr11:0x000000000000000F, $vgpr14_vgpr15:0x000000000000000F, $vgpr41_vgpr42:0x000000000000000F, $vgpr43_vgpr44:0x000000000000000F, $vgpr45_vgpr46:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr57 = COPY $vgpr9, implicit $exec
   ; GCN-NEXT:   renamable $vgpr56 = COPY $vgpr8, implicit $exec

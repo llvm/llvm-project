@@ -567,7 +567,7 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx10.1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
+     ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
                                          - ``gfx1012``     - cumode                               and ``gfx1012``
                                          - ``gfx1013``
@@ -586,7 +586,7 @@ greater than or equal to the version in which the processor was added to the gen
                                                                                                   ``gfx1013``
 
 
-     ``gfx10.3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
+     ``gfx10-3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
                                          - ``gfx1031``     - cumode             scratch
                                          - ``gfx1032``
                                          - ``gfx1033``
@@ -1860,8 +1860,8 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x04f      Reserved.
      *reserved*                                 0x050      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10.1-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10.3-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
      *reserved*                                 0x055      Reserved.
      ========================================== ========== =============================
