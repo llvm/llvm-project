@@ -159,13 +159,6 @@ int llvm::compileModuleWithNewPM(
   } else {
     ExitOnErr(LLVMTM.buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
-
-    auto StartStopInfo = TargetPassConfig::getStartStopInfo(PIC);
-    assert(StartStopInfo && "Expect StartStopInfo!");
-
-    if (auto StopPassName = StartStopInfo->StopPass; !StopPassName.empty()) {
-      MPM.addPass(createModuleToMachineFunctionPassAdaptor(PrintMIRPass(*OS)));
-    }
   }
 
   if (PrintPipelinePasses) {

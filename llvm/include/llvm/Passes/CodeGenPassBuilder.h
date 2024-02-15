@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
@@ -208,12 +209,13 @@ protected:
     }
 
     template <typename PassT>
-    void operator()(PassT &&Pass, StringRef Name = PassT::name()) {
+    void operator()(PassT &&Pass, bool Force = false,
+                    StringRef Name = PassT::name()) {
       static_assert((is_detected<is_machine_function_pass_t, PassT>::value ||
                      is_detected<is_module_pass_t, PassT>::value) &&
                     "Only module pass and function pass are supported.");
 
-      if (!PB.runBeforeAdding(Name))
+      if (!Force && !PB.runBeforeAdding(Name))
         return;
 
       // Add Function Pass
@@ -492,11 +494,13 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
-  AddIRPass addIRPass(MPM, derived());
-  // `ProfileSummaryInfo` is always valid.
-  addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
-  addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
-  addISelPasses(addIRPass);
+
+  {
+    AddIRPass addIRPass(MPM, derived());
+    addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+    addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
+    addISelPasses(addIRPass);
+  }
 
   AddMachinePass addPass(MPM, derived());
   if (auto Err = addCoreISelPasses(addPass))
@@ -505,10 +509,14 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   if (auto Err = derived().addMachinePasses(addPass))
     return std::move(Err);
 
-  derived().addAsmPrinter(
-      addPass, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
-        return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
-      });
+  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    derived().addAsmPrinter(
+        addPass, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
+          return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+        });
+  } else if (FileType != CodeGenFileType::Null) {
+    addPass(PrintMIRPass(Out), /*Force=*/true);
+  }
 
   addPass(FreeMachineFunctionPass());
   return verifyStartStop(*StartStopInfo);
