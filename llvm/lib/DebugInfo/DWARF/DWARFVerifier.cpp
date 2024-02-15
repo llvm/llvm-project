@@ -2028,9 +2028,7 @@ void OutputCategoryAggregator::EnumerateResults(
 }
 
 void DWARFVerifier::summarize() {
-  if (!ErrorCategory.GetNumCategories())
-    return;
-  if (DumpOpts.ShowAggregateErrors) {
+  if (DumpOpts.ShowAggregateErrors && ErrorCategory.GetNumCategories()) {
     error() << "Aggregated error counts:\n";
     ErrorCategory.EnumerateResults([&](StringRef s, unsigned count) {
       error() << s << " occurred " << count << " time(s).\n";
@@ -2047,13 +2045,16 @@ void DWARFVerifier::summarize() {
     }
 
     llvm::json::Object Categories;
-    ErrorCategory.EnumerateResults([&](StringRef category, unsigned count) {
+    uint64_t ErrorCount = 0;
+    ErrorCategory.EnumerateResults([&](StringRef Category, unsigned Count) {
       llvm::json::Object Val;
-      Val.try_emplace("count", count);
-      Categories.try_emplace(category, std::move(Val));
+      Val.try_emplace("count", Count);
+      Categories.try_emplace(Category, std::move(Val));
+      ErrorCount += Count;
     });
     llvm::json::Object RootNode;
     RootNode.try_emplace("error-categories", std::move(Categories));
+    RootNode.try_emplace("error-count", ErrorCount);
 
     JsonStream << llvm::json::Value(std::move(RootNode));
   }
