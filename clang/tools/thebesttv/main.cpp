@@ -44,15 +44,14 @@ getCompilationDatabase(fs::path buildPath) {
 }
 
 struct VarLocResult {
-    const FunctionInfo *fi;
-    const CFGBlock *block;
-    const int id;
+    const int fid, bid;
 
-    VarLocResult() : fi(nullptr), block(nullptr), id(-1) {}
+    VarLocResult() : fid(-1), bid(-1) {}
     VarLocResult(const FunctionInfo *fi, const CFGBlock *block)
-        : fi(fi), block(block), id(block->getBlockID()) {}
+        : fid(Global.getIdOfFunction(fi->signature)), bid(block->getBlockID()) {
+    }
 
-    bool isValid() const { return fi != nullptr; }
+    bool isValid() const { return fid != -1; }
 };
 
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
@@ -111,39 +110,17 @@ VarLocResult locateVariable(const std::string &signature, int line,
     return locateVariable(functionsInFile, loc.file, line, column);
 }
 
-void findPathBetween(const fif &functionsInFile, //
-                     const std::string &fileFrom, int lineFrom, int columnFrom,
-                     const std::string &fileTo, int lineTo, int columnTo) {
-    VarLocResult from =
-        locateVariable(functionsInFile, fileFrom, lineFrom, columnFrom);
-    VarLocResult to = locateVariable(functionsInFile, fileTo, lineTo, columnTo);
-
+void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
     if (!from.isValid() || !to.isValid()) {
         llvm::errs() << "Invalid variable location!\n";
         return;
     }
 
-    requireTrue(from.fi == to.fi, "different functions!");
+    ICFG &icfg = Global.icfg;
+    int u = icfg.getNodeId(from.fid, from.bid);
+    int v = icfg.getNodeId(to.fid, to.bid);
 
-    const FunctionInfo *fi = from.fi;
-    int u = from.id;
-    int v = to.id;
-
-    fi->bg->dij(from.block);
-    llvm::errs() << "Dis from " << u << " to " << v << ": " << fi->bg->g.d[v]
-                 << "\n  path:";
-    for (int x : fi->bg->g.trace(v)) {
-        llvm::errs() << " " << x;
-    }
-    llvm::errs() << "\n";
-
-    fi->bg->dij(to.block);
-    llvm::errs() << "Dis from " << v << " to " << u << ": " << fi->bg->g.d[u]
-                 << "\n  path:";
-    for (int x : fi->bg->g.trace(u)) {
-        llvm::errs() << " " << x;
-    }
-    llvm::errs() << "\n";
+    llvm::errs() << "u: " << u << ", v: " << v << "\n";
 }
 
 void printCloc(const std::vector<std::string> &allFiles) {
@@ -211,8 +188,8 @@ int main(int argc, const char **argv) {
     std::string source = "IOPriorityPanel_new(IOPriority)";
     std::string target = "Vector_new(const ObjectClass *, _Bool, int)";
 
-    locateVariable(source, 23, 11);
-    locateVariable(target, 31, 10);
+    findPathBetween(locateVariable(source, 23, 11),
+                    locateVariable(target, 31, 10));
 
     while (true) {
         std::string methodName;
