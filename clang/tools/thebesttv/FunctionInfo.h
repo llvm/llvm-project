@@ -57,60 +57,93 @@ struct Graph {
     }
 };
 
-/*
 struct DfsTraverse {
-    DfsTraverse(const Graph &G) : G(G) {}
+    DfsTraverse(const ICFG &icfg) : icfg(icfg) {}
 
-    const Graph &G;
+    const ICFG &icfg;
 
     int source;
     int target;
-    int maxDistance;
+    int maxCallDepth;
     std::vector<int> path;
     std::vector<bool> visiting;
     std::set<std::vector<int>> results;
 
-    void search(int source, int target, int maxDistance) {
+    std::stack<int> callStack; // 部分平衡的括号匹配
+    std::set<int> callSites;
+
+    void search(int source, int target, int maxCallDepth) {
         this->source = source;
         this->target = target;
-        this->maxDistance = maxDistance;
+        this->maxCallDepth = maxCallDepth;
 
-        this->path.clear();
-        this->path.push_back(source);
+        path.clear();
+        path.push_back(source);
 
-        this->visiting.resize(G.n, false);
+        visiting.resize(icfg.n);
+        std::fill(visiting.begin(), visiting.end(), false);
 
-        dfs(source, 0);
+        while (!callStack.empty())
+            callStack.pop();
+        callSites.clear();
+
+        dfs(source);
     }
 
-    void dfs(int u, int d) {
-        if (d > maxDistance || (d == maxDistance && u != target))
-            return;
-
+    void dfs(int u) {
         if (u == target) {
-            // llvm::errs() << "found:";
-            // for (int v : path) {
-            //     llvm::errs() << " " << v;
-            // }
-            // llvm::errs() << "\n";
+            llvm::errs() << "found:";
+            for (int v : path) {
+                llvm::errs() << " " << v;
+            }
+            llvm::errs() << "\n";
 
             results.insert(path);
             return;
         }
 
-        for (int v : G.G[u]) {
+        for (const auto &e : icfg.G[u]) {
+            int v = e.target;
             if (visiting[v])
                 continue;
 
-            visiting[v] = true;
-            this->path.push_back(v);
-            dfs(v, d + 1);
-            this->path.pop_back();
-            visiting[v] = false;
+            if (e.type == ICFG::Edge::Type::INTRA_PROC) {
+                visiting[v] = true;
+                path.push_back(v);
+                dfs(v);
+                path.pop_back();
+                visiting[v] = false;
+            } else {
+                std::stack<int> oldCallStack = callStack;
+                std::set<int> oldCallSites = callSites;
+
+                if (e.type == ICFG::Edge::Type::CALL_EDGE) { // 左括号
+                    callStack.push(e.callSiteId);
+                } else { // 右括号
+                    if (!callStack.empty()) {
+                        if (callStack.top() != e.callSiteId) {
+                            continue;
+                        } else {
+                            callStack.pop();
+                        }
+                    }
+                }
+                callSites.insert(e.callSiteId);
+
+                if (callSites.size() <= maxCallDepth) {
+                    visiting[v] = true;
+                    path.push_back(v);
+                    dfs(v);
+                    path.pop_back();
+                    visiting[v] = false;
+                }
+
+                callSites = oldCallSites;
+                callStack = oldCallStack;
+            }
         }
     }
 };
-*/
 
 struct BlockGraph {
     const CFG *cfg;

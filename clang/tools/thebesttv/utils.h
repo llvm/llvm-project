@@ -17,6 +17,7 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <stack>
 #include <string>
 
 #include "ICFG.h"

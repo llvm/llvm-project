@@ -110,6 +110,44 @@ VarLocResult locateVariable(const std::string &signature, int line,
     return locateVariable(functionsInFile, loc.file, line, column);
 }
 
+void dumpIcfgNode(int u) {
+    auto [fid, bid] = Global.icfg.functionBlockOfNodeId[u];
+    requireTrue(fid != -1);
+
+    const NamedLocation &loc = *Global.functionLocations[fid];
+
+    llvm::errs() << ">> Node " << u << " is in " << loc.name << " at block "
+                 << bid << "\n";
+
+    ClangTool Tool(*Global.cb, {loc.file});
+    DiagnosticConsumer DC = IgnoringDiagConsumer();
+    Tool.setDiagnosticConsumer(&DC);
+
+    std::vector<std::unique_ptr<ASTUnit>> ASTs;
+    Tool.buildASTs(ASTs);
+
+    requireTrue(ASTs.size() == 1);
+    std::unique_ptr<ASTUnit> AST = std::move(ASTs[0]);
+
+    fif functionsInFile;
+    ASTContext &Context = AST->getASTContext();
+    auto *TUD = Context.getTranslationUnitDecl();
+    requireTrue(!TUD->isUnavailable());
+    FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
+
+    for (const FunctionInfo *fi : functionsInFile.at(loc.file)) {
+        if (fi->signature != Global.functionLocations[fid]->name)
+            continue;
+        for (auto BI = fi->cfg->begin(); BI != fi->cfg->end(); ++BI) {
+            const CFGBlock &B = **BI;
+            if (B.getBlockID() != bid)
+                continue;
+            B.dump(fi->cfg, Context.getLangOpts(), true);
+            return;
+        }
+    }
+}
+
 void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
     if (!from.isValid() || !to.isValid()) {
         llvm::errs() << "Invalid variable location!\n";
@@ -121,6 +159,20 @@ void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
     int v = icfg.getNodeId(to.fid, to.bid);
 
     llvm::errs() << "u: " << u << ", v: " << v << "\n";
+
+    DfsTraverse dfs(icfg);
+    dfs.search(u, v, 3);
+
+    for (const auto &path : dfs.results) {
+        llvm::errs() << "> p:";
+        for (int x : path) {
+            llvm::errs() << " " << x;
+        }
+        llvm::errs() << "\n";
+        for (int x : path)
+            dumpIcfgNode(x);
+        llvm::errs() << "\n";
+    }
 }
 
 void printCloc(const std::vector<std::string> &allFiles) {
@@ -185,11 +237,14 @@ int main(int argc, const char **argv) {
         llvm::errs() << "  m: " << m << "\n";
     }
 
-    std::string source = "IOPriorityPanel_new(IOPriority)";
-    std::string target = "Vector_new(const ObjectClass *, _Bool, int)";
+    findPathBetween(locateVariable("main()", 23, 9),
+                    locateVariable("useAlias(const A &)", 19, 12));
 
-    findPathBetween(locateVariable(source, 23, 11),
-                    locateVariable(target, 31, 10));
+    // std::string source = "IOPriorityPanel_new(IOPriority)";
+    // std::string target = "Vector_new(const ObjectClass *, _Bool, int)";
+
+    // findPathBetween(locateVariable(source, 23, 11),
+    //                 locateVariable(target, 31, 10));
 
     while (true) {
         std::string methodName;

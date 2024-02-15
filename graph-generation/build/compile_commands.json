@@ -1,11 +1,11 @@
 [
   {
     "arguments": [
-      "/usr/bin/g++",
+      "/usr/bin/gcc",
       "-c",
-      "../test6.cpp"
+      "../test8.cpp"
     ],
     "directory": "/home/thebesttv/vul/llvm-project/graph-generation/build",
-    "file": "/home/thebesttv/vul/llvm-project/graph-generation/test6.cpp"
+    "file": "/home/thebesttv/vul/llvm-project/graph-generation/test8.cpp"
   }
 ]
