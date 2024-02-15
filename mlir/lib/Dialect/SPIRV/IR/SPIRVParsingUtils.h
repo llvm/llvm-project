@@ -22,9 +22,9 @@ namespace mlir::spirv {
 namespace AttrNames {
 
 inline constexpr char kClusterSize[] = "cluster_size"; // no ODS generation
-inline constexpr char kControl[] = "control"; // no ODS generation
-inline constexpr char kFnNameAttrName[] = "fn"; // no ODS generation
-inline constexpr char kSpecIdAttrName[] = "spec_id"; // no ODS generation
+inline constexpr char kControl[] = "control";          // no ODS generation
+inline constexpr char kFnNameAttrName[] = "fn";        // no ODS generation
+inline constexpr char kSpecIdAttrName[] = "spec_id";   // no ODS generation
 
 } // namespace AttrNames
 

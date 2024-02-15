@@ -89,9 +89,8 @@ ParseResult BranchConditionalOp::parse(OpAsmParser &parser,
 
     StringAttr branchWeightsAttrName =
         BranchConditionalOp::getBranchWeightsAttrName(result.name);
-    result.addAttribute(
-        branchWeightsAttrName,
-        builder.getArrayAttr({trueWeight, falseWeight}));
+    result.addAttribute(branchWeightsAttrName,
+                        builder.getArrayAttr({trueWeight, falseWeight}));
   }
 
   // Parse the true branch.
@@ -207,9 +206,8 @@ CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(
-      FunctionCallOp::getCalleeAttrName((*this)->getName()),
-      callee.get<SymbolRefAttr>());
+  (*this)->setAttr(FunctionCallOp::getCalleeAttrName((*this)->getName()),
+                   callee.get<SymbolRefAttr>());
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {

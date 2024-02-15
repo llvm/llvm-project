@@ -87,6 +87,7 @@ getIntegerDotProductExtensions() {
   return {extension};
 }
 
+template <typename IntegerDotProductOpTy>
 static SmallVector<ArrayRef<spirv::Capability>, 1>
 getIntegerDotProductCapabilities(Operation *op) {
   // Requires the the DotProduct capability and capabilities that depend on
@@ -103,7 +104,7 @@ getIntegerDotProductCapabilities(Operation *op) {
 
   Type factorTy = op->getOperand(0).getType();
   StringAttr packedVectorFormatAttrName =
-      SDotAccSatOp::getFormatAttrName(op->getName());
+      IntegerDotProductOpTy::getFormatAttrName(op->getName());
   if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
     auto formatAttr = llvm::cast<spirv::PackedVectorFormatAttr>(
         op->getAttr(packedVectorFormatAttrName));
@@ -125,12 +126,14 @@ getIntegerDotProductCapabilities(Operation *op) {
 }
 
 #define SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(OpName)                              \
-  LogicalResult OpName::verify() { return verifyIntegerDotProduct<OpName>(*this); }    \
+  LogicalResult OpName::verify() {                                             \
+    return verifyIntegerDotProduct<OpName>(*this);                             \
+  }                                                                            \
   SmallVector<ArrayRef<spirv::Extension>, 1> OpName::getExtensions() {         \
     return getIntegerDotProductExtensions();                                   \
   }                                                                            \
   SmallVector<ArrayRef<spirv::Capability>, 1> OpName::getCapabilities() {      \
-    return getIntegerDotProductCapabilities(*this);                            \
+    return getIntegerDotProductCapabilities<OpName>(*this);                            \
   }                                                                            \
   std::optional<spirv::Version> OpName::getMinVersion() {                      \
     return getIntegerDotProductMinVersion();                                   \
