@@ -13,4 +13,3 @@ FileHeader:
 Symbols:
   - Name:     foo
     Binding:  STB_LOCAL
-    Index:    SHN_UNDEF
