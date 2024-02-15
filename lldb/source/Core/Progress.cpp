@@ -68,7 +68,11 @@ void Progress::ReportProgress() {
   }
 }
 
-ProgressManager &ProgressManager::InstanceImpl() {
+ProgressManager::ProgressManager() : m_progress_category_map() {}
+
+ProgressManager::~ProgressManager() {}
+
+ProgressManager &ProgressManager::Instance() {
   static std::once_flag g_once_flag;
   static ProgressManager *g_progress_manager = nullptr;
   std::call_once(g_once_flag, []() {
@@ -77,12 +81,6 @@ ProgressManager &ProgressManager::InstanceImpl() {
   });
   return *g_progress_manager;
 }
-
-ProgressManager::ProgressManager() : m_progress_category_map() {}
-
-ProgressManager::~ProgressManager() {}
-
-ProgressManager &ProgressManager::Instance() { return InstanceImpl(); }
 
 void ProgressManager::Increment(std::string title) {
   std::lock_guard<std::mutex> lock(m_progress_map_mutex);
