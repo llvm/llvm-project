@@ -447,17 +447,18 @@ class SampleProfileMatcher {
   // Match state for an anchor/callsite.
   enum class MatchState {
     Unknown = 0,
-    // Initial match in pre-match.
+    // Initial match between input profile and current IR.
     InitialMatch = 1,
-    // Initial mismatch in pre-match.
+    // Initial mismatch between input profile and current IR.
     InitialMismatch = 2,
-    // InitialMatch stays matched in post-match.
+    // InitialMatch stays matched after fuzzy profile matching.
     UnchangedMatch = 3,
-    // InitialMismatch stays mismatched in post-match.
+    // InitialMismatch stays mismatched after fuzzy profile matching.
     UnchangedMismatch = 4,
-    // InitialMismatch is recovered in post-match.
+    // InitialMismatch is recovered after fuzzy profile matching.
     RecoveredMismatch = 5,
-    // InitialMatch is removed and becomes mismatched in post-match.
+    // InitialMatch is removed and becomes mismatched after fuzzy profile
+    // matching.
     RemovedMatch = 6,
   };
 
@@ -2427,7 +2428,8 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
   };
 
   for (const auto &I : IRAnchors) {
-    // In post-match, use the matching result to remap the current IR callsite.
+    // After fuzzy profile matching, use the matching result to remap the
+    // current IR callsite.
     const auto &ProfileLoc = MapIRLocToProfileLoc(I.first);
     const auto &IRCalleeName = I.second;
     const auto &It = ProfileAnchors.find(ProfileLoc);
