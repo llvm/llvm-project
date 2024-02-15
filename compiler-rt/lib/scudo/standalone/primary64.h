@@ -624,7 +624,7 @@ private:
     // by TransferBatch is also free for use. We don't need to recycle the
     // TransferBatch. Note that the correctness is maintained by the invariant,
     //
-    //   Each popBlocks() request returns the entire TransferBatch. Return
+    //   Each popBlocks() request returns the entire TransferBatch. Returning
     //   part of the blocks in a TransferBatch is invalid.
     //
     // This ensures that TransferBatch won't leak the address itself while it's
@@ -939,7 +939,7 @@ private:
     // So far, instead of always fill blocks to `MaxBlockCount`, we only exmaine
     // single `TransferBatch` to minimize the time spent in the primary
     // allocator. Besides, the sizes of `TransferBatch` and
-    // `CacheT::getMaxCached()` may also impact the times of accessing the
+    // `CacheT::getMaxCached()` may also impact the time spent on accessing the
     // primary allocator.
     // TODO(chiahungduan): Evaluate if we want to always prepare `MaxBlockCount`
     // blocks and/or adjust the size of `TransferBatch` according to
@@ -970,7 +970,7 @@ private:
         Region->FreeListInfo.BlockList.pop_front();
 
         // We don't keep BatchGroup with zero blocks to avoid empty-checking
-        // while allocating. Note that block used by constructing BatchGroup is
+        // while allocating. Note that block used for constructing BatchGroup is
         // recorded as free blocks in the last element of BatchGroup::Batches.
         // Which means, once we pop the last TransferBatch, the block is
         // implicitly deallocated.
