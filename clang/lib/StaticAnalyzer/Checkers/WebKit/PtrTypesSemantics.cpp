@@ -271,7 +271,9 @@ public:
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
     // A return statement is allowed as long as the return value is trivial.
-    return Visit(RS->getRetValue());
+    if (auto *RV = RS->getRetValue())
+      return Visit(RV);
+    return true;
   }
 
   bool VisitDeclStmt(const DeclStmt *DS) { return VisitChildren(DS); }
@@ -314,13 +316,8 @@ public:
   }
 
   bool VisitCallExpr(const CallExpr *CE) {
-    if (auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
-      return VisitCXXMemberCallExpr(MCE);
-
-    for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !Visit(Arg))
-        return false;
-    }
+    if (!checkArguments(CE))
+      return false;
 
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
@@ -335,10 +332,8 @@ public:
   }
 
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
-    for (const Expr *Arg : MCE->arguments()) {
-      if (Arg && !Visit(Arg))
-        return false;
-    }
+    if (!checkArguments(MCE))
+      return false;
 
     bool TrivialThis = Visit(MCE->getImplicitObjectArgument());
     if (!TrivialThis)
@@ -352,6 +347,14 @@ public:
     // Recursively descend into the callee to confirm that it's trivial as well.
     return TrivialFunctionAnalysis::isTrivialImpl(MCE->getDirectCallee(),
                                                   Cache);
+  }
+  
+  bool checkArguments(const CallExpr *CE) {
+    for (const Expr *Arg : CE->arguments()) {
+      if (Arg && !Visit(Arg))
+        return false;
+    }
+    return true;
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {

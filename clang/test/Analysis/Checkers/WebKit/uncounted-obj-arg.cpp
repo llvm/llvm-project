@@ -110,6 +110,7 @@ public:
   unsigned long trivial16() { return reinterpret_cast<unsigned long>(this); }
   RefCounted& trivial17() const { return const_cast<RefCounted&>(*this); }
   RefCounted& trivial18() const { RELEASE_ASSERT(this, "this must be not null"); return const_cast<RefCounted&>(*this); }
+  void trivial19() const { return; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -206,6 +207,7 @@ public:
     getFieldTrivial().trivial16(); // no-warning
     getFieldTrivial().trivial17(); // no-warning
     getFieldTrivial().trivial18(); // no-warning
+    getFieldTrivial().trivial19(); // no-warning
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 
