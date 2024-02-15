@@ -1355,9 +1355,6 @@ def warn_pragma_acc_ignored
       DefaultIgnore;
 def err_acc_unexpected_directive
     : Error<"unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
-def warn_pragma_acc_unimplemented
-    : Warning<"OpenACC directives not yet implemented, pragma ignored">,
-      InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;

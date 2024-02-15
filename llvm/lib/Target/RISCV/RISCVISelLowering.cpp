@@ -3877,6 +3877,47 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Vec, DAG, Subtarget);
   }
 
+  // For m1 vectors, if we have non-undef values in both halves of our vector,
+  // split the vector into low and high halves, build them separately, then
+  // use a vselect to combine them.  For long vectors, this cuts the critical
+  // path of the vslide1down sequence in half, and gives us an opportunity
+  // to special case each half independently.  Note that we don't change the
+  // length of the sub-vectors here, so if both fallback to the generic
+  // vslide1down path, we should be able to fold the vselect into the final
+  // vslidedown (for the undef tail) for the first half w/ masking.
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumUndefElts =
+      count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
+  unsigned NumDefElts = NumElts - NumUndefElts;
+  if (NumDefElts >= 8 && NumDefElts > NumElts / 2 &&
+      ContainerVT.bitsLE(getLMUL1VT(ContainerVT))) {
+    SmallVector<SDValue> SubVecAOps, SubVecBOps;
+    SmallVector<SDValue> MaskVals;
+    SDValue UndefElem = DAG.getUNDEF(Op->getOperand(0)->getValueType(0));
+    SubVecAOps.reserve(NumElts);
+    SubVecBOps.reserve(NumElts);
+    for (unsigned i = 0; i < NumElts; i++) {
+      SDValue Elem = Op->getOperand(i);
+      if (i < NumElts / 2) {
+        SubVecAOps.push_back(Elem);
+        SubVecBOps.push_back(UndefElem);
+      } else {
+        SubVecAOps.push_back(UndefElem);
+        SubVecBOps.push_back(Elem);
+      }
+      bool SelectMaskVal = (i < NumElts / 2);
+      MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    }
+    assert(SubVecAOps.size() == NumElts && SubVecBOps.size() == NumElts &&
+           MaskVals.size() == NumElts);
+
+    SDValue SubVecA = DAG.getBuildVector(VT, DL, SubVecAOps);
+    SDValue SubVecB = DAG.getBuildVector(VT, DL, SubVecBOps);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, SubVecA, SubVecB);
+  }
+
   // Cap the cost at a value linear to the number of elements in the vector.
   // The default lowering is to use the stack.  The vector store + scalar loads
   // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
@@ -14959,8 +15000,8 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     if (CC == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(LHS.getOperand(1)) && isNullConstant(RHS)) {
-      uint64_t MaskVal = LHS.getConstantOperandVal(1);
-      if (isPowerOf2_64(MaskVal) && !isInt<12>(MaskVal))
+      const APInt &MaskVal = LHS.getConstantOperandAPInt(1);
+      if (MaskVal.isPowerOf2() && !MaskVal.isSignedIntN(12))
         return DAG.getSelect(DL, VT,
                              DAG.getSetCC(DL, CondVT, LHS, RHS, ISD::SETNE),
                              False, True);

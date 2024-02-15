@@ -169,16 +169,27 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.
     // This code path should be executed very rarely.
-    const auto *CE =
-        cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
-    unsigned FixedParams = CurFunc->getNumParams();
-    int32_t ArgsToPop = CE->getNumArgs() - FixedParams;
-    assert(ArgsToPop >= 0);
-    for (int32_t I = ArgsToPop - 1; I >= 0; --I) {
-      const Expr *A = CE->getArg(FixedParams + I);
+    unsigned NumVarArgs;
+    const Expr *const *Args = nullptr;
+    unsigned NumArgs = 0;
+    const Expr *CallSite = S.Current->Caller->getExpr(S.Current->getRetPC());
+    if (const auto *CE = dyn_cast<CallExpr>(CallSite)) {
+      Args = CE->getArgs();
+      NumArgs = CE->getNumArgs();
+    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite)) {
+      Args = CE->getArgs();
+      NumArgs = CE->getNumArgs();
+    } else
+      assert(false && "Can't get arguments from that expression type");
+
+    assert(NumArgs >= CurFunc->getNumWrittenParams());
+    NumVarArgs = NumArgs - CurFunc->getNumWrittenParams();
+    for (unsigned I = 0; I != NumVarArgs; ++I) {
+      const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
     }
   }
+
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
   S.Current->popArgs();
@@ -464,6 +475,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         // for a constant expression. It might be defined at the point we're
         // actually calling it.
         if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
+          return false;
+
+        // If the declaration is defined _and_ declared 'constexpr', the below
+        // diagnostic doesn't add anything useful.
+        if (DiagDecl->isDefined() && DiagDecl->isConstexpr())
           return false;
 
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)

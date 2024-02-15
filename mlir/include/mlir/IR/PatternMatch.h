@@ -588,8 +588,7 @@ public:
 
   /// Unlink this operation from its current block and insert it right before
   /// `iterator` in the specified block.
-  virtual void moveOpBefore(Operation *op, Block *block,
-                            Block::iterator iterator);
+  void moveOpBefore(Operation *op, Block *block, Block::iterator iterator);
 
   /// Unlink this operation from its current block and insert it right after
   /// `existingOp` which may be in the same or another block in the same
@@ -598,8 +597,7 @@ public:
 
   /// Unlink this operation from its current block and insert it right after
   /// `iterator` in the specified block.
-  virtual void moveOpAfter(Operation *op, Block *block,
-                           Block::iterator iterator);
+  void moveOpAfter(Operation *op, Block *block, Block::iterator iterator);
 
   /// Unlink this block and insert it right before `existingBlock`.
   void moveBlockBefore(Block *block, Block *anotherBlock);

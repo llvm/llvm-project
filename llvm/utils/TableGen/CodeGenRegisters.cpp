@@ -1954,11 +1954,12 @@ void CodeGenRegBank::pruneUnitSets() {
       SuperSetIDs.push_back(SubIdx);
   }
   // Populate PrunedUnitSets with each equivalence class's superset.
-  std::vector<RegUnitSet> PrunedUnitSets(SuperSetIDs.size());
+  std::vector<RegUnitSet> PrunedUnitSets;
+  PrunedUnitSets.reserve(SuperSetIDs.size());
   for (unsigned i = 0, e = SuperSetIDs.size(); i != e; ++i) {
     unsigned SuperIdx = SuperSetIDs[i];
-    PrunedUnitSets[i].Name = RegUnitSets[SuperIdx].Name;
-    PrunedUnitSets[i].Units = std::move(RegUnitSets[SuperIdx].Units);
+    PrunedUnitSets.emplace_back(RegUnitSets[SuperIdx].Name);
+    PrunedUnitSets.back().Units = std::move(RegUnitSets[SuperIdx].Units);
   }
   RegUnitSets = std::move(PrunedUnitSets);
 }
@@ -1980,8 +1981,7 @@ void CodeGenRegBank::computeRegUnitSets() {
       continue;
 
     // Compute a sorted list of units in this class.
-    RegUnitSet RUSet;
-    RUSet.Name = RC.getName();
+    RegUnitSet RUSet(RC.getName());
     RC.buildRegUnitSet(*this, RUSet.Units);
 
     // Find an existing RegUnitSet.
@@ -2032,9 +2032,8 @@ void CodeGenRegBank::computeRegUnitSets() {
       if (Intersection.empty())
         continue;
 
-      RegUnitSet RUSet;
-      RUSet.Name =
-          RegUnitSets[Idx].Name + "_with_" + RegUnitSets[SearchIdx].Name;
+      RegUnitSet RUSet(RegUnitSets[Idx].Name + "_with_" +
+                       RegUnitSets[SearchIdx].Name);
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),
                      RegUnitSets[SearchIdx].Units.begin(),
