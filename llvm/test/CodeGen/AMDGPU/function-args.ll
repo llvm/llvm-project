@@ -4037,7 +4037,7 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
 ; GFX11-LABEL: void_func_v32i32_v16i32_v16f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x20
+; GFX11-NEXT:    s_clause 0x1f
 ; GFX11-NEXT:    scratch_load_b32 v35, off, s32 offset:80
 ; GFX11-NEXT:    scratch_load_b32 v34, off, s32 offset:76
 ; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:72

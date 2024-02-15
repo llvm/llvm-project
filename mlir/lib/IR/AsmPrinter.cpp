@@ -1095,7 +1095,7 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 }
 
 void AliasInitializer::markAliasNonDeferrable(size_t aliasIndex) {
-  auto it = std::next(aliases.begin(), aliasIndex);
+  auto *it = std::next(aliases.begin(), aliasIndex);
 
   // If already marked non-deferrable stop the recursion.
   // All children should already be marked non-deferrable as well.
@@ -1190,7 +1190,7 @@ void AliasState::initialize(
 }
 
 LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
-  auto it = attrTypeToAlias.find(attr.getAsOpaquePointer());
+  const auto *it = attrTypeToAlias.find(attr.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
   it->second.print(os);
@@ -1198,7 +1198,7 @@ LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
 }
 
 LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
-  auto it = attrTypeToAlias.find(ty.getAsOpaquePointer());
+  const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
 

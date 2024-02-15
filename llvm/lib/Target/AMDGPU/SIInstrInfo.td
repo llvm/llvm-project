@@ -797,16 +797,8 @@ def i64imm_32bit : ImmLeaf<i64, [{
   return (Imm & 0xffffffffULL) == static_cast<uint64_t>(Imm);
 }]>;
 
-def InlineImm16 : ImmLeaf<i16, [{
-  return isInlineImmediate16(Imm);
-}]>;
-
-def InlineImm32 : ImmLeaf<i32, [{
-  return isInlineImmediate32(Imm);
-}]>;
-
-def InlineImm64 : ImmLeaf<i64, [{
-  return isInlineImmediate64(Imm);
+def InlineImm64 : IntImmLeaf<i64, [{
+  return isInlineImmediate(Imm);
 }]>;
 
 def InlineImmFP32 : FPImmLeaf<f32, [{
@@ -1579,13 +1571,15 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT> {
   RegisterOperand ret =
-      !if (!eq(VT.Value, i1.Value), SSrc_i1,
-           !if (VT.isFP,
-                !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)), VCSrc_f16,
-                     !if (!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)), VCSrc_v2f16, VCSrc_f32)),
-                !if (!eq(VT.Value, i16.Value), VCSrc_b16,
-                     !if (!eq(VT.Value, v2i16.Value), VCSrc_v2b16,
-                          VCSrc_b32))));
+  !cond(!eq(VT, i1)     : SSrc_i1,
+        !eq(VT, i16)    : VCSrc_b16,
+        !eq(VT, f16)    : VCSrc_f16,
+        !eq(VT, bf16)   : VCSrc_f16,
+        !eq(VT, v2i16)  : VCSrc_v2b16,
+        !eq(VT, v2f16)  : VCSrc_v2f16,
+        !eq(VT, v2bf16) : VCSrc_v2f16,
+        !eq(VT, f32)    : VCSrc_f32,
+        1               : VCSrc_b32);
 }
 
 // Float or packed int
