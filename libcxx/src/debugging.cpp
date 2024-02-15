@@ -16,8 +16,11 @@
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 #  include <array>
 #  include <csignal>
+#  include <libutil.h>
+#  include <sys/proc.h>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
+#  include <sys/user.h>
 #  include <unistd.h>
 #elif defined(__linux__)
 #  include <csignal>
