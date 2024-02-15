@@ -10,8 +10,8 @@
 
 ## Check passing an invalid filename generates an error
 # RUN: not llvm-objcopy %t.o --ignore-symbols=no_file 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=FILE
-# FILE: error: 'no_file': No such file or directory
+# RUN:   FileCheck %s --check-prefix=FILE -DMSG=%errc_ENOENT
+# FILE: error: 'no_file': [[MSG]]
 
 !ELF
 FileHeader:
