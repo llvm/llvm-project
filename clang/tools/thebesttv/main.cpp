@@ -71,9 +71,9 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                 visitor.findVarInStmt(Context, stmt, file, line, column);
             if (!var.empty()) {
                 int id = block->getBlockID();
-                llvm::errs()
-                    << "Found var '" << var << "' in " << fi->name << "() at "
-                    << line << ":" << column << " in block " << id << "\n";
+                llvm::errs() << "Found var '" << var << "' in " << fi->signature
+                             << " at " << line << ":" << column << " in block "
+                             << id << "\n";
                 return VarLocResult(fi, block);
             }
         }

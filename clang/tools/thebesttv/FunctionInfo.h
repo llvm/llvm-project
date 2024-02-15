@@ -136,7 +136,7 @@ struct BlockGraph {
 
 struct FunctionInfo {
     const FunctionDecl *D;
-    std::string name;
+    std::string signature;
     std::string file;
     int line;
     int column;
@@ -156,8 +156,6 @@ struct FunctionInfo {
         if (!pLoc)
             return nullptr;
 
-        std::string name = D->getQualifiedNameAsString();
-
         // build CFG
         CFG *cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
                                  CFG::BuildOptions())
@@ -172,7 +170,7 @@ struct FunctionInfo {
 
         FunctionInfo *fi = new FunctionInfo();
         fi->D = D;
-        fi->name = name;
+        fi->signature = getFullSignature(D);
         fi->file = pLoc->file;
         fi->line = pLoc->line;
         fi->column = pLoc->column;
