@@ -517,7 +517,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %map1:
     "omp.target"(%if_cond, %device, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 1,1,1,0>} : ( i1, si32, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 1,1,1,0,0>} : ( i1, si32, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map_info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -625,12 +625,17 @@ atomic {
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: reduction(@add_f32 -> %{{.+}} : !llvm.ptr)
-  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr)
+  // CHECK: reduction(@add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
-    %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction %{{.+}}, %{{.+}}
-    omp.reduction %1, %0 : f32, !llvm.ptr
+    // CHECK: %[[CST:.+]] = arith.constant 2.0{{.*}} : f32
+    %cst = arith.constant 2.0 : f32
+    // CHECK: %[[LPRV:.+]] = llvm.load %[[PRV]] : !llvm.ptr -> f32
+    %lprv = llvm.load %prv : !llvm.ptr -> f32
+    // CHECK: %[[RES:.+]] = llvm.fadd %[[LPRV]], %[[CST]] : f32
+    %res = llvm.fadd %lprv, %cst: f32
+    // CHECK: llvm.store %[[RES]], %[[PRV]] :  f32, !llvm.ptr
+    llvm.store %res, %prv :  f32, !llvm.ptr
     omp.yield
   }
   return
@@ -640,11 +645,13 @@ func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
 func.func @parallel_reduction() {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 -> {{.+}} : !llvm.ptr)
-  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr) {
+  // CHECK: omp.parallel reduction(@add_f32 {{.+}} -> {{.+}} : !llvm.ptr)
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction %{{.+}}, %{{.+}}
-    omp.reduction %1, %0 : f32, !llvm.ptr
+    %2 = llvm.load %prv : !llvm.ptr -> f32
+    // CHECK: llvm.fadd %{{.*}}, %{{.*}} : f32
+    %3 = llvm.fadd %1, %2 : f32
+    llvm.store %3, %prv : f32, !llvm.ptr
     omp.terminator
   }
   return
@@ -654,13 +661,14 @@ func.func @parallel_reduction() {
 func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add_f32 -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr) {
+  // CHECK: omp.parallel reduction(@add_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+  omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     // CHECK: omp.wsloop for (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}})
     omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
       %1 = arith.constant 2.0 : f32
-      // CHECK: omp.reduction %{{.+}}, %{{.+}} : f32, !llvm.ptr
-      omp.reduction %1, %0 : f32, !llvm.ptr
+      %2 = llvm.load %prv : !llvm.ptr -> f32
+      // CHECK: llvm.fadd %{{.+}}, %{{.+}} : f32
+      llvm.fadd %1, %2 : f32
       // CHECK: omp.yield
       omp.yield
     }
@@ -785,12 +793,15 @@ combiner {
 // CHECK-LABEL: func @wsloop_reduction2
 func.func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %0 = memref.alloca() : memref<1xf32>
-  // CHECK: omp.wsloop reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
-  omp.wsloop reduction(@add2_f32 -> %0 : memref<1xf32>)
+  // CHECK: omp.wsloop reduction(@add2_f32 %{{.+}} -> %{{.+}} : memref<1xf32>)
+  omp.wsloop reduction(@add2_f32 %0 -> %prv : memref<1xf32>)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction
-    omp.reduction %1, %0 : f32, memref<1xf32>
+    %2 = arith.constant 0 : index
+    %3 = memref.load %prv[%2] : memref<1xf32>
+    // CHECK: llvm.fadd
+    %4 = llvm.fadd %1, %3 : f32
+    memref.store %4, %prv[%2] : memref<1xf32>
     omp.yield
   }
   return
@@ -799,11 +810,14 @@ func.func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
 // CHECK-LABEL: func @parallel_reduction2
 func.func @parallel_reduction2() {
   %0 = memref.alloca() : memref<1xf32>
-  // CHECK: omp.parallel reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
-  omp.parallel reduction(@add2_f32 -> %0 : memref<1xf32>) {
+  // CHECK: omp.parallel reduction(@add2_f32 %{{.+}} -> %{{.+}} : memref<1xf32>)
+  omp.parallel reduction(@add2_f32 %0 -> %prv : memref<1xf32>) {
     %1 = arith.constant 2.0 : f32
-    // CHECK: omp.reduction
-    omp.reduction %1, %0 : f32, memref<1xf32>
+    %2 = arith.constant 0 : index
+    %3 = memref.load %prv[%2] : memref<1xf32>
+    // CHECK: llvm.fadd
+    %4 = llvm.fadd %1, %3 : f32
+    memref.store %4, %prv[%2] : memref<1xf32>
     omp.terminator
   }
   return
@@ -813,13 +827,14 @@ func.func @parallel_reduction2() {
 func.func @parallel_wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: omp.parallel reduction(@add2_f32 -> %{{.+}} : !llvm.ptr) {
-  omp.parallel reduction(@add2_f32 -> %0 : !llvm.ptr) {
+  // CHECK: omp.parallel reduction(@add2_f32 %{{.*}} -> %{{.+}} : !llvm.ptr) {
+  omp.parallel reduction(@add2_f32 %0 -> %prv : !llvm.ptr) {
     // CHECK: omp.wsloop for (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}})
     omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
       %1 = arith.constant 2.0 : f32
-      // CHECK: omp.reduction %{{.+}}, %{{.+}} : f32, !llvm.ptr
-      omp.reduction %1, %0 : f32, !llvm.ptr
+      %2 = llvm.load %prv : !llvm.ptr -> f32
+      // CHECK: llvm.fadd %{{.+}}, %{{.+}} : f32
+      %3 = llvm.fadd %1, %2 : f32
       // CHECK: omp.yield
       omp.yield
     }
@@ -1607,6 +1622,23 @@ func.func @omp_single_multiple_blocks() {
   return
 }
 
+func.func private @copy_i32(memref<i32>, memref<i32>)
+
+// CHECK-LABEL: func @omp_single_copyprivate
+func.func @omp_single_copyprivate(%data_var: memref<i32>) {
+  omp.parallel {
+    // CHECK: omp.single copyprivate(%{{.*}} -> @copy_i32 : memref<i32>) {
+    omp.single copyprivate(%data_var -> @copy_i32 : memref<i32>) {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: @omp_task
 // CHECK-SAME: (%[[bool_var:.*]]: i1, %[[i64_var:.*]]: i64, %[[i32_var:.*]]: i32, %[[data_var:.*]]: memref<i32>)
 func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memref<i32>) {
@@ -1707,6 +1739,18 @@ func.func @omp_task_depend(%arg0: memref<i32>, %arg1: memref<i32>) {
     // CHECK: omp.terminator
     omp.terminator
   }
+  return
+}
+
+
+// CHECK-LABEL: @omp_target_depend
+// CHECK-SAME: (%arg0: memref<i32>, %arg1: memref<i32>) {
+func.func @omp_target_depend(%arg0: memref<i32>, %arg1: memref<i32>) {
+  // CHECK:  omp.target depend(taskdependin -> %arg0 : memref<i32>, taskdependin -> %arg1 : memref<i32>, taskdependinout -> %arg0 : memref<i32>) {
+  omp.target depend(taskdependin -> %arg0 : memref<i32>, taskdependin -> %arg1 : memref<i32>, taskdependinout -> %arg0 : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  } {operandSegmentSizes = array<i32: 0,0,0,3,0>}
   return
 }
 
@@ -2134,6 +2178,56 @@ func.func @omp_targets_is_allocatable(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () 
     ^bb0(%arg2: !llvm.ptr, %arg3 : !llvm.ptr):
       omp.terminator
   }
+  return
+}
+
+// CHECK-LABEL: func @omp_target_enter_update_exit_data_depend
+// CHECK-SAME:([[ARG0:%.*]]: memref<?xi32>, [[ARG1:%.*]]: memref<?xi32>, [[ARG2:%.*]]: memref<?xi32>) {
+func.func @omp_target_enter_update_exit_data_depend(%a: memref<?xi32>, %b: memref<?xi32>, %c: memref<?xi32>) {
+// CHECK-NEXT: [[MAP0:%.*]] = omp.map_info
+// CHECK-NEXT: [[MAP1:%.*]] = omp.map_info
+// CHECK-NEXT: [[MAP2:%.*]] = omp.map_info
+  %map_a = omp.map_info var_ptr(%a: memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32>
+  %map_b = omp.map_info var_ptr(%b: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
+  %map_c = omp.map_info var_ptr(%c: memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32>
+
+  // Do some work on the host that writes to 'a'
+  omp.task depend(taskdependout -> %a : memref<?xi32>) {
+    "test.foo"(%a) : (memref<?xi32>) -> ()
+    omp.terminator
+  }
+
+  // Then map that over to the target
+  // CHECK: omp.target_enter_data nowait map_entries([[MAP0]], [[MAP2]] : memref<?xi32>, memref<?xi32>) depend(taskdependin -> [[ARG0]] : memref<?xi32>)
+  omp.target_enter_data nowait map_entries(%map_a, %map_c: memref<?xi32>, memref<?xi32>) depend(taskdependin ->  %a: memref<?xi32>)
+
+  // Compute 'b' on the target and copy it back
+  // CHECK: omp.target map_entries([[MAP1]] -> {{%.*}} : memref<?xi32>) {
+  omp.target map_entries(%map_b -> %arg0 : memref<?xi32>) {
+    ^bb0(%arg0: memref<?xi32>) :
+      "test.foo"(%arg0) : (memref<?xi32>) -> ()
+      omp.terminator
+  }
+
+  // Update 'a' on the host using 'b'
+  omp.task depend(taskdependout -> %a: memref<?xi32>){
+    "test.bar"(%a, %b) : (memref<?xi32>, memref<?xi32>) -> ()
+  }
+
+  // Copy the updated 'a' onto the target
+  // CHECK: omp.target_update_data nowait motion_entries([[MAP0]] : memref<?xi32>) depend(taskdependin -> [[ARG0]] : memref<?xi32>)
+  omp.target_update_data motion_entries(%map_a :  memref<?xi32>) depend(taskdependin -> %a : memref<?xi32>) nowait
+
+  // Compute 'c' on the target and copy it back
+  %map_c_from = omp.map_info var_ptr(%c: memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32>
+  omp.target map_entries(%map_a -> %arg0, %map_c_from -> %arg1 : memref<?xi32>, memref<?xi32>) depend(taskdependout -> %c : memref<?xi32>) {
+  ^bb0(%arg0 : memref<?xi32>, %arg1 : memref<?xi32>) :
+    "test.foobar"() : ()->()
+    omp.terminator
+  }
+  // CHECK: omp.target_exit_data map_entries([[MAP2]] : memref<?xi32>) depend(taskdependin -> [[ARG2]] : memref<?xi32>)
+  omp.target_exit_data map_entries(%map_c : memref<?xi32>) depend(taskdependin -> %c : memref<?xi32>)
+
   return
 }
 
