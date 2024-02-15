@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/TypeSystem/Clang/ImporterBackedASTSource.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -15,6 +16,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
@@ -278,7 +281,8 @@ public:
       NamedDecl *decl = m_decls_to_complete.pop_back_val();
       m_decls_already_completed.insert(decl);
 
-      CompleteDecl(decl, *to_context_md);
+      if (!TypeSystemClang::UseRedeclCompletion())
+        CompleteDecl(decl, *to_context_md);
 
       to_context_md->removeOrigin(decl);
     }
@@ -292,6 +296,9 @@ public:
     // Filter out decls that we can't complete later.
     if (!isa<TagDecl>(to) && !isa<ObjCInterfaceDecl>(to))
       return;
+
+    if (TypeSystemClang::UseRedeclCompletion())
+      to = ClangUtil::GetFirstDecl(to);
 
     RecordDecl *from_record_decl = dyn_cast<RecordDecl>(from);
     // We don't need to complete injected class name decls.
@@ -507,7 +514,14 @@ bool ClangASTImporter::CompleteType(const CompilerType &compiler_type) {
   if (!CanImport(compiler_type))
     return false;
 
-  if (Import(compiler_type)) {
+  auto const success = Import(compiler_type);
+
+  // With redecl completion we don't need to manually complete
+  // the definition.
+  if (TypeSystemClang::UseRedeclCompletion())
+    return success;
+
+  if (success) {
     TypeSystemClang::CompleteTagDeclarationDefinition(compiler_type);
     return true;
   }
@@ -568,16 +582,42 @@ bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
   if (!decl_origin.Valid())
     return false;
 
-  if (!TypeSystemClang::GetCompleteDecl(decl_origin.ctx, decl_origin.decl))
-    return false;
-
   ImporterDelegateSP delegate_sp(
       GetDelegate(&decl->getASTContext(), decl_origin.ctx));
 
   ASTImporterDelegate::CxxModuleScope std_scope(*delegate_sp,
                                                 &decl->getASTContext());
-  if (delegate_sp)
-    delegate_sp->ImportDefinitionTo(decl, decl_origin.decl);
+
+  if (!TypeSystemClang::UseRedeclCompletion()) {
+    if (!TypeSystemClang::GetCompleteDecl(decl_origin.ctx, decl_origin.decl))
+      return false;
+
+    if (delegate_sp)
+      delegate_sp->ImportDefinitionTo(decl, decl_origin.decl);
+  } else {
+    auto *origin_def = llvm::cast<TagDecl>(decl_origin.decl)->getDefinition();
+    if (!origin_def)
+      return false;
+
+    // This is expected to pull in a definition for result_decl (if in redecl
+    // completion mode)
+    llvm::Expected<Decl *> result = delegate_sp->Import(origin_def);
+    if (!result) {
+      llvm::handleAllErrors(result.takeError(),
+                            [](const clang::ASTImportError &e) {
+                              llvm::errs() << "ERR: " << e.toString() << "\n";
+                            });
+      return false;
+    }
+
+    // Create redeclaration chain with the 'to' decls.
+    // Only need to do this if the 'result_decl' is a definition outside
+    // of any redeclaration chain and the input 'decl' was a forward declaration
+    TagDecl *result_decl = llvm::cast<TagDecl>(*result);
+    if (!decl->isThisDeclarationADefinition() && result_decl != decl)
+      if (result_decl->getPreviousDecl() == nullptr)
+        result_decl->setPreviousDecl(decl);
+  }
 
   return true;
 }
@@ -598,24 +638,48 @@ bool ClangASTImporter::CompleteObjCInterfaceDecl(
   if (!decl_origin.Valid())
     return false;
 
-  if (!TypeSystemClang::GetCompleteDecl(decl_origin.ctx, decl_origin.decl))
-    return false;
-
   ImporterDelegateSP delegate_sp(
       GetDelegate(&interface_decl->getASTContext(), decl_origin.ctx));
 
-  if (delegate_sp)
-    delegate_sp->ImportDefinitionTo(interface_decl, decl_origin.decl);
+  if (!TypeSystemClang::UseRedeclCompletion()) {
+    if (!TypeSystemClang::GetCompleteDecl(decl_origin.ctx, decl_origin.decl))
+      return false;
 
-  if (ObjCInterfaceDecl *super_class = interface_decl->getSuperClass())
-    RequireCompleteType(clang::QualType(super_class->getTypeForDecl(), 0));
+    if (delegate_sp)
+      delegate_sp->ImportDefinitionTo(interface_decl, decl_origin.decl);
+
+    if (ObjCInterfaceDecl *super_class = interface_decl->getSuperClass())
+      RequireCompleteType(clang::QualType(super_class->getTypeForDecl(), 0));
+  } else {
+    ObjCInterfaceDecl *origin_decl =
+        llvm::cast<ObjCInterfaceDecl>(decl_origin.decl);
+
+    origin_decl = origin_decl->getDefinition();
+    if (!origin_decl)
+      return false;
+
+    auto delegate_sp(
+        GetDelegate(&interface_decl->getASTContext(), decl_origin.ctx));
+
+    llvm::Expected<Decl *> result = delegate_sp->Import(origin_decl);
+    if (result)
+      return true;
+
+    llvm::handleAllErrors(result.takeError(),
+                          [](const clang::ASTImportError &e) {
+                            llvm::errs() << "ERR: " << e.toString() << "\n";
+                          });
+
+    return false;
+  }
 
   return true;
 }
 
 bool ClangASTImporter::CompleteAndFetchChildren(clang::QualType type) {
-  if (!RequireCompleteType(type))
-    return false;
+  const auto ret = RequireCompleteType(type);
+  if (TypeSystemClang::UseRedeclCompletion() || !ret)
+    return ret;
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -862,6 +926,22 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
     }
   }
 
+  if (TypeSystemClang::UseRedeclCompletion()) {
+    if (auto *source = llvm::dyn_cast<ImporterBackedASTSource>(
+            getToContext().getExternalSource())) {
+      // We added a new declaration (which is not a definition) into the
+      // destination AST context, so bump the declaration chain generation
+      // counter.
+      if (clang::TagDecl *td = dyn_cast<TagDecl>(From))
+        if (!td->isThisDeclarationADefinition())
+          source->MarkRedeclChainsAsOutOfDate(getToContext());
+
+      if (clang::ObjCInterfaceDecl *td = dyn_cast<ObjCInterfaceDecl>(From))
+        if (!td->isThisDeclarationADefinition())
+          source->MarkRedeclChainsAsOutOfDate(getToContext());
+    }
+  }
+
   // If we have a forcefully completed type, try to find an actual definition
   // for it in other modules.
   const ClangASTMetadata *md = m_main.GetDeclMetadata(From);
@@ -883,6 +963,14 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
     for (clang::Decl *candidate : lr) {
       if (candidate->getKind() == From->getKind()) {
         RegisterImportedDecl(From, candidate);
+
+        // If we're dealing with redecl chains. We want to find the definition,
+        // so skip if the decl is actually just a forwad decl.
+        if (TypeSystemClang::UseRedeclCompletion())
+          if (auto *tag_decl = llvm::dyn_cast<TagDecl>(candidate);
+              !tag_decl || !tag_decl->getDefinition())
+            continue;
+
         m_decls_to_ignore.insert(candidate);
         return candidate;
       }
@@ -1125,7 +1213,16 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
     to_namespace_decl->setHasExternalVisibleStorage();
   }
 
-  MarkDeclImported(from, to);
+  if (TypeSystemClang::UseRedeclCompletion()) {
+    if (clang::ObjCInterfaceDecl *td = dyn_cast<ObjCInterfaceDecl>(to)) {
+      if (clang::ExternalASTSource *s = getToContext().getExternalSource())
+        if (td->isThisDeclarationADefinition())
+          s->CompleteRedeclChain(td);
+      td->setHasExternalVisibleStorage();
+    }
+  } else {
+    MarkDeclImported(from, to);
+  }
 }
 
 void ClangASTImporter::ASTImporterDelegate::MarkDeclImported(Decl *from,
@@ -1196,4 +1293,5 @@ ClangASTImporter::ASTImporterDelegate::ASTImporterDelegate(
   // do a minimal import and the imported declarations won't be completed.
   assert(target_ctx->getExternalSource() && "Missing ExternalSource");
   setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
+  setLLDBRedeclCompletion(TypeSystemClang::UseRedeclCompletion());
 }

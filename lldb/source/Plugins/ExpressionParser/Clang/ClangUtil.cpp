@@ -76,6 +76,18 @@ clang::Decl *ClangUtil::GetFirstDecl(clang::Decl *d) {
   return d;
 }
 
+clang::ObjCInterfaceDecl *ClangUtil::GetAsObjCDecl(const CompilerType &type) {
+  clang::QualType qual_type = ClangUtil::GetCanonicalQualType(type);
+  if (qual_type.isNull())
+    return nullptr;
+
+  if (const auto *ot = qual_type->getAsObjCInterfaceType())
+    return ot->getInterface();
+  if (const auto *ot = qual_type->getAsObjCInterfacePointerType())
+    return ot->getInterfaceDecl();
+  return nullptr;
+}
+
 std::string ClangUtil::DumpDecl(const clang::Decl *d) {
   if (!d)
     return "nullptr";

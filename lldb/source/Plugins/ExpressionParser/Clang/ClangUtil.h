@@ -45,6 +45,8 @@ struct ClangUtil {
     return GetFirstDecl(const_cast<clang::Decl *>(d));
   }
 
+  static clang::ObjCInterfaceDecl *GetAsObjCDecl(const CompilerType &type);
+
   /// Returns a textual representation of the given Decl's AST. Does not
   /// deserialize any child nodes.
   static std::string DumpDecl(const clang::Decl *d);

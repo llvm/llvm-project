@@ -6,7 +6,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @unittest.expectedFailure  # The fix for this was reverted due to llvm.org/PR52257
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'false'))
     def test(self):
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
