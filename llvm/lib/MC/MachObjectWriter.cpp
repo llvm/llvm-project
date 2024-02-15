@@ -137,7 +137,7 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
                                    unsigned NumLoadCommands,
                                    unsigned LoadCommandsSize,
                                    bool SubsectionsViaSymbols,
-                                   Optional<unsigned> PtrAuthABIVersion,
+                                   std::optional<unsigned> PtrAuthABIVersion,
                                    bool PtrAuthKernelABIVersion) {
   uint32_t Flags = 0;
 
@@ -896,7 +896,7 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm,
   SectionDataFileSize += SectionDataPadding;
 
   // The ptrauth ABI version is limited to 4 bits.
-  Optional<unsigned> PtrAuthABIVersion = Asm.getPtrAuthABIVersion();
+  std::optional<unsigned> PtrAuthABIVersion = Asm.getPtrAuthABIVersion();
   if (PtrAuthABIVersion && *PtrAuthABIVersion > 63) {
     Asm.getContext().reportError(SMLoc(), "invalid ptrauth ABI version: " +
                                               utostr(*PtrAuthABIVersion));

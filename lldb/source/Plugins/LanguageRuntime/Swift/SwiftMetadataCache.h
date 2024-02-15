@@ -140,7 +140,7 @@ public:
       const swift::reflection::FieldSection &field_descriptors,
       llvm::ArrayRef<std::string> mangled_names) override;
 
-  llvm::Optional<swift::remote::FieldDescriptorLocator>
+  std::optional<swift::remote::FieldDescriptorLocator>
   getFieldDescriptorLocator(const std::string &mangled_name) override;
 
   bool isReflectionInfoCached(uint64_t info_id) override;
@@ -148,7 +148,7 @@ public:
 private:
   /// Generate the on disk hash table data structure into a blob. Returns
   /// the start on the hash table's control structure and the blob itself.
-  llvm::Optional<std::pair<uint32_t, llvm::SmallString<32>>>
+  std::optional<std::pair<uint32_t, llvm::SmallString<32>>>
   generateHashTableBlob(
       uint64_t info_id,
       const swift::reflection::FieldSection &field_descriptors,
@@ -181,7 +181,7 @@ private:
 
   std::recursive_mutex m_mutex;
 
-  llvm::Optional<DataFileCache> m_data_file_cache;
+  std::optional<DataFileCache> m_data_file_cache;
 };
 } // namespace lldb_private
 #endif

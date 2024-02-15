@@ -585,7 +585,7 @@ public:
   virtual bool HasSyntheticValue();
 
 #ifdef LLDB_ENABLE_SWIFT
-  llvm::Optional<SwiftScratchContextReader> GetSwiftScratchContext();
+  std::optional<SwiftScratchContextReader> GetSwiftScratchContext();
 #endif // LLDB_ENABLE_SWIFT
 
   virtual bool IsSynthetic() { return false; }

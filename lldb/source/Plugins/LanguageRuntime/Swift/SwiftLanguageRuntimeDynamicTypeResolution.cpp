@@ -259,7 +259,7 @@ void SwiftLanguageRuntimeImpl::PopLocalBuffer() {
 class LLDBTypeInfoProvider : public swift::remote::TypeInfoProvider {
   SwiftLanguageRuntimeImpl &m_runtime;
   Status m_error;
-  llvm::Optional<SwiftScratchContextReader> m_reader;
+  std::optional<SwiftScratchContextReader> m_reader;
 
 public:
   LLDBTypeInfoProvider(SwiftLanguageRuntimeImpl &runtime,
@@ -376,7 +376,7 @@ public:
   }
 };
 
-llvm::Optional<const swift::reflection::TypeInfo *>
+std::optional<const swift::reflection::TypeInfo *>
 SwiftLanguageRuntimeImpl::lookupClangTypeInfo(CompilerType clang_type) {
   std::lock_guard<std::recursive_mutex> locker(m_clang_type_info_mutex);
   {
@@ -400,12 +400,12 @@ SwiftLanguageRuntimeImpl::lookupClangTypeInfo(CompilerType clang_type) {
 
 const swift::reflection::TypeInfo *
 SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
-    CompilerType clang_type, llvm::Optional<uint64_t> byte_size,
-    llvm::Optional<size_t> bit_align,
+    CompilerType clang_type, std::optional<uint64_t> byte_size,
+    std::optional<size_t> bit_align,
     llvm::ArrayRef<swift::reflection::FieldInfo> fields) {
   const std::lock_guard<std::recursive_mutex> locker(m_clang_type_info_mutex);
   if (!byte_size || !bit_align) {
-    m_clang_type_info.insert({clang_type.GetOpaqueQualType(), llvm::None});
+    m_clang_type_info.insert({clang_type.GetOpaqueQualType(), std::nullopt});
     return nullptr;
   }
   assert(*bit_align % 8 == 0 && "Bit alignment no a multiple of 8!");
@@ -432,7 +432,7 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
   return &*it_b.first->second;
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name, Status *error) {
@@ -471,7 +471,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
   }
 
   // Try the instance type metadata.
-  llvm::Optional<uint64_t> result;
+  std::optional<uint64_t> result;
   if (!instance)
     return result;
   ForEachSuperClassType(*instance, [&](SuperClassType super_class) -> bool {
@@ -489,11 +489,11 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
   return result;
 }
 
-llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
+std::optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name, Status *error) {
   LLDB_SCOPED_TIMER();
-  llvm::Optional<uint64_t> offset;
+  std::optional<uint64_t> offset;
 
   if (!instance_type.IsValid())
     return {};
@@ -642,7 +642,7 @@ void LogUnimplementedTypeKind(const char *function, CompilerType type) {
 
 } // namespace
 
-llvm::Optional<unsigned>
+std::optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
                                          ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
@@ -763,7 +763,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   return {};
 }
 
-llvm::Optional<unsigned>
+std::optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
                                        ExecutionContext *exe_ctx) {
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
@@ -833,7 +833,7 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
   }
 }
 
-static std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
+static std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
 findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
                   const swift::reflection::TypeRef *tr, llvm::StringRef name,
                   bool is_enum, std::vector<uint32_t> &child_indexes,
@@ -878,7 +878,7 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
   return {SwiftLanguageRuntime::eFound, child_indexes.size()};
 }
 
-llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
+std::optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
     CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
   using namespace swift::reflection;
   using namespace swift::remote;
@@ -905,7 +905,7 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   return {};
 }
 
-std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
+std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
 SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
@@ -1069,7 +1069,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   // The actual conversion from the FieldInfo record.
   auto get_from_field_info =
       [&](const swift::reflection::FieldInfo &field,
-          llvm::Optional<TypeSystemSwift::TupleElement> tuple,
+          std::optional<TypeSystemSwift::TupleElement> tuple,
           bool hide_existentials) -> CompilerType {
     bool is_indirect_enum =
         !field.Offset && field.TR &&
@@ -1136,7 +1136,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     if (idx >= rti->getNumFields())
       LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
                 rti->getNumFields());
-    llvm::Optional<TypeSystemSwift::TupleElement> tuple;
+    std::optional<TypeSystemSwift::TupleElement> tuple;
     if (rti->getRecordKind() == swift::reflection::RecordKind::Tuple)
       tuple = ts->GetTupleElement(type.GetOpaqueQualType(), idx);
     if (rti->getRecordKind() ==
@@ -1301,7 +1301,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
               llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
         auto fields = rti->getFields();
         if (idx < fields.size()) {
-          llvm::Optional<TypeSystemSwift::TupleElement> tuple;
+          std::optional<TypeSystemSwift::TupleElement> tuple;
           return get_from_field_info(fields[idx], tuple, true);
         }
       }
@@ -1497,7 +1497,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
     llvm::raw_svector_ostream os(buf);
     os << "$pack_count_" << signature->GetCountForValuePack(i);
     StringRef count_var = os.str();
-    llvm::Optional<lldb::addr_t> count =
+    std::optional<lldb::addr_t> count =
         GetTypeMetadataForTypeNameAndFrame(count_var, *frame);
     if (!count) {
       LLDB_LOG(log,
@@ -1527,7 +1527,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
           llvm::raw_svector_ostream os(buf);
           os << u8"$\u03C4_" << shape.depth << '_' << shape.index;
           StringRef mds_var = os.str();
-          llvm::Optional<lldb::addr_t> mds_ptr =
+          std::optional<lldb::addr_t> mds_ptr =
               GetTypeMetadataForTypeNameAndFrame(mds_var, *frame);
           if (!mds_ptr) {
             LLDB_LOG(log,
@@ -2023,7 +2023,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetTypeFromMetadata(TypeSystemSwift &ts,
   return ts.GetTypeSystemSwiftTypeRef().RemangleAsType(dem, node);
 }
 
-llvm::Optional<lldb::addr_t>
+std::optional<lldb::addr_t>
 SwiftLanguageRuntimeImpl::GetTypeMetadataForTypeNameAndFrame(
     StringRef mdvar_name, StackFrame &frame) {
   VariableList *var_list = frame.GetVariableList(false, nullptr);
@@ -2170,7 +2170,7 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
     StreamString mdvar_name;
     mdvar_name.Printf(u8"$\u03C4_%d_%d", depth, index);
 
-    llvm::Optional<lldb::addr_t> metadata_location =
+    std::optional<lldb::addr_t> metadata_location =
         GetTypeMetadataForTypeNameAndFrame(mdvar_name.GetString(), stack_frame);
     if (!metadata_location)
       return;
@@ -2261,7 +2261,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Value(
   class_type_or_name.SetCompilerType(bound_type);
 
   ExecutionContext exe_ctx = in_value.GetExecutionContextRef().Lock(true);
-  llvm::Optional<uint64_t> size =
+  std::optional<uint64_t> size =
       bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return false;
@@ -2384,7 +2384,7 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
       // the existential container or not.
       swift::remote::RemoteAddress remote_existential(existential_address);
       if (ThreadSafeReflectionContext reflection_ctx = GetReflectionContext()) {
-        llvm::Optional<bool> is_inlined =
+        std::optional<bool> is_inlined =
             reflection_ctx->IsValueInlinedInExistentialContainer(
                 remote_existential);
 
@@ -2586,7 +2586,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   // Import the remangled dynamic name into the scratch context.
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+  std::optional<SwiftScratchContextReader> maybe_scratch_ctx =
       in_value.GetSwiftScratchContext();
   if (!maybe_scratch_ctx)
     return false;
@@ -2944,7 +2944,7 @@ bool SwiftLanguageRuntimeImpl::IsStoredInlineInBuffer(CompilerType type) {
   return true;
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetBitSize(CompilerType type,
                                      ExecutionContextScope *exe_scope) {
   if (auto *type_info = GetSwiftRuntimeTypeInfo(type, exe_scope))
@@ -2952,14 +2952,14 @@ SwiftLanguageRuntimeImpl::GetBitSize(CompilerType type,
   return {};
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetByteStride(CompilerType type) {
   if (auto *type_info = GetSwiftRuntimeTypeInfo(type, nullptr))
     return type_info->getStride();
   return {};
 }
 
-llvm::Optional<size_t>
+std::optional<size_t>
 SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type,
                                           ExecutionContextScope *exe_scope) {
   if (auto *type_info = GetSwiftRuntimeTypeInfo(type, exe_scope))

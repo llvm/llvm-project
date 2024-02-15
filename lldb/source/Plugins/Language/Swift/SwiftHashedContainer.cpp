@@ -290,7 +290,7 @@ HashedCollectionConfig::StorageObjectAtAddress(
   // same address.
   Status error;
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  llvm::Optional<SwiftScratchContextReader> reader =
+  std::optional<SwiftScratchContextReader> reader =
     process_sp->GetTarget().GetSwiftScratchContext(error, *exe_scope);
   if (!reader)
     return nullptr;

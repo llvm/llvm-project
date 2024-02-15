@@ -1607,10 +1607,10 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-llvm::Optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
+std::optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
-    return llvm::None;
+    return std::nullopt;
   Status error;
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
   auto *exe_scope = ctx.GetBestExecutionContextScope();

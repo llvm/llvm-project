@@ -71,7 +71,7 @@ public:
       : m_reflection_ctx(reader, swift_metadata_cache, &m_forwader),
         m_type_converter(m_reflection_ctx.getBuilder()) {}
 
-  llvm::Optional<uint32_t> AddImage(
+  std::optional<uint32_t> AddImage(
       llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
           swift::ReflectionSectionKind)>
           find_section,
@@ -79,15 +79,15 @@ public:
     return m_reflection_ctx.addImage(find_section, likely_module_names);
   }
 
-  llvm::Optional<uint32_t>
+  std::optional<uint32_t>
   AddImage(swift::remote::RemoteAddress image_start,
            llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
     return m_reflection_ctx.addImage(image_start, likely_module_names);
   }
 
-  llvm::Optional<uint32_t> ReadELF(
+  std::optional<uint32_t> ReadELF(
       swift::remote::RemoteAddress ImageStart,
-      llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
+      std::optional<llvm::sys::MemoryBlock> FileBuffer,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
     return m_reflection_ctx.readELF(ImageStart, FileBuffer,
                                     likely_module_names);
@@ -261,7 +261,7 @@ public:
     return false;
   }
 
-  llvm::Optional<int32_t> ProjectEnumValue(
+  std::optional<int32_t> ProjectEnumValue(
       swift::remote::RemoteAddress enum_addr,
       const swift::reflection::TypeRef *enum_type_ref,
       swift::remote::TypeInfoProvider *provider,
@@ -274,7 +274,7 @@ public:
     return {};
   }
 
-  llvm::Optional<std::pair<const swift::reflection::TypeRef *,
+  std::optional<std::pair<const swift::reflection::TypeRef *,
                            swift::reflection::RemoteAddress>>
   ProjectExistentialAndUnwrapClass(
       swift::reflection::RemoteAddress existential_address,
@@ -312,7 +312,7 @@ public:
                                                  skip_artificial_subclasses);
   }
 
-  llvm::Optional<bool> IsValueInlinedInExistentialContainer(
+  std::optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) override {
     return m_reflection_ctx.isValueInlinedInExistentialContainer(
         existential_address);

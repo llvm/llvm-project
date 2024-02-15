@@ -58,7 +58,7 @@ SwiftDWARFImporterForClangTypes::SwiftDWARFImporterForClangTypes(
 }
 
 void SwiftDWARFImporterForClangTypes::lookupValue(
-    StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
+    StringRef name, std::optional<swift::ClangTypeKind> kind,
     StringRef inModule, llvm::SmallVectorImpl<CompilerType> &results) {
   LLDB_SCOPED_TIMER();
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}::lookupValue(\"{1}\")", m_description,
@@ -121,7 +121,7 @@ void SwiftDWARFImporterForClangTypes::lookupValue(
 
 void SwiftDWARFImporterDelegate::importType(
     clang::QualType qual_type, clang::ASTContext &from_ctx,
-    clang::ASTContext &to_ctx, llvm::Optional<swift::ClangTypeKind> kind,
+    clang::ASTContext &to_ctx, std::optional<swift::ClangTypeKind> kind,
     llvm::SmallVectorImpl<clang::Decl *> &results) {
   clang::ASTImporter importer(
       to_ctx, to_ctx.getSourceManager().getFileManager(), from_ctx,
@@ -174,7 +174,7 @@ SwiftDWARFImporterDelegate::SwiftDWARFImporterDelegate(SwiftASTContext &ts)
       m_description(ts.GetDescription() + "::SwiftDWARFImporterDelegate") {}
 
 void SwiftDWARFImporterDelegate::lookupValue(
-    StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
+    StringRef name, std::optional<swift::ClangTypeKind> kind,
     StringRef inModule, llvm::SmallVectorImpl<clang::Decl *> &results) {
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}::lookupValue(\"{1}\")", m_description,
            name.str());

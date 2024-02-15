@@ -21,7 +21,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
 
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 
@@ -292,7 +292,7 @@ public:
     unsigned GetCountForTypePack(unsigned i) { return count_for_type_pack[i]; }
   };
   /// Extract the generic signature out of a mangled Swift function name.
-  static llvm::Optional<GenericSignature>
+  static std::optional<GenericSignature>
   GetGenericSignature(llvm::StringRef function_name,
                       TypeSystemSwiftTypeRef &ts);
 
@@ -309,18 +309,18 @@ public:
   /// of the given type.
   ///
   /// \param instance_type
-  llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
+  std::optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
                                                    llvm::StringRef member_name,
                                                    Status *error = nullptr);
 
   /// Ask Remote Mirrors about the children of a composite type.
-  llvm::Optional<unsigned> GetNumChildren(CompilerType type,
+  std::optional<unsigned> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scope);
 
   /// Determine the enum case name for the \p data value of the enum \p type.
   /// This is performed using Swift reflection.
-  llvm::Optional<std::string> GetEnumCaseName(CompilerType type,
+  std::optional<std::string> GetEnumCaseName(CompilerType type,
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 
@@ -345,7 +345,7 @@ public:
   ///                     don't have an index.
   ///
   /// \returns {true, {num_idexes}} on success.
-  std::pair<LookupResult, llvm::Optional<size_t>>
+  std::pair<LookupResult, std::optional<size_t>>
   GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
                                 ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
@@ -362,18 +362,18 @@ public:
       uint64_t &language_flags);
 
   /// Ask Remote Mirrors about the fields of a composite type.
-  llvm::Optional<unsigned> GetNumFields(CompilerType type,
+  std::optional<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx);
 
   /// Ask Remote Mirrors for the size of a Swift type.
-  llvm::Optional<uint64_t> GetBitSize(CompilerType type,
+  std::optional<uint64_t> GetBitSize(CompilerType type,
                                       ExecutionContextScope *exe_scope);
 
   /// Ask Remote mirrors for the stride of a Swift type.
-  llvm::Optional<uint64_t> GetByteStride(CompilerType type);
+  std::optional<uint64_t> GetByteStride(CompilerType type);
 
   /// Ask Remote mirrors for the alignment of a Swift type.
-  llvm::Optional<size_t> GetBitAlignment(CompilerType type,
+  std::optional<size_t> GetBitAlignment(CompilerType type,
                                          ExecutionContextScope *exe_scope);
 
   /// Release the RemoteASTContext associated with the given swift::ASTContext.
@@ -428,10 +428,10 @@ public:
                                                          ConstString name,
                                                          bool persistent);
 
-  llvm::Optional<Value>
+  std::optional<Value>
   GetErrorReturnLocationAfterReturn(lldb::StackFrameSP frame_sp);
 
-  llvm::Optional<Value>
+  std::optional<Value>
   GetErrorReturnLocationBeforeReturn(lldb::StackFrameSP frame_sp,
                                      bool &need_to_check_after_return);
 

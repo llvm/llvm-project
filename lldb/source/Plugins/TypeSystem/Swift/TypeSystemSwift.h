@@ -151,7 +151,7 @@ public:
     eUnowned,
     eUnmanaged
   };
-  virtual llvm::Optional<NonTriviallyManagedReferenceKind>
+  virtual std::optional<NonTriviallyManagedReferenceKind>
   GetNonTriviallyManagedReferenceKind(lldb::opaque_compiler_type_t type) = 0;
 
   /// Creates a GenericTypeParamType with the desired depth and index.

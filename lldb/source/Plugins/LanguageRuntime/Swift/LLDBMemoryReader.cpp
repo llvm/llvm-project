@@ -167,7 +167,7 @@ GetSwiftObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
   return obj_file_format;
 }
 
-llvm::Optional<swift::remote::RemoteAbsolutePointer>
+std::optional<swift::remote::RemoteAbsolutePointer>
 LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   // If an address has a symbol, that symbol provides additional useful data to
   // MetadataReader. Without the symbol, MetadataReader can derive the symbol
@@ -178,7 +178,7 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   if (!target.GetSwiftUseReflectionSymbols())
     return {};
 
-  llvm::Optional<Address> maybeAddr =
+  std::optional<Address> maybeAddr =
       resolveRemoteAddress(address.getAddressData());
   // This is not an assert, but should never happen.
   if (!maybeAddr)
@@ -332,7 +332,7 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
 
   LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
             size, address.getAddressData());
-  llvm::Optional<Address> maybeAddr =
+  std::optional<Address> maybeAddr =
       resolveRemoteAddressFromSymbolObjectFile(address.getAddressData());
 
   if (!maybeAddr)
@@ -409,7 +409,7 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
   LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0:x}",
             address.getAddressData());
 
-  llvm::Optional<Address> maybeAddr =
+  std::optional<Address> maybeAddr =
       resolveRemoteAddressFromSymbolObjectFile(address.getAddressData());
 
   if (!maybeAddr)
@@ -464,7 +464,7 @@ void LLDBMemoryReader::popLocalBuffer() {
   m_local_buffer_size = 0;
 }
 
-llvm::Optional<std::pair<uint64_t, uint64_t>>
+std::optional<std::pair<uint64_t, uint64_t>>
 LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
                                         bool register_symbol_obj_file) {
   if (!readMetadataFromFileCacheEnabled())
@@ -547,7 +547,7 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
   return {{module_start_address, module_end_address}};
 }
 
-llvm::Optional<std::pair<uint64_t, lldb::ModuleSP>>
+std::optional<std::pair<uint64_t, lldb::ModuleSP>>
 LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
     uint64_t tagged_address) const {
   Log *log(GetLog(LLDBLog::Types));
@@ -600,7 +600,7 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
   return {{file_address, module}};
 }
 
-llvm::Optional<Address>
+std::optional<Address>
 LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   Log *log(GetLog(LLDBLog::Types));
   auto maybe_pair = getFileAddressAndModuleForTaggedAddress(address);
@@ -633,7 +633,7 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   return resolved;
 }
 
-llvm::Optional<Address>
+std::optional<Address>
 LLDBMemoryReader::resolveRemoteAddressFromSymbolObjectFile(
     uint64_t address) const {
   Log *log(GetLog(LLDBLog::Types));

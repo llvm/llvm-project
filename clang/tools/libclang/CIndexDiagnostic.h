@@ -16,7 +16,6 @@
 #include "clang-c/Index.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <assert.h>
 #include <memory>

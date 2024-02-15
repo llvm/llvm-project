@@ -18,7 +18,7 @@
 namespace lldb_private {
 
 /// Parse a name such as "$τ_0_0".
-llvm::Optional<std::pair<unsigned, unsigned>>
+std::optional<std::pair<unsigned, unsigned>>
 ParseSwiftGenericParameter(llvm::StringRef name);
 
 class SwiftExpressionSourceCode : public ExpressionSourceCode {
@@ -46,7 +46,7 @@ public:
       std::string &text, lldb::LanguageType wrapping_language,
       bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
       const EvaluateExpressionOptions &options,
-      const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
+      const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
       ExecutionContext &exe_ctx, uint32_t &first_body_line,
       llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) const;
 

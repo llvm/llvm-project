@@ -161,7 +161,7 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
   return runtime_image;
 }
 
-static llvm::Optional<lldb::addr_t>
+static std::optional<lldb::addr_t>
 FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
                          StringRef object, const SymbolType sym_type) {
   ModuleSP image = findRuntime(process, runtime_kind);
@@ -290,7 +290,7 @@ public:
     STUB_LOG();
   }
 
-  llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
+  std::optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
                                                    llvm::StringRef member_name,
                                                    Status *error) {
@@ -298,20 +298,20 @@ public:
     return {};
   }
 
-  llvm::Optional<unsigned> GetNumChildren(CompilerType type,
+  std::optional<unsigned> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scopej) {
     STUB_LOG();
     return {};
   }
 
-  llvm::Optional<std::string> GetEnumCaseName(CompilerType type,
+  std::optional<std::string> GetEnumCaseName(CompilerType type,
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx) {
     STUB_LOG();
     return {};
   }
 
-  std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
+  std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
   GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
                                 ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
@@ -332,7 +332,7 @@ public:
     return {};
   }
 
-  llvm::Optional<unsigned> GetNumFields(CompilerType type,
+  std::optional<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx) {
     STUB_LOG();
     return {};
@@ -370,18 +370,18 @@ public:
     return {};
   }
 
-  llvm::Optional<uint64_t> GetBitSize(CompilerType type,
+  std::optional<uint64_t> GetBitSize(CompilerType type,
                                       ExecutionContextScope *exe_scope) {
     STUB_LOG();
     return {};
   }
 
-  llvm::Optional<uint64_t> GetByteStride(CompilerType type) {
+  std::optional<uint64_t> GetByteStride(CompilerType type) {
     STUB_LOG();
     return {};
   }
 
-  llvm::Optional<size_t> GetBitAlignment(CompilerType type,
+  std::optional<size_t> GetBitAlignment(CompilerType type,
                                          ExecutionContextScope *exe_scope) {
     STUB_LOG();
     return {};
@@ -583,7 +583,7 @@ void SwiftLanguageRuntimeImpl::SetupSwiftError() {
                                "__SwiftNativeNSError", eSymbolTypeObjCClass);
 }
 
-llvm::Optional<lldb::addr_t>
+std::optional<lldb::addr_t>
 SwiftLanguageRuntimeImpl::GetSwiftNativeNSErrorISA() {
   return m_SwiftNativeNSErrorISA;
 }
@@ -599,7 +599,7 @@ void SwiftLanguageRuntimeImpl::SetupExclusivity() {
         m_dynamic_exclusivity_flag_addr ? *m_dynamic_exclusivity_flag_addr : 0);
 }
 
-llvm::Optional<lldb::addr_t>
+std::optional<lldb::addr_t>
 SwiftLanguageRuntimeImpl::GetDynamicExclusivityFlagAddr() {
   return m_dynamic_exclusivity_flag_addr;
 }
@@ -718,7 +718,7 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
   return reflection_info_id.has_value();
 }
 
-llvm::Optional<uint32_t>
+std::optional<uint32_t>
 SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     ModuleSP module,
     llvm::SmallVector<llvm::StringRef, 1> likely_module_names) {
@@ -739,7 +739,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     if (!sym_obj_file)
       return false;
 
-    llvm::Optional<llvm::StringRef> maybe_segment_name =
+    std::optional<llvm::StringRef> maybe_segment_name =
         obj_file_format->getSymbolRichSegmentName();
     if (!maybe_segment_name)
       return false;
@@ -764,8 +764,8 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
     return section_iter != segment->GetChildren().end();
   }();
 
-  llvm::Optional<llvm::StringRef> maybe_segment_name;
-  llvm::Optional<llvm::StringRef> maybe_secondary_segment_name;
+  std::optional<llvm::StringRef> maybe_segment_name;
+  std::optional<llvm::StringRef> maybe_secondary_segment_name;
   ObjectFile *object_file;
   if (should_register_with_symbol_obj_file) {
     maybe_segment_name = obj_file_format->getSymbolRichSegmentName();
@@ -902,7 +902,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   auto read_from_file_cache =
       GetMemoryReader()->readMetadataFromFileCacheEnabled();
 
-  llvm::Optional<uint32_t> info_id;
+  std::optional<uint32_t> info_id;
   // When dealing with ELF, we need to pass in the contents of the on-disk
   // file, since the Section Header Table is not present in the child process
   if (obj_file->GetPluginName().equals("elf")) {
@@ -912,7 +912,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
     info_id = m_reflection_ctx->ReadELF(
         swift::remote::RemoteAddress(load_ptr),
-        llvm::Optional<llvm::sys::MemoryBlock>(file_buffer),
+        std::optional<llvm::sys::MemoryBlock>(file_buffer),
         likely_module_names);
   } else if (read_from_file_cache &&
              obj_file->GetPluginName().equals("mach-o")) {
@@ -1237,7 +1237,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       Status error;
       Target &target = frame.GetThread()->GetProcess()->GetTarget();
       ExecutionContext exe_ctx(frame);
-      llvm::Optional<SwiftScratchContextReader> maybe_swift_ast =
+      std::optional<SwiftScratchContextReader> maybe_swift_ast =
           target.GetSwiftScratchContext(error, frame);
       auto scratch_ctx = maybe_swift_ast->get();
       if (scratch_ctx) {
@@ -1434,7 +1434,7 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!runtime)
     return error_valobj_sp;
 
-  llvm::Optional<Value> arg0 =
+  std::optional<Value> arg0 =
       runtime->GetErrorReturnLocationAfterReturn(frame_sp);
   if (!arg0)
     return error_valobj_sp;
@@ -1446,7 +1446,7 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!exe_scope)
     return error_valobj_sp;
 
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_context =
+  std::optional<SwiftScratchContextReader> maybe_scratch_context =
       target->GetSwiftScratchContext(error, *frame_sp);
   if (!maybe_scratch_context || error.Fail())
     return error_valobj_sp;
@@ -1910,7 +1910,7 @@ void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
     return;
   }
   ConstString BoolName("bool");
-  llvm::Optional<uint64_t> bool_size =
+  std::optional<uint64_t> bool_size =
       ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
   if (!bool_size)
     return;
@@ -1985,7 +1985,7 @@ void SwiftLanguageRuntimeImpl::DidFinishExecutingUserExpression(
     return;
   }
   ConstString BoolName("bool");
-  llvm::Optional<uint64_t> bool_size =
+  std::optional<uint64_t> bool_size =
       ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
   if (!bool_size)
     return;
@@ -2008,9 +2008,9 @@ void SwiftLanguageRuntimeImpl::DidFinishExecutingUserExpression(
              m_original_dynamic_exclusivity_flag_state);
 }
 
-llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
+std::optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
     lldb::StackFrameSP frame_sp) {
-  llvm::Optional<Value> error_val;
+  std::optional<Value> error_val;
 
   llvm::StringRef error_reg_name;
   ArchSpec arch_spec(GetTargetRef().GetArchitecture());
@@ -2058,9 +2058,9 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
   return error_val;
 }
 
-llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
+std::optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
     lldb::StackFrameSP frame_sp, bool &need_to_check_after_return) {
-  llvm::Optional<Value> error_val;
+  std::optional<Value> error_val;
 
   if (!frame_sp) {
     need_to_check_after_return = false;
@@ -2217,7 +2217,7 @@ private:
     eReferenceWeak,
   };
 
-  llvm::Optional<uint32_t> getReferenceCount(StringRef ObjName,
+  std::optional<uint32_t> getReferenceCount(StringRef ObjName,
                                              ReferenceCountType Type,
                                              ExecutionContext &exe_ctx,
                                              StackFrameSP &Frame) {
@@ -2245,13 +2245,13 @@ private:
     bool evalStatus = exe_ctx.GetTargetSP()->EvaluateExpression(
         Expr, Frame.get(), result_valobj_sp, eval_options);
     if (evalStatus != eExpressionCompleted)
-      return llvm::None;
+      return std::nullopt;
 
     bool success = false;
     uint32_t count = result_valobj_sp->GetSyntheticValue()->GetValueAsUnsigned(
         UINT32_MAX, &success);
     if (!success)
-      return llvm::None;
+      return std::nullopt;
     return count;
   }
 
@@ -2293,11 +2293,11 @@ protected:
 
     // Ask swift debugger support in the compiler about the objects
     // reference counts, and return them to the user.
-    llvm::Optional<uint32_t> strong = getReferenceCount(
+    std::optional<uint32_t> strong = getReferenceCount(
         command, ReferenceCountType::eReferenceStrong, m_exe_ctx, frame_sp);
-    llvm::Optional<uint32_t> unowned = getReferenceCount(
+    std::optional<uint32_t> unowned = getReferenceCount(
         command, ReferenceCountType::eReferenceUnowned, m_exe_ctx, frame_sp);
-    llvm::Optional<uint32_t> weak = getReferenceCount(
+    std::optional<uint32_t> weak = getReferenceCount(
         command, ReferenceCountType::eReferenceWeak, m_exe_ctx, frame_sp);
 
     std::string unavailable = "<unavailable>";
@@ -2411,24 +2411,24 @@ bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
   FORWARD(IsStoredInlineInBuffer, type);
 }
 
-llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
+std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name, Status *error) {
   FORWARD(GetMemberVariableOffset, instance_type, instance, member_name, error);
 }
 
-llvm::Optional<unsigned>
+std::optional<unsigned>
 SwiftLanguageRuntime::GetNumChildren(CompilerType type,
                                      ExecutionContextScope *exe_scope) {
   FORWARD(GetNumChildren, type, exe_scope);
 }
 
-llvm::Optional<std::string> SwiftLanguageRuntime::GetEnumCaseName(
+std::optional<std::string> SwiftLanguageRuntime::GetEnumCaseName(
     CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
   FORWARD(GetEnumCaseName, type, data, exe_ctx);
 }
 
-std::pair<SwiftLanguageRuntime::LookupResult, llvm::Optional<size_t>>
+std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
 SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
@@ -2452,7 +2452,7 @@ CompilerType SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
           language_flags);
 }
 
-llvm::Optional<unsigned>
+std::optional<unsigned>
 SwiftLanguageRuntime::GetNumFields(CompilerType type,
                                    ExecutionContext *exe_ctx) {
   FORWARD(GetNumFields, type, exe_ctx);
@@ -2490,18 +2490,18 @@ SwiftLanguageRuntime::GetConcreteType(ExecutionContextScope *exe_scope,
   FORWARD(GetConcreteType, exe_scope, abstract_type_name);
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 SwiftLanguageRuntime::GetBitSize(CompilerType type,
                                  ExecutionContextScope *exe_scope) {
   FORWARD(GetBitSize, type, exe_scope);
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 SwiftLanguageRuntime::GetByteStride(CompilerType type) {
   FORWARD(GetByteStride, type);
 }
 
-llvm::Optional<size_t>
+std::optional<size_t>
 SwiftLanguageRuntime::GetBitAlignment(CompilerType type,
                                       ExecutionContextScope *exe_scope) {
   FORWARD(GetBitAlignment, type, exe_scope);
@@ -2544,7 +2544,7 @@ struct AsyncUnwindRegisterNumbers {
 };
 } // namespace
 
-static llvm::Optional<AsyncUnwindRegisterNumbers>
+static std::optional<AsyncUnwindRegisterNumbers>
 GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple) {
   switch (triple) {
   case llvm::Triple::x86_64: {
@@ -2594,7 +2594,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
 
   Target &target(process_sp->GetTarget());
   auto arch = target.GetArchitecture();
-  llvm::Optional<AsyncUnwindRegisterNumbers> regnums =
+  std::optional<AsyncUnwindRegisterNumbers> regnums =
       GetAsyncUnwindRegisterNumbers(arch.GetMachine());
   if (!regnums)
     return UnwindPlanSP();
@@ -2772,7 +2772,7 @@ GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
   const int32_t ptr_size = 8;
   row->SetOffset(0);
 
-  llvm::Optional<AsyncUnwindRegisterNumbers> regnums =
+  std::optional<AsyncUnwindRegisterNumbers> regnums =
       GetAsyncUnwindRegisterNumbers(arch.GetMachine());
   if (!regnums)
     return UnwindPlanSP();

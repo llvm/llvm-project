@@ -42,7 +42,7 @@ class SwiftDWARFImporterForClangTypes {
 
 public:
   SwiftDWARFImporterForClangTypes(TypeSystemSwiftTypeRef &ts);
-  void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
+  void lookupValue(StringRef name, std::optional<swift::ClangTypeKind> kind,
                    StringRef inModule,
                    llvm::SmallVectorImpl<CompilerType> &results);
 };
@@ -65,7 +65,7 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
   /// add it to \p results if successful.
   void importType(clang::QualType qual_type, clang::ASTContext &from_ctx,
                   clang::ASTContext &to_ctx,
-                  llvm::Optional<swift::ClangTypeKind> kind,
+                  std::optional<swift::ClangTypeKind> kind,
                   llvm::SmallVectorImpl<clang::Decl *> &results);
 
   clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
@@ -128,7 +128,7 @@ public:
   /// ║  └─────────────────────────┘                                         ║
   /// ╚══════════════════════════════════════════════════════════════════════╝
   /// \endverbatim
-  void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
+  void lookupValue(StringRef name, std::optional<swift::ClangTypeKind> kind,
                    StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override;
 };
