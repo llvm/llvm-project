@@ -66,7 +66,11 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
           E = call->getArg(0);
           continue;
         }
+
         if (isReturnValueRefCounted(callee))
+          return {E, true};
+
+        if (isSingleton(callee))
           return {E, true};
 
         if (isPtrConversion(callee)) {
