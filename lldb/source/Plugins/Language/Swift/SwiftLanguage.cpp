@@ -39,6 +39,7 @@
 #include <functional>
 #include <mutex>
 
+#include "lldb/lldb-enumerations.h"
 #include "swift/AST/ImportCache.h"
 #include "swift/Basic/InitializeSwiftModules.h"
 #include "swift/Demangling/ManglingMacros.h"
@@ -840,7 +841,7 @@ class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
       return m_backend.GetName() == name ? 0 : UINT32_MAX;
     }
 
-    bool Update() override { return false; }
+    lldb::ChildCacheState Update() override { return ChildCacheState::eRefetch; }
 
     bool MightHaveChildren() override { return true; }
 

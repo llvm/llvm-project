@@ -22,6 +22,7 @@
 
 // FIXME: we should not need this
 #include "Plugins/Language/ObjC/Cocoa.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -488,9 +489,9 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex(
   return child_sp;
 }
 
-bool lldb_private::formatters::swift::ArraySyntheticFrontEnd::Update() {
+lldb::ChildCacheState lldb_private::formatters::swift::ArraySyntheticFrontEnd::Update() {
   m_array_buffer = SwiftArrayBufferHandler::CreateBufferHandler(m_backend);
-  return false;
+  return ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::swift::ArraySyntheticFrontEnd::IsValid() {

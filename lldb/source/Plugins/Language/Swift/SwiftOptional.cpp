@@ -18,6 +18,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -227,7 +228,7 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
   return child;
 }
 
-bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::Update() {
+lldb::ChildCacheState lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::Update() {
   m_some = nullptr;
   m_is_none = true;
   m_children = false;
@@ -237,14 +238,14 @@ bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::Update() {
   if (!m_some) {
     m_is_none = true;
     m_children = false;
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   m_is_none = false;
 
   m_children = (m_some->GetNumChildren() > 0);
 
-  return false;
+  return ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::

@@ -5,6 +5,7 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <utility>
 
@@ -30,7 +31,7 @@ public:
   bool HasPointee() const {
     return m_count == 1 && m_kind == UnsafePointerKind::eSwiftUnsafePointer;
   }
-  virtual bool Update() = 0;
+  virtual lldb::ChildCacheState Update() = 0;
 
   virtual ~SwiftUnsafeType() = default;
 
@@ -108,15 +109,15 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
 class SwiftUnsafeBufferPointer final : public SwiftUnsafeType {
 public:
   SwiftUnsafeBufferPointer(ValueObject &valobj);
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 };
 
 SwiftUnsafeBufferPointer::SwiftUnsafeBufferPointer(ValueObject &valobj)
     : SwiftUnsafeType(valobj, UnsafePointerKind::eSwiftUnsafeBufferPointer) {}
 
-bool SwiftUnsafeBufferPointer::Update() {
+lldb::ChildCacheState SwiftUnsafeBufferPointer::Update() {
   if (!m_valobj.GetNumChildren())
-    return false;
+    return ChildCacheState::eRefetch;
 
   // Here is the layout of Swift's Unsafe[Mutable]BufferPointer.
   //
@@ -140,7 +141,7 @@ bool SwiftUnsafeBufferPointer::Update() {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't find ValueObject child member named '{1}'.",
              __FUNCTION__, g_count);
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   ValueObjectSP value_provided_child_sp = nullptr;
@@ -160,7 +161,7 @@ bool SwiftUnsafeBufferPointer::Update() {
              "{0}: Couldn't extract 'value-providing synthetic children' from "
              "ValueObject 'count'.",
              __FUNCTION__);
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   }
 
   size_t count = value_provided_child_sp->GetValueAsUnsigned(UINT64_MAX);
@@ -169,7 +170,7 @@ bool SwiftUnsafeBufferPointer::Update() {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid value for ValueObject 'count'.",
              __FUNCTION__);
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   m_count = count;
@@ -180,18 +181,18 @@ bool SwiftUnsafeBufferPointer::Update() {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid address for ValueObject '_position'.",
              __FUNCTION__);
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   m_start_addr = start_addr;
 
-  return true;
+  return ChildCacheState::eReuse;
 }
 
 class SwiftUnsafeRawBufferPointer final : public SwiftUnsafeType {
 public:
   SwiftUnsafeRawBufferPointer(ValueObject &valobj);
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
 private:
   addr_t m_end_addr;
@@ -201,9 +202,9 @@ SwiftUnsafeRawBufferPointer::SwiftUnsafeRawBufferPointer(ValueObject &valobj)
     : SwiftUnsafeType(valobj, UnsafePointerKind::eSwiftUnsafeRawBufferPointer) {
 }
 
-bool SwiftUnsafeRawBufferPointer::Update() {
+lldb::ChildCacheState SwiftUnsafeRawBufferPointer::Update() {
   if (!m_valobj.GetNumChildren())
-    return false;
+    return ChildCacheState::eRefetch;
 
   // Here is the layout of Swift's UnsafeRaw[Mutable]BufferPointer.
   // It's a view of the raw bytes of the pointee object. Each byte is viewed as
@@ -226,7 +227,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid address for ValueObject '_position'.",
              __FUNCTION__);
-    return false;
+    return ChildCacheState::eRefetch;
   }
   m_start_addr = addr;
 
@@ -235,7 +236,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get a valid address for ValueObject '_end'.",
              __FUNCTION__);
-    return false;
+    return ChildCacheState::eRefetch;
   }
   m_end_addr = addr;
 
@@ -244,7 +245,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
     if (!type.IsValid()) {
       LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get a valid base compiler type.", __FUNCTION__);
-      return false;
+      return ChildCacheState::eRefetch;
     }
 
     auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
@@ -252,7 +253,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
       LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get {1} type system.", __FUNCTION__,
                type.GetTypeName());
-      return false;
+      return ChildCacheState::eRefetch;
     }
 
     CompilerType compiler_type =
@@ -261,7 +262,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
       LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get a valid compiler type for 'Swift.UInt8'.",
                __FUNCTION__);
-      return false;
+      return ChildCacheState::eRefetch;
     }
 
     m_elem_type = compiler_type;
@@ -272,26 +273,26 @@ bool SwiftUnsafeRawBufferPointer::Update() {
   if (!opt_type_size) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get element byte size.", __FUNCTION__);
-    return false;
+    return ChildCacheState::eRefetch;
   }
   m_count = (m_end_addr - m_start_addr) / *opt_type_size;
 
-  return true;
+  return ChildCacheState::eReuse;
 }
 
 class SwiftUnsafePointer final : public SwiftUnsafeType {
 public:
   SwiftUnsafePointer(ValueObject &valobj, UnsafePointerKind kind);
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 };
 
 SwiftUnsafePointer::SwiftUnsafePointer(ValueObject &valobj,
                                        UnsafePointerKind kind)
     : SwiftUnsafeType(valobj, kind) {}
 
-bool SwiftUnsafePointer::Update() {
+lldb::ChildCacheState SwiftUnsafePointer::Update() {
   if (!m_valobj.GetNumChildren())
-    return false;
+    return ChildCacheState::eRefetch;
 
   // Here is the layout of Swift's Unsafe[Mutable]Pointer.
   //
@@ -306,7 +307,7 @@ bool SwiftUnsafePointer::Update() {
              "{0}: Couldn't get the compiler type for the "
              "'Swift.UnsafePointer' ValueObject.",
              __FUNCTION__, type.GetTypeName());
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
@@ -314,7 +315,7 @@ bool SwiftUnsafePointer::Update() {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get {1} type system.", __FUNCTION__,
              type.GetTypeName());
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   CompilerType argument_type =
@@ -329,18 +330,18 @@ bool SwiftUnsafePointer::Update() {
              "{0}: Couldn't unwrap the 'Swift.Int' ValueObject named "
              "'pointerValue'.",
              __FUNCTION__);
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   addr_t addr = pointer_value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (!addr || addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return ChildCacheState::eRefetch;
 
   m_start_addr = addr;
   m_count = (m_elem_type.IsValid()) ? 1 : 0;
 
-  return true;
+  return ChildCacheState::eReuse;
 }
 
 std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
@@ -404,7 +405,7 @@ bool lldb_private::formatters::swift::UnsafeTypeSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   std::unique_ptr<SwiftUnsafeType> unsafe_ptr = SwiftUnsafeType::Create(valobj);
 
-  if (!unsafe_ptr || !unsafe_ptr->Update())
+  if (!unsafe_ptr || unsafe_ptr->Update() == ChildCacheState::eRefetch)
     return false;
   size_t count = unsafe_ptr->GetCount();
   addr_t addr = unsafe_ptr->GetStartAddress();
@@ -503,7 +504,7 @@ public:
 
   size_t CalculateNumChildren() override;
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -550,21 +551,23 @@ lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::GetChildAtIndex(
   return m_children[idx];
 }
 
-bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
   m_children.clear();
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return false;
+    return ChildCacheState::eRefetch;
 
   if (!m_unsafe_ptr)
-    return false;
-  if (!m_unsafe_ptr->Update())
-    return false;
+    return ChildCacheState::eRefetch;
+  if (m_unsafe_ptr->Update() == ChildCacheState::eRefetch)
+    return ChildCacheState::eRefetch;
 
   const size_t num_children = CalculateNumChildren();
   m_children = ::ExtractChildrenFromSwiftPointerValueObject(valobj_sp,
                                                           *m_unsafe_ptr.get());
-  return m_children.size() == num_children;
+  return m_children.size() == num_children ? ChildCacheState::eReuse
+                                           : ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::

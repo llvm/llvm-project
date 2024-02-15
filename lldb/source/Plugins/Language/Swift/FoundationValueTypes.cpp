@@ -24,6 +24,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -590,7 +591,7 @@ public:
     return nullptr;
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     static ConstString g__handle("_handle");
     static ConstString g__pointer("_pointer");
 
@@ -609,23 +610,23 @@ public:
     ValueObjectSP underlying_sp =
         m_backend.GetChildAtNamePath({g__handle, g__pointer});
     if (!underlying_sp)
-      return false;
+      return ChildCacheState::eRefetch;
 
     ObjCLanguageRuntime *objc_runtime =
         ObjCLanguageRuntime::Get(*m_backend.GetProcessSP());
     if (!objc_runtime)
-      return false;
+      return ChildCacheState::eRefetch;
 
     ObjCLanguageRuntime::ClassDescriptorSP class_descriptor_sp =
         objc_runtime->GetClassDescriptor(*underlying_sp);
     if (!class_descriptor_sp)
-      return false;
+      return ChildCacheState::eRefetch;
 
     m_synth_backend_up = std::make_unique<ObjCRuntimeSyntheticProvider>(
         SyntheticChildren::Flags(), class_descriptor_sp);
     m_synth_frontend_up = m_synth_backend_up->GetFrontEnd(*underlying_sp);
     if (!m_synth_frontend_up)
-      return false;
+      return ChildCacheState::eRefetch;
     else
       m_synth_frontend_up->Update();
 
@@ -640,7 +641,7 @@ public:
 
     SetValid(CheckValid());
 
-    return false;
+    return ChildCacheState::eRefetch;
   }
 
   bool MightHaveChildren() override { return true; }
