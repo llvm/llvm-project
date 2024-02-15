@@ -1233,6 +1233,7 @@ class SrcReg9<RegisterClass regClass, string width> : RegisterOperand<regClass> 
 
 def VRegSrc_32 : SrcReg9<VGPR_32, "OPW32">;
 def VRegSrc_64 : SrcReg9<VReg_64, "OPW64">;
+def VRegSrc_96 : SrcReg9<VReg_96, "OPW96">;
 def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
 def VRegSrc_512: SrcReg9<VReg_512, "OPW512">;
@@ -1251,6 +1252,10 @@ def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
 }
 def VGPRSrc_64 : RegisterOperand<VReg_64> {
   let DecoderMethod = "DecodeVReg_64RegisterClass";
+}
+
+def VGPRSrc_96 : RegisterOperand<VReg_96> {
+  let DecoderMethod = "DecodeVReg_96RegisterClass";
 }
 
 def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
