@@ -9671,13 +9671,10 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // size of the subvector.
   MVT InterSubVT = VecVT;
   SDValue AlignedExtract = Vec;
-  unsigned AlignedIdx = OrigIdx - RemIdx;
   if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
     InterSubVT = getLMUL1VT(VecVT);
-    // Extract a subvector equal to the nearest full vector register type. This
-    // should resolve to a EXTRACT_SUBREG instruction.
-    AlignedExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
-                                 DAG.getConstant(AlignedIdx, DL, XLenVT));
+    // Extract a subvector equal to the nearest full vector register type.
+    AlignedExtract = DAG.getTargetExtractSubreg(SubRegIdx, DL, InterSubVT, Vec);
   }
 
   SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InterSubVT,
@@ -9705,10 +9702,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   }
 
   // If required, insert this subvector back into the correct vector register.
-  // This should resolve to an INSERT_SUBREG instruction.
   if (VecVT.bitsGT(InterSubVT))
-    SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, SubVec,
-                         DAG.getConstant(AlignedIdx, DL, XLenVT));
+    SubVec = DAG.getTargetInsertSubreg(SubRegIdx, DL, VecVT, Vec, SubVec);
 
   // We might have bitcast from a mask type: cast back to the original type if
   // required.

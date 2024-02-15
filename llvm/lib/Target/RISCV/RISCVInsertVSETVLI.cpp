@@ -190,18 +190,22 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI,
   if (UseMO.getReg() == RISCV::NoRegister)
     return true;
 
-  if (MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg())) {
-    if (UseMI->isImplicitDef())
-      return true;
+  Register SrcReg =
+      MRI.getTargetRegisterInfo()->lookThruCopyLike(UseMO.getReg(), &MRI);
+  if (SrcReg.isPhysical())
+    return false;
 
-    if (UseMI->isRegSequence()) {
-      for (unsigned i = 1, e = UseMI->getNumOperands(); i < e; i += 2) {
-        MachineInstr *SourceMI = MRI.getVRegDef(UseMI->getOperand(i).getReg());
-        if (!SourceMI || !SourceMI->isImplicitDef())
-          return false;
-      }
-      return true;
+  MachineInstr *UseMI = MRI.getUniqueVRegDef(SrcReg);
+  if (UseMI->isImplicitDef())
+    return true;
+
+  if (UseMI->isRegSequence()) {
+    for (unsigned i = 1, e = UseMI->getNumOperands(); i < e; i += 2) {
+      MachineInstr *SourceMI = MRI.getVRegDef(UseMI->getOperand(i).getReg());
+      if (!SourceMI || !SourceMI->isImplicitDef())
+        return false;
     }
+    return true;
   }
   return false;
 }
