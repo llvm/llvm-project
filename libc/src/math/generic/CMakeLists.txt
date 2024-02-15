@@ -1001,10 +1001,10 @@ add_entrypoint_object(
     ldexp.cpp
   HDRS
     ../ldexp.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1013,10 +1013,10 @@ add_entrypoint_object(
     ldexpf.cpp
   HDRS
     ../ldexpf.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -1025,10 +1025,23 @@ add_entrypoint_object(
     ldexpl.cpp
   HDRS
     ../ldexpl.h
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  ldexpf128
+  SRCS
+    ldexpf128.cpp
+  HDRS
+    ../ldexpf128.h
   COMPILE_OPTIONS
-    -O2
+    -O3
+  DEPENDS
+  libc.src.__support.macros.properties.float
+  libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_object_library(
