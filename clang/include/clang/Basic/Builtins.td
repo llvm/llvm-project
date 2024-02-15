@@ -4512,12 +4512,6 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
-def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "unsigned int(bool)";
-}
-
 def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_create_handle"];
   let Attributes = [NoThrow, Const];

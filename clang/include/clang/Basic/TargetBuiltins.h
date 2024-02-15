@@ -89,6 +89,16 @@ namespace clang {
   };
   }
 
+  /// HLSL builtins
+  namespace hlsl {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsHLSL.inc"
+    LastTSBuiltin
+  };
+  } // namespace hlsl
+
   /// PPC builtins
   namespace PPC {
     enum {

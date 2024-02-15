@@ -73,9 +73,7 @@ public:
     return Feature == "directx";
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   std::string_view getClobbers() const override { return ""; }
 
