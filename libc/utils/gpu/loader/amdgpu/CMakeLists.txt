@@ -9,5 +9,5 @@ target_link_libraries(amdhsa_loader
 )
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
-  target_compile_options(amdhsa_loader "-ffixed-point")
+  target_compile_options(amdhsa_loader PRIVATE "-ffixed-point")
 endif()

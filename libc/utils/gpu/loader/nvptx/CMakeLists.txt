@@ -5,7 +5,7 @@ if(NOT LLVM_ENABLE_RTTI)
   target_compile_options(nvptx_loader PRIVATE -fno-rtti)
 endif()
 if(LIBC_COMPILER_HAS_FIXED_POINT)
-  target_compile_options(amdhsa_loader PRIVATE "-ffixed-point")
+  target_compile_options(nvptx_loader PRIVATE "-ffixed-point")
 endif()
 target_include_directories(nvptx_loader PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(nvptx_loader
