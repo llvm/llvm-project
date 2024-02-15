@@ -26,15 +26,15 @@ target triple = "spir64"
 
 define dso_local spir_func void @test1() local_unnamed_addr {
 entry:
-  %0 = atomicrmw fmin ptr addrspace(1) @f, half 42.0e+00 seq_cst
-  %1 = atomicrmw fmax ptr addrspace(1) @f, half 42.0e+00 seq_cst
+  %minval = atomicrmw fmin ptr addrspace(1) @f, half 42.0e+00 seq_cst
+  %maxval = atomicrmw fmax ptr addrspace(1) @f, half 42.0e+00 seq_cst
   ret void
 }
 
 define dso_local spir_func void @test2() local_unnamed_addr {
 entry:
-  %0 = tail call spir_func half @_Z21__spirv_AtomicFMinEXT(ptr addrspace(1) @f, i32 1, i32 16, half 42.000000e+00)
-  %1 = tail call spir_func half @_Z21__spirv_AtomicFMaxEXT(ptr addrspace(1) @f, i32 1, i32 16, half 42.000000e+00)
+  %minval = tail call spir_func half @_Z21__spirv_AtomicFMinEXT(ptr addrspace(1) @f, i32 1, i32 16, half 42.000000e+00)
+  %maxval = tail call spir_func half @_Z21__spirv_AtomicFMaxEXT(ptr addrspace(1) @f, i32 1, i32 16, half 42.000000e+00)
   ret void
 }
 

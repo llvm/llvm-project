@@ -884,20 +884,20 @@ class AtomicFloatingBuiltin<string name, Op operation> {
   Op Opcode = operation;
 }
 
-// Table gathering all the Intel sub group builtins.
+// Table gathering all builtins for atomic instructions on floating-point numbers
 def AtomicFloatingBuiltins : GenericTable {
   let FilterClass = "AtomicFloatingBuiltin";
   let Fields = ["Name", "Opcode"];
 }
 
-// Function to lookup group builtins by their name and set.
+// Function to lookup builtins by their name and set.
 def lookupAtomicFloatingBuiltin : SearchIndex {
   let Table = AtomicFloatingBuiltins;
   let Key = ["Name"];
 }
 
-// Multiclass used to define incoming builtin records for the SPV_INTEL_subgroups extension
-// and corresponding work/sub group builtin records.
+// Multiclass used to define incoming demangled builtin records and
+// corresponding builtin records for atomic instructions on floating-point numbers.
 multiclass DemangledAtomicFloatingBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
   def : DemangledBuiltin<!strconcat("__spirv_AtomicF", name), OpenCL_std, AtomicFloating, minNumArgs, maxNumArgs>;
   def : AtomicFloatingBuiltin<!strconcat("__spirv_AtomicF", name), operation>;

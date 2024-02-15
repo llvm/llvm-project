@@ -29,14 +29,14 @@ target triple = "spir64"
 
 define dso_local spir_func void @test1() local_unnamed_addr {
 entry:
-  %0 = atomicrmw fadd ptr addrspace(1) @f, half 42.000000e+00 seq_cst
-  %1 = atomicrmw fsub ptr addrspace(1) @f, half 42.000000e+00 seq_cst
+  %addval = atomicrmw fadd ptr addrspace(1) @f, half 42.000000e+00 seq_cst
+  %subval = atomicrmw fsub ptr addrspace(1) @f, half 42.000000e+00 seq_cst
   ret void
 }
 
 define dso_local spir_func void @test2() local_unnamed_addr {
 entry:
-  %0 = tail call spir_func half @_Z21__spirv_AtomicFAddEXT(ptr addrspace(1) @f, i32 1, i32 16, half 42.000000e+00)
+  %addval = tail call spir_func half @_Z21__spirv_AtomicFAddEXT(ptr addrspace(1) @f, i32 1, i32 16, half 42.000000e+00)
   ret void
 }
 
