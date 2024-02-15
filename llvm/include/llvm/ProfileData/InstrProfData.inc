@@ -331,6 +331,7 @@ INSTR_PROF_SECT_ENTRY(IPSK_covname, \
 #undef INSTR_PROF_SECT_ENTRY
 #endif
 
+
 #ifdef INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_DATA_DEFINED
 
@@ -501,6 +502,7 @@ getValueProfRecordHeaderSize(uint32_t NumValueSites);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
 #endif  /* INSTR_PROF_VALUE_PROF_DATA */
+
 
 #ifdef INSTR_PROF_COMMON_API_IMPL
 #define INSTR_PROF_DATA_DEFINED

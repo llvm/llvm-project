@@ -105,7 +105,7 @@ INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
 #endif
 INSTR_PROF_VTABLE_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), \
                        VTableNameHash, ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
-                     IndexedInstrProf::ComputeHash(PGOVTableName)))
+                       IndexedInstrProf::ComputeHash(PGOVTableName)))
 INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
                        VTablePointer, VTableAddr)
 INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize, \
