@@ -1067,6 +1067,199 @@ TLI_DEFINE_VECFUNC("tgammaf", "armpl_vtgammaq_f32", FIXED(4), NOMASK, "_ZGV_LLVM
 TLI_DEFINE_VECFUNC("tgamma", "armpl_svtgamma_f64_x",  SCALABLE(2), MASKED, "_ZGVsMxv")
 TLI_DEFINE_VECFUNC("tgammaf", "armpl_svtgamma_f32_x", SCALABLE(4), MASKED, "_ZGVsMxv")
 
+#elif defined(TLI_DEFINE_AMDLIBM_VECFUNCS)
+TLI_DEFINE_VECFUNC("sinf", "amd_vrs16_sinf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("sinf", "amd_vrs8_sinf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("sinf", "amd_vrs4_sinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("sin", "amd_vrd8_sin", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("sin", "amd_vrd4_sin", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("sin", "amd_vrd2_sin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "amd_vrs16_sinf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "amd_vrs8_sinf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "amd_vrs4_sinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "amd_vrd8_sin", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "amd_vrd4_sin", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "amd_vrd2_sin", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+
+TLI_DEFINE_VECFUNC("cosf", "amd_vrs16_cosf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("cosf", "amd_vrs8_cosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("cosf", "amd_vrs4_cosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("cos", "amd_vrd8_cos", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("cos", "amd_vrd4_cos", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("cos", "amd_vrd2_cos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "amd_vrs16_cosf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "amd_vrs8_cosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "amd_vrs4_cosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "amd_vrd8_cos", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "amd_vrd4_cos", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "amd_vrd2_cos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+
+TLI_DEFINE_VECFUNC("expf", "amd_vrs16_expf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("expf", "amd_vrs8_expf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("expf", "amd_vrs4_expf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("exp", "amd_vrd2_exp", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("exp", "amd_vrd4_exp", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("exp", "amd_vrd8_exp", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("__expf_finite", "amd_vrs16_expf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("__expf_finite", "amd_vrs8_expf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("__expf_finite", "amd_vrs4_expf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__exp_finite", "amd_vrd2_exp", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("__exp_finite", "amd_vrd4_exp", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__exp_finite", "amd_vrd8_exp", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "amd_vrs16_expf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "amd_vrs8_expf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "amd_vrs4_expf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "amd_vrd2_exp", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "amd_vrd4_exp", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "amd_vrd8_exp", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("exp2f", "amd_vrs16_exp2f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("exp2f", "amd_vrs8_exp2f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("exp2f", "amd_vrs4_exp2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("exp2", "amd_vrd2_exp2", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("exp2", "amd_vrd4_exp2", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("exp2", "amd_vrd8_exp2", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("__exp2f_finite", "amd_vrs16_exp2f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("__exp2f_finite", "amd_vrs8_exp2f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("__exp2f_finite", "amd_vrs4_exp2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__exp2_finite", "amd_vrd2_exp2", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("__exp2_finite", "amd_vrd4_exp2", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__exp2_finite", "amd_vrd8_exp2", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "amd_vrs16_exp2f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "amd_vrs8_exp2f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "amd_vrs4_exp2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "amd_vrd2_exp2", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "amd_vrd4_exp2", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "amd_vrd8_exp2", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("powf", "amd_vrs16_powf", FIXED(16), NOMASK, "_ZGV_LLVM_N16vv")
+TLI_DEFINE_VECFUNC("powf", "amd_vrs8_powf", FIXED(8), NOMASK, "_ZGV_LLVM_N8vv")
+TLI_DEFINE_VECFUNC("powf", "amd_vrs4_powf", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("pow", "amd_vrd2_pow", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("pow", "amd_vrd4_pow", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("pow", "amd_vrd8_pow", FIXED(8), NOMASK, "_ZGV_LLVM_N8vv")
+
+TLI_DEFINE_VECFUNC("__powf_finite", "amd_vrs16_powf", FIXED(16), NOMASK, "_ZGV_LLVM_N16vv")
+TLI_DEFINE_VECFUNC("__powf_finite", "amd_vrs8_powf", FIXED(8), NOMASK, "_ZGV_LLVM_N8vv")
+TLI_DEFINE_VECFUNC("__powf_finite", "amd_vrs4_powf", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("__pow_finite", "amd_vrd2_pow", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("__pow_finite", "amd_vrd4_pow", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("__pow_finite", "amd_vrd8_pow", FIXED(8), NOMASK, "_ZGV_LLVM_N8vv")
+
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "amd_vrs16_powf", FIXED(16), NOMASK, "_ZGV_LLVM_N16vv")
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "amd_vrs8_powf", FIXED(8), NOMASK, "_ZGV_LLVM_N8vv")
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "amd_vrs4_powf", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "amd_vrd2_pow", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "amd_vrd4_pow", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "amd_vrd8_pow", FIXED(8), NOMASK, "_ZGV_LLVM_N8vv")
+
+TLI_DEFINE_VECFUNC("logf", "amd_vrs16_logf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("logf", "amd_vrs8_logf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("logf", "amd_vrs4_logf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log", "amd_vrd2_log", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("log", "amd_vrd4_log", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log", "amd_vrd8_log", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("__logf_finite", "amd_vrs16_logf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("__logf_finite", "amd_vrs8_logf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("__logf_finite", "amd_vrs4_logf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__log_finite", "amd_vrd2_log", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("__log_finite", "amd_vrd4_log", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__log_finite", "amd_vrd8_log", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.log.f32", "amd_vrs16_logf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.log.f32", "amd_vrs8_logf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.log.f32", "amd_vrs4_logf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.log.f64", "amd_vrd2_log", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.log.f64", "amd_vrd4_log", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.log.f64", "amd_vrd8_log", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("log2f", "amd_vrs16_log2f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("log2f", "amd_vrs8_log2f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("log2f", "amd_vrs4_log2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log2", "amd_vrd2_log2", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("log2", "amd_vrd4_log2", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log2", "amd_vrd8_log2", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("__log2f_finite", "amd_vrs16_log2f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("__log2f_finite", "amd_vrs8_log2f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("__log2f_finite", "amd_vrs4_log2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__log2_finite", "amd_vrd2_log2", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("__log2_finite", "amd_vrd4_log2", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("__log2_finite", "amd_vrd8_log2", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.log2.f32", "amd_vrs16_log2f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.log2.f32", "amd_vrs8_log2f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.log2.f32", "amd_vrs4_log2f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.log2.f64", "amd_vrd2_log2", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.log2.f64", "amd_vrd4_log2", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.log2.f64", "amd_vrd8_log2", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("log10f", "amd_vrs16_log10f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("log10f", "amd_vrs8_log10f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("log10f", "amd_vrs4_log10f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("__log10f_finite", "amd_vrs16_log10f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("__log10f_finite", "amd_vrs8_log10f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("__log10f_finite", "amd_vrs4_log10f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "amd_vrs16_log10f", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "amd_vrs8_log10f", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "amd_vrs4_log10f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("erff", "amd_vrs4_erff", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erff", "amd_vrs8_erff", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("erff", "amd_vrs16_erff", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+TLI_DEFINE_VECFUNC("erf", "amd_vrd2_erf", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("erf", "amd_vrd4_erf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erf", "amd_vrd8_erf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("exp10", "amd_vrd2_exp10", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("exp10f", "amd_vrs4_exp10f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("expm1", "amd_vrd2_expm1", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("expm1f", "amd_vrs4_expm1f", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("log1p", "amd_vrd2_log1p", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("log1pf", "amd_vrs4_log1pf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("tan", "amd_vrd2_tan", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("tan", "amd_vrd4_tan", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tan", "amd_vrd8_tan", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("tanf", "amd_vrs4_tanf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tanf", "amd_vrs8_tanf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("tanf", "amd_vrs16_tanf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("asin", "amd_vrd8_asin", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("asinf", "amd_vrs4_asinf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("asinf", "amd_vrs8_asinf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("asinf", "amd_vrs16_asinf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("acosf", "amd_vrs4_acosf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("acosf", "amd_vrs8_acosf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("atan", "amd_vrd2_atan", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("atan", "amd_vrd4_atan", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("atan", "amd_vrd8_atan", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("atanf", "amd_vrs4_atanf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("atanf", "amd_vrs8_atanf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+TLI_DEFINE_VECFUNC("atanf", "amd_vrs16_atanf", FIXED(16), NOMASK, "_ZGV_LLVM_N16v")
+
+TLI_DEFINE_VECFUNC("coshf", "amd_vrs4_coshf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("coshf", "amd_vrs8_coshf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("tanhf", "amd_vrs4_tanhf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tanhf", "amd_vrs8_tanhf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("cbrt", "amd_vrd2_cbrt", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("cbrtf", "amd_vrs4_cbrtf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+
 #else
 #error "Must choose which vector library functions are to be defined."
 #endif
@@ -1087,3 +1280,4 @@ TLI_DEFINE_VECFUNC("tgammaf", "armpl_svtgamma_f32_x", SCALABLE(4), MASKED, "_ZGV
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #undef TLI_DEFINE_MASSV_VECFUNCS_NAMES
 #undef TLI_DEFINE_ARMPL_VECFUNCS
+#undef TLI_DEFINE_AMDLIBM_VECFUNCS
