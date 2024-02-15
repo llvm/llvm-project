@@ -19,7 +19,7 @@ def NeoverseN2Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-    [HasSVE2p1, HasPAuthLR, HasCPA]);
+    [HasSVE2p1, HasPAuthLR, HasCPA, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//

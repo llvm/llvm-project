@@ -17545,79 +17545,6 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
   return Decl;
 }
 
-/// Perform semantic analysis of the given friend type declaration.
-///
-/// \returns A friend declaration that.
-FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
-                                      SourceLocation FriendLoc,
-                                      TypeSourceInfo *TSInfo) {
-  assert(TSInfo && "NULL TypeSourceInfo for friend type declaration");
-
-  QualType T = TSInfo->getType();
-  SourceRange TypeRange = TSInfo->getTypeLoc().getSourceRange();
-
-  // C++03 [class.friend]p2:
-  //   An elaborated-type-specifier shall be used in a friend declaration
-  //   for a class.*
-  //
-  //   * The class-key of the elaborated-type-specifier is required.
-  if (!CodeSynthesisContexts.empty()) {
-    // Do not complain about the form of friend template types during any kind
-    // of code synthesis. For template instantiation, we will have complained
-    // when the template was defined.
-  } else {
-    if (!T->isElaboratedTypeSpecifier()) {
-      // If we evaluated the type to a record type, suggest putting
-      // a tag in front.
-      if (const RecordType *RT = T->getAs<RecordType>()) {
-        RecordDecl *RD = RT->getDecl();
-
-        SmallString<16> InsertionText(" ");
-        InsertionText += RD->getKindName();
-
-        Diag(TypeRange.getBegin(),
-             getLangOpts().CPlusPlus11 ?
-               diag::warn_cxx98_compat_unelaborated_friend_type :
-               diag::ext_unelaborated_friend_type)
-          << (unsigned) RD->getTagKind()
-          << T
-          << FixItHint::CreateInsertion(getLocForEndOfToken(FriendLoc),
-                                        InsertionText);
-      } else {
-        Diag(FriendLoc,
-             getLangOpts().CPlusPlus11 ?
-               diag::warn_cxx98_compat_nonclass_type_friend :
-               diag::ext_nonclass_type_friend)
-          << T
-          << TypeRange;
-      }
-    } else if (T->getAs<EnumType>()) {
-      Diag(FriendLoc,
-           getLangOpts().CPlusPlus11 ?
-             diag::warn_cxx98_compat_enum_friend :
-             diag::ext_enum_friend)
-        << T
-        << TypeRange;
-    }
-
-    // C++11 [class.friend]p3:
-    //   A friend declaration that does not declare a function shall have one
-    //   of the following forms:
-    //     friend elaborated-type-specifier ;
-    //     friend simple-type-specifier ;
-    //     friend typename-specifier ;
-    if (getLangOpts().CPlusPlus11 && LocStart != FriendLoc)
-      Diag(FriendLoc, diag::err_friend_not_first_in_declaration) << T;
-  }
-
-  //   If the type specifier in a friend declaration designates a (possibly
-  //   cv-qualified) class type, that class is declared as a friend; otherwise,
-  //   the friend declaration is ignored.
-  return FriendDecl::Create(Context, CurContext,
-                            TSInfo->getTypeLoc().getBeginLoc(), TSInfo,
-                            FriendLoc);
-}
-
 /// Handle a friend tag declaration where the scope specifier was
 /// templated.
 DeclResult Sema::ActOnTemplatedFriendTag(
@@ -17755,6 +17682,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                                 MultiTemplateParamsArg TempParams) {
   SourceLocation Loc = DS.getBeginLoc();
+  SourceLocation FriendLoc = DS.getFriendSpecLoc();
 
   assert(DS.isFriendSpecified());
   assert(DS.getStorageClassSpec() == DeclSpec::SCS_unspecified);
@@ -17766,9 +17694,10 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   //     friend simple-type-specifier ;
   //     friend typename-specifier ;
   //
-  // Any declaration with a type qualifier does not have that form. (It's
-  // legal to specify a qualified type as a friend, you just can't write the
-  // keywords.)
+  // If the friend keyword isn't first, or if the declarations has any type
+  // qualifiers, then the declaration doesn't have that form.
+  if (getLangOpts().CPlusPlus11 && !DS.isFriendSpecifiedFirst())
+    Diag(FriendLoc, diag::err_friend_not_first_in_declaration);
   if (DS.getTypeQualifiers()) {
     if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
       Diag(DS.getConstSpecLoc(), diag::err_friend_decl_spec) << "const";
@@ -17795,24 +17724,35 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   if (DiagnoseUnexpandedParameterPack(Loc, TSI, UPPC_FriendDeclaration))
     return nullptr;
 
-  // This is definitely an error in C++98.  It's probably meant to
-  // be forbidden in C++0x, too, but the specification is just
-  // poorly written.
-  //
-  // The problem is with declarations like the following:
-  //   template <T> friend A<T>::foo;
-  // where deciding whether a class C is a friend or not now hinges
-  // on whether there exists an instantiation of A that causes
-  // 'foo' to equal C.  There are restrictions on class-heads
-  // (which we declare (by fiat) elaborated friend declarations to
-  // be) that makes this tractable.
-  //
-  // FIXME: handle "template <> friend class A<T>;", which
-  // is possibly well-formed?  Who even knows?
-  if (TempParams.size() && !T->isElaboratedTypeSpecifier()) {
-    Diag(Loc, diag::err_tagless_friend_type_template)
-      << DS.getSourceRange();
-    return nullptr;
+  if (!T->isElaboratedTypeSpecifier()) {
+    if (TempParams.size()) {
+      // C++23 [dcl.pre]p5:
+      //   In a simple-declaration, the optional init-declarator-list can be
+      //   omitted only when declaring a class or enumeration, that is, when
+      //   the decl-specifier-seq contains either a class-specifier, an
+      //   elaborated-type-specifier with a class-key, or an enum-specifier.
+      //
+      // The declaration of a template-declaration or explicit-specialization
+      // is never a member-declaration, so this must be a simple-declaration
+      // with no init-declarator-list. Therefore, this is ill-formed.
+      Diag(Loc, diag::err_tagless_friend_type_template) << DS.getSourceRange();
+      return nullptr;
+    } else if (const RecordDecl *RD = T->getAsRecordDecl()) {
+      SmallString<16> InsertionText(" ");
+      InsertionText += RD->getKindName();
+
+      Diag(Loc, getLangOpts().CPlusPlus11
+                    ? diag::warn_cxx98_compat_unelaborated_friend_type
+                    : diag::ext_unelaborated_friend_type)
+          << (unsigned)RD->getTagKind() << T
+          << FixItHint::CreateInsertion(getLocForEndOfToken(FriendLoc),
+                                        InsertionText);
+    } else {
+      Diag(FriendLoc, getLangOpts().CPlusPlus11
+                          ? diag::warn_cxx98_compat_nonclass_type_friend
+                          : diag::ext_nonclass_type_friend)
+          << T << DS.getSourceRange();
+    }
   }
 
   // C++98 [class.friend]p1: A friend of a class is a function
@@ -17828,12 +17768,11 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
 
   Decl *D;
   if (!TempParams.empty())
-    D = FriendTemplateDecl::Create(Context, CurContext, Loc,
-                                   TempParams,
-                                   TSI,
-                                   DS.getFriendSpecLoc());
+    D = FriendTemplateDecl::Create(Context, CurContext, Loc, TempParams, TSI,
+                                   FriendLoc);
   else
-    D = CheckFriendTypeDecl(Loc, DS.getFriendSpecLoc(), TSI);
+    D = FriendDecl::Create(Context, CurContext, TSI->getTypeLoc().getBeginLoc(),
+                           TSI, FriendLoc);
 
   if (!D)
     return nullptr;

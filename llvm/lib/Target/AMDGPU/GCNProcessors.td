@@ -258,12 +258,12 @@ def : ProcessorModel<"gfx1036", GFX10SpeedModel,
 >;
 
 // [gfx1010, gfx1011, gfx1012, gfx1013]
-def : ProcessorModel<"gfx10.1-generic", GFX10SpeedModel,
+def : ProcessorModel<"gfx10-1-generic", GFX10SpeedModel,
   FeatureISAVersion10_1_Generic.Features
 >;
 
 // [gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036]
-def : ProcessorModel<"gfx10.3-generic", GFX10SpeedModel,
+def : ProcessorModel<"gfx10-3-generic", GFX10SpeedModel,
   FeatureISAVersion10_3_Generic.Features
 >;
 

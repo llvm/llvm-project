@@ -451,6 +451,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lto-cs-profile-generate");
   if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
     add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
+  if (args.hasArg(OPT_plugin_opt_emit_llvm))
+    add("-lldemit:llvm");
+  if (args.hasArg(OPT_lto_emit_asm))
+    add("-lldemit:asm");
 
   if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
     add("-lldltocache:" + StringRef(a->getValue()));
