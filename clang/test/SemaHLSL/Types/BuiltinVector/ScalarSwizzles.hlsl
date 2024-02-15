@@ -80,7 +80,7 @@ float4 FillTwoPointFiveFloat(){
 // initialze the returned vector.
 
 // CHECK-LABEL: FillOneHalfFloat
-// CHECK: ImplicitCastExpr {{.*}} 'vector<float, 1>':'float __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: InitListExpr {{.*}} 'vector<float, 1>':'float __attribute__((ext_vector_type(1)))'
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'float' r
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 5.000000e-01
@@ -113,10 +113,31 @@ int64_t4 HooBoy() {
 // list with float truncation casts.
 
 // CHECK-LABEL: AllRighty
-// CHECK: ImplicitCastExpr {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))' <FloatingCast>
+// CHECK: InitListExpr {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))'
+
+// Vector element 0:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'double'
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+
+// Vector element 1:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'double'
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+
+// Vector element 2:
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'double'
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
 
 float3 AllRighty() {
   return 1..rrr;

@@ -195,9 +195,6 @@ class Sema;
     /// Fixed point type conversions according to N1169.
     ICK_Fixed_Point_Conversion,
 
-    /// HLSL vector truncation.
-    ICK_HLSL_Vector_Truncation,
-
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };
@@ -273,12 +270,6 @@ class Sema;
     /// conversion, floating-integral conversion, pointer conversion,
     /// pointer-to-member conversion, or boolean conversion.
     ImplicitConversionKind Second : 8;
-
-    /// Element - Between the second and third conversion a vector or matrix
-    /// element conversion may occur. If this is not ICK_Identity this
-    /// conversion is applied element-wise to each element in the vector or
-    /// matrix.
-    ImplicitConversionKind Element : 8;
 
     /// Third - The third conversion can be a qualification conversion
     /// or a function conversion.
@@ -376,8 +367,7 @@ class Sema;
     void setAsIdentityConversion();
 
     bool isIdentityConversion() const {
-      return Second == ICK_Identity && Element == ICK_Identity &&
-             Third == ICK_Identity;
+      return Second == ICK_Identity && Third == ICK_Identity;
     }
 
     ImplicitConversionRank getRank() const;
