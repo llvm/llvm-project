@@ -115,7 +115,7 @@ TEST_F(FormatTestTableGen, SimpleValue1_SingleLiterals) {
 TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
   // test::messUp does not understand multiline TableGen code-literals.
   // We have to give the result and the strings to format manually.
-  std::string DefWithCode =
+  StringRef DefWithCode =
       "def SimpleValueCode {\n"
       "  let Code =\n"
       "      [{ A TokCode is  nothing more than a multi-line string literal "
@@ -123,7 +123,7 @@ TEST_F(FormatTestTableGen, SimpleValue1_MultilineString) {
       "breaks are retained in the string. \n"
       "(https://llvm.org/docs/TableGen/ProgRef.html#grammar-token-TokCode)}];\n"
       "}\n";
-  std::string DefWithCodeMessedUp =
+  StringRef DefWithCodeMessedUp =
       "def SimpleValueCode {  let  \n"
       "Code=       \n"
       "               [{ A TokCode is  nothing more than a multi-line string "
