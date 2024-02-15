@@ -183,6 +183,39 @@ namespace dr2358 { // dr2358: 16
 }
 #endif
 
+// CWG2363 was closed as NAD, but its resolution does affirm that
+// a friend declaration cannot have an opaque-enumm-specifier.
+namespace dr2363 { // dr2363: yes
+
+enum class E0;
+enum E1 : int;
+
+struct A {
+  friend enum class E0;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E0;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E1;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E1;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E2;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+};
+} // namespace dr2363
+
 namespace dr2370 { // dr2370: no
 namespace N {
 typedef int type;
@@ -277,38 +310,5 @@ namespace dr2397 { // dr2397: 17
     auto (*c)[5] = &a;
   }
 } // namespace dr2397
-
-// CWG2363 was closed as NAD, but its resolution does affirm that
-// a friend declaration cannot have an opaque-enumm-specifier.
-namespace dr2363 { // dr2363: yes
-
-enum class E0;
-enum E1 : int;
-
-struct A {
-  friend enum class E0;
-  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
-  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
-
-  friend enum E0;
-  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-2 {{remove 'enum' to befriend an enum}}
-
-  friend enum class E1;
-  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
-  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
-
-  friend enum E1;
-  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-2 {{remove 'enum' to befriend an enum}}
-
-  friend enum class E2;
-  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
-  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
-};
-} // namespace dr2363
 
 #endif
