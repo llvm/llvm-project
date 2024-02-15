@@ -851,6 +851,7 @@ struct AAMDNodes {
   AAMDNodes adjustForAccess(unsigned AccessSize);
   AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
                             const DataLayout &DL);
+  AAMDNodes adjustForAccess(size_t Offset, unsigned AccessSize);
 };
 
 // Specialize DenseMapInfo for AAMDNodes.

@@ -836,7 +836,6 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
 
 AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, Type *AccessTy,
                                      const DataLayout &DL) {
-
   AAMDNodes New = shift(Offset);
   if (!DL.typeSizeEqualsStoreSize(AccessTy))
     return New;
@@ -845,4 +844,9 @@ AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, Type *AccessTy,
     return New;
 
   return New.adjustForAccess(Size.getKnownMinValue());
+}
+
+AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, unsigned AccessSize) {
+  AAMDNodes New = shift(Offset);
+  return New.adjustForAccess(AccessSize);
 }
