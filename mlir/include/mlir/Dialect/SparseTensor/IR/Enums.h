@@ -295,7 +295,7 @@ public:
   }
 
   /// Get the `LevelFormat` of the `LevelType`.
-  LevelFormat getLvlFmt() const {
+  constexpr LevelFormat getLvlFmt() const {
     return static_cast<LevelFormat>(lvlBits & 0xffff0000);
   }
 
@@ -307,12 +307,12 @@ public:
 
   /// Check if the `LevelType` has the properties
   template <LevelPropNonDefault p>
-  bool isa() const {
+  constexpr bool isa() const {
     return lvlBits & static_cast<uint64_t>(p);
   }
 
   /// Check if the `LevelType` needs positions array.
-  bool isWithPosLT() const {
+  constexpr bool isWithPosLT() const {
     return isa<LevelFormat::Compressed>() ||
            isa<LevelFormat::LooseCompressed>();
   }
