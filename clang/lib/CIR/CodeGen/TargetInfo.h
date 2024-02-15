@@ -15,10 +15,14 @@
 #define LLVM_CLANG_LIB_CIR_TARGETINFO_H
 
 #include "ABIInfo.h"
+#include "CIRGenValue.h"
+#include "mlir/IR/Types.h"
 
 #include <memory>
 
 namespace cir {
+
+class CIRGenFunction;
 
 /// This class organizes various target-specific codegeneration issues, like
 /// target-specific attributes, builtins and so on.
@@ -31,6 +35,24 @@ public:
 
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *Info; }
+
+  virtual bool isScalarizableAsmOperand(CIRGenFunction &CGF,
+                                        mlir::Type Ty) const {
+    return false;
+  }
+
+  /// Corrects the MLIR type for a given constraint and "usual"
+  /// type.
+  ///
+  /// \returns A new MLIR type, possibly the same as the original
+  /// on success
+  virtual mlir::Type adjustInlineAsmType(CIRGenFunction &CGF,
+                                         llvm::StringRef Constraint,
+                                         mlir::Type Ty) const {
+    return Ty;
+  }
+
+  virtual ~TargetCIRGenInfo() {}
 };
 
 } // namespace cir
