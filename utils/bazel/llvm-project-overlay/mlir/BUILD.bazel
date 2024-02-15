@@ -1529,6 +1529,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":DialectUtils",
+        ":FuncDialect",
         ":GPUCommonTransforms",
         ":GPUCompilationAttrInterfacesIncGen",
         ":GPUDialect",
