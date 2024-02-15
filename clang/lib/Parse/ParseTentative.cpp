@@ -737,7 +737,8 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 Parser::CXX11AttributeKind
 Parser::isCXX11AttributeSpecifier(bool Disambiguate,
                                   bool OuterMightBeMessageSend) {
-  if (Tok.is(tok::kw_alignas))
+  // alignas is an attribute specifier in C++ but not in C23.
+  if (Tok.is(tok::kw_alignas) && !getLangOpts().C23)
     return CAK_AttributeSpecifier;
 
   if (Tok.isRegularKeywordAttribute())
