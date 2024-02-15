@@ -26,26 +26,26 @@ template <typename T> struct removeConst<const T> {
 
 namespace scudo {
 
-#define OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT)                                 \
+#define OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, MEMBER)                         \
   template <typename Config, typename = TYPE> struct NAME##State {             \
     static constexpr removeConst<TYPE>::type getValue() { return DEFAULT; }    \
   };                                                                           \
   template <typename Config>                                                   \
-  struct NAME##State<Config, decltype(Config::NAME)> {                         \
+  struct NAME##State<Config, decltype(Config::MEMBER)> {                       \
     static constexpr removeConst<TYPE>::type getValue() {                      \
-      return Config::NAME;                                                     \
+      return Config::MEMBER;                                                   \
     }                                                                          \
   };
 
-#define OPTIONAL_TYPE_TEMPLATE(NAME, DEFAULT)                                  \
+#define OPTIONAL_TYPE_TEMPLATE(NAME, DEFAULT, MEMBER)                          \
   template <typename Config, typename Void = Config> struct NAME##Type {       \
     static constexpr bool enabled() { return false; }                          \
     using NAME = DEFAULT;                                                      \
   };                                                                           \
   template <typename Config>                                                   \
-  struct NAME##Type<Config, typename Config::NAME> {                           \
+  struct NAME##Type<Config, typename Config::MEMBER> {                         \
     static constexpr bool enabled() { return true; }                           \
-    using NAME = typename Config::NAME;                                        \
+    using NAME = typename Config::MEMBER;                                      \
   };
 
 template <typename AllocatorConfig> struct BaseConfig {
@@ -53,7 +53,7 @@ template <typename AllocatorConfig> struct BaseConfig {
   template <typename T> using NAME = typename AllocatorConfig::template NAME<T>;
 
 #define BASE_OPTIONAL(TYPE, NAME, DEFAULT)                                     \
-  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT)                                       \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, NAME)                                 \
   static constexpr removeConst<TYPE>::type get##NAME() {                       \
     return NAME##State<AllocatorConfig>::getValue();                           \
   }
@@ -77,13 +77,13 @@ template <typename AllocatorConfig> struct PrimaryConfig {
   }
 
 #define PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)                                  \
-  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT)                                       \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, NAME)                                 \
   static constexpr removeConst<TYPE>::type get##NAME() {                       \
     return NAME##State<typename AllocatorConfig::Primary>::getValue();         \
   }
 
 #define PRIMARY_OPTIONAL_TYPE(NAME, DEFAULT)                                   \
-  OPTIONAL_TYPE_TEMPLATE(NAME, DEFAULT)                                        \
+  OPTIONAL_TYPE_TEMPLATE(NAME, DEFAULT, NAME)                                  \
   static constexpr bool has##NAME() {                                          \
     return NAME##Type<typename AllocatorConfig::Primary>::enabled();           \
   }                                                                            \
@@ -113,21 +113,16 @@ template <typename AllocatorConfig> struct SecondaryConfig {
     }
 
 #define SECONDARY_CACHE_OPTIONAL(TYPE, NAME, DEFAULT)                          \
-  template <typename Config, typename = TYPE> struct NAME##State {             \
-    static constexpr removeConst<TYPE>::type getValue() { return DEFAULT; }    \
-  };                                                                           \
-  template <typename Config>                                                   \
-  struct NAME##State<Config, decltype(Config::Cache)> {                        \
-    static constexpr removeConst<TYPE>::type getValue() {                      \
-      return Config::Cache::NAME;                                              \
-    }                                                                          \
-  };                                                                           \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, Cache::NAME)                          \
   static constexpr removeConst<TYPE>::type get##NAME() {                       \
     return NAME##State<typename AllocatorConfig::Secondary>::getValue();       \
   }
 #include "allocator_config.def"
-  };
+  }; // CacheConfig
 }; // SecondaryConfig
+
+#undef OPTIONAL_TEMPLATE
+#undef OPTIONAL_TEMPLATE_TYPE
 
 } // namespace scudo
 
