@@ -4795,7 +4795,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // vectors or matrices.
     
     // TODO: Support HLSL matrices.
-    assert(From->getType()->isMatrixType() || ToType->isMatrixType() &&
+    assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
            "Element conversion for matrix types is not implemented yet.");
     assert(From->getType()->isVectorType() && ToType->isVectorType() &&
            "Element conversion is only supported for vector types.");
