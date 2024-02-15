@@ -1622,6 +1622,23 @@ func.func @omp_single_multiple_blocks() {
   return
 }
 
+func.func private @copy_i32(memref<i32>, memref<i32>)
+
+// CHECK-LABEL: func @omp_single_copyprivate
+func.func @omp_single_copyprivate(%data_var: memref<i32>) {
+  omp.parallel {
+    // CHECK: omp.single copyprivate(%{{.*}} -> @copy_i32 : memref<i32>) {
+    omp.single copyprivate(%data_var -> @copy_i32 : memref<i32>) {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: @omp_task
 // CHECK-SAME: (%[[bool_var:.*]]: i1, %[[i64_var:.*]]: i64, %[[i32_var:.*]]: i32, %[[data_var:.*]]: memref<i32>)
 func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memref<i32>) {
