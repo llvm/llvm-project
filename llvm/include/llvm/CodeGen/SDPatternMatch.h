@@ -41,11 +41,7 @@ public:
 
   const SelectionDAG *getDAG() const { return DAG; }
 
-  const TargetLowering *getTLI() const {
-    if (TLI)
-      return TLI;
-    return DAG ? &DAG->getTargetLoweringInfo() : nullptr;
-  }
+  const TargetLowering *getTLI() const { return TLI; }
 
   // Optional trait function(s)
 
@@ -108,7 +104,9 @@ struct Value_match {
   explicit Value_match(SDValue Match) : MatchVal(Match) {}
 
   template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return (MatchVal && (MatchVal == N)) || N.getNode();
+    if (MatchVal)
+      return MatchVal == N;
+    return N.getNode();
   }
 };
 
@@ -125,14 +123,14 @@ struct Opcode_match {
   template <typename MatchContext>
   std::enable_if_t<is_detected<ctx_has_match, MatchContext>::value, bool>
   match(const MatchContext &Ctx, SDValue N) {
-    return N && Ctx.match(N, Opcode);
+    return Ctx.match(N, Opcode);
   }
 
   // Default implementation.
   template <typename MatchContext>
   std::enable_if_t<!is_detected<ctx_has_match, MatchContext>::value, bool>
   match(const MatchContext &, SDValue N) {
-    return N && N->getOpcode() == Opcode;
+    return N->getOpcode() == Opcode;
   }
 };
 
@@ -148,7 +146,7 @@ template <unsigned NumUses, typename Pattern> struct NUses_match {
     // SDNode::hasNUsesOfValue is pretty expensive when the SDNode produces
     // multiple results, hence we check the subsequent pattern here before
     // checking the number of value users.
-    return N && P.match(Ctx, N) && N->hasNUsesOfValue(NumUses, N.getResNo());
+    return P.match(Ctx, N) && N->hasNUsesOfValue(NumUses, N.getResNo());
   }
 };
 
@@ -174,11 +172,8 @@ struct Value_bind {
   explicit Value_bind(SDValue &N) : BindVal(N) {}
 
   template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    if (N) {
-      BindVal = N;
-      return true;
-    }
-    return false;
+    BindVal = N;
+    return true;
   }
 };
 
@@ -193,7 +188,8 @@ template <typename Pattern> struct TLI_pred_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    return Ctx.getTLI() && N && PredFunc(*Ctx.getTLI(), N) && P.match(Ctx, N);
+    assert(Ctx.getTLI() && "TargetLowering is required for this pattern.");
+    return PredFunc(*Ctx.getTLI(), N) && P.match(Ctx, N);
   }
 };
 
@@ -231,8 +227,6 @@ struct ValueType_bind {
   explicit ValueType_bind(EVT &Bind) : BindVT(Bind) {}
 
   template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    if (!N)
-      return false;
     BindVT = N.getValueType();
     return true;
   }
@@ -241,85 +235,77 @@ struct ValueType_bind {
 /// Retreive the ValueType of the current SDValue.
 inline ValueType_bind m_VT(EVT &VT) { return ValueType_bind(VT); }
 
-template <typename Pattern> struct ValueType_match {
-  std::function<bool(EVT)> PredFunc;
+template <typename Pattern, typename PredFuncT> struct ValueType_match {
+  PredFuncT PredFunc;
   Pattern P;
 
-  ValueType_match(decltype(PredFunc) &&Pred, const Pattern &P)
-      : PredFunc(std::move(Pred)), P(P) {}
+  ValueType_match(const PredFuncT &Pred, const Pattern &P)
+      : PredFunc(Pred), P(P) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    return N && PredFunc(N.getValueType()) && P.match(Ctx, N);
+    return PredFunc(N.getValueType()) && P.match(Ctx, N);
   }
 };
 
+// Explicit deduction guide.
+template <typename PredFuncT, typename Pattern>
+ValueType_match(const PredFuncT &Pred, const Pattern &P)
+    -> ValueType_match<Pattern, PredFuncT>;
+
 /// Match a specific ValueType.
 template <typename Pattern>
-inline ValueType_match<Pattern> m_SpecificVT(EVT RefVT, const Pattern &P) {
-  return ValueType_match<Pattern>([=](EVT VT) { return VT == RefVT; }, P);
+inline auto m_SpecificVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) { return VT == RefVT; }, P};
 }
-inline ValueType_match<Value_match> m_SpecificVT(EVT RefVT) {
-  return ValueType_match<Value_match>([=](EVT VT) { return VT == RefVT; },
-                                      m_Value());
+inline auto m_SpecificVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) { return VT == RefVT; }, m_Value()};
 }
 
-inline ValueType_match<Value_match> m_Glue() { return m_SpecificVT(MVT::Glue); }
-inline ValueType_match<Value_match> m_OtherVT() {
-  return m_SpecificVT(MVT::Other);
-}
+inline auto m_Glue() { return m_SpecificVT(MVT::Glue); }
+inline auto m_OtherVT() { return m_SpecificVT(MVT::Other); }
 
 /// Match any integer ValueTypes.
-template <typename Pattern>
-inline ValueType_match<Pattern> m_IntegerVT(const Pattern &P) {
-  return ValueType_match<Pattern>([](EVT VT) { return VT.isInteger(); }, P);
+template <typename Pattern> inline auto m_IntegerVT(const Pattern &P) {
+  return ValueType_match{[](EVT VT) { return VT.isInteger(); }, P};
 }
-inline ValueType_match<Value_match> m_IntegerVT() {
-  return ValueType_match<Value_match>([](EVT VT) { return VT.isInteger(); },
-                                      m_Value());
+inline auto m_IntegerVT() {
+  return ValueType_match{[](EVT VT) { return VT.isInteger(); }, m_Value()};
 }
 
 /// Match any floating point ValueTypes.
-template <typename Pattern>
-inline ValueType_match<Pattern> m_FloatingPointVT(const Pattern &P) {
-  return ValueType_match<Pattern>([](EVT VT) { return VT.isFloatingPoint(); },
-                                  P);
+template <typename Pattern> inline auto m_FloatingPointVT(const Pattern &P) {
+  return ValueType_match{[](EVT VT) { return VT.isFloatingPoint(); }, P};
 }
-inline ValueType_match<Value_match> m_FloatingPointVT() {
-  return ValueType_match<Value_match>(
-      [](EVT VT) { return VT.isFloatingPoint(); }, m_Value());
+inline auto m_FloatingPointVT() {
+  return ValueType_match{[](EVT VT) { return VT.isFloatingPoint(); },
+                         m_Value()};
 }
 
 /// Match any vector ValueTypes.
-template <typename Pattern>
-inline ValueType_match<Pattern> m_VectorVT(const Pattern &P) {
-  return ValueType_match<Pattern>([](EVT VT) { return VT.isVector(); }, P);
+template <typename Pattern> inline auto m_VectorVT(const Pattern &P) {
+  return ValueType_match{[](EVT VT) { return VT.isVector(); }, P};
 }
-inline ValueType_match<Value_match> m_VectorVT() {
-  return ValueType_match<Value_match>([](EVT VT) { return VT.isVector(); },
-                                      m_Value());
+inline auto m_VectorVT() {
+  return ValueType_match{[](EVT VT) { return VT.isVector(); }, m_Value()};
 }
 
 /// Match fixed-length vector ValueTypes.
-template <typename Pattern>
-inline ValueType_match<Pattern> m_FixedVectorVT(const Pattern &P) {
-  return ValueType_match<Pattern>(
-      [](EVT VT) { return VT.isFixedLengthVector(); }, P);
+template <typename Pattern> inline auto m_FixedVectorVT(const Pattern &P) {
+  return ValueType_match{[](EVT VT) { return VT.isFixedLengthVector(); }, P};
 }
-inline ValueType_match<Value_match> m_FixedVectorVT() {
-  return ValueType_match<Value_match>(
-      [](EVT VT) { return VT.isFixedLengthVector(); }, m_Value());
+inline auto m_FixedVectorVT() {
+  return ValueType_match{[](EVT VT) { return VT.isFixedLengthVector(); },
+                         m_Value()};
 }
 
 /// Match scalable vector ValueTypes.
-template <typename Pattern>
-inline ValueType_match<Pattern> m_ScalableVectorVT(const Pattern &P) {
-  return ValueType_match<Pattern>([](EVT VT) { return VT.isScalableVector(); },
-                                  P);
+template <typename Pattern> inline auto m_ScalableVectorVT(const Pattern &P) {
+  return ValueType_match{[](EVT VT) { return VT.isScalableVector(); }, P};
 }
-inline ValueType_match<Value_match> m_ScalableVectorVT() {
-  return ValueType_match<Value_match>(
-      [](EVT VT) { return VT.isScalableVector(); }, m_Value());
+inline auto m_ScalableVectorVT() {
+  return ValueType_match{[](EVT VT) { return VT.isScalableVector(); },
+                         m_Value()};
 }
 
 /// Match legal ValueTypes based on the information provided by TargetLowering.
@@ -370,11 +356,11 @@ struct Or<Pred, Preds...> : Or<Preds...> {
   }
 };
 
-template <typename... Preds> And<Preds...> m_all_of(Preds &&...preds) {
+template <typename... Preds> And<Preds...> m_AllOf(Preds &&...preds) {
   return And<Preds...>(std::forward<Preds>(preds)...);
 }
 
-template <typename... Preds> Or<Preds...> m_any_of(Preds &&...preds) {
+template <typename... Preds> Or<Preds...> m_AnyOf(Preds &&...preds) {
   return Or<Preds...>(std::forward<Preds>(preds)...);
 }
 
@@ -387,9 +373,6 @@ template <typename... OpndPreds> struct Node_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (!N)
-      return false;
-
     if (OpIdx == 0) {
       // Check opcode
       if (!sd_context_match(N, Ctx, m_Opc(Opcode)))
@@ -414,9 +397,6 @@ struct Node_match<OpndPred, OpndPreds...> : Node_match<OpndPreds...> {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (!N)
-      return false;
-
     if (OpIdx == 0) {
       // Check opcode
       if (!sd_context_match(N, Ctx, m_Opc(Opcode)))
@@ -439,7 +419,7 @@ Node_match<OpndPreds...> m_Node(unsigned Opcode, OpndPreds &&...preds) {
 
 /// Provide number of operands that are not chain or glue, as well as the first
 /// index of such operand.
-struct EffectiveOperands {
+template <bool ExcludeChain> struct EffectiveOperands {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
@@ -459,8 +439,16 @@ struct EffectiveOperands {
   }
 };
 
+template <> struct EffectiveOperands<false> {
+  unsigned Size = 0;
+  unsigned FirstIndex = 0;
+
+  explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {}
+};
+
 // === Binary operations ===
-template <typename LHS_P, typename RHS_P, bool Commutable = false>
+template <typename LHS_P, typename RHS_P, bool Commutable = false,
+          bool ExcludeChain = false>
 struct BinaryOpc_match {
   unsigned Opcode;
   LHS_P LHS;
@@ -471,17 +459,13 @@ struct BinaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (!N)
-      return false;
-
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands EO(N);
-      if (EO.Size == 2)
-        return (LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
-                RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
-               (Commutable &&
-                LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
-                RHS.match(Ctx, N->getOperand(EO.FirstIndex)));
+      EffectiveOperands<ExcludeChain> EO(N);
+      assert(EO.Size == 2);
+      return (LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
+              RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
+             (Commutable && LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
+              RHS.match(Ctx, N->getOperand(EO.FirstIndex)));
     }
 
     return false;
@@ -497,6 +481,17 @@ template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_c_BinOp(unsigned Opc, const LHS &L,
                                                  const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(Opc, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, false, true>
+m_ChainedBinOp(unsigned Opc, const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, false, true>(Opc, L, R);
+}
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true, true>
+m_c_ChainedBinOp(unsigned Opc, const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true, true>(Opc, L, R);
 }
 
 // Common binary operations
@@ -573,7 +568,7 @@ inline BinaryOpc_match<LHS, RHS, false> m_FRem(const LHS &L, const RHS &R) {
 }
 
 // === Unary operations ===
-template <typename Opnd_P> struct UnaryOpc_match {
+template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
   Opnd_P Opnd;
 
@@ -581,13 +576,10 @@ template <typename Opnd_P> struct UnaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (!N)
-      return false;
-
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands EO(N);
-      if (EO.Size == 1)
-        return Opnd.match(Ctx, N->getOperand(EO.FirstIndex));
+      EffectiveOperands<ExcludeChain> EO(N);
+      assert(EO.Size == 1);
+      return Opnd.match(Ctx, N->getOperand(EO.FirstIndex));
     }
 
     return false;
@@ -597,6 +589,11 @@ template <typename Opnd_P> struct UnaryOpc_match {
 template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_UnaryOp(unsigned Opc, const Opnd &Op) {
   return UnaryOpc_match<Opnd>(Opc, Op);
+}
+template <typename Opnd>
+inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
+                                                   const Opnd &Op) {
+  return UnaryOpc_match<Opnd, true>(Opc, Op);
 }
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {

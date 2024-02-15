@@ -141,10 +141,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(Add, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(
       Mul, m_Mul(m_OneUse(m_Opc(ISD::SUB)), m_NUses<2>(m_Specific(Add)))));
-  EXPECT_TRUE(sd_match(SFAdd, m_BinOp(ISD::STRICT_FADD, m_SpecificVT(Float32VT),
-                                      m_SpecificVT(Float32VT))));
-  EXPECT_FALSE(sd_match(
-      SFAdd, m_BinOp(ISD::STRICT_FADD, m_OtherVT(), m_SpecificVT(Float32VT))));
+  EXPECT_TRUE(
+      sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_SpecificVT(Float32VT),
+                                     m_SpecificVT(Float32VT))));
+  EXPECT_FALSE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_OtherVT(),
+                                              m_SpecificVT(Float32VT))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
@@ -209,8 +210,8 @@ TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(
-      Sub, m_any_of(m_Opc(ISD::ADD), m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
-  EXPECT_TRUE(sd_match(Add, m_all_of(m_Opc(ISD::ADD), m_OneUse())));
+      Sub, m_AnyOf(m_Opc(ISD::ADD), m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
+  EXPECT_TRUE(sd_match(Add, m_AllOf(m_Opc(ISD::ADD), m_OneUse())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchNode) {
