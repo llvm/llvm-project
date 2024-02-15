@@ -44,7 +44,7 @@ template <size_t Bits> struct DyadicFloat {
     static_assert(FPBits<T>::FRACTION_LEN < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.sign();
-    exponent = x_bits.get_exponent() - FPBits<T>::FRACTION_LEN;
+    exponent = x_bits.get_explicit_exponent() - FPBits<T>::FRACTION_LEN;
     mantissa = MantissaType(x_bits.get_explicit_mantissa());
     normalize();
   }
@@ -79,24 +79,31 @@ template <size_t Bits> struct DyadicFloat {
     return *this;
   }
 
-  // Assume that it is already normalized and output is not underflow.
+  // Assume that it is already normalized.
   // Output is rounded correctly with respect to the current rounding mode.
-  // TODO(lntue): Add support for underflow.
-  // TODO(lntue): Test or add specialization for x86 long double.
   template <typename T,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   explicit operator T() const {
-    // TODO(lntue): Do we need to treat signed zeros properly?
-    if (mantissa.is_zero())
-      return 0.0;
+    if (LIBC_UNLIKELY(mantissa.is_zero()))
+      return FPBits<T>::zero(sign).get_val();
 
     // Assume that it is normalized, and output is also normal.
     constexpr uint32_t PRECISION = FPBits<T>::FRACTION_LEN + 1;
     using output_bits_t = typename FPBits<T>::StorageType;
+    constexpr output_bits_t IMPLICIT_MASK =
+        FPBits<T>::SIG_MASK - FPBits<T>::FRACTION_MASK;
 
     int exp_hi = exponent + static_cast<int>((Bits - 1) + FPBits<T>::EXP_BIAS);
+
+    if (LIBC_UNLIKELY(exp_hi > 2 * FPBits<T>::EXP_BIAS)) {
+      // Results overflow.
+      T d_hi =
+          FPBits<T>::create_value(sign, 2 * FPBits<T>::EXP_BIAS, IMPLICIT_MASK)
+              .get_val();
+      return T(2) * d_hi;
+    }
 
     bool denorm = false;
     uint32_t shift = Bits - PRECISION;
@@ -112,49 +119,57 @@ template <size_t Bits> struct DyadicFloat {
 
     MantissaType m_hi(mantissa >> shift);
 
-    T d_hi = FPBits<T>::create_value(sign, exp_hi,
-                                     static_cast<output_bits_t>(m_hi) &
-                                         FPBits<T>::FRACTION_MASK)
+    T d_hi = FPBits<T>::create_value(
+                 sign, exp_hi,
+                 (static_cast<output_bits_t>(m_hi) & FPBits<T>::SIG_MASK) |
+                     IMPLICIT_MASK)
                  .get_val();
 
-    const MantissaType round_mask = MantissaType(1) << (shift - 1);
-    const MantissaType sticky_mask = round_mask - MantissaType(1);
+    MantissaType round_mask = MantissaType(1) << (shift - 1);
+    MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
     bool sticky_bit = !(mantissa & sticky_mask).is_zero();
     int round_and_sticky = int(round_bit) * 2 + int(sticky_bit);
 
     T d_lo;
+
     if (LIBC_UNLIKELY(exp_lo <= 0)) {
       // d_lo is denormal, but the output is normal.
       int scale_up_exponent = 2 * PRECISION;
       T scale_up_factor =
           FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS + scale_up_exponent,
-                                  output_bits_t(0))
+                                  IMPLICIT_MASK)
               .get_val();
       T scale_down_factor =
           FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS - scale_up_exponent,
-                                  output_bits_t(0))
+                                  IMPLICIT_MASK)
               .get_val();
 
       d_lo = FPBits<T>::create_value(sign, exp_lo + scale_up_exponent,
-                                     output_bits_t(0))
+                                     IMPLICIT_MASK)
                  .get_val();
 
       return multiply_add(d_lo, T(round_and_sticky), d_hi * scale_up_factor) *
              scale_down_factor;
     }
 
-    d_lo = FPBits<T>::create_value(sign, exp_lo, output_bits_t(0)).get_val();
+    d_lo = FPBits<T>::create_value(sign, exp_lo, IMPLICIT_MASK).get_val();
 
     // Still correct without FMA instructions if `d_lo` is not underflow.
     T r = multiply_add(d_lo, T(round_and_sticky), d_hi);
 
     if (LIBC_UNLIKELY(denorm)) {
-      // Output is denormal, simply clear the exponent field.
-      output_bits_t clear_exp = output_bits_t(exp_hi)
-                                << FPBits<T>::FRACTION_LEN;
+      // Exponent before rounding is in denormal range, simply clear the
+      // exponent field.
+      output_bits_t clear_exp = (output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
+      if (!(r_bits & FPBits<T>::EXP_MASK)) {
+        // Output is denormal after rounding, clear the implicit bit for 80-bit
+        // long double.
+        r_bits -= IMPLICIT_MASK;
+      }
+
       return FPBits<T>(r_bits).get_val();
     }
 
