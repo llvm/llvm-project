@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target
+
 // Hard-float, valid
 // RUN: %clang --target=aarch64-none-elf                               -c %s -o /dev/null
 // RUN: %clang --target=aarch64-none-elf                   -mabi=aapcs -c %s -o /dev/null
