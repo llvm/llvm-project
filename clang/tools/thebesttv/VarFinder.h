@@ -51,6 +51,12 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
             return false;
         return true;
     }
+
+    bool VisitMemberExpr(MemberExpr *me) {
+        if (findMatch(me, me->getMemberDecl(), me->getMemberLoc()))
+            return false;
+        return true;
+    }
 };
 
 #endif
