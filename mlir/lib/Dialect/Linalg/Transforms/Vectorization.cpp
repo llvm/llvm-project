@@ -1420,28 +1420,16 @@ static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
   assert(sourceShape.size() == readShape.size());
   auto maskType = VectorType::get(readShape, builder.getI1Type());
-  Type vecElemType = padValue != nullptr
-                         ? padValue.getType()
-                         : cast<ShapedType>(source.getType()).getElementType();
-  auto vectorType = VectorType::get(readShape, vecElemType);
+  auto vectorType = VectorType::get(readShape, padValue.getType());
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-  vector::TransferReadOp transferReadOp = nullptr;
-  if (padValue == nullptr) {
-    transferReadOp = builder.create<vector::TransferReadOp>(
-        loc,
-        /*vectorType=*/vectorType,
-        /*source=*/source,
-        /*indices=*/SmallVector<Value>(readRank, zero));
-  } else {
-    transferReadOp = builder.create<vector::TransferReadOp>(
-        loc,
-        /*vectorType=*/vectorType,
-        /*source=*/source,
-        /*indices=*/SmallVector<Value>(readRank, zero),
-        /*padding=*/padValue,
-        /*inBounds=*/SmallVector<bool>(readRank, true));
-  }
+  auto transferReadOp = builder.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/source,
+      /*indices=*/SmallVector<Value>(readRank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/SmallVector<bool>(readRank, true));
   if (llvm::equal(readShape, sourceShape)) {
     return transferReadOp;
   }
@@ -1588,21 +1576,32 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   RankedTensorType unpackTensorType = unpackOp.getSourceType();
 
   SmallVector<int64_t> readMaskShape(unpackTensorType.getShape());
-  llvm::ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
-  llvm::ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
+  ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
+  ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
   for (unsigned int i = 0; i < inputVectorSizes.size(); i++) {
     readMaskShape[i] = inputVectorSizes[i];
   }
+
+  // ReadMask is the size of tensor used to read and apply mask. It is
+  // set like this. Let's say the vectorSize (VS) array is size 'N' and
+  // the sourceShape(SS) is 'M' where M >= N and InnerTileSizes (IT) of
+  // size M-N
+  // Thus:
+  // ReadMaskShape (initial) = [VS[0], ..., VS[N-1], SS[N], ..., SS[M-1]]
+  // Then divide all the readMaskShape locations pointed by innerDimPos
+  // by the innerTileSize attribute value.
+  // E.g. let's say let's say unpackTensorType.getShape() = <8x8x32x16>
+  // inner Dim Pos = [0, 1] and Inner Tiles = [32, 16], vector_sizes are [512,
+  // 128] then read shape is:
+  //   ReadMaskShape(initial): [8, 8, 32, 16]
+  //   After settin vectorSizes: [512, 128, 32, 16]
+  //   Final Value(after innerDim Adjustment): [512/32, 128/16, 32, 16]
+  //                                           = [16, 8, 32, 16]
   for (auto [index, size] : enumerate(innerTiles)) {
     readMaskShape[innerDimPos[index]] =
         llvm::divideCeil(readMaskShape[innerDimPos[index]], size);
   }
 
-  // ReadMask is the size of tensor used to read and apply mask. It is
-  // set like this. Let's say the vectorSize (VS) array is size 'N' and
-  // the sourceShape(SS) is 'M' where M >= N
-  // Thus:
-  // ReadMaskShape = [VS[0], ..., VS[N-1], SS[N], ..., SS[M-1]]
   ReifiedRankedShapedTypeDims reifiedRetShapes;
   LogicalResult status =
       cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
@@ -1613,11 +1612,14 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   }
   Location loc = unpackOp->getLoc();
 
-  // Read result, mask if necessary.
+  auto padValue = rewriter.create<arith::ConstantOp>(
+      loc, rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
+
+  // Read result, mask if necessary. If transferReadOp shape is not equal
+  // to shape of source, then a mask is necessary.
   Value readResult = createReadOrMaskedRead(
       rewriter, loc, unpackOp.getSource(),
-      llvm::ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()),
-      nullptr);
+      ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
 
   PackingMetadata packMetadata;
   SmallVector<int64_t> lastDimToInsertPosPerm = invertPermutationVector(
@@ -1627,9 +1629,7 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
   applyPermutationToVector(stripMineShape, lastDimToInsertPosPerm);
   RankedTensorType stripMineTensorType =
-      RankedTensorType::Builder(stripMineShape, stripMineElemType, {})
-          .setShape(stripMineShape);
-
+      RankedTensorType::get(stripMineShape, stripMineElemType);
   // Transpose the appropriate rows to match output.
   vector::TransposeOp transposeOp = rewriter.create<vector::TransposeOp>(
       loc, readResult, lastDimToInsertPosPerm);
