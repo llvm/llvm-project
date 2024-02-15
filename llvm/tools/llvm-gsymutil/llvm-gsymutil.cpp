@@ -535,13 +535,16 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       }
 
       llvm::json::Object Categories;
-      Aggregation.EnumerateResults([&](StringRef category, unsigned count) {
+      uint64_t ErrorCount = 0;
+      Aggregation.EnumerateResults([&](StringRef Category, unsigned Count) {
         llvm::json::Object Val;
-        Val.try_emplace("count", count);
-        Categories.try_emplace(category, std::move(Val));
+        Val.try_emplace("count", Count);
+        Categories.try_emplace(Category, std::move(Val));
+        ErrorCount += Count;
       });
       llvm::json::Object RootNode;
       RootNode.try_emplace("error-categories", std::move(Categories));
+      RootNode.try_emplace("error-count", ErrorCount);
 
       JsonStream << llvm::json::Value(std::move(RootNode));
     }
