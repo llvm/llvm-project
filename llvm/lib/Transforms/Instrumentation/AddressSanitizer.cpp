@@ -346,7 +346,8 @@ static cl::opt<bool>
                                cl::Hidden, cl::init(true));
 
 static cl::opt<AsanCtorKind> ClConstructorKind(
-    "asan-constructor-kind", cl::desc("Sets the ASan constructor kind"),
+    "asan-constructor-kind",
+    cl::desc("Sets the ASan constructor kind"),
     cl::values(clEnumValN(AsanCtorKind::None, "none", "No constructors"),
                clEnumValN(AsanCtorKind::Global, "global",
                           "Use global constructors")),
