@@ -2797,7 +2797,7 @@ RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
     return RankedTensorType();
   if (staticHigh.size() != rank)
     return RankedTensorType();
-  if (!(resultShape.empty() || resultShape.size() == rank))
+  if (!resultShape.empty() && resultShape.size() != rank)
     return RankedTensorType();
 
   SmallVector<int64_t, 4> inferredShape;
