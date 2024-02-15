@@ -496,6 +496,12 @@ long long test_builtin_readcyclecounter(void) {
   return __builtin_readcyclecounter();
 }
 
+// CHECK-LABEL: define{{.*}} i64 @test_builtin_readsteadycounter
+long long test_builtin_readsteadycounter(void) {
+  // CHECK: call i64 @llvm.readsteadycounter()
+  return __builtin_readsteadycounter();
+}
+
 /// __builtin_launder should be a NOP in C since there are no vtables.
 // CHECK-LABEL: define{{.*}} void @test_builtin_launder
 void test_builtin_launder(int *p) {

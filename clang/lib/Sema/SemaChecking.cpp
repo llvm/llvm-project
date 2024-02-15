@@ -7162,13 +7162,11 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
 
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
-  if (const RecordType *UT = Expr->getType()->getAsUnionType()) {
-    if (UT->getDecl()->hasAttr<TransparentUnionAttr>())
-      if (const CompoundLiteralExpr *CLE =
-          dyn_cast<CompoundLiteralExpr>(Expr))
-        if (const InitListExpr *ILE =
-            dyn_cast<InitListExpr>(CLE->getInitializer()))
-          Expr = ILE->getInit(0);
+  if (const RecordType *UT = Expr->getType()->getAsUnionType();
+      UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+    if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
+      if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
+        Expr = ILE->getInit(0);
   }
 
   bool Result;
@@ -16129,10 +16127,10 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 /// Check conversion of given expression to boolean.
 /// Input argument E is a logical expression.
 static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
-  // While C23 does have bool as a keyword, we still need to run the bool-like
-  // conversion checks as bools are still not used as the return type from
-  // "boolean" operators or as the input type for conditional operators.
-  if (S.getLangOpts().Bool && !S.getLangOpts().C23)
+  // Run the bool-like conversion checks only for C since there bools are
+  // still not used as the return type from "boolean" operators or as the input
+  // type for conditional operators.
+  if (S.getLangOpts().CPlusPlus)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isAtomicType())
     return;
@@ -16652,6 +16650,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     struct Value {
       explicit Value(unsigned Parent) : Parent(Parent), Merged(false) {}
       unsigned Parent : 31;
+      LLVM_PREFERRED_TYPE(bool)
       unsigned Merged : 1;
     };
     SmallVector<Value, 8> Values;

@@ -98,8 +98,9 @@ constexpr _Complex int I3 = {15};
 static_assert(__real(I3) == 15, "");
 static_assert(__imag(I3) == 0, "");
 
-/// FIXME: This should work in the new interpreter as well.
-// constexpr _Complex _BitInt(8) A = 0;// = {4};
+constexpr _Complex _BitInt(8) A = {4};
+static_assert(__real(A) == 4, "");
+static_assert(__imag(A) == 0, "");
 
 
 constexpr _Complex double Doubles[4] = {{1.0, 2.0}};
