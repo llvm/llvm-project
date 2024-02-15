@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -799,7 +802,8 @@ public:
 ///  \code
 ///  p = q;
 ///  \endcode
-class PointerAssignmentGadget : public FixableGadget {
+/// where both `p` and `q` are pointers.
+class PtrToPtrAssignmentGadget : public FixableGadget {
 private:
   static constexpr const char *const PointerAssignLHSTag = "ptrLHS";
   static constexpr const char *const PointerAssignRHSTag = "ptrRHS";
@@ -807,13 +811,13 @@ private:
   const DeclRefExpr * PtrRHS;         // the RHS pointer expression in `PA`
 
 public:
-  PointerAssignmentGadget(const MatchFinder::MatchResult &Result)
-      : FixableGadget(Kind::PointerAssignment),
-    PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
-    PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
+  PtrToPtrAssignmentGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::PtrToPtrAssignment),
+        PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
+        PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
 
   static bool classof(const Gadget *G) {
-    return G->getKind() == Kind::PointerAssignment;
+    return G->getKind() == Kind::PtrToPtrAssignment;
   }
 
   static Matcher matcher() {
@@ -845,6 +849,60 @@ public:
   getStrategyImplications() const override {
     return std::make_pair(cast<VarDecl>(PtrLHS->getDecl()),
                           cast<VarDecl>(PtrRHS->getDecl()));
+  }
+};
+
+/// An assignment expression of the form:
+///  \code
+///  ptr = array;
+///  \endcode
+/// where `p` is a pointer and `array` is a constant size array.
+class CArrayToPtrAssignmentGadget : public FixableGadget {
+private:
+  static constexpr const char *const PointerAssignLHSTag = "ptrLHS";
+  static constexpr const char *const PointerAssignRHSTag = "ptrRHS";
+  const DeclRefExpr *PtrLHS; // the LHS pointer expression in `PA`
+  const DeclRefExpr *PtrRHS; // the RHS pointer expression in `PA`
+
+public:
+  CArrayToPtrAssignmentGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::CArrayToPtrAssignment),
+        PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
+        PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::CArrayToPtrAssignment;
+  }
+
+  static Matcher matcher() {
+    auto PtrAssignExpr = binaryOperator(
+        allOf(hasOperatorName("="),
+              hasRHS(ignoringParenImpCasts(
+                  declRefExpr(hasType(hasCanonicalType(constantArrayType())),
+                              toSupportedVariable())
+                      .bind(PointerAssignRHSTag))),
+              hasLHS(declRefExpr(hasPointerType(), toSupportedVariable())
+                         .bind(PointerAssignLHSTag))));
+
+    return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
+  }
+
+  virtual std::optional<FixItList>
+  getFixits(const FixitStrategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override {
+    // FIXME: This should be the binary operator, assuming that this method
+    // makes sense at all on a FixableGadget.
+    return PtrLHS;
+  }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return DeclUseList{PtrLHS, PtrRHS};
+  }
+
+  virtual std::optional<std::pair<const VarDecl *, const VarDecl *>>
+  getStrategyImplications() const override {
+    return {};
   }
 };
 
@@ -1471,7 +1529,7 @@ bool clang::internal::anyConflict(const SmallVectorImpl<FixItHint> &FixIts,
 }
 
 std::optional<FixItList>
-PointerAssignmentGadget::getFixits(const FixitStrategy &S) const {
+PtrToPtrAssignmentGadget::getFixits(const FixitStrategy &S) const {
   const auto *LeftVD = cast<VarDecl>(PtrLHS->getDecl());
   const auto *RightVD = cast<VarDecl>(PtrRHS->getDecl());
   switch (S.lookup(LeftVD)) {
@@ -1486,6 +1544,42 @@ PointerAssignmentGadget::getFixits(const FixitStrategy &S) const {
     return std::nullopt;
   case FixitStrategy::Kind::Vector:
     llvm_unreachable("unsupported strategies for FixableGadgets");
+  }
+  return std::nullopt;
+}
+
+/// \returns fixit that adds .data() call after \DRE.
+static inline std::optional<FixItList> createDataFixit(const ASTContext &Ctx,
+                                                       const DeclRefExpr *DRE);
+
+std::optional<FixItList>
+CArrayToPtrAssignmentGadget::getFixits(const FixitStrategy &S) const {
+  const auto *LeftVD = cast<VarDecl>(PtrLHS->getDecl());
+  const auto *RightVD = cast<VarDecl>(PtrRHS->getDecl());
+  // TLDR: Implementing fixits for non-Wontfix strategy on both LHS and RHS is
+  // non-trivial.
+  //
+  // CArrayToPtrAssignmentGadget doesn't have strategy implications because
+  // constant size array propagates its bounds. Because of that LHS and RHS are
+  // addressed by two different fixits.
+  //
+  // At the same time FixitStrategy S doesn't reflect what group a fixit belongs
+  // to and can't be generally relied on in multi-variable Fixables!
+  //
+  // E. g. If an instance of this gadget is fixing variable on LHS then the
+  // variable on RHS is fixed by a different fixit and its strategy for LHS
+  // fixit is as if Wontfix.
+  //
+  // The only exception is Wontfix strategy for a given variable as that is
+  // valid for any fixit produced for the given input source code.
+  if (S.lookup(LeftVD) == FixitStrategy::Kind::Span) {
+    if (S.lookup(RightVD) == FixitStrategy::Kind::Wontfix) {
+      return FixItList{};
+    }
+  } else if (S.lookup(LeftVD) == FixitStrategy::Kind::Wontfix) {
+    if (S.lookup(RightVD) == FixitStrategy::Kind::Array) {
+      return createDataFixit(RightVD->getASTContext(), PtrRHS);
+    }
   }
   return std::nullopt;
 }
@@ -1907,6 +2001,19 @@ PointerDereferenceGadget::getFixits(const FixitStrategy &S) const {
   return std::nullopt;
 }
 
+static inline std::optional<FixItList> createDataFixit(const ASTContext &Ctx,
+                                                       const DeclRefExpr *DRE) {
+  const SourceManager &SM = Ctx.getSourceManager();
+  // Inserts the .data() after the DRE
+  std::optional<SourceLocation> EndOfOperand =
+      getPastLoc(DRE, SM, Ctx.getLangOpts());
+
+  if (EndOfOperand)
+    return FixItList{{FixItHint::CreateInsertion(*EndOfOperand, ".data()")}};
+
+  return std::nullopt;
+}
+
 // Generates fix-its replacing an expression of the form UPC(DRE) with
 // `DRE.data()`
 std::optional<FixItList>
@@ -1915,14 +2022,7 @@ UPCStandalonePointerGadget::getFixits(const FixitStrategy &S) const {
   switch (S.lookup(VD)) {
   case FixitStrategy::Kind::Array:
   case FixitStrategy::Kind::Span: {
-    ASTContext &Ctx = VD->getASTContext();
-    SourceManager &SM = Ctx.getSourceManager();
-    // Inserts the .data() after the DRE
-    std::optional<SourceLocation> EndOfOperand =
-        getPastLoc(Node, SM, Ctx.getLangOpts());
-
-    if (EndOfOperand)
-      return FixItList{{FixItHint::CreateInsertion(*EndOfOperand, ".data()")}};
+    return createDataFixit(VD->getASTContext(), Node);
     // FIXME: Points inside a macro expansion.
     break;
   }
