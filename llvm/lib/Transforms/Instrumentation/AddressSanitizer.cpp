@@ -345,13 +345,8 @@ static cl::opt<bool>
                                cl::desc("instrument dynamic allocas"),
                                cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClInstrumentUninterestingAllocas(
-    "asan-instrument-uninteresting-allocas",
-    cl::desc("Instrument uninteresting allocas"), cl::Hidden);
-
 static cl::opt<AsanCtorKind> ClConstructorKind(
-    "asan-constructor-kind",
-    cl::desc("Sets the ASan constructor kind"),
+    "asan-constructor-kind", cl::desc("Sets the ASan constructor kind"),
     cl::values(clEnumValN(AsanCtorKind::None, "none", "No constructors"),
                clEnumValN(AsanCtorKind::Global, "global",
                           "Use global constructors")),
@@ -1308,7 +1303,7 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // will not cause memory violations. This greatly speeds up the instrumented
   // executable at -O0.
   if (auto AI = dyn_cast_or_null<AllocaInst>(Ptr))
-    if (!ClInstrumentUninterestingAllocas && !isInterestingAlloca(*AI))
+    if (!isInterestingAlloca(*AI))
       return true;
 
   if (SSGI != nullptr && SSGI->stackAccessIsSafe(*Inst) &&

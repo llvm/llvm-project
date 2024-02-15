@@ -1829,8 +1829,19 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
         return false;
     }
 
-    if (!this->emitCall(Func, E))
-      return false;
+    if (Func->isVariadic()) {
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I) {
+        VarArgSize +=
+            align(primSize(classify(E->getArg(I)->getType()).value_or(PT_Ptr)));
+      }
+      if (!this->emitCallVar(Func, VarArgSize, E))
+        return false;
+    } else {
+      if (!this->emitCall(Func, 0, E))
+        return false;
+    }
 
     // Immediately call the destructor if we have to.
     if (DiscardResult) {
@@ -1863,7 +1874,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
           return false;
       }
 
-      if (!this->emitCall(Func, E))
+      if (!this->emitCall(Func, 0, E))
         return false;
     }
     return true;
@@ -2049,7 +2060,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
     Offset += align(primSize(PT));
   }
 
-  return this->emitCall(F, E);
+  return this->emitCall(F, 0, E);
 }
 
 template <class Emitter>
@@ -2846,20 +2857,38 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // and if the function has RVO, we already have the pointer on the stack to
     // write the result into.
     if (IsVirtual && !HasQualifier) {
-      if (!this->emitCallVirt(Func, E))
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
+        VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+
+      if (!this->emitCallVirt(Func, VarArgSize, E))
+        return false;
+    } else if (Func->isVariadic()) {
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
+        VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+      if (!this->emitCallVar(Func, VarArgSize, E))
         return false;
     } else {
-      if (!this->emitCall(Func, E))
+      if (!this->emitCall(Func, 0, E))
         return false;
     }
   } else {
     // Indirect call. Visit the callee, which will leave a FunctionPointer on
     // the stack. Cleanup of the returned value if necessary will be done after
     // the function call completed.
+
+    // Sum the size of all args from the call expr.
+    uint32_t ArgSize = 0;
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      ArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+
     if (!this->visit(E->getCallee()))
       return false;
 
-    if (!this->emitCallPtr(E))
+    if (!this->emitCallPtr(ArgSize, E))
       return false;
   }
 
@@ -3386,7 +3415,7 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
       assert(DtorFunc->getNumParams() == 1);
       if (!this->emitDupPtr(SourceInfo{}))
         return false;
-      if (!this->emitCall(DtorFunc, SourceInfo{}))
+      if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
         return false;
     }
   }
