@@ -186,7 +186,7 @@ public:
   /// Returns the number of parameter this function takes when it's called,
   /// i.e excluding the instance pointer and the RVO pointer.
   unsigned getNumWrittenParams() const {
-    assert(getNumParams() >= (hasThisPointer() + hasRVO()));
+    assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
     return getNumParams() - hasThisPointer() - hasRVO();
   }
   unsigned getWrittenArgSize() const {
