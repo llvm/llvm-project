@@ -10,10 +10,10 @@
 
 ## Check that omitting the '=' character generates an error
 # RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=FORMAT
+# RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbols-visibility
 # RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo default 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=FORMAT
-# FORMAT: error: bad format for --set-symbol{{.?}}-visibility
+# RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbol-visibility
+# FORMAT: error: bad format for [[OPTION]]
 
 ## Check that using an invalid symbol pattern generates an error
 # RUN: echo '*.' > %t.symbols.regex
