@@ -61,16 +61,16 @@ stdc_first_leading_one_us    |check|
 stdc_first_leading_one_ui    |check|
 stdc_first_leading_one_ul    |check|
 stdc_first_leading_one_ull   |check|
-stdc_first_trailing_zero_uc
-stdc_first_trailing_zero_us
-stdc_first_trailing_zero_ui
-stdc_first_trailing_zero_ul
-stdc_first_trailing_zero_ull
-stdc_first_trailing_one_uc
-stdc_first_trailing_one_us
-stdc_first_trailing_one_ui
-stdc_first_trailing_one_ul
-stdc_first_trailing_one_ull
+stdc_first_trailing_zero_uc  |check|
+stdc_first_trailing_zero_us  |check|
+stdc_first_trailing_zero_ui  |check|
+stdc_first_trailing_zero_ul  |check|
+stdc_first_trailing_zero_ull |check|
+stdc_first_trailing_one_uc   |check|
+stdc_first_trailing_one_us   |check|
+stdc_first_trailing_one_ui   |check|
+stdc_first_trailing_one_ul   |check|
+stdc_first_trailing_one_ull  |check|
 stdc_count_zeros_uc
 stdc_count_zeros_us
 stdc_count_zeros_ui
@@ -120,8 +120,8 @@ stdc_trailing_zeros        |check|
 stdc_trailing_ones         |check|
 stdc_first_leading_zero    |check|
 stdc_first_leading_one     |check|
-stdc_first_trailing_zero
-stdc_first_trailing_one
+stdc_first_trailing_zero   |check|
+stdc_first_trailing_one    |check|
 stdc_count_zeros
 stdc_count_ones
 stdc_has_single_bit
