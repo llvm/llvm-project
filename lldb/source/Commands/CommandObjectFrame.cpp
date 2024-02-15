@@ -177,7 +177,10 @@ protected:
 
     DumpValueObjectOptions options;
     options.SetDeclPrintingHelper(helper);
-    ValueObjectPrinter printer(valobj_sp.get(), &result.GetOutputStream(),
+    // We've already handled the case where the value object sp is null, so
+    // this is just to make sure future changes don't skip that:
+    assert(valobj_sp.get() && "Must have a valid ValueObject to print");
+    ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(),
                                options);
     printer.PrintValueObject();
   }

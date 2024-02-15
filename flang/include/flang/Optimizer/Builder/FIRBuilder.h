@@ -230,12 +230,14 @@ public:
                              llvm::StringRef name,
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
-                             bool isTarget = false);
+                             bool isTarget = false,
+                             fir::CUDADataAttributeAttr cudaAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
-                             mlir::StringAttr linkage = {});
+                             mlir::StringAttr linkage = {},
+                             fir::CUDADataAttributeAttr cudaAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,

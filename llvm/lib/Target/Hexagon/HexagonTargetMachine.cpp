@@ -39,6 +39,10 @@ static cl::opt<bool>
 static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::init(true),
                                   cl::desc("Enable RDF-based optimizations"));
 
+cl::opt<unsigned> RDFFuncBlockLimit(
+    "rdf-bb-limit", cl::Hidden, cl::init(1000),
+    cl::desc("Basic block limit for a function for RDF optimizations"));
+
 static cl::opt<bool> DisableHardwareLoops("disable-hexagon-hwloops",
   cl::Hidden, cl::desc("Disable Hardware Loops for Hexagon target"));
 
