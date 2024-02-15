@@ -2475,22 +2475,22 @@ bool SIGfx6CacheControl ::handleNonAtomicForPreciseMemory(
   if (TII->isSMRD(Inst)) { // scalar
     if (Inst.mayStore())
       return false;
-    Wait.DsCnt = 0;                   // LgkmCnt
-  } else {                            // vector
-    if (Inst.mayLoad()) {             // vector load
-      if (TII->isVMEM(Inst))          // VMEM load
-        Wait.LoadCnt = 0;             // VmCnt
-      else if (TII->isFLAT(Inst)) {   // Flat load
-        Wait.LoadCnt = 0;             // VmCnt
-        Wait.DsCnt = 0;               // LgkmCnt
-      } else                          // LDS load
-        Wait.DsCnt = 0;               // LgkmCnt
-    } else {                          // vector store
-      if (TII->isVMEM(Inst))          // VMEM store
-        Wait.LoadCnt = 0;             // VmCnt
-      else if (TII->isFLAT(Inst)) {   // Flat store
-        Wait.LoadCnt = 0;             // VmCnt
-        Wait.DsCnt = 0;               // LgkmCnt
+    Wait.DsCnt = 0;                 // LgkmCnt
+  } else {                          // vector
+    if (Inst.mayLoad()) {           // vector load
+      if (TII->isVMEM(Inst))        // VMEM load
+        Wait.LoadCnt = 0;           // VmCnt
+      else if (TII->isFLAT(Inst)) { // Flat load
+        Wait.LoadCnt = 0;           // VmCnt
+        Wait.DsCnt = 0;             // LgkmCnt
+      } else                        // LDS load
+        Wait.DsCnt = 0;             // LgkmCnt
+    } else {                        // vector store
+      if (TII->isVMEM(Inst))        // VMEM store
+        Wait.LoadCnt = 0;           // VmCnt
+      else if (TII->isFLAT(Inst)) { // Flat store
+        Wait.LoadCnt = 0;           // VmCnt
+        Wait.DsCnt = 0;             // LgkmCnt
       } else
         Wait.DsCnt = 0; // LDS store; LgkmCnt
     }
@@ -2532,16 +2532,16 @@ bool SIGfx10CacheControl::handleNonAtomicForPreciseMemory(
   if (TII->isSMRD(Inst)) { // scalar
     if (Inst.mayStore())
       return false;
-    Wait.DsCnt = 0;                   // LgkmCnt
-  } else {                            // vector
-    if (Inst.mayLoad()) {             // vector load
-      if (TII->isVMEM(Inst))          // VMEM load
-        Wait.LoadCnt = 0;             // VmCnt
-      else if (TII->isFLAT(Inst)) {   // Flat load
-        Wait.LoadCnt = 0;             // VmCnt
-        Wait.DsCnt = 0;               // LgkmCnt
-      } else                          // LDS load
-        Wait.DsCnt = 0;               // LgkmCnt
+    Wait.DsCnt = 0;                 // LgkmCnt
+  } else {                          // vector
+    if (Inst.mayLoad()) {           // vector load
+      if (TII->isVMEM(Inst))        // VMEM load
+        Wait.LoadCnt = 0;           // VmCnt
+      else if (TII->isFLAT(Inst)) { // Flat load
+        Wait.LoadCnt = 0;           // VmCnt
+        Wait.DsCnt = 0;             // LgkmCnt
+      } else                        // LDS load
+        Wait.DsCnt = 0;             // LgkmCnt
     }
 
     // For some vector instructions, mayLoad() and mayStore() can be both true.
@@ -2623,8 +2623,8 @@ bool SIGfx12CacheControl ::handleNonAtomicForPreciseMemory(
         WaitType = AMDGPU::S_WAIT_LOADCNT_DSCNT;
       else // LDS load
         WaitType = AMDGPU::S_WAIT_DSCNT;
-    } else {                   // vector store
-      if (TII->isVMEM(Inst))   // VMEM store
+    } else {                 // vector store
+      if (TII->isVMEM(Inst)) // VMEM store
         WaitType = AMDGPU::S_WAIT_STORECNT;
       else if (TII->isFLAT(Inst)) // Flat store
         WaitType = AMDGPU::S_WAIT_STORECNT_DSCNT;
