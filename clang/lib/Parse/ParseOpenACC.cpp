@@ -1231,4 +1231,4 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   return getActions().ActOnEndOpenACCStmtDirective(
       DirInfo.DirKind, DirInfo.StartLoc, DirInfo.EndLoc, AssocStmt);
 }
-:Xa
+
