@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=asan -asan-use-after-scope -asan-use-stack-safety=1 -S | FileCheck %s
+; RUN: opt < %s -passes=asan -asan-use-after-scope -asan-use-stack-safety=1 -S | FileCheck %s --implicit-check-not=__asan_stack_malloc
 
 ; Source (-O0 -fsanitize=address -fsanitize-address-use-after-scope):
 ;; struct S { int x, y; };
@@ -21,13 +21,14 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK:      %a.addr = alloca ptr, align 8
 ; CHECK-NEXT: %b.addr = alloca ptr, align 8
 ; CHECK-NEXT: %doit.addr = alloca i8, align 1
+; CHECK-NEXT: %tmp = alloca %struct.S, align 4
 
 ; Next, the stores into the argument allocas.
 ; CHECK-NEXT: store ptr {{.*}}, ptr %a.addr
 ; CHECK-NEXT: store ptr {{.*}}, ptr %b.addr
 ; CHECK-NEXT: [[frombool:%.*]] = zext i1 {{.*}} to i8
 ; CHECK-NEXT: store i8 %frombool, ptr %doit.addr, align 1
-; CHECK-NEXT: [[stack_base:%.*]] = alloca i64, align 8
+; CHECK-NOT:  alloca i64, align 8
 
 define void @_Z4swapP1SS0_b(ptr %a, ptr %b, i1 zeroext %doit) sanitize_address {
 entry:
