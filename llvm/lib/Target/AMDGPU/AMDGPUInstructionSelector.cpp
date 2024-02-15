@@ -4075,28 +4075,30 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
   Register Src = Root.getReg();
   unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned ModOpcode;
   SmallVector<Register, 8> EltsV2F16;
 
-  if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src))) {
-    for (unsigned i = 0; i < CV->getNumSources(); ++i) {
-      MachineInstr *ElV2F16 = MRI->getVRegDef(CV->getSourceReg(i));
+  if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src)))
+    if (CV->getNumSources() > 0) {
+      MachineInstr *ElV2F16 = MRI->getVRegDef(CV->getSourceReg(0));
       // Based on first element decide which mod we match, neg or abs
-      if (EltsV2F16.empty())
-        ModOpcode = (ElV2F16->getOpcode() == AMDGPU::G_FNEG) ? AMDGPU::G_FNEG
-                                                             : AMDGPU::G_FABS;
-      if (ElV2F16->getOpcode() != ModOpcode)
-        break;
-      EltsV2F16.push_back(ElV2F16->getOperand(1).getReg());
-    }
+      unsigned ModOpcode = (ElV2F16->getOpcode() == AMDGPU::G_FNEG)
+                               ? AMDGPU::G_FNEG
+                               : AMDGPU::G_FABS;
 
-    // All elements had ModOpcode modifier
-    if (CV->getNumSources() == EltsV2F16.size()) {
-      MachineIRBuilder B(*Root.getParent());
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
-                           *MRI);
+      for (unsigned i = 0; i < CV->getNumSources(); ++i) {
+        ElV2F16 = MRI->getVRegDef(CV->getSourceReg(i));
+        if (ElV2F16->getOpcode() != ModOpcode)
+          break;
+        EltsV2F16.push_back(ElV2F16->getOperand(1).getReg());
+      }
+
+      // All elements had ModOpcode modifier
+      if (CV->getNumSources() == EltsV2F16.size()) {
+        MachineIRBuilder B(*Root.getParent());
+        selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
+                             *MRI);
+      }
     }
-  }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }}};
