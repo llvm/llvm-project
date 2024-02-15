@@ -24,7 +24,6 @@ array compare
 array cstddef
 array cstdint
 array initializer_list
-array limits
 array new
 array stdexcept
 array version
@@ -293,7 +292,6 @@ iterator concepts
 iterator cstddef
 iterator initializer_list
 iterator iosfwd
-iterator limits
 iterator variant
 iterator version
 latch cstddef
@@ -433,7 +431,6 @@ queue cstddef
 queue cstdint
 queue deque
 queue initializer_list
-queue limits
 queue new
 queue vector
 queue version
@@ -527,7 +524,6 @@ stack cstddef
 stack cstdint
 stack deque
 stack initializer_list
-stack limits
 stack new
 stack version
 stop_token atomic
