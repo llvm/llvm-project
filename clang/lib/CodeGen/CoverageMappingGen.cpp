@@ -190,8 +190,7 @@ public:
   }
 
   const auto &getMCDCDecisionParams() const {
-    return CounterMappingRegion::getParams<const mcdc::DecisionParameters>(
-        MCDCParams);
+    return mcdc::getParams<const mcdc::DecisionParameters>(MCDCParams);
   }
 
   const mcdc::Parameters &getMCDCParams() const { return MCDCParams; }
@@ -770,12 +769,10 @@ public:
   /// Pop and return the LHS Decision ([0,0] if not set).
   mcdc::ConditionIDs pop() {
     if (!CGM.getCodeGenOpts().MCDCCoverage || NotMapped)
-      return DecisionStack.front();
+      return DecisionStackSentinel;
 
     assert(DecisionStack.size() > 1);
-    mcdc::ConditionIDs D = DecisionStack.back();
-    DecisionStack.pop_back();
-    return D;
+    return DecisionStack.pop_back_val();
   }
 
   /// Return the total number of conditions and reset the state. The number of
