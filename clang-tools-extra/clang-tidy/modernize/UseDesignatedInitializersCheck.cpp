@@ -88,38 +88,41 @@ void UseDesignatedInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitList = Result.Nodes.getNodeAs<InitListExpr>("init");
   const auto *Type = Result.Nodes.getNodeAs<CXXRecordDecl>("type");
-  if (!Type || !InitList)
+  if (!Type || !InitList) {
     return;
-  if (const auto *SyntacticInitList = InitList->getSyntacticForm()) {
-    const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
-        clang::tooling::getUnwrittenDesignators(SyntacticInitList);
-    if (isFullyUndesignated(SyntacticInitList)) {
-      if (IgnoreMacros && InitList->getBeginLoc().isMacroID()) {
-        return;
-      }
-      DiagnosticBuilder Diag =
-          diag(InitList->getLBraceLoc(), "use designated initializer list");
-      Diag << InitList->getSourceRange();
-      for (const Stmt *InitExpr : *SyntacticInitList) {
-        Diag << FixItHint::CreateInsertion(
-            InitExpr->getBeginLoc(),
-            Designators.at(InitExpr->getBeginLoc()) + "=");
-      }
+  }
+  const auto *SyntacticInitList = InitList->getSyntacticForm();
+  if (!SyntacticInitList) {
+    return;
+  }
+  const llvm::DenseMap<clang::SourceLocation, std::string> Designators =
+      clang::tooling::getUnwrittenDesignators(SyntacticInitList);
+  if (isFullyUndesignated(SyntacticInitList)) {
+    if (IgnoreMacros && InitList->getBeginLoc().isMacroID()) {
       return;
     }
-    for (const auto *InitExpr : *SyntacticInitList) {
-      if (isa<DesignatedInitExpr>(InitExpr)) {
-        continue;
-      }
-      if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID()) {
-        continue;
-      }
-      diag(InitExpr->getBeginLoc(), "use designated init expression")
-          << InitExpr->getSourceRange()
-          << FixItHint::CreateInsertion(
-                 InitExpr->getBeginLoc(),
-                 Designators.at(InitExpr->getBeginLoc()) + "=");
+    DiagnosticBuilder Diag =
+        diag(InitList->getLBraceLoc(), "use designated initializer list");
+    Diag << InitList->getSourceRange();
+    for (const Stmt *InitExpr : *SyntacticInitList) {
+      Diag << FixItHint::CreateInsertion(
+          InitExpr->getBeginLoc(),
+          Designators.at(InitExpr->getBeginLoc()) + "=");
     }
+    return;
+  }
+  for (const auto *InitExpr : *SyntacticInitList) {
+    if (isa<DesignatedInitExpr>(InitExpr)) {
+      continue;
+    }
+    if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID()) {
+      continue;
+    }
+    diag(InitExpr->getBeginLoc(), "use designated init expression")
+        << InitExpr->getSourceRange()
+        << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
+                                      Designators.at(InitExpr->getBeginLoc()) +
+                                          "=");
   }
 }
 
