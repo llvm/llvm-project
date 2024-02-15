@@ -230,7 +230,7 @@ template <typename DebugVector, typename ListEntry, typename DebugAddressEntry>
 static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
                          DebugAddrWriter &AddrWriter, DWARFUnit &CU,
                          uint32_t &Index, const ListEntry BaseAddressx,
-                         const ListEntry OffsetPair, const ListEntry EndOfList,
+                         const ListEntry OffsetPair,
                          const std::function<void(uint32_t)> &Func) {
   if (Entries.size() < 2)
     return false;
@@ -241,7 +241,9 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
     const DebugAddressEntry &Entry = Entries[Index];
     if (Entry.LowPC == 0)
       break;
-    assert(Base <= Entry.LowPC && "Entry base is higher than low PC");
+    // In case rnglists or loclists are not sorted.
+    if (Base > Entry.LowPC)
+      break;
     uint32_t StartOffset = Entry.LowPC - Base;
     uint32_t EndOffset = Entry.HighPC - Base;
     if (encodeULEB128(EndOffset, TempBuffer) > 2)
@@ -266,8 +268,6 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
     encodeULEB128(OffsetEntry.EndOffset, OS);
     Func(OffsetEntry.Index);
   }
-  support::endian::write(OS, static_cast<uint8_t>(EndOfList),
-                         llvm::endianness::little);
   return true;
 }
 
@@ -276,19 +276,17 @@ DebugRangeListsSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   std::lock_guard<std::mutex> Lock(WriterMutex);
 
   RangeEntries.push_back(CurrentOffset);
-  bool WrittenStartxLength = false;
   std::sort(
       Ranges.begin(), Ranges.end(),
       [](const DebugAddressRange &R1, const DebugAddressRange &R2) -> bool {
         return R1.LowPC < R2.LowPC;
       });
   for (unsigned I = 0; I < Ranges.size();) {
-    WrittenStartxLength = false;
     if (emitWithBase<DebugAddressRangesVector, dwarf::RnglistEntries,
-                     DebugAddressRange>(
-            *CUBodyStream, Ranges, *AddrWriter, *CU, I,
-            dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-            dwarf::DW_RLE_end_of_list, [](uint32_t Index) -> void {}))
+                     DebugAddressRange>(*CUBodyStream, Ranges, *AddrWriter, *CU,
+                                        I, dwarf::DW_RLE_base_addressx,
+                                        dwarf::DW_RLE_offset_pair,
+                                        [](uint32_t Index) -> void {}))
       continue;
 
     const DebugAddressRange &Range = Ranges[I];
@@ -299,12 +297,11 @@ DebugRangeListsSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
     encodeULEB128(Index, *CUBodyStream);
     encodeULEB128(Range.HighPC - Range.LowPC, *CUBodyStream);
     ++I;
-    WrittenStartxLength = true;
   }
-  if (WrittenStartxLength)
-    support::endian::write(*CUBodyStream,
-                           static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
-                           llvm::endianness::little);
+
+  support::endian::write(*CUBodyStream,
+                         static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
+                         llvm::endianness::little);
   CurrentOffset = CUBodyBuffer->size();
   return RangeEntries.size() - 1;
 }
@@ -688,7 +685,6 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
   }
 
   std::vector<uint64_t> OffsetsArray;
-  bool WrittenStartxLength = false;
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
     encodeULEB128(Entry.Expr.size(), LocBodyStream);
@@ -696,12 +692,11 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
         reinterpret_cast<const char *>(Entry.Expr.data()), Entry.Expr.size());
   };
   for (unsigned I = 0; I < LocList.size();) {
-    WrittenStartxLength = false;
     if (emitWithBase<DebugLocationsVector, dwarf::LoclistEntries,
-                     DebugLocationEntry>(
-            LocBodyStream, LocList, AddrWriter, CU, I,
-            dwarf::DW_LLE_base_addressx, dwarf::DW_LLE_offset_pair,
-            dwarf::DW_LLE_end_of_list, writeExpression))
+                     DebugLocationEntry>(LocBodyStream, LocList, AddrWriter, CU,
+                                         I, dwarf::DW_LLE_base_addressx,
+                                         dwarf::DW_LLE_offset_pair,
+                                         writeExpression))
       continue;
 
     const DebugLocationEntry &Entry = LocList[I];
@@ -713,13 +708,11 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
     encodeULEB128(Entry.HighPC - Entry.LowPC, LocBodyStream);
     writeExpression(I);
     ++I;
-    WrittenStartxLength = true;
   }
 
-  if (WrittenStartxLength)
-    support::endian::write(LocBodyStream,
-                           static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
-                           llvm::endianness::little);
+  support::endian::write(LocBodyStream,
+                         static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
+                         llvm::endianness::little);
 }
 
 void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
@@ -1185,7 +1178,7 @@ static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
     Error Err = Error::success();
     const char *CStr = StrData.getCStr(&Offset, &Err);
     if (Err) {
-      errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
+      BC.errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
       continue;
     }
     const size_t NewOffset = LineStr.addString(CStr);

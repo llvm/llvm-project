@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTokenLexer.h"
-#include "TokenAnalyzer.h"
+#include "FormatToken.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Format/Format.h"
+#include "llvm/Support/Regex.h"
 
 namespace clang {
 namespace format {
@@ -24,12 +28,12 @@ FormatTokenLexer::FormatTokenLexer(
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
     IdentifierTable &IdentTable)
     : FormatTok(nullptr), IsFirstToken(true), StateStack({LexerState::NORMAL}),
-      Column(Column), TrailingWhitespace(0), SourceMgr(SourceMgr), ID(ID),
+      Column(Column), TrailingWhitespace(0),
+      LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
-  assert(LangOpts.CPlusPlus);
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
 
@@ -812,7 +816,7 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
   if (CloseOffset == StringRef::npos)
     return;
-  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
   MultiLineString->TokenText = Text;
   resetLexer(SourceMgr.getFileOffset(
       Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
@@ -1438,7 +1442,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  assert(LangOpts.CPlusPlus);
+  LangOpts = getFormattingLangOpts(Style);
   Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
                       Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
   Lex->SetKeepWhitespaceMode(true);
