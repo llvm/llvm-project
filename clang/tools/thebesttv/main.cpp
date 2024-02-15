@@ -81,6 +81,34 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
     return VarLocResult();
 }
 
+VarLocResult locateVariable(const std::string &signature, int line,
+                            int column) {
+
+    int fid = Global.getIdOfFunction(signature);
+    if (fid == -1) {
+        llvm::errs() << "Function not found: " << signature << "\n";
+        return VarLocResult();
+    }
+
+    const NamedLocation &loc = *Global.functionLocations[fid];
+
+    ClangTool Tool(*Global.cb, {loc.file});
+
+    std::vector<std::unique_ptr<ASTUnit>> ASTs;
+    Tool.buildASTs(ASTs);
+
+    fif functionsInFile;
+    for (auto &AST : ASTs) {
+        ASTContext &Context = AST->getASTContext();
+        auto *TUD = Context.getTranslationUnitDecl();
+        if (TUD->isUnavailable())
+            continue;
+        FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
+    }
+
+    return locateVariable(functionsInFile, loc.file, line, column);
+}
+
 void findPathBetween(const fif &functionsInFile, //
                      const std::string &fileFrom, int lineFrom, int columnFrom,
                      const std::string &fileTo, int lineTo, int columnTo) {
@@ -176,7 +204,11 @@ int main(int argc, const char **argv) {
         llvm::errs() << "  m: " << m << "\n";
     }
 
+    std::string source = "IOPriorityPanel_new(IOPriority)";
+    std::string target = "Vector_new(const ObjectClass *, _Bool, int)";
 
+    locateVariable(source, 23, 11);
+    locateVariable(target, 31, 10);
 
     while (true) {
         std::string methodName;
@@ -199,30 +231,7 @@ int main(int argc, const char **argv) {
 
     return 0;
 
-    std::vector<std::unique_ptr<ASTUnit>> ASTs;
-    Tool.buildASTs(ASTs);
-
-    llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
-    fif functionsInFile;
-    for (auto &AST : ASTs) {
-        ASTContext &Context = AST->getASTContext();
-        auto *TUD = Context.getTranslationUnitDecl();
-        if (TUD->isUnavailable())
-            continue;
-        // TUD->dump();
-        FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
-    }
-
-    llvm::errs() << "\n--- All functions from all files ---\n";
-    // traverse functionInFile
-    for (const auto &[file, functions] : functionsInFile) {
-        llvm::errs() << "File: " << file << "\n";
-        for (const auto *fi : functions) {
-            llvm::errs() << "  Fun: " << fi->name << "() at " << fi->line << ":"
-                         << fi->column << "\n";
-        }
-    }
-
+    /*
     llvm::errs() << "\n--- FindVarVisitor ---\n";
     std::string root_dir = "/home/thebesttv/vul/llvm-project/graph-generation/";
     std::string file1 = root_dir + "test4.cpp";
@@ -237,4 +246,5 @@ int main(int argc, const char **argv) {
     locateVariable(functionsInFile, file2, 5, 15);
 
     findPathBetween(functionsInFile, file1, 3, 19, file1, 15, 10);
+    */
 }
