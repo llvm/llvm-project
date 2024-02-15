@@ -1,5 +1,5 @@
-// RUN: not  %clang_cc1 -E %s 2>&1 | grep 'error: invalid newline character in raw string delimiter; use PREFIX( )PREFIX to delimit raw string'
+// RUN: %clang_cc1 -E -fsyntax-only -verify %s
 
-// Introduced new error code err_invalid_nexline_raw_delim for code which has \n as delimiter.
-char const* str1 = R"
-";
+// expected-error@+2{{invalid newline character in raw string delimiter; use PREFIX( )PREFIX to delimit raw string}}
+// expected-error@+1{{expected expression}}
+char const* str1 = R"";
