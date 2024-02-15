@@ -202,24 +202,39 @@ bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
       return true;
   }
 
-  // Filter the function profiles for the inlinees.
+  // Filter the function profiles for the inlinees. It's useful for fuzzy
+  // profile matching which flattens the profile and inlinees' samples are
+  // merged into top-level function.
   for (auto &Callees :
        const_cast<CallsiteSampleMap &>(FS.getCallsiteSamples())) {
     auto &CalleesMap = Callees.second;
     for (auto I = CalleesMap.begin(); I != CalleesMap.end();) {
-      auto Tmp = I++;
-      if (filterAmbiguousProfile(Tmp->second))
-        CalleesMap.erase(Tmp);
+      auto FS = I++;
+      if (filterAmbiguousProfile(FS->second))
+        CalleesMap.erase(FS);
     }
   }
   return false;
 }
 
+// For built-in local initialization function such as __cxx_global_var_init,
+// __tls_init prefix function, there could be multiple versions of the functions
+// in the final binary. However, in the profile generation, we call
+// getCanonicalFnName to canonicalize the names which strips the suffixes.
+// Therefore, samples from different functions queries the same profile and the
+// samples are merged. As the functions are essentially different, entries of
+// the merged profile are ambiguous. In sample loader, the IR from one version
+// would be attributed towards a merged entries, which is inaccurate. Especially
+// for fuzzy profile matching, it gets multiple callsites(from different
+// function) but used to match one callsite, which misleads the matching and
+// causes a lot of false positives report. Hence, we want to filter them out
+// from the profile map during the profile generation time. The profiles are all
+// cold functions, it won't have perf impact.
 void ProfileGeneratorBase::filterAmbiguousProfile(SampleProfileMap &Profiles) {
   for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
-    auto Tmp = I++;
-    if (filterAmbiguousProfile(Tmp->second))
-      ProfileMap.erase(Tmp);
+    auto FS = I++;
+    if (filterAmbiguousProfile(FS->second))
+      ProfileMap.erase(FS);
   }
 }
 

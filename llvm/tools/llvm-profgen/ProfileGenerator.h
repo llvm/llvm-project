@@ -132,10 +132,7 @@ protected:
   virtual bool collectFunctionsFromLLVMProfile(
       std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
 
-  // Those functions are usually cold but could have multiple versions, the
-  // profile are either from one version or the merged version, which is
-  // ambiguous. We can't attribute the profile for each version accurately, so
-  // filter them out from the profile map.
+  // List of function prefix to filter out.
   static constexpr const char *FuncPrefixsToFilter[] = {"__cxx_global_var_init",
                                                         "__tls_init"};
 
