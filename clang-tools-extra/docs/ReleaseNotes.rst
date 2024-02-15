@@ -117,6 +117,14 @@ Changes in existing checks
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
   global options of the same name.
 
+- Improved :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
+  better support for ``const`` loop boundaries.
+
+- Improved :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
+  ignoring local variable with ``[maybe_unused]`` attribute.
+
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
   by removing enforcement of rule `C.48
@@ -156,16 +164,24 @@ Changes in existing checks
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
 
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
+  whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
+  emit warnings for static data member with an in-class initializer.
+
 Removed checks
 ^^^^^^^^^^^^^^
-
-Miscellaneous
-^^^^^^^^^^^^^
 
 - Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
   since the rule DCL21-CPP has been removed from the CERT guidelines.
 
-- Fixed incorrect formatting in ``clang-apply-repalcements`` when no ``--format``
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Fixed incorrect formatting in ``clang-apply-replacements`` when no ``--format``
   option is specified. Now ``clang-apply-replacements`` applies formatting only with
   the option.
 

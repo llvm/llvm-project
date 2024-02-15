@@ -302,8 +302,8 @@ void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, unsigned indent) const {
 
 void CompleteMatchMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CompleteMatch <todo args>\n";
-  OS.indent(indent) << "Src = " << *Pattern.getSrcPattern() << "\n";
-  OS.indent(indent) << "Dst = " << *Pattern.getDstPattern() << "\n";
+  OS.indent(indent) << "Src = " << Pattern.getSrcPattern() << "\n";
+  OS.indent(indent) << "Dst = " << Pattern.getDstPattern() << "\n";
 }
 
 bool CheckOpcodeMatcher::isEqualImpl(const Matcher *M) const {

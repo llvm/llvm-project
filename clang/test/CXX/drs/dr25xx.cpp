@@ -10,6 +10,8 @@
 // expected-no-diagnostics
 #endif
 
+// dr2504 is in dr2504.cpp
+
 namespace dr2516 { // dr2516: 3.0
                    // NB: reusing 1482 test
 #if __cplusplus >= 201103L

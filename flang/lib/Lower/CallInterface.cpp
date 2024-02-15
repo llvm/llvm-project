@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -523,6 +524,57 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
                 mlir::StringAttr::get(&mlirContext, name));
 }
 
+static void
+setCUDAAttributes(mlir::func::FuncOp func,
+                  const Fortran::semantics::Symbol *sym,
+                  std::optional<Fortran::evaluate::characteristics::Procedure>
+                      characteristic) {
+  if (characteristic && characteristic->cudaSubprogramAttrs) {
+    func.getOperation()->setAttr(
+        fir::getCUDAAttrName(),
+        fir::getCUDAProcAttribute(func.getContext(),
+                                  *characteristic->cudaSubprogramAttrs));
+  }
+
+  if (sym) {
+    if (auto details =
+            sym->GetUltimate()
+                .detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
+      if (!details->cudaLaunchBounds().empty()) {
+        assert(details->cudaLaunchBounds().size() >= 2 &&
+               "expect at least 2 values");
+        auto maxTPBAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
+        auto minBPMAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
+        mlir::IntegerAttr ubAttr;
+        if (details->cudaLaunchBounds().size() > 2)
+          ubAttr =
+              mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDALaunchBoundsAttrName(),
+            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                           minBPMAttr, ubAttr));
+      }
+
+      if (!details->cudaClusterDims().empty()) {
+        assert(details->cudaClusterDims().size() == 3 && "expect 3 values");
+        auto xAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[0]);
+        auto yAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[1]);
+        auto zAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDAClusterDimsAttrName(),
+            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
+                                          zAttr));
+      }
+    }
+  }
+}
+
 /// Declare drives the different actions to be performed while analyzing the
 /// signature and building/finding the mlir::func::FuncOp.
 template <typename T>
@@ -558,6 +610,8 @@ void Fortran::lower::CallInterface<T>::declare() {
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
       side().setFuncAttrs(func);
+
+      setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
   }
 }
@@ -972,7 +1026,7 @@ private:
     if (obj.cudaDataAttr)
       attrs.emplace_back(
           mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
-          fir::getCUDAAttribute(&mlirContext, obj.cudaDataAttr));
+          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 

@@ -26,7 +26,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", 1)
         self.assertTrue(breakpoint.IsHardware())
 
-    @expectedFailureIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_range(self):
         """Test stepping when hardware breakpoints are required."""
         self.build()
@@ -49,7 +49,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
             "Could not create hardware breakpoint for thread plan" in error.GetCString()
         )
 
-    @expectedFailureIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_out(self):
         """Test stepping out when hardware breakpoints are required."""
         self.build()
@@ -71,7 +71,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
             "Could not create hardware breakpoint for thread plan" in error.GetCString()
         )
 
-    @expectedFailureIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_over(self):
         """Test stepping over when hardware breakpoints are required."""
         self.build()
@@ -91,7 +91,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
 
     # Was reported to sometimes pass on certain hardware.
     @skipIf(oslist=["linux"], archs=["arm"])
-    @expectedFailureIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""
         self.build()

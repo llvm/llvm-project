@@ -164,7 +164,7 @@ struct IncludeStyle {
 
   /// When guessing whether a #include is the "main" include, only the include
   /// directives that use the specified character are considered.
-  /// \version 18
+  /// \version 19
   MainIncludeCharDiscriminator MainIncludeChar;
 };
 
