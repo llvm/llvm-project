@@ -12,6 +12,9 @@ def D_long : JoinedOrSeparate<["--"], "dllname">, Alias<D>;
 def d: JoinedOrSeparate<["-"], "d">, HelpText<"Input .def File">;
 def d_long : JoinedOrSeparate<["--"], "input-def">, Alias<d>;
 
+def n: JoinedOrSeparate<["-"], "n">, HelpText<"Input native .def File on ARM64EC">;
+def n_long : JoinedOrSeparate<["--"], "input-native-def">, Alias<d>;
+
 def k: Flag<["-"], "k">, HelpText<"Kill @n Symbol from export">;
 def k_alias: Flag<["--"], "kill-at">, Alias<k>;
 

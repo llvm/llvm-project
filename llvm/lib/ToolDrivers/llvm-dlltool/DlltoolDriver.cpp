@@ -75,6 +75,7 @@ MachineTypes getEmulation(StringRef S) {
       .Case("i386:x86-64", IMAGE_FILE_MACHINE_AMD64)
       .Case("arm", IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
+      .Case("arm64ec", IMAGE_FILE_MACHINE_ARM64EC)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
@@ -87,7 +88,8 @@ MachineTypes getMachine(Triple T) {
   case Triple::arm:
     return COFF::IMAGE_FILE_MACHINE_ARMNT;
   case Triple::aarch64:
-    return COFF::IMAGE_FILE_MACHINE_ARM64;
+    return T.isWindowsArm64EC() ? COFF::IMAGE_FILE_MACHINE_ARM64EC
+                                : COFF::IMAGE_FILE_MACHINE_ARM64;
   default:
     return COFF::IMAGE_FILE_MACHINE_UNKNOWN;
   }
@@ -168,7 +170,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
       (!Args.hasArgNoClaim(OPT_d) && !Args.hasArgNoClaim(OPT_l))) {
     Table.printHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
                     false);
-    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64\n";
+    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec\n";
     return 1;
   }
 
@@ -201,7 +203,19 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_D))
     OutputFile = Arg->getValue();
 
-  std::vector<COFFShortExport> Exports;
+  std::vector<COFFShortExport> Exports, NativeExports;
+
+  if (Args.hasArg(OPT_n)) {
+    if (!isArm64EC(Machine)) {
+      llvm::errs() << "native .def file is supported only on arm64ec target\n";
+      return 1;
+    }
+    if (!parseModuleDefinition(Args.getLastArg(OPT_n)->getValue(),
+                               IMAGE_FILE_MACHINE_ARM64, AddUnderscores,
+                               NativeExports, OutputFile))
+      return 1;
+  }
+
   if (!parseModuleDefinition(Args.getLastArg(OPT_d)->getValue(), Machine,
                              AddUnderscores, Exports, OutputFile))
     return 1;
@@ -230,7 +244,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
 
   std::string Path = std::string(Args.getLastArgValue(OPT_l));
   if (!Path.empty() && writeImportLibrary(OutputFile, Path, Exports, Machine,
-                                          /*MinGW=*/true))
+                                          /*MinGW=*/true, NativeExports))
     return 1;
   return 0;
 }
