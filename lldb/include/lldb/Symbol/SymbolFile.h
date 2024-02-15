@@ -393,13 +393,13 @@ public:
   /// function will iterate over all sections in a module and add up their
   /// debug info only section byte sizes.
   ///
-  /// \param load_if_needed
+  /// \param load_all_debug_info
   ///   If true, force loading any symbol files if they are not yet loaded and
-  ///   add to the total size
+  ///   add to the total size. Default to false.
   ///
   /// \returns
   ///   Total currently loaded debug info size in bytes
-  virtual uint64_t GetDebugInfoSize(bool load_if_needed = false) = 0;
+  virtual uint64_t GetDebugInfoSize(bool load_all_debug_info = false) = 0;
 
   /// Return the time taken to parse the debug information.
   ///
@@ -542,7 +542,7 @@ public:
 
   void Dump(Stream &s) override;
 
-  uint64_t GetDebugInfoSize(bool load_if_needed = false) override;
+  uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
 
   bool GetDebugInfoIndexWasLoadedFromCache() const override {
     return m_index_was_loaded_from_cache;

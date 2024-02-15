@@ -1421,8 +1421,8 @@ let Command = "statistics dump" in {
   def statistics_dump_summary: Option<"summary", "s">, Group<1>,
     Desc<"Dump only high-level summary statistics. "
          "Exclude targets, modules, breakpoints etc... details.">;
-  def statistics_dump_force: Option<"force", "f">, Group<1>,
+  def statistics_dump_force: Option<"load-all-debug-info", "f">, Group<1>,
     Desc<"Dump the total possible debug info statistics. "
-    "Force loading the debug information if not yet loaded, and collect "
+    "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
 }

@@ -79,7 +79,7 @@ class CommandObjectStatsDump : public CommandObjectParsed {
         m_stats_options.summary_only = true;
         break;
       case 'f':
-        m_stats_options.force_loading = true;
+        m_stats_options.load_all_debug_info = true;
         break;
       default:
         llvm_unreachable("Unimplemented option");

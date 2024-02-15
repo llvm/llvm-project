@@ -8,7 +8,7 @@
 ) lldb::SBStatisticsOptions::GetSummaryOnly;
 %feature("docstring", "
     Sets whether the statistics will force loading all possible debug info."
-) lldb::SBStatisticsOptions::SetForceLoading;
+) lldb::SBStatisticsOptions::SetReportAllAvailableDebugInfo;
 %feature("docstring", "
     Gets whether the statistics will force loading all possible debug info."
-) lldb::SBStatisticsOptions::GetForceLoading;
+) lldb::SBStatisticsOptions::GetReportAllAvailableDebugInfo;

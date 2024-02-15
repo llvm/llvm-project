@@ -117,7 +117,7 @@ class TestStatsAPI(TestBase):
         self.assertNotIn("bt", command_stats)
         # Verify bt's regex command is not duplicatedly captured.
         self.assertNotIn("_regexp-bt", command_stats)
-        
+
     def test_command_stats_force(self):
         """
         Test reporting all pssible debug info stats by force loading all debug
@@ -136,7 +136,7 @@ class TestStatsAPI(TestBase):
         # Create a target with the object file we just created from YAML
         target = self.dbg.CreateTarget(obj_path)
         self.assertTrue(target, VALID_TARGET)
-        
+
         # Get statistics
         stats_options = lldb.SBStatisticsOptions()
         stats = target.GetStatistics(stats_options)
@@ -146,7 +146,7 @@ class TestStatsAPI(TestBase):
         self.assertEqual(debug_stats["totalDebugInfoByteSize"], 188)
 
         # Get statistics with force loading
-        stats_options.SetForceLoading(True)
+        stats_options.SetReportAllAvailableDebugInfo(True)
         stats_force = target.GetStatistics(stats_options)
         stream_force = lldb.SBStream()
         stats_force.GetAsJSON(stream_force)

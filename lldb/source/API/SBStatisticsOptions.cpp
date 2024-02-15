@@ -44,11 +44,13 @@ void SBStatisticsOptions::SetSummaryOnly(bool b) {
 
 bool SBStatisticsOptions::GetSummaryOnly() { return m_opaque_up->summary_only; }
 
-void SBStatisticsOptions::SetForceLoading(bool b) {
-  m_opaque_up->force_loading = b;
+void SBStatisticsOptions::SetReportAllAvailableDebugInfo(bool b) {
+  m_opaque_up->load_all_debug_info = b;
 }
 
-bool SBStatisticsOptions::GetForceLoading() { return m_opaque_up->force_loading; }
+bool SBStatisticsOptions::GetReportAllAvailableDebugInfo() {
+  return m_opaque_up->load_all_debug_info;
+}
 
 const lldb_private::StatisticsOptions &SBStatisticsOptions::ref() const {
   return *m_opaque_up;
