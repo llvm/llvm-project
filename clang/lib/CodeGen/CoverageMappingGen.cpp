@@ -770,12 +770,10 @@ public:
   /// Pop and return the LHS Decision ([0,0] if not set).
   mcdc::ConditionIDs pop() {
     if (!CGM.getCodeGenOpts().MCDCCoverage || NotMapped)
-      return DecisionStack.front();
+      return DecisionStackSentinel;
 
     assert(DecisionStack.size() > 1);
-    mcdc::ConditionIDs D = DecisionStack.back();
-    DecisionStack.pop_back();
-    return D;
+    return DecisionStack.pop_back_val();
   }
 
   /// Return the total number of conditions and reset the state. The number of
