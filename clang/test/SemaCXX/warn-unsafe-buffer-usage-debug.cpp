@@ -53,7 +53,7 @@ void unclaimed_use() {
 void implied_unclaimed_var(int *b) {  // expected-warning{{'b' is an unsafe pointer used for buffer access}}
   int *a = new int[3];  // expected-warning{{'a' is an unsafe pointer used for buffer access}}
   a[4] = 7;  // expected-note{{used in buffer access here}}
-  a = b;  // debug-note{{safe buffers debug: gadget 'PointerAssignment' refused to produce a fix}}
+  a = b;  // debug-note{{safe buffers debug: gadget 'PtrToPtrAssignment' refused to produce a fix}}
   b++;  // expected-note{{used in pointer arithmetic here}} \
         // debug-note{{safe buffers debug: failed to produce fixit for 'b' : has an unclaimed use}}
 }
