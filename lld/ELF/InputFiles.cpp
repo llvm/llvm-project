@@ -997,7 +997,7 @@ static void readAArch64PauthAbiTag(const InputSection &sec, ObjFile<ELFT> &f) {
     return;
   }
 
-  f.aarch64PauthAbiTag = SmallVector<uint8_t, 0>(iterator_range(desc));
+  f.aarch64PauthAbiTag = desc;
 }
 
 template <class ELFT>

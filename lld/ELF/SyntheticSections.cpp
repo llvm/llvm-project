@@ -340,7 +340,7 @@ bool AArch64PauthAbiTag::isNeeded() const {
 }
 
 void AArch64PauthAbiTag::writeTo(uint8_t *buf) {
-  const SmallVector<uint8_t, 0> &data = ctx.aarch64PauthAbiTag;
+  ArrayRef<uint8_t> data = ctx.aarch64PauthAbiTag;
   write32(buf, 4);                             // Name size
   write32(buf + 4, data.size());               // Content size
   write32(buf + 8, NT_ARM_TYPE_PAUTH_ABI_TAG); // Type

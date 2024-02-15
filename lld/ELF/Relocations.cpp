@@ -1138,14 +1138,12 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   if (canWrite) {
     RelType rel = target->getDynRel(type);
     if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-      // Assume relocations from relocatable objects are RELA.
-      assert(config->isRela);
       std::lock_guard<std::mutex> lock(relocMutex);
       // For a preemptible symbol, we can't use a relative relocation. For an
       // undefined symbol, we can't compute offset at link-time and use a
       // relative relocation. Use a symbolic relocation instead.
       Partition &part = sec->getPartition();
-      if (sym.isPreemptible || sym.isUndefined()) {
+      if (sym.isPreemptible) {
         part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
       } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0 &&
                  isInt<32>(sym.getVA(addend))) {

@@ -2624,9 +2624,6 @@ static uint32_t getAndFeatures() {
 }
 
 static void getAArch64PauthInfo() {
-  if (ctx.objectFiles.empty())
-    return;
-
   auto it = std::find_if(
       ctx.objectFiles.begin(), ctx.objectFiles.end(),
       [](const ELFFileBase *f) { return !f->aarch64PauthAbiTag.empty(); });
@@ -2635,11 +2632,11 @@ static void getAArch64PauthInfo() {
 
   ctx.aarch64PauthAbiTag = (*it)->aarch64PauthAbiTag;
   StringRef f1 = (*it)->getName();
-  for (ELFFileBase *f : ArrayRef(ctx.objectFiles)) {
+  for (ELFFileBase *f : ctx.objectFiles) {
     StringRef f2 = f->getName();
-    const SmallVector<uint8_t, 0> &d1 = ctx.aarch64PauthAbiTag;
-    const SmallVector<uint8_t, 0> &d2 = f->aarch64PauthAbiTag;
-    if (d1.empty() != d2.empty()) {
+    ArrayRef<uint8_t> d1 = ctx.aarch64PauthAbiTag;
+    ArrayRef<uint8_t> d2 = f->aarch64PauthAbiTag;
+    if (d2.empty()) {
       auto helper = [](StringRef report, const Twine &msg) {
         if (report == "warning")
           warn(msg);
@@ -2648,14 +2645,12 @@ static void getAArch64PauthInfo() {
       };
 
       helper(config->zPauthReport,
-             (d1.empty() ? f1.str() : f2.str()) +
-                 " has no AArch64 PAuth compatibility info while " +
-                 (d1.empty() ? f2.str() : f1.str()) +
+             f2.str() + " has no AArch64 PAuth compatibility info while " +
+                 f1.str() +
                  " has one; either all or no input files must have it");
+      continue;
     }
-
-    if (!d1.empty() && !d2.empty() &&
-        !std::equal(d1.begin(), d1.end(), d2.begin(), d2.end()))
+    if (!std::equal(d1.begin(), d1.end(), d2.begin(), d2.end()))
       errorOrWarn(
           "incompatible values of AArch64 PAuth compatibility info found"
           "\n" +

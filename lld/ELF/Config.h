@@ -497,7 +497,7 @@ struct Ctx {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  SmallVector<uint8_t, 0> aarch64PauthAbiTag;
+  ArrayRef<uint8_t> aarch64PauthAbiTag;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

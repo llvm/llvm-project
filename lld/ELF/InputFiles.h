@@ -218,7 +218,7 @@ protected:
 public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
-  SmallVector<uint8_t, 0> aarch64PauthAbiTag;
+  ArrayRef<uint8_t> aarch64PauthAbiTag;
 };
 
 // .o file.
