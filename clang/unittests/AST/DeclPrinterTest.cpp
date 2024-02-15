@@ -358,6 +358,16 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
     "class A : virtual public Z, private Y {}"));
 }
 
+TEST(DeclPrinter, TestCXXRecordDecl12) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+    "struct S { int x; };"
+    "namespace NS { class C {};}"
+    "void foo(S s1, NS::C c1) {}",
+    "foo",
+    "void foo(struct S s1, class NS::C c1) {}",
+    [](PrintingPolicy &Policy){ Policy.ForcePrintingAsElaboratedType = true; }));
+}
+
 TEST(DeclPrinter, TestFunctionDecl1) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
     "void A();",
