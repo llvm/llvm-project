@@ -339,14 +339,16 @@ public:
     if (!TrivialThis)
       return false;
 
-    std::optional<bool> IsGetterOfRefCounted =
-        isGetterOfRefCounted(MCE->getMethodDecl());
+    auto* Callee = MCE->getMethodDecl();
+    if (!Callee)
+      return false;
+
+    std::optional<bool> IsGetterOfRefCounted = isGetterOfRefCounted(Callee);
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
 
     // Recursively descend into the callee to confirm that it's trivial as well.
-    return TrivialFunctionAnalysis::isTrivialImpl(MCE->getDirectCallee(),
-                                                  Cache);
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
   }
 
   bool checkArguments(const CallExpr *CE) {
@@ -358,9 +360,10 @@ public:
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
-    for (const Expr *Arg : CE->arguments())
+    for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
         return false;
+    }
 
     // Recursively descend into the callee to confirm that it's trivial.
     return TrivialFunctionAnalysis::isTrivialImpl(CE->getConstructor(), Cache);
