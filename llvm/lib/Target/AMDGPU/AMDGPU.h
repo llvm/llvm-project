@@ -149,6 +149,11 @@ private:
   const TargetMachine &TM;
 };
 
+struct AMDGPUCloneModuleLDSPass
+    : public PassInfoMixin<AMDGPUCloneModuleLDSPass> {
+  PreservedAnalyses run(Module &, ModuleAnalysisManager &);
+};
+
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 

@@ -725,6 +725,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
+        PM.addPass(AMDGPUCloneModuleLDSPass());
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
       });
