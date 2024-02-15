@@ -4084,7 +4084,7 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
           XVT, KeptBits))
     return SDValue();
 
-  // Unfold into:  (sext_inreg(%x) cond %x
+  // Unfold into:  sext_inreg(%x) cond %x
   // Where 'cond' will be either 'eq' or 'ne'.
   SDValue SExtInReg = DAG.getNode(
       ISD::SIGN_EXTEND_INREG, DL, XVT, X,
