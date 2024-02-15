@@ -622,8 +622,6 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .explogxf
-    libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -634,9 +632,10 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.include.errno
     libc.src.errno.errno
+    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -673,8 +672,6 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .explogxf
-    libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -685,9 +682,10 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.include.errno
     libc.src.errno.errno
+    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -733,8 +731,6 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .explogxf
-    libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -745,9 +741,10 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.include.errno
     libc.src.errno.errno
+    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -794,8 +791,6 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .explogxf
-    libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -806,9 +801,10 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.include.errno
     libc.src.errno.errno
+    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -1078,13 +1074,12 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .log_range_reduction
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
-    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
@@ -1115,13 +1110,12 @@ add_entrypoint_object(
     ../log1p.h
   DEPENDS
     .common_constants
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
-    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
@@ -1154,13 +1148,12 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .log_range_reduction
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
-    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
@@ -1193,13 +1186,12 @@ add_entrypoint_object(
   DEPENDS
     .common_constants
     .log_range_reduction
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
-    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
