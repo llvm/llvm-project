@@ -13,6 +13,25 @@
 // Include the common option parsing interfaces.
 include "llvm/Option/OptParser.td"
 
+// When generating documentation, we expect there to be a GlobalDocumentation
+// def containing the program name that we are generating documentation for.
+// This object should only be used by things that are used in documentation,
+// such as the group descriptions.
+#ifndef GENERATING_DOCS
+// So that this file can still be parsed without such a def, define one if there
+// isn't one provided.
+def GlobalDocumentation {
+  // Sensible default in case of mistakes.
+  string Program = "Clang";
+}
+#endif
+
+// Use this to generate program specific documentation, for example:
+// StringForProgram<"Control how %Program behaves.">.str
+class StringForProgram<string _str> {
+  string str = !subst("%Program", GlobalDocumentation.Program, _str);
+}
+
 /////////
 // Flags
 
@@ -100,14 +119,16 @@ def Action_Group : OptionGroup<"<action group>">, DocName<"Actions">,
 // Meta-group for options which are only used for compilation,
 // and not linking etc.
 def CompileOnly_Group : OptionGroup<"<CompileOnly group>">,
-                        DocName<"Compilation options">, DocBrief<[{
-Flags controlling the behavior of Clang during compilation. These flags have
-no effect during actions that do not perform compilation.}]>;
+                        DocName<"Compilation options">,
+                        DocBrief<StringForProgram<[{
+Flags controlling the behavior of %Program during compilation. These flags have
+no effect during actions that do not perform compilation.}]>.str>;
 
 def Preprocessor_Group : OptionGroup<"<Preprocessor group>">,
                          Group<CompileOnly_Group>,
-                         DocName<"Preprocessor options">, DocBrief<[{
-Flags controlling the behavior of the Clang preprocessor.}]>;
+                         DocName<"Preprocessor options">,
+                         DocBrief<StringForProgram<[{
+Flags controlling the behavior of the %Program preprocessor.}]>.str>;
 
 def IncludePath_Group : OptionGroup<"<I/i group>">, Group<Preprocessor_Group>,
                         DocName<"Include path management">,
@@ -128,9 +149,15 @@ def d_Group : OptionGroup<"<d group>">, Group<Preprocessor_Group>,
 Flags allowing the state of the preprocessor to be dumped in various ways.}]>;
 
 def Diag_Group : OptionGroup<"<W/R group>">, Group<CompileOnly_Group>,
-                 DocName<"Diagnostic options">, DocBrief<[{
-Flags controlling which warnings, errors, and remarks Clang will generate.
-See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.}]>;
+                 DocName<"Diagnostic options">,
+                 DocBrief<!strconcat(StringForProgram<
+"Flags controlling which warnings, errors, and remarks %Program will generate. ">.str,
+                  // When in clang link directly to the page.
+                  !cond(!eq(GlobalDocumentation.Program, "Clang"):
+"See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.",
+                  // When elsewhere the link will not work.
+                  true:
+"See Clang's Diagnostic Reference for a full list of warning and remark flags."))>;
 
 def R_Group : OptionGroup<"<R group>">, Group<Diag_Group>, DocFlatten;
 def R_value_Group : OptionGroup<"<R (with value) group>">, Group<R_Group>,
@@ -3204,10 +3231,10 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Use the given vector functions library">,
-    Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,none">,
+    Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
     NormalizedValuesScope<"llvm::driver::VectorLibrary">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
-                      "Darwin_libsystem_m", "ArmPL", "NoLibrary"]>,
+                      "Darwin_libsystem_m", "ArmPL", "AMDLIBM", "NoLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
