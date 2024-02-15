@@ -756,7 +756,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
     if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
-      Policy.ForcePrintingAsElaboratedType = LO.MicrosoftExt;
+      Policy.FullyQualifiedName = LO.MicrosoftExt;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 

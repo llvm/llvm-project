@@ -1635,11 +1635,12 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
-    if (Policy.ForcePrintingAsElaboratedType) {
-      if (Qualifier)
-        OS << "class ";
-      else
-        OS << "struct ";
+    if (Policy.FullyQualifiedName) {
+      std::string prefix = T->isClassType()       ? "class "
+                           : T->isStructureType() ? "struct "
+                           : T->isUnionType()     ? "union "
+                                                  : "";
+      OS << prefix;
       return printBefore(T->getNamedType(), OS);
     }
     if (Qualifier)
@@ -2267,7 +2268,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (Policy.ForcePrintingAsElaboratedType &&
+      if (Policy.FullyQualifiedName &&
           Argument.getKind() == TemplateArgument::Type &&
           !Argument.getAsType()->isBuiltinType())
         OS << Argument.getAsType().getAsString().data();
