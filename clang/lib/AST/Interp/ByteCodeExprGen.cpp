@@ -3239,9 +3239,14 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrThisField(Offset, E);
   }
 
-  // Lazily visit global declarations we haven't seen yet.
-  // This happens in C.
-  if (!Ctx.getLangOpts().CPlusPlus) {
+  // Try to lazily visit (or emit dummy pointers for) declarations
+  // we haven't seen yet.
+  if (Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isStaticLocal()) {
+      if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+        return this->emitGetPtrGlobal(*I, E);
+    }
+  } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
         VD && VD->getAnyInitializer() && VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))
