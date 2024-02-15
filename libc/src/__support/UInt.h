@@ -65,7 +65,7 @@ struct BigInt {
         val[i] = other[i];
     } else {
       size_t i = 0;
-      for (; i < OtherBits / 64; ++i)
+      for (; i < OtherBits / WORD_SIZE; ++i)
         val[i] = other[i];
       WordType sign = 0;
       if constexpr (Signed && OtherSigned) {
