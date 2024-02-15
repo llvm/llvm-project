@@ -286,6 +286,8 @@ static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
 static opt<ErrorDetailLevel> ErrorDetails(
     "error-display", init(Unspecified),
+    desc("Set the level of detail and summary to display when verifying "
+         "(implies --verify)"),
     values(clEnumValN(NoDetailsOrSummary, "quiet",
                       "Only display whether errors occurred."),
            clEnumValN(NoDetailsOnlySummary, "summary",
@@ -296,10 +298,10 @@ static opt<ErrorDetailLevel> ErrorDetails(
                       "Display each error as well as a summary. [default]")),
     cat(DwarfDumpCategory));
 static opt<std::string> JsonSummaryFile(
-    "json-summary-file", cl::init(""),
-    cl::desc("Output JSON-formatted error summary to the specified file. "
-             "(Implies -verify)"),
-    cl::value_desc("filename.json"), cat(DwarfDumpCategory));
+    "json-summary-file", init(""),
+    desc("Output JSON-formatted error summary to the specified file. "
+         "(Implies --verify)"),
+    value_desc("filename.json"), cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
