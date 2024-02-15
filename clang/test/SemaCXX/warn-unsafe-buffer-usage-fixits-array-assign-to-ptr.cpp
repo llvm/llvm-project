@@ -31,6 +31,8 @@ void unsafe_array_assigned_to_safe_ptr(unsigned idx) {
   buffer[idx] = 0;
 }
 
+// FIXME: Implement fixit/s for this case.
+// See comment in CArrayToPtrAssignmentGadget::getFixits to learn why this hasn't been implemented.
 void unsafe_array_assigned_to_unsafe_ptr(unsigned idx) {
   int buffer[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}

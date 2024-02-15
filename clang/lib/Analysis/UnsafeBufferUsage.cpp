@@ -1556,6 +1556,22 @@ std::optional<FixItList>
 CArrayToPtrAssignmentGadget::getFixits(const FixitStrategy &S) const {
   const auto *LeftVD = cast<VarDecl>(PtrLHS->getDecl());
   const auto *RightVD = cast<VarDecl>(PtrRHS->getDecl());
+  // TLDR: Implementing fixits for non-Wontfix strategy on both LHS and RHS is
+  // non-trivial.
+  //
+  // CArrayToPtrAssignmentGadget doesn't have strategy implications because
+  // constant size array propagates its bounds. Because of that LHS and RHS are
+  // addressed by two different fixits.
+  //
+  // At the same time FixitStrategy S doesn't reflect what group a fixit belongs
+  // to and can't be generally relied on in multi-variable Fixables!
+  //
+  // E. g. If an instance of this gadget is fixing variable on LHS then the
+  // variable on RHS is fixed by a different fixit and its strategy for LHS
+  // fixit is as if Wontfix.
+  //
+  // The only exception is Wontfix strategy for a given variable as that is
+  // valid for any fixit produced for the given input source code.
   if (S.lookup(LeftVD) == FixitStrategy::Kind::Span) {
     if (S.lookup(RightVD) == FixitStrategy::Kind::Wontfix) {
       return FixItList{};
