@@ -439,7 +439,14 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   if (match(Op0, m_Constant(C)) &&
       match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
     Value *NewC = Builder.CreateBinOp(I.getOpcode(), C, C1);
-    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+    BinaryOperator *NewShiftOp = BinaryOperator::Create(I.getOpcode(), NewC, A);
+    if (I.getOpcode() == Instruction::Shl) {
+      NewShiftOp->setHasNoSignedWrap(I.hasNoSignedWrap());
+      NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+    } else {
+      NewShiftOp->setIsExact(I.isExact());
+    }
+    return NewShiftOp;
   }
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
@@ -1199,6 +1206,12 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Mask, X);
   }
 
+  // Transform  (-1 >> y) << y  to -1 << y
+  if (match(Op0, m_LShr(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateShl(AllOnes, Op1);
+  }
+
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
@@ -1484,6 +1497,12 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateLShr(AllOnes, Op1);
     return BinaryOperator::CreateAnd(Mask, X);
+  }
+
+  // Transform  (-1 << y) >> y  to -1 >> y
+  if (match(Op0, m_Shl(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateLShr(AllOnes, Op1);
   }
 
   if (Instruction *Overflow = foldLShrOverflowBit(I))

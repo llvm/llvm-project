@@ -232,7 +232,7 @@ define i64 @test_v16i64_v16i8(<16 x i64> %a0) {
 ;
 ; SSE41-LABEL: test_v16i64_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [1,1]
+; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm8 = [1,1]
 ; SSE41-NEXT:    pand %xmm8, %xmm5
 ; SSE41-NEXT:    pand %xmm8, %xmm1
 ; SSE41-NEXT:    paddq %xmm5, %xmm1
@@ -560,7 +560,7 @@ define i32 @test_v16i32_v16i8(<16 x i32> %a0) {
 ;
 ; SSE41-LABEL: test_v16i32_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm4 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm4, %xmm2
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    paddd %xmm2, %xmm0
@@ -669,7 +669,7 @@ define i32 @test_v32i32_v32i8(<32 x i32> %a0) {
 ;
 ; SSE41-LABEL: test_v32i32_v32i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm8 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm8, %xmm5
 ; SSE41-NEXT:    pand %xmm8, %xmm1
 ; SSE41-NEXT:    paddd %xmm5, %xmm1
@@ -993,7 +993,7 @@ define i16 @test_v16i16_v16i8(<16 x i16> %a0) {
 ;
 ; SSE41-LABEL: test_v16i16_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm2, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    packuswb %xmm1, %xmm0
@@ -1193,7 +1193,7 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ;
 ; SSE41-LABEL: test_v64i16_v64i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [127,127,127,127,127,127,127,127]
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm8 = [127,127,127,127,127,127,127,127]
 ; SSE41-NEXT:    pand %xmm8, %xmm1
 ; SSE41-NEXT:    pand %xmm8, %xmm0
 ; SSE41-NEXT:    packuswb %xmm1, %xmm0

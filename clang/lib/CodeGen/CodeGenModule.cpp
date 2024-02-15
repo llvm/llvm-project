@@ -30,6 +30,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -67,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/Triple.h"
@@ -143,6 +145,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
       Kind = AArch64ABIKind::DarwinPCS;
     else if (Triple.isOSWindows())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
+    else if (Target.getABI() == "aapcs-soft")
+      Kind = AArch64ABIKind::AAPCSSoft;
 
     return createAArch64TargetCodeGenInfo(CGM, Kind);
   }
@@ -1044,21 +1048,31 @@ void CodeGenModule::Release() {
                               llvm::MDString::get(VMContext, "ascii"));
   }
 
-  llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
-  if (   Arch == llvm::Triple::arm
-      || Arch == llvm::Triple::armeb
-      || Arch == llvm::Triple::thumb
-      || Arch == llvm::Triple::thumbeb) {
+  llvm::Triple T = Context.getTargetInfo().getTriple();
+  if (T.isARM() || T.isThumb()) {
     // The minimum width of an enum in bytes
     uint64_t EnumWidth = Context.getLangOpts().ShortEnums ? 1 : 4;
     getModule().addModuleFlag(llvm::Module::Error, "min_enum_size", EnumWidth);
   }
 
-  if (Arch == llvm::Triple::riscv32 || Arch == llvm::Triple::riscv64) {
+  if (T.isRISCV()) {
     StringRef ABIStr = Target.getABI();
     llvm::LLVMContext &Ctx = TheModule.getContext();
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(Ctx, ABIStr));
+
+    // Add the canonical ISA string as metadata so the backend can set the ELF
+    // attributes correctly. We use AppendUnique so LTO will keep all of the
+    // unique ISA strings that were linked together.
+    const std::vector<std::string> &Features =
+        getTarget().getTargetOpts().Features;
+    auto ParseResult =
+        llvm::RISCVISAInfo::parseFeatures(T.isRISCV64() ? 64 : 32, Features);
+    if (!errorToBool(ParseResult.takeError()))
+      getModule().addModuleFlag(
+          llvm::Module::AppendUnique, "riscv-isa",
+          llvm::MDNode::get(
+              Ctx, llvm::MDString::get(Ctx, (*ParseResult)->toString())));
   }
 
   if (CodeGenOpts.SanitizeCfiCrossDso) {
@@ -1127,10 +1141,7 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Override,
                               "tag-stack-memory-buildattr", 1);
 
-  if (Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb ||
-      Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
-      Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
-      Arch == llvm::Triple::aarch64_be) {
+  if (T.isARM() || T.isThumb() || T.isAArch64()) {
     if (LangOpts.BranchTargetEnforcement)
       getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
                                 1);
@@ -2414,7 +2425,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
   if (auto *Attr = D->getAttr<ArmNewAttr>()) {
     if (Attr->isNewZA())
-      B.addAttribute("aarch64_pstate_za_new");
+      B.addAttribute("aarch64_new_za");
     if (Attr->isNewZT0())
       B.addAttribute("aarch64_new_zt0");
   }
@@ -4218,7 +4229,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      if (FD->isTargetClonesMultiVersion()) {
+      if (FD->isTargetClonesMultiVersion() ||
+          FD->isTargetVersionMultiVersion()) {
         const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
         llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
@@ -4399,8 +4411,18 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // a separate resolver).
   std::string ResolverName = MangledName;
   if (getTarget().supportsIFunc()) {
-    if (!FD->isTargetClonesMultiVersion())
+    switch (FD->getMultiVersionKind()) {
+    case MultiVersionKind::None:
+      llvm_unreachable("unexpected MultiVersionKind::None for resolver");
+    case MultiVersionKind::Target:
+    case MultiVersionKind::CPUSpecific:
+    case MultiVersionKind::CPUDispatch:
       ResolverName += ".ifunc";
+      break;
+    case MultiVersionKind::TargetClones:
+    case MultiVersionKind::TargetVersion:
+      break;
+    }
   } else if (FD->isTargetMultiVersion()) {
     ResolverName += ".resolver";
   }
@@ -6330,7 +6352,8 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
 ConstantAddress
 CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                                   StringRef Name) {
-  CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(S->getType());
+  CharUnits Alignment =
+      getContext().getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
 
   llvm::Constant *C = GetConstantArrayFromStringLiteral(S);
   llvm::GlobalVariable **Entry = nullptr;
@@ -6393,8 +6416,8 @@ CodeGenModule::GetAddrOfConstantStringFromObjCEncode(const ObjCEncodeExpr *E) {
 ConstantAddress CodeGenModule::GetAddrOfConstantCString(
     const std::string &Str, const char *GlobalName) {
   StringRef StrWithNull(Str.c_str(), Str.size() + 1);
-  CharUnits Alignment =
-    getContext().getAlignOfGlobalVarInChars(getContext().CharTy);
+  CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(
+      getContext().CharTy, /*VD=*/nullptr);
 
   llvm::Constant *C =
       llvm::ConstantDataArray::getString(getLLVMContext(), StrWithNull, false);

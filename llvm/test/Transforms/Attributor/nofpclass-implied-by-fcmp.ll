@@ -2641,8 +2641,8 @@ define float @assume_false_smallest_normal(float %arg) {
 }
 
 define float @clamp_false_nan(float %arg) {
-; CHECK-LABEL: define float @clamp_false_nan(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_nan(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0x7FF8000000000000

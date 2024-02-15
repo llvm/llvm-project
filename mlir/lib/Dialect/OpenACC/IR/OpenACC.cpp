@@ -104,6 +104,91 @@ static void printDeviceTypes(mlir::OpAsmPrinter &p,
   p << "]";
 }
 
+static std::optional<unsigned> findSegment(ArrayAttr segments,
+                                           mlir::acc::DeviceType deviceType) {
+  unsigned segmentIdx = 0;
+  for (auto attr : segments) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    if (deviceTypeAttr.getValue() == deviceType)
+      return std::make_optional(segmentIdx);
+    ++segmentIdx;
+  }
+  return std::nullopt;
+}
+
+static mlir::Operation::operand_range
+getValuesFromSegments(std::optional<mlir::ArrayAttr> arrayAttr,
+                      mlir::Operation::operand_range range,
+                      std::optional<llvm::ArrayRef<int32_t>> segments,
+                      mlir::acc::DeviceType deviceType) {
+  if (!arrayAttr)
+    return range.take_front(0);
+  if (auto pos = findSegment(*arrayAttr, deviceType)) {
+    int32_t nbOperandsBefore = 0;
+    for (unsigned i = 0; i < *pos; ++i)
+      nbOperandsBefore += (*segments)[i];
+    return range.drop_front(nbOperandsBefore).take_front((*segments)[*pos]);
+  }
+  return range.take_front(0);
+}
+
+static mlir::Value
+getWaitDevnumValue(std::optional<mlir::ArrayAttr> deviceTypeAttr,
+                   mlir::Operation::operand_range operands,
+                   std::optional<llvm::ArrayRef<int32_t>> segments,
+                   std::optional<mlir::ArrayAttr> hasWaitDevnum,
+                   mlir::acc::DeviceType deviceType) {
+  if (!hasDeviceTypeValues(deviceTypeAttr))
+    return {};
+  if (auto pos = findSegment(*deviceTypeAttr, deviceType))
+    if (hasWaitDevnum->getValue()[*pos])
+      return getValuesFromSegments(deviceTypeAttr, operands, segments,
+                                   deviceType)
+          .front();
+  return {};
+}
+
+static mlir::Operation::operand_range
+getWaitValuesWithoutDevnum(std::optional<mlir::ArrayAttr> deviceTypeAttr,
+                           mlir::Operation::operand_range operands,
+                           std::optional<llvm::ArrayRef<int32_t>> segments,
+                           std::optional<mlir::ArrayAttr> hasWaitDevnum,
+                           mlir::acc::DeviceType deviceType) {
+  auto range =
+      getValuesFromSegments(deviceTypeAttr, operands, segments, deviceType);
+  if (range.empty())
+    return range;
+  if (auto pos = findSegment(*deviceTypeAttr, deviceType)) {
+    if (hasWaitDevnum && *hasWaitDevnum) {
+      auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasWaitDevnum)[*pos]);
+      if (boolAttr.getValue())
+        return range.drop_front(1); // first value is devnum
+    }
+  }
+  return range;
+}
+
+template <typename Op>
+static LogicalResult checkWaitAndAsyncConflict(Op op) {
+  for (uint32_t dtypeInt = 0; dtypeInt != acc::getMaxEnumValForDeviceType();
+       ++dtypeInt) {
+    auto dtype = static_cast<acc::DeviceType>(dtypeInt);
+
+    // The async attribute represent the async clause without value. Therefore
+    // the attribute and operand cannot appear at the same time.
+    if (hasDeviceType(op.getAsyncOperandsDeviceType(), dtype) &&
+        op.hasAsyncOnly(dtype))
+      return op.emitError("async attribute cannot appear with asyncOperand");
+
+    // The wait attribute represent the wait clause without values. Therefore
+    // the attribute and operands cannot appear at the same time.
+    if (hasDeviceType(op.getWaitOperandsDeviceType(), dtype) &&
+        op.hasWaitOnly(dtype))
+      return op.emitError("wait attribute cannot appear with waitOperands");
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // DataBoundsOp
 //===----------------------------------------------------------------------===//
@@ -649,7 +734,7 @@ unsigned ParallelOp::getNumDataOperands() {
 }
 
 Value ParallelOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getAsync().size();
+  unsigned numOptional = getAsyncOperands().size();
   numOptional += getNumGangs().size();
   numOptional += getNumWorkers().size();
   numOptional += getVectorLength().size();
@@ -722,23 +807,15 @@ LogicalResult acc::ParallelOp::verify() {
                                         "vector_length")))
     return failure();
 
-  if (failed(verifyDeviceTypeCountMatch(*this, getAsync(),
-                                        getAsyncDeviceTypeAttr(), "async")))
+  if (failed(verifyDeviceTypeCountMatch(*this, getAsyncOperands(),
+                                        getAsyncOperandsDeviceTypeAttr(),
+                                        "async")))
+    return failure();
+
+  if (failed(checkWaitAndAsyncConflict<acc::ParallelOp>(*this)))
     return failure();
 
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
-}
-
-static std::optional<unsigned> findSegment(ArrayAttr segments,
-                                           mlir::acc::DeviceType deviceType) {
-  unsigned segmentIdx = 0;
-  for (auto attr : segments) {
-    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
-    if (deviceTypeAttr.getValue() == deviceType)
-      return std::make_optional(segmentIdx);
-    ++segmentIdx;
-  }
-  return std::nullopt;
 }
 
 static mlir::Value
@@ -765,8 +842,8 @@ mlir::Value acc::ParallelOp::getAsyncValue() {
 }
 
 mlir::Value acc::ParallelOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
-  return getValueInDeviceTypeSegment(getAsyncDeviceType(), getAsync(),
-                                     deviceType);
+  return getValueInDeviceTypeSegment(getAsyncOperandsDeviceType(),
+                                     getAsyncOperands(), deviceType);
 }
 
 mlir::Value acc::ParallelOp::getNumWorkersValue() {
@@ -793,22 +870,6 @@ mlir::Operation::operand_range ParallelOp::getNumGangsValues() {
   return getNumGangsValues(mlir::acc::DeviceType::None);
 }
 
-static mlir::Operation::operand_range
-getValuesFromSegments(std::optional<mlir::ArrayAttr> arrayAttr,
-                      mlir::Operation::operand_range range,
-                      std::optional<llvm::ArrayRef<int32_t>> segments,
-                      mlir::acc::DeviceType deviceType) {
-  if (!arrayAttr)
-    return range.take_front(0);
-  if (auto pos = findSegment(*arrayAttr, deviceType)) {
-    int32_t nbOperandsBefore = 0;
-    for (unsigned i = 0; i < *pos; ++i)
-      nbOperandsBefore += (*segments)[i];
-    return range.drop_front(nbOperandsBefore).take_front((*segments)[*pos]);
-  }
-  return range.take_front(0);
-}
-
 mlir::Operation::operand_range
 ParallelOp::getNumGangsValues(mlir::acc::DeviceType deviceType) {
   return getValuesFromSegments(getNumGangsDeviceType(), getNumGangs(),
@@ -829,8 +890,19 @@ mlir::Operation::operand_range ParallelOp::getWaitValues() {
 
 mlir::Operation::operand_range
 ParallelOp::getWaitValues(mlir::acc::DeviceType deviceType) {
-  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
-                               getWaitOperandsSegments(), deviceType);
+  return getWaitValuesWithoutDevnum(
+      getWaitOperandsDeviceType(), getWaitOperands(), getWaitOperandsSegments(),
+      getHasWaitDevnum(), deviceType);
+}
+
+mlir::Value ParallelOp::getWaitDevnum() {
+  return getWaitDevnum(mlir::acc::DeviceType::None);
+}
+
+mlir::Value ParallelOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
+  return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
+                            getWaitOperandsSegments(), getHasWaitDevnum(),
+                            deviceType);
 }
 
 static ParseResult parseNumGangs(
@@ -967,8 +1039,9 @@ static ParseResult parseWaitClause(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
     llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &deviceTypes,
-    mlir::DenseI32ArrayAttr &segments, mlir::ArrayAttr &keywordOnly) {
-  llvm::SmallVector<mlir::Attribute> deviceTypeAttrs, keywordAttrs;
+    mlir::DenseI32ArrayAttr &segments, mlir::ArrayAttr &hasDevNum,
+    mlir::ArrayAttr &keywordOnly) {
+  llvm::SmallVector<mlir::Attribute> deviceTypeAttrs, keywordAttrs, devnum;
   llvm::SmallVector<int32_t> seg;
 
   bool needCommaBeforeOperands = false;
@@ -1003,6 +1076,14 @@ static ParseResult parseWaitClause(
 
     int32_t crtOperandsSize = operands.size();
 
+    if (succeeded(parser.parseOptionalKeyword("devnum"))) {
+      if (failed(parser.parseColon()))
+        return failure();
+      devnum.push_back(BoolAttr::get(parser.getContext(), true));
+    } else {
+      devnum.push_back(BoolAttr::get(parser.getContext(), false));
+    }
+
     if (failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(operands.emplace_back()) ||
@@ -1033,6 +1114,7 @@ static ParseResult parseWaitClause(
   deviceTypes = ArrayAttr::get(parser.getContext(), deviceTypeAttrs);
   keywordOnly = ArrayAttr::get(parser.getContext(), keywordAttrs);
   segments = DenseI32ArrayAttr::get(parser.getContext(), seg);
+  hasDevNum = ArrayAttr::get(parser.getContext(), devnum);
 
   return success();
 }
@@ -1052,6 +1134,7 @@ static void printWaitClause(mlir::OpAsmPrinter &p, mlir::Operation *op,
                             mlir::OperandRange operands, mlir::TypeRange types,
                             std::optional<mlir::ArrayAttr> deviceTypes,
                             std::optional<mlir::DenseI32ArrayAttr> segments,
+                            std::optional<mlir::ArrayAttr> hasDevNum,
                             std::optional<mlir::ArrayAttr> keywordOnly) {
 
   if (operands.begin() == operands.end() && hasOnlyDeviceTypeNone(keywordOnly))
@@ -1066,6 +1149,9 @@ static void printWaitClause(mlir::OpAsmPrinter &p, mlir::Operation *op,
   unsigned opIdx = 0;
   llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
     p << "{";
+    auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
+    if (boolAttr && boolAttr.getValue())
+      p << "devnum: ";
     llvm::interleaveComma(
         llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
           p << operands[opIdx] << " : " << operands[opIdx].getType();
@@ -1125,8 +1211,14 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   llvm::SmallVector<mlir::Attribute> keywordOnlyDeviceTypeAttributes;
   bool needCommaBeforeOperands = false;
 
-  if (failed(parser.parseOptionalLParen()))
-    return failure();
+  if (failed(parser.parseOptionalLParen())) {
+    // Keyword only
+    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    keywordOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
+    return success();
+  }
 
   // Parse keyword only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
@@ -1141,13 +1233,6 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
-  } else if (succeeded(parser.parseOptionalRParen())) {
-    // Keyword only
-    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    keywordOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
-    return success();
   }
 
   if (needCommaBeforeOperands && failed(parser.parseComma()))
@@ -1184,13 +1269,12 @@ static void printDeviceTypeOperandsWithKeywordOnly(
     mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
     std::optional<mlir::ArrayAttr> keywordOnlyDeviceTypes) {
 
-  p << "(";
   if (operands.begin() == operands.end() &&
       hasOnlyDeviceTypeNone(keywordOnlyDeviceTypes)) {
-    p << ")";
     return;
   }
 
+  p << "(";
   printDeviceTypes(p, keywordOnlyDeviceTypes);
   if (hasDeviceTypeValues(keywordOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
@@ -1209,7 +1293,7 @@ unsigned SerialOp::getNumDataOperands() {
 }
 
 Value SerialOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getAsync().size();
+  unsigned numOptional = getAsyncOperands().size();
   numOptional += getIfCond() ? 1 : 0;
   numOptional += getSelfCond() ? 1 : 0;
   return getOperand(getWaitOperands().size() + numOptional + i);
@@ -1228,8 +1312,8 @@ mlir::Value acc::SerialOp::getAsyncValue() {
 }
 
 mlir::Value acc::SerialOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
-  return getValueInDeviceTypeSegment(getAsyncDeviceType(), getAsync(),
-                                     deviceType);
+  return getValueInDeviceTypeSegment(getAsyncOperandsDeviceType(),
+                                     getAsyncOperands(), deviceType);
 }
 
 bool acc::SerialOp::hasWaitOnly() {
@@ -1246,8 +1330,19 @@ mlir::Operation::operand_range SerialOp::getWaitValues() {
 
 mlir::Operation::operand_range
 SerialOp::getWaitValues(mlir::acc::DeviceType deviceType) {
-  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
-                               getWaitOperandsSegments(), deviceType);
+  return getWaitValuesWithoutDevnum(
+      getWaitOperandsDeviceType(), getWaitOperands(), getWaitOperandsSegments(),
+      getHasWaitDevnum(), deviceType);
+}
+
+mlir::Value SerialOp::getWaitDevnum() {
+  return getWaitDevnum(mlir::acc::DeviceType::None);
+}
+
+mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
+  return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
+                            getWaitOperandsSegments(), getHasWaitDevnum(),
+                            deviceType);
 }
 
 LogicalResult acc::SerialOp::verify() {
@@ -1265,8 +1360,12 @@ LogicalResult acc::SerialOp::verify() {
           getWaitOperandsDeviceTypeAttr(), "wait")))
     return failure();
 
-  if (failed(verifyDeviceTypeCountMatch(*this, getAsync(),
-                                        getAsyncDeviceTypeAttr(), "async")))
+  if (failed(verifyDeviceTypeCountMatch(*this, getAsyncOperands(),
+                                        getAsyncOperandsDeviceTypeAttr(),
+                                        "async")))
+    return failure();
+
+  if (failed(checkWaitAndAsyncConflict<acc::SerialOp>(*this)))
     return failure();
 
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
@@ -1281,7 +1380,7 @@ unsigned KernelsOp::getNumDataOperands() {
 }
 
 Value KernelsOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getAsync().size();
+  unsigned numOptional = getAsyncOperands().size();
   numOptional += getWaitOperands().size();
   numOptional += getNumGangs().size();
   numOptional += getNumWorkers().size();
@@ -1304,8 +1403,8 @@ mlir::Value acc::KernelsOp::getAsyncValue() {
 }
 
 mlir::Value acc::KernelsOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
-  return getValueInDeviceTypeSegment(getAsyncDeviceType(), getAsync(),
-                                     deviceType);
+  return getValueInDeviceTypeSegment(getAsyncOperandsDeviceType(),
+                                     getAsyncOperands(), deviceType);
 }
 
 mlir::Value acc::KernelsOp::getNumWorkersValue() {
@@ -1352,8 +1451,19 @@ mlir::Operation::operand_range KernelsOp::getWaitValues() {
 
 mlir::Operation::operand_range
 KernelsOp::getWaitValues(mlir::acc::DeviceType deviceType) {
-  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
-                               getWaitOperandsSegments(), deviceType);
+  return getWaitValuesWithoutDevnum(
+      getWaitOperandsDeviceType(), getWaitOperands(), getWaitOperandsSegments(),
+      getHasWaitDevnum(), deviceType);
+}
+
+mlir::Value KernelsOp::getWaitDevnum() {
+  return getWaitDevnum(mlir::acc::DeviceType::None);
+}
+
+mlir::Value KernelsOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
+  return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
+                            getWaitOperandsSegments(), getHasWaitDevnum(),
+                            deviceType);
 }
 
 LogicalResult acc::KernelsOp::verify() {
@@ -1377,8 +1487,12 @@ LogicalResult acc::KernelsOp::verify() {
                                         "vector_length")))
     return failure();
 
-  if (failed(verifyDeviceTypeCountMatch(*this, getAsync(),
-                                        getAsyncDeviceTypeAttr(), "async")))
+  if (failed(verifyDeviceTypeCountMatch(*this, getAsyncOperands(),
+                                        getAsyncOperandsDeviceTypeAttr(),
+                                        "async")))
+    return failure();
+
+  if (failed(checkWaitAndAsyncConflict<acc::KernelsOp>(*this)))
     return failure();
 
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
@@ -1440,8 +1554,14 @@ static ParseResult parseGangClause(
   bool needCommaBetweenValues = false;
   bool needCommaBeforeOperands = false;
 
-  if (failed(parser.parseOptionalLParen()))
-    return failure();
+  if (failed(parser.parseOptionalLParen())) {
+    // Gang only keyword
+    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    gangOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
+    return success();
+  }
 
   // Parse gang only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
@@ -1456,13 +1576,6 @@ static ParseResult parseGangClause(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
-  } else if (succeeded(parser.parseOptionalRParen())) {
-    // Gang only keyword
-    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    gangOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
-    return success();
   }
 
   auto argNum = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
@@ -1562,12 +1675,12 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
-  p << "(";
   if (operands.begin() == operands.end() &&
       hasOnlyDeviceTypeNone(gangOnlyDeviceTypes)) {
-    p << ")";
     return;
   }
+
+  p << "(";
 
   printDeviceTypes(p, gangOnlyDeviceTypes);
 
@@ -1875,8 +1988,10 @@ llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
   return {&getRegion()};
 }
 
-/// loop-control ::= `(` ssa-id-and-type-list `)` `=` `(` ssa-id-and-type-list
-/// `)` `to` `(` ssa-id-and-type-list `)` `step` `(` ssa-id-and-type-list `)`
+/// loop-control ::= `control` `(` ssa-id-and-type-list `)` `=`
+/// `(` ssa-id-and-type-list `)` `to` `(` ssa-id-and-type-list `)` `step`
+/// `(` ssa-id-and-type-list `)`
+/// region
 ParseResult
 parseLoopControl(OpAsmParser &parser, Region &region,
                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerbound,
@@ -1887,8 +2002,10 @@ parseLoopControl(OpAsmParser &parser, Region &region,
                  SmallVectorImpl<Type> &stepType) {
 
   SmallVector<OpAsmParser::Argument> inductionVars;
-  if (succeeded(parser.parseOptionalLParen())) {
-    if (parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
+  if (succeeded(
+          parser.parseOptionalKeyword(acc::LoopOp::getControlKeyword()))) {
+    if (parser.parseLParen() ||
+        parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
                                  /*allowType=*/true) ||
         parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
         parser.parseOperandList(lowerbound, inductionVars.size(),
@@ -1913,7 +2030,7 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
                       ValueRange steps, TypeRange stepType) {
   ValueRange regionArgs = region.front().getArguments();
   if (!regionArgs.empty()) {
-    p << "(";
+    p << acc::LoopOp::getControlKeyword() << "(";
     llvm::interleaveComma(regionArgs, p,
                           [&p](Value v) { p << v << " : " << v.getType(); });
     p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
@@ -1943,6 +2060,9 @@ LogicalResult acc::DataOp::verify() {
       return emitError("expect data entry/exit operation or acc.getdeviceptr "
                        "as defining op");
 
+  if (failed(checkWaitAndAsyncConflict<acc::DataOp>(*this)))
+    return failure();
+
   return success();
 }
 
@@ -1950,7 +2070,7 @@ unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;
-  numOptional += getAsync().size() ? 1 : 0;
+  numOptional += getAsyncOperands().size() ? 1 : 0;
   numOptional += getWaitOperands().size();
   return getOperand(numOptional + i);
 }
@@ -1968,8 +2088,8 @@ mlir::Value DataOp::getAsyncValue() {
 }
 
 mlir::Value DataOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
-  return getValueInDeviceTypeSegment(getAsyncDeviceType(), getAsync(),
-                                     deviceType);
+  return getValueInDeviceTypeSegment(getAsyncOperandsDeviceType(),
+                                     getAsyncOperands(), deviceType);
 }
 
 bool DataOp::hasWaitOnly() { return hasWaitOnly(mlir::acc::DeviceType::None); }
@@ -1984,8 +2104,19 @@ mlir::Operation::operand_range DataOp::getWaitValues() {
 
 mlir::Operation::operand_range
 DataOp::getWaitValues(mlir::acc::DeviceType deviceType) {
-  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
-                               getWaitOperandsSegments(), deviceType);
+  return getWaitValuesWithoutDevnum(
+      getWaitOperandsDeviceType(), getWaitOperands(), getWaitOperandsSegments(),
+      getHasWaitDevnum(), deviceType);
+}
+
+mlir::Value DataOp::getWaitDevnum() {
+  return getWaitDevnum(mlir::acc::DeviceType::None);
+}
+
+mlir::Value DataOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
+  return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
+                            getWaitOperandsSegments(), getHasWaitDevnum(),
+                            deviceType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2549,23 +2680,8 @@ LogicalResult acc::UpdateOp::verify() {
           getWaitOperandsDeviceTypeAttr(), "wait")))
     return failure();
 
-  for (uint32_t dtypeInt = 0; dtypeInt != acc::getMaxEnumValForDeviceType();
-       ++dtypeInt) {
-    auto dtype = static_cast<acc::DeviceType>(dtypeInt);
-
-    // The async attribute represent the async clause without value. Therefore
-    // the attribute and operand cannot appear at the same time.
-    if (getAsyncValue(dtype) && hasAsyncOnly(dtype))
-      return emitError("async attribute cannot appear with asyncOperand");
-
-    // The wait attribute represent the wait clause without values. Therefore
-    // the attribute and operands cannot appear at the same time.
-    if (!getWaitValues(dtype).empty() && hasWaitOnly(dtype))
-      return emitError("wait attribute cannot appear with waitOperands");
-  }
-
-  if (getWaitDevnum() && getWaitOperands().empty())
-    return emitError("wait_devnum cannot appear without waitOperands");
+  if (failed(checkWaitAndAsyncConflict<acc::UpdateOp>(*this)))
+    return failure();
 
   for (mlir::Value operand : getDataClauseOperands())
     if (!mlir::isa<acc::UpdateDeviceOp, acc::UpdateHostOp, acc::GetDevicePtrOp>(
@@ -2582,7 +2698,6 @@ unsigned UpdateOp::getNumDataOperands() {
 
 Value UpdateOp::getDataOperand(unsigned i) {
   unsigned numOptional = getAsyncOperands().size();
-  numOptional += getWaitDevnum() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
   return getOperand(getWaitOperands().size() + numOptional + i);
 }
@@ -2619,7 +2734,7 @@ bool UpdateOp::hasWaitOnly() {
 }
 
 bool UpdateOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
-  return hasDeviceType(getWait(), deviceType);
+  return hasDeviceType(getWaitOnly(), deviceType);
 }
 
 mlir::Operation::operand_range UpdateOp::getWaitValues() {
@@ -2628,8 +2743,19 @@ mlir::Operation::operand_range UpdateOp::getWaitValues() {
 
 mlir::Operation::operand_range
 UpdateOp::getWaitValues(mlir::acc::DeviceType deviceType) {
-  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
-                               getWaitOperandsSegments(), deviceType);
+  return getWaitValuesWithoutDevnum(
+      getWaitOperandsDeviceType(), getWaitOperands(), getWaitOperandsSegments(),
+      getHasWaitDevnum(), deviceType);
+}
+
+mlir::Value UpdateOp::getWaitDevnum() {
+  return getWaitDevnum(mlir::acc::DeviceType::None);
+}
+
+mlir::Value UpdateOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
+  return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
+                            getWaitOperandsSegments(), getHasWaitDevnum(),
+                            deviceType);
 }
 
 //===----------------------------------------------------------------------===//

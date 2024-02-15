@@ -2066,10 +2066,10 @@ multiclass VPseudoVID_V {
     defvar mx = m.MX;
     let VLMul = m.value in {
       def "_V_" # mx : VPseudoNullaryNoMask<m.vrclass>,
-                         SchedNullary<"WriteVMIdxV", mx, forceMergeOpRead=true>;
+                         SchedNullary<"WriteVIdxV", mx, forceMergeOpRead=true>;
       def "_V_" # mx # "_MASK" : VPseudoNullaryMask<m.vrclass>,
                                    RISCVMaskedPseudo<MaskIdx=1>,
-                                   SchedNullary<"WriteVMIdxV", mx,
+                                   SchedNullary<"WriteVIdxV", mx,
                                                 forceMergeOpRead=true>;
     }
   }
@@ -2084,17 +2084,17 @@ multiclass VPseudoNullaryPseudoM <string BaseInst> {
   }
 }
 
-multiclass VPseudoVIOT_M {
+multiclass VPseudoVIOTA_M {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList in {
     defvar mx = m.MX;
     let VLMul = m.value in {
       def "_" # mx : VPseudoUnaryNoMask<m.vrclass, VR, constraint>,
-                       SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
+                       SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
                                  RISCVMaskedPseudo<MaskIdx=2, MaskAffectsRes=true>,
-                                 SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
+                                 SchedUnary<"WriteVIotaV", "ReadVIotaV", mx,
                                             forceMergeOpRead=true>;
     }
   }
@@ -6747,7 +6747,7 @@ defm PseudoVMSOF: VPseudoVSFS_M;
 //===----------------------------------------------------------------------===//
 // 15.8.  Vector Iota Instruction
 //===----------------------------------------------------------------------===//
-defm PseudoVIOTA_M: VPseudoVIOT_M;
+defm PseudoVIOTA_M: VPseudoVIOTA_M;
 
 //===----------------------------------------------------------------------===//
 // 15.9. Vector Element Index Instruction

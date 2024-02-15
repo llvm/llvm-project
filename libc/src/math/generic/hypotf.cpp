@@ -52,9 +52,9 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
     uint64_t lrs = result.uintval() & mask;
 
     if (lrs == 0x0000'0000'1000'0000ULL && err < diff) {
-      result.bits |= 1ULL;
+      result.set_uintval(result.uintval() | 1ULL);
     } else if (lrs == 0x0000'0000'3000'0000ULL && err > diff) {
-      result.bits -= 1ULL;
+      result.set_uintval(result.uintval() - 1ULL);
     }
   } else {
     FPBits bits_x(x), bits_y(y);

@@ -64,6 +64,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -2469,7 +2470,8 @@ private:
     // found
     ompDeviceCodeFound =
         ompDeviceCodeFound ||
-        Fortran::lower::isOpenMPDeviceDeclareTarget(*this, getEval(), ompDecl);
+        Fortran::lower::isOpenMPDeviceDeclareTarget(
+            *this, bridge.getSemanticsContext(), getEval(), ompDecl);
     genOpenMPDeclarativeConstruct(
         *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
     builder->restoreInsertionPoint(insertPt);
@@ -3114,10 +3116,10 @@ private:
         hlfir::Entity nullBoxProc(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
         builder->createStoreWithConvert(loc, nullBoxProc, pptr);
-        return;
+      } else {
+        fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
+        fir::factory::disassociateMutableBox(*builder, loc, box);
       }
-      fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
-      fir::factory::disassociateMutableBox(*builder, loc, box);
     }
   }
 
@@ -3272,7 +3274,9 @@ private:
     if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
           loc, *this, assign.lhs, localSymbols, stmtCtx);
-      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              assign.rhs)) {
+        // rhs is null(). rhs being null(pptr) is handled in genNull.
         auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
         hlfir::Entity rhs(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
@@ -3415,6 +3419,13 @@ private:
       fir::factory::disassociateMutableBox(*builder, loc, lhs);
       return;
     }
+    if (lowerToHighLevelFIR()) {
+      fir::ExtendedValue rhs = genExprAddr(assign.rhs, stmtCtx);
+      fir::factory::associateMutableBoxWithRemap(*builder, loc, lhs, rhs,
+                                                 lbounds, ubounds);
+      return;
+    }
+    // Legacy lowering below.
     // Do not generate a temp in case rhs is an array section.
     fir::ExtendedValue rhs =
         Fortran::lower::isArraySectionWithoutVectorSubscript(assign.rhs)
@@ -3423,7 +3434,7 @@ private:
             : genExprAddr(assign.rhs, stmtCtx);
     fir::factory::associateMutableBoxWithRemap(*builder, loc, lhs, rhs, lbounds,
                                                ubounds);
-    if (!lowerToHighLevelFIR() && explicitIterationSpace()) {
+    if (explicitIterationSpace()) {
       mlir::ValueRange inners = explicitIterSpace.getInnerArgs();
       if (!inners.empty())
         builder->create<fir::ResultOp>(loc, inners);
@@ -4355,7 +4366,8 @@ private:
       if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
         for (const auto &var : Fortran::lower::pft::getScopeVariableList(
                  *scp, scopeVariableListMap))
-          instantiateVar(var, storeMap);
+          if (!var.isRuntimeTypeInfoData())
+            instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
@@ -5058,9 +5070,9 @@ private:
 } // namespace
 
 Fortran::evaluate::FoldingContext
-Fortran::lower::LoweringBridge::createFoldingContext() const {
+Fortran::lower::LoweringBridge::createFoldingContext() {
   return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics(),
-          getLanguageFeatures()};
+          getLanguageFeatures(), tempNames};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -5092,7 +5104,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::DataLayout *dataLayout)
+    const llvm::TargetMachine &targetMachine)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -5148,6 +5160,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
-  if (dataLayout)
-    fir::support::setMLIRDataLayout(*module.get(), *dataLayout);
+  fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
+  fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
+  fir::support::setMLIRDataLayout(*module.get(),
+                                  targetMachine.createDataLayout());
 }

@@ -72,7 +72,7 @@ struct ReplayPreamblePPCallback : public PPCallbacks {
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, OptionalFileEntryRef,
-                          StringRef, StringRef, const clang::Module *,
+                          StringRef, StringRef, const clang::Module *, bool,
                           SrcMgr::CharacteristicKind) override {
     Includes.emplace_back(SM, HashLoc, IncludeTok, FileName, IsAngled,
                           FilenameRange);

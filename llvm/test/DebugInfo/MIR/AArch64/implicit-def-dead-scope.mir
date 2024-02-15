@@ -21,12 +21,12 @@
 
   @bt = global i32 0, align 4
 
-  define void @_ZN1v2bvEv(%class.v* nocapture readonly %this) local_unnamed_addr align 2 !dbg !14 {
+  define void @_ZN1v2bvEv(ptr nocapture readonly %this) local_unnamed_addr align 2 !dbg !14 {
   entry:
     %bz = alloca %class.j, align 8
     %att = alloca %class.j, align 8
-    %ap = getelementptr inbounds %class.v, %class.v* %this, i64 0, i32 1
-    %0 = load i8, i8* %ap, align 4
+    %ap = getelementptr inbounds %class.v, ptr %this, i64 0, i32 1
+    %0 = load i8, ptr %ap, align 4
     %conv = sext i8 %0 to i32
     switch i32 %conv, label %sw.epilog [
       i32 1, label %_ZN1jILi6EN1a1fEE1mEj.exit
@@ -34,24 +34,24 @@
     ]
 
   _ZN1jILi6EN1a1fEE1mEj.exit:                       ; preds = %entry
-    %1 = bitcast %class.j* %att to i64*
-    %2 = bitcast %class.j* %bz to i64*
-    store i64 1, i64* %2, align 8
+    %1 = bitcast ptr %att to ptr
+    %2 = bitcast ptr %bz to ptr
+    store i64 1, ptr %2, align 8
     call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !23), !dbg !24
-    store i64 1, i64* %1, align 8, !dbg !27
+    store i64 1, ptr %1, align 8, !dbg !27
     br label %sw.epilog
 
   sw.bb2:                                           ; preds = %entry
-    %3 = bitcast %class.j* %att to i64*
-    %4 = bitcast %class.j* %bz to i64*
-    %.pre = load i64, i64* %3, align 8
-    %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i13.phi.trans.insert = getelementptr inbounds %class.j, %class.j* %bz, i64 0, i32 1
-    %.phi.trans.insert = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i13.phi.trans.insert to i64*
-    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14.pre = load i64, i64* %.phi.trans.insert, align 8
-    %.pre25 = load i64, i64* %4, align 8
-    %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert = getelementptr inbounds %class.j, %class.j* %att, i64 0, i32 1
-    %.phi.trans.insert26 = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert to i64*
-    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i.pre = load i64, i64* %.phi.trans.insert26, align 8
+    %3 = bitcast ptr %att to ptr
+    %4 = bitcast ptr %bz to ptr
+    %.pre = load i64, ptr %3, align 8
+    %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i13.phi.trans.insert = getelementptr inbounds %class.j, ptr %bz, i64 0, i32 1
+    %.phi.trans.insert = bitcast ptr %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i13.phi.trans.insert to ptr
+    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14.pre = load i64, ptr %.phi.trans.insert, align 8
+    %.pre25 = load i64, ptr %4, align 8
+    %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert = getelementptr inbounds %class.j, ptr %att, i64 0, i32 1
+    %.phi.trans.insert26 = bitcast ptr %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert to ptr
+    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i.pre = load i64, ptr %.phi.trans.insert26, align 8
     br label %sw.epilog
 
   sw.epilog:                                        ; preds = %sw.bb2, %_ZN1jILi6EN1a1fEE1mEj.exit, %entry
@@ -59,26 +59,26 @@
     %5 = phi i64 [ %.pre25, %sw.bb2 ], [ 0, %entry ], [ 1, %_ZN1jILi6EN1a1fEE1mEj.exit ]
     %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14 = phi i64 [ %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14.pre, %sw.bb2 ], [ undef, %entry ], [ undef, %_ZN1jILi6EN1a1fEE1mEj.exit ]
     %6 = phi i64 [ %.pre, %sw.bb2 ], [ 0, %entry ], [ 1, %_ZN1jILi6EN1a1fEE1mEj.exit ]
-    %bw1 = bitcast %class.v* %this to i32*
-    %7 = load i32, i32* %bw1, align 4
-    %bx = getelementptr inbounds %class.v, %class.v* %this, i64 0, i32 2
-    %8 = load i8, i8* %bx, align 1
+    %bw1 = bitcast ptr %this to ptr
+    %7 = load i32, ptr %bw1, align 4
+    %bx = getelementptr inbounds %class.v, ptr %this, i64 0, i32 2
+    %8 = load i8, ptr %bx, align 1
     %tobool = icmp ne i8 %8, 0
     %.fca.0.insert9 = insertvalue [2 x i64] undef, i64 %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14, 0
     %.fca.1.insert12 = insertvalue [2 x i64] %.fca.0.insert9, i64 %5, 1
     %.fca.0.insert = insertvalue [2 x i64] undef, i64 %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i, 0
     %.fca.1.insert = insertvalue [2 x i64] %.fca.0.insert, i64 %6, 1
-    call void @_Z2byi1LS_bbPi(i32 %7, [2 x i64] %.fca.1.insert12, [2 x i64] %.fca.1.insert, i1 %tobool, i1 false, i32* nonnull @bt)
+    call void @_Z2byi1LS_bbPi(i32 %7, [2 x i64] %.fca.1.insert12, [2 x i64] %.fca.1.insert, i1 %tobool, i1 false, ptr nonnull @bt)
     ret void
   }
 
-  declare void @_Z2byi1LS_bbPi(i32, [2 x i64], [2 x i64], i1, i1, i32*) local_unnamed_addr
+  declare void @_Z2byi1LS_bbPi(i32, [2 x i64], [2 x i64], i1, i1, ptr) local_unnamed_addr
 
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }

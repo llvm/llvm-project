@@ -34,9 +34,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     Func = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
   APValue DummyResult;
-  if (!Run(Parent, Func, DummyResult)) {
+  if (!Run(Parent, Func, DummyResult))
     return false;
-  }
 
   return Func->isConstexpr();
 }
@@ -45,7 +44,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
-  auto Res = C.interpretExpr(E);
+  auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
   if (Res.isInvalid()) {
     Stk.clear();
@@ -59,16 +58,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   Stk.clear();
 #endif
 
-  // Implicit lvalue-to-rvalue conversion.
-  if (E->isGLValue()) {
-    std::optional<APValue> RValueResult = Res.toRValue();
-    if (!RValueResult) {
-      return false;
-    }
-    Result = *RValueResult;
-  } else {
-    Result = Res.toAPValue();
-  }
+  Result = Res.toAPValue();
 
   return true;
 }
@@ -112,14 +102,17 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #endif
 
   // Ensure global variables are fully initialized.
-  if (shouldBeGloballyIndexed(VD) && !Res.isInvalid() &&
-      (VD->getType()->isRecordType() || VD->getType()->isArrayType())) {
+  if (shouldBeGloballyIndexed(VD) &&
+      (VD->getType()->isRecordType() || VD->getType()->isArrayType() ||
+       VD->getType()->isAnyComplexType())) {
     assert(Res.isLValue());
 
-    if (!Res.checkFullyInitialized(C.getState()))
+    if (!VD->getType()->isAnyComplexType() &&
+        !Res.checkFullyInitialized(C.getState()))
       return false;
 
-    // lvalue-to-rvalue conversion.
+    // lvalue-to-rvalue conversion. We do this manually here so we can
+    // examine the result above before converting and returning it.
     std::optional<APValue> RValueResult = Res.toRValue();
     if (!RValueResult)
       return false;
@@ -208,7 +201,8 @@ bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
 
   {
     InterpState State(Parent, *P, Stk, *this);
-    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
+    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
+                                    Func->getArgSize());
     if (Interpret(State, Result)) {
       assert(Stk.empty());
       return true;

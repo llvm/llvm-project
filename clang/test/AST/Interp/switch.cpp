@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref %s
+// RUN: %clang_cc1 -std=c++17 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both %s
 
 constexpr bool isEven(int a) {
   bool v = false;
@@ -75,20 +75,14 @@ constexpr int test(int val) {
 }
 static_assert(test(1) == 100, "");
 
-constexpr int bad(int val) { return val / 0; } // expected-warning {{division by zero}} \
-                                               // ref-warning {{division by zero}}
-constexpr int another_test(int val) { // expected-note {{declared here}} \
-                                      // ref-note {{declared here}}
+constexpr int bad(int val) { return val / 0; } // both-warning {{division by zero}}
+constexpr int another_test(int val) { // both-note {{declared here}}
   switch (val) {
-  case bad(val): return 100; // expected-error {{case value is not a constant expression}} \
-                             // expected-note {{cannot be used in a constant expression}} \
-                             // ref-error {{case value is not a constant expression}} \
-                             // ref-note {{cannot be used in a constant expression}}
+  case bad(val): return 100; // both-error {{case value is not a constant expression}} \
+                             // both-note {{cannot be used in a constant expression}}
   default: return -1;
   }
   return 0;
 }
-static_assert(another_test(1) == 100, ""); // expected-error {{static assertion failed}} \
-                                           // expected-note {{evaluates to}} \
-                                           // ref-error {{static assertion failed}} \
-                                           // ref-note {{evaluates to}}
+static_assert(another_test(1) == 100, ""); // both-error {{static assertion failed}} \
+                                           // both-note {{evaluates to}}

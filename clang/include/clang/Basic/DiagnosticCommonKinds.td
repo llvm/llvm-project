@@ -73,7 +73,7 @@ def warn_pragma_debug_unexpected_argument : Warning<
 def warn_fp_nan_inf_when_disabled : Warning<
   "use of %select{infinity|NaN}0%select{| via a macro}1 is undefined behavior "
   "due to the currently enabled floating-point options">,
-  InGroup<DiagGroup<"nan-infinity-disabled">>;
+  InGroup<DiagGroup<"nan-infinity-disabled", [], NanInfDisabledDocs>>;
 }
 
 // Parse && Sema
@@ -356,6 +356,8 @@ def warn_target_unrecognized_env : Warning<
 def warn_knl_knm_isa_support_removed : Warning<
   "KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.">,
   InGroup<DiagGroup<"knl-knm-isa-support-removed">>;
+def err_target_unsupported_abi_with_fpu : Error<
+  "'%0' ABI is not supported with FPU">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

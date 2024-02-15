@@ -817,7 +817,7 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
       return failure();
 
     auto resultIndex = source.cast<OpResult>().getResultNumber();
-    auto initOperand = destOp.getDpsInitOperand(resultIndex);
+    auto *initOperand = destOp.getDpsInitOperand(resultIndex);
 
     rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initOperand->get()); });
@@ -2663,8 +2663,8 @@ struct InsertSliceOpSourceCastInserter final
     if (!hasValidSizesOffsets(newSrcShape))
       return failure();
 
-    RankedTensorType newSrcType =
-        RankedTensorType::get(newSrcShape, srcType.getElementType());
+    RankedTensorType newSrcType = RankedTensorType::get(
+        newSrcShape, srcType.getElementType(), srcType.getEncoding());
     if (srcType == newSrcType ||
         !preservesStaticInformation(srcType, newSrcType) ||
         !tensor::CastOp::areCastCompatible(srcType, newSrcType))
@@ -2797,7 +2797,7 @@ RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
     return RankedTensorType();
   if (staticHigh.size() != rank)
     return RankedTensorType();
-  if (!(resultShape.empty() || resultShape.size() == rank))
+  if (!resultShape.empty() && resultShape.size() != rank)
     return RankedTensorType();
 
   SmallVector<int64_t, 4> inferredShape;
@@ -3158,19 +3158,23 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     // Extract the static info from the high and low operands.
     SmallVector<int64_t> constOperandsLow;
+    SmallVector<Value> newLows;
     for (auto operand : padTensorOp.getLow()) {
       APSInt intOp;
       if (!matchPattern(operand, m_ConstantInt(&intOp))) {
         constOperandsLow.push_back(ShapedType::kDynamic);
+        newLows.push_back(operand);
         continue;
       }
       constOperandsLow.push_back(intOp.getExtValue());
     }
     SmallVector<int64_t> constOperandsHigh;
+    SmallVector<Value> newHighs;
     for (auto operand : padTensorOp.getHigh()) {
       APSInt intOp;
       if (!matchPattern(operand, m_ConstantInt(&intOp))) {
         constOperandsHigh.push_back(ShapedType::kDynamic);
+        newHighs.push_back(operand);
         continue;
       }
       constOperandsHigh.push_back(intOp.getExtValue());
@@ -3222,7 +3226,7 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
         newOutDims, padTensorOp.getType().getElementType());
     auto newOp = rewriter.create<PadOp>(
         padTensorOp->getLoc(), newResultType, input, staticLow, staticHigh,
-        padTensorOp.getLow(), padTensorOp.getHigh(), padTensorOp.getNofold(),
+        newLows, newHighs, padTensorOp.getNofold(),
         getPrunedAttributeList(padTensorOp, PadOp::getAttributeNames()));
 
     IRMapping mapper;
@@ -3979,6 +3983,41 @@ static bool paddingIsNotNeeded(PackOp op) {
                                       op.getMixedTiles());
 }
 
+/// Returns true if the `srcShape` or `destShape` is different from the one in
+/// `packOp` and populates each with the inferred static shape.
+static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
+                             SmallVectorImpl<int64_t> &destShape) {
+  bool changeNeeded = false;
+  srcShape.assign(packOp.getSourceType().getShape().begin(),
+                  packOp.getSourceType().getShape().end());
+  destShape.assign(packOp.getDestType().getShape().begin(),
+                   packOp.getDestType().getShape().end());
+  llvm::SmallSetVector<int64_t, 4> innerDims;
+  innerDims.insert(packOp.getInnerDimsPos().begin(),
+                   packOp.getInnerDimsPos().end());
+  auto outerDimsPerm = packOp.getOuterDimsPerm();
+  int srcRank = packOp.getSourceRank();
+  for (auto i : llvm::seq<int64_t>(0, srcRank)) {
+    if (innerDims.contains(i))
+      continue;
+    int64_t srcPos = i;
+    int64_t destPos = i;
+    if (!outerDimsPerm.empty())
+      destPos = outerDimsPerm[srcPos];
+    if (ShapedType::isDynamic(srcShape[srcPos]) ==
+        ShapedType::isDynamic(destShape[destPos])) {
+      continue;
+    }
+    int64_t size = srcShape[srcPos];
+    if (ShapedType::isDynamic(size))
+      size = destShape[destPos];
+    srcShape[srcPos] = size;
+    destShape[destPos] = size;
+    changeNeeded = true;
+  }
+  return changeNeeded;
+}
+
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
   // Fold an unpack(pack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
@@ -3999,6 +4038,31 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     rewriter.finalizeOpModification(packOp);
     return success();
   }
+
+  // Insert tensor.cast ops if static shape inference is available..
+  SmallVector<int64_t> srcShape, destShape;
+  if (inferStaticShape(packOp, srcShape, destShape)) {
+    Location loc = packOp.getLoc();
+    Value source = packOp.getSource();
+    if (srcShape != packOp.getSourceType().getShape()) {
+      auto newSrcType = packOp.getSourceType().clone(srcShape);
+      source =
+          rewriter.create<tensor::CastOp>(loc, newSrcType, packOp.getSource());
+    }
+    Value dest = packOp.getDest();
+    if (destShape != packOp.getDestType().getShape()) {
+      auto newDestType = packOp.getDestType().clone(destShape);
+      dest =
+          rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
+    }
+    Value newOp = rewriter.create<tensor::PackOp>(
+        loc, source, dest, packOp.getInnerDimsPos(), packOp.getMixedTiles(),
+        packOp.getPaddingValue(), packOp.getOuterDimsPerm());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(
+        packOp, packOp.getResult().getType(), newOp);
+    return success();
+  }
+
   return failure();
 }
 

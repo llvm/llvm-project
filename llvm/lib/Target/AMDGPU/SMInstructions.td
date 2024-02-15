@@ -1065,10 +1065,22 @@ def : GCNPat <
   (REG_SEQUENCE SReg_64,
     (S_GETREG_B32 getHwRegImm<HWREG.SHADER_CYCLES, 0, -12>.ret), sub0,
     (S_MOV_B32 (i32 0)), sub1)> {
-  // Prefer this to s_memtime because it has lower and more predictable latency.
-  let AddedComplexity = 1;
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
+
+let OtherPredicates = [HasSMemRealTime] in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_MEMREALTIME)
+>;
+} // let OtherPredicates = [HasSMemRealTime]
+
+let SubtargetPredicate = isGFX11Plus in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_SENDMSG_RTN_B64 (i32 /*MSG_RTN_GET_REALTIME=*/0x83))
+>;
+} // let SubtargetPredicate = [isGFX11Plus]
 
 def i32imm_zero : TImmLeaf <i32, [{
   return Imm == 0;

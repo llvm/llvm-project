@@ -284,6 +284,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *a = args.getLastArg(
           clang::driver::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
+    if (s == "6")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_6;
     if (s == "5")
       opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
     if (s == "4")
@@ -1324,10 +1326,23 @@ void CompilerInvocation::setDefaultPredefinitions() {
     Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
                                     fortranOptions.predefinitions);
   }
+
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+  switch (targetTriple.getArch()) {
+  default:
+    break;
+  case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    break;
   }
 }
 

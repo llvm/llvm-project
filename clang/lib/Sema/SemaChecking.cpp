@@ -2143,6 +2143,48 @@ static bool checkFPMathBuiltinElementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
+/// SemaBuiltinCpu{Supports|Is} - Handle __builtin_cpu_{supports|is}(char *).
+/// This checks that the target supports the builtin and that the string
+/// argument is constant and valid.
+static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
+                           const TargetInfo *AuxTI, unsigned BuiltinID) {
+  assert((BuiltinID == Builtin::BI__builtin_cpu_supports ||
+          BuiltinID == Builtin::BI__builtin_cpu_is) &&
+         "Expecting __builtin_cpu_...");
+
+  bool IsCPUSupports = BuiltinID == Builtin::BI__builtin_cpu_supports;
+  const TargetInfo *TheTI = &TI;
+  auto SupportsBI = [=](const TargetInfo *TInfo) {
+    return TInfo && ((IsCPUSupports && TInfo->supportsCpuSupports()) ||
+                     (!IsCPUSupports && TInfo->supportsCpuIs()));
+  };
+  if (!SupportsBI(&TI) && SupportsBI(AuxTI))
+    TheTI = AuxTI;
+
+  if (IsCPUSupports && !TheTI->supportsCpuSupports())
+    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  if (!IsCPUSupports && !TheTI->supportsCpuIs())
+    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+
+  Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
+  // Check if the argument is a string literal.
+  if (!isa<StringLiteral>(Arg))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+           << Arg->getSourceRange();
+
+  // Check the contents of the string.
+  StringRef Feature = cast<StringLiteral>(Arg)->getString();
+  if (IsCPUSupports && !TheTI->validateCpuSupports(Feature))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
+           << Arg->getSourceRange();
+  if (!IsCPUSupports && !TheTI->validateCpuIs(Feature))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
+           << Arg->getSourceRange();
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -2171,6 +2213,19 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   FPOptions FPO;
   switch (BuiltinID) {
+  case Builtin::BI__builtin_cpu_supports:
+  case Builtin::BI__builtin_cpu_is:
+    if (SemaBuiltinCpu(*this, Context.getTargetInfo(), TheCall,
+                       Context.getAuxTargetInfo(), BuiltinID))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_cpu_init:
+    if (!Context.getTargetInfo().supportsCpuInit()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+          << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+      return ExprError();
+    }
+    break;
   case Builtin::BI__builtin___CFStringMakeConstantString:
     // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
     // on z/OS) and for XCOFF (i.e., on AIX). Emit unsupported
@@ -6216,47 +6271,6 @@ bool Sema::CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI,
   return false;
 }
 
-/// SemaBuiltinCpuSupports - Handle __builtin_cpu_supports(char *).
-/// This checks that the target supports __builtin_cpu_supports and
-/// that the string argument is constant and valid.
-static bool SemaBuiltinCpuSupports(Sema &S, const TargetInfo &TI,
-                                   CallExpr *TheCall) {
-  Expr *Arg = TheCall->getArg(0);
-
-  // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-           << Arg->getSourceRange();
-
-  // Check the contents of the string.
-  StringRef Feature =
-      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
-  if (!TI.validateCpuSupports(Feature))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
-           << Arg->getSourceRange();
-  return false;
-}
-
-/// SemaBuiltinCpuIs - Handle __builtin_cpu_is(char *).
-/// This checks that the target supports __builtin_cpu_is and
-/// that the string argument is constant and valid.
-static bool SemaBuiltinCpuIs(Sema &S, const TargetInfo &TI, CallExpr *TheCall) {
-  Expr *Arg = TheCall->getArg(0);
-
-  // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-           << Arg->getSourceRange();
-
-  // Check the contents of the string.
-  StringRef Feature =
-      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
-  if (!TI.validateCpuIs(Feature))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
-           << Arg->getSourceRange();
-  return false;
-}
-
 // Check if the rounding mode is legal.
 bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   // Indicates if this instruction has rounding control or just SAE.
@@ -6731,12 +6745,6 @@ static bool isX86_32Builtin(unsigned BuiltinID) {
 
 bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                        CallExpr *TheCall) {
-  if (BuiltinID == X86::BI__builtin_cpu_supports)
-    return SemaBuiltinCpuSupports(*this, TI, TheCall);
-
-  if (BuiltinID == X86::BI__builtin_cpu_is)
-    return SemaBuiltinCpuIs(*this, TI, TheCall);
-
   // Check for 32-bit only builtins on a 64-bit target.
   const llvm::Triple &TT = TI.getTriple();
   if (TT.getArch() != llvm::Triple::x86 && isX86_32Builtin(BuiltinID))
@@ -7154,13 +7162,11 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
 
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
-  if (const RecordType *UT = Expr->getType()->getAsUnionType()) {
-    if (UT->getDecl()->hasAttr<TransparentUnionAttr>())
-      if (const CompoundLiteralExpr *CLE =
-          dyn_cast<CompoundLiteralExpr>(Expr))
-        if (const InitListExpr *ILE =
-            dyn_cast<InitListExpr>(CLE->getInitializer()))
-          Expr = ILE->getInit(0);
+  if (const RecordType *UT = Expr->getType()->getAsUnionType();
+      UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+    if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
+      if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
+        Expr = ILE->getInit(0);
   }
 
   bool Result;
@@ -7505,47 +7511,43 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
 
-    // If the callee uses AArch64 SME ZA state but the caller doesn't define
-    // any, then this is an error.
-    FunctionType::ArmStateValue ArmZAState =
+    FunctionType::ArmStateValue CalleeArmZAState =
         FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
-    if (ArmZAState != FunctionType::ARM_None) {
+    FunctionType::ArmStateValue CalleeArmZT0State =
+        FunctionType::getArmZT0State(ExtInfo.AArch64SMEAttributes);
+    if (CalleeArmZAState != FunctionType::ARM_None ||
+        CalleeArmZT0State != FunctionType::ARM_None) {
       bool CallerHasZAState = false;
+      bool CallerHasZT0State = false;
       if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
         auto *Attr = CallerFD->getAttr<ArmNewAttr>();
         if (Attr && Attr->isNewZA())
           CallerHasZAState = true;
-        else if (const auto *FPT =
-                     CallerFD->getType()->getAs<FunctionProtoType>())
-          CallerHasZAState = FunctionType::getArmZAState(
-                                 FPT->getExtProtoInfo().AArch64SMEAttributes) !=
-                             FunctionType::ARM_None;
-      }
-
-      if (!CallerHasZAState)
-        Diag(Loc, diag::err_sme_za_call_no_za_state);
-    }
-
-    // If the callee uses AArch64 SME ZT0 state but the caller doesn't define
-    // any, then this is an error.
-    FunctionType::ArmStateValue ArmZT0State =
-        FunctionType::getArmZT0State(ExtInfo.AArch64SMEAttributes);
-    if (ArmZT0State != FunctionType::ARM_None) {
-      bool CallerHasZT0State = false;
-      if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
-        auto *Attr = CallerFD->getAttr<ArmNewAttr>();
         if (Attr && Attr->isNewZT0())
           CallerHasZT0State = true;
-        else if (const auto *FPT =
-                     CallerFD->getType()->getAs<FunctionProtoType>())
-          CallerHasZT0State =
+        if (const auto *FPT = CallerFD->getType()->getAs<FunctionProtoType>()) {
+          CallerHasZAState |=
+              FunctionType::getArmZAState(
+                  FPT->getExtProtoInfo().AArch64SMEAttributes) !=
+              FunctionType::ARM_None;
+          CallerHasZT0State |=
               FunctionType::getArmZT0State(
                   FPT->getExtProtoInfo().AArch64SMEAttributes) !=
               FunctionType::ARM_None;
+        }
       }
 
-      if (!CallerHasZT0State)
+      if (CalleeArmZAState != FunctionType::ARM_None && !CallerHasZAState)
+        Diag(Loc, diag::err_sme_za_call_no_za_state);
+
+      if (CalleeArmZT0State != FunctionType::ARM_None && !CallerHasZT0State)
         Diag(Loc, diag::err_sme_zt0_call_no_zt0_state);
+
+      if (CallerHasZAState && CalleeArmZAState == FunctionType::ARM_None &&
+          CalleeArmZT0State != FunctionType::ARM_None) {
+        Diag(Loc, diag::err_sme_unimplemented_za_save_restore);
+        Diag(Loc, diag::note_sme_use_preserves_za);
+      }
     }
   }
 
@@ -7603,9 +7605,8 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   unsigned NumArgs = TheCall->getNumArgs();
 
   Expr *ImplicitThis = nullptr;
-  if (IsMemberOperatorCall && !FDecl->isStatic() &&
-      !FDecl->hasCXXExplicitFunctionObjectParameter()) {
-    // If this is a call to a non-static member operator, hide the first
+  if (IsMemberOperatorCall && !FDecl->hasCXXExplicitFunctionObjectParameter()) {
+    // If this is a call to a member operator, hide the first
     // argument from checkCall.
     // FIXME: Our choice of AST representation here is less than ideal.
     ImplicitThis = Args[0];
@@ -16126,7 +16127,10 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 /// Check conversion of given expression to boolean.
 /// Input argument E is a logical expression.
 static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
-  if (S.getLangOpts().Bool)
+  // Run the bool-like conversion checks only for C since there bools are
+  // still not used as the return type from "boolean" operators or as the input
+  // type for conditional operators.
+  if (S.getLangOpts().CPlusPlus)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isAtomicType())
     return;
@@ -16646,6 +16650,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     struct Value {
       explicit Value(unsigned Parent) : Parent(Parent), Merged(false) {}
       unsigned Parent : 31;
+      LLVM_PREFERRED_TYPE(bool)
       unsigned Merged : 1;
     };
     SmallVector<Value, 8> Values;
@@ -17177,7 +17182,7 @@ public:
     //  evaluates to true.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitRHS = !EvalOK || !EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17209,7 +17214,7 @@ public:
     //  [...] the second operand is not evaluated if the first operand is false.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && EvalResult);
+    bool ShouldVisitRHS = !EvalOK || EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17260,8 +17265,8 @@ public:
     // evaluated. [...]
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(CO->getCond(), EvalResult);
-    bool ShouldVisitTrueExpr = !EvalOK || (EvalOK && EvalResult);
-    bool ShouldVisitFalseExpr = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitTrueExpr = !EvalOK || EvalResult;
+    bool ShouldVisitFalseExpr = !EvalOK || !EvalResult;
     if (ShouldVisitTrueExpr) {
       Region = TrueRegion;
       Visit(CO->getTrueExpr());

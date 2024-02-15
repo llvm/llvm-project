@@ -658,7 +658,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
   const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
   std::string Name = ED->getName().str();
-  if (std::string::npos != Name.find("enum")) {
+  if (StringRef(Name).contains("enum")) {
     Name = Name.substr(strlen("enum"), Name.length() - strlen("enum"));
     Name = Name.erase(0, Name.find_first_not_of(' '));
   }

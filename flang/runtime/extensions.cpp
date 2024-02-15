@@ -18,6 +18,7 @@
 #include "flang/Runtime/io-api.h"
 #include <chrono>
 #include <ctime>
+#include <signal.h>
 #include <thread>
 
 #ifdef _WIN32
@@ -114,6 +115,17 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
+}
+
+std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int)) {
+  // using auto for portability:
+  // on Windows, this is a void *
+  // on POSIX, this has the same type as handler
+  auto result = signal(number, handler);
+
+  // GNU defines the intrinsic as returning an integer, not a pointer. So we
+  // have to reinterpret_cast
+  return static_cast<int64_t>(reinterpret_cast<std::uintptr_t>(result));
 }
 
 // CALL SLEEP(SECONDS)

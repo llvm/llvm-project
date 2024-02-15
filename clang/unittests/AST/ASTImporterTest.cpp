@@ -5181,7 +5181,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   }
 }
 
-TEST_P(ImportFriendClasses, RecordVarTemplateDecl) {
+TEST_P(ASTImporterOptionSpecificTestBase, RecordVarTemplateDecl) {
   Decl *ToTU = getToTuDecl(
       R"(
       template <class T>
@@ -5263,6 +5263,58 @@ TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateStaticDefinition) {
   EXPECT_TRUE(ToXDef);
   EXPECT_TRUE(ToXDef->isThisDeclarationADefinition());
   EXPECT_EQ(ToXDef->getPreviousDecl(), ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateSpecializationDeclValue) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14);
+
+  auto *ToTUX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      ToTU, varTemplateSpecializationDecl(hasName("X")));
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX14);
+  EXPECT_TRUE(ToX);
+  EXPECT_EQ(ToTUX, ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       VarTemplateSpecializationDeclValueConflict) {
+  getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14);
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 2; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX14);
+  EXPECT_FALSE(ToX);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateParameterDeclContext) {
