@@ -41,7 +41,7 @@ AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 AST_MATCHER(InitListExpr, isFullyDesignated) {
   if (const InitListExpr *SyntacticForm =
           Node.isSyntacticForm() ? &Node : Node.getSyntacticForm()) {
-    return llvm::all_of(SyntacticForm->children(), [](auto *InitExpr) {
+    return llvm::all_of(*SyntacticForm, [](auto *InitExpr) {
       return isa<DesignatedInitExpr>(InitExpr);
     });
   }
@@ -79,9 +79,9 @@ void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static bool isFullyUndesignated(const InitListExpr *SyntacticInitList) {
-  return std::all_of(
-      SyntacticInitList->begin(), SyntacticInitList->end(),
-      [](auto *InitExpr) { return !isa<DesignatedInitExpr>(InitExpr); });
+  return llvm::all_of(*SyntacticInitList, [](auto *InitExpr) {
+    return !isa<DesignatedInitExpr>(InitExpr);
+  });
 }
 
 void UseDesignatedInitializersCheck::check(
