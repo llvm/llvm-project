@@ -163,6 +163,11 @@ enum class LevelFormat : uint64_t {
   NOutOfM = 0x00100000,
 };
 
+template <LevelFormat... targets>
+constexpr bool isAnyOfFmt(LevelFormat fmt) {
+  return (... || (targets == fmt));
+}
+
 /// Returns string representation of the given level format.
 constexpr const char *toFormatString(LevelFormat lvlFmt) {
   switch (lvlFmt) {
@@ -218,14 +223,15 @@ struct LevelType {
 public:
   /// Check that the `LevelType` contains a valid (possibly undefined) value.
   static constexpr bool isValidLvlBits(uint64_t lvlBits) {
-    const uint64_t formatBits = lvlBits & 0xffff0000;
+    auto fmt = static_cast<LevelFormat>(lvlBits & 0xffff0000);
     const uint64_t propertyBits = lvlBits & 0xffff;
     // If undefined/dense/NOutOfM, then must be unique and ordered.
     // Otherwise, the format must be one of the known ones.
-    return (formatBits <= 0x10000 || formatBits == 0x100000)
+    return (isAnyOfFmt<LevelFormat::Undef, LevelFormat::Dense,
+                       LevelFormat::NOutOfM>(fmt))
                ? (propertyBits == 0)
-               : (formatBits == 0x20000 || formatBits == 0x40000 ||
-                  formatBits == 0x80000);
+               : (isAnyOfFmt<LevelFormat::Compressed, LevelFormat::Singleton,
+                             LevelFormat::LooseCompressed>(fmt));
   }
 
   /// Convert a LevelFormat to its corresponding LevelType with the given
@@ -235,6 +241,7 @@ public:
   buildLvlType(LevelFormat lf,
                const std::vector<LevelPropNonDefault> &properties,
                uint64_t n = 0, uint64_t m = 0) {
+    assert((n & 0xff) == n && (m & 0xff) == m);
     uint64_t newN = n << 32;
     uint64_t newM = m << 40;
     uint64_t ltBits = static_cast<uint64_t>(lf) | newN | newM;
@@ -275,11 +282,13 @@ public:
 
   LevelType stripProperties() const { return LevelType(lvlBits & ~0xffff); }
 
-  /// Get N/M of NOutOfM level type.
+  /// Get N of NOutOfM level type.
   constexpr uint64_t getN() const {
     assert(isa<LevelFormat::NOutOfM>());
     return (lvlBits >> 32) & 0xff;
   }
+
+  /// Get M of NOutOfM level type.
   constexpr uint64_t getM() const {
     assert(isa<LevelFormat::NOutOfM>());
     return (lvlBits >> 40) & 0xff;
@@ -388,10 +397,6 @@ inline bool isValidNOutOfMLT(LevelType lt, uint64_t n, uint64_t m) {
   return isNOutOfMLT(lt) && lt.getN() == n && lt.getM() == m;
 }
 inline std::string toMLIRString(LevelType lt) { return lt.toMLIRString(); }
-
-//
-// Ensure the above methods work as intended.
-//
 
 /// Bit manipulations for affine encoding.
 ///
