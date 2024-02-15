@@ -12,7 +12,7 @@
 // UNSUPPORTED: libcpp-has-no-unicode
 
 // TODO FMT Investigate Windows issues.
-// XFAIL: msvc, target={{.+}}-windows-gnu
+// XFAIL: target={{.+}}-windows-gnu
 
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
