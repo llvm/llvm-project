@@ -804,10 +804,8 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
   ED->setScopedUsingClassTag(EnumDeclBits.getNextBit());
   ED->setFixed(EnumDeclBits.getNextBit());
 
-  if (!shouldSkipCheckingODR(ED)) {
-    ED->setHasODRHash(true);
-    ED->ODRHash = Record.readInt();
-  }
+  ED->setHasODRHash(true);
+  ED->ODRHash = Record.readInt();
 
   // If this is a definition subject to the ODR, and we already have a
   // definition, merge this one into it.
@@ -1102,10 +1100,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   if (FD->isExplicitlyDefaulted())
     FD->setDefaultLoc(readSourceLocation());
 
-  if (!shouldSkipCheckingODR(FD)) {
-    FD->ODRHash = Record.readInt();
-    FD->setHasODRHash(true);
-  }
+  FD->ODRHash = Record.readInt();
+  FD->setHasODRHash(true);
 
   if (FD->isDefaulted()) {
     if (unsigned NumLookups = Record.readInt()) {
@@ -1981,12 +1977,9 @@ void ASTDeclReader::ReadCXXDefinitionData(
 #include "clang/AST/CXXRecordDeclDefinitionBits.def"
 #undef FIELD
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D)) {
-    // Note: the caller has deserialized the IsLambda bit already.
-    Data.ODRHash = Record.readInt();
-    Data.HasODRHash = true;
-  }
+  // Note: the caller has deserialized the IsLambda bit already.
+  Data.ODRHash = Record.readInt();
+  Data.HasODRHash = true;
 
   if (Record.readInt()) {
     Reader.DefinitionSource[D] =

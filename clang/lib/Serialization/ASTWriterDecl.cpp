@@ -493,9 +493,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   EnumDeclBits.addBit(D->isFixed());
   Record.push_back(EnumDeclBits);
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D))
-    Record.push_back(D->getODRHash());
+  Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
     Record.AddDeclRef(MemberInfo->getInstantiatedFrom());
@@ -703,9 +701,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   if (D->isExplicitlyDefaulted())
     Record.AddSourceLocation(D->getDefaultLoc());
 
-  // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D))
-    Record.push_back(D->getODRHash());
+  Record.push_back(D->getODRHash());
 
   if (D->isDefaulted()) {
     if (auto *FDI = D->getDefaultedFunctionInfo()) {
