@@ -776,6 +776,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
+  if (STI.getSmVersion() < 80 || STI.getPTXVersion() < 71) {
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+  }
+  if (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78) {
+    setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
+  }
+
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
   // bf16 conversions.
   if (STI.hasBF16Math() &&
@@ -2465,6 +2474,72 @@ SDValue NVPTXTargetLowering::LowerFP_TO_INT(SDValue Op,
   return Op;
 }
 
+SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  EVT NarrowVT = Op.getValueType();
+  SDValue Wide = Op.getOperand(0);
+  EVT WideVT = Wide.getValueType();
+  if (NarrowVT.getScalarType() == MVT::bf16) {
+    const TargetLowering *TLI = STI.getTargetLowering();
+    if (STI.getSmVersion() < 80 || STI.getPTXVersion() < 70) {
+      return TLI->expandFP_ROUND(Op.getNode(), DAG);
+    }
+    if (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78) {
+      // This combination was the first to support f32 -> bf16.
+      if (STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70) {
+        if (WideVT.getScalarType() == MVT::f32) {
+          return Op;
+        }
+        if (WideVT.getScalarType() == MVT::f64) {
+          SDLoc Loc(Op);
+          // Round-inexact-to-odd f64 to f32, then do the final rounding using
+          // the hardware f32 -> bf16 instruction.
+          SDValue rod = TLI->expandRoundInexactToOdd(
+              WideVT.isVector() ? WideVT.changeVectorElementType(MVT::f32)
+                                : MVT::f32,
+              Wide, Loc, DAG);
+          return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
+        }
+      }
+      return TLI->expandFP_ROUND(Op.getNode(), DAG);
+    }
+  }
+
+  // Everything else is considered legal.
+  return Op;
+}
+
+SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDValue Narrow = Op.getOperand(0);
+  EVT NarrowVT = Narrow.getValueType();
+  EVT WideVT = Op.getValueType();
+  if (NarrowVT.getScalarType() == MVT::bf16) {
+    if (WideVT.getScalarType() == MVT::f32 &&
+        (STI.getSmVersion() < 80 || STI.getPTXVersion() < 71)) {
+      SDLoc Loc(Op);
+      return DAG.getNode(ISD::BF16_TO_FP, Loc, WideVT, Narrow);
+    }
+    if (WideVT.getScalarType() == MVT::f64 &&
+        (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78)) {
+      EVT F32 = NarrowVT.isVector() ? NarrowVT.changeVectorElementType(MVT::f32)
+                                    : MVT::f32;
+      EVT F64 = NarrowVT.isVector() ? NarrowVT.changeVectorElementType(MVT::f64)
+                                    : MVT::f64;
+      SDLoc Loc(Op);
+      if (STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 71) {
+        Op = DAG.getNode(ISD::FP_EXTEND, Loc, F32, Narrow);
+      } else {
+        Op = DAG.getNode(ISD::BF16_TO_FP, Loc, F32, Narrow);
+      }
+      return DAG.getNode(ISD::FP_EXTEND, Loc, F64, Op);
+    }
+  }
+
+  // Everything else is considered legal.
+  return Op;
+}
+
 static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   if (Op.getValueType() != MVT::v2i16)
@@ -2527,6 +2602,10 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return LowerFP_TO_INT(Op, DAG);
+  case ISD::FP_ROUND:
+    return LowerFP_ROUND(Op, DAG);
+  case ISD::FP_EXTEND:
+    return LowerFP_EXTEND(Op, DAG);
   case ISD::VAARG:
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
