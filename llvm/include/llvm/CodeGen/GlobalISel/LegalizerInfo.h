@@ -1084,7 +1084,7 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT T = Query.Types[LargeTypeIdx];
-          if (T.isVector() && T.getElementType().isPointer())
+          if (T.isPointerVector())
             T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
           return std::make_pair(TypeIdx, T);
         });
