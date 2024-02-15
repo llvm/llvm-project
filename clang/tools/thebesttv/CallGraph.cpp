@@ -3,8 +3,7 @@
 #include "ICFG.h"
 #include "utils.h"
 
-std::string
-GenWholeProgramCallGraphVisitor::getMangledName(const FunctionDecl *decl) {
+std::string GenICFGVisitor::getMangledName(const FunctionDecl *decl) {
     auto mangleContext = Context->createMangleContext();
 
     if (!mangleContext->shouldMangleDeclName(decl)) {
@@ -23,7 +22,7 @@ GenWholeProgramCallGraphVisitor::getMangledName(const FunctionDecl *decl) {
     return mangledName;
 };
 
-bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
+bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     std::unique_ptr<Location> pLoc =
         Location::fromSourceLocation(D->getASTContext(), D->getBeginLoc());
     if (!pLoc)
@@ -84,13 +83,12 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
     return true;
 }
 
-bool GenWholeProgramCallGraphVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
+bool GenICFGVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // llvm::errs() << D->getQualifiedNameAsString() << "\n";
     return true;
 }
 
-void GenWholeProgramCallGraphConsumer::HandleTranslationUnit(
-    clang::ASTContext &Context) {
+void GenICFGConsumer::HandleTranslationUnit(clang::ASTContext &Context) {
     TranslationUnitDecl *TUD = Context.getTranslationUnitDecl();
     // TUD->dump();
     // CallGraph CG;
@@ -100,8 +98,8 @@ void GenWholeProgramCallGraphConsumer::HandleTranslationUnit(
 }
 
 std::unique_ptr<clang::ASTConsumer>
-GenWholeProgramCallGraphAction::CreateASTConsumer(
-    clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
+GenICFGAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
+                                 llvm::StringRef InFile) {
 
     static const int total = Global.cb->getAllFiles().size();
     static int fileCnt = 0;
@@ -112,6 +110,6 @@ GenWholeProgramCallGraphAction::CreateASTConsumer(
     std::string filePath(fileEntry->tryGetRealPathName());
     llvm::errs() << "[" << fileCnt << "/" << total << "] " << filePath << "\n";
 
-    return std::make_unique<GenWholeProgramCallGraphConsumer>(
-        &Compiler.getASTContext(), filePath);
+    return std::make_unique<GenICFGConsumer>(&Compiler.getASTContext(),
+                                             filePath);
 }

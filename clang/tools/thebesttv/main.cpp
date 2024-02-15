@@ -175,6 +175,18 @@ void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
     }
 }
 
+/**
+ * 生成全程序调用图
+ */
+void generateICFG(const std::vector<std::string> &allFiles) {
+    llvm::errs() << "\n--- Generating whole program call graph ---\n";
+    ClangTool Tool(*Global.cb, allFiles);
+    DiagnosticConsumer DC = IgnoringDiagConsumer();
+    Tool.setDiagnosticConsumer(&DC);
+
+    Tool.run(newFrontendActionFactory<GenICFGAction>().get());
+}
+
 void printCloc(const std::vector<std::string> &allFiles) {
     // save all files to "compile_files.txt" under build path
     fs::path resultFiles = Global.buildPath / "compile_files.txt";
@@ -217,14 +229,7 @@ int main(int argc, const char **argv) {
     for (auto &file : allFiles)
         llvm::errs() << "  " << file << "\n";
 
-    llvm::errs() << "\n--- Building ATS from files ---\n";
-    ClangTool Tool(*Global.cb, allFiles);
-    DiagnosticConsumer DC = IgnoringDiagConsumer();
-    Tool.setDiagnosticConsumer(&DC);
-
-    // 生成所有函数的调用图
-    Tool.run(newFrontendActionFactory<GenWholeProgramCallGraphAction>().get());
-
+    generateICFG(allFiles);
     printCloc(allFiles);
 
     {

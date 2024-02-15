@@ -5,8 +5,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/Demangle/Demangle.h"
 
-class GenWholeProgramCallGraphVisitor
-    : public RecursiveASTVisitor<GenWholeProgramCallGraphVisitor> {
+class GenICFGVisitor : public RecursiveASTVisitor<GenICFGVisitor> {
 
     ASTContext *Context;
     fs::path filePath;
@@ -28,27 +27,25 @@ class GenWholeProgramCallGraphVisitor
     }
 
   public:
-    explicit GenWholeProgramCallGraphVisitor(ASTContext *Context,
-                                             fs::path filePath)
+    explicit GenICFGVisitor(ASTContext *Context, fs::path filePath)
         : Context(Context), filePath(filePath) {}
 
     bool VisitFunctionDecl(clang::FunctionDecl *D);
     bool VisitCXXRecordDecl(clang::CXXRecordDecl *D);
 };
 
-class GenWholeProgramCallGraphConsumer : public clang::ASTConsumer {
+class GenICFGConsumer : public clang::ASTConsumer {
   public:
-    explicit GenWholeProgramCallGraphConsumer(ASTContext *Context,
-                                              fs::path filePath)
+    explicit GenICFGConsumer(ASTContext *Context, fs::path filePath)
         : Visitor(Context, filePath) {}
 
     virtual void HandleTranslationUnit(clang::ASTContext &Context) override;
 
   private:
-    GenWholeProgramCallGraphVisitor Visitor;
+    GenICFGVisitor Visitor;
 };
 
-class GenWholeProgramCallGraphAction : public clang::ASTFrontendAction {
+class GenICFGAction : public clang::ASTFrontendAction {
   public:
     virtual std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(clang::CompilerInstance &Compiler,
