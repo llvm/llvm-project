@@ -888,6 +888,17 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         return false;
       } // end of PHI handling
 
+      // or-disjoint instruction which is predicated maybe disjoint because of a
+      // dominating condition. Avoid vectorizing in such cases, since dropping
+      // the disjoint (to avoid poison) changes the meaning of the instruction
+      // which was originally an add.
+      // TODO: We should check the terminating condition of all
+      // dominating blocks in the loop to see if Op0 is used for their
+      // terminating condition.
+      if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I))
+        if (Op->isDisjoint() && blockNeedsPredication(BB))
+          return false;
+
       // We handle calls that:
       //   * Are debug info intrinsics.
       //   * Have a mapping to an IR intrinsic.
