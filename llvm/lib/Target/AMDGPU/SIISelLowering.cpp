@@ -12965,10 +12965,8 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
 
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-    if ((!K0->hasOneUse() ||
-         TII->isInlineConstant(K0->getValueAPF().bitcastToAPInt())) &&
-        (!K1->hasOneUse() ||
-         TII->isInlineConstant(K1->getValueAPF().bitcastToAPInt()))) {
+    if ((!K0->hasOneUse() || TII->isInlineConstant(K0->getValueAPF())) &&
+        (!K1->hasOneUse() || TII->isInlineConstant(K1->getValueAPF()))) {
       return DAG.getNode(AMDGPUISD::FMED3, SL, K0->getValueType(0),
                          Var, SDValue(K0, 0), SDValue(K1, 0));
     }

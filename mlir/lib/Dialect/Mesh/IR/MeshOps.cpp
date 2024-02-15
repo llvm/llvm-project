@@ -252,14 +252,20 @@ MeshShapeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 void MeshShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                         MeshOp mesh) {
+  build(odsBuilder, odsState, mesh, SmallVector<MeshAxis>());
+}
+
+void MeshShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                        MeshOp mesh, ArrayRef<MeshAxis> axes) {
   build(odsBuilder, odsState,
-        SmallVector<Type>(mesh.getRank(), odsBuilder.getIndexType()),
-        mesh.getSymName(),
-        MeshAxesAttr::get(odsBuilder.getContext(), SmallVector<MeshAxis>()));
+        SmallVector<Type>(axes.empty() ? mesh.getRank() : axes.size(),
+                          odsBuilder.getIndexType()),
+        mesh.getSymName(), MeshAxesAttr::get(odsBuilder.getContext(), axes));
 }
 
 void MeshShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                         StringRef mesh, ArrayRef<MeshAxis> axes) {
+  assert(!axes.empty());
   build(odsBuilder, odsState,
         SmallVector<Type>(axes.size(), odsBuilder.getIndexType()), mesh,
         MeshAxesAttr::get(odsBuilder.getContext(), axes));
@@ -552,13 +558,13 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
   return success();
 }
 
-static LogicalResult verifyScatterOperandAndResultShape(
-    Value operand, Value result, int64_t scatterAxis,
+static LogicalResult verifyScatterOrSliceOperandAndResultShape(
+    Value operand, Value result, int64_t tensorAxis,
     ArrayRef<MeshAxis> meshAxes, ArrayRef<int64_t> meshShape) {
   ShapedType operandType = operand.getType().cast<ShapedType>();
   ShapedType resultType = result.getType().cast<ShapedType>();
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
-    if (axis != scatterAxis) {
+    if (axis != tensorAxis) {
       if (failed(verifyDimensionCompatibility(
               result.getLoc(), operandType.getDimSize(axis),
               resultType.getDimSize(axis), axis))) {
@@ -570,24 +576,40 @@ static LogicalResult verifyScatterOperandAndResultShape(
   auto deviceGroupSize =
       DimensionSize(collectiveProcessGroupSize(meshAxes, meshShape));
   auto operandScatterDimSize =
-      DimensionSize(operandType.getDimSize(scatterAxis));
+      DimensionSize(operandType.getDimSize(tensorAxis));
   if (!operandScatterDimSize.isDynamic() && !deviceGroupSize.isDynamic() &&
       int64_t(operandScatterDimSize) % int64_t(deviceGroupSize) != 0) {
     return emitError(result.getLoc())
            << "Operand dimension size " << int64_t(operandScatterDimSize)
            << " is not divisible by collective device group size "
-           << int64_t(deviceGroupSize) << " for scatter axis " << scatterAxis
+           << int64_t(deviceGroupSize) << " for tensor axis " << tensorAxis
            << ".";
   }
-  DimensionSize expectedResultScatterDimSize =
+  DimensionSize expectedResultTensorDimSize =
       operandScatterDimSize / deviceGroupSize;
   if (failed(verifyDimensionCompatibility(
-          result.getLoc(), expectedResultScatterDimSize.value(),
-          resultType.getDimSize(scatterAxis), scatterAxis))) {
+          result.getLoc(), expectedResultTensorDimSize.value(),
+          resultType.getDimSize(tensorAxis), tensorAxis))) {
     return failure();
   }
 
   return success();
+}
+
+static RankedTensorType sliceResultType(Type operandType, MeshOp mesh,
+                                        ArrayRef<MeshAxis> meshAxes,
+                                        int64_t sliceAxis) {
+  RankedTensorType operandRankedTensorType =
+      cast<RankedTensorType>(operandType);
+  DimensionSize operandSliceAxisSize =
+      operandRankedTensorType.getShape()[sliceAxis];
+  SmallVector<int64_t> resultShape =
+      llvm::to_vector(operandRankedTensorType.getShape());
+
+  resultShape[sliceAxis] =
+      operandSliceAxisSize /
+      DimensionSize(collectiveProcessGroupSize(meshAxes, mesh));
+  return operandRankedTensorType.clone(resultShape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -623,6 +645,40 @@ AllReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void AllReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<AllReduceOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.all_slice op
+//===----------------------------------------------------------------------===//
+
+LogicalResult AllSliceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto mesh = getMeshAndVerifyAxes(*this, symbolTable);
+  if (failed(mesh)) {
+    return failure();
+  }
+  return verifyScatterOrSliceOperandAndResultShape(
+      getOperand(), getResult(), getSliceAxis().getSExtValue(), getMeshAxes(),
+      mesh.value().getShape());
+}
+
+void AllSliceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                             MLIRContext *context) {
+  patterns.add<EmptyMeshAxesCanonicalizationPattern<AllSliceOp>>(context);
+}
+
+void AllSliceOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                       Value input, MeshOp mesh, ArrayRef<MeshAxis> meshAxes,
+                       int64_t sliceAxis) {
+  Type resultType = sliceResultType(input.getType(), mesh, meshAxes, sliceAxis);
+  build(odsBuilder, odsState, resultType, input, mesh.getSymName(), meshAxes,
+        sliceAxis);
+}
+
+void AllSliceOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                       Type resultType, Value input, StringRef mesh,
+                       ArrayRef<MeshAxis> meshAxes, int64_t sliceAxis) {
+  build(odsBuilder, odsState, resultType, mesh, meshAxes, input,
+        APInt(sizeof(sliceAxis) * CHAR_BIT, sliceAxis));
 }
 
 //===----------------------------------------------------------------------===//
@@ -752,7 +808,7 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
 
-  return verifyScatterOperandAndResultShape(
+  return verifyScatterOrSliceOperandAndResultShape(
       getOperand(), getResult(), getScatterAxis().getSExtValue(), getMeshAxes(),
       mesh.value().getShape());
 }
@@ -778,9 +834,9 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   auto scatterAxis = getScatterAxis().getSExtValue();
-  return verifyScatterOperandAndResultShape(getInput(), getResult(),
-                                            scatterAxis, getMeshAxes(),
-                                            mesh.value().getShape());
+  return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
+                                                   scatterAxis, getMeshAxes(),
+                                                   mesh.value().getShape());
 }
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,

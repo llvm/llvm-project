@@ -56,6 +56,12 @@ Clang Frontend Potentially Breaking Changes
   ``ArrayRef<TemplateArgument>`` reduces AST memory usage by 0.4% when compiling clang, and is
   expected to show similar improvements on other workloads.
 
+- The ``-Wgnu-binary-literal`` diagnostic group no longer controls any
+  diagnostics. Binary literals are no longer a GNU extension, they're now a C23
+  extension which is controlled via ``-pedantic`` or ``-Wc23-extensions``. Use
+  of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
+  which may break existing uses with ``-Werror``.
+
 Target OS macros extension
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
@@ -113,12 +119,30 @@ C Language Changes
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- No longer diagnose use of binary literals as an extension in C23 mode. Fixes
+  `#72017 <https://github.com/llvm/llvm-project/issues/72017>`_.
+
+- Corrected parsing behavior for the ``alignas`` specifier/qualifier in C23. We
+  previously handled it as an attribute as in C++, but there are parsing
+  differences. The behavioral differences are:
+
+  .. code-block:: c
+
+     struct alignas(8) /* was accepted, now rejected */ S {
+       char alignas(8) /* was rejected, now accepted */ C;
+     };
+     int i alignas(8) /* was accepted, now rejected */ ;
+
+  Fixes (`#81472 <https://github.com/llvm/llvm-project/issues/81472>`_).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 - Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
   counters.
+
+- ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
+  builtins are now constexpr and may be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -297,8 +321,16 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
+Fixed Point Support in Clang
+----------------------------
+
+- Support fixed point precision macros according to ``7.18a.3`` of
+  `ISO/IEC TR 18037:2008 <https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip>`_.
+
 AST Matchers
 ------------
+
+- ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 
 clang-format
 ------------
