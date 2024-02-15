@@ -30,16 +30,6 @@ Location::Location() : Location("", -1, -1) {}
 Location::Location(std::string file, int line, int column)
     : file(file), line(line), column(column) {}
 
-Location::Location(const FullSourceLoc &fullLoc) {
-    requireTrue(fullLoc.hasManager(), "no source manager!");
-    requireTrue(fullLoc.isValid(), "invalid location!");
-
-    file = fullLoc.getFileEntry()->tryGetRealPathName();
-    line = fullLoc.getLineNumber();
-    column = fullLoc.getColumnNumber();
-    requireTrue(!file.empty(), "empty file path!");
-}
-
 bool Location::operator==(const Location &other) const {
     return file == other.file && line == other.line && column == other.column;
 }
@@ -49,9 +39,6 @@ NamedLocation::NamedLocation() : NamedLocation("", -1, -1, "") {}
 NamedLocation::NamedLocation(std::string file, int line, int column,
                              std::string name)
     : Location(file, line, column), name(name) {}
-
-NamedLocation::NamedLocation(const FullSourceLoc &fullLoc, std::string name)
-    : Location(fullLoc), name(name) {}
 
 bool NamedLocation::operator==(const NamedLocation &other) const {
     return Location::operator==(other) && name == other.name;

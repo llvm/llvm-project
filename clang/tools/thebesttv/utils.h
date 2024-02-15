@@ -55,7 +55,6 @@ struct Location {
 
     Location();
     Location(std::string file, int line, int column);
-    Location(const FullSourceLoc &fullLoc);
 
     bool operator==(const Location &other) const;
 };
@@ -65,7 +64,6 @@ struct NamedLocation : public Location {
 
     NamedLocation();
     NamedLocation(std::string file, int line, int column, std::string name);
-    NamedLocation(const FullSourceLoc &fullLoc, std::string name);
 
     bool operator==(const NamedLocation &other) const;
 };
