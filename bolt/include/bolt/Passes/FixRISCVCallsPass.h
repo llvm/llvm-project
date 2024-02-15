@@ -33,7 +33,7 @@ public:
   const char *getName() const override { return "fix-riscv-calls"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

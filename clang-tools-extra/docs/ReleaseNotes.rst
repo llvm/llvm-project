@@ -121,6 +121,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
   better support for ``const`` loop boundaries.
 
+- Improved :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
+  ignoring local variable with ``[maybe_unused]`` attribute.
+
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
   by removing enforcement of rule `C.48
@@ -159,6 +163,14 @@ Changes in existing checks
   <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
+  whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
+  emit warnings for static data member with an in-class initializer.
 
 Removed checks
 ^^^^^^^^^^^^^^

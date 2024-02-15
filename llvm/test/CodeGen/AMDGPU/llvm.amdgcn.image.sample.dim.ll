@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX6789 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX6789 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx10.1-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx10-1-generic --amdhsa-code-object-version=6 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx11-generic --amdhsa-code-object-version=6 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s

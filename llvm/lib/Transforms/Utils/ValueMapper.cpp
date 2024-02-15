@@ -552,6 +552,7 @@ void Mapper::remapDPValue(DPValue &V) {
       V.setKillAddress();
     else if (NewAddr)
       V.setAddress(NewAddr);
+    V.setAssignId(cast<DIAssignID>(mapMetadata(V.getAssignID())));
   }
 
   // Find Value operands and remap those.

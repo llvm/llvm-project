@@ -549,7 +549,6 @@ define i64 @ctpop_shifted_mask8(i64 %x) nounwind readnone {
 ; X86-POPCOUNT-LABEL: ctpop_shifted_mask8:
 ; X86-POPCOUNT:       # %bb.0:
 ; X86-POPCOUNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-POPCOUNT-NEXT:    shll $8, %eax
 ; X86-POPCOUNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCOUNT-NEXT:    xorl %edx, %edx
 ; X86-POPCOUNT-NEXT:    retl
@@ -663,12 +662,11 @@ define i64 @ctpop_shifted_mask16(i64 %x) nounwind readnone {
 ; X86-NO-POPCOUNT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NO-POPCOUNT-NEXT:    movl %ecx, %eax
 ; X86-NO-POPCOUNT-NEXT:    andl $524280, %eax # imm = 0x7FFF8
-; X86-NO-POPCOUNT-NEXT:    shrl $4, %ecx
-; X86-NO-POPCOUNT-NEXT:    andl $21845, %ecx # imm = 0x5555
-; X86-NO-POPCOUNT-NEXT:    shrl $3, %eax
+; X86-NO-POPCOUNT-NEXT:    shrl %ecx
+; X86-NO-POPCOUNT-NEXT:    andl $87380, %ecx # imm = 0x15554
 ; X86-NO-POPCOUNT-NEXT:    subl %ecx, %eax
 ; X86-NO-POPCOUNT-NEXT:    movl %eax, %ecx
-; X86-NO-POPCOUNT-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; X86-NO-POPCOUNT-NEXT:    andl $858993456, %ecx # imm = 0x33333330
 ; X86-NO-POPCOUNT-NEXT:    shrl $2, %eax
 ; X86-NO-POPCOUNT-NEXT:    andl $858993459, %eax # imm = 0x33333333
 ; X86-NO-POPCOUNT-NEXT:    addl %ecx, %eax

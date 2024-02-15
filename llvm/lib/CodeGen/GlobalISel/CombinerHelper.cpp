@@ -222,21 +222,11 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   replaceRegWith(MRI, DstReg, SrcReg);
 }
 
-bool CombinerHelper::tryCombineConcatVectors(MachineInstr &MI) {
-  bool IsUndef = false;
-  SmallVector<Register, 4> Ops;
-  if (matchCombineConcatVectors(MI, IsUndef, Ops)) {
-    applyCombineConcatVectors(MI, IsUndef, Ops);
-    return true;
-  }
-  return false;
-}
-
-bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                               SmallVectorImpl<Register> &Ops) {
+bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS &&
          "Invalid instruction");
-  IsUndef = true;
+  bool IsUndef = true;
   MachineInstr *Undef = nullptr;
 
   // Walk over all the operands of concat vectors and check if they are
@@ -246,6 +236,8 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
     Register Reg = MO.getReg();
     MachineInstr *Def = MRI.getVRegDef(Reg);
     assert(Def && "Operand not defined");
+    if (!MRI.hasOneNonDBGUse(Reg))
+      return false;
     switch (Def->getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
       IsUndef = false;
@@ -275,10 +267,21 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
       return false;
     }
   }
+
+  // Check if the combine is illegal
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, MRI.getType(Ops[0])}})) {
+    return false;
+  }
+
+  if (IsUndef)
+    Ops.clear();
+
   return true;
 }
-void CombinerHelper::applyCombineConcatVectors(
-    MachineInstr &MI, bool IsUndef, const ArrayRef<Register> Ops) {
+void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   // We determined that the concat_vectors can be flatten.
   // Generate the flattened build_vector.
   Register DstReg = MI.getOperand(0).getReg();
@@ -289,9 +292,9 @@ void CombinerHelper::applyCombineConcatVectors(
   // checking that at all Ops are undef.  Alternatively, we could have
   // generate a build_vector of undefs and rely on another combine to
   // clean that up.  For now, given we already gather this information
-  // in tryCombineConcatVectors, just save compile time and issue the
+  // in matchCombineConcatVectors, just save compile time and issue the
   // right thing.
-  if (IsUndef)
+  if (Ops.empty())
     Builder.buildUndef(NewDstReg);
   else
     Builder.buildBuildVector(NewDstReg, Ops);
