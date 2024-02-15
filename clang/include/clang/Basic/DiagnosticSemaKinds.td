@@ -1637,10 +1637,10 @@ def err_inline_namespace_std : Error<
 def err_unexpected_friend : Error<
   "friends can only be classes or functions">;
 def ext_enum_friend : ExtWarn<
-  "befriending enumeration type %0 is a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_enum_friend : Warning<
-  "befriending enumeration type %0 is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
+  "elaborated enum specifier cannot be declared as a friend">,
+  InGroup<DiagGroup<"friend-enum">>;
+def note_enum_friend : Note<
+  "remove 'enum%select{| struct| class}0' to befriend an enum">;
 def ext_nonclass_type_friend : ExtWarn<
   "non-class friend type %0 is a C++11 extension">, InGroup<CXX11>;
 def warn_cxx98_compat_nonclass_type_friend : Warning<
@@ -11314,6 +11314,8 @@ def err_omp_wrong_dependency_iterator_type : Error<
 def err_target_unsupported_type
     : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
             " but target '%5' does not support it">;
+def err_target_unsupported_type_for_abi
+    : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
 def err_omp_device_type_mismatch : Error<
