@@ -3728,14 +3728,13 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
 bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   assert(Line.MightBeFunctionDecl);
 
-  if ((Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_TopLevel ||
-       Style.AlwaysBreakAfterReturnType ==
-           FormatStyle::RTBS_TopLevelDefinitions) &&
+  if ((Style.BreakAfterReturnType == FormatStyle::RTBS_TopLevel ||
+       Style.BreakAfterReturnType == FormatStyle::RTBS_TopLevelDefinitions) &&
       Line.Level > 0) {
     return false;
   }
 
-  switch (Style.AlwaysBreakAfterReturnType) {
+  switch (Style.BreakAfterReturnType) {
   case FormatStyle::RTBS_None:
   case FormatStyle::RTBS_Automatic:
   case FormatStyle::RTBS_ExceptShortType:

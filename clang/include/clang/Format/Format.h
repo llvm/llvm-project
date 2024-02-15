@@ -1013,7 +1013,7 @@ struct FormatStyle {
   /// This option is renamed to ``BreakAfterReturnType``.
   /// \version 3.8
   /// @deprecated
-  ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
+  // ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
 
   /// If ``true``, always break before multiline string literals.
   ///
@@ -1579,7 +1579,7 @@ struct FormatStyle {
 
   /// The function declaration return type breaking style to use.
   /// \version 19
-  // ReturnTypeBreakingStyle BreakAfterReturnType;
+  ReturnTypeBreakingStyle BreakAfterReturnType;
 
   /// If ``true``, clang-format will always break after a Json array ``[``
   /// otherwise it will scan until the closing ``]`` to determine if it should
@@ -4824,7 +4824,6 @@ struct FormatStyle {
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
-           AlwaysBreakAfterReturnType == R.AlwaysBreakAfterReturnType &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
@@ -4835,6 +4834,7 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
