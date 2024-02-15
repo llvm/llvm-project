@@ -4189,7 +4189,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
       }
 
-      if (auto *IAA = dyn_cast<InstallAPIJobAction>(Current)) {
+      if (isa<InstallAPIJobAction>(Current)) {
         Current = nullptr;
         break;
       }
