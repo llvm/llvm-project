@@ -251,7 +251,10 @@ public:
           const DWARF5AccelTableData &)>
           getIndexForEntry,
       bool IsSplitDwarf);
-
+  ~Dwarf5AccelTableWriter() {
+    for (DebugNamesAbbrev *Abbrev : AbbreviationsVector)
+      Abbrev->~DebugNamesAbbrev();
+  }
   void emit();
 };
 } // namespace
