@@ -52,6 +52,9 @@ bool GenWholeProgramCallGraphVisitor::VisitFunctionDecl(FunctionDecl *D) {
     if (!D->isThisDeclarationADefinition())
         return true;
 
+    if (!D->getBody())
+        return true;
+
     std::string fullSignature = getFullSignature(D);
 
     auto &functionCnt = Global.functionCnt;
