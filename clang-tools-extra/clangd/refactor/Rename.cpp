@@ -586,19 +586,19 @@ bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
   return isSelectorLike(Cur, Next) && Cur.text(SM) == SelectorName;
 }
 
-// Scan through Tokens to find ranges for each selector fragment in Sel at the
-// top level (not nested in any () or {} or []). The search will terminate upon
-// seeing Terminator or a ; at the top level.
+// Scan through Tokens to find ranges for each selector fragment in Sel assuming
+// its first segment is located at Tokens.front().
+// The search will terminate upon seeing Terminator or a ; at the top level.
 std::optional<SymbolRange>
 findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
                       const SourceManager &SM, Selector Sel,
                       tok::TokenKind Terminator) {
+  assert(!Tokens.empty());
 
   unsigned NumArgs = Sel.getNumArgs();
   llvm::SmallVector<tok::TokenKind, 8> Closes;
   std::vector<Range> SelectorPieces;
-  unsigned Last = Tokens.size() - 1;
-  for (unsigned Index = 0; Index < Last; ++Index) {
+  for (unsigned Index = 0, Last = Tokens.size(); Index < Last - 1; ++Index) {
     const auto &Tok = Tokens[Index];
 
     if (Closes.empty()) {
@@ -607,7 +607,9 @@ findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
           isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
                                  Sel.getNameForSlot(PieceCount))) {
         // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
-        // token after the name.
+        // token after the name. We don't currently properly support empty
+        // selectors since we may lex them improperly due to ternary statements
+        // as well as don't properly support storing their ranges for edits.
         if (!Sel.getNameForSlot(PieceCount).empty())
           ++Index;
         SelectorPieces.push_back(
