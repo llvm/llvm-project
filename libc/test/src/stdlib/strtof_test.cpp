@@ -43,7 +43,7 @@ public:
     LIBC_NAMESPACE::fputil::FPBits<float> expected_fp =
         LIBC_NAMESPACE::fputil::FPBits<float>(expectedRawData);
 
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     float result = LIBC_NAMESPACE::strtof(inputString, &str_end);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);

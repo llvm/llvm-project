@@ -10,6 +10,7 @@
 // extensions:
 //   - Zawrs (v1.0) : Wait-on-Reservation-Set.
 //   - Zacas (v1.0-rc1) : Atomic Compare-and-Swap.
+//   - Zabha (v1.0-rc1) : Byte and Halfword Atomic Memory Operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -134,3 +135,53 @@ let Predicates = [HasStdExtZawrs] in {
 def WRS_NTO : WRSInst<0b000000001101, "wrs.nto">, Sched<[]>;
 def WRS_STO : WRSInst<0b000000011101, "wrs.sto">, Sched<[]>;
 } // Predicates = [HasStdExtZawrs]
+
+//===----------------------------------------------------------------------===//
+// Zabha (Byte and Halfword Atomic Memory Operations)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZabha] in {
+defm AMOSWAP_B  : AMO_rr_aq_rl<0b00001, 0b000, "amoswap.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOADD_B   : AMO_rr_aq_rl<0b00000, 0b000, "amoadd.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOXOR_B   : AMO_rr_aq_rl<0b00100, 0b000, "amoxor.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOAND_B   : AMO_rr_aq_rl<0b01100, 0b000, "amoand.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOOR_B    : AMO_rr_aq_rl<0b01000, 0b000, "amoor.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOMIN_B   : AMO_rr_aq_rl<0b10000, 0b000, "amomin.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOMAX_B   : AMO_rr_aq_rl<0b10100, 0b000, "amomax.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOMINU_B  : AMO_rr_aq_rl<0b11000, 0b000, "amominu.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+defm AMOMAXU_B  : AMO_rr_aq_rl<0b11100, 0b000, "amomaxu.b">,
+                  Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
+
+defm AMOSWAP_H  : AMO_rr_aq_rl<0b00001, 0b001, "amoswap.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOADD_H   : AMO_rr_aq_rl<0b00000, 0b001, "amoadd.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOXOR_H   : AMO_rr_aq_rl<0b00100, 0b001, "amoxor.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOAND_H   : AMO_rr_aq_rl<0b01100, 0b001, "amoand.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOOR_H    : AMO_rr_aq_rl<0b01000, 0b001, "amoor.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOMIN_H   : AMO_rr_aq_rl<0b10000, 0b001, "amomin.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOMAX_H   : AMO_rr_aq_rl<0b10100, 0b001, "amomax.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOMINU_H  : AMO_rr_aq_rl<0b11000, 0b001, "amominu.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+defm AMOMAXU_H  : AMO_rr_aq_rl<0b11100, 0b001, "amomaxu.h">,
+                  Sched<[WriteAtomicH, ReadAtomicHA, ReadAtomicHD]>;
+}
+
+// If Zacas extension is also implemented, Zabha further provides AMOCAS.[B|H].
+let Predicates = [HasStdExtZabha, HasStdExtZacas] in {
+defm AMOCAS_B : AMO_cas_aq_rl<0b00101, 0b000, "amocas.b", GPR>;
+defm AMOCAS_H : AMO_cas_aq_rl<0b00101, 0b001, "amocas.h", GPR>;
+}

@@ -46,7 +46,6 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[V_SUB_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_SUB_F32_e64 0, [[IMAGE_SAMPLE_V3_V2_gfx10_]].sub0, 0, [[IMAGE_SAMPLE_V3_V2_gfx10_]].sub1, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET_exact [[V_SUB_F32_e64_]], [[DEF1]], [[COPY1]], 4, 0, 0, implicit $exec

@@ -1556,6 +1556,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FCMP:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_ZEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_SEXT_INREG: {
     if (TypeIdx != 0)
       return UnableToLegalize;
@@ -1707,8 +1716,7 @@ Register LegalizerHelper::coerceToScalar(Register Val) {
   Register NewVal = Val;
 
   assert(Ty.isVector());
-  LLT EltTy = Ty.getElementType();
-  if (EltTy.isPointer())
+  if (Ty.isPointerVector())
     NewVal = MIRBuilder.buildPtrToInt(NewTy, NewVal).getReg(0);
   return MIRBuilder.buildBitcast(NewTy, NewVal).getReg(0);
 }
@@ -5245,6 +5253,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
+  case TargetOpcode::G_ABS:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -5317,14 +5326,18 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
-  case TargetOpcode::G_ICMP: {
-    // TODO: the symmetric MoreTy works for targets like, e.g. NEON.
-    // For targets, like e.g. MVE, the result is a predicated vector (i1).
-    // This will need some refactoring.
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, MoreTy, 2);
     moreElementsVectorSrc(MI, MoreTy, 3);
-    moreElementsVectorDst(MI, MoreTy, 0);
+    LLT CondTy = LLT::fixed_vector(
+        MoreTy.getNumElements(),
+        MRI.getType(MI.getOperand(0).getReg()).getElementType());
+    moreElementsVectorDst(MI, CondTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -7950,7 +7963,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   auto [DstReg, DstTy, MaskReg, MaskTy, Op1Reg, Op1Ty, Op2Reg, Op2Ty] =
       MI.getFirst4RegLLTs();
 
-  bool IsEltPtr = DstTy.getScalarType().isPointer();
+  bool IsEltPtr = DstTy.isPointerOrPointerVector();
   if (IsEltPtr) {
     LLT ScalarPtrTy = LLT::scalar(DstTy.getScalarSizeInBits());
     LLT NewTy = DstTy.changeElementType(ScalarPtrTy);

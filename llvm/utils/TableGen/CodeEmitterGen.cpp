@@ -78,8 +78,8 @@ private:
 
 // If the VarBitInit at position 'bit' matches the specified variable then
 // return the variable bit position.  Otherwise return -1.
-int CodeEmitterGen::getVariableBit(const std::string &VarName,
-                                   BitsInit *BI, int bit) {
+int CodeEmitterGen::getVariableBit(const std::string &VarName, BitsInit *BI,
+                                   int bit) {
   if (VarBitInit *VBI = dyn_cast<VarBitInit>(BI->getBit(bit))) {
     if (VarInit *VI = dyn_cast<VarInit>(VBI->getBitVar()))
       if (VI->getName() == VarName)
@@ -101,16 +101,16 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
   // Determine if VarName actually contributes to the Inst encoding.
-  int bit = BI->getNumBits()-1;
+  int bit = BI->getNumBits() - 1;
 
   // Scan for a bit that this contributed to.
-  for (; bit >= 0; ) {
+  for (; bit >= 0;) {
     if (getVariableBit(VarName, BI, bit) != -1)
       break;
-    
+
     --bit;
   }
-  
+
   // If we found no bits, ignore this value, otherwise emit the call to get the
   // operand encoding.
   if (bit < 0)
@@ -127,12 +127,14 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
   } else {
-    PrintError(R, Twine("No operand named ") + VarName + " in record " + R->getName());
+    PrintError(R, Twine("No operand named ") + VarName + " in record " +
+                      R->getName());
     return false;
   }
 
   if (CGI.Operands.isFlatOperandNotEmitted(OpIdx)) {
-    PrintError(R, "Operand " + VarName + " used but also marked as not emitted!");
+    PrintError(R,
+               "Operand " + VarName + " used but also marked as not emitted!");
     return false;
   }
 
@@ -156,10 +158,12 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     Case += ", Fixups, STI);\n";
   } else {
     if (UseAPInt) {
-      Case += "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
+      Case +=
+          "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
       Case += ", op, Fixups, STI";
     } else {
-      Case += "      op = getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
+      Case += "      op = getMachineOpValue(MI, MI.getOperand(" +
+              utostr(OpIdx) + ")";
       Case += ", Fixups, STI";
     }
     Case += ");\n";
@@ -193,9 +197,9 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
   }
 
   unsigned BitOffset = -1;
-  for (; bit >= 0; ) {
+  for (; bit >= 0;) {
     int varBit = getVariableBit(VarName, BI, bit);
-    
+
     // If this bit isn't from a variable, skip it.
     if (varBit == -1) {
       --bit;
@@ -209,7 +213,8 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     int N = 1;
     for (--bit; bit >= 0;) {
       varBit = getVariableBit(VarName, BI, bit);
-      if (varBit == -1 || varBit != (beginVarBit - N)) break;
+      if (varBit == -1 || varBit != (beginVarBit - N))
+        break;
       ++N;
       --bit;
     }
@@ -295,11 +300,11 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
         append("      }\n");
       }
       append("      }\n");
-      return std::make_pair(std::move(Case), std::move(BitOffsetCase));
+      return std::pair(std::move(Case), std::move(BitOffsetCase));
     }
   }
   addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
-  return std::make_pair(std::move(Case), std::move(BitOffsetCase));
+  return std::pair(std::move(Case), std::move(BitOffsetCase));
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(
@@ -368,7 +373,9 @@ void CodeEmitterGen::emitInstructionBaseValues(
 
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||
         R->getValueAsBit("isPseudo")) {
-      o << "    "; emitInstBits(o, APInt(BitWidth, 0)); o << ",\n";
+      o << "    ";
+      emitInstBits(o, APInt(BitWidth, 0));
+      o << ",\n";
       continue;
     }
 
@@ -419,13 +426,13 @@ void CodeEmitterGen::run(raw_ostream &o) {
   emitSourceFileHeader("Machine Code Emitter", o);
 
   CodeGenTarget Target(Records);
-  std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
+  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("Instruction");
 
   // For little-endian instruction bit encodings, reverse the bit order
   Target.reverseBitsForLittleEndianEncoding();
 
-  ArrayRef<const CodeGenInstruction*> NumberedInstructions =
-    Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
+      Target.getInstructionsByEnumValue();
 
   if (any_of(NumberedInstructions, [](const CodeGenInstruction *CGI) {
         Record *R = CGI->TheDef;

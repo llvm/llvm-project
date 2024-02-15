@@ -636,3 +636,13 @@ struct D {
     }
 };
 }
+
+namespace GH80971 {
+struct S {
+  auto f(this auto self...) {  }
+};
+
+int bug() {
+  S{}.f(0);
+}
+}

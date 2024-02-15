@@ -233,15 +233,20 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CalleeAttrs.hasNewZABody())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      (CallerAttrs.requiresSMChange(CalleeAttrs) &&
-       (!CallerAttrs.hasStreamingInterfaceOrBody() ||
-        !CalleeAttrs.hasStreamingBody()))) {
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -3804,6 +3809,10 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  // Treat extractsubvector as single op permutation.
+  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
+  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+    Kind = TTI::SK_PermuteSingleSrc;
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -3966,6 +3975,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
+  // Restore optimal kind.
+  if (IsExtractSubvector)
+    Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 

@@ -187,6 +187,14 @@ namespace FunctionReturnType {
   static_assert(!!op, "");
   constexpr int (*op2)(int, int) = nullptr;
   static_assert(!op2, "");
+
+  int m() { return 5;} // ref-note {{declared here}} \
+                       // expected-note {{declared here}}
+  constexpr int (*invalidFnPtr)() = m;
+  static_assert(invalidFnPtr() == 5, ""); // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{non-constexpr function 'm'}} \
+                                 // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{non-constexpr function 'm'}}
 }
 
 namespace Comparison {
@@ -381,6 +389,81 @@ namespace Variadic {
 
   constexpr int (*VFP)(...) = variadic_function2;
   static_assert(VFP() == 12, "");
+
+  /// Member functions
+  struct Foo {
+    int a = 0;
+    constexpr void bla(...) {}
+    constexpr S bla2(...) {
+      return S{12, true};
+    }
+    constexpr Foo(...) : a(1337) {}
+    constexpr Foo(void *c, bool b, void*p, ...) : a('a' + b) {}
+    constexpr Foo(int a, const S* s, ...) : a(a) {}
+  };
+
+  constexpr int foo2() {
+    Foo f(1, nullptr);
+    auto s = f.bla2(1, 2, S{1, false});
+    return s.a + s.b;
+  }
+  static_assert(foo2() == 13, "");
+
+  constexpr Foo _f = 123;
+  static_assert(_f.a == 1337, "");
+
+  constexpr Foo __f(nullptr, false, nullptr, nullptr, 'a', Foo());
+  static_assert(__f.a ==  'a', "");
+
+
+#if __cplusplus >= 202002L
+namespace VariadicVirtual {
+  class A {
+  public:
+    constexpr virtual void foo(int &a, ...) {
+      a = 1;
+    }
+  };
+
+  class B : public A {
+  public:
+    constexpr void foo(int &a, ...) override {
+      a = 2;
+    }
+  };
+
+  constexpr int foo() {
+    B b;
+    int a;
+    b.foo(a, 1,2,nullptr);
+    return a;
+  }
+  static_assert(foo() == 2, "");
+} // VariadicVirtual
+
+namespace VariadicQualified {
+  class A {
+      public:
+      constexpr virtual int foo(...) const {
+          return 5;
+      }
+  };
+  class B : public A {};
+  class C : public B {
+      public:
+      constexpr int foo(...) const override {
+          return B::foo(1,2,3); // B doesn't have a foo(), so this should call A::foo().
+      }
+      constexpr int foo2() const {
+        return this->A::foo(1,2,3,this);
+      }
+  };
+  constexpr C c;
+  static_assert(c.foo() == 5);
+  static_assert(c.foo2() == 5);
+} // VariadicQualified
+#endif
+
 }
 
 namespace Packs {
@@ -412,4 +495,93 @@ namespace AddressOf {
 
   constexpr _Complex float F = {3, 4};
   static_assert(__builtin_addressof(F) == &F, "");
+}
+
+namespace std {
+template <typename T> struct remove_reference { using type = T; };
+template <typename T> struct remove_reference<T &> { using type = T; };
+template <typename T> struct remove_reference<T &&> { using type = T; };
+template <typename T>
+constexpr typename std::remove_reference<T>::type&& move(T &&t) noexcept {
+  return static_cast<typename std::remove_reference<T>::type &&>(t);
+}
+}
+/// The std::move declaration above gets translated to a builtin function.
+namespace Move {
+#if __cplusplus >= 202002L
+  consteval int f_eval() { // expected-note 12{{declared here}} \
+                           // ref-note 12{{declared here}}
+    return 0;
+  }
+
+  /// From test/SemaCXX/cxx2a-consteval.
+  struct Copy {
+    int(*ptr)();
+    constexpr Copy(int(*p)() = nullptr) : ptr(p) {}
+    consteval Copy(const Copy&) = default;
+  };
+
+  constexpr const Copy &to_lvalue_ref(const Copy &&a) {
+    return a;
+  }
+
+  void test() {
+    constexpr const Copy C;
+    // there is no the copy constructor call when its argument is a prvalue because of garanteed copy elision.
+    // so we need to test with both prvalue and xvalues.
+    { Copy c(C); }
+    { Copy c((Copy(&f_eval))); } // expected-error {{cannot take address of consteval}} \
+                                 // ref-error {{cannot take address of consteval}}
+    { Copy c(std::move(C)); }
+    { Copy c(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                          // expected-note {{to a consteval}} \
+                                          // ref-error {{is not a constant expression}} \
+                                          // ref-note {{to a consteval}}
+    { Copy c(to_lvalue_ref((Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                // expected-note {{to a consteval}} \
+                                                // ref-error {{is not a constant expression}} \
+                                                // ref-note {{to a consteval}}
+    { Copy c(to_lvalue_ref(std::move(C))); }
+    { Copy c(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                         // expected-note {{to a consteval}} \
+                                                         // ref-error {{is not a constant expression}} \
+                                                         // ref-note {{to a consteval}}
+    { Copy c = Copy(C); }
+    { Copy c = Copy(Copy(&f_eval)); } // expected-error {{cannot take address of consteval}} \
+                                      // ref-error {{cannot take address of consteval}}
+    { Copy c = Copy(std::move(C)); }
+    { Copy c = Copy(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                 // expected-note {{to a consteval}} \
+                                                 // ref-error {{is not a constant expression}} \
+                                                 // ref-note {{to a consteval}}
+    { Copy c = Copy(to_lvalue_ref(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                     // expected-note {{to a consteval}} \
+                                                     // ref-error {{is not a constant expression}} \
+                                                     // ref-note {{to a consteval}}
+    { Copy c = Copy(to_lvalue_ref(std::move(C))); }
+    { Copy c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                                // expected-note {{to a consteval}} \
+                                                                // ref-error {{is not a constant expression}} \
+                                                                // ref-note {{to a consteval}}
+    { Copy c; c = Copy(C); }
+    { Copy c; c = Copy(Copy(&f_eval)); } // expected-error {{cannot take address of consteval}} \
+                                         // ref-error {{cannot take address of consteval}}
+    { Copy c; c = Copy(std::move(C)); }
+    { Copy c; c = Copy(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                    // expected-note {{to a consteval}} \
+                                                    // ref-error {{is not a constant expression}} \
+                                                    // ref-note {{to a consteval}}
+    { Copy c; c = Copy(to_lvalue_ref(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
+                                                        // expected-note {{to a consteval}} \
+                                                        // ref-error {{is not a constant expression}} \
+                                                        // ref-note {{to a consteval}}
+    { Copy c; c = Copy(to_lvalue_ref(std::move(C))); }
+    { Copy c; c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
+                                                                   // expected-note {{to a consteval}} \
+                                                                   // ref-error {{is not a constant expression}} \
+                                                                   // ref-note {{to a consteval}}
+  }
+#endif
+  constexpr int A = std::move(5);
+  static_assert(A == 5, "");
 }

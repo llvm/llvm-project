@@ -31,7 +31,6 @@
 
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -194,9 +193,9 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
 
-/// Function to update the live-in's for a basic block and return whether any
-/// changes were made.
-static inline bool updateBlockLiveInfo(MachineBasicBlock &MBB) {
+/// Convenience function for recomputing live-in's for a MBB. Returns true if
+/// any changes were made.
+static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
   LivePhysRegs LPR;
   auto oldLiveIns = MBB.getLiveIns();
 
@@ -206,19 +205,6 @@ static inline bool updateBlockLiveInfo(MachineBasicBlock &MBB) {
 
   auto newLiveIns = MBB.getLiveIns();
   return oldLiveIns != newLiveIns;
-}
-
-/// Convenience function for recomputing live-in's for the entire CFG until
-/// convergence is reached.
-static inline void recomputeLiveIns(MachineFunction &MF) {
-  bool anyChanged;
-  do {
-    anyChanged = false;
-    for (auto MFI = MF.rbegin(), MFE = MF.rend(); MFI != MFE; ++MFI) {
-      MachineBasicBlock &MBB = *MFI;
-      anyChanged |= updateBlockLiveInfo(MBB);
-    }
-  } while (anyChanged);
 }
 
 } // end namespace llvm

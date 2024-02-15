@@ -473,14 +473,14 @@ struct FromElementsOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
+    auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate a buffer for the result.
     Location loc = op->getLoc();
-    auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
@@ -588,8 +588,10 @@ struct GenerateOpInterface
                           const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
 
+    auto type = generateOp.getResult().getType();
+
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
+    if (options.defaultMemorySpaceFn(type) != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
@@ -1007,10 +1009,6 @@ struct SplatOpInterface
     OpBuilder::InsertionGuard g(rewriter);
     auto splatOp = cast<tensor::SplatOp>(op);
 
-    // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
-      return op->emitError("memory space not implemented yet");
-
     // Allocate memory.
     Location loc = op->getLoc();
     FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
@@ -1021,6 +1019,11 @@ struct SplatOpInterface
 
     // Create linalg::MapOp.
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
+
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+      return op->emitError("memory space not implemented yet");
+
     auto linalgOp =
         rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
                                        /*init=*/*tensorAlloc);

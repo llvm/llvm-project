@@ -380,8 +380,8 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
-  DecodeStatus Result = DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder);
-  (void)Result;
+  [[maybe_unused]] DecodeStatus Result =
+      DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid register");
   Inst.addOperand(Inst.getOperand(0));
   Inst.addOperand(MCOperand::createImm(0));
@@ -392,8 +392,8 @@ static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
   uint32_t Rs1 = fieldFromInstruction(Insn, 7, 5);
-  DecodeStatus Result = DecodeGPRX1X5RegisterClass(Inst, Rs1, Address, Decoder);
-  (void)Result;
+  [[maybe_unused]] DecodeStatus Result =
+      DecodeGPRX1X5RegisterClass(Inst, Rs1, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid register");
   return MCDisassembler::Success;
 }
@@ -404,8 +404,8 @@ static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
   Inst.addOperand(MCOperand::createReg(RISCV::X0));
   uint32_t SImm6 =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
-  DecodeStatus Result = decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
-  (void)Result;
+  [[maybe_unused]] DecodeStatus Result =
+      decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
   return MCDisassembler::Success;
 }
@@ -417,8 +417,8 @@ static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, uint32_t Insn,
   Inst.addOperand(Inst.getOperand(0));
   uint32_t UImm6 =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
-  DecodeStatus Result = decodeUImmOperand<6>(Inst, UImm6, Address, Decoder);
-  (void)Result;
+  [[maybe_unused]] DecodeStatus Result =
+      decodeUImmOperand<6>(Inst, UImm6, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
   return MCDisassembler::Success;
 }
@@ -454,8 +454,8 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
   DecodeGPRRegisterClass(Inst, Rd1, Address, Decoder);
   DecodeGPRRegisterClass(Inst, Rd2, Address, Decoder);
   DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
-  DecodeStatus Result = decodeUImmOperand<2>(Inst, UImm2, Address, Decoder);
-  (void)Result;
+  [[maybe_unused]] DecodeStatus Result =
+      decodeUImmOperand<2>(Inst, UImm2, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
 
   // Disassemble the final operand which is implicit.

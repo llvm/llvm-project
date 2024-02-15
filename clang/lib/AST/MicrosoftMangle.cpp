@@ -3408,6 +3408,12 @@ void MicrosoftCXXNameMangler::mangleType(const PackExpansionType *T, Qualifiers,
     << Range;
 }
 
+void MicrosoftCXXNameMangler::mangleType(const PackIndexingType *T,
+                                         Qualifiers Quals, SourceRange Range) {
+  manglePointerCVQualifiers(Quals);
+  mangleType(T->getSelectedType(), Range);
+}
+
 void MicrosoftCXXNameMangler::mangleType(const TypeOfType *T, Qualifiers,
                                          SourceRange Range) {
   DiagnosticsEngine &Diags = Context.getDiags();

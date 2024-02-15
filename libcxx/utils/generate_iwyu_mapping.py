@@ -30,7 +30,7 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["map", "set", "unordered_map", "unordered_set"]
     elif header == "__split_buffer":
         return ["deque", "vector"]
-    elif header == "__threading_support":
+    elif re.match("(__thread/support[.]h)|(__thread/support/.+)", header):
         return ["atomic", "mutex", "semaphore", "thread"]
     elif header == "__tree":
         return ["map", "set"]

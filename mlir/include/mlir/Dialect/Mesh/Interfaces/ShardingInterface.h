@@ -10,11 +10,14 @@
 #define MLIR_DIALECT_MESH_INTERFACES_SHARDINGINTERFACE_H_
 
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
 
 class Operation;
+class IRMapping;
+class SymbolTableCollection;
 
 namespace mesh {
 
@@ -58,8 +61,14 @@ defaultAddShardingAnnotations(Operation *op, OpBuilder &b,
 
 } // namespace detail
 
-} // namespace mesh
+// Assumes full replication on all ranked tensor arguments and results.
+void spmdizeFullyReplicatedOperation(
+    Operation &op, ArrayRef<Value> spmdizedOperands,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    SymbolTableCollection &symbolTable, OpBuilder &builder);
 
+} // namespace mesh
 } // namespace mlir
 
 /// Include the ODS generated interface header files.

@@ -11253,9 +11253,9 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
                                            SelectionDAG &DAG) const {
   assert(Subtarget.hasP9Vector() && "Test data class requires Power9");
   SDValue LHS = Op.getOperand(0);
-  const auto *RHS = cast<ConstantSDNode>(Op.getOperand(1));
+  uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
-  FPClassTest Category = static_cast<FPClassTest>(RHS->getZExtValue());
+  FPClassTest Category = static_cast<FPClassTest>(RHSC);
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
@@ -16804,10 +16804,8 @@ void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
       IntrinsicID != Intrinsic::ppc_trapd && IntrinsicID != Intrinsic::ppc_trap)
     return;
 
-  if (I.hasMetadata("annotation")) {
-    MDNode *MDN = I.getMetadata("annotation");
+  if (MDNode *MDN = I.getMetadata(LLVMContext::MD_annotation))
     Ops.push_back(DAG.getMDNode(MDN));
-  }
 }
 
 // isLegalAddressingMode - Return true if the addressing mode represented

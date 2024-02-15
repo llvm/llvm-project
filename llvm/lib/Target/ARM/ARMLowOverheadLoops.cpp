@@ -1806,7 +1806,13 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
   PostOrderLoopTraversal DFS(LoLoop.ML, *MLI);
   DFS.ProcessLoop();
   const SmallVectorImpl<MachineBasicBlock*> &PostOrder = DFS.getOrder();
-  recomputeLiveIns(*LoLoop.MF);
+  bool anyChange = false;
+  do {
+    anyChange = false;
+    for (auto *MBB : PostOrder) {
+      anyChange = recomputeLiveIns(*MBB) || anyChange;
+    }
+  } while (anyChange);
 
   for (auto *MBB : reverse(PostOrder))
     recomputeLivenessFlags(*MBB);

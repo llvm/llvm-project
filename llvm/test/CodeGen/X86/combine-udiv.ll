@@ -435,7 +435,7 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; XOP-LABEL: combine_vec_udiv_by_shl_pow2b:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,4294967294,4294967293,4294967292]
+; XOP-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,4294967294,4294967293,4294967292]
 ; XOP-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpshld %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -659,7 +659,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; AVX-NEXT:    vpackuswb %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpsrlw $7, %xmm1, %xmm1
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [18446744073709551360,18446744073709551615]
 ; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -673,7 +673,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; XOP-NEXT:    movl $249, %eax
 ; XOP-NEXT:    vmovd %eax, %xmm2
 ; XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm1
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; XOP-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [18446744073709551360,18446744073709551615]
 ; XOP-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
   %div = udiv <16 x i8> %x, <i8 -64, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>

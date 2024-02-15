@@ -2387,17 +2387,31 @@ define signext i32 @atomicrmw_nand_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_nand_i32_monotonic:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a2, (a0)
-; RV32IA-NEXT:    and a3, a2, a1
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    sc.w a3, a3, (a0)
-; RV32IA-NEXT:    bnez a3, .LBB29_1
-; RV32IA-NEXT:  # %bb.2:
-; RV32IA-NEXT:    mv a0, a2
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV32IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV32IA-NOZACAS-NEXT:    not a3, a3
+; RV32IA-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV32IA-NOZACAS-NEXT:    bnez a3, .LBB29_1
+; RV32IA-NOZACAS-NEXT:  # %bb.2:
+; RV32IA-NOZACAS-NEXT:    mv a0, a2
+; RV32IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    mv a2, a0
+; RV32IA-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-ZACAS-NEXT:  .LBB29_1: # %atomicrmw.start
+; RV32IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-ZACAS-NEXT:    mv a3, a0
+; RV32IA-ZACAS-NEXT:    and a4, a0, a1
+; RV32IA-ZACAS-NEXT:    not a4, a4
+; RV32IA-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV32IA-ZACAS-NEXT:    bne a0, a3, .LBB29_1
+; RV32IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-ZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_monotonic:
 ; RV64I:       # %bb.0:
@@ -2410,17 +2424,31 @@ define signext i32 @atomicrmw_nand_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i32_monotonic:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a2, (a0)
-; RV64IA-NEXT:    and a3, a2, a1
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.w a3, a3, (a0)
-; RV64IA-NEXT:    bnez a3, .LBB29_1
-; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    mv a0, a2
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w a2, (a0)
+; RV64IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.w a3, a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB29_1
+; RV64IA-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomicrmw_nand_i32_monotonic:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    mv a2, a0
+; RV64IA-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-ZACAS-NEXT:  .LBB29_1: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a3, a0
+; RV64IA-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-ZACAS-NEXT:    not a4, a4
+; RV64IA-ZACAS-NEXT:    amocas.w a0, a4, (a2)
+; RV64IA-ZACAS-NEXT:    bne a0, a3, .LBB29_1
+; RV64IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i32 %b monotonic
   ret i32 %1
 }
@@ -3039,17 +3067,31 @@ define signext i64 @atomicrmw_nand_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i64_monotonic:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB40_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.d a2, (a0)
-; RV64IA-NEXT:    and a3, a2, a1
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.d a3, a3, (a0)
-; RV64IA-NEXT:    bnez a3, .LBB40_1
-; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    mv a0, a2
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i64_monotonic:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB40_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.d a2, (a0)
+; RV64IA-NOZACAS-NEXT:    and a3, a2, a1
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.d a3, a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB40_1
+; RV64IA-NOZACAS-NEXT:  # %bb.2:
+; RV64IA-NOZACAS-NEXT:    mv a0, a2
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomicrmw_nand_i64_monotonic:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    mv a2, a0
+; RV64IA-ZACAS-NEXT:    ld a0, 0(a0)
+; RV64IA-ZACAS-NEXT:  .LBB40_1: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a3, a0
+; RV64IA-ZACAS-NEXT:    and a4, a0, a1
+; RV64IA-ZACAS-NEXT:    not a4, a4
+; RV64IA-ZACAS-NEXT:    amocas.d a0, a4, (a2)
+; RV64IA-ZACAS-NEXT:    bne a0, a3, .LBB40_1
+; RV64IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-ZACAS-NEXT:    ret
   %1 = atomicrmw nand ptr %a, i64 %b monotonic
   ret i64 %1
 }
@@ -4598,27 +4640,50 @@ define signext i32 @atomicrmw_nand_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    andi a2, a1, 1
-; RV32IA-NEXT:    mv a1, a0
-; RV32IA-NEXT:    beqz a2, .LBB57_2
-; RV32IA-NEXT:  # %bb.1: # %then
-; RV32IA-NEXT:    li a2, 1
-; RV32IA-NEXT:  .LBB57_3: # %then
-; RV32IA-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a0, (a1)
-; RV32IA-NEXT:    and a3, a0, a2
-; RV32IA-NEXT:    not a3, a3
-; RV32IA-NEXT:    sc.w a3, a3, (a1)
-; RV32IA-NEXT:    bnez a3, .LBB57_3
-; RV32IA-NEXT:  # %bb.4: # %then
-; RV32IA-NEXT:    ret
-; RV32IA-NEXT:  .LBB57_2: # %else
-; RV32IA-NEXT:    lw a0, 0(a1)
-; RV32IA-NEXT:    andi a2, a0, 1
-; RV32IA-NEXT:    sw a2, 0(a1)
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    andi a2, a1, 1
+; RV32IA-NOZACAS-NEXT:    mv a1, a0
+; RV32IA-NOZACAS-NEXT:    beqz a2, .LBB57_2
+; RV32IA-NOZACAS-NEXT:  # %bb.1: # %then
+; RV32IA-NOZACAS-NEXT:    li a2, 1
+; RV32IA-NOZACAS-NEXT:  .LBB57_3: # %then
+; RV32IA-NOZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w a0, (a1)
+; RV32IA-NOZACAS-NEXT:    and a3, a0, a2
+; RV32IA-NOZACAS-NEXT:    not a3, a3
+; RV32IA-NOZACAS-NEXT:    sc.w a3, a3, (a1)
+; RV32IA-NOZACAS-NEXT:    bnez a3, .LBB57_3
+; RV32IA-NOZACAS-NEXT:  # %bb.4: # %then
+; RV32IA-NOZACAS-NEXT:    ret
+; RV32IA-NOZACAS-NEXT:  .LBB57_2: # %else
+; RV32IA-NOZACAS-NEXT:    lw a0, 0(a1)
+; RV32IA-NOZACAS-NEXT:    andi a2, a0, 1
+; RV32IA-NOZACAS-NEXT:    sw a2, 0(a1)
+; RV32IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    andi a1, a1, 1
+; RV32IA-ZACAS-NEXT:    beqz a1, .LBB57_4
+; RV32IA-ZACAS-NEXT:  # %bb.1: # %then
+; RV32IA-ZACAS-NEXT:    lw a1, 0(a0)
+; RV32IA-ZACAS-NEXT:  .LBB57_2: # %atomicrmw.start
+; RV32IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-ZACAS-NEXT:    mv a2, a1
+; RV32IA-ZACAS-NEXT:    not a3, a1
+; RV32IA-ZACAS-NEXT:    ori a3, a3, -2
+; RV32IA-ZACAS-NEXT:    amocas.w a1, a3, (a0)
+; RV32IA-ZACAS-NEXT:    bne a1, a2, .LBB57_2
+; RV32IA-ZACAS-NEXT:  # %bb.3: # %merge
+; RV32IA-ZACAS-NEXT:    mv a0, a1
+; RV32IA-ZACAS-NEXT:    ret
+; RV32IA-ZACAS-NEXT:  .LBB57_4: # %else
+; RV32IA-ZACAS-NEXT:    lw a1, 0(a0)
+; RV32IA-ZACAS-NEXT:    andi a2, a1, 1
+; RV32IA-ZACAS-NEXT:    sw a2, 0(a0)
+; RV32IA-ZACAS-NEXT:    mv a0, a1
+; RV32IA-ZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
 ; RV64I:       # %bb.0:
@@ -4641,27 +4706,50 @@ define signext i32 @atomicrmw_nand_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV64I-NEXT:    sext.w a0, a1
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a2, a1, 1
-; RV64IA-NEXT:    mv a1, a0
-; RV64IA-NEXT:    beqz a2, .LBB57_2
-; RV64IA-NEXT:  # %bb.1: # %then
-; RV64IA-NEXT:    li a2, 1
-; RV64IA-NEXT:  .LBB57_3: # %then
-; RV64IA-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a0, (a1)
-; RV64IA-NEXT:    and a3, a0, a2
-; RV64IA-NEXT:    not a3, a3
-; RV64IA-NEXT:    sc.w a3, a3, (a1)
-; RV64IA-NEXT:    bnez a3, .LBB57_3
-; RV64IA-NEXT:  # %bb.4: # %then
-; RV64IA-NEXT:    ret
-; RV64IA-NEXT:  .LBB57_2: # %else
-; RV64IA-NEXT:    lw a0, 0(a1)
-; RV64IA-NEXT:    andi a2, a0, 1
-; RV64IA-NEXT:    sw a2, 0(a1)
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    andi a2, a1, 1
+; RV64IA-NOZACAS-NEXT:    mv a1, a0
+; RV64IA-NOZACAS-NEXT:    beqz a2, .LBB57_2
+; RV64IA-NOZACAS-NEXT:  # %bb.1: # %then
+; RV64IA-NOZACAS-NEXT:    li a2, 1
+; RV64IA-NOZACAS-NEXT:  .LBB57_3: # %then
+; RV64IA-NOZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w a0, (a1)
+; RV64IA-NOZACAS-NEXT:    and a3, a0, a2
+; RV64IA-NOZACAS-NEXT:    not a3, a3
+; RV64IA-NOZACAS-NEXT:    sc.w a3, a3, (a1)
+; RV64IA-NOZACAS-NEXT:    bnez a3, .LBB57_3
+; RV64IA-NOZACAS-NEXT:  # %bb.4: # %then
+; RV64IA-NOZACAS-NEXT:    ret
+; RV64IA-NOZACAS-NEXT:  .LBB57_2: # %else
+; RV64IA-NOZACAS-NEXT:    lw a0, 0(a1)
+; RV64IA-NOZACAS-NEXT:    andi a2, a0, 1
+; RV64IA-NOZACAS-NEXT:    sw a2, 0(a1)
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomicrmw_nand_i32_monotonic_crossbb:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    andi a1, a1, 1
+; RV64IA-ZACAS-NEXT:    beqz a1, .LBB57_4
+; RV64IA-ZACAS-NEXT:  # %bb.1: # %then
+; RV64IA-ZACAS-NEXT:    lw a1, 0(a0)
+; RV64IA-ZACAS-NEXT:  .LBB57_2: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a2, a1
+; RV64IA-ZACAS-NEXT:    not a3, a1
+; RV64IA-ZACAS-NEXT:    ori a3, a3, -2
+; RV64IA-ZACAS-NEXT:    amocas.w a1, a3, (a0)
+; RV64IA-ZACAS-NEXT:    bne a1, a2, .LBB57_2
+; RV64IA-ZACAS-NEXT:  # %bb.3: # %merge
+; RV64IA-ZACAS-NEXT:    mv a0, a1
+; RV64IA-ZACAS-NEXT:    ret
+; RV64IA-ZACAS-NEXT:  .LBB57_4: # %else
+; RV64IA-ZACAS-NEXT:    lw a1, 0(a0)
+; RV64IA-ZACAS-NEXT:    andi a2, a1, 1
+; RV64IA-ZACAS-NEXT:    sw a2, 0(a0)
+; RV64IA-ZACAS-NEXT:    mv a0, a1
+; RV64IA-ZACAS-NEXT:    ret
   br i1 %c, label %then, label %else
 
 then:

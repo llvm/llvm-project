@@ -174,6 +174,7 @@ LANGOPT(MathErrno         , 1, 1, "errno in math functions")
 BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like and may be ripped out at any time")
 LANGOPT(Modules           , 1, 0, "modules semantics")
 COMPATIBLE_LANGOPT(CPlusPlusModules, 1, 0, "C++ modules syntax")
+LANGOPT(SkipODRCheckInGMF, 1, 0, "Skip ODR checks for decls in the global module fragment")
 LANGOPT(BuiltinHeadersInSystemModules, 1, 0, "builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers")
 BENIGN_ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None,
                     "compiling a module interface")

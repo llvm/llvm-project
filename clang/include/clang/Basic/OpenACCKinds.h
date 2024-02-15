@@ -16,6 +16,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 // Represents the Construct/Directive kind of a pragma directive. Note the
@@ -65,8 +66,9 @@ enum class OpenACCDirectiveKind {
   Invalid,
 };
 
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
-                                             OpenACCDirectiveKind K) {
+template <typename StreamTy>
+inline StreamTy &PrintOpenACCDirectiveKind(StreamTy &Out,
+                                           OpenACCDirectiveKind K) {
   switch (K) {
   case OpenACCDirectiveKind::Parallel:
     return Out << "parallel";
@@ -132,6 +134,16 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
     return Out << "<invalid>";
   }
   llvm_unreachable("Uncovered directive kind");
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCDirectiveKind K) {
+  return PrintOpenACCDirectiveKind(Out, K);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCDirectiveKind K) {
+  return PrintOpenACCDirectiveKind(Out, K);
 }
 
 enum class OpenACCAtomicKind {
@@ -243,13 +255,18 @@ enum class OpenACCClauseKind {
   Async,
   /// 'tile' clause, allowed on 'loop' and Combined constructs.
   Tile,
+  /// 'gang' clause, allowed on 'loop' and Combined constructs.
+  Gang,
+  /// 'wait' clause, allowed on Compute, Data, 'update', and Combined
+  /// constructs.
+  Wait,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
 };
 
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
-                                             OpenACCClauseKind K) {
+template <typename StreamTy>
+inline StreamTy &PrintOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   switch (K) {
   case OpenACCClauseKind::Finalize:
     return Out << "finalize";
@@ -371,11 +388,28 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
   case OpenACCClauseKind::Tile:
     return Out << "tile";
 
+  case OpenACCClauseKind::Gang:
+    return Out << "gang";
+
+  case OpenACCClauseKind::Wait:
+    return Out << "wait";
+
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
   }
   llvm_unreachable("Uncovered clause kind");
 }
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCClauseKind K) {
+  return PrintOpenACCClauseKind(Out, K);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCClauseKind K) {
+  return PrintOpenACCClauseKind(Out, K);
+}
+
 enum class OpenACCDefaultClauseKind {
   /// 'none' option.
   None,

@@ -354,6 +354,10 @@ public:
   ComplexPairTy VisitAtomicExpr(AtomicExpr *E) {
     return CGF.EmitAtomicExpr(E).getComplexVal();
   }
+
+  ComplexPairTy VisitPackIndexingExpr(PackIndexingExpr *E) {
+    return Visit(E->getSelectedExpr());
+  }
 };
 }  // end anonymous namespace.
 

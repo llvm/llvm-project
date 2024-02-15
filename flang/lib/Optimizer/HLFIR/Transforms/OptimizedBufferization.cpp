@@ -20,7 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/Support/Utils.h"
+#include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
@@ -812,54 +812,59 @@ public:
 // inlined elemental.
 //  %e = hlfir.elemental %shape ({ ... })
 //  %m = hlfir.minloc %array mask %e
-class MinMaxlocElementalConversion
-    : public mlir::OpRewritePattern<hlfir::MinlocOp> {
+template <typename Op>
+class MinMaxlocElementalConversion : public mlir::OpRewritePattern<Op> {
 public:
-  using mlir::OpRewritePattern<hlfir::MinlocOp>::OpRewritePattern;
+  using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(hlfir::MinlocOp minloc,
-                  mlir::PatternRewriter &rewriter) const override {
-    if (!minloc.getMask() || minloc.getDim() || minloc.getBack())
-      return rewriter.notifyMatchFailure(minloc, "Did not find valid minloc");
+  matchAndRewrite(Op mloc, mlir::PatternRewriter &rewriter) const override {
+    if (!mloc.getMask() || mloc.getDim() || mloc.getBack())
+      return rewriter.notifyMatchFailure(mloc,
+                                         "Did not find valid minloc/maxloc");
 
-    auto elemental = minloc.getMask().getDefiningOp<hlfir::ElementalOp>();
+    bool isMax = std::is_same_v<Op, hlfir::MaxlocOp>;
+
+    auto elemental =
+        mloc.getMask().template getDefiningOp<hlfir::ElementalOp>();
     if (!elemental || hlfir::elementalOpMustProduceTemp(elemental))
-      return rewriter.notifyMatchFailure(minloc, "Did not find elemental");
+      return rewriter.notifyMatchFailure(mloc, "Did not find elemental");
 
-    mlir::Value array = minloc.getArray();
+    mlir::Value array = mloc.getArray();
 
-    unsigned rank = mlir::cast<hlfir::ExprType>(minloc.getType()).getShape()[0];
+    unsigned rank = mlir::cast<hlfir::ExprType>(mloc.getType()).getShape()[0];
     mlir::Type arrayType = array.getType();
     if (!arrayType.isa<fir::BoxType>())
       return rewriter.notifyMatchFailure(
-          minloc, "Currently requires a boxed type input");
+          mloc, "Currently requires a boxed type input");
     mlir::Type elementType = hlfir::getFortranElementType(arrayType);
     if (!fir::isa_trivial(elementType))
       return rewriter.notifyMatchFailure(
-          minloc, "Character arrays are currently not handled");
+          mloc, "Character arrays are currently not handled");
 
-    mlir::Location loc = minloc.getLoc();
-    fir::FirOpBuilder builder{rewriter, minloc.getOperation()};
+    mlir::Location loc = mloc.getLoc();
+    fir::FirOpBuilder builder{rewriter, mloc.getOperation()};
     mlir::Value resultArr = builder.createTemporary(
         loc, fir::SequenceType::get(
-                 rank, hlfir::getFortranElementType(minloc.getType())));
+                 rank, hlfir::getFortranElementType(mloc.getType())));
 
-    auto init = [](fir::FirOpBuilder builder, mlir::Location loc,
-                   mlir::Type elementType) {
+    auto init = [isMax](fir::FirOpBuilder builder, mlir::Location loc,
+                        mlir::Type elementType) {
       if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
         const llvm::fltSemantics &sem = ty.getFloatSemantics();
         return builder.createRealConstant(
             loc, elementType,
-            llvm::APFloat::getLargest(sem, /*Negative=*/false));
+            llvm::APFloat::getLargest(sem, /*Negative=*/isMax));
       }
       unsigned bits = elementType.getIntOrFloatBitWidth();
-      int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-      return builder.createIntegerConstant(loc, elementType, maxInt);
+      int64_t limitInt =
+          isMax ? llvm::APInt::getSignedMinValue(bits).getSExtValue()
+                : llvm::APInt::getSignedMaxValue(bits).getSExtValue();
+      return builder.createIntegerConstant(loc, elementType, limitInt);
     };
 
     auto genBodyOp =
-        [&rank, &resultArr, &elemental](
+        [&rank, &resultArr, &elemental, isMax](
             fir::FirOpBuilder builder, mlir::Location loc,
             mlir::Type elementType, mlir::Value array, mlir::Value flagRef,
             mlir::Value reduction,
@@ -899,10 +904,16 @@ public:
       mlir::Value cmp;
       if (elementType.isa<mlir::FloatType>()) {
         cmp = builder.create<mlir::arith::CmpFOp>(
-            loc, mlir::arith::CmpFPredicate::OLT, elem, reduction);
+            loc,
+            isMax ? mlir::arith::CmpFPredicate::OGT
+                  : mlir::arith::CmpFPredicate::OLT,
+            elem, reduction);
       } else if (elementType.isa<mlir::IntegerType>()) {
         cmp = builder.create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::slt, elem, reduction);
+            loc,
+            isMax ? mlir::arith::CmpIPredicate::sgt
+                  : mlir::arith::CmpIPredicate::slt,
+            elem, reduction);
       } else {
         llvm_unreachable("unsupported type");
       }
@@ -975,15 +986,15 @@ public:
     // AsExpr for the temporary resultArr.
     llvm::SmallVector<hlfir::DestroyOp> destroys;
     llvm::SmallVector<hlfir::AssignOp> assigns;
-    for (auto user : minloc->getUsers()) {
+    for (auto user : mloc->getUsers()) {
       if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(user))
         destroys.push_back(destroy);
       else if (auto assign = mlir::dyn_cast<hlfir::AssignOp>(user))
         assigns.push_back(assign);
     }
 
-    // Check if the minloc was the only user of the elemental (apart from a
-    // destroy), and remove it if so.
+    // Check if the minloc/maxloc was the only user of the elemental (apart from
+    // a destroy), and remove it if so.
     mlir::Operation::user_range elemUsers = elemental->getUsers();
     hlfir::DestroyOp elemDestroy;
     if (std::distance(elemUsers.begin(), elemUsers.end()) == 2) {
@@ -996,7 +1007,7 @@ public:
       rewriter.eraseOp(d);
     for (auto a : assigns)
       a.setOperand(0, resultArr);
-    rewriter.replaceOp(minloc, asExpr);
+    rewriter.replaceOp(mloc, asExpr);
     if (elemDestroy) {
       rewriter.eraseOp(elemDestroy);
       rewriter.eraseOp(elemental);
@@ -1030,7 +1041,8 @@ public:
     patterns.insert<ReductionElementalConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionElementalConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionElementalConversion<hlfir::AllOp>>(context);
-    patterns.insert<MinMaxlocElementalConversion>(context);
+    patterns.insert<MinMaxlocElementalConversion<hlfir::MinlocOp>>(context);
+    patterns.insert<MinMaxlocElementalConversion<hlfir::MaxlocOp>>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             func, std::move(patterns), config))) {
