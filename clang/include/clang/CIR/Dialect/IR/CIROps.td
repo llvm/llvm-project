@@ -2825,22 +2825,28 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     ```
     
     ```mlir
-    cir.asm(x86_att, {"foo" ""})
-    cir.asm(x86_att, {"bar $$42 $0" "=r,=&r,1"}) 
-    cir.asm(x86_att, {"baz $$42 $0" "=r,=&r,0,1"}) 
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] 
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init]
+    ... 
+    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    cir.asm(x86_att, {"foo" ""} : () -> ()
+    cir.asm(x86_att, {"bar $$42 $0" "=r,=&r,1"} %2 : (!s32i) -> ()
+    cir.asm(x86_att, {"baz $$42 $0" "=r,=&r,0,1"} %3, %2 : (!s32i, !s32i) -> ()
     ```
   }];
 
   let results = (outs Optional<CIR_AnyType>:$res);
 
   let arguments = (
-    ins StrAttr:$asm_string,
+    ins Variadic<AnyType>:$operands,
+        StrAttr:$asm_string,
         StrAttr:$constraints,
         AsmFlavor:$asm_flavor);  
 
   let assemblyFormat = [{
     `(`$asm_flavor`,` `{` $asm_string $constraints `}` `)` attr-dict 
-    `:` type($res)
+     operands `:` functional-type(operands, results)
    }];  
 }
 

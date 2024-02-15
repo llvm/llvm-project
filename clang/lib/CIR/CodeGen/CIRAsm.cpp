@@ -137,6 +137,65 @@ static void collectInOutConstrainsInfos(const CIRGenFunction &cgf,
   }
 }
 
+mlir::Value CIRGenFunction::buildAsmInputLValue(
+    const TargetInfo::ConstraintInfo &Info, LValue InputValue,
+    QualType InputType, std::string &ConstraintStr, SourceLocation Loc) {
+
+  if (Info.allowsRegister() || !Info.allowsMemory()) {
+    if (hasScalarEvaluationKind(InputType))
+      return buildLoadOfLValue(InputValue, Loc).getScalarVal();
+
+    mlir::Type Ty = convertType(InputType);
+    uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
+    if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
+        getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
+      Ty = mlir::cir::IntType::get(builder.getContext(), Size, false);
+
+      return builder.createLoad(getLoc(Loc),
+                                InputValue.getAddress().withElementType(Ty));
+    }
+  }
+
+  Address Addr = InputValue.getAddress();
+  ConstraintStr += '*';
+  return Addr.getPointer();
+}
+
+mlir::Value
+CIRGenFunction::buildAsmInput(const TargetInfo::ConstraintInfo &Info,
+                              const Expr *InputExpr,
+                              std::string &ConstraintStr) {
+  auto loc = getLoc(InputExpr->getExprLoc());
+
+  // If this can't be a register or memory, i.e., has to be a constant
+  // (immediate or symbolic), try to emit it as such.
+  if (!Info.allowsRegister() && !Info.allowsMemory()) {
+    if (Info.requiresImmediateConstant()) {
+      Expr::EvalResult EVResult;
+      InputExpr->EvaluateAsRValue(EVResult, getContext(), true);
+
+      llvm::APSInt IntResult;
+      if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                          getContext()))
+        return builder.getConstAPSInt(loc, IntResult);
+    }
+
+    Expr::EvalResult Result;
+    if (InputExpr->EvaluateAsInt(Result, getContext()))
+      builder.getConstAPSInt(loc, Result.Val.getInt());
+  }
+
+  if (Info.allowsRegister() || !Info.allowsMemory())
+    if (CIRGenFunction::hasScalarEvaluationKind(InputExpr->getType()))
+      return buildScalarExpr(InputExpr);
+  if (InputExpr->getStmtClass() == Expr::CXXThisExprClass)
+    return buildScalarExpr(InputExpr);
+  InputExpr = InputExpr->IgnoreParenNoopCasts(getContext());
+  LValue Dest = buildLValue(InputExpr);
+  return buildAsmInputLValue(Info, Dest, InputExpr->getType(), ConstraintStr,
+                             InputExpr->getExprLoc());
+}
+
 mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
@@ -153,6 +212,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
 
   // Keep track of input constraints.
   std::string InOutConstraints;
+  std::vector<mlir::Value> InOutArgs;
 
   // Keep track of out constraints for tied input operand.
   std::vector<std::string> OutputConstraints;
@@ -176,6 +236,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
                                Info.earlyClobber(), &GCCReg);
 
     OutputConstraints.push_back(OutputConstraint);
+    LValue Dest = buildLValue(OutExpr);
 
     if (!Constraints.empty())
       Constraints += ',';
@@ -188,18 +249,40 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
     if (!Info.allowsMemory() && IsScalarOrAggregate) {
       Constraints += "=" + OutputConstraint;
     } else {
+      Address DestAddr = Dest.getAddress();
+
+      // Matrix types in memory are represented by arrays, but accessed through
+      // vector pointers, with the alignment specified on the access operation.
+      // For inline assembly, update pointer arguments to use vector pointers.
+      // Otherwise there will be a mis-match if the matrix is also an
+      // input-argument which is represented as vector.
+      if (isa<MatrixType>(OutExpr->getType().getCanonicalType()))
+        DestAddr = DestAddr.withElementType(ConvertType(OutExpr->getType()));
+
+      Args.push_back(DestAddr.getPointer());
       Constraints += "=*";
       Constraints += OutputConstraint;
     }
 
     if (Info.isReadWrite()) {
       InOutConstraints += ',';
+      const Expr *InputExpr = S.getOutputExpr(i);
+
+      mlir::Value Arg =
+          buildAsmInputLValue(Info, Dest, InputExpr->getType(),
+                              InOutConstraints, InputExpr->getExprLoc());
+
+      if (mlir::Type AdjTy = getTargetHooks().adjustInlineAsmType(
+              *this, OutputConstraint, Arg.getType()))
+        Arg = builder.createBitcast(Arg, AdjTy);
 
       // Only tie earlyclobber physregs.
       if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
         InOutConstraints += llvm::utostr(i);
       else
         InOutConstraints += OutputConstraint;
+
+      InOutArgs.push_back(Arg);
     }
   } // iterate over output operands
 
@@ -221,6 +304,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
         getTarget(), CGM, S, false /* No EarlyClobber */);
 
     std::string ReplaceConstraint(InputConstraint);
+    mlir::Value Arg = buildAsmInput(Info, InputExpr, Constraints);
 
     // If this input argument is tied to a larger output result, extend the
     // input to be the same size as the output.  The LLVM backend wants to see
@@ -229,14 +313,42 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
     // that is usually cheaper, but LLVM IR should really get an anyext someday.
     if (Info.hasTiedOperand()) {
       unsigned Output = Info.getTiedOperand();
+      QualType OutputType = S.getOutputExpr(Output)->getType();
+      QualType InputTy = InputExpr->getType();
+
+      if (getContext().getTypeSize(OutputType) >
+          getContext().getTypeSize(InputTy)) {
+        // Use ptrtoint as appropriate so that we can do our extension.
+        if (isa<mlir::cir::PointerType>(Arg.getType()))
+          Arg = builder.createPtrToInt(Arg, UIntPtrTy);
+        mlir::Type OutputTy = convertType(OutputType);
+        if (isa<mlir::cir::IntType>(OutputTy))
+          Arg = builder.createIntCast(Arg, OutputTy);
+        else if (isa<mlir::cir::PointerType>(OutputTy))
+          Arg = builder.createIntCast(Arg, UIntPtrTy);
+        else if (isa<mlir::FloatType>(OutputTy))
+          Arg = builder.createFloatingCast(Arg, OutputTy);
+      }
 
       // Deal with the tied operands' constraint code in adjustInlineAsmType.
       ReplaceConstraint = OutputConstraints[Output];
     }
 
+    if (mlir::Type AdjTy = getTargetHooks().adjustInlineAsmType(
+            *this, ReplaceConstraint, Arg.getType()))
+      Arg = builder.createBitcast(Arg, AdjTy);
+    else
+      CGM.getDiags().Report(S.getAsmLoc(), diag::err_asm_invalid_type_in_input)
+          << InputExpr->getType() << InputConstraint;
+
+    Args.push_back(Arg);
     Constraints += InputConstraint;
   } // iterate over input operands
 
+  // Append the "input" part of inout constraints.
+  for (unsigned i = 0, e = InOutArgs.size(); i != e; i++) {
+    Args.push_back(InOutArgs[i]);
+  }
   Constraints += InOutConstraints;
 
   mlir::Type ResultType;
@@ -252,7 +364,8 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
   AsmFlavor AsmFlavor = inferFlavor(CGM, S);
 
   builder.create<mlir::cir::InlineAsmOp>(getLoc(S.getAsmLoc()), ResultType,
-                                         AsmString, Constraints, AsmFlavor);
+                                         Args, AsmString, Constraints,
+                                         AsmFlavor);
 
   return mlir::success();
 }

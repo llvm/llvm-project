@@ -529,6 +529,10 @@ public:
 
   const TargetInfo &getTarget() const { return CGM.getTarget(); }
 
+  const TargetCIRGenInfo &getTargetHooks() const {
+    return CGM.getTargetCIRGenInfo();
+  }
+
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation SLoc);
 
@@ -937,6 +941,14 @@ public:
   mlir::Type convertType(clang::QualType T);
 
   mlir::LogicalResult buildAsmStmt(const clang::AsmStmt &S);
+
+  mlir::Value buildAsmInputLValue(const TargetInfo::ConstraintInfo &Info,
+                                  LValue InputValue, QualType InputType,
+                                  std::string &ConstraintStr,
+                                  SourceLocation Loc);
+
+  mlir::Value buildAsmInput(const TargetInfo::ConstraintInfo &Info,
+                            const Expr *InputExpr, std::string &ConstraintStr);
 
   mlir::LogicalResult buildIfStmt(const clang::IfStmt &S);
 
