@@ -93,6 +93,8 @@ VarLocResult locateVariable(const std::string &signature, int line,
     const NamedLocation &loc = *Global.functionLocations[fid];
 
     ClangTool Tool(*Global.cb, {loc.file});
+    DiagnosticConsumer DC = IgnoringDiagConsumer();
+    Tool.setDiagnosticConsumer(&DC);
 
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
     Tool.buildASTs(ASTs);
@@ -188,6 +190,8 @@ int main(int argc, const char **argv) {
 
     llvm::errs() << "\n--- Building ATS from files ---\n";
     ClangTool Tool(*Global.cb, allFiles);
+    DiagnosticConsumer DC = IgnoringDiagConsumer();
+    Tool.setDiagnosticConsumer(&DC);
 
     // 生成所有函数的调用图
     Tool.run(newFrontendActionFactory<GenWholeProgramCallGraphAction>().get());
