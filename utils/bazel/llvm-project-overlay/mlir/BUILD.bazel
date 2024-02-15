@@ -3384,7 +3384,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineUtils",
         ":ArithDialect",
+        ":ArithUtils",
         ":ControlFlowDialect",
         ":DialectUtils",
         ":FuncDialect",

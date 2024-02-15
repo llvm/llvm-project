@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Mesh/Transforms/Simplifications.h"
+#include "TransformsDetail.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -16,7 +17,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include <iterator>
 #include <numeric>
 #include <utility>
 
@@ -56,13 +56,10 @@ namespace {
 // symbol tables.
 // We can't use DialectFoldInterface since the cache may be invalidated by some
 // pass changing the referenced MeshOp ops.
-struct MeshShapeFolder : OpRewritePattern<MeshShapeOp> {
-  template <typename... OpRewritePatternArgs>
-  MeshShapeFolder(SymbolTableCollection &symbolTableCollection,
-                  OpRewritePatternArgs &&...opRewritePatternArgs)
-      : OpRewritePattern(
-            std::forward<OpRewritePatternArgs...>(opRewritePatternArgs)...),
-        symbolTableCollection(symbolTableCollection) {}
+struct MeshShapeFolder
+    : OpRewritePatternWithSymbolTableCollection<MeshShapeOp> {
+  using OpRewritePatternWithSymbolTableCollection::
+      OpRewritePatternWithSymbolTableCollection;
   LogicalResult matchAndRewrite(MeshShapeOp op,
                                 PatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
@@ -113,9 +110,6 @@ struct MeshShapeFolder : OpRewritePattern<MeshShapeOp> {
 
     return success();
   }
-
-private:
-  SymbolTableCollection &symbolTableCollection;
 };
 
 } // namespace
