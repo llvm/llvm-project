@@ -39,8 +39,8 @@ constexpr double P_ERR = 0x1.0p-50;
 //     return "0x" + "'".join(x) + "_u128"
 // (s, m, e) = RealField(128)(2).log().sign_mantissa_exponent();
 // print(format_hex(m));
-const Float128 LOG_2(Sign::POS, /*exponent=*/-128, /*mantissa=*/
-                     0xb17217f7'd1cf79ab'c9e3b398'03f2f6af_u128);
+constexpr Float128 LOG_2(Sign::POS, /*exponent=*/-128, /*mantissa=*/
+                         0xb17217f7'd1cf79ab'c9e3b398'03f2f6af_u128);
 
 // R1[i] = 2^-8 * nearestint( 2^8 / (1 + i * 2^-7) )
 constexpr double R1[129] = {
@@ -252,7 +252,7 @@ constexpr double P_COEFFS[6] = {-0x1p-1,
 //   r = 2^-8 * round( 2^8 / (1 + i*2^(-7)) );
 //   s, m, e = RealField(128)(r).log().sign_mantissa_exponent();
 //   print("{Sign::POS,", e, ", format_hex(m), "},");
-const Float128 LOG_R1[129] = {
+constexpr Float128 LOG_R1[129] = {
     {Sign::POS, 0, 0_u128},
     {Sign::POS, -134, 0x8080abac'46f38946'662d417c'ed007a46_u128},
     {Sign::POS, -133, 0x8102b2c4'9ac23a4f'91d082dc'e3ddcd38_u128},
@@ -436,7 +436,7 @@ constexpr double S2[198] = {
 //   s, m, e = RealField(128)(r).log().sign_mantissa_exponent();
 //   print("{Sign::POS," if (s == -1) else "{Sign::NEG,", e, ",
 //         format_hex(m), "},");
-const Float128 LOG_R2[198] = {
+constexpr Float128 LOG_R2[198] = {
     {Sign::NEG, -135, 0xb67dab2a'1a5742a4'a0e061c5'f7431c5e_u128},
     {Sign::NEG, -135, 0xb4807f24'af682939'5d5bfe7b'969ed6ec_u128},
     {Sign::NEG, -135, 0xb2834b35'b4d54d5f'4d08702d'dfabc23f_u128},
@@ -665,7 +665,7 @@ constexpr double S3[139] = {
 //   s, m, e = RealField(128)(r).log().sign_mantissa_exponent();
 //   print("{Sign::POS," if (s == -1) else "{Sign::NEG,", e, ",
 //         format_hex(m), "},");
-const Float128 LOG_R3[139] = {
+constexpr Float128 LOG_R3[139] = {
     {Sign::NEG, -142, 0x89ff6b38'd5de2622'e39d3faf'42340ed7_u128},
     {Sign::NEG, -142, 0x87ff6f80'ccb40f16'7ff33266'82c02485_u128},
     {Sign::NEG, -142, 0x85ff73b8'c3cdf731'5caf4fbe'343cf928_u128},
@@ -813,7 +813,7 @@ const Float128 LOG_R3[139] = {
 // > P;
 // > dirtyinfnorm(log(1 + x)/x - 1 - x*P, [-0x1.01928p-22 , 0x1p-22]);
 // 0x1.ce1e...p-116
-const Float128 BIG_COEFFS[4]{
+constexpr Float128 BIG_COEFFS[4]{
     {Sign::POS, -130, 0xccccccd7'4818e397'7ed78465'd460315b_u128},
     {Sign::NEG, -129, 0x80000000'000478b0'c6388a23'871ce156_u128},
     {Sign::POS, -129, 0xaaaaaaaa'aaaaaaaa'aa807bd8'67763262_u128},
