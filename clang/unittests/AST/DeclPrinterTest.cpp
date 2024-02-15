@@ -362,10 +362,14 @@ TEST(DeclPrinter, TestCXXRecordDecl12) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
     "struct S { int x; };"
     "namespace NS { class C {};}"
-    "void foo(S s1, NS::C c1) {}",
+    "S foo(S s1, NS::C c1) {using namespace NS; C c; return s1;}",
     "foo",
-    "void foo(struct S s1, class NS::C c1) {}",
-    [](PrintingPolicy &Policy){ Policy.ForcePrintingAsElaboratedType = true; }));
+    "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
+    "NS::C c;\nreturn s1;\n}\n",
+      [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
+        Policy.TerseOutput = false;
+      }));
 }
 
 TEST(DeclPrinter, TestFunctionDecl1) {
