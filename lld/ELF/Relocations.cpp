@@ -1194,8 +1194,9 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-    error("relocation " + toString(type) + " against symbol '" + toString(sym) +
-          "'" + " in read-only section" + getLocation(*sec, sym, offset));
+    errorOrWarn("relocation " + toString(type) + " against symbol '" +
+                toString(sym) + "'" + " in read-only section" +
+                getLocation(*sec, sym, offset));
     return;
   }
 

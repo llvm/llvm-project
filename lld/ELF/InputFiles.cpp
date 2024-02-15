@@ -971,28 +971,27 @@ static void readAArch64PauthAbiTag(const InputSection &sec, ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
   ArrayRef<uint8_t> data = sec.content();
-  auto reportError = [&](const Twine &msg) {
-    errorOrWarn(toString(sec.file) + ":(" + sec.name + "): " + msg);
-  };
 
   auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
   if (data.size() < sizeof(Elf_Nhdr) ||
       data.size() < nhdr->getSize(sec.addralign)) {
-    reportError("section is too short");
+    errorOrWarn(toString(&sec) + ": section is too short");
     return;
   }
 
   Elf_Note note(*nhdr);
   if (nhdr->n_type != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    reportError("invalid type field value " + Twine(nhdr->n_type) + " (" +
-                Twine(NT_ARM_TYPE_PAUTH_ABI_TAG) + " expected)");
+    errorOrWarn(toString(&sec) + ": invalid type field value " +
+                Twine(nhdr->n_type) + " (" + Twine(NT_ARM_TYPE_PAUTH_ABI_TAG) +
+                " expected)");
   if (note.getName() != "ARM")
-    reportError("invalid name field value " + note.getName() +
-                " (ARM expected)");
+    errorOrWarn(toString(&sec) + ": invalid name field value " +
+                note.getName() + " (ARM expected)");
 
   ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
   if (desc.size() < 16) {
-    reportError("AArch64 PAuth compatibility info is too short "
+    errorOrWarn(toString(&sec) +
+                ": AArch64 PAuth compatibility info is too short "
                 "(at least 16 bytes expected)");
     return;
   }
