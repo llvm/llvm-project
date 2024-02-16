@@ -97,7 +97,7 @@ public:
   /// LValue and we can't read from it.
   std::optional<APValue> toRValue() const;
 
-  bool checkFullyInitialized(InterpState &S) const;
+  bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
 
   /// Dump to stderr.
   void dump() const;
