@@ -13663,8 +13663,3 @@ StringRef ASTContext::getCUIDHash() const {
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
 }
-
-void ASTContext::setOpenACCStructuredBlock(OpenACCComputeConstruct *C,
-                                           Stmt *S) {
-  C->setStructuredBlock(S);
-}

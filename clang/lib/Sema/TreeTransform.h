@@ -4001,20 +4001,15 @@ public:
                                             SourceLocation EndLoc,
                                             StmtResult StrBlock) {
     getSema().ActOnOpenACCConstruct(K, BeginLoc);
+
     // TODO OpenACC: Include clauses.
-    StmtResult Construct =
-        getSema().ActOnStartOpenACCStmtDirective(K, BeginLoc, EndLoc);
+    if (getSema().ActOnStartOpenACCStmtDirective(K, BeginLoc))
+      return StmtError();
 
-    if (!Construct.isUsable())
-      return Construct;
+    StrBlock = getSema().ActOnOpenACCAssociatedStmt(K, StrBlock);
 
-    if (StrBlock.isUsable()) {
-      Construct = getSema().ActOnOpenACCAssociatedStmt(
-          cast<OpenACCComputeConstruct>(Construct.get()), StrBlock.get());
-    }
-
-    getSema().ActOnEndOpenACCStmtDirective(Construct);
-    return Construct;
+    return getSema().ActOnEndOpenACCStmtDirective(K, BeginLoc, EndLoc,
+                                                  StrBlock);
   }
 
 private:

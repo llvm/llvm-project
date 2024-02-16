@@ -66,7 +66,7 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
 
 bool Sema::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
-  return diagnoseConstructAppertainment(&this, K, StartLoc, /*IsStmt=*/true);
+  return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
 StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
@@ -79,14 +79,16 @@ StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
     case OpenACCDirectiveKind::Invalid:
       return StmtError();
     case OpenACCDirectiveKind::Parallel:
-      return OpenACCComputeConstruct::Create(getASTContext(), K, StartLoc, EndLoc, AssocStmt);
+      return OpenACCComputeConstruct::Create(
+          getASTContext(), K, StartLoc, EndLoc,
+          AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
 StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
                                             StmtResult AssocStmt) {
-  switch (Construct->getDirectiveKind()) {
+  switch (K) {
   default:
   llvm_unreachable("Unimplemented associated statement application");
   case OpenACCDirectiveKind::Parallel:
@@ -106,7 +108,7 @@ StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
 
 bool Sema::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
-  return diagnoseConstructAppertainment(&this, K, StartLoc, /*IsStmt=*/false);
+  return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
 DeclGroupRef Sema::ActOnEndOpenACCDeclDirective() { return DeclGroupRef{}; }
