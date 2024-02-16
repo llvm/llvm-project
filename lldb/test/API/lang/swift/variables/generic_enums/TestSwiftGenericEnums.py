@@ -30,19 +30,6 @@ class TestSwiftGenericEnumTypes(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    # using Ints as keys should practically guarantee that key and index match
-    # that makes the test case logic much much easier
-    def check_dictionary_entry(self, var, index, key_summary, value_summary):
-        self.assertTrue(var.GetChildAtIndex(index).IsValid(), "invalid item")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
-            "key").IsValid(), "invalid key child")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
-            "value").IsValid(), "invalid key child")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
-            "key").GetSummary() == key_summary, "invalid key summary")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
-            "value").GetSummary() == value_summary, "invalid value summary")
-
     @swiftTest
     def test_swift_generic_enum_types(self):
         """Test that we handle reasonably generically-typed enums"""
@@ -54,14 +41,6 @@ class TestSwiftGenericEnumTypes(TestBase):
             'Set second breakpoint here', main_file)
         self.assertGreater(bkpt2.GetNumLocations(), 0, VALID_BREAKPOINT)
 
-
-        # This is the function to remove the custom formats in order to have a
-        # clean slate for the next test case.
-        def cleanup():
-            self.runCmd("type summary delete main.StringWrapper", check=False)
-
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
 
         enumvar = self.get_variable("myOptionalU").GetStaticValue()
         self.assertTrue(enumvar.GetValue() is None,
