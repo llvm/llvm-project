@@ -74,12 +74,12 @@ define weak_odr dllexport void @l() {
 ; CHECK-MSVC: .ascii "  /EXPORT:t"
 ; CHECK-MSVC: .ascii "  /EXPORT:u"
 
-; CHECK-GNU-NOT-EC: -export:f
-; CHECK-GNU-NOT-EC: -export:#f,EXPORTAS,f
+; CHECK-GNU-EC-NOT: -export:f
+; CHECK-GNU-EC-NOT: -export:#f,EXPORTAS,f
 ; CHECK-GNU-EC: .ascii " -export:#g,EXPORTAS,g
 ; CHECK-GNU-EC: .ascii " -export:#h,EXPORTAS,h
-; CHECK-GNU-NOT-EC: -export:i
-; CHECK-GNU-NOT-EC: -export:#i,EXPORTAS,i
+; CHECK-GNU-EC-NOT: -export:i
+; CHECK-GNU-EC-NOT: -export:#i,EXPORTAS,i
 ; CHECK-GNU-EC: .ascii " -export:#j,EXPORTAS,j"
 ; CHECK-GNU-EC: .ascii " -export:#k,EXPORTAS,k"
 ; CHECK-GNU-EC: .ascii " -export:#l,EXPORTAS,l"
@@ -92,12 +92,12 @@ define weak_odr dllexport void @l() {
 ; CHECK-GNU-EC: .ascii " -export:s"
 ; CHECK-GNU-EC: .ascii " -export:t"
 ; CHECK-GNU-EC: .ascii " -export:u"
-; CHECK-MSVC-NOT-EC: /EXPORT:f
-; CHECK-MSVC-NOT-EC: /EXPORT:#f,EXPORTAS,f
+; CHECK-MSVC-EC-NOT: /EXPORT:f
+; CHECK-MSVC-EC-NOT: /EXPORT:#f,EXPORTAS,f
 ; CHECK-MSVC-EC: .ascii "  /EXPORT:#g,EXPORTAS,g"
 ; CHECK-MSVC-EC: .ascii "  /EXPORT:#h,EXPORTAS,h"
-; CHECK-MSVC-NOT-EC: /EXPORT:i
-; CHECK-MSVC-NOT-EC: /EXPORT:#i,EXPORTAS,i
+; CHECK-MSVC-EC-NOT: /EXPORT:i
+; CHECK-MSVC-EC-NOT: /EXPORT:#i,EXPORTAS,i
 ; CHECK-MSVC-EC: .ascii "  /EXPORT:#j,EXPORTAS,j"
 ; CHECK-MSVC-EC: .ascii "  /EXPORT:#k,EXPORTAS,k"
 ; CHECK-MSVC-EC: .ascii "  /EXPORT:#l,EXPORTAS,l"
