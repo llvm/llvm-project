@@ -8,7 +8,7 @@ let Definition = "modulelist" in {
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.download background'.">;
+    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.auto-download background'.">;
   def AutoDownload: Property<"auto-download", "Enum">,
     Global,
     DefaultEnumValue<"eSymbolDownloadOff">,
