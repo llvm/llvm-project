@@ -13169,9 +13169,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   if (NonNegZExt) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    for (SDNode::use_iterator UI = N0->use_begin(), UE = N0->use_end();
-         UI != UE; ++UI) {
-      SDNode *User = *UI;
+    for (SDNode *User : N0->uses()) {
       if (User->getOpcode() == ISD::SETCC) {
         ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
         if (ISD::isSignedIntSetCC(CC)) {
