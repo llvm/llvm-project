@@ -63,9 +63,8 @@ func.func @unary_elementwise_with_resharding(
   %arg0: tensor<2xi8>
 // CHECK-SAME: -> tensor<2xi8> {
 ) -> tensor<2xi8> {
-  // We don't care about the whole resharding IR, just that it happens.
-  // CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[ARG]][%{{.*}}] [1] [1]
-  // CHECK-SAME: tensor<2xi8> to tensor<1xi8>
+  // CHECK: %[[SLICE:.*]] = mesh.all_slice %[[ARG]] on @mesh_1d mesh_axes = [0] slice_axis = 0
+  // CHECK-SAME: tensor<2xi8> -> tensor<1xi8>
   %0 = mesh.shard %arg0 to <@mesh_1d, [[]]> : tensor<2xi8>
   %1 = mesh.shard %0 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
   // CHECK: %[[ABS:.*]] = tosa.abs %[[SLICE]] : (tensor<1xi8>) -> tensor<1xi8>
@@ -109,9 +108,8 @@ func.func @multiple_chained_ops(
   %arg0: tensor<2xi8>
 // CHECK-SAME: -> tensor<1xi8> {
 ) -> tensor<2xi8> {
-  // We don't care about the whole resharding IR, just that it happens.
-  // CHECK: %[[RESHARD1:.*]] = tensor.extract_slice %[[ARG]][%{{.*}}] [1] [1]
-  // CHECK-SAME: tensor<2xi8> to tensor<1xi8>
+  // CHECK: %[[RESHARD1:.*]] = mesh.all_slice %[[ARG]] on @mesh_1d mesh_axes = [0] slice_axis = 0
+  // CHECK-SAME: tensor<2xi8> -> tensor<1xi8>
   %0 = mesh.shard %arg0 to <@mesh_1d, [[]]> : tensor<2xi8>
   %1 = mesh.shard %0 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
   // CHECK: %[[ABS1:.*]] = tosa.abs %[[RESHARD1]] : (tensor<1xi8>) -> tensor<1xi8>
@@ -122,8 +120,8 @@ func.func @multiple_chained_ops(
   %4 = mesh.shard %3 to <@mesh_1d, [[]]> annotate_for_users: tensor<2xi8>
   // CHECK: %[[ABS2:.*]] = tosa.abs %[[RESHARD2]] : (tensor<2xi8>) -> tensor<2xi8>
   %5 = tosa.abs %4 : (tensor<2xi8>) -> tensor<2xi8>
-  // CHECK: %[[RESHARD3:.*]] = tensor.extract_slice %[[ABS2]][%{{.*}}] [1] [1]
-  // CHECK-SAME: tensor<2xi8> to tensor<1xi8>
+  // CHECK: %[[RESHARD3:.*]] = mesh.all_slice %[[ABS2]] on @mesh_1d mesh_axes = [0] slice_axis = 0 : 
+  // CHECK-SAME: tensor<2xi8> -> tensor<1xi8>
   %6 = mesh.shard %5 to <@mesh_1d, [[]]> : tensor<2xi8>
   %7 = mesh.shard %6 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
   // CHECK: return %[[RESHARD3]] : tensor<1xi8>

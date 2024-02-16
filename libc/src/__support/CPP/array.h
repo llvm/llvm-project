@@ -47,7 +47,7 @@ template <class T, size_t N> struct array {
   LIBC_INLINE constexpr const_iterator begin() const { return Data; }
 
   LIBC_INLINE constexpr iterator end() { return Data + N; }
-  LIBC_INLINE const_iterator end() const { return Data + N; }
+  LIBC_INLINE constexpr const_iterator end() const { return Data + N; }
 };
 
 } // namespace cpp
