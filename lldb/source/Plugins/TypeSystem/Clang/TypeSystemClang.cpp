@@ -2714,6 +2714,105 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
   return nullptr;
 }
 
+static clang::Type const *GetCompleteRecordType(clang::ASTContext *ast,
+                                                clang::QualType qual_type,
+                                                bool allow_completion = true) {
+  clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
+  if (!cxx_record_decl)
+    return nullptr;
+
+  if (cxx_record_decl->hasExternalLexicalStorage()) {
+    const bool is_complete = cxx_record_decl->isCompleteDefinition();
+    const bool fields_loaded =
+        cxx_record_decl->hasLoadedFieldsFromExternalStorage();
+    if (is_complete && fields_loaded)
+      return qual_type.getTypePtr();
+
+    if (!allow_completion)
+      return nullptr;
+
+    // Call the field_begin() accessor to for it to use the external source
+    // to load the fields...
+    clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+    if (external_ast_source) {
+      external_ast_source->CompleteType(cxx_record_decl);
+      if (cxx_record_decl->isCompleteDefinition()) {
+        cxx_record_decl->field_begin();
+        cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
+      }
+    }
+
+    return qual_type.getTypePtr();
+  }
+
+  return qual_type.getTypePtr();
+}
+
+static clang::Type const *GetCompleteEnumType(clang::ASTContext *ast,
+                                              clang::QualType qual_type,
+                                              bool allow_completion = true) {
+  const clang::TagType *tag_type =
+      llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr());
+  if (!tag_type)
+    return nullptr;
+
+  clang::TagDecl *tag_decl = tag_type->getDecl();
+  if (!tag_decl)
+    return nullptr;
+
+  if (tag_decl->getDefinition())
+    return tag_type;
+
+  if (!allow_completion)
+    return nullptr;
+
+  if (tag_decl->hasExternalLexicalStorage()) {
+    if (ast) {
+      clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+      if (external_ast_source) {
+        external_ast_source->CompleteType(tag_decl);
+        return tag_type;
+      }
+    }
+  }
+
+  return tag_type;
+}
+
+static clang::Type const *
+GetCompleteObjCInterfaceType(clang::ASTContext *ast, clang::QualType qual_type,
+                             bool allow_completion = true) {
+  const clang::ObjCObjectType *objc_class_type =
+      llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
+  if (!objc_class_type)
+    return nullptr;
+
+  clang::ObjCInterfaceDecl *class_interface_decl =
+      objc_class_type->getInterface();
+  // We currently can't complete objective C types through the newly added
+  // ASTContext because it only supports TagDecl objects right now...
+  if (!class_interface_decl)
+    return objc_class_type;
+
+  if (class_interface_decl->getDefinition())
+    return objc_class_type;
+
+  if (!allow_completion)
+    return nullptr;
+
+  if (class_interface_decl->hasExternalLexicalStorage()) {
+    if (ast) {
+      clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+      if (external_ast_source) {
+        external_ast_source->CompleteType(class_interface_decl);
+        return objc_class_type;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 static bool GetCompleteQualType(clang::ASTContext *ast,
                                 clang::QualType qual_type,
                                 bool allow_completion = true) {
@@ -2731,92 +2830,27 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
                                  allow_completion);
   } break;
   case clang::Type::Record: {
-    clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-    if (cxx_record_decl) {
-      if (cxx_record_decl->hasExternalLexicalStorage()) {
-        const bool is_complete = cxx_record_decl->isCompleteDefinition();
-        const bool fields_loaded =
-            cxx_record_decl->hasLoadedFieldsFromExternalStorage();
-        if (is_complete && fields_loaded)
-          return true;
+    if (auto const *ty = llvm::dyn_cast_or_null<RecordType>(
+            GetCompleteRecordType(ast, qual_type, allow_completion)))
+      return !ty->isIncompleteType();
 
-        if (!allow_completion)
-          return false;
-
-        // Call the field_begin() accessor to for it to use the external source
-        // to load the fields...
-        clang::ExternalASTSource *external_ast_source =
-            ast->getExternalSource();
-        if (external_ast_source) {
-          external_ast_source->CompleteType(cxx_record_decl);
-          if (cxx_record_decl->isCompleteDefinition()) {
-            cxx_record_decl->field_begin();
-            cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
-          }
-        }
-      }
-    }
-    const clang::TagType *tag_type =
-        llvm::cast<clang::TagType>(qual_type.getTypePtr());
-    return !tag_type->isIncompleteType();
+    return false;
   } break;
 
   case clang::Type::Enum: {
-    const clang::TagType *tag_type =
-        llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr());
-    if (tag_type) {
-      clang::TagDecl *tag_decl = tag_type->getDecl();
-      if (tag_decl) {
-        if (tag_decl->getDefinition())
-          return true;
+    if (auto const *ty = llvm::dyn_cast_or_null<EnumType>(
+            GetCompleteEnumType(ast, qual_type, allow_completion)))
+      return !ty->isIncompleteType();
 
-        if (!allow_completion)
-          return false;
-
-        if (tag_decl->hasExternalLexicalStorage()) {
-          if (ast) {
-            clang::ExternalASTSource *external_ast_source =
-                ast->getExternalSource();
-            if (external_ast_source) {
-              external_ast_source->CompleteType(tag_decl);
-              return !tag_type->isIncompleteType();
-            }
-          }
-        }
-        return false;
-      }
-    }
-
+    return false;
   } break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
-    const clang::ObjCObjectType *objc_class_type =
-        llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
-    if (objc_class_type) {
-      clang::ObjCInterfaceDecl *class_interface_decl =
-          objc_class_type->getInterface();
-      // We currently can't complete objective C types through the newly added
-      // ASTContext because it only supports TagDecl objects right now...
-      if (class_interface_decl) {
-        if (class_interface_decl->getDefinition())
-          return true;
+    if (auto const *ty = llvm::dyn_cast_or_null<ObjCInterfaceType>(
+            GetCompleteObjCInterfaceType(ast, qual_type, allow_completion)))
+      return !ty->isIncompleteType();
 
-        if (!allow_completion)
-          return false;
-
-        if (class_interface_decl->hasExternalLexicalStorage()) {
-          if (ast) {
-            clang::ExternalASTSource *external_ast_source =
-                ast->getExternalSource();
-            if (external_ast_source) {
-              external_ast_source->CompleteType(class_interface_decl);
-              return !objc_class_type->isIncompleteType();
-            }
-          }
-        }
-        return false;
-      }
-    }
+    return false;
   } break;
 
   case clang::Type::Attributed:
