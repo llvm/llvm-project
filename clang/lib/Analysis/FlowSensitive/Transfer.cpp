@@ -663,6 +663,12 @@ public:
   void VisitInitListExpr(const InitListExpr *S) {
     QualType Type = S->getType();
 
+    if (Type->isUnionType()) {
+      if (auto *Val = Env.createValue(Type))
+        Env.setValue(*S, *Val);
+      return;
+    }
+
     if (!Type->isStructureOrClassType()) {
       // Until array initialization is implemented, we don't need to care about
       // cases where `getNumInits() > 1`.
