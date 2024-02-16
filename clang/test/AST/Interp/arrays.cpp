@@ -537,3 +537,11 @@ namespace SelfComparison {
     return s3->array[t.field] == s3->array[t.field];  // both-warning {{self-comparison always evaluates to true}}
   };
 }
+
+namespace LocalIndex {
+  void test() {
+    const int const_subscript = 3;
+    int array[2]; // both-note {{declared here}}
+    array[const_subscript] = 0;  // both-warning {{array index 3 is past the end of the array (that has type 'int[2]')}}
+  }
+}
