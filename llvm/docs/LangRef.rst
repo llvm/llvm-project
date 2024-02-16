@@ -5585,7 +5585,7 @@ arguments.
 .. note::
 
     One example application of metadata is source-level debug information,
-    which is currently the only use of specialized nodes.
+    which is currently the only user of specialized nodes.
 
 Metadata does not have a type, and is not a value.
 
