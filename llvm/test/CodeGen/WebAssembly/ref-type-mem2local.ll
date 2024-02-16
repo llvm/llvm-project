@@ -2,14 +2,14 @@
 
 target triple = "wasm32-unknown-unknown"
 
-%funcref = type ptr addrspace(20)
 %externref = type ptr addrspace(10)
+%funcref = type ptr addrspace(20)
 
-declare %funcref @get_funcref()
 declare %externref @get_externref()
+declare %funcref @get_funcref()
 declare i32 @get_i32()
-declare void @take_funcref(%funcref)
 declare void @take_externref(%externref)
+declare void @take_funcref(%funcref)
 declare void @take_i32(i32)
 
 ; Reference type allocas should be moved to addrspace(1)
