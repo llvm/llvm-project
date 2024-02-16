@@ -28,7 +28,7 @@ class WebAssemblyRefTypeMem2Local final
     : public FunctionPass,
       public InstVisitor<WebAssemblyRefTypeMem2Local> {
   StringRef getPassName() const override {
-    return "WebAssembly Refernce Types Memory to Local";
+    return "WebAssembly Reference Types Memory to Local";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
