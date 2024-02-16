@@ -1,0 +1,94 @@
+name: Timeout Save
+description: Save build state when a timeout occurs so that it can be reused when the job is restarted.
+inputs:
+  job-name:
+    description: The name of the job.  This is used to look up the job id.
+    required: true
+  artifact-name-suffix:
+    desciption: Suffix to add to the name of the artifact containing the build state.
+    required: true
+  timeout-step:
+    description: The step that we want to restart if there is a timeout.
+    required: true
+  timeout-minutes:
+    description: The value of timeout-minutes for this step.
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check for timeout
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+      id: timeout
+      with:
+        script: |
+          const job_data = await github.rest.actions.listJobsForWorkflowRun({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+
+          for (job of job_data.data.jobs) {
+            console.log(job)
+            if (job.name != "${{ inputs.job-name }}") {
+              continue;
+            }
+
+            for (step of job.steps) {
+              console.log(step);
+              if (step.name != "${{ inputs.timeout-step }}") {
+                continue;
+              }
+              if (step.conclusion != "failure") {
+                return false;
+              }
+
+              // This run failed, check for timeout.
+              console.log(step.completed_at)
+              console.log(step.started_at)
+              completed_at = Date.parse(step.completed_at);
+              started_at = Date.parse(step.started_at);
+              console.log(completed_at)
+              console.log(started_at)
+              const diff = (completed_at - started_at) / 1000;
+              console.log(diff);
+              if (diff > 60 * ${{ inputs.timeout-minutes }})
+                return true;
+            }
+          }
+          return false;
+
+    - name: Save Working Directory
+      shell: bash
+      if: steps.timeout.outputs.result == 'true'
+      run: |
+        # Dereference symlinks so that this works on Windows.
+        tar -h -c . | zstd -T0 -c > ../llvm-project.tar.zst
+        mv ../llvm-project.tar.zst .
+
+    - name: Upload Working Directory
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      if: steps.timeout.outputs.result == 'true'
+      with:
+        name: timeout-build-${{ inputs.artifact-name-suffix }}
+        path: llvm-project.tar.zst
+        retention-days: 2
+
+    - name: Get Job ID
+      id: job-id
+      if: steps.timeout.outputs.result == 'true'
+      uses: ./.github/workflows/get-job-id
+      with:
+        job-name: ${{ inputs.job-name }}
+
+    - name: Create Timeout File
+      if: steps.timeout.outputs.result == 'true'
+      shell: bash
+      run: touch timeout-${{ steps.job-id.outputs.job-id }}
+
+    - name: Upload Timeout File
+      if: steps.timeout.outputs.result == 'true'
+      uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: timeout-${{ steps.job-id.outputs.job-id }}
+        path: timeout-${{ steps.job-id.outputs.job-id }}

@@ -1,0 +1,21 @@
+name: 'Compute Projects To Test'
+inputs:
+  projects:
+    required: false
+    type: 'string'
+
+outputs:
+  check-targets:
+    description: "A space delimited list of check-targets to pass to ninja."
+    value: ${{ steps.compute-projects.outputs.check-targets }}
+
+  projects:
+    description: "A semi-colon delimited list of projects to pass to -DLLVM_ENABLE_PROJECTS."
+    value: ${{ steps.compute-projects.outputs.projects }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: compute-projects
+      run: .github/workflows/compute-projects-to-test/compute-projects-to-test.sh ${{ inputs.projects }}
+      shell: bash

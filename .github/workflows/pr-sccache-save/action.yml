@@ -1,0 +1,50 @@
+name: PR sccache save
+inputs:
+  artifact-name-suffix:
+    desciption: The suffix to append to the artifict name (sccache-pr#)
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+      with:
+        script: |
+          const data = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+            name: 'sccache-pr' + context.issue.number + "-${{ inputs.artifact-name-suffix }}"
+          })
+
+          console.log(data.data.artifacts)
+          if (data.data.artifacts.length == 0) {
+            return '';
+          }
+          console.log(data.data.artifacts[0])
+          const artifact_id = data.data.artifacts[0].id
+
+          // Delete the exisiting artifact so we can upload a new one with the same name.
+          github.rest.actions.deleteArtifact({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            artifact_id: artifact_id
+          })
+
+    - name: Package sccache Directory
+      shell: bash
+      run: |
+        # Dereference symlinks so that this works on Windows.
+        tar -h -c .sccache | zstd -T0 -c > sccache.tar.zst
+
+    - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      with:
+        name: 'sccache-pr${{ github.event.number }}-${{ inputs.artifact-name-suffix }}'
+        path: sccache.tar.zst
+        retention-days: 7
+
+    - shell: bash
+      run: |
+        rm sccache.tar.zst
+        sccache --show-stats
+

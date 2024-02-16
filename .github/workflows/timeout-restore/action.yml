@@ -1,0 +1,33 @@
+name: Timeout Restore
+description: Save build state from a timed out job.
+inputs:
+  artifact-name-suffix:
+    desciption: Suffix to add to the name of the artifact containing the build state.
+    required: true
+
+outputs:
+  exists:
+    description: "This is true if a previous timeout build was restored, false otherwise."
+    value: ${{ steps.timeout-artifact.exists }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Artifact
+      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      with:
+        pattern: timeout-build-${{ inputs.artifact-name-suffix }}
+        merge-multiple: true
+
+    - name: Unpack Artifact
+      id: timeout-artifact
+      shell: bash
+      run: |
+        if [ -e llvm-project.tar.zst ]; then
+          tar --zstd -xf llvm-project.tar.zst
+          rm llvm-project.tar.zst
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+

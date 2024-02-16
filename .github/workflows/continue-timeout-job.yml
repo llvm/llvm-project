@@ -1,0 +1,75 @@
+name: Continue Timeout Job
+
+on:
+  workflow_run:
+    workflows:
+      - "Windows Precommit Tests"
+      - "CI Tests"
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  restart:
+    name: "Restart Job"
+    permissions:
+      actions: write
+    runs-on: ubuntu-22.04
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: "Restart Job"
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        with:
+          script: |
+            const response = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            })
+
+            job_ids = [];
+
+            for (artifact of response.data.artifacts) {
+              console.log(artifact);
+              const match = artifact.name.match(/timeout-([0-9]+)/);
+              console.log(match);
+              if (!match) {
+                continue;
+              }
+              job_ids.push(match[1]);
+
+              // Delete the timeout artifact to prepare for the next run
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id
+              });
+            }
+
+            if (job_ids.length == 0) {
+              return;
+            }
+
+            if (job_ids.length > 1) {
+              // We aren't able to re-start multiple jobs individually, so our
+              // only option is to restart all failed jobs.
+              await github.rest.actions.reRunWorkflowFailedJobs({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              })
+              console.log("Restarted workflow: " + context.payload.workflow_run.id);
+              return;
+            }
+
+            job_id = job_ids[0];
+            // This function does not exist even though it is in the document
+            //github.rest.actions.reRunJobForWorkflow({
+            await github.request('POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun', {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              job_id: job_id
+            })
+            console.log("Restarted job: " + job_id);
