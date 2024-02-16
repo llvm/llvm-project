@@ -18,8 +18,9 @@
 
 #  include <__availability>
 #  include <__chrono/tzdb.h>
+#  include <__config>
+#  include <__fwd/string.h>
 #  include <forward_list>
-#  include <string>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -41,7 +42,9 @@ namespace chrono {
 class _LIBCPP_AVAILABILITY_TZDB tzdb_list {
 public:
   class __impl; // public to allow construction in dylib
-  _LIBCPP_EXPORTED_FROM_ABI explicit tzdb_list(__impl* __p);
+  _LIBCPP_HIDE_FROM_ABI explicit tzdb_list(__impl* __p) : __impl_(__p) {
+    _LIBCPP_ASSERT_NON_NULL(__impl_ != nullptr, "initialized time_zone without a valid pimpl object");
+  }
   _LIBCPP_EXPORTED_FROM_ABI ~tzdb_list();
 
   tzdb_list(const tzdb_list&)            = delete;

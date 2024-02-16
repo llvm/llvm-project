@@ -16,10 +16,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
-_LIBCPP_EXPORTED_FROM_ABI tzdb_list::tzdb_list(tzdb_list::__impl* __p) : __impl_(__p) {
-  _LIBCPP_ASSERT_NON_NULL(__impl_ != nullptr, "initialized time_zone without a valid pimpl object");
-}
-
 _LIBCPP_EXPORTED_FROM_ABI tzdb_list::~tzdb_list() { delete __impl_; }
 
 _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const tzdb& tzdb_list::front() const noexcept {
