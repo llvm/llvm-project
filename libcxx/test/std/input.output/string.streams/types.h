@@ -15,24 +15,67 @@
 #include "test_macros.h"
 
 template <typename CharT, class Traits = std::char_traits<CharT>>
-class CustomStringView {
+class ConstConvertibleStringView {
 public:
-  explicit CustomStringView(const CharT* cs) : cs_{cs} {}
+  explicit ConstConvertibleStringView(const CharT* cs) : cs_{cs} {}
 
-  template <std::same_as<std::basic_string_view<CharT, Traits>> T>
-  operator T() const {
-    return std::basic_string_view<CharT, Traits>(cs_);
-  }
+  operator std::basic_string_view<CharT, Traits>() = delete;
+
+  // template <std::same_as<std::basic_string_view<CharT, Traits>> T>
+  // operator T() const {
+  //   return std::basic_string_view<CharT, Traits>(cs_);
+  // }
+
+  operator std::basic_string_view<CharT, Traits>() const { return std::basic_string_view<CharT, Traits>(cs_); }
 
 private:
   const CharT* cs_;
 };
 
-static_assert(std::constructible_from<std::basic_string_view<char>, CustomStringView<char>>);
-static_assert(std::convertible_to<CustomStringView<char>, std::basic_string_view<char>>);
+static_assert(!std::constructible_from<std::basic_string_view<char>, ConstConvertibleStringView<char>>);
+static_assert(!std::convertible_to<ConstConvertibleStringView<char>, std::basic_string_view<char>>);
+
+static_assert(std::constructible_from<std::basic_string_view<char>, const ConstConvertibleStringView<char>>);
+static_assert(std::convertible_to<const ConstConvertibleStringView<char>, std::basic_string_view<char>>);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::convertible_to<CustomStringView<wchar_t>, std::basic_string_view<wchar_t>>);
+static_assert(!std::constructible_from<std::basic_string_view<wchar_t>, ConstConvertibleStringView<wchar_t>>);
+static_assert(!std::convertible_to<ConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
+
+static_assert(std::constructible_from<std::basic_string_view<wchar_t>, const ConstConvertibleStringView<wchar_t>>);
+static_assert(std::convertible_to<const ConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
+#endif
+
+template <typename CharT, class Traits = std::char_traits<CharT>>
+class NonConstConvertibleStringView {
+public:
+  explicit NonConstConvertibleStringView(const CharT* cs) : cs_{cs} {}
+
+  // template <std::same_as<std::basic_string_view<CharT, Traits>> T>
+  // operator T() {
+  //   return std::basic_string_view<CharT, Traits>(cs_);
+  // }
+
+  operator std::basic_string_view<CharT, Traits>() { return std::basic_string_view<CharT, Traits>(cs_); }
+
+  operator std::basic_string_view<CharT, Traits>() const = delete;
+
+private:
+  const CharT* cs_;
+};
+
+static_assert(std::constructible_from<std::basic_string_view<char>, NonConstConvertibleStringView<char>>);
+static_assert(std::convertible_to<NonConstConvertibleStringView<char>, std::basic_string_view<char>>);
+
+static_assert(!std::constructible_from<std::basic_string_view<char>, const NonConstConvertibleStringView<char>>);
+static_assert(!std::convertible_to<const NonConstConvertibleStringView<char>, std::basic_string_view<char>>);
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(std::constructible_from<std::basic_string_view<wchar_t>, NonConstConvertibleStringView<wchar_t>>);
+static_assert(std::convertible_to<NonConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
+
+static_assert(!std::constructible_from<std::basic_string_view<wchar_t>, const NonConstConvertibleStringView<wchar_t>>);
+static_assert(!std::convertible_to<const NonConstConvertibleStringView<wchar_t>, std::basic_string_view<wchar_t>>);
 #endif
 
 struct SomeObject {};

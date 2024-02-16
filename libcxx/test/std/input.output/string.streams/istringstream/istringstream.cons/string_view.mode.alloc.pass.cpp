@@ -99,22 +99,61 @@ void test_sfinae() {
   static_assert(
       test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
 
-  // `CustomStringView`
+  // ConstConvertibleStringView<CharT>
   static_assert(std::constructible_from<SSTREAM,
-                                        const CustomStringView<CharT>,
+                                        const ConstConvertibleStringView<CharT>,
                                         std::ios_base::openmode,
                                         const test_allocator<CharT>>);
-  static_assert(
-      test_convertible<SSTREAM, const CustomStringView<CharT>, std::ios_base::openmode, const test_allocator<CharT>>());
+  static_assert(test_convertible<SSTREAM,
+                                 const ConstConvertibleStringView<CharT>,
+                                 std::ios_base::openmode,
+                                 const test_allocator<CharT>>());
 
   static_assert(std::constructible_from<CSSTREAM,
-                                        const CustomStringView<CharT, constexpr_char_traits<CharT>>,
+                                        const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                         std::ios_base::openmode,
                                         const test_allocator<CharT>>);
   static_assert(test_convertible<CSSTREAM,
-                                 const CustomStringView<CharT, constexpr_char_traits<CharT>>,
+                                 const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                  std::ios_base::openmode,
                                  const test_allocator<CharT>>());
+
+  // NonConstConvertibleStringView<CharT>
+  static_assert(!std::constructible_from<SSTREAM,
+                                         NonConstConvertibleStringView<CharT>,
+                                         std::ios_base::openmode,
+                                         const test_allocator<CharT>>);
+  static_assert(!test_convertible<SSTREAM,
+                                  NonConstConvertibleStringView<CharT>,
+                                  std::ios_base::openmode,
+                                  const test_allocator<CharT>>());
+
+  static_assert(!std::constructible_from<SSTREAM,
+                                         const NonConstConvertibleStringView<CharT>,
+                                         std::ios_base::openmode,
+                                         const test_allocator<CharT>>);
+  static_assert(!test_convertible<SSTREAM,
+                                  const NonConstConvertibleStringView<CharT>,
+                                  std::ios_base::openmode,
+                                  const test_allocator<CharT>>());
+
+  static_assert(!std::constructible_from<CSSTREAM,
+                                         const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
+                                         std::ios_base::openmode,
+                                         const test_allocator<CharT>>);
+  static_assert(!test_convertible<CSSTREAM,
+                                  const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
+                                  std::ios_base::openmode,
+                                  const test_allocator<CharT>>());
+
+  static_assert(!std::constructible_from<CSSTREAM,
+                                         const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
+                                         std::ios_base::openmode,
+                                         const test_allocator<CharT>>);
+  static_assert(!test_convertible<CSSTREAM,
+                                  const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
+                                  std::ios_base::openmode,
+                                  const test_allocator<CharT>>());
 
   // Non-`string-view-like`
   static_assert(!std::constructible_from<SSTREAM, const int, std::ios_base::openmode, const test_allocator<CharT>>);
@@ -167,10 +206,10 @@ static void test() {
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
-  // CustomStringView<CharT>
+  // ConstConvertibleStringView<CharT>
   {
-    const CustomStringView<CharT> ccsv{CS("zmt")};
-    std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(ccsv, std::ios_base::binary, ca);
+    const ConstConvertibleStringView<CharT> sv{CS("zmt")};
+    std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(sv, std::ios_base::binary, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
