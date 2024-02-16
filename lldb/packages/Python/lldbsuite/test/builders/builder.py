@@ -175,11 +175,6 @@ class Builder:
             return ["SWIFT_LIBS_DIR={}".format(configuration.swift_libs_dir)]
         return []
 
-    def getLLDBSwiftLibs(self):
-        if configuration.swift_libs_dir:
-            return ["SWIFT_LIBS_DIR={}".format(configuration.swift_libs_dir)]
-        return []
-
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
