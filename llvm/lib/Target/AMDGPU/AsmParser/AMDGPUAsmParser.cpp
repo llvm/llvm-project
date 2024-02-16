@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDKernelCodeT.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
@@ -1816,6 +1817,7 @@ private:
 
 public:
   void onBeginOfFile() override;
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   ParseStatus parseCustomOperand(OperandVector &Operands, unsigned MCK);
 
@@ -8275,6 +8277,53 @@ void AMDGPUAsmParser::onBeginOfFile() {
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
+}
+
+/// Parse AMDGPU specific expressions.
+///
+///  expr ::= or(expr, ...) |
+///           max(expr, ...)
+///
+bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  using AGVK = AMDGPUVariadicMCExpr::AMDGPUVariadicKind;
+
+  auto parseVariadicExpr = [&](AGVK Kind, const MCExpr *&res, SMLoc &EndLoc) {
+    std::vector<const MCExpr *> Exprs;
+    while (true) {
+      if (isToken(AsmToken::RParen)) {
+        if (Exprs.empty()) {
+          Error(getToken().getLoc(), "empty max/or expression");
+          return true;
+        }
+        lex();
+        res = AMDGPUVariadicMCExpr::create(Kind, Exprs, getContext());
+        return false;
+      }
+      const MCExpr *Expr;
+      if (getParser().parseExpression(Expr, EndLoc))
+        return true;
+      Exprs.push_back(Expr);
+      if (!trySkipToken(AsmToken::Comma) && !isToken(AsmToken::RParen)) {
+        Error(getToken().getLoc(), "unexpected token in max/or expression");
+        return true;
+      }
+    }
+  };
+
+  if (isToken(AsmToken::Identifier)) {
+    StringRef TokenId = getTokenStr();
+    AGVK VK = StringSwitch<AGVK>(TokenId)
+                  .Case("max", AGVK::AGVK_Max)
+                  .Case("or", AGVK::AGVK_Or)
+                  .Default(AGVK::AGVK_None);
+
+    if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
+      lex(); // Eat 'max'/'or'
+      lex(); // Eat '('
+      return parseVariadicExpr(VK, Res, EndLoc);
+    }
+  }
+  return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
 }
 
 ParseStatus AMDGPUAsmParser::parseOModSI(OperandVector &Operands) {
