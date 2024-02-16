@@ -492,6 +492,11 @@ public:
                        const PseudoProbeManager *ProbeManager)
       : M(M), Reader(Reader), ProbeManager(ProbeManager){};
   void runOnModule();
+  void clearMatchingData() {
+    // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
+    // will be used for sample loader.
+    FuncCallsiteMatchStates.clear();
+  }
 
 private:
   FunctionSamples *getFlattenedSamplesFor(const Function &F) {
@@ -518,6 +523,18 @@ private:
   bool isMismatchState(const enum MatchState &State) {
     return State == MatchState::InitialMismatch ||
            State == MatchState::UnchangedMismatch ||
+           State == MatchState::RemovedMatch;
+  };
+
+  bool isInitialState(const enum MatchState &State) {
+    return State == MatchState::InitialMatch ||
+           State == MatchState::InitialMismatch;
+  };
+
+  bool isFinalState(const enum MatchState &State) {
+    return State == MatchState::UnchangedMatch ||
+           State == MatchState::UnchangedMismatch ||
+           State == MatchState::RecoveredMismatch ||
            State == MatchState::RemovedMatch;
   };
 
@@ -2561,8 +2578,14 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
   if (It == FuncCallsiteMatchStates.end() || It->second.empty())
     return;
   const auto &MatchStates = It->second;
+  [[maybe_unused]] bool OnInitialState =
+      isInitialState(MatchStates.begin()->second);
   for (const auto &I : MatchStates) {
     TotalProfiledCallsites++;
+    assert(
+        (OnInitialState ? isInitialState(I.second) : isFinalState(I.second)) &&
+        "Profile matching state is inconsistent");
+
     if (isMismatchState(I.second))
       NumMismatchedCallsites++;
     else if (I.second == MatchState::RecoveredMismatch)
@@ -2729,6 +2752,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
     MatchingManager->runOnModule();
+    MatchingManager->clearMatchingData();
   }
 
   bool retval = false;
