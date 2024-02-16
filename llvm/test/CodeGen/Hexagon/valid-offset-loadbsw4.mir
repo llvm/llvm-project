@@ -1,0 +1,32 @@
+# RUN: llc -march=hexagon -run-pass hexagon-postincopt -o - %s | FileCheck %s
+# REQUIRES: asserts
+
+# Check that this doesn't crash:
+# CHECK: L2_loadbsw4_io
+
+---
+name: fred
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $r0
+
+    %0:intregs = COPY $r0
+    %1:intregs = A2_tfrsi 240
+    %2:doubleregs = IMPLICIT_DEF
+    %3:doubleregs = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.1(0x80000000)
+
+    %4:intregs = PHI %1, %bb.0, %5, %bb.1
+    %6:doubleregs = L2_loadbsw4_io %4, 0
+    %7:doubleregs = M2_vrmac_s0 %2, %6, %3
+    S2_storeri_io %0, 0, %7.isub_lo
+    %5:intregs = nuw A2_addi %4, 256
+    J2_jump %bb.1, implicit-def dead $pc
+
+...
