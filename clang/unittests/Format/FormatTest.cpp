@@ -22895,7 +22895,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                LLVMWithBeforeLambdaBody);
   verifyFormat(
       "FctWithTwoParams_SLS_All(\n"
-      "    87, []() { return LongLineThatWillForceBothParamsToNewLine(); });\n",
+      "    87, []() { return LongLineThatWillForceBothParamsToNewLine(); });",
       LLVMWithBeforeLambdaBody);
   verifyFormat(
       "FctWithTwoParams_SLS_All(\n"
