@@ -551,8 +551,13 @@ void SkipUntilEndOfDirective(Parser &P) {
 }
 
 bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
-  // TODO OpenACC: Implement.
-  return false;
+  switch (DirKind) {
+  default:
+    return false;
+  case OpenACCDirectiveKind::Parallel:
+    return true;
+  }
+  llvm_unreachable("Unhandled directive->assoc stmt");
 }
 
 } // namespace
@@ -1215,7 +1220,7 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   ConsumeAnnotationToken();
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
-  if (getActions().ActOnStartOpenACCDeclDirective(DirInfo.DirKind,
+  if (getActions().ActOnStartOpenACCStmtDirective(DirInfo.DirKind,
                                                   DirInfo.StartLoc))
     return StmtError();
 
