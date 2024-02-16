@@ -285,7 +285,8 @@ public:
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
     // Operator '*' and '!' are allowed as long as the operand is trivial.
-    if (UO->getOpcode() == UO_Deref || UO->getOpcode() == UO_LNot)
+    if (UO->getOpcode() == UO_Deref || UO->getOpcode() == UO_AddrOf ||
+        UO->getOpcode() == UO_LNot)
       return Visit(UO->getSubExpr());
 
     // Other operators are non-trivial.
@@ -306,6 +307,10 @@ public:
     if (auto *decl = DRE->getDecl()) {
       if (isa<ParmVarDecl>(decl))
         return true;
+      if (isa<EnumConstantDecl>(decl))
+        return true;
+      if (auto *VD = dyn_cast<VarDecl>(decl))
+        return VD->hasConstantInitialization() && VD->getEvaluatedValue();
     }
     return false;
   }
@@ -377,6 +382,14 @@ public:
     return Visit(ECE->getSubExpr());
   }
 
+  bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
+    return Visit(VMT->getSubExpr());
+  }
+
+  bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
+    return Visit(EWC->getSubExpr());
+  }
+
   bool VisitParenExpr(const ParenExpr *PE) { return Visit(PE->getSubExpr()); }
 
   bool VisitInitListExpr(const InitListExpr *ILE) {
@@ -394,6 +407,11 @@ public:
 
   bool VisitCXXThisExpr(const CXXThisExpr *CTE) {
     // The expression 'this' is always trivial, be it explicit or implicit.
+    return true;
+  }
+
+  bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
+    // nullptr is trivial.
     return true;
   }
 
