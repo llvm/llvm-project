@@ -8814,7 +8814,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   // be included.
   return IsNullOrVectorRegister &&
          (isSpill(Opcode) || (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
-                                 MI.modifiesRegister(AMDGPU::EXEC, &RI)));
+                              MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
 MachineInstrBuilder
