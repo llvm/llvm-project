@@ -26,23 +26,23 @@ namespace mesh {
 void populateSimplificationPatterns(
     RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection) {
   populateAllReduceEndomorphismSimplificationPatterns<arith::AddFOp>(
-      patterns, Partial::Sum);
+      patterns, ReductionKind::Sum);
   populateAllReduceEndomorphismSimplificationPatterns<arith::AddIOp>(
-      patterns, Partial::Sum);
+      patterns, ReductionKind::Sum);
 
   populateAllReduceEndomorphismSimplificationPatterns<arith::MinimumFOp>(
-      patterns, Partial::Min);
+      patterns, ReductionKind::Min);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MinSIOp>(
-      patterns, Partial::Min);
+      patterns, ReductionKind::Min);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MinUIOp>(
-      patterns, Partial::Min);
+      patterns, ReductionKind::Min);
 
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaximumFOp>(
-      patterns, Partial::Max);
+      patterns, ReductionKind::Max);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaxSIOp>(
-      patterns, Partial::Max);
+      patterns, ReductionKind::Max);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaxUIOp>(
-      patterns, Partial::Max);
+      patterns, ReductionKind::Max);
 
   // TODO: add simplifications for all-gather and other collectives.
 
