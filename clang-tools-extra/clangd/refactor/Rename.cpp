@@ -919,9 +919,9 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
 }
 
 // AST-based rename, it renames all occurrences in the main file.
-llvm::Expected<tooling::Replacements>
-renameWithinFile(ParsedAST &AST,
-                 const llvm::DenseMap<const NamedDecl *, std::string> &DeclToNewName) {
+llvm::Expected<tooling::Replacements> renameWithinFile(
+    ParsedAST &AST,
+    const llvm::DenseMap<const NamedDecl *, std::string> &DeclToNewName) {
   trace::Span Tracer("RenameWithinFile");
   const SourceManager &SM = AST.getSourceManager();
 
@@ -964,8 +964,14 @@ renameWithinFile(ParsedAST &AST,
       // case, as it relies on parsing selectors via the trailing `:`.
       // We also choose to use regular rename logic for the single-arg selectors
       // as the AST/Index has the right locations in that case.
-      if (MD->getSelector().getNumArgs() > 1)
-        return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+      if (MD->getSelector().getNumArgs() > 1) {
+        auto Res =
+            renameObjCMethodWithinFile(AST, MD, Entry.second, std::move(Locs));
+        if (!Res)
+          return Res.takeError();
+        FilteredChanges = FilteredChanges.merge(Res.get());
+        continue;
+      }
 
       // Eat trailing : for single argument methods since they're actually
       // considered a separate token during rename.
@@ -1241,7 +1247,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
         }
       } else if (const auto *ID = CD->getClassInterface()) {
         if (!ASTCtx.getObjCPropertyImplDeclForPropertyDecl(
-              PD, ID->getImplementation())) {
+                PD, ID->getImplementation())) {
           return makeError(ReasonToReject::OnlyRenameableFromDefinition);
         }
       }
@@ -1262,7 +1268,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
       Placeholder = Name;
 
     auto Reject =
-      renameable(*Entry.first, RInputs.MainFilePath, RInputs.Index, Opts);
+        renameable(*Entry.first, RInputs.MainFilePath, RInputs.Index, Opts);
     if (Reject)
       return makeError(*Reject);
   }
@@ -1337,7 +1343,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     auto OtherFilesEdits = renameOutsideFile(
         *Entry.first, RInputs.MainFilePath, Entry.second, *RInputs.Index,
         Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
-                            : Opts.LimitFiles,
+                             : Opts.LimitFiles,
         *RInputs.FS);
     if (!OtherFilesEdits)
       return OtherFilesEdits.takeError();

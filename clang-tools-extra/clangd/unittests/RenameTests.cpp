@@ -1023,7 +1023,7 @@ TEST(RenameTest, ObjCWithinFileRename) {
                           std::nullopt,
                       },
                       {
-                        R"cpp(
+                          R"cpp(
                           @interface Foo
                           @property(nonatomic) int fo^o;
                           @end
@@ -1034,8 +1034,8 @@ TEST(RenameTest, ObjCWithinFileRename) {
                             [f setFoo:[f foo] ];
                           }
                         )cpp",
-                        "bar",
-                        R"cpp(
+                          "bar",
+                          R"cpp(
                           @interface Foo
                           @property(nonatomic) int bar;
                           @end
@@ -1048,7 +1048,7 @@ TEST(RenameTest, ObjCWithinFileRename) {
                         )cpp",
                       },
                       {
-                        R"cpp(
+                          R"cpp(
                           @interface Foo
                           @property(nonatomic) int foo;
                           @end
@@ -1059,8 +1059,8 @@ TEST(RenameTest, ObjCWithinFileRename) {
                             [f setF^oo:[f foo] ];
                           }
                         )cpp",
-                        "setBar:",
-                        R"cpp(
+                          "setBar:",
+                          R"cpp(
                           @interface Foo
                           @property(nonatomic) int bar;
                           @end
@@ -1073,7 +1073,7 @@ TEST(RenameTest, ObjCWithinFileRename) {
                         )cpp",
                       },
                       {
-                        R"cpp(
+                          R"cpp(
                           @interface Foo
                           @property(nonatomic) int foo;
                           @end
@@ -1084,8 +1084,8 @@ TEST(RenameTest, ObjCWithinFileRename) {
                             [f setFoo:[f fo^o] ];
                           }
                         )cpp",
-                        "bar",
-                        R"cpp(
+                          "bar",
+                          R"cpp(
                           @interface Foo
                           @property(nonatomic) int bar;
                           @end
