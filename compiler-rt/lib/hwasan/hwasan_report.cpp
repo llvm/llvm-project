@@ -213,7 +213,8 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       break;
     tag_t base_tag =
         reinterpret_cast<uptr>(record_addr) >> kRecordAddrBaseTagShift;
-    uptr fp = (record >> kRecordFPShift) << kRecordFPLShift;
+    const uptr fp = (record >> kRecordFPShift) << kRecordFPLShift;
+    CHECK_LT(fp, kRecordFPModulus);
     uptr pc_mask = (1ULL << kRecordFPShift) - 1;
     uptr pc = record & pc_mask;
     FrameInfo frame;
