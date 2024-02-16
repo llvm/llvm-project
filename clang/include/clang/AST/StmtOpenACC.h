@@ -68,8 +68,9 @@ class OpenACCAssociatedStmtConstruct : public OpenACCConstructStmt {
 
 protected:
   OpenACCAssociatedStmtConstruct(StmtClass SC, OpenACCDirectiveKind K,
-                                 SourceLocation Start, SourceLocation End)
-      : OpenACCConstructStmt(SC, K, Start, End) {}
+                                 SourceLocation Start, SourceLocation End,
+                                 Stmt *AssocStmt)
+      : OpenACCConstructStmt(SC, K, Start, End), AssociatedStmt(AssocStmt) {}
 
   void setAssociatedStmt(Stmt *S) { AssociatedStmt = S; }
   Stmt *getAssociatedStmt() { return AssociatedStmt; }
@@ -105,14 +106,14 @@ class OpenACCComputeConstruct : public OpenACCAssociatedStmtConstruct {
   friend class ASTStmtReader;
   friend class ASTContext;
   OpenACCComputeConstruct()
-      : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass,
-                                       OpenACCDirectiveKind::Invalid,
-                                       SourceLocation{}, SourceLocation{}) {}
+      : OpenACCAssociatedStmtConstruct(
+            OpenACCComputeConstructClass, OpenACCDirectiveKind::Invalid,
+            SourceLocation{}, SourceLocation{}, /*AssociatedStmt=*/nullptr) {}
 
   OpenACCComputeConstruct(OpenACCDirectiveKind K, SourceLocation Start,
-                          SourceLocation End)
+                          SourceLocation End, Stmt *StructuredBlock)
       : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass, K, Start,
-                                       End) {
+                                       End, StructuredBlock) {
     assert((K == OpenACCDirectiveKind::Parallel ||
             K == OpenACCDirectiveKind::Serial ||
             K == OpenACCDirectiveKind::Kernels) &&
@@ -128,10 +129,9 @@ public:
   }
 
   static OpenACCComputeConstruct *CreateEmpty(const ASTContext &C, EmptyShell);
-  static OpenACCComputeConstruct *Create(const ASTContext &C,
-                                         OpenACCDirectiveKind K,
-                                         SourceLocation BeginLoc,
-                                         SourceLocation EndLoc);
+  static OpenACCComputeConstruct *
+  Create(const ASTContext &C, OpenACCDirectiveKind K, SourceLocation BeginLoc,
+         SourceLocation EndLoc, Stmt *StructuredBlock);
 
   Stmt *getStructuredBlock() { return getAssociatedStmt(); }
   const Stmt *getStructuredBlock() const {
