@@ -2,8 +2,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-%externref = type ptr addrspace(10)
 %funcref = type ptr addrspace(20)
+%externref = type ptr addrspace(10)
 
 declare %funcref @get_funcref()
 declare %externref @get_externref()
