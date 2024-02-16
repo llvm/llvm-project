@@ -110,17 +110,21 @@ void UseDesignatedInitializersCheck::check(
         LazyDesignators()->size()) {
       return;
     }
-    DiagnosticBuilder Diag =
-        diag(InitList->getLBraceLoc(), "use designated initializer list");
-    Diag << InitList->getSourceRange();
-    for (const Stmt *InitExpr : *SyntacticInitList) {
-      const std::string Designator =
-          LazyDesignators()->at(InitExpr->getBeginLoc());
-      if (!Designator.empty()) {
-        Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                           Designator + "=");
+    {
+      DiagnosticBuilder Diag =
+          diag(InitList->getLBraceLoc(), "use designated initializer list");
+      Diag << InitList->getSourceRange();
+      for (const Stmt *InitExpr : *SyntacticInitList) {
+        const std::string Designator =
+            LazyDesignators()->at(InitExpr->getBeginLoc());
+        if (!Designator.empty()) {
+          Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
+                                             Designator + "=");
+        }
       }
     }
+    diag(Type->getBeginLoc(), "this is the type to initialize",
+         DiagnosticIDs::Note);
     return;
   }
   for (const auto *InitExpr : *SyntacticInitList) {
