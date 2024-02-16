@@ -1788,15 +1788,15 @@ GetASTBuffersFromModule(const std::string &m_description,
 /// Detect whether a Swift module was "imported" by DWARFImporter.
 /// All this *really* means is that it couldn't be loaded through any
 /// other mechanism.
-static bool IsDWARFImported(swift::ModuleDecl &module) {
-  return llvm::any_of(module.getFiles(), [](swift::FileUnit *file_unit) {
+static bool IsDWARFImported(const swift::ModuleDecl &module) {
+  return llvm::any_of(module.getFiles(), [](const swift::FileUnit *file_unit) {
     return (file_unit->getKind() == swift::FileUnitKind::DWARFModule);
   });
 }
 
 /// Detect whether this is a proper Swift module.
-static bool IsSerializedAST(swift::ModuleDecl &module) {
-  return llvm::any_of(module.getFiles(), [](swift::FileUnit *file_unit) {
+static bool IsSerializedAST(const swift::ModuleDecl &module) {
+  return llvm::any_of(module.getFiles(), [](const swift::FileUnit *file_unit) {
     return (file_unit->getKind() == swift::FileUnitKind::SerializedAST);
   });
 }
@@ -8452,14 +8452,14 @@ SwiftASTContextForExpressions::GetPersistentExpressionState() {
   return GetTypeSystemSwiftTypeRef().GetPersistentExpressionState();
 }
 
-static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
+static void DescribeFileUnit(Stream &s, const swift::FileUnit *file_unit) {
   s.PutCString("kind = ");
 
   switch (file_unit->getKind()) {
   case swift::FileUnitKind::Source: {
     s.PutCString("Source, ");
-    if (swift::SourceFile *source_file =
-            llvm::dyn_cast<swift::SourceFile>(file_unit)) {
+    if (auto *source_file =
+            llvm::dyn_cast<const swift::SourceFile>(file_unit)) {
       s.Printf("filename = \"%s\", ", source_file->getFilename().str().c_str());
       s.PutCString("source file kind = ");
       switch (source_file->Kind) {
@@ -8493,7 +8493,7 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
       s.PutCString("Serialized Swift AST, ");
     else
       s.PutCString("Clang module, ");
-    swift::LoadedFile *loaded_file = swift::cast<swift::LoadedFile>(file_unit);
+    auto *loaded_file = swift::cast<const swift::LoadedFile>(file_unit);
     s.Printf("filename = \"%s\"", loaded_file->getFilename().str().c_str());
   } break;
   case swift::FileUnitKind::DWARFModule:
@@ -8586,7 +8586,7 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
 
   if (GetLog(LLDBLog::Types | LLDBLog::Expressions)) {
     StreamString ss;
-    for (swift::FileUnit *file_unit : swift_module->getFiles())
+    for (const swift::FileUnit *file_unit : swift_module->getFiles())
       DescribeFileUnit(ss, file_unit);
     LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                "Imported module %s from {%s}", module.path.front().AsCString(),
