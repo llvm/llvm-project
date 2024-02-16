@@ -1,7 +1,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t.o
 # RUN: echo '.*' > %t.symbols.regex
 
-## Check that the visibility of all symbols is properly set to DEFAULT
+## Check that the visibility of all symbols is properly set to DEFAULT.
 # RUN: llvm-objcopy %t.o %t0.o --set-symbols-visibility=%t.symbols.regex=default --regex
 # RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=DEF
 
@@ -18,7 +18,7 @@
 # DEF-DAG: DEFAULT     1 protected_global
 # DEF-DAG: DEFAULT     1 protected_weak
 
-## Check that the visibility of all symbols is properly set to HIDDEN
+## Check that the visibility of all symbols is properly set to HIDDEN.
 # RUN: llvm-objcopy %t.o %t1.o --set-symbols-visibility=%t.symbols.regex=hidden --regex
 # RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=HID
 
@@ -35,7 +35,7 @@
 # HID-DAG: HIDDEN      1 protected_global
 # HID-DAG: HIDDEN      1 protected_weak
 
-## Check that the visibility of all symbols is properly set to PROTECTED
+## Check that the visibility of all symbols is properly set to PROTECTED.
 # RUN: llvm-objcopy %t.o %t2.o --set-symbols-visibility=%t.symbols.regex=protected --regex
 # RUN: llvm-readelf -s %t2.o | FileCheck %s --check-prefix=PRO
 
@@ -52,7 +52,7 @@
 # PRO-DAG: PROTECTED   1 protected_global
 # PRO-DAG: PROTECTED   1 protected_weak
 
-## Check that the visibility of all symbols is properly set to INTERNAL
+## Check that the visibility of all symbols is properly set to INTERNAL.
 # RUN: llvm-objcopy %t.o %t3.o --set-symbols-visibility=%t.symbols.regex=internal --regex
 # RUN: llvm-readelf -s %t3.o | FileCheck %s --check-prefix=INT
 
@@ -70,7 +70,7 @@
 # INT-DAG: INTERNAL    1 protected_weak
 
 ## Check that setting the visibility of certain symbols that were read from
-# a file does not affect other symbols
+## a file does not affect other symbols.
 # RUN: echo -e "default_local\ninternal_local" > %t.symbol.list
 # RUN: llvm-objcopy %t.o %t4.o --set-symbols-visibility=%t.symbol.list=hidden
 # RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=FILE
@@ -90,7 +90,7 @@
 # FILE-DAG: PROTECTED   1 protected_weak
 
 ## Check that the visibility of a single symbol is set correctly,
-# and that no other symbols are affected
+## and that no other symbols are affected.
 # RUN: llvm-objcopy %t.o %t5.o --set-symbol-visibility=default_local=hidden \
 # RUN:                         --set-symbol-visibility=internal_local=protected \
 # RUN:                         --set-symbol-visibility=hidden_local=internal \
@@ -112,7 +112,7 @@
 # SINGLE-DAG: PROTECTED   1 protected_weak
 
 ## Check that the visibility of symbols specified by a regex are set correctly,
-# and that no other symbols are affected
+## and that no other symbols are affected.
 # RUN: llvm-objcopy %t.o %t6.o --set-symbol-visibility=.*_local=hidden --regex
 # RUN: llvm-readelf -s %t6.o | FileCheck %s --check-prefix=REGEX
 
@@ -131,7 +131,7 @@
 # REGEX-DAG: PROTECTED   1 protected_weak
 
 ## Check that the visibility of symbols specified by a wildcard are set correctly,
-# and that no other symbols are affected
+## and that no other symbols are affected.
 # RUN: llvm-objcopy %t.o %t7.o --set-symbol-visibility=*_local=hidden --wildcard
 # RUN: llvm-readelf -s %t7.o | FileCheck %s --check-prefix=WILDCARD
 
@@ -150,7 +150,7 @@
 # WILDCARD-DAG: PROTECTED   1 protected_weak
 
 ## Check that the latest option that matches the same symbols as any of the previous
-## options overwrites the visibility of these symbols
+## options overwrites the visibility of these symbols.
 # RUN: echo -e "*_weak\n*_local" > %t.symbols.pattern
 # RUN: llvm-objcopy %t.o %t8.o --set-symbol-visibility=default_*=hidden \
 # RUN:                         --set-symbol-visibility=internal_*=hidden \
@@ -173,7 +173,7 @@
 # REWRITE-DAG: PROTECTED   1 protected_global
 
 ## Check that a symbol name with a special charater is treated as a plain name
-## when pattern matching options are not enabled
+## when pattern matching options are not enabled.
 # RUN: yaml2obj --docnum=2 %s -o %t9.o
 # RUN: llvm-objcopy %t9.o --set-symbol-visibility=f*o=hidden
 # RUN: llvm-readelf -s %t9.o | FileCheck %s --check-prefix=SPECIAL

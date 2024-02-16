@@ -1,21 +1,21 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: echo 'foo' > %t.symbols
 
-## Check that passing an invalid visibility type generates an error message
+## Check that passing an invalid visibility type generates an error message.
 # RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols=invalid-type 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=TYPE
 # RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo=invalid-type 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=TYPE
 # TYPE: error: 'invalid-type' is not a valid symbol visibility
 
-## Check that omitting the '=' character generates an error
+## Check that omitting the '=' character generates an error.
 # RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbols-visibility
 # RUN: not llvm-objcopy %t.o --set-symbol-visibility=foo default 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbol-visibility
 # FORMAT: error: bad format for [[OPTION]]
 
-## Check that using an invalid symbol pattern generates an error
+## Check that using an invalid symbol pattern generates an error.
 # RUN: echo '*.' > %t.symbols.regex
 # RUN: not llvm-objcopy %t.o --set-symbols-visibility=%t.symbols.regex=hidden --regex 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=SYMBOL
@@ -23,7 +23,7 @@
 # RUN:   FileCheck %s --check-prefix=SYMBOL
 # SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
 
-## Check passing an invalid filename generates an error
+## Check passing an invalid filename generates an error.
 # RUN: not llvm-objcopy %t.o --set-symbols-visibility=no_file=hidden 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=FILE -DMSG=%errc_ENOENT
 # FILE: error: 'no_file': [[MSG]]
