@@ -14,8 +14,12 @@
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+
+#define DEBUG_TYPE "bolt-linux"
 
 using namespace llvm;
 using namespace bolt;
@@ -48,19 +52,24 @@ struct ORCState {
   bool operator!=(const ORCState &Other) const { return !(*this == Other); }
 };
 
+/// Section terminator ORC entry.
+static ORCState NullORC = {0, 0, 0};
+
 /// Basic printer for ORC entry. It does not provide the same level of
 /// information as objtool (for now).
 inline raw_ostream &operator<<(raw_ostream &OS, const ORCState &E) {
-  if (opts::PrintORC)
+  if (!opts::PrintORC)
+    return OS;
+  if (E != NullORC)
     OS << format("{sp: %d, bp: %d, info: 0x%x}", E.SPOffset, E.BPOffset,
                  E.Info);
+  else
+    OS << "{terminator}";
+
   return OS;
 }
 
 namespace {
-
-/// Section terminator ORC entry.
-static ORCState NullORC = {0, 0, 0};
 
 class LinuxKernelRewriter final : public MetadataRewriter {
   /// Linux Kernel special sections point to a specific instruction in many
@@ -90,6 +99,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
     BinaryFunction *BF; /// Binary function corresponding to the entry.
     ORCState ORC;       /// Stack unwind info in ORC format.
 
+    /// ORC entries are sorted by their IPs. Terminator entries (NullORC)
+    /// should precede other entries with the same address.
     bool operator<(const ORCListEntry &Other) const {
       if (IP < Other.IP)
         return 1;
@@ -101,6 +112,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   using ORCListType = std::vector<ORCListEntry>;
   ORCListType ORCEntries;
+
+  /// Number of entries in the input file ORC sections.
+  uint64_t NumORCEntries = 0;
 
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
@@ -464,10 +478,9 @@ Error LinuxKernelRewriter::readORCTables() {
     return createStringError(errc::executable_format_error,
                              "missing ORC section");
 
-  const uint64_t NumEntries =
-      ORCUnwindIPSection->getSize() / ORC_UNWIND_IP_ENTRY_SIZE;
-  if (ORCUnwindSection->getSize() != NumEntries * ORC_UNWIND_ENTRY_SIZE ||
-      ORCUnwindIPSection->getSize() != NumEntries * ORC_UNWIND_IP_ENTRY_SIZE)
+  NumORCEntries = ORCUnwindIPSection->getSize() / ORC_UNWIND_IP_ENTRY_SIZE;
+  if (ORCUnwindSection->getSize() != NumORCEntries * ORC_UNWIND_ENTRY_SIZE ||
+      ORCUnwindIPSection->getSize() != NumORCEntries * ORC_UNWIND_IP_ENTRY_SIZE)
     return createStringError(errc::executable_format_error,
                              "ORC entries number mismatch detected");
 
@@ -481,7 +494,7 @@ Error LinuxKernelRewriter::readORCTables() {
   DataExtractor::Cursor ORCCursor(0);
   DataExtractor::Cursor IPCursor(0);
   uint64_t PrevIP = 0;
-  for (uint32_t Index = 0; Index < NumEntries; ++Index) {
+  for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
     const uint64_t IP =
         IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
 
@@ -505,24 +518,23 @@ Error LinuxKernelRewriter::readORCTables() {
     Entry.ORC.SPOffset = (int16_t)OrcDE.getU16(ORCCursor);
     Entry.ORC.BPOffset = (int16_t)OrcDE.getU16(ORCCursor);
     Entry.ORC.Info = (int16_t)OrcDE.getU16(ORCCursor);
+    Entry.BF = nullptr;
 
     // Consume the status of the cursor.
     if (!ORCCursor)
       return createStringError(errc::executable_format_error,
                                "out of bounds while reading ORC");
 
+    if (Entry.ORC == NullORC)
+      continue;
+
     BinaryFunction *&BF = Entry.BF;
     BF = BC.getBinaryFunctionContainingAddress(IP, /*CheckPastEnd*/ true);
 
     // If the entry immediately pointing past the end of the function is not
     // the terminator entry, then it does not belong to this function.
-    if (BF && BF->getAddress() + BF->getSize() == IP && Entry.ORC != NullORC)
+    if (BF && BF->getAddress() + BF->getSize() == IP)
       BF = 0;
-
-    // If terminator entry points to the start of the function, then it belongs
-    // to a different function that contains the previous IP.
-    if (BF && BF->getAddress() == IP && Entry.ORC == NullORC)
-      BF = BC.getBinaryFunctionContainingAddress(IP - 1);
 
     if (!BF) {
       if (opts::Verbosity)
@@ -530,9 +542,6 @@ Error LinuxKernelRewriter::readORCTables() {
                << Twine::utohexstr(IP) << ": " << Entry.ORC << '\n';
       continue;
     }
-
-    if (Entry.ORC == NullORC)
-      continue;
 
     BF->setHasORC(true);
 
@@ -556,12 +565,48 @@ Error LinuxKernelRewriter::readORCTables() {
     BC.MIB->addAnnotation(*Inst, "ORC", Entry.ORC);
   }
 
-  // Older kernels could contain unsorted tables in the file as the tables  were
-  // sorted during boot time.
-  llvm::sort(ORCEntries);
+  outs() << "BOLT-INFO: parsed " << NumORCEntries << " ORC entries\n";
 
   if (opts::DumpORC) {
     outs() << "BOLT-INFO: ORC unwind information:\n";
+    for (const ORCListEntry &E : ORCEntries) {
+      outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
+      if (E.BF)
+        outs() << ": " << *E.BF;
+      outs() << '\n';
+    }
+  }
+
+  // Add entries for functions that don't have explicit ORC info at the start.
+  // We'll have the correct info for them even if ORC for the preceding function
+  // changes.
+  ORCListType NewEntries;
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    auto It = llvm::partition_point(ORCEntries, [&](const ORCListEntry &E) {
+      return E.IP <= BF.getAddress();
+    });
+    if (It != ORCEntries.begin())
+      --It;
+
+    if (It->BF == &BF)
+      continue;
+
+    if (It->ORC == NullORC && It->IP == BF.getAddress()) {
+      assert(!It->BF);
+      It->BF = &BF;
+      continue;
+    }
+
+    NewEntries.push_back({BF.getAddress(), &BF, It->ORC});
+    if (It->ORC != NullORC)
+      BF.setHasORC(true);
+  }
+
+  llvm::copy(NewEntries, std::back_inserter(ORCEntries));
+  llvm::sort(ORCEntries);
+
+  if (opts::DumpORC) {
+    outs() << "BOLT-INFO: amended ORC unwind information:\n";
     for (const ORCListEntry &E : ORCEntries) {
       outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
       if (E.BF)
@@ -574,6 +619,9 @@ Error LinuxKernelRewriter::readORCTables() {
 }
 
 Error LinuxKernelRewriter::processORCPostCFG() {
+  if (!NumORCEntries)
+    return Error::success();
+
   // Propagate ORC to the rest of the function. We can annotate every
   // instruction in every function, but to minimize the overhead, we annotate
   // the first instruction in every basic block to reflect the state at the
@@ -593,19 +641,28 @@ Error LinuxKernelRewriter::processORCPostCFG() {
           continue;
         }
 
-        // In case there was no ORC entry that matched the function start
-        // address, we need to propagate ORC state from the previous entry.
+        // Get state for the start of the function.
         if (!CurrentState) {
+          // A terminator entry (NullORC) can match the function address. If
+          // there's also a non-terminator entry, it will be placed after the
+          // terminator. Hence, we are looking for the last ORC entry that
+          // matches the address.
           auto It =
               llvm::partition_point(ORCEntries, [&](const ORCListEntry &E) {
-                return E.IP < BF.getAddress();
+                return E.IP <= BF.getAddress();
               });
           if (It != ORCEntries.begin())
-            It = std::prev(It);
+            --It;
 
-          if (It->ORC == NullORC && BF.hasORC())
+          assert(It->IP == BF.getAddress() && (!It->BF || It->BF == &BF) &&
+                 "ORC info at function entry expected.");
+
+          if (It->ORC == NullORC && BF.hasORC()) {
             errs() << "BOLT-WARNING: ORC unwind info excludes prologue for "
                    << BF << '\n';
+          }
+
+          It->BF = &BF;
 
           CurrentState = It->ORC;
           if (It->ORC != NullORC)
@@ -623,9 +680,121 @@ Error LinuxKernelRewriter::processORCPostCFG() {
 }
 
 Error LinuxKernelRewriter::rewriteORCTables() {
-  // TODO:
+  if (!NumORCEntries)
+    return Error::success();
+
+  // Update ORC sections in-place. As we change the code, the number of ORC
+  // entries may increase for some functions. However, as we remove terminator
+  // redundancy (see below), more space is freed up and we should always be able
+  // to fit new ORC tables in the reserved space.
+  auto createInPlaceWriter = [&](BinarySection &Section) -> BinaryStreamWriter {
+    const size_t Size = Section.getSize();
+    uint8_t *NewContents = new uint8_t[Size];
+    Section.updateContents(NewContents, Size);
+    Section.setOutputFileOffset(Section.getInputFileOffset());
+    return BinaryStreamWriter({NewContents, Size}, BC.AsmInfo->isLittleEndian()
+                                                       ? endianness::little
+                                                       : endianness::big);
+  };
+  BinaryStreamWriter UnwindWriter = createInPlaceWriter(*ORCUnwindSection);
+  BinaryStreamWriter UnwindIPWriter = createInPlaceWriter(*ORCUnwindIPSection);
+
+  uint64_t NumEmitted = 0;
+  std::optional<ORCState> LastEmittedORC;
+  auto emitORCEntry = [&](const uint64_t IP, const ORCState &ORC,
+                          MCSymbol *Label = 0, bool Force = false) -> Error {
+    if (LastEmittedORC && ORC == *LastEmittedORC && !Force)
+      return Error::success();
+
+    LastEmittedORC = ORC;
+
+    if (++NumEmitted > NumORCEntries)
+      return createStringError(errc::executable_format_error,
+                               "exceeded the number of allocated ORC entries");
+
+    if (Label)
+      ORCUnwindIPSection->addRelocation(UnwindIPWriter.getOffset(), Label,
+                                        Relocation::getPC32(), /*Addend*/ 0);
+
+    const int32_t IPValue =
+        IP - ORCUnwindIPSection->getAddress() - UnwindIPWriter.getOffset();
+    if (Error E = UnwindIPWriter.writeInteger(IPValue))
+      return E;
+
+    if (Error E = UnwindWriter.writeInteger(ORC.SPOffset))
+      return E;
+    if (Error E = UnwindWriter.writeInteger(ORC.BPOffset))
+      return E;
+    if (Error E = UnwindWriter.writeInteger(ORC.Info))
+      return E;
+
+    return Error::success();
+  };
+
+  // Emit new ORC entries for the emitted function.
+  auto emitORC = [&](const BinaryFunction &BF) -> Error {
+    assert(!BF.isSplit() && "Split functions not supported by ORC writer yet.");
+
+    ORCState CurrentState = NullORC;
+    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+      for (MCInst &Inst : *BB) {
+        ErrorOr<ORCState> ErrorOrState =
+            BC.MIB->tryGetAnnotationAs<ORCState>(Inst, "ORC");
+        if (!ErrorOrState || *ErrorOrState == CurrentState)
+          continue;
+
+        // Issue label for the instruction.
+        MCSymbol *Label = BC.MIB->getLabel(Inst);
+        if (!Label) {
+          Label = BC.Ctx->createTempSymbol("__ORC_");
+          BC.MIB->setLabel(Inst, Label);
+        }
+
+        if (Error E = emitORCEntry(0, *ErrorOrState, Label))
+          return E;
+
+        CurrentState = *ErrorOrState;
+      }
+    }
+
+    return Error::success();
+  };
+
+  for (ORCListEntry &Entry : ORCEntries) {
+    // Emit original entries for functions that we haven't modified.
+    if (!Entry.BF || !BC.shouldEmit(*Entry.BF)) {
+      // Emit terminator only if it marks the start of a function.
+      if (Entry.ORC == NullORC && !Entry.BF)
+        continue;
+      if (Error E = emitORCEntry(Entry.IP, Entry.ORC))
+        return E;
+      continue;
+    }
+
+    // Emit all ORC entries for a function referenced by an entry and skip over
+    // the rest of entries for this function by resetting its ORC attribute.
+    if (Entry.BF->hasORC()) {
+      if (Error E = emitORC(*Entry.BF))
+        return E;
+      Entry.BF->setHasORC(false);
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitted " << NumEmitted
+                    << " ORC entries\n");
+
+  // Replicate terminator entry at the end of sections to match the original
+  // table sizes.
+  const BinaryFunction &LastBF = BC.getBinaryFunctions().rbegin()->second;
+  const uint64_t LastIP = LastBF.getAddress() + LastBF.getMaxSize();
+  while (UnwindWriter.bytesRemaining()) {
+    if (Error E = emitORCEntry(LastIP, NullORC, nullptr, /*Force*/ true))
+      return E;
+  }
+
   return Error::success();
 }
+
 } // namespace
 
 std::unique_ptr<MetadataRewriter>
