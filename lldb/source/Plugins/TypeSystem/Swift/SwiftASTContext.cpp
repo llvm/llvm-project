@@ -2576,8 +2576,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     StreamString ss;
     ss << "SwiftASTContextForExpressions"
        << "(module: " << '"' << swift_module_name << "\", "
-       << "cu: " << '"' << cu->GetPrimaryFile().GetFilename() << '"'
-       << ')';
+       << "cu: " << '"';
+    if (cu)
+      ss << cu->GetPrimaryFile().GetFilename();
+    else
+      ss << "null";
+    ss << '"' << ')';
     m_description = ss.GetString();
   }
 
