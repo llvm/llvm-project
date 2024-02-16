@@ -1616,13 +1616,38 @@ struct CStructAlignment {
 
 struct CStructIncomplete;
 
+enum EnumLayout : int {};
+enum class EnumClassLayout {};
+
 void is_layout_compatible()
 {
   static_assert(__is_layout_compatible(void, void), "");
+  static_assert(!__is_layout_compatible(void, int), "");
   static_assert(__is_layout_compatible(int, int), "");
+  static_assert(!__is_layout_compatible(int, const int), ""); // FIXME: this is CWG1719
+  static_assert(!__is_layout_compatible(int, volatile int), ""); // FIXME: this is CWG1719
+  static_assert(!__is_layout_compatible(const int, volatile int), ""); // FIXME: this is CWG1719
+  static_assert(!__is_layout_compatible(int, unsigned int), "");
+  static_assert(!__is_layout_compatible(char, unsigned char), "");
+  static_assert(!__is_layout_compatible(char, signed char), "");
+  static_assert(!__is_layout_compatible(unsigned char, signed char), "");
   static_assert(__is_layout_compatible(int[], int[]), "");
   static_assert(__is_layout_compatible(int[2], int[2]), "");
+  static_assert(__is_layout_compatible(int&, int&), "");
+  static_assert(!__is_layout_compatible(int&, char&), "");
+  static_assert(__is_layout_compatible(void(int), void(int)), "");
+  static_assert(!__is_layout_compatible(void(int), void(char)), "");
+  static_assert(__is_layout_compatible(void(&)(int), void(&)(int)), "");
+  static_assert(!__is_layout_compatible(void(&)(int), void(&)(char)), "");
+  static_assert(__is_layout_compatible(void(*)(int), void(*)(int)), "");
+  static_assert(!__is_layout_compatible(void(*)(int), void(*)(char)), "");
+  static_assert(!__is_layout_compatible(EnumLayout, int), "");
+  static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
+  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
   static_assert(__is_layout_compatible(CStruct, CStruct2), "");
+  static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
+  static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
+  static_assert(__is_layout_compatible(const CStruct, volatile CStruct2), "");
   static_assert(__is_layout_compatible(CEmptyStruct, CEmptyStruct2), "");
   static_assert(__is_layout_compatible(CppEmptyStruct, CppEmptyStruct2), "");
   static_assert(__is_layout_compatible(CppStructStandard, CppStructStandard2), "");
@@ -1639,6 +1664,10 @@ void is_layout_compatible()
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
   static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), "");
   static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
+  static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*), "");
+  static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*), "");
+  static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)), "");
+  static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)), "");
 }
 
 void is_signed()
