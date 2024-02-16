@@ -52,12 +52,8 @@ void local_variable_qualifiers_specifiers() {
   int a[10];
   const int * p = a;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:18}:"std::span<int const> p"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:19-[[@LINE-2]]:19}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:20}:", 10}"
   const int * const q = a;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:24}:"std::span<int const> const q"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:25-[[@LINE-2]]:25}:"{"
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:", 10}"
   int tmp;
   tmp = p[5];
   tmp = q[5];
@@ -88,12 +84,8 @@ void local_ptr_to_array() {
   int b[n];  // If the extent expression does not have a constant value, we cannot fill the extent for users...
   int *p = a;
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:13}:", 10}"
   int *q = b;
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> q"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:13}:", <# placeholder #>}"
   // No way to know if `n` is ever mutated since `int b[n];`, so no way to figure out the extent
   tmp = p[5];
   tmp = q[5];
