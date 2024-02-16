@@ -281,7 +281,7 @@ private:
       for (BlockArgument &blockArg : block.getArguments())
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
 
-      SmallVector<Operation*> sortedOperations;
+      SmallVector<Operation *> sortedOperations;
       for (Operation &op : block) {
         sortedOperations.push_back(&op);
       }
