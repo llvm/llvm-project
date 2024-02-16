@@ -16542,13 +16542,13 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
+#include "llvm/TargetParser/PPCTargetParser.def"
   // This lambda function converts builtin_cpu_is() into directly
   // returning true or false, or it gets and checks the information from the
   // kernel variable _system_configuration fromr the AIX OS.
-
-#include "llvm/TargetParser/PPCTargetParser.def"
-  auto ConvBuiltinCpu = [&](unsigned SupportMethod, unsigned FieldIdx,
-                            unsigned CompOp, unsigned OpValue) -> Value * {
+  auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
+                                     unsigned CompOp,
+                                     unsigned OpValue) -> Value * {
     if (SupportMethod == AIX_BUILTIN_PPC_FALSE)
       return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
 
@@ -16570,7 +16570,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
                                            CharUnits::fromQuantity(4));
     assert(FieldValue->getType()->isIntegerTy(32) &&
-           "Only supports 32-bit integer in the ConvBuiltinCpu.");
+           "Only supports 32-bit integer in the GenAIXPPCBuiltinCpuExpr.");
     return Builder.CreateICmp(ICmpInst::ICMP_EQ, FieldValue,
                               ConstantInt::get(Int32Ty, OpValue));
   };
@@ -16592,7 +16592,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   .Case(NAME, {SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
           );
-      return ConvBuiltinCpu(IsCpuSupport, FieldIdx, CompareOp, CpuIdValue);
+      return GenAIXPPCBuiltinCpuExpr(IsCpuSupport, FieldIdx, CompareOp,
+                                     CpuIdValue);
     }
 
     assert(Triple.isOSLinux() &&

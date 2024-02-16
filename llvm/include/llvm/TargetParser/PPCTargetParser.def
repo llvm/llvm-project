@@ -137,10 +137,12 @@ PPC_LNX_CPU("power10",47)
   #define AIX_PPC9_VALUE 0x00020000
   #define AIX_PPC10_VALUE 0x00040000
 
+  // Supported SUPPORT_METHOD values.
   #define AIX_BUILTIN_PPC_TRUE 1
   #define AIX_BUILTIN_PPC_FALSE 0
   #define USE_SYS_CONF 2
 
+  // Supported COMPARE_OP values.
   #define COMP_EQ  0
 
 #endif
@@ -175,7 +177,7 @@ PPC_AIX_CPU("power10",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,COMP_EQ,AIX_PPC10_VALUE)
 #undef PPC_AIX_CPU
 
 // PPC_SYSTEMCONFIG_TYPE defines the IR data struture of the _system_conf
-// found in the AIX OS header file: </usr/include/sys/systemcfg.h>
+// found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
 #ifndef PPC_SYSTEMCONFIG_TYPE
 #define PPC_SYSTEMCONFIG_TYPE \
 Int32Ty, Int32Ty, Int32Ty
