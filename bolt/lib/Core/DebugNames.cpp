@@ -66,7 +66,7 @@ void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
   CurrentUnit = nullptr;
   CurrentUnitOffset = UnitStartOffset;
   std::optional<uint64_t> DWOID = Unit.getDWOId();
-  // We process Skelton CUs after DWO Units for it.
+  // We process skeleton CUs after DWO Units for it.
   // Patching offset in CU list to correct one.
   if (!Unit.isDWOUnit() && DWOID) {
     auto Iter = CUOffsetsToPatch.find(*DWOID);
@@ -289,14 +289,6 @@ void DWARF5AcceleratorTable::computeBucketCount() {
 void DWARF5AcceleratorTable::finalize() {
   if (!NeedToCreate)
     return;
-  // Create the individual hash data outputs.
-  for (auto &E : Entries) {
-    // Unique the entries.
-    llvm::stable_sort(E.second.Values, [](const BOLTDWARF5AccelTableData *A,
-                                          const BOLTDWARF5AccelTableData *B) {
-      return A->getDieOffset() < B->getDieOffset();
-    });
-  }
   // Figure out how many buckets we need, then compute the bucket contents and
   // the final ordering. The hashes and offsets can be emitted by walking these
   // data structures.
@@ -311,10 +303,16 @@ void DWARF5AcceleratorTable::finalize() {
 
   // Sort the contents of the buckets by hash value so that hash collisions end
   // up together. Stable sort makes testing easier and doesn't cost much more.
-  for (auto &Bucket : Buckets)
-    llvm::stable_sort(Bucket, [](HashData *LHS, HashData *RHS) {
+  for (HashList &Bucket : Buckets) {
+    llvm::stable_sort(Bucket, [](const HashData *LHS, const HashData *RHS) {
       return LHS->HashValue < RHS->HashValue;
     });
+    for (HashData *H : Bucket)
+      llvm::stable_sort(H->Values, [](const BOLTDWARF5AccelTableData *LHS,
+                                      const BOLTDWARF5AccelTableData *RHS) {
+        return LHS->getDieOffset() < RHS->getDieOffset();
+      });
+  }
 
   CUIndexForm = DIEInteger::BestForm(/*IsSigned*/ false, CUList.size() - 1);
   TUIndexForm = DIEInteger::BestForm(
@@ -416,7 +414,7 @@ void DWARF5AcceleratorTable::writeEntry(const BOLTDWARF5AccelTableData &Entry) {
       getAbbrevIndex(Entry.getDieTag(), EntryRet, SecondEntryRet);
   auto AbbrevIt = Abbreviations.find(TagIndexVal);
   assert(AbbrevIt != Abbreviations.end() &&
-         "Why wasn't this abbrev generated?");
+         "Abbrev tag was not found in the abbreviation map!");
   encodeULEB128(TagIndexVal.Index, *Entriestream);
   auto writeIndex = [&](uint32_t Index, uint32_t IndexSize) -> void {
     switch (IndexSize) {
