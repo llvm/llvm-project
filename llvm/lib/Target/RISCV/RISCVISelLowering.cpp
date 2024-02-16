@@ -13374,7 +13374,7 @@ struct NodeExtensionHelper {
     unsigned ExtOpc = *SExt ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
 
     // If we need an extension, we should be changing the type.
-    SDLoc DL(Root);
+    SDLoc DL(OrigOperand);
     auto [Mask, VL] = getMaskAndVL(Root, DAG, Subtarget);
     switch (OrigOperand.getOpcode()) {
     case ISD::ZERO_EXTEND:
