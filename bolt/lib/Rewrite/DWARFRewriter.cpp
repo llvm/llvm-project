@@ -873,7 +873,9 @@ void DWARFRewriter::updateUnitDebugInfo(
         OutputRanges.push_back({0, 0});
       const uint64_t RangesSectionOffset =
           RangesSectionWriter.addRanges(OutputRanges);
-      if (!Unit.isDWOUnit())
+      // Don't emit the zero low_pc arange.
+      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
+          OutputRanges.back().LowPC)
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
@@ -919,15 +921,10 @@ void DWARFRewriter::updateUnitDebugInfo(
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
       if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal) {
+        if (LowPCVal && HighPCVal)
           FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        } else {
-          // I haven't seen this case, but who knows what other compilers
-          // generate.
+        else
           FunctionRanges.push_back({0, 1});
-          errs() << "BOLT-WARNING: [internal-dwarf-error]: subprogram got GCed "
-                    "by the linker, DW_AT_ranges is used\n";
-        }
       }
 
       if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
