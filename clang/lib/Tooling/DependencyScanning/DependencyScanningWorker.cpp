@@ -411,7 +411,13 @@ public:
         EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
         CASOpts(CASOpts), EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
-        ModuleName(ModuleName), VerboseOS(VerboseOS) {}
+        ModuleName(ModuleName), VerboseOS(VerboseOS) {
+    // The FullIncludeTree output format completely subsumes header search and
+    // VFS optimizations due to how it works. Disable these optimizations so
+    // we're not doing unneeded work.
+    if (Format == ScanningOutputFormat::FullIncludeTree)
+      this->OptimizeArgs &= ~ScanningOptimizations::FullIncludeTreeIrrelevant;
+  }
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,

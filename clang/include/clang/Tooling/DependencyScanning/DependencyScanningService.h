@@ -80,7 +80,8 @@ enum class ScanningOptimizations {
   Macros = 8,
 
   DSS_LAST_BITMASK_ENUM(Macros),
-  Default = All
+  Default = All,
+  FullIncludeTreeIrrelevant = HeaderSearch | VFS,
 };
 
 #undef DSS_LAST_BITMASK_ENUM
