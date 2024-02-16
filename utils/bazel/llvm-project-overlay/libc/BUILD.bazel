@@ -892,6 +892,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fixed_point_fx_rep",
+    hdrs = ["src/__support/fixed_point/fx_rep.h"],
+)
+
+libc_support_library(
     name = "__support_osutil_syscall",
     hdrs = ["src/__support/OSUtil/syscall.h"],
     textual_hdrs = [
