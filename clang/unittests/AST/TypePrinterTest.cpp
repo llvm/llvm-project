@@ -117,7 +117,7 @@ TEST(TypePrinter, SuppressElaboration) {
       Code, {}, Matcher, "a::S<b::Foo>",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
   ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher,
-                                 "shared::a::S<shared::b::Foo>",
+                                 "shared::a::S<b::Foo>",
                                  [](PrintingPolicy &Policy) {
                                    Policy.SuppressElaboration = true;
                                    Policy.FullyQualifiedName = true;

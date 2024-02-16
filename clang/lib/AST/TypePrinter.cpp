@@ -1635,7 +1635,7 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
-    if (Policy.FullyQualifiedName) {
+    if (Policy.SuppressTagKeyword && !Policy.TerseOutput) {
       std::string prefix = T->isClassType()       ? "class "
                            : T->isStructureType() ? "struct "
                            : T->isUnionType()     ? "union "

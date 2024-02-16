@@ -366,9 +366,7 @@ TEST(DeclPrinter, TestCXXRecordDecl12) {
     "foo",
     "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
     "NS::C c;\nreturn s1;\n}\n",
-      [](PrintingPolicy &Policy) {
-        Policy.FullyQualifiedName = true;
-        Policy.TerseOutput = false;
+      [](PrintingPolicy &Policy) { Policy.TerseOutput = false;
       }));
 }
 
