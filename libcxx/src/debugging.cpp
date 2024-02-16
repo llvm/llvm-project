@@ -13,7 +13,13 @@
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
-#elif defined(__APPLE__) || defined(__FreeBSD__)
+#elif defined(__APPLE__)
+#  include <array>
+#  include <csignal>
+#  include <sys/sysctl.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#elif defined(__FreeBSD__)
 #  include <array>
 #  include <csignal>
 #  include <libutil.h>

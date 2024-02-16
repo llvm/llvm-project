@@ -36,7 +36,6 @@
 {'is_defined': False, 'name': '_ZTVSt13runtime_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTVSt14overflow_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTVSt16invalid_argument', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': False, 'name': '_ZTVSt9exception', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZdaPv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdaPvSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdlPv', 'type': 'FUNC'}
@@ -1972,8 +1971,6 @@
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 96, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__120__time_get_c_storageIcEE', 'size': 72, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__120__time_get_c_storageIwEE', 'size': 72, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr15memory_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr26__null_memory_resource_impE', 'size': 56, 'type': 'OBJECT'}
