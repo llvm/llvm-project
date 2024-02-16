@@ -716,33 +716,33 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           ((MI.getDesc().TSFlags & SIInstrFlags::Spill) &&
-            (MI.getDesc().TSFlags & SIInstrFlags::VALU));
+		   (isSpill(MI) & isVALU(MI));
   }
 
   bool isVGPRSpill(uint16_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           ((get(Opcode).TSFlags & SIInstrFlags::Spill) &&
-            (get(Opcode).TSFlags & SIInstrFlags::VALU));
+		   (isSpill(Opcode) & isVALU(Opcode));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR ||
            MI.getOpcode() == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
-           ((MI.getDesc().TSFlags & SIInstrFlags::Spill) &&
-            (MI.getDesc().TSFlags & SIInstrFlags::SALU));
+		   (isSpill(MI) & isSALU(MI));
   }
 
   bool isSGPRSpill(uint16_t Opcode) const {
     return Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR ||
            Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
-           ((get(Opcode).TSFlags & SIInstrFlags::Spill) &&
-            (get(Opcode).TSFlags & SIInstrFlags::SALU));
+	       (isSpill(Opcode) & isSALU(Opcode));
   }
 
-  bool isSpillOpcode(uint16_t Opcode) const {
+  bool isSpill(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::Spill;
+  }
+
+  static bool isSpill(const MachineInstr &MI) {
+	return MI.getDesc().TSFlags & SIInstrFlags::Spill;
   }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
