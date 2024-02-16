@@ -851,7 +851,9 @@ void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
       [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
         if (!Result)
           return Reply(Result.takeError());
-        PrepareRenameResult PrepareResult{Result->Target, Result->OldName};
+        PrepareRenameResult PrepareResult;
+        PrepareResult.range = Result->Target;
+        PrepareResult.placeholder = Result->Placeholder;
         return Reply(std::move(PrepareResult));
       });
 }

@@ -173,38 +173,22 @@ std::optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
 bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
   const auto NameKind = Name.getNameKind();
-  bool PrefixComparison;
-  switch (NameKind) {
-  case DeclarationName::Identifier:
-  case DeclarationName::CXXConstructorName:
-  case DeclarationName::ObjCZeroArgSelector:
-    PrefixComparison = false;
-    break;
-  case DeclarationName::ObjCOneArgSelector:
-  case DeclarationName::ObjCMultiArgSelector:
-    PrefixComparison = true;
-    break;
-  default:
+  if (NameKind != DeclarationName::Identifier &&
+      NameKind != DeclarationName::CXXConstructorName &&
+      NameKind != DeclarationName::ObjCZeroArgSelector &&
+      NameKind != DeclarationName::ObjCOneArgSelector &&
+      NameKind != DeclarationName::ObjCMultiArgSelector)
     return false;
-  }
   const auto &AST = ND.getASTContext();
   const auto &SM = AST.getSourceManager();
   const auto &LO = AST.getLangOpts();
   clang::Token Tok;
   if (clang::Lexer::getRawToken(Loc, Tok, SM, LO))
     return false;
-  auto StrName = Name.getAsString();
-  std::string LexerSpelling = clang::Lexer::getSpelling(Tok, SM, LO);
-  if (PrefixComparison) {
-    // The lexer spelling at the source location is only the first label of an
-    // Objective-C selector, eg. if `StrName` is `performAction:with:`, then the
-    // token at the requested location is `performAction`. Re-building the
-    // entire selector from the lexer is too complicated here, so just perform
-    // a prefix comparison.
-    return StringRef(StrName).starts_with(LexerSpelling);
-  } else {
-    return StrName == LexerSpelling;
-  }
+  auto TokSpelling = clang::Lexer::getSpelling(Tok, SM, LO);
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+    return TokSpelling == MD->getSelector().getNameForSlot(0);
+  return TokSpelling == Name.getAsString();
 }
 } // namespace
 

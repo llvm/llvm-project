@@ -1021,17 +1021,6 @@ struct CodeActionParams {
 };
 bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
-struct PrepareRenameResult {
-  /// The range of the string to rename.
-  Range range;
-  /// A placeholder text of the string content to be renamed.
-  ///
-  /// This is usueful to populate the rename field with an Objective-C selector
-  /// name (eg. `performAction:with:`) when renaming Objective-C methods.
-  std::string placeholder;
-};
-llvm::json::Value toJSON(const PrepareRenameResult &WE);
-
 /// The edit should either provide changes or documentChanges. If the client
 /// can handle versioned document edits and if documentChanges are present,
 /// the latter are preferred over changes.
@@ -1463,6 +1452,14 @@ struct RenameParams {
   std::string newName;
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
+
+struct PrepareRenameResult {
+  /// Range of the string to rename.
+  Range range;
+  /// Placeholder text to use in the editor if non-empty.
+  std::string placeholder;
+};
+llvm::json::Value toJSON(const PrepareRenameResult &PRR);
 
 /// Rename all occurrences of a symbol named `oldName` to `newName` at the
 /// given `positions`.
@@ -2028,6 +2025,28 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ASTNode &);
 } // namespace clang
 
 namespace llvm {
+
+template <> struct DenseMapInfo<clang::clangd::Range> {
+  using Range = clang::clangd::Range;
+  static inline Range getEmptyKey() {
+    static clang::clangd::Position Tomb{-1, -1};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static inline Range getTombstoneKey() {
+    static clang::clangd::Position Tomb{-2, -2};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static unsigned getHashValue(const Range &Val) {
+    return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
+                              Val.end.character);
+  }
+  static bool isEqual(const Range &LHS, const Range &RHS) {
+    return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);
+  }
+};
+
 template <> struct format_provider<clang::clangd::Position> {
   static void format(const clang::clangd::Position &Pos, raw_ostream &OS,
                      StringRef Style) {
