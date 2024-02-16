@@ -1515,8 +1515,26 @@ static void LoadTypeSummariesForModule(ModuleSP module_sp) {
   auto section_size = summaries_sp->GetSectionData(extractor);
   lldb::offset_t offset = 0;
   while (offset < section_size) {
+    // Skip null bytes. Can happen with alignment padding.
+    while (true) {
+      auto next_offset = offset;
+      if (extractor.GetU8(&next_offset) != 0) {
+        break;
+      }
+      // Move past the null byte, using the advanced offset.
+      offset = next_offset;
+    }
+
     uint64_t version = extractor.GetULEB128(&offset);
     uint64_t record_size = extractor.GetULEB128(&offset);
+    if (record_size == 0) {
+      LLDB_LOGF(log,
+                "Skipping empty (malformed) embedded type summary of version "
+                "%llu in %s.",
+                version, module_name);
+      continue;
+    }
+
     if (version == 1) {
       uint64_t type_size = extractor.GetULEB128(&offset);
       llvm::StringRef type_name = extractor.GetCStr(&offset, type_size);

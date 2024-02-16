@@ -5,8 +5,7 @@ struct Player {
   int number;
 };
 
-__attribute__((aligned(1), used,
-               section("__DATA_CONST,__lldbsummaries"))) unsigned char
+__attribute__((used, section("__DATA_CONST,__lldbsummaries"))) unsigned char
     _Player_type_summary[] = "\x01"     // version
                              "\x25"     // record size
                              "\x07"     // type name size
@@ -20,8 +19,7 @@ struct Layer {
 };
 
 // Near copy of the record for `Player`, using a regex type name (`^Layer`).
-__attribute__((aligned(1), used,
-               section("__DATA_CONST,__lldbsummaries"))) unsigned char
+__attribute__((used, section("__DATA_CONST,__lldbsummaries"))) unsigned char
     _Layer_type_summary[] = "\x01"     // version
                             "\x25"     // record size
                             "\x07"     // type name size
