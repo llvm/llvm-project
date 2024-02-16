@@ -135,6 +135,11 @@ C23 Feature Support
 
   Fixes (`#81472 <https://github.com/llvm/llvm-project/issues/81472>`_).
 
+- Clang now generates predefined macros of the form ``__TYPE_FMTB__`` and
+  ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
+  macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
+  (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
