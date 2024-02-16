@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s -o %t.o
+# RUN: yaml2obj --docnum=1 %s -o %t.o
 # RUN: echo '.*' > %t.symbols.regex
 
 ## Check that the visibility of all symbols is properly set to DEFAULT
@@ -149,6 +149,17 @@
 # WILDCARD-DAG: PROTECTED   1 protected_global
 # WILDCARD-DAG: PROTECTED   1 protected_weak
 
+## Check that a symbol name with a special charater is treated as a plain name
+## when pattern matching options are not enabled
+# RUN: yaml2obj --docnum=2 %s -o %t8.o
+# RUN: llvm-objcopy %t8.o --set-symbol-visibility=f*o=hidden
+# RUN: llvm-readelf -s %t8.o | FileCheck %s --check-prefix=SPECIAL
+
+# SPECIAL-DAG: HIDDEN      1 f*o
+## Unaffected symbol:
+# SPECIAL-DAG: DEFAULT     1 foo
+
+---
 !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -208,3 +219,23 @@ Symbols:
     Section: .text
     Binding:  STB_GLOBAL
     Other:    [ STV_INTERNAL ]
+...
+
+---
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+Symbols:
+  - Name:    f*o
+    Section: .text
+    Binding:  STB_LOCAL
+  - Name:    foo
+    Section: .text
+    Binding:  STB_LOCAL
+...
