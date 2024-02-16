@@ -352,8 +352,16 @@ static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
   PoisonShadow(bottom, ssize, 0);
 }
 
+// Since Solaris 10/SPARC, ucp->uc_stack.ss_sp refers to the stack base address
+// as on other targets.  For binary compatibility, the new version uses a
+// different external name, so we intercept that.
+#    if SANITIZER_SOLARIS && defined(__sparc__)
+INTERCEPTOR(void, __makecontext_v2, struct ucontext_t *ucp, void (*func)(),
+            int argc, ...) {
+#    else
 INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
             ...) {
+#    endif
   va_list ap;
   uptr args[64];
   // We don't know a better way to forward ... into REAL function. We can
@@ -373,7 +381,11 @@ INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
       ENUMERATE_ARRAY_16(0), ENUMERATE_ARRAY_16(16), ENUMERATE_ARRAY_16(32), \
           ENUMERATE_ARRAY_16(48)
 
+#    if SANITIZER_SOLARIS && defined(__sparc__)
+  REAL(__makecontext_v2)
+#    else
   REAL(makecontext)
+#    endif
   ((struct ucontext_t *)ucp, func, argc, ENUMERATE_ARRAY_64());
 
 #    undef ENUMERATE_ARRAY_4
@@ -780,7 +792,12 @@ void InitializeAsanInterceptors() {
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT
   ASAN_INTERCEPT_FUNC(swapcontext);
+  // See the makecontext interceptor above for an explanation.
+#    if SANITIZER_SOLARIS && defined(__sparc__)
+  ASAN_INTERCEPT_FUNC(__makecontext_v2);
+#    else
   ASAN_INTERCEPT_FUNC(makecontext);
+#    endif
 #  endif
 #  if ASAN_INTERCEPT__LONGJMP
   ASAN_INTERCEPT_FUNC(_longjmp);
