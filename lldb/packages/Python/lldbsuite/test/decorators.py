@@ -746,18 +746,14 @@ def skipUnlessTargetAndroid(func):
     )(func)
 
 
-def skipIfHostIncompatibleWithRemote(func):
-    """Decorate the item to skip tests if binaries built on this host are incompatible."""
+def skipIfHostIncompatibleWithTarget(func):
+    """Decorate the item to skip tests when the host and target are incompatible."""
 
     def is_host_incompatible_with_remote():
         host_arch = lldbplatformutil.getLLDBArchitecture()
         host_platform = lldbplatformutil.getHostPlatform()
         target_arch = lldbplatformutil.getArchitecture()
-        target_platform = (
-            "darwin"
-            if lldbplatformutil.platformIsDarwin()
-            else lldbplatformutil.getPlatform()
-        )
+        target_platform = lldbplatformutil.getPlatform()
         if (
             not (target_arch == "x86_64" and host_arch == "i386")
             and host_arch != target_arch
