@@ -977,9 +977,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       Type *OldResTy = TypeInfo.inferScalarType(ResultVPV);
       unsigned OldResSizeInBits = OldResTy->getScalarSizeInBits();
       assert(OldResTy->isIntegerTy() && "only integer types supported");
-      if (OldResSizeInBits == NewResSizeInBits)
-        continue;
-      assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       (void)OldResSizeInBits;
 
       auto *NewResTy = IntegerType::get(Ctx, NewResSizeInBits);
@@ -990,11 +987,17 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      // Extend result to original width.
-      auto *Ext = new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
-      Ext->insertAfter(&R);
-      ResultVPV->replaceAllUsesWith(Ext);
-      Ext->setOperand(0, ResultVPV);
+      if (OldResSizeInBits != NewResSizeInBits) {
+        // Extend result to original width.
+        auto *Ext =
+            new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
+        Ext->insertAfter(&R);
+        ResultVPV->replaceAllUsesWith(Ext);
+        Ext->setOperand(0, ResultVPV);
+        assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
+      } else
+        assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
+               "Only ICmps should not need extending the result.");
 
       if (isa<VPWidenMemoryInstructionRecipe>(&R)) {
         assert(!cast<VPWidenMemoryInstructionRecipe>(&R)->isStore() && "stores cannot be narrowed");
