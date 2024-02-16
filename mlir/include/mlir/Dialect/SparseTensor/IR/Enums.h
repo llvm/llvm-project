@@ -189,8 +189,9 @@ constexpr const char *toFormatString(LevelFormat lvlFmt) {
 
 /// This enum defines all the nondefault properties for storage formats.
 enum class LevelPropNonDefault : uint64_t {
-  Nonunique = 0x0001,
-  Nonordered = 0x0002,
+  Nonunique = 0x0001,  // 0b001
+  Nonordered = 0x0002, // 0b010
+  SoA = 0x0004,        // 0b100
 };
 
 /// Returns string representation of the given level properties.
@@ -200,6 +201,8 @@ constexpr const char *toPropString(LevelPropNonDefault lvlProp) {
     return "nonunique";
   case LevelPropNonDefault::Nonordered:
     return "nonordered";
+  case LevelPropNonDefault::SoA:
+    return "soa";
   }
   return "";
 }
@@ -295,24 +298,24 @@ public:
   }
 
   /// Get the `LevelFormat` of the `LevelType`.
-  LevelFormat getLvlFmt() const {
+  constexpr LevelFormat getLvlFmt() const {
     return static_cast<LevelFormat>(lvlBits & 0xffff0000);
   }
 
   /// Check if the `LevelType` is in the `LevelFormat`.
   template <LevelFormat fmt>
-  bool isa() const {
+  constexpr bool isa() const {
     return getLvlFmt() == fmt;
   }
 
   /// Check if the `LevelType` has the properties
   template <LevelPropNonDefault p>
-  bool isa() const {
+  constexpr bool isa() const {
     return lvlBits & static_cast<uint64_t>(p);
   }
 
   /// Check if the `LevelType` needs positions array.
-  bool isWithPosLT() const {
+  constexpr bool isWithPosLT() const {
     return isa<LevelFormat::Compressed>() ||
            isa<LevelFormat::LooseCompressed>();
   }
@@ -333,6 +336,11 @@ public:
       if (!propStr.empty())
         propStr += ", ";
       propStr += toPropString(LevelPropNonDefault::Nonordered);
+    }
+    if (isa<LevelPropNonDefault::SoA>()) {
+      if (!propStr.empty())
+        propStr += ", ";
+      propStr += toPropString(LevelPropNonDefault::SoA);
     }
     if (!propStr.empty())
       lvlStr += ("(" + propStr + ")");
