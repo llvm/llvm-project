@@ -100,7 +100,10 @@ def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_invalid_char_raw_delim : Error<
-  "invalid character '%0' character in raw string delimiter"
+  "invalid character '%0' in raw string delimiter"
+  "; use PREFIX( )PREFIX to delimit raw string">;
+def err_invalid_newline_raw_delim : Error<
+  "invalid newline character in raw string delimiter"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_unterminated_raw_string : Error<
   "raw string missing terminating delimiter )%0\"">;
