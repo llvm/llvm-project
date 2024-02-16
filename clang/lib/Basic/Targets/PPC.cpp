@@ -912,10 +912,10 @@ bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
         .Default(false);
   }
 
-  assert(Triple.isOSLinux() && "Triple for AIX OS has already been checked; "
-                               "it must be Linux OS here.");
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_is() is only supported for AIX and Linux.");
 #define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
-    return llvm::StringSwitch<bool>(CPUName)
+  return llvm::StringSwitch<bool>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
-        .Default(false);
+      .Default(false);
 }
