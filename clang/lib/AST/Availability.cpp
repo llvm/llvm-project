@@ -1,11 +1,22 @@
-#include "clang/ExtractAPI/AvailabilityInfo.h"
+//===- Availability.cpp --------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the Availability information for Decls.
+//
+//===----------------------------------------------------------------------===//
+
+#include "clang/AST/Availability.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 
-using namespace clang::extractapi;
-using namespace llvm;
+namespace clang {
 
 AvailabilityInfo AvailabilityInfo::createFromDecl(const Decl *Decl) {
   ASTContext &Context = Decl->getASTContext();
@@ -33,3 +44,5 @@ AvailabilityInfo AvailabilityInfo::createFromDecl(const Decl *Decl) {
   }
   return Availability;
 }
+
+} // namespace clang

@@ -14,12 +14,12 @@
 #ifndef LLVM_CLANG_EXTRACTAPI_EXTRACT_API_VISITOR_H
 #define LLVM_CLANG_EXTRACTAPI_EXTRACT_API_VISITOR_H
 
+#include "clang/AST/Availability.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/ExtractAPI/AvailabilityInfo.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/ADT/FunctionExtras.h"
 
