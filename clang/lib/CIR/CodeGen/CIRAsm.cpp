@@ -108,6 +108,64 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
 }
 
+static void collectClobbers(const CIRGenFunction &cgf, const AsmStmt &S,
+                            std::string &constraints, bool &hasUnwindClobber,
+                            bool &readOnly, bool readNone) {
+
+  hasUnwindClobber = false;
+  auto &cgm = cgf.getCIRGenModule();
+
+  // Clobbers
+  for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
+    StringRef clobber = S.getClobber(i);
+    if (clobber == "memory")
+      readOnly = readNone = false;
+    else if (clobber == "unwind") {
+      hasUnwindClobber = true;
+      continue;
+    } else if (clobber != "cc") {
+      clobber = cgf.getTarget().getNormalizedGCCRegisterName(clobber);
+      if (cgm.getCodeGenOpts().StackClashProtector &&
+          cgf.getTarget().isSPRegName(clobber)) {
+        cgm.getDiags().Report(S.getAsmLoc(),
+                              diag::warn_stack_clash_protection_inline_asm);
+      }
+    }
+
+    if (isa<MSAsmStmt>(&S)) {
+      if (clobber == "eax" || clobber == "edx") {
+        if (constraints.find("=&A") != std::string::npos)
+          continue;
+        std::string::size_type position1 =
+            constraints.find("={" + clobber.str() + "}");
+        if (position1 != std::string::npos) {
+          constraints.insert(position1 + 1, "&");
+          continue;
+        }
+        std::string::size_type position2 = constraints.find("=A");
+        if (position2 != std::string::npos) {
+          constraints.insert(position2 + 1, "&");
+          continue;
+        }
+      }
+    }
+    if (!constraints.empty())
+      constraints += ',';
+
+    constraints += "~{";
+    constraints += clobber;
+    constraints += '}';
+  }
+
+  // Add machine specific clobbers
+  std::string_view machineClobbers = cgf.getTarget().getClobbers();
+  if (!machineClobbers.empty()) {
+    if (!constraints.empty())
+      constraints += ',';
+    constraints += machineClobbers;
+  }
+}
+
 using constraintInfos = SmallVector<TargetInfo::ConstraintInfo, 4>;
 
 static void collectInOutConstrainsInfos(const CIRGenFunction &cgf,
@@ -217,7 +275,13 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
   // Keep track of out constraints for tied input operand.
   std::vector<std::string> OutputConstraints;
 
-  assert(!S.getNumClobbers() && "asm clobbers operands are NYI");
+  // An inline asm can be marked readonly if it meets the following conditions:
+  //  - it doesn't have any sideeffects
+  //  - it doesn't clobber memory
+  //  - it doesn't return a value by-reference
+  // It can be marked readnone if it doesn't have any input memory constraints
+  // in addition to meeting the conditions listed above.
+  bool ReadOnly = true, ReadNone = true;
 
   for (unsigned i = 0, e = S.getNumOutputs(); i != e; i++) {
     TargetInfo::ConstraintInfo &Info = OutputConstraintInfos[i];
@@ -350,6 +414,9 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
     Args.push_back(InOutArgs[i]);
   }
   Constraints += InOutConstraints;
+
+  bool HasUnwindClobber = false;
+  collectClobbers(*this, S, Constraints, HasUnwindClobber, ReadOnly, ReadNone);
 
   mlir::Type ResultType;
 

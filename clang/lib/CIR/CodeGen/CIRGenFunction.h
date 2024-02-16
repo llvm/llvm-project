@@ -441,6 +441,7 @@ public:
   CIRGenBuilderTy &getBuilder() { return builder; }
 
   CIRGenModule &getCIRGenModule() { return CGM; }
+  const CIRGenModule &getCIRGenModule() const { return CGM; }
 
   mlir::Block *getCurFunctionEntryBlock() {
     auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
