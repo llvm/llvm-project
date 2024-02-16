@@ -3012,7 +3012,6 @@ static void emitLoadFromConstantPool(Register DstReg, const Constant *ConstVal,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerConstant(MachineInstr &MI) {
   MachineOperand ConstOperand = MI.getOperand(1);
-  assert(ConstOperand.isCImm());
   const Constant *ConstantVal = ConstOperand.getCImm();
 
   emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
@@ -3024,7 +3023,6 @@ LegalizerHelper::lowerConstant(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFConstant(MachineInstr &MI) {
   MachineOperand ConstOperand = MI.getOperand(1);
-  assert(ConstOperand.isFPImm());
   const Constant *ConstantVal = ConstOperand.getFPImm();
 
   emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
