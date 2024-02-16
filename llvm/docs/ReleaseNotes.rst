@@ -94,7 +94,7 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Added assembler/disassembler support for the experimental Zabha (Byte and
+* Added full support for the experimental Zabha (Byte and
   Halfword Atomic Memory Operations) extension.
 * Added assembler/disassembler support for the experimenatl Zalasr
   (Load-Acquire and Store-Release) extension.
