@@ -42,13 +42,32 @@ public:
     mlir::omp::ParallelOp parallelOp =
         rewriter.create<mlir::omp::ParallelOp>(doLoop.getLoc());
 
-    rewriter.createBlock(&parallelOp.getRegion());
-    mlir::Block &block = parallelOp.getRegion().back();
+    mlir::Block *block = rewriter.createBlock(&parallelOp.getRegion());
 
-    rewriter.setInsertionPointToEnd(&block);
+    rewriter.setInsertionPointToEnd(block);
     rewriter.create<mlir::omp::TerminatorOp>(doLoop.getLoc());
 
-    rewriter.setInsertionPointToStart(&block);
+    rewriter.setInsertionPointToStart(block);
+
+    // ==== TODO (1) Start ====
+    //
+    // The goal of the few lines below is to collect and clone
+    // the list of operations that define the loop's lower and upper bounds as
+    // well as the step. Should we, instead of doing this here, split it into 2
+    // stages?
+    //
+    //   1. **Stage 1**: add an analysis that extracts all the relevant
+    //                   operations defining the lower-bound, upper-bound, and
+    //                   step.
+    //   2. **Stage 2**: clone the collected operations in the parallel region.
+    //
+    // So far, the pass has been tested with very simple loops (where the bounds
+    // and step are constants) so the goal of **Stage 1** is to have a
+    // well-defined component that has the sole responsibility of collecting all
+    // the relevant ops relevant to the loop header. This was we can test this
+    // in isolation for more complex loops and better organize the code. **Stage
+    // 2** would then be responsible for the actual cloning of the collected
+    // loop header preparation/allocation operations.
 
     // Clone the LB, UB, step defining ops inside the parallel region.
     llvm::SmallVector<mlir::Value> lowerBound, upperBound, step;
@@ -58,6 +77,7 @@ public:
         rewriter.clone(*doLoop.getUpperBound().getDefiningOp())->getResult(0));
     step.push_back(
         rewriter.clone(*doLoop.getStep().getDefiningOp())->getResult(0));
+    // ==== TODO (1) End ====
 
     auto wsLoopOp = rewriter.create<mlir::omp::WsLoopOp>(
         doLoop.getLoc(), lowerBound, upperBound, step);
@@ -65,8 +85,25 @@ public:
 
     auto outlineableOp =
         mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(*parallelOp);
-    assert(outlineableOp);
     rewriter.setInsertionPointToStart(outlineableOp.getAllocaBlock());
+
+    // ==== TODO (2) Start ====
+    //
+    // The goal of the following simple work-list algorithm and
+    // the following `for` loop is to collect all the operations related to the
+    // allocation of the induction variable for the `do concurrent` loop. The
+    // operations collected by this algorithm are very similar to what is
+    // usually emitted for privatized variables, e.g. for omp.parallel loops.
+    // Therefore, I think we can:
+    //
+    //   1. **Stage 1**: Add an analysis that colects all these operations. The
+    //                   goal is similar to **Stage 1** of TODO (1): isolate the
+    //                   algorithm is an individually-testable component so that
+    //                   we properly implement and test it for more complicated
+    //                   `do concurrent` loops.
+    //   1. **Stage 2**: Using the collected operations, create and populate an
+    //                   `omp.private {type=private}` op to server as the
+    //                   delayed privatizer for the new work-sharing loop.
 
     // For the induction variable, we need to privative its allocation and
     // binding inside the parallel region.
@@ -101,6 +138,12 @@ public:
       }
       declareAndAllocasToClone.insert(storeTarget);
     }
+    // ==== TODO (2) End ====
+    //
+    // TODO (1 & 2): Isolating analyses proposed in both TODOs, I think we can
+    // more easily generalize the pass to work for targets other than OpenMP,
+    // e.g. OpenACC, I think can, can reuse the results of the analyses and only
+    // change the code-gen/rewriting.
 
     mlir::IRMapping mapper;
 
