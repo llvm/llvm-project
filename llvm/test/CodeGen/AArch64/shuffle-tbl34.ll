@@ -675,57 +675,33 @@ define <16 x i8> @insert4_v16i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8
   ret <16 x i8> %i16
 }
 
-
-; CHECK: .LCPI16_0:
-; CHECK: 	.byte	0
-; CHECK: 	.byte	1
-; CHECK: 	.byte	4
-; CHECK: 	.byte	5
-; CHECK: 	.byte	16
-; CHECK: 	.byte	17
-; CHECK: 	.byte	20
-; CHECK: 	.byte	21
-; CHECK: 	.byte	32
-; CHECK: 	.byte	33
-; CHECK: 	.byte	36
-; CHECK: 	.byte	37
-; CHECK: 	.byte	48
-; CHECK: 	.byte	49
-; CHECK: 	.byte	52
-; CHECK: 	.byte	53
 define <16 x i16> @test(<2 x double> %l213, <2 x double> %l231, <2 x double> %l249, <2 x double> %l267, <2 x double> %l285, <2 x double> %l303, <2 x double> %l321, <2 x double> %l339) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintm v0.2d, v0.2d
-; CHECK-NEXT:    frintm v4.2d, v4.2d
-; CHECK-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-NEXT:    frintm v1.2d, v1.2d
-; CHECK-NEXT:    frintm v5.2d, v5.2d
 ; CHECK-NEXT:    frintm v2.2d, v2.2d
-; CHECK-NEXT:    frintm v6.2d, v6.2d
 ; CHECK-NEXT:    frintm v3.2d, v3.2d
+; CHECK-NEXT:    frintm v4.2d, v4.2d
+; CHECK-NEXT:    frintm v5.2d, v5.2d
+; CHECK-NEXT:    frintm v6.2d, v6.2d
 ; CHECK-NEXT:    frintm v7.2d, v7.2d
 ; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v4.2d, v4.2d
 ; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-NEXT:    fcvtzs v6.2d, v6.2d
 ; CHECK-NEXT:    fcvtzs v3.2d, v3.2d
+; CHECK-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-NEXT:    fcvtzs v6.2d, v6.2d
 ; CHECK-NEXT:    fcvtzs v7.2d, v7.2d
-; CHECK-NEXT:    xtn v16.2s, v0.2d
-; CHECK-NEXT:    xtn v20.2s, v4.2d
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI16_0]
-; CHECK-NEXT:    xtn v17.2s, v1.2d
-; CHECK-NEXT:    xtn v21.2s, v5.2d
-; CHECK-NEXT:    xtn v18.2s, v2.2d
-; CHECK-NEXT:    xtn v22.2s, v6.2d
-; CHECK-NEXT:    xtn v19.2s, v3.2d
-; CHECK-NEXT:    xtn v23.2s, v7.2d
-; CHECK-NEXT:    tbl v1.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.16b
-; CHECK-NEXT:    tbl v2.16b, { v20.16b, v21.16b, v22.16b, v23.16b }, v0.16b
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v2.8h
-; CHECK-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp1 v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    uzp1 v3.4s, v4.4s, v5.4s
+; CHECK-NEXT:    uzp1 v1.4s, v6.4s, v7.4s
+; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v2.8h
+; CHECK-NEXT:    uzp1 v1.8h, v3.8h, v1.8h
+; CHECK-NEXT:    uzp1 v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    uzp2 v1.8h, v2.8h, v1.8h
 ; CHECK-NEXT:    ret
   %l214 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l213)
   %l215 = fptosi <2 x double> %l214 to <2 x i16>
