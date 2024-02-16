@@ -165,7 +165,7 @@ Changes in existing checks
   length initialized from string literals.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check in ``GetConfigPerFile: true``
+  <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files.
 
 Removed checks
