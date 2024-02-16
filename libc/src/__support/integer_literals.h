@@ -115,32 +115,32 @@ template <typename T> struct Parser {
   }
 };
 
-// Specialization for cpp::BigInt<N, false, uint64_t>.
+// Specialization for cpp::UInt<N>.
 // Because this code runs at compile time we try to make it efficient. For
 // binary and hexadecimal formats we read digits by chunks of 64 bits and
 // produce the BigInt internal representation direcly. For decimal numbers we
 // go the slow path and use slower BigInt arithmetic.
-template <size_t N>
-struct Parser<LIBC_NAMESPACE::cpp::BigInt<N, false, uint64_t>> {
-  using UIntT = cpp::BigInt<N, false, uint64_t>;
+template <size_t N> struct Parser<LIBC_NAMESPACE::cpp::UInt<N>> {
+  using UIntT = cpp::UInt<N>;
   template <int base> static constexpr UIntT parse(const char *str) {
     const DigitBuffer<UIntT, base> buffer(str);
     if constexpr (base == 10) {
       // Slow path, we sum and multiply BigInt for each digit.
       return accumulate<UIntT>(base, buffer.digits, buffer.size);
     } else {
-      // Fast path, we consume blocks of uint64_t and creates the BigInt's
+      // Fast path, we consume blocks of WordType and creates the BigInt's
       // internal representation directly.
-      using U64ArrayT = cpp::array<uint64_t, UIntT::WORD_COUNT>;
-      U64ArrayT array = {};
+      using WordArrayT = decltype(UIntT::val);
+      using WordType = typename WordArrayT::value_type;
+      WordArrayT array = {};
       size_t size = buffer.size;
       const uint8_t *digit_ptr = buffer.digits + size;
       for (size_t i = 0; i < array.size(); ++i) {
-        constexpr size_t U64_DIGITS = DigitBuffer<uint64_t, base>::MAX_DIGITS;
-        const size_t chunk = size > U64_DIGITS ? U64_DIGITS : size;
+        constexpr size_t DIGITS = DigitBuffer<WordType, base>::MAX_DIGITS;
+        const size_t chunk = size > DIGITS ? DIGITS : size;
         digit_ptr -= chunk;
         size -= chunk;
-        array[i] = accumulate<uint64_t>(base, digit_ptr, chunk);
+        array[i] = accumulate<WordType>(base, digit_ptr, chunk);
       }
       return UIntT(array);
     }
