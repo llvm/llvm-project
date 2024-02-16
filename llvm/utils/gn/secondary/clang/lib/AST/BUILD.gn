@@ -61,6 +61,7 @@ static_library("AST") {
     "ASTTypeTraits.cpp",
     "AttrDocTable.cpp",
     "AttrImpl.cpp",
+    "Availability.cpp",
     "CXXInheritance.cpp",
     "Comment.cpp",
     "CommentBriefParser.cpp",
