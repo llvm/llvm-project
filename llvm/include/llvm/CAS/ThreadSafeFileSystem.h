@@ -19,10 +19,13 @@ class ObjectStore;
 class CASID;
 
 /// For thread-safe filesystem implementations.
-class ThreadSafeFileSystem : public vfs::FileSystem {
-  virtual void anchor();
+class ThreadSafeFileSystem
+    : public llvm::RTTIExtends<ThreadSafeFileSystem, vfs::FileSystem> {
+  virtual void anchor() override;
 
 public:
+  static const char ID;
+
   /// Get a proxy FS that has an independent working directory.
   virtual IntrusiveRefCntPtr<ThreadSafeFileSystem>
   createThreadSafeProxyFS() = 0;

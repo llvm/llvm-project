@@ -24,9 +24,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
 
-namespace swift {
-enum ReflectionSectionKind : uint8_t;
-}
 namespace lldb_private {
 
 /// \class ObjectFile ObjectFile.h "lldb/Symbol/ObjectFile.h"
@@ -720,9 +717,6 @@ public:
 
   /// Creates a plugin-specific call frame info
   virtual std::unique_ptr<CallFrameInfo> CreateCallFrameInfo();
-
-  virtual llvm::StringRef
-  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
 
   /// Load binaries listed in a corefile
   ///

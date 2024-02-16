@@ -25,9 +25,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/ManglingMacros.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 // FIXME: we should not need this
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
@@ -80,7 +79,7 @@ struct StringSlice {
 
 template <typename AddrT>
 static void applySlice(AddrT &address, uint64_t &length,
-                       Optional<StringSlice> slice) {
+                       std::optional<StringSlice> slice) {
   if (!slice)
     return;
 
@@ -129,7 +128,7 @@ static bool makeStringGutsSummary(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options,
     StringPrinter::ReadStringAndDumpToStreamOptions read_options,
-    Optional<StringSlice> slice = None) {
+    std::optional<StringSlice> slice = std::nullopt) {
   LLDB_SCOPED_TIMER();
 
   static ConstString g__object("_object");
@@ -429,20 +428,20 @@ bool lldb_private::formatters::swift::Substring_SummaryProvider(
     return false;
 
   auto get_index =
-      [&slice_sp](ConstString index_name) -> Optional<StringIndex> {
+      [&slice_sp](ConstString index_name) -> std::optional<StringIndex> {
     auto raw_bits_sp = slice_sp->GetChildAtNamePath({index_name, g__rawBits});
     if (!raw_bits_sp)
-      return None;
+      return std::nullopt;
     bool success = false;
     StringIndex index =
         raw_bits_sp->GetSyntheticValue()->GetValueAsUnsigned(0, &success);
     if (!success)
-      return None;
+      return std::nullopt;
     return index;
   };
 
-  Optional<StringIndex> start_index = get_index(g__startIndex);
-  Optional<StringIndex> end_index = get_index(g__endIndex);
+  std::optional<StringIndex> start_index = get_index(g__startIndex);
+  std::optional<StringIndex> end_index = get_index(g__endIndex);
   if (!start_index || !end_index)
     return false;
 
@@ -1043,12 +1042,12 @@ public:
 };
 
 /// Read a vector from a buffer target.
-llvm::Optional<std::vector<std::string>>
+std::optional<std::vector<std::string>>
 ReadVector(const SIMDElementFormatter &formatter, const uint8_t *buffer,
            unsigned len, unsigned offset, unsigned num_elements) {
   unsigned elt_size = formatter.getElementSize();
   if ((offset + num_elements * elt_size) > len)
-    return llvm::None;
+    return std::nullopt;
   std::vector<std::string> elements;
   for (unsigned I = 0; I < num_elements; ++I)
     elements.emplace_back(formatter.Format(buffer + offset + (I * elt_size)));
@@ -1056,7 +1055,7 @@ ReadVector(const SIMDElementFormatter &formatter, const uint8_t *buffer,
 }
 
 /// Read a SIMD vector from the target.
-llvm::Optional<std::vector<std::string>>
+std::optional<std::vector<std::string>>
 ReadVector(Process &process, ValueObject &valobj,
            const SIMDElementFormatter &formatter, unsigned num_elements) {
   Status error;
@@ -1064,21 +1063,21 @@ ReadVector(Process &process, ValueObject &valobj,
   static ConstString g_value("_value");
   ValueObjectSP value_sp = valobj.GetChildAtNamePath({g_storage, g_value});
   if (!value_sp)
-    return llvm::None;
+    return std::nullopt;
 
   // The layout of the vector is the same as what you'd expect for a C-style
   // array. It's a contiguous bag of bytes with no padding.
   lldb_private::DataExtractor data;
   uint64_t len = value_sp->GetData(data, error);
   if (error.Fail())
-    return llvm::None;
+    return std::nullopt;
 
   const uint8_t *buffer = data.GetDataStart();
   return ReadVector(formatter, buffer, len, 0, num_elements);
 }
 
 /// Print a vector of elements as a row, if possible.
-bool PrintRow(Stream &stream, llvm::Optional<std::vector<std::string>> vec) {
+bool PrintRow(Stream &stream, std::optional<std::vector<std::string>> vec) {
   if (!vec)
     return false;
 
@@ -1128,7 +1127,7 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     return false;
 
   ExecutionContext exe_ctx = valobj.GetExecutionContextRef().Lock(true);
-  llvm::Optional<uint64_t> opt_type_size =
+  std::optional<uint64_t> opt_type_size =
     simd_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!opt_type_size)
     return false;
@@ -1143,7 +1142,7 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   if (!arg_type)
     return false;
 
-  llvm::Optional<uint64_t> opt_arg_size =
+  std::optional<uint64_t> opt_arg_size =
       arg_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!opt_arg_size)
     return false;
@@ -1211,7 +1210,7 @@ bool lldb_private::formatters::swift::LegacySIMD_SummaryProvider(
   bool is_vector = !is_matrix && !is_quaternion;
 
   // Get the kind of SIMD element inside of this object.
-  llvm::Optional<SIMDElementKind> kind = llvm::None;
+  std::optional<SIMDElementKind> kind = std::nullopt;
   if (type_name.startswith("int"))
     kind = SIMDElementKind::Int32;
   else if (type_name.startswith("uint"))

@@ -6,7 +6,7 @@ lldb_tablegen(SymbolFileDWARFPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE SymbolFileDWARFProperties.td
   TARGET LLDBPluginSymbolFileDWARFPropertiesEnumGen)
 
-set(SWIFT_SOURCES DWARFASTParserSwift.cpp)
+set(SWIFT_SOURCES DWARFASTParserSwift.cpp DWARFASTParserSwiftDescriptorFinder.cpp)
 set(LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
 if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_SOURCES)

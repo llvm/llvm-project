@@ -95,7 +95,7 @@ static bool GetFormatFromFormatChar(char format_char, Format &format) {
 }
 
 static bool GetFormatFromFormatName(llvm::StringRef format_name,
-                                    bool partial_match_ok, Format &format) {
+                                    Format &format) {
   uint32_t i;
   for (i = 0; i < g_num_format_infos; ++i) {
     if (format_name.equals_insensitive(g_format_infos[i].format_name)) {
@@ -104,13 +104,11 @@ static bool GetFormatFromFormatName(llvm::StringRef format_name,
     }
   }
 
-  if (partial_match_ok) {
-    for (i = 0; i < g_num_format_infos; ++i) {
-      if (llvm::StringRef(g_format_infos[i].format_name)
-              .starts_with_insensitive(format_name)) {
-        format = g_format_infos[i].format;
-        return true;
-      }
+  for (i = 0; i < g_num_format_infos; ++i) {
+    if (llvm::StringRef(g_format_infos[i].format_name)
+            .starts_with_insensitive(format_name)) {
+      format = g_format_infos[i].format;
+      return true;
     }
   }
   format = eFormatInvalid;
@@ -128,7 +126,6 @@ void FormatManager::Changed() {
 }
 
 bool FormatManager::GetFormatFromCString(const char *format_cstr,
-                                         bool partial_match_ok,
                                          lldb::Format &format) {
   bool success = false;
   if (format_cstr && format_cstr[0]) {
@@ -138,7 +135,7 @@ bool FormatManager::GetFormatFromCString(const char *format_cstr,
         return true;
     }
 
-    success = GetFormatFromFormatName(format_cstr, partial_match_ok, format);
+    success = GetFormatFromFormatName(format_cstr, format);
   }
   if (!success)
     format = eFormatInvalid;

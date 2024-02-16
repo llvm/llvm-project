@@ -64,6 +64,8 @@ public:
     std::unordered_map<std::string, std::vector<std::string>> m_enum_spec;
   };
 
+  unsigned GetGeneration() const { return m_generation; }
+  void SymbolsDidLoad(const ModuleList &module_list) { ++m_generation; }
   void ModulesDidLoad(const ModuleList &module_list);
 
   bool GetObjectDescription(Stream &str, ValueObject &object);
@@ -91,54 +93,56 @@ public:
   GetSwiftRuntimeTypeInfo(CompilerType type, ExecutionContextScope *exe_scope,
                           swift::reflection::TypeRef const **out_tr = nullptr);
 
-  llvm::Optional<const swift::reflection::TypeInfo *>
+  std::optional<const swift::reflection::TypeInfo *>
   lookupClangTypeInfo(CompilerType clang_type);
 
   const swift::reflection::TypeInfo *emplaceClangTypeInfo(
-      CompilerType clang_type, llvm::Optional<uint64_t> byte_size,
-      llvm::Optional<size_t> bit_align,
+      CompilerType clang_type, std::optional<uint64_t> byte_size,
+      std::optional<size_t> bit_align,
       llvm::ArrayRef<swift::reflection::FieldInfo> fields);
 
   bool IsStoredInlineInBuffer(CompilerType type);
 
   /// Ask Remote Mirrors for the size of a Swift type.
-  llvm::Optional<uint64_t> GetBitSize(CompilerType type,
+  std::optional<uint64_t> GetBitSize(CompilerType type,
                                       ExecutionContextScope *exe_scope);
 
   /// Ask Remote mirrors for the stride of a Swift type.
-  llvm::Optional<uint64_t> GetByteStride(CompilerType type);
+  std::optional<uint64_t> GetByteStride(CompilerType type);
 
   /// Ask Remote mirrors for the alignment of a Swift type.
-  llvm::Optional<size_t> GetBitAlignment(CompilerType type,
+  std::optional<size_t> GetBitAlignment(CompilerType type,
                                          ExecutionContextScope *exe_scope);
 
   CompilerType GetTypeFromMetadata(TypeSystemSwift &tss, Address address);
 
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetMemberVariableOffsetRemoteAST(CompilerType instance_type,
                                    ValueObject *instance,
                                    llvm::StringRef member_name);
-  llvm::Optional<uint64_t> GetMemberVariableOffsetRemoteMirrors(
+  std::optional<uint64_t> GetMemberVariableOffsetRemoteMirrors(
       CompilerType instance_type, ValueObject *instance,
       llvm::StringRef member_name, Status *error);
-  llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
+  std::optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
                                                    llvm::StringRef member_name,
                                                    Status *error);
 
-  llvm::Optional<unsigned> GetNumChildren(CompilerType type,
+  std::optional<unsigned> GetNumChildren(CompilerType type,
                                           ExecutionContextScope *exe_scope);
 
-  llvm::Optional<unsigned> GetNumFields(CompilerType type,
+  std::optional<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx);
 
-  llvm::Optional<std::string> GetEnumCaseName(CompilerType type,
+  std::optional<std::string> GetEnumCaseName(CompilerType type,
                                               const DataExtractor &data,
                                               ExecutionContext *exe_ctx);
 
-  std::pair<bool, llvm::Optional<size_t>> GetIndexOfChildMemberWithName(
-      CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
-      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);
+  std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
+  GetIndexOfChildMemberWithName(CompilerType type, llvm::StringRef name,
+                                ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
+                                std::vector<uint32_t> &child_indexes);
 
   CompilerType GetChildCompilerTypeAtIndex(
       CompilerType type, size_t idx, bool transparent_pointers,
@@ -248,7 +252,7 @@ protected:
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
 #ifndef NDEBUG
-  llvm::Optional<std::pair<CompilerType, Address>>
+  std::optional<std::pair<CompilerType, Address>>
   GetDynamicTypeAndAddress_ProtocolRemoteAST(ValueObject &in_value,
                                              CompilerType protocol_type,
                                              bool use_local_buffer,
@@ -287,8 +291,8 @@ protected:
     lldb::ValueObjectSP m_for_object_sp;
     SwiftLanguageRuntimeImpl &m_swift_runtime;
     lldb::addr_t m_metadata_location;
-    llvm::Optional<swift::MetadataKind> m_metadata_kind;
-    llvm::Optional<CompilerType> m_compiler_type;
+    std::optional<swift::MetadataKind> m_metadata_kind;
+    std::optional<CompilerType> m_compiler_type;
 
   public:
     CompilerType FulfillTypePromise(const SymbolContext *sc,
@@ -302,7 +306,7 @@ protected:
   MetadataPromiseSP
   GetPromiseForTypeNameAndFrame(const char *type_name, StackFrame *frame);
 
-  llvm::Optional<lldb::addr_t>
+  std::optional<lldb::addr_t>
   GetTypeMetadataForTypeNameAndFrame(llvm::StringRef mdvar_name,
                                      StackFrame &frame);
 
@@ -364,14 +368,14 @@ private:
   bool m_initialized_reflection_ctx = false;
 
   /// Lazily initialize and return \p m_dynamic_exclusivity_flag_addr.
-  llvm::Optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
+  std::optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
 
   // Add the modules in m_modules_to_add to the Reflection Context. The
   // ModulesDidLoad() callback appends to m_modules_to_add.
   void ProcessModulesToAdd();
 
   /// Lazily initialize and return \p m_SwiftNativeNSErrorISA.
-  llvm::Optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
+  std::optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
 
   SwiftMetadataCache *GetSwiftMetadataCache();
 
@@ -385,7 +389,7 @@ private:
   uint32_t m_active_user_expr_count = 0;
 
   bool m_original_dynamic_exclusivity_flag_state = false;
-  llvm::Optional<lldb::addr_t> m_dynamic_exclusivity_flag_addr;
+  std::optional<lldb::addr_t> m_dynamic_exclusivity_flag_addr;
   /// \}
 
   /// Reflection context.
@@ -401,6 +405,8 @@ private:
   /// added to the reflection context once it's being initialized.
   ModuleList m_modules_to_add;
 
+  /// Increased every time SymbolsDidLoad is called.
+  unsigned m_generation = 0;
   /// Add the image to the reflection context.
   /// \return true on success.
   bool AddModuleToReflectionContext(const lldb::ModuleSP &module_sp);
@@ -415,24 +421,24 @@ private:
   /// Add the reflections sections to the reflection context by extracting
   /// the directly from the object file.
   /// \return the info id of the newly registered reflection info on success, or
-  /// llvm::None otherwise.
-  llvm::Optional<uint32_t> AddObjectFileToReflectionContext(
+  /// std::nullopt otherwise.
+  std::optional<uint32_t> AddObjectFileToReflectionContext(
       lldb::ModuleSP module,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names);
 
   /// Cache for the debug-info-originating type infos.
   /// \{
   llvm::DenseMap<lldb::opaque_compiler_type_t,
-                 llvm::Optional<swift::reflection::TypeInfo>>
+                 std::optional<swift::reflection::TypeInfo>>
       m_clang_type_info;
   llvm::DenseMap<lldb::opaque_compiler_type_t,
-                 llvm::Optional<swift::reflection::RecordTypeInfo>>
+                 std::optional<swift::reflection::RecordTypeInfo>>
       m_clang_record_type_info;
   std::recursive_mutex m_clang_type_info_mutex;
   /// \}
 
   /// Swift native NSError isa.
-  llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
+  std::optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
 #ifndef NDEBUG
   /// Assert helper to determine if the scratch SwiftASTContext is locked.

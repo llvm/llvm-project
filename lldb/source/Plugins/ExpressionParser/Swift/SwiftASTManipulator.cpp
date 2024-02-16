@@ -295,7 +295,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
 
   if (in_return) {
     result_loc_info.return_stmt =
-        new (ast_context) swift::ReturnStmt(source_loc, nullptr);
+        swift::ReturnStmt::createImplicit(ast_context, source_loc, nullptr);
     body.push_back(result_loc_info.return_stmt);
   }
 
@@ -878,7 +878,7 @@ swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
   return m_function_decl;
 }
 
-llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
+std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
     const SwiftASTManipulator::VariableInfo &variable) const {
   auto type_system_swift =
       variable.m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
@@ -997,7 +997,6 @@ static void AddNodesToBeginningFunction(
       body->getRBraceLoc());
 
   function->setBody(new_function_body, function->getBodyKind());
-  function->setHasSingleExpressionBody(false);
 }
 
 bool SwiftASTManipulator::AddExternalVariables(

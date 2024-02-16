@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMDWARFLinker
+  DWARFLinkerBase.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS

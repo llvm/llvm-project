@@ -20,7 +20,7 @@
 #include "lldb/Symbol/CompilerType.h"
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 #include <vector>
 
@@ -48,7 +48,7 @@ private:
   typedef std::vector<std::pair<llvm::APInt, lldb_private::ConstString>>
       CasesVector;
 
-  llvm::Optional<CasesVector> m_cases;
+  std::optional<CasesVector> m_cases;
 };
 
 bool SwiftOptionSet_SummaryProvider(ValueObject &valobj, Stream &stream);

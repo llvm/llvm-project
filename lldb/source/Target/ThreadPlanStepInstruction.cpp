@@ -110,7 +110,7 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
       SetPlanComplete();
     }
     return (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr);
-  } else if (cur_frame_id < m_stack_id) {
+  } else if (IsYounger(cur_frame_id, m_stack_id)) {
     // If the current frame is younger than the start frame and we are stepping
     // over, then we need to continue, but if we are doing just one step, we're
     // done.
@@ -140,7 +140,8 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
 
     StackID cur_frame_zero_id = cur_frame_sp->GetStackID();
 
-    if (cur_frame_zero_id == m_stack_id || m_stack_id < cur_frame_zero_id) {
+    if (cur_frame_zero_id == m_stack_id ||
+        IsYounger(m_stack_id, cur_frame_zero_id)) {
       if (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr) {
         if (--m_iteration_count <= 0) {
           SetPlanComplete();

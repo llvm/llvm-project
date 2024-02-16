@@ -906,6 +906,10 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
   return std::move(Result);
 }
 
+llvm::json::Value toJSON(const PrepareRenameResult &R) {
+  return llvm::json::Object{{"range", R.range}, {"placeholder", R.placeholder}};
+}
+
 llvm::json::Value toJSON(const WorkspaceEdit &WE) {
   llvm::json::Object Result;
   if (WE.changes) {
@@ -1186,6 +1190,15 @@ bool fromJSON(const llvm::json::Value &Params, RenameParams &R,
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("position", R.position) && O.map("newName", R.newName);
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              IndexedRenameParams &IndexedRename, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", IndexedRename.textDocument) &&
+         O.map("oldName", IndexedRename.oldName) &&
+         O.map("newName", IndexedRename.newName) &&
+         O.map("positions", IndexedRename.positions);
 }
 
 llvm::json::Value toJSON(const DocumentHighlight &DH) {

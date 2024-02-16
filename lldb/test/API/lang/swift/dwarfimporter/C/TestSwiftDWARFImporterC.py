@@ -102,9 +102,9 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.runCmd('log enable lldb types -f "%s"' % log)
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
-        #lldbutil.check_variable(self,
-        #                        target.FindFirstGlobalVariable("point"),
-        #                        typename="Point", num_children=2)
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("point"),
+                                typename="CModule.Point", num_children=2)
         # This can't be resolved.
         self.expect("expr swiftStructCMember", error=True)
 

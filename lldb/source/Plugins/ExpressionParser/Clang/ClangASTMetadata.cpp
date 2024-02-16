@@ -31,5 +31,12 @@ void ClangASTMetadata::Dump(Stream *s) {
   if (m_is_dynamic_cxx) {
     s->Printf("is_dynamic_cxx=%i ", m_is_dynamic_cxx);
   }
+
+  // BEGIN SWIFT
+  if (m_is_potentially_swift_interop_type) {
+    s->Printf("is_swift_interop_type=%i ", m_is_potentially_swift_interop_type);
+  }
+  // END SWIFT
+
   s->EOL();
 }

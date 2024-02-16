@@ -1,5 +1,6 @@
+// REQUIRES: x86-registered-target
 // RUN: rm -rf %t.idx %t.mcp
-// RUN: %clang -arch x86_64 -mmacosx-version-min=10.7 -c %s -o %t.o -index-store-path %t.idx -fmodules -fmodules-cache-path=%t.mcp -Xclang -fdisable-module-hash -I %S/Inputs/module
+// RUN: %clang -target x86_64-apple-macos10.7 -c %s -o %t.o -index-store-path %t.idx -fmodules -fmodules-cache-path=%t.mcp -Xclang -fdisable-module-hash -I %S/Inputs/module
 // RUN: c-index-test core -print-unit %t.idx | FileCheck %s
 
 @import ModDep;

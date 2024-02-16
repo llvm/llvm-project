@@ -3858,7 +3858,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 
   Lex(); // Eat operand.
 
-  bool ExpectRegister = (Op.lower().find("all") == StringRef::npos);
+  bool ExpectRegister = !Op.contains_insensitive("all");
   bool HasRegister = false;
 
   // Check for the optional register operand.
@@ -4809,19 +4809,29 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
       return parseCondCode(Operands, invertCondCode);
 
     // If it's a register name, parse it.
-    if (!parseRegister(Operands))
+    if (!parseRegister(Operands)) {
+      // Parse an optional shift/extend modifier.
+      AsmToken SavedTok = getTok();
+      if (parseOptionalToken(AsmToken::Comma)) {
+        // The operand after the register may be a label (e.g. ADR/ADRP).  Check
+        // such cases and don't report an error when <label> happens to match a
+        // shift/extend modifier.
+        ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic,
+                                                 /*ParseForAllFeatures=*/true);
+        if (!Res.isNoMatch())
+          return Res.isFailure();
+        Res = tryParseOptionalShiftExtend(Operands);
+        if (!Res.isNoMatch())
+          return Res.isFailure();
+        getLexer().UnLex(SavedTok);
+      }
       return false;
+    }
 
     // See if this is a "mul vl" decoration or "mul #<int>" operand used
     // by SVE instructions.
     if (!parseOptionalMulOperand(Operands))
       return false;
-
-    // This could be an optional "shift" or "extend" operand.
-    ParseStatus GotShift = tryParseOptionalShiftExtend(Operands);
-    // We can only continue if no tokens were eaten.
-    if (!GotShift.isNoMatch())
-      return GotShift.isFailure();
 
     // If this is a two-word mnemonic, parse its special keyword
     // operand as an identifier.
@@ -4883,6 +4893,15 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
 
     E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
     Operands.push_back(AArch64Operand::CreateImm(ImmVal, S, E, getContext()));
+
+    // Parse an optional shift/extend modifier.
+    AsmToken SavedTok = Tok;
+    if (parseOptionalToken(AsmToken::Comma)) {
+      ParseStatus Res = tryParseOptionalShiftExtend(Operands);
+      if (!Res.isNoMatch())
+        return Res.isFailure();
+      getLexer().UnLex(SavedTok);
+    }
     return false;
   }
   case AsmToken::Equal: {
@@ -6868,7 +6887,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  std::optional<AArch64::ArchInfo> ArchInfo = AArch64::parseArch(Arch);
+  const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
     return Error(ArchLoc, "unknown arch name");
 
@@ -6970,7 +6989,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  const std::optional<llvm::AArch64::ArchInfo> CpuArch = llvm::AArch64::getArchForCpu(CPU);
+  const llvm::AArch64::ArchInfo *CpuArch = llvm::AArch64::getArchForCpu(CPU);
   if (!CpuArch) {
     Error(CurLoc, "unknown CPU name");
     return false;

@@ -30,6 +30,7 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
+using Sign = fputil::Sign;
 
 // log2(10)
 constexpr double LOG2_10 = 0x1.a934f0979a371p+1;
@@ -101,14 +102,14 @@ Float128 poly_approx_f128(const Float128 &dx) {
   using MType = typename Float128::MantissaType;
 
   constexpr Float128 COEFFS_128[]{
-      {false, -127, MType({0, 0x8000000000000000})}, // 1.0
-      {false, -126, MType({0xea56d62b82d30a2d, 0x935d8dddaaa8ac16})},
-      {false, -126, MType({0x80a99ce75f4d5bdb, 0xa9a92639e753443a})},
-      {false, -126, MType({0x6a4f9d7dbf6c9635, 0x82382c8ef1652304})},
-      {false, -124, MType({0x345787019216c7af, 0x12bd7609fd98c44c})},
-      {false, -127, MType({0xcc41ed7e0d27aee5, 0x450a7ff47535d889})},
-      {false, -130, MType({0x8326bb91a6e7601d, 0xd3f6b844702d636b})},
-      {false, -130, MType({0xfa7b46df314112a9, 0x45b937f0d05bb1cd})},
+      {Sign::POS, -127, MType({0, 0x8000000000000000})}, // 1.0
+      {Sign::POS, -126, MType({0xea56d62b82d30a2d, 0x935d8dddaaa8ac16})},
+      {Sign::POS, -126, MType({0x80a99ce75f4d5bdb, 0xa9a92639e753443a})},
+      {Sign::POS, -126, MType({0x6a4f9d7dbf6c9635, 0x82382c8ef1652304})},
+      {Sign::POS, -124, MType({0x345787019216c7af, 0x12bd7609fd98c44c})},
+      {Sign::POS, -127, MType({0xcc41ed7e0d27aee5, 0x450a7ff47535d889})},
+      {Sign::POS, -130, MType({0x8326bb91a6e7601d, 0xd3f6b844702d636b})},
+      {Sign::POS, -130, MType({0xfa7b46df314112a9, 0x45b937f0d05bb1cd})},
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -247,7 +248,7 @@ double set_exceptional(double x) {
         return x;
 
       if (fputil::quick_get_round() == FE_UPWARD)
-        return FPBits::min_denormal();
+        return FPBits::min_subnormal().get_val();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0;
@@ -261,13 +262,13 @@ double set_exceptional(double x) {
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return FPBits::max_normal();
+      return FPBits::max_normal().get_val();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
   }
   // x is +inf or nan
-  return x + static_cast<double>(FPBits::inf());
+  return x + FPBits::inf().get_val();
 }
 
 } // namespace

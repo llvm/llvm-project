@@ -873,7 +873,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   prettyPrintAttributes(D, Out, AttrPrintLoc::Right);
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     Out << " = 0";
   else if (D->isDeletedAsWritten())
     Out << " = delete";
@@ -1216,6 +1216,10 @@ void DeclPrinter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
 void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
                                           bool OmitTemplateKW) {
   assert(Params);
+
+  // Don't print invented template parameter lists.
+  if (!Params->empty() && Params->getParam(0)->isImplicit())
+    return;
 
   if (!OmitTemplateKW)
     Out << "template ";

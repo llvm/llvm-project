@@ -51,7 +51,6 @@
 
 #include "ObjectFileMachO.h"
 #ifdef LLDB_ENABLE_SWIFT
-#include "swift/ABI/ObjectFile.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #endif //LLDB_ENABLE_SWIFT
 
@@ -1205,6 +1204,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleObjC:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
+        case eSectionTypeLLDBTypeSummaries:
         case eSectionTypeSwiftModules:
           return AddressClass::eDebug;
 
@@ -1482,6 +1482,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_data("__data");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
+  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
   if (section_name == g_sect_name_dwarf_debug_abbrev)
@@ -1562,6 +1563,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
     return eSectionTypeCTF;
+  if (section_name == g_sect_name_lldb_summaries)
+    return lldb::eSectionTypeLLDBTypeSummaries;
   if (section_name == g_sect_name_swift_ast)
     return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_objc_data ||
@@ -2231,7 +2234,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   const char *file_name = file.GetFilename().AsCString("<Unknown>");
   LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
-  Progress progress(llvm::formatv("Parsing symbol table for {0}", file_name));
+  Progress progress("Parsing symbol table", file_name);
 
   llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
@@ -4942,6 +4945,14 @@ struct OSEnv {
       environment =
           llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
       return;
+    case llvm::MachO::PLATFORM_XROS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::XROS);
+      return;
+    case llvm::MachO::PLATFORM_XROS_SIMULATOR:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::XROS);
+      environment =
+          llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
+      return;
     default: {
       Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
       LLDB_LOGF(log, "unsupported platform in LC_BUILD_VERSION");
@@ -6509,7 +6520,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       (target_triple.getOS() == llvm::Triple::MacOSX ||
        target_triple.getOS() == llvm::Triple::IOS ||
        target_triple.getOS() == llvm::Triple::WatchOS ||
-       target_triple.getOS() == llvm::Triple::TvOS)) {
+       target_triple.getOS() == llvm::Triple::TvOS ||
+       target_triple.getOS() == llvm::Triple::XROS)) {
     // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
     // {
     bool make_core = false;
@@ -6864,16 +6876,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                  // this process
   }
   return false;
-}
-
-llvm::StringRef ObjectFileMachO::GetReflectionSectionIdentifier(
-    swift::ReflectionSectionKind section) {
-#ifdef LLDB_ENABLE_SWIFT
-  swift::SwiftObjectFileFormatMachO file_format_mach_o;
-  return file_format_mach_o.getSectionName(section);
-#else
-  llvm_unreachable("Swift support disabled");
-#endif //LLDB_ENABLE_SWIFT
 }
 
 ObjectFileMachO::MachOCorefileAllImageInfos

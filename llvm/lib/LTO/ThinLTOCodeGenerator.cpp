@@ -387,48 +387,42 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
       std::move(OutputBuffer), /*RequiresNullTerminator=*/false);
 }
 
+struct NullModuleCacheEntry : ModuleCacheEntry {
+  std::string getEntryPath() override { return "<null>"; }
+  ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() override {
+    return std::error_code();
+  }
+  void write(const MemoryBuffer &OutputBuffer) override {}
+};
+
 class FileModuleCacheEntry : public ModuleCacheEntry {
 public:
+  static std::unique_ptr<ModuleCacheEntry> create(StringRef CachePath,
+                                                  std::string Key) {
+    if (CachePath.empty())
+      return std::make_unique<NullModuleCacheEntry>();
+    return std::make_unique<FileModuleCacheEntry>(CachePath, std::move(Key));
+  }
+
   // Create a cache entry. This compute a unique hash for the Module considering
   // the current list of export/import, and offer an interface to query to
   // access the content in the cache.
-  FileModuleCacheEntry(
-      StringRef CachePath, const ModuleSummaryIndex &Index, StringRef ModuleID,
-      const FunctionImporter::ImportMapTy &ImportList,
-      const FunctionImporter::ExportSetTy &ExportList,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder) {
-    if (CachePath.empty())
-      return;
-
-    std::optional<std::string> Key =
-        computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
-                        DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
-
-    if (!Key)
-      return;
-
+  FileModuleCacheEntry(StringRef CachePath, std::string Key) {
+    assert(!CachePath.empty());
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath, "llvmcache-" + *Key);
+    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
   }
 
   std::string getEntryPath() final { return EntryPath.str().str(); }
 
   // Try loading the buffer for this cache entry.
   ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() final {
-    if (EntryPath.empty())
-      return std::error_code();
-
     return MemoryBuffer::getFile(EntryPath);
   }
 
   // Cache the Produced object file
   void write(const MemoryBuffer &OutputBuffer) final {
-    if (EntryPath.empty())
-      return;
-
     if (auto Err = llvm::writeToOutput(
             EntryPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
               OS << OutputBuffer.getBuffer();
@@ -443,30 +437,24 @@ public:
                     StringRef OutputPath) final {
     // Clear output file if exists for hard-linking.
     sys::fs::remove(OutputPath);
-    // Cache is enabled, hard-link the entry (or copy if hard-link fails).
-    std::string CacheEntryPath = getEntryPath();
-    if (!CacheEntryPath.empty()) {
-      auto Err = sys::fs::create_hard_link(CacheEntryPath, OutputPath);
-      if (!Err)
-        return Error::success();
-      // Hard linking failed, try to copy.
-      Err = sys::fs::copy_file(CacheEntryPath, OutputPath);
-      if (!Err)
-        return Error::success();
-      // Copy failed (could be because the CacheEntry was removed from the cache
-      // in the meantime by another process), fall back and try to write down
-      // the buffer to the output.
-      errs() << "remark: can't link or copy from cached entry '"
-             << CacheEntryPath << "' to '" << OutputPath << "'\n";
-    }
+    // Hard-link the entry (or copy if hard-link fails).
+    auto Err = sys::fs::create_hard_link(EntryPath, OutputPath);
+    if (!Err)
+      return Error::success();
+    // Hard linking failed, try to copy.
+    Err = sys::fs::copy_file(EntryPath, OutputPath);
+    if (!Err)
+      return Error::success();
+    // Copy failed (could be because the CacheEntry was removed from the cache
+    // in the meantime by another process), fall back and try to write down
+    // the buffer to the output.
+    errs() << "remark: can't link or copy from cached entry '" << EntryPath
+           << "' to '" << OutputPath << "'\n";
     // Fallback to default.
     return ModuleCacheEntry::writeObject(OutputBuffer, OutputPath);
   }
 
   std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
-    if (getEntryPath().empty())
-      return std::nullopt;
-
     auto ReloadedBufferOrErr = tryLoadingBuffer();
     if (auto EC = ReloadedBufferOrErr.getError()) {
       // On error, keep the preexisting buffer and print a diagnostic.
@@ -499,54 +487,34 @@ static void handleCASError(
     consumeError(std::move(E));
 }
 
+static cas::CASID createCASProxyOrAbort(cas::ObjectStore &CAS, StringRef Key) {
+  // Create the key by inserting cache key (SHA1) into CAS to create an ID for
+  // the correct context.
+  // TODO: We can have an alternative hashing function that doesn't need to
+  // store the key into CAS to get the CacheKey.
+  auto CASKey = CAS.createProxy(std::nullopt, Key);
+  if (!CASKey)
+    report_fatal_error(CASKey.takeError());
+  return CASKey->getID();
+}
+
 class CASModuleCacheEntry : public ModuleCacheEntry {
 public:
   // Create a cache entry. This compute a unique hash for the Module considering
   // the current list of export/import, and offer an interface to query to
   // access the content in the cache.
   CASModuleCacheEntry(
-      cas::ObjectStore &CAS, cas::ActionCache &Cache,
-      const ModuleSummaryIndex &Index, StringRef ModuleID,
-      const FunctionImporter::ImportMapTy &ImportList,
-      const FunctionImporter::ExportSetTy &ExportList,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      cas::ObjectStore &CAS, cas::ActionCache &Cache, std::string Key,
       std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger)
-      : CAS(CAS), Cache(Cache), Logger(std::move(Logger)) {
-    std::optional<std::string> Key =
-        computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
-                        DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
-
-    if (!Key)
-      return;
-
-    // Create the key by inserting cache key (SHA1) into CAS to create a ID for
-    // the correct context.
-    // TODO: We can have an alternative hashing function that doesn't
-    // need to store the key into CAS to get the CacheKey.
-    auto CASKey = CAS.createProxy(std::nullopt, *Key);
-    if (!CASKey) {
-      handleCASError(CASKey.takeError(), this->Logger);
-      // return as if the key doesn't exist, which will be treated as miss.
-      return;
-    }
-
-    ID = CASKey->getID();
-  }
+      : CAS(CAS), Cache(Cache), ID(createCASProxyOrAbort(CAS, Key)),
+        Logger(std::move(Logger)) {}
 
   std::string getEntryPath() final {
-    if (!ID)
-      return "";
-
-    return ID->toString();
+    return ID.toString();
   }
 
   // Try loading the buffer for this cache entry.
   ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() final {
-    if (!ID)
-      return std::error_code();
-
     std::optional<cas::CASID> MaybeKeyID;
     {
       ScopedDurationTimer ScopedTime([&](double Seconds) {
@@ -558,7 +526,7 @@ public:
         }
       });
 
-      if (Error E = Cache.get(*ID, /*Globally=*/true).moveInto(MaybeKeyID)) {
+      if (Error E = Cache.get(ID, /*Globally=*/true).moveInto(MaybeKeyID)) {
         handleCASError(std::move(E), Logger);
         // If handleCASError didn't abort, treat as miss.
         return std::error_code();
@@ -587,11 +555,8 @@ public:
     return MaybeObject->getMemoryBuffer("", /*NullTerminated=*/true);
   }
 
-  // Cache the Produced object file
+  // Cache the computed object file.
   void write(const MemoryBuffer &OutputBuffer) final {
-    if (!ID)
-      return;
-
     std::optional<cas::ObjectProxy> Proxy;
     {
       ScopedDurationTimer ScopedTime([&](double Seconds) {
@@ -617,14 +582,14 @@ public:
       }
     });
 
-    if (auto Err = Cache.put(*ID, Proxy->getID(), /*Globally=*/true))
+    if (auto Err = Cache.put(ID, Proxy->getID(), /*Globally=*/true))
       handleCASError(std::move(Err), Logger);
   }
 
 private:
   cas::ObjectStore &CAS;
   cas::ActionCache &Cache;
-  std::optional<cas::CASID> ID;
+  cas::CASID ID;
   std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger;
 };
 
@@ -634,33 +599,16 @@ public:
   // the current list of export/import, and offer an interface to query to
   // access the content in the cache.
   RemoteModuleCacheEntry(
-      cas::remote::ClientServices &Service, const ModuleSummaryIndex &Index,
-      StringRef ModuleID, StringRef OutputPath,
-      const FunctionImporter::ImportMapTy &ImportList,
-      const FunctionImporter::ExportSetTy &ExportList,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      cas::remote::ClientServices &Service, StringRef OutputPath,
+      std::string Key,
       std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger)
-      : Service(Service), OutputPath(OutputPath.str()),
-        Logger(std::move(Logger)) {
-    std::optional<std::string> Key =
-        computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
-                        DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
-
-    if (!Key)
-      return;
-
-    ID = *Key;
-  }
+      : Service(Service), ID(std::move(Key)), OutputPath(OutputPath.str()),
+        Logger(std::move(Logger)) {}
 
   std::string getEntryPath() final { return ID; }
 
   // Try loading the buffer for this cache entry.
   ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() final {
-    if (ID.empty())
-      return std::error_code();
-
     // Lookup the output value from KVDB.
     std::optional<cas::remote::KeyValueDBClient::ValueTy> GetResponse;
     {
@@ -719,9 +667,6 @@ public:
 
   // Cache the Produced object file
   void write(const MemoryBuffer &OutputBuffer) final {
-    if (ID.empty())
-      return;
-
     if (!ProducedOutput)
       cantFail(ModuleCacheEntry::writeObject(OutputBuffer, OutputPath));
 
@@ -1002,21 +947,23 @@ std::unique_ptr<ModuleCacheEntry> ThinLTOCodeGenerator::createModuleCacheEntry(
     const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
     bool Freestanding, const TargetMachineBuilder &TMBuilder,
     std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger) {
+  std::optional<std::string> Key = ModuleCacheEntry::computeCacheKey(
+      Index, ModuleID, ImportList, ExportList, ResolvedODR, DefinedGVSummaries,
+      OptLevel, Freestanding, TMBuilder);
+
+  if (!Key)
+    return std::make_unique<NullModuleCacheEntry>();
+
   switch (CacheOptions.Type) {
   case CachingOptions::CacheType::CacheDirectory:
-    return std::make_unique<FileModuleCacheEntry>(
-        CacheOptions.Path, Index, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
+    return FileModuleCacheEntry::create(CacheOptions.Path, std::move(*Key));
   case CachingOptions::CacheType::CAS:
     return std::make_unique<CASModuleCacheEntry>(
-        *CacheOptions.CAS, *CacheOptions.Cache, Index, ModuleID, ImportList,
-        ExportList, ResolvedODR, DefinedGVSummaries, OptLevel, Freestanding,
-        TMBuilder, std::move(Logger));
+        *CacheOptions.CAS, *CacheOptions.Cache, std::move(*Key),
+        std::move(Logger));
   case CachingOptions::CacheType::RemoteService:
     return std::make_unique<RemoteModuleCacheEntry>(
-        *CacheOptions.Service, Index, ModuleID, OutputPath, ImportList,
-        ExportList, ResolvedODR, DefinedGVSummaries, OptLevel, Freestanding,
-        TMBuilder, std::move(Logger));
+        *CacheOptions.Service, OutputPath, std::move(*Key), std::move(Logger));
   }
 }
 
@@ -1415,7 +1362,7 @@ ThinLTOCodeGenerator::writeGeneratedObject(StringRef OutputPath,
     Error Err = CacheEntry->writeObject(OutputBuffer, OutputPath);
     if (Err)
       report_fatal_error(std::move(Err));
-    return OutputPath.str();
+    return std::string(OutputPath);
   }
   // No cache entry, just write out the buffer.
   std::error_code Err;
@@ -1423,7 +1370,7 @@ ThinLTOCodeGenerator::writeGeneratedObject(StringRef OutputPath,
   if (Err)
     report_fatal_error(Twine("Can't open output '") + OutputPath + "'\n");
   OS << OutputBuffer.getBuffer();
-  return std::string(OutputPath.str());
+  return std::string(OutputPath);
 }
 
 // Main entry point for the ThinLTO processing
@@ -1717,7 +1664,7 @@ void ThinLTOCodeGenerator::run() {
             OS << "Update cached result for " << ModuleIdentifier << "\n";
           });
 
-        // Commit to the cache (if enabled)
+        // Commit to the cache.
         CacheEntry->write(*OutputBuffer);
 
         if (UseBufferAPI) {

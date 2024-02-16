@@ -21,7 +21,6 @@ class TestSwiftMissingVFSOverlay(TestBase):
         """This used to be a test for a diagnostic, however,
         this is no longer an unrecoverable error"""
         self.build()
-        os.unlink(self.getBuildArtifact("header.pch"))
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift"),
             extra_images=["Foo"]

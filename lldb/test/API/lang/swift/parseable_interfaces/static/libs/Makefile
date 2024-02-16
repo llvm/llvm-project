@@ -17,7 +17,7 @@ include Makefile.rules
 
 # These are *not* Makefile.rules config variables.
 ARCHIVE_NAME := lib$(BASENAME).a
-ARCHIVE_OBJECTS := $(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
+ARCHIVE_OBJECTS := $(strip $(DYLIB_SWIFT_SOURCES:.swift=.swift.o))
 $(ARCHIVE_NAME): $(ARCHIVE_OBJECTS) $(BASENAME).swiftmodule
 	$(AR) $(ARFLAGS) $@ $<
 

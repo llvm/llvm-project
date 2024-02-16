@@ -1005,14 +1005,14 @@ void Module::FindTypes(const TypeQuery &query, TypeResults &results) {
     symbols->FindTypes(query, results);
 }
 
-static Debugger::DebuggerList 
+static Debugger::DebuggerList
 DebuggersOwningModuleRequestingInterruption(Module &module) {
-  Debugger::DebuggerList requestors 
-      = Debugger::DebuggersRequestingInterruption();
+  Debugger::DebuggerList requestors =
+      Debugger::DebuggersRequestingInterruption();
   Debugger::DebuggerList interruptors;
   if (requestors.empty())
     return interruptors;
-    
+
   for (auto debugger_sp : requestors) {
     if (!debugger_sp->InterruptRequested())
       continue;
@@ -1027,12 +1027,12 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_symfile.load() && can_create) {
-      Debugger::DebuggerList interruptors 
-          = DebuggersOwningModuleRequestingInterruption(*this);
+      Debugger::DebuggerList interruptors =
+          DebuggersOwningModuleRequestingInterruption(*this);
       if (!interruptors.empty()) {
         for (auto debugger_sp : interruptors) {
-          REPORT_INTERRUPTION(*(debugger_sp.get()), 
-                              "Interrupted fetching symbols for module {0}", 
+          REPORT_INTERRUPTION(*(debugger_sp.get()),
+                              "Interrupted fetching symbols for module {0}",
                               this->GetFileSpec());
         }
         return nullptr;
@@ -1140,7 +1140,7 @@ static llvm::VersionTuple GetAdjustedVersion(llvm::VersionTuple version) {
 }
 
 void Module::ReportWarningToolchainMismatch(
-    CompileUnit &comp_unit, llvm::Optional<lldb::user_id_t> debugger_id) {
+    CompileUnit &comp_unit, std::optional<lldb::user_id_t> debugger_id) {
   if (SymbolFile *sym_file = GetSymbolFile()) {
     llvm::VersionTuple sym_file_version =
         GetAdjustedVersion(sym_file->GetProducerVersion(comp_unit));

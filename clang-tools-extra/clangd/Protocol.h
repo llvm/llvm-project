@@ -128,6 +128,23 @@ private:
 llvm::json::Value toJSON(const URIForFile &U);
 bool fromJSON(const llvm::json::Value &, URIForFile &, llvm::json::Path);
 
+template <typename T>
+bool fromJSON(const llvm::json::Value &E, std::map<URIForFile, T> &Out,
+              llvm::json::Path P) {
+  if (auto *O = E.getAsObject()) {
+    Out.clear();
+    for (const auto &KV : *O) {
+      URIForFile URI;
+      fromJSON(llvm::json::Value(KV.first), URI, P);
+      if (!fromJSON(KV.second, Out[URI], P.field(KV.first)))
+        return false;
+    }
+    return true;
+  }
+  P.report("expected object");
+  return false;
+}
+
 struct TextDocumentIdentifier {
   /// The text document's URI.
   URIForFile uri;
@@ -1004,6 +1021,17 @@ struct CodeActionParams {
 };
 bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
+struct PrepareRenameResult {
+  /// The range of the string to rename.
+  Range range;
+  /// A placeholder text of the string content to be renamed.
+  ///
+  /// This is usueful to populate the rename field with an Objective-C selector
+  /// name (eg. `performAction:with:`) when renaming Objective-C methods.
+  std::string placeholder;
+};
+llvm::json::Value toJSON(const PrepareRenameResult &WE);
+
 /// The edit should either provide changes or documentChanges. If the client
 /// can handle versioned document edits and if documentChanges are present,
 /// the latter are preferred over changes.
@@ -1435,6 +1463,37 @@ struct RenameParams {
   std::string newName;
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
+
+/// Rename all occurrences of a symbol named `oldName` to `newName` at the
+/// given `positions`.
+///
+/// The use case of this method is for when the positions to rename are already
+/// known, eg. from an index lookup outside of clangd's built-in index. In
+/// particular, it determines the edits necessary to rename multi-piece
+/// Objective-C selector names.
+///
+/// `textDocument` is used to determine the language options for the symbol to
+/// rename, eg. to decide whether `oldName` and `newName` are Objective-C
+/// selectors or normal identifiers.
+///
+/// This is a clangd extension.
+struct IndexedRenameParams {
+  /// The document in which the declaration to rename is declared. Its compiler
+  /// arguments are used to infer language settings for the rename.
+  TextDocumentIdentifier textDocument;
+
+  /// The old name of the symbol.
+  std::string oldName;
+
+  /// The new name of the symbol.
+  std::string newName;
+
+  /// The positions at which the symbol is known to appear and that should be
+  /// renamed.
+  std::map<URIForFile, std::vector<Position>> positions;
+};
+bool fromJSON(const llvm::json::Value &, IndexedRenameParams &,
+              llvm::json::Path);
 
 enum class DocumentHighlightKind { Text = 1, Read = 2, Write = 3 };
 

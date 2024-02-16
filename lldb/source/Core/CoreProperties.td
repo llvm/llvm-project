@@ -8,7 +8,12 @@ let Definition = "modulelist" in {
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"On macOS, enable calling dsymForUUID (or an equivalent script/binary) in the background to locate symbol files that weren't found.">;
+    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.download background'.">;
+  def AutoDownload: Property<"auto-download", "Enum">,
+    Global,
+    DefaultEnumValue<"eSymbolDownloadOff">,
+    EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
+    Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -27,7 +32,7 @@ let Definition = "modulelist" in {
     DefaultFalse,
     Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
   def UseSwiftPreciseCompilerInvocation: Property<"swift-precise-compiler-invocation", "Boolean">,
-    DefaultFalse,
+    DefaultTrue,
     Desc<"In the Swift expression evaluator, create many Swift compiler instances with the precise invocation for the current context, instead of a single compiler instance that merges all flags from the entire project.">;
   def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,

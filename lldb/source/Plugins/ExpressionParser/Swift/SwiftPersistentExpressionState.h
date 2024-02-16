@@ -84,7 +84,7 @@ public:
 
   ConstString GetNextPersistentVariableName(bool is_error = false) override;
 
-  llvm::Optional<CompilerType>
+  std::optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
   void RegisterSwiftPersistentDecl(CompilerDecl value_decl);

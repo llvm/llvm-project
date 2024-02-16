@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
+#include <optional>
 
 namespace swift {
 class CaseStmt;
@@ -213,7 +214,7 @@ public:
   swift::VarDecl *GetVarDeclForVariableInFunction(
       const SwiftASTManipulator::VariableInfo &variable,
       swift::FuncDecl *containing_function);
-  llvm::Optional<swift::Type> GetSwiftTypeForVariable(
+  std::optional<swift::Type> GetSwiftTypeForVariable(
       const SwiftASTManipulator::VariableInfo &variable) const;
 
   bool AddExternalVariables(llvm::MutableArrayRef<VariableInfo> variables);

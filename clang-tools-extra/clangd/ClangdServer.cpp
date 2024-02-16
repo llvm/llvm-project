@@ -578,8 +578,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     // prepareRename is latency-sensitive: we don't query the index, as we
     // only need main-file references
     auto Results =
-        clangd::rename({Pos, NewName.value_or("__clangd_rename_placeholder"),
-                        InpAST->AST, File, /*FS=*/nullptr,
+        clangd::rename({Pos, NewName, InpAST->AST, File, /*FS=*/nullptr,
                         /*Index=*/nullptr, RenameOpts});
     if (!Results) {
       // LSP says to return null on failure, but that will result in a generic
@@ -623,6 +622,50 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     return CB(*R);
   };
   WorkScheduler->runWithAST("Rename", File, std::move(Action));
+}
+
+void ClangdServer::indexedRename(
+    const std::map<URIForFile, std::vector<Position>> &Positions,
+    PathRef PrimaryFile, llvm::StringRef OldName, llvm::StringRef NewName,
+    Callback<FileEdits> CB) {
+  ParseInputs Inputs;
+  Inputs.TFS = &TFS;
+  Inputs.CompileCommand = CDB.getCompileCommand(PrimaryFile)
+                              .value_or(CDB.getFallbackCommand(PrimaryFile));
+  IgnoreDiagnostics IgnoreDiags;
+  std::unique_ptr<CompilerInvocation> CI =
+      buildCompilerInvocation(Inputs, IgnoreDiags);
+  if (!CI) {
+    return CB(llvm::make_error<llvm::StringError>(
+        "Unable to get compiler arguments for primary file",
+        llvm::inconvertibleErrorCode()));
+  }
+  const LangOptions &LangOpts = CI->getLangOpts();
+
+  tooling::SymbolName OldSymbolName(OldName, LangOpts);
+  tooling::SymbolName NewSymbolName(NewName, LangOpts);
+
+  llvm::StringMap<std::vector<Range>> FilesToRanges;
+  for (auto Entry : Positions) {
+    std::vector<Range> &Ranges = FilesToRanges[Entry.first.file()];
+    for (Position Pos : Entry.second) {
+      // Compute the range for the given position:
+      // - If the old name is a simple identifier, we can add its length to the
+      //   start position's column because identifiers can't contain newlines
+      // - If we have a multi-piece symbol name, them `editsForLocations` will
+      //   only look at the start of the range to call
+      //   `findObjCSymbolSelectorPieces`. It is thus fine to use an empty
+      //   range that points to the symbol's start.
+      Position End = Pos;
+      if (std::optional<std::string> Identifier =
+              OldSymbolName.getSinglePiece()) {
+        End.line += Identifier->size();
+      }
+      Ranges.push_back({Pos, End});
+    }
+  }
+  CB(editsForLocations(FilesToRanges, OldSymbolName, NewSymbolName,
+                       *getHeaderFS().view(std::nullopt), LangOpts));
 }
 
 // May generate several candidate selections, due to SelectionTree ambiguity.

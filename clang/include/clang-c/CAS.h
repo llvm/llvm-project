@@ -24,6 +24,7 @@
 #include "clang-c/CXString.h"
 #include "clang-c/Platform.h"
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,6 +118,39 @@ clang_experimental_cas_Databases_create(CXCASOptions Opts, CXString *Error);
  * Dispose of a \c CXCASDatabases object.
  */
 CINDEX_LINKAGE void clang_experimental_cas_Databases_dispose(CXCASDatabases);
+
+/**
+ * Get the local storage size of the CAS/cache data in bytes.
+ *
+ * \param[out] OutError The error object to pass back to client (if any).
+ * If non-null the object must be disposed using \c clang_Error_dispose.
+ * \returns the local storage size of the CAS/cache data, or -1 if the
+ * implementation does not support reporting such size, or -2 if an error
+ * occurred.
+ */
+CINDEX_LINKAGE int64_t clang_experimental_cas_Databases_get_storage_size(
+    CXCASDatabases, CXError *OutError);
+
+/**
+ * Set the size for limiting disk storage growth.
+ *
+ * \param size_limit the maximum size limit in bytes. 0 means no limit. Negative
+ * values are invalid.
+ * \returns an error object if there was an error, NULL otherwise.
+ * If non-null the object must be disposed using \c clang_Error_dispose.
+ */
+CINDEX_LINKAGE CXError clang_experimental_cas_Databases_set_size_limit(
+    CXCASDatabases, int64_t size_limit);
+
+/**
+ * Prune local storage to reduce its size according to the desired size limit.
+ * Pruning can happen concurrently with other operations.
+ *
+ * \returns an error object if there was an error, NULL otherwise.
+ * If non-null the object must be disposed using \c clang_Error_dispose.
+ */
+CINDEX_LINKAGE
+CXError clang_experimental_cas_Databases_prune_ondisk_data(CXCASDatabases);
 
 /**
  * Loads an object using its printed \p CASID.

@@ -132,7 +132,10 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("thumb2pe");
     break;
   case llvm::Triple::aarch64:
-    CmdArgs.push_back("arm64pe");
+    if (TC.getEffectiveTriple().isWindowsArm64EC())
+      CmdArgs.push_back("arm64ecpe");
+    else
+      CmdArgs.push_back("arm64pe");
     break;
   default:
     D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
@@ -614,17 +617,17 @@ SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
 
 void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                            ArgStringList &CC1Args) const {
-  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+  CudaInstallation->AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                           ArgStringList &CC1Args) const {
-  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+  RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::printVerboseInfo(raw_ostream &OS) const {
-  CudaInstallation.print(OS);
-  RocmInstallation.print(OS);
+  CudaInstallation->print(OS);
+  RocmInstallation->print(OS);
 }
 
 // Include directories for various hosts:

@@ -53,6 +53,10 @@ class SPIRVInstructionSelector : public InstructionSelector {
   SPIRVGlobalRegistry &GR;
   MachineRegisterInfo *MRI;
 
+  /// We need to keep track of the number we give to anonymous global values to
+  /// generate the same name every time when this is needed.
+  mutable DenseMap<const GlobalValue *, unsigned> UnnamedGlobalIDs;
+
 public:
   SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                            const SPIRVSubtarget &ST,
@@ -1519,7 +1523,23 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
       PointerBaseType, I, TII,
       addressSpaceToStorageClass(GV->getAddressSpace()));
-  std::string GlobalIdent = GV->getGlobalIdentifier();
+
+  std::string GlobalIdent;
+  if (!GV->hasName()) {
+    unsigned &ID = UnnamedGlobalIDs[GV];
+    if (ID == 0)
+      ID = UnnamedGlobalIDs.size();
+    GlobalIdent = "__unnamed_" + Twine(ID).str();
+  } else {
+    GlobalIdent = GV->getGlobalIdentifier();
+  }
+
+  // Behaviour of functions as operands depends on availability of the
+  // corresponding extension (SPV_INTEL_function_pointers):
+  // - If there is an extension to operate with functions as operands:
+  // We create a proper constant operand and evaluate a correct type for a
+  // function pointer.
+  // - Without the required extension:
   // We have functions as operands in tests with blocks of instruction e.g. in
   // transcoding/global_block.ll. These operands are not used and should be
   // substituted by zero constants. Their type is expected to be always
@@ -1531,6 +1551,27 @@ bool SPIRVInstructionSelector::selectGlobalValue(
     if (!NewReg.isValid()) {
       Register NewReg = ResVReg;
       GR.add(ConstVal, GR.CurMF, NewReg);
+      const Function *GVFun =
+          STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
+              ? dyn_cast<Function>(GV)
+              : nullptr;
+      if (GVFun) {
+        // References to a function via function pointers generate virtual
+        // registers without a definition. We will resolve it later, during
+        // module analysis stage.
+        MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+        Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+        MRI->setRegClass(FuncVReg, &SPIRV::IDRegClass);
+        MachineInstrBuilder MB =
+            BuildMI(BB, I, I.getDebugLoc(),
+                    TII.get(SPIRV::OpConstantFunctionPointerINTEL))
+                .addDef(NewReg)
+                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(FuncVReg);
+        // mapping the function pointer to the used Function
+        GR.recordFunctionPointer(&MB.getInstr()->getOperand(2), GVFun);
+        return MB.constrainAllUses(TII, TRI, RBI);
+      }
       return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
           .addDef(NewReg)
           .addUse(GR.getSPIRVTypeID(ResType))
@@ -1560,7 +1601,10 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   SPIRV::LinkageType::LinkageType LnkType =
       (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
           ? SPIRV::LinkageType::Import
-          : SPIRV::LinkageType::Export;
+          : (GV->getLinkage() == GlobalValue::LinkOnceODRLinkage &&
+                     STI.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr)
+                 ? SPIRV::LinkageType::LinkOnceODR
+                 : SPIRV::LinkageType::Export);
 
   Register Reg = GR.buildGlobalVariable(ResVReg, ResType, GlobalIdent, GV,
                                         Storage, Init, GlobalVar->isConstant(),

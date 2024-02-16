@@ -30,6 +30,13 @@ class Node;
 using NodePointer = Node *;
 class Demangler;
 } // namespace Demangle
+namespace reflection {
+struct DescriptorFinder;
+class TypeInfo;
+} // namespace reflection
+namespace remote {
+struct TypeInfoProvider;
+} // namespace remote
 } // namespace swift
 
 namespace lldb_private {
@@ -178,10 +185,10 @@ public:
   CompilerType GetVoidFunctionType();
 
   // Exploring the type
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetByteStride(lldb::opaque_compiler_type_t type,
                 ExecutionContextScope *exe_scope) override;
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
@@ -251,7 +258,7 @@ public:
 
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override;
-  llvm::Optional<size_t>
+  std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
@@ -275,6 +282,8 @@ public:
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp);
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
+  /// Determine whether this is a builtin SIMD type.
+  static bool IsSIMDType(CompilerType type);
   /// Like \p IsImportedType(), but even returns Clang types that are also Swift
   /// builtins (int <-> Swift.Int) as Clang types.
   CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type,
@@ -296,22 +305,29 @@ public:
     bool indirect = false;
     bool expanded = false;
   };
-  llvm::Optional<PackTypeInfo> IsSILPackType(CompilerType type);
+  std::optional<PackTypeInfo> IsSILPackType(CompilerType type);
   CompilerType GetSILPackElementAtIndex(CompilerType type, unsigned i);
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
-  llvm::Optional<NonTriviallyManagedReferenceKind>
+  std::optional<NonTriviallyManagedReferenceKind>
   GetNonTriviallyManagedReferenceKind(
       lldb::opaque_compiler_type_t type) override;
 
   /// Return the nth tuple element's type and name, if it has one.
-  llvm::Optional<TupleElement>
+  std::optional<TupleElement>
   GetTupleElement(lldb::opaque_compiler_type_t type, size_t idx);
 
   /// Creates a GenericTypeParamType with the desired depth and index.
   CompilerType CreateGenericTypeParamType(unsigned int depth,
                                     unsigned int index) override;
+
+  /// Builds a bound generic struct demangle tree with the name, module name,
+  /// and the struct's elements.
+  static swift::Demangle::NodePointer CreateBoundGenericStruct(
+      llvm::StringRef name, llvm::StringRef module_name,
+      llvm::ArrayRef<swift::Demangle::NodePointer> type_list_elements,
+      swift::Demangle::Demangler &dem);
 
   /// Get the Swift raw pointer type.
   CompilerType GetRawPointerType();
@@ -345,9 +361,6 @@ public:
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
 
-  /// Return whether the type is known to be specially handled by the compiler.
-  static bool IsKnownSpecialImportedType(llvm::StringRef name);
-
   /// Use API notes to determine the swiftified name of \p clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
@@ -373,6 +386,12 @@ public:
   /// For example, int is converted to Int32.
   CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) override;
 
+  /// Gets the descriptor finder belonging to this instance's
+  /// module.
+  swift::reflection::DescriptorFinder *GetDescriptorFinder();
+
+  /// Lookup a type in the debug info.
+  lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type,
@@ -382,8 +401,6 @@ protected:
   /// Cast \p opaque_type as a mangled name.
   static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
-  /// Lookup a type in the debug info.
-  lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
@@ -513,10 +530,13 @@ public:
   /// Forwards to SwiftASTContext.
   PersistentExpressionState *GetPersistentExpressionState() override;
   Status PerformCompileUnitImports(const SymbolContext &sc);
+  /// Returns how often ModulesDidLoad was called/
+  unsigned GetGeneration() const { return m_generation; }
 
   friend class SwiftASTContextForExpressions;
 protected:
   lldb::TargetWP m_target_wp;
+  unsigned m_generation = 0;
 
   /// This exists to implement the PerformCompileUnitImports
   /// mechanism.

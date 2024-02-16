@@ -924,7 +924,7 @@ public:
   LocIdx getRegMLoc(Register R) {
     unsigned ID = getLocID(R);
     assert(ID < LocIDToLocIdx.size());
-    assert(LocIDToLocIdx[ID] != UINT_MAX); // Sentinal for IndexedMap.
+    assert(LocIDToLocIdx[ID] != UINT_MAX); // Sentinel for IndexedMap.
     return LocIDToLocIdx[ID];
   }
 
@@ -940,7 +940,7 @@ public:
 
   // Get LocIdx of a spill ID.
   LocIdx getSpillMLoc(unsigned SpillID) {
-    assert(LocIDToLocIdx[SpillID] != UINT_MAX); // Sentinal for IndexedMap.
+    assert(LocIDToLocIdx[SpillID] != UINT_MAX); // Sentinel for IndexedMap.
     return LocIDToLocIdx[SpillID];
   }
 

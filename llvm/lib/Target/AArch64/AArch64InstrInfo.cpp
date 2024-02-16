@@ -1068,6 +1068,8 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_EpilogStart:
     case AArch64::SEH_EpilogEnd:
     case AArch64::SEH_PACSignLR:
+    case AArch64::SEH_SaveAnyRegQP:
+    case AArch64::SEH_SaveAnyRegQPX:
       return true;
   }
 }
@@ -2184,7 +2186,7 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
   return false;
 }
 
-unsigned AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -2208,7 +2210,7 @@ unsigned AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -2501,7 +2503,9 @@ bool AArch64InstrInfo::isTailCallReturnInst(const MachineInstr &MI) {
     return false;
   case AArch64::TCRETURNdi:
   case AArch64::TCRETURNri:
-  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNrix16x17:
+  case AArch64::TCRETURNrix17:
+  case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL:
   case AArch64::AUTH_TCRETURNrii:
   case AArch64::AUTH_TCRETURNriri:
@@ -4098,16 +4102,6 @@ AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
   return MI.getOperand(Idx);
 }
 
-const MachineOperand &
-AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case AArch64::LDRBBroX:
-    return MI.getOperand(4);
-  }
-}
-
 static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
                                               Register Reg) {
   if (MI.getParent() == nullptr)
@@ -4216,6 +4210,27 @@ static bool canPairLdStOpc(unsigned FirstOpc, unsigned SecondOpc) {
   switch (FirstOpc) {
   default:
     return false;
+  case AArch64::STRSui:
+  case AArch64::STURSi:
+    return SecondOpc == AArch64::STRSui || SecondOpc == AArch64::STURSi;
+  case AArch64::STRDui:
+  case AArch64::STURDi:
+    return SecondOpc == AArch64::STRDui || SecondOpc == AArch64::STURDi;
+  case AArch64::STRQui:
+  case AArch64::STURQi:
+    return SecondOpc == AArch64::STRQui || SecondOpc == AArch64::STURQi;
+  case AArch64::STRWui:
+  case AArch64::STURWi:
+    return SecondOpc == AArch64::STRWui || SecondOpc == AArch64::STURWi;
+  case AArch64::STRXui:
+  case AArch64::STURXi:
+    return SecondOpc == AArch64::STRXui || SecondOpc == AArch64::STURXi;
+  case AArch64::LDRSui:
+  case AArch64::LDURSi:
+    return SecondOpc == AArch64::LDRSui || SecondOpc == AArch64::LDURSi;
+  case AArch64::LDRDui:
+  case AArch64::LDURDi:
+    return SecondOpc == AArch64::LDRDui || SecondOpc == AArch64::LDURDi;
   case AArch64::LDRQui:
   case AArch64::LDURQi:
     return SecondOpc == AArch64::LDRQui || SecondOpc == AArch64::LDURQi;
@@ -4225,6 +4240,9 @@ static bool canPairLdStOpc(unsigned FirstOpc, unsigned SecondOpc) {
   case AArch64::LDRSWui:
   case AArch64::LDURSWi:
     return SecondOpc == AArch64::LDRWui || SecondOpc == AArch64::LDURWi;
+  case AArch64::LDRXui:
+  case AArch64::LDURXi:
+    return SecondOpc == AArch64::LDRXui || SecondOpc == AArch64::LDURXi;
   }
   // These instructions can't be paired based on their opcodes.
   return false;
@@ -8069,9 +8087,10 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_S, "aarch64-s"},
       {MO_TLS, "aarch64-tls"},
       {MO_DLLIMPORT, "aarch64-dllimport"},
-      {MO_DLLIMPORTAUX, "aarch64-dllimportaux"},
       {MO_PREL, "aarch64-prel"},
-      {MO_TAGGED, "aarch64-tagged"}};
+      {MO_TAGGED, "aarch64-tagged"},
+      {MO_ARM64EC_CALLMANGLE, "aarch64-arm64ec-callmangle"},
+  };
   return ArrayRef(TargetFlags);
 }
 
@@ -8229,11 +8248,11 @@ std::optional<outliner::OutlinedFunction>
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-  unsigned SequenceSize =
-      std::accumulate(FirstCand.front(), std::next(FirstCand.back()), 0,
-                      [this](unsigned Sum, const MachineInstr &MI) {
-                        return Sum + getInstSizeInBytes(MI);
-                      });
+
+  unsigned SequenceSize = 0;
+  for (auto &MI : FirstCand)
+    SequenceSize += getInstSizeInBytes(MI);
+
   unsigned NumBytesToCreateFrame = 0;
 
   // We only allow outlining for functions having exactly matching return
@@ -8286,7 +8305,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
         AArch64PAuth::getCheckerSizeInBytes(LRCheckMethod);
     // Checking the authenticated LR value may significantly impact
     // SequenceSize, so account for it for more precise results.
-    if (isTailCallReturnInst(*RepeatedSequenceLocs[0].back()))
+    if (isTailCallReturnInst(RepeatedSequenceLocs[0].back()))
       SequenceSize += NumBytesToCheckLRInTCEpilogue;
 
     // We have to check if sp modifying instructions would get outlined.
@@ -8295,37 +8314,36 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // are not
     auto hasIllegalSPModification = [&TRI](outliner::Candidate &C) {
       int SPValue = 0;
-      MachineBasicBlock::iterator MBBI = C.front();
-      for (;;) {
-        if (MBBI->modifiesRegister(AArch64::SP, &TRI)) {
-          switch (MBBI->getOpcode()) {
+      for (auto &MI : C) {
+        if (MI.modifiesRegister(AArch64::SP, &TRI)) {
+          switch (MI.getOpcode()) {
           case AArch64::ADDXri:
           case AArch64::ADDWri:
-            assert(MBBI->getNumOperands() == 4 && "Wrong number of operands");
-            assert(MBBI->getOperand(2).isImm() &&
+            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+            assert(MI.getOperand(2).isImm() &&
                    "Expected operand to be immediate");
-            assert(MBBI->getOperand(1).isReg() &&
+            assert(MI.getOperand(1).isReg() &&
                    "Expected operand to be a register");
             // Check if the add just increments sp. If so, we search for
             // matching sub instructions that decrement sp. If not, the
             // modification is illegal
-            if (MBBI->getOperand(1).getReg() == AArch64::SP)
-              SPValue += MBBI->getOperand(2).getImm();
+            if (MI.getOperand(1).getReg() == AArch64::SP)
+              SPValue += MI.getOperand(2).getImm();
             else
               return true;
             break;
           case AArch64::SUBXri:
           case AArch64::SUBWri:
-            assert(MBBI->getNumOperands() == 4 && "Wrong number of operands");
-            assert(MBBI->getOperand(2).isImm() &&
+            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+            assert(MI.getOperand(2).isImm() &&
                    "Expected operand to be immediate");
-            assert(MBBI->getOperand(1).isReg() &&
+            assert(MI.getOperand(1).isReg() &&
                    "Expected operand to be a register");
             // Check if the sub just decrements sp. If so, we search for
             // matching add instructions that increment sp. If not, the
             // modification is illegal
-            if (MBBI->getOperand(1).getReg() == AArch64::SP)
-              SPValue -= MBBI->getOperand(2).getImm();
+            if (MI.getOperand(1).getReg() == AArch64::SP)
+              SPValue -= MI.getOperand(2).getImm();
             else
               return true;
             break;
@@ -8333,9 +8351,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
             return true;
           }
         }
-        if (MBBI == C.back())
-          break;
-        ++MBBI;
       }
       if (SPValue)
         return true;
@@ -8356,7 +8371,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     FlagsSetInAll &= C.Flags;
 
-  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
+  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back().getOpcode();
 
   // Helper lambda which sets call information for every candidate.
   auto SetCandidateCallInfo =
@@ -8375,8 +8390,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // We check to see if CFI Instructions are present, and if they are
   // we find the number of CFI Instructions in the candidates.
   unsigned CFICount = 0;
-  for (auto &I : make_range(RepeatedSequenceLocs[0].front(),
-                            std::next(RepeatedSequenceLocs[0].back()))) {
+  for (auto &I : RepeatedSequenceLocs[0]) {
     if (I.isCFIInstruction())
       CFICount++;
   }
@@ -8451,12 +8465,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // True if it's possible to fix up each stack instruction in this sequence.
   // Important for frames/call variants that modify the stack.
-  bool AllStackInstrsSafe = std::all_of(
-      FirstCand.front(), std::next(FirstCand.back()), IsSafeToFixup);
+  bool AllStackInstrsSafe = llvm::all_of(FirstCand, IsSafeToFixup);
 
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
-  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+  if (RepeatedSequenceLocs[0].back().isTerminator()) {
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = 0;
     unsigned NumBytesForCall = 4 + NumBytesToCheckLRInTCEpilogue;
@@ -8582,9 +8595,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       //
       if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
         erase_if(RepeatedSequenceLocs, [this, &TRI](outliner::Candidate &C) {
-          return (std::any_of(
-                     C.front(), std::next(C.back()),
-                     [](const MachineInstr &MI) { return MI.isCall(); })) &&
+          auto IsCall = [](const MachineInstr &MI) { return MI.isCall(); };
+          return (llvm::any_of(C, IsCall)) &&
                  (!C.isAvailableAcrossAndOutOfSeq(AArch64::LR, TRI) ||
                   !findRegisterToSaveLRTo(C));
         });
@@ -8604,7 +8616,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // Check if the range contains a call. These require a save + restore of the
     // link register.
     bool ModStackToSaveLR = false;
-    if (std::any_of(FirstCand.front(), FirstCand.back(),
+    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
                     [](const MachineInstr &MI) { return MI.isCall(); }))
       ModStackToSaveLR = true;
 
@@ -8614,7 +8626,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // it being valid to tail call this sequence. We should consider this as
     // well.
     else if (FrameID != MachineOutlinerThunk &&
-             FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+             FrameID != MachineOutlinerTailCall && FirstCand.back().isCall())
       ModStackToSaveLR = true;
 
     if (ModStackToSaveLR) {
@@ -9603,12 +9615,121 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
 
   // Update liveins.
   if (MF.getRegInfo().reservedRegsFrozen()) {
-    recomputeLiveIns(*LoopTestMBB);
-    recomputeLiveIns(*LoopBodyMBB);
-    recomputeLiveIns(*ExitMBB);
+    bool anyChange = false;
+    do {
+      anyChange = recomputeLiveIns(*ExitMBB) ||
+                  recomputeLiveIns(*LoopBodyMBB) ||
+                  recomputeLiveIns(*LoopTestMBB);
+    } while (anyChange);
+    ;
   }
 
   return ExitMBB->begin();
+}
+
+namespace {
+class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+  MachineInstr *PredBranch;
+  SmallVector<MachineOperand, 4> Cond;
+
+public:
+  AArch64PipelinerLoopInfo(MachineInstr *PredBranch,
+                           const SmallVectorImpl<MachineOperand> &Cond)
+      : PredBranch(PredBranch), Cond(Cond.begin(), Cond.end()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    // Make the instructions for loop control be placed in stage 0.
+    // The predecessors of PredBranch are considered by the caller.
+    return MI == PredBranch;
+  }
+
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &CondParam) override {
+    // A branch instruction will be inserted as "if (Cond) goto epilogue".
+    // Cond is normalized for such use.
+    // The predecessors of the branch are assumed to have already been inserted.
+    CondParam = Cond;
+    return {};
+  }
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void disposed() override {}
+};
+} // namespace
+
+static bool isCompareAndBranch(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZW:
+  case AArch64::CBNZX:
+  case AArch64::TBZW:
+  case AArch64::TBZX:
+  case AArch64::TBNZW:
+  case AArch64::TBNZX:
+    return true;
+  }
+  return false;
+}
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond))
+    return nullptr;
+
+  // Infinite loops are not supported
+  if (TBB == LoopBB && FBB == LoopBB)
+    return nullptr;
+
+  // Must be conditional branch
+  if (FBB == nullptr)
+    return nullptr;
+
+  assert((TBB == LoopBB || FBB == LoopBB) &&
+         "The Loop must be a single-basic-block loop");
+
+  // Normalization for createTripCountGreaterCondition()
+  if (TBB == LoopBB)
+    reverseBranchCondition(Cond);
+
+  MachineInstr *CondBranch = &*LoopBB->getFirstTerminator();
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+
+  // Find the immediate predecessor of the conditional branch
+  MachineInstr *PredBranch = nullptr;
+  if (CondBranch->getOpcode() == AArch64::Bcc) {
+    for (MachineInstr &MI : reverse(*LoopBB)) {
+      if (MI.modifiesRegister(AArch64::NZCV, &TRI)) {
+        PredBranch = &MI;
+        break;
+      }
+    }
+    if (!PredBranch)
+      return nullptr;
+  } else if (isCompareAndBranch(CondBranch->getOpcode())) {
+    const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+    Register Reg = CondBranch->getOperand(0).getReg();
+    if (!Reg.isVirtual())
+      return nullptr;
+    PredBranch = MRI.getVRegDef(Reg);
+
+    // MachinePipeliner does not expect that the immediate predecessor is a Phi
+    if (PredBranch->isPHI())
+      return nullptr;
+
+    if (PredBranch->getParent() != LoopBB)
+      return nullptr;
+  } else {
+    return nullptr;
+  }
+
+  return std::make_unique<AArch64PipelinerLoopInfo>(PredBranch, Cond);
 }
 
 #define GET_INSTRINFO_HELPERS

@@ -45,7 +45,7 @@
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -185,6 +185,8 @@ public:
   bool GetSwiftEnableBareSlashRegex() const;
 
   EnableSwiftCxxInterop GetEnableSwiftCxxInterop() const;
+
+  bool GetSwiftEnableFullDwarfDebugging() const;
 
   Args GetSwiftPluginServerForPath() const;
 
@@ -1284,7 +1286,7 @@ public:
     return m_scratch_typesystem_lock;
   }
 
-  llvm::Optional<SwiftScratchContextReader>
+  std::optional<SwiftScratchContextReader>
   GetSwiftScratchContext(Status &error, ExecutionContextScope &exe_scope,
                          bool create_on_demand = true);
 
@@ -1743,7 +1745,8 @@ public:
   ///
   /// \return
   ///     Returns a JSON value that contains all target metrics.
-  llvm::json::Value ReportStatistics();
+  llvm::json::Value
+  ReportStatistics(const lldb_private::StatisticsOptions &options);
 
   TargetStats &GetStatistics() { return m_stats; }
 

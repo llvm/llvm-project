@@ -439,6 +439,18 @@ ExtractChildrenFromSwiftPointerValueObject(ValueObjectSP valobj_sp,
   const size_t num_children = unsafe_ptr.GetCount();
   const CompilerType element_type = unsafe_ptr.GetElementType();
 
+  // Performance optimization. Give up if this is a forward-declared
+  // Clang type.  In that case GetByteStride will attempt to fall back
+  // to SwiftASTContext, which is generally correct because it could
+  // be a type imported from an expression, but in this data formatter
+  // the potential cost of triggering SwiftASTContext is not the right
+  // trade-off.
+  auto tss = element_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  CompilerType clang_type;
+  if (tss && tss->IsImportedType(element_type.GetOpaqueQualType(), &clang_type))
+    if (!clang_type.IsCompleteType())
+      return {};    
+  
   auto stride = element_type.GetByteStride(process_sp.get());
   if (!stride)
     return {};

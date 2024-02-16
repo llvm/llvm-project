@@ -78,6 +78,7 @@ set(LIBS
   clangSerialization
   clangTooling
   clangToolingRefactor
+  clangToolingSyntax
 )
 
 if (CLANG_ENABLE_ARCMT)
@@ -106,7 +107,7 @@ if(MSVC)
   set(LLVM_EXPORTED_SYMBOL_FILE)
 endif()
 
-if (UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   set(LLVM_EXPORTED_SYMBOL_FILE)
   set(USE_VERSION_SCRIPT ${LLVM_HAVE_LINK_VERSION_SCRIPT})
 endif()
@@ -138,8 +139,9 @@ else()
   set(output_name "clang")
 endif()
 
-# libclang requires headers which need _ALL_SOURCE to build on AIX
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
+    # libclang requires headers which need _ALL_SOURCE to build on AIX
     remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 

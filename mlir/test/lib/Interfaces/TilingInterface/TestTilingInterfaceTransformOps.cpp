@@ -58,8 +58,8 @@ static LogicalResult
 applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
                       Range &&payloadOps, unsigned numLoops,
                       ArrayRef<OpFoldResult> tileSizes,
-                      ArrayRef<int64_t> interchange,
-                      transform::TransformResults &transformResults) {
+                      ArrayRef<int64_t> interchange, bool useForall,
+                      TransformResults &transformResults) {
   SmallVector<Operation *> tiledOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
 
@@ -82,6 +82,9 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
 
     scf::SCFTilingOptions tilingOptions;
     tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
+    if (useForall) {
+      tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
+    }
 
     scf::SCFTileAndFuseOptions tileAndFuseOptions;
     tileAndFuseOptions.setTilingOptions(tilingOptions);
@@ -97,8 +100,8 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
 
     rewriter.setInsertionPoint(target);
     FailureOr<scf::SCFTileAndFuseResult> tiledResults =
-        scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
-            rewriter, tilingInterfaceOp, tileAndFuseOptions);
+        scf::tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
+                                                  tileAndFuseOptions);
     if (failed(tiledResults))
       return failure();
 
@@ -109,12 +112,11 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
       for (OpResult res : toReplace->getResults())
         if (auto replacement = tiledResults->replacements.lookup(res)) {
           Operation *replacementOp = replacement.getDefiningOp();
-          rewriter.replaceUsesWithIf(
-              res, replacement, [&](mlir::OpOperand &use) {
-                Operation *user = use.getOwner();
-                return dominanceInfo.properlyDominates(replacementOp, user) &&
-                       user->getParentOp() == replacementOp->getParentOp();
-              });
+          rewriter.replaceUsesWithIf(res, replacement, [&](OpOperand &use) {
+            Operation *user = use.getOwner();
+            return dominanceInfo.properlyDominates(replacementOp, user) &&
+                   user->getParentOp() == replacementOp->getParentOp();
+          });
         }
 
       if (toReplace->use_empty()) {
@@ -138,10 +140,10 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
   return success();
 }
 
-DiagnosedSilenceableFailure transform::TestFuseAndYieldOp::apply(
-    transform::TransformRewriter &rewriter,
-    mlir::transform::TransformResults &transformResults,
-    mlir::transform::TransformState &state) {
+DiagnosedSilenceableFailure
+transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
+                                     TransformResults &transformResults,
+                                     TransformState &state) {
   SmallVector<int64_t> tileSizes =
       extractFromIntegerArrayAttr<int64_t>(getTileSizes());
   SmallVector<int64_t> tileInterchange =
@@ -153,7 +155,7 @@ DiagnosedSilenceableFailure transform::TestFuseAndYieldOp::apply(
   LogicalResult result = applyTileAndFuseToAll(
       rewriter, getOperation(), state.getPayloadOps(getTarget()),
       tileSizes.size() - llvm::count(tileSizes, 0), tileSizesOfr,
-      tileInterchange, transformResults);
+      tileInterchange, getUseForall(), transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
@@ -169,7 +171,7 @@ static LogicalResult
 applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
                Range &&payloadOps, ArrayRef<OpFoldResult> tileSizes,
                ArrayRef<int64_t> interchange, std::optional<ArrayAttr> mapping,
-               transform::TransformResults &transformResults) {
+               TransformResults &transformResults) {
   SmallVector<Operation *> tiledOps;
   SmallVector<Operation *> loopOps;
 
@@ -186,10 +188,11 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
           });
       tilingOptions.setMapping(mappingAttrs);
     }
+    tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
 
     rewriter.setInsertionPoint(target);
     FailureOr<scf::SCFTilingResult> tiledResults =
-        scf::tileUsingSCFForallOp(rewriter, tilingInterfaceOp, tilingOptions);
+        scf::tileUsingSCF(rewriter, tilingInterfaceOp, tilingOptions);
     if (failed(tiledResults))
       return failure();
 
@@ -209,10 +212,10 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
   return success();
 }
 
-DiagnosedSilenceableFailure transform::TestTileUsingForallOp::apply(
-    transform::TransformRewriter &rewriter,
-    mlir::transform::TransformResults &transformResults,
-    mlir::transform::TransformState &state) {
+DiagnosedSilenceableFailure
+transform::TestTileUsingForallOp::apply(TransformRewriter &rewriter,
+                                        TransformResults &transformResults,
+                                        TransformState &state) {
   SmallVector<int64_t> tileSizes =
       extractFromIntegerArrayAttr<int64_t>(getTileSizes());
   SmallVector<int64_t> interchange =
@@ -231,6 +234,96 @@ void transform::TestTileUsingForallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   producesHandle(getTiledOp(), effects);
+  producesHandle(getLoops(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// TestFuseUsingForallOp
+//===----------------------------------------------------------------------===//
+
+/// Apply a tiling transformation to all payload ops and store both the
+/// tiled operation as well as the created tile loops.
+template <typename Range>
+static LogicalResult applyTilingToAll(
+    RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
+    unsigned numLoops, TransformResults &transformResults,
+    function_ref<FailureOr<scf::SCFTileAndFuseResult>(TilingInterface)>
+        applyFn) {
+  SmallVector<Operation *> tiledLinalgOps;
+  SmallVector<SmallVector<Operation *>> loopOps(1);
+
+  for (Operation *target : payloadOps) {
+    auto tilingInterfaceOp = dyn_cast<TilingInterface>(target);
+    if (!tilingInterfaceOp)
+      return transformOp->emitError("only TilingInterface ops are supported");
+
+    rewriter.setInsertionPoint(target);
+    FailureOr<scf::SCFTileAndFuseResult> tiledResults =
+        applyFn(tilingInterfaceOp);
+    if (failed(tiledResults))
+      return failure();
+
+    // Perform the replacement of tiled and fused values.
+    SmallVector<Operation *> opsToReplace{target};
+    llvm::append_range(opsToReplace, tiledResults->fusedProducers);
+    for (Operation *toReplace : opsToReplace) {
+      for (OpResult res : toReplace->getResults())
+        if (auto replacement = tiledResults->replacements.lookup(res))
+          rewriter.replaceAllUsesWith(res, replacement);
+      if (toReplace->use_empty())
+        rewriter.eraseOp(toReplace);
+    }
+
+    // Report back the relevant handles to the transform op.
+    tiledLinalgOps.push_back(tiledResults->tiledAndFusedOps.front());
+    assert(tiledResults->loops.size() == 1 &&
+           cast<scf::ForallOp>(tiledResults->loops[0]).getRank() == numLoops &&
+           "Mismatched number of loops, tile and fuse transform should have "
+           "failed");
+    loopOps[0] = {tiledResults->loops[0]};
+  }
+
+  transformResults.set(transformOp->getOpResult(0), tiledLinalgOps);
+  if (!loopOps.empty())
+    transformResults.set(transformOp->getOpResult(1), loopOps[0]);
+
+  return success();
+}
+
+DiagnosedSilenceableFailure
+transform::TestFuseUsingForallOp::apply(TransformRewriter &rewriter,
+                                        TransformResults &transformResults,
+                                        TransformState &state) {
+  SmallVector<int64_t> tileSizes =
+      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
+  SmallVector<int64_t> tileInterchange =
+      extractFromIntegerArrayAttr<int64_t>(getInterchange());
+
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.interchangeVector = tileInterchange;
+  SmallVector<OpFoldResult> tileSizesOfr =
+      getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
+  tilingOptions = tilingOptions.setTileSizes(tileSizesOfr);
+  tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
+  scf::SCFTileAndFuseOptions tileAndFuseOptions;
+  tileAndFuseOptions.tilingOptions = tilingOptions;
+  LogicalResult result = applyTilingToAll(
+      rewriter, getOperation(), state.getPayloadOps(getRootOp()),
+      tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
+      [&](TilingInterface tilingInterfaceOp)
+          -> FailureOr<scf::SCFTileAndFuseResult> {
+        return tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
+                                                    tileAndFuseOptions);
+      });
+  return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
+                        : DiagnosedSilenceableFailure::success();
+}
+
+void transform::TestFuseUsingForallOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getRootOp(), effects);
+  producesHandle(getTiledOps(), effects);
   producesHandle(getLoops(), effects);
   modifiesPayload(effects);
 }

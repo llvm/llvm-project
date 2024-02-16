@@ -2558,16 +2558,48 @@ def ArmStreamingCompatible : TypeAttr, TargetSpecificAttr<TargetAArch64> {
   let Documentation = [ArmSmeStreamingCompatibleDocs];
 }
 
-def ArmSharedZA : TypeAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [RegularKeyword<"__arm_shared_za">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [ArmSmeSharedZADocs];
+def ArmNew : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_new">];
+  let Args = [VariadicStringArgument<"NewArgs">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [ArmNewDocs];
+
+  let AdditionalMembers = [{
+    bool isNewZA() const {
+      return llvm::is_contained(newArgs(), "za");
+    }
+    bool isNewZT0() const {
+      return llvm::is_contained(newArgs(), "zt0");
+    }
+  }];
 }
 
-def ArmPreservesZA : TypeAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [RegularKeyword<"__arm_preserves_za">];
+def ArmIn : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_in">];
+  let Args = [VariadicStringArgument<"InArgs">];
   let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [ArmSmePreservesZADocs];
+  let Documentation = [ArmInDocs];
+}
+
+def ArmOut : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_out">];
+  let Args = [VariadicStringArgument<"OutArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmOutDocs];
+}
+
+def ArmInOut : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_inout">];
+  let Args = [VariadicStringArgument<"InOutArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmInOutDocs];
+}
+
+def ArmPreserves : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_preserves">];
+  let Args = [VariadicStringArgument<"PreserveArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmPreservesDocs];
 }
 
 def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
@@ -2575,14 +2607,6 @@ def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [ArmSmeLocallyStreamingDocs];
 }
-
-def ArmNewZA : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [RegularKeyword<"__arm_new_za">];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [ArmSmeNewZADocs];
-}
-def : MutualExclusions<[ArmNewZA, ArmSharedZA]>;
-def : MutualExclusions<[ArmNewZA, ArmPreservesZA]>;
 
 
 def Pure : InheritableAttr {
@@ -2883,6 +2907,13 @@ def Suppress : DeclOrStmtAttr {
   let Spellings = [CXX11<"gsl", "suppress">, Clang<"suppress">];
   let Args = [VariadicStringArgument<"DiagnosticIdentifiers">];
   let Accessors = [Accessor<"isGSL", [CXX11<"gsl", "suppress">]>];
+  // There's no fundamental reason why we can't simply accept all Decls
+  // but let's make a short list so that to avoid supporting something weird
+  // by accident. We can always expand the list later.
+  let Subjects = SubjectList<[
+    Stmt, Var, Field, ObjCProperty, Function, ObjCMethod, Record, ObjCInterface,
+    ObjCImplementation, Namespace, Empty
+  ], ErrorDiag, "variables, functions, structs, interfaces, and namespaces">;
   let Documentation = [SuppressDocs];
 }
 
@@ -2949,6 +2980,12 @@ def PreserveAll : DeclOrTypeAttr {
 def M68kRTD: DeclOrTypeAttr {
   let Spellings = [Clang<"m68k_rtd">];
   let Documentation = [M68kRTDDocs];
+}
+
+def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
+  let Spellings = [Clang<"preserve_none">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [PreserveNoneDocs];
 }
 
 def Target : InheritableAttr {
@@ -3220,8 +3257,8 @@ def TypeVisibility : InheritableAttr {
   let Args = [EnumArgument<"Visibility", "VisibilityType",
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
-//  let Subjects = [Tag, ObjCInterface, Namespace];
-  let Documentation = [Undocumented];
+  // let Subjects = SubjectList<[Tag, ObjCInterface, Namespace], ErrorDiag>;
+  let Documentation = [TypeVisibilityDocs];
 }
 
 def VecReturn : InheritableAttr {

@@ -966,6 +966,11 @@ namespace llvm {
     /// Check if Op is an operation that could be folded into a zero extend x86
     /// instruction.
     bool mayFoldIntoZeroExtend(SDValue Op);
+
+    /// True if the target supports the extended frame for async Swift
+    /// functions.
+    bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
+                                            const MachineFunction &MF);
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//

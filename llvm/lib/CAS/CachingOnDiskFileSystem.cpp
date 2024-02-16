@@ -22,6 +22,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
+const char ThreadSafeFileSystem::ID = 0;
 void ThreadSafeFileSystem::anchor() {}
 void CachingOnDiskFileSystem::anchor() {}
 
@@ -288,7 +289,7 @@ StringRef CachingOnDiskFileSystemImpl::canonicalizeWorkingDirectory(
     const Twine &Path, StringRef WorkingDirectory,
     SmallVectorImpl<char> &Storage) {
   // Not portable.
-  assert(WorkingDirectory.startswith("/"));
+  assert(WorkingDirectory.starts_with("/"));
   Path.toVector(Storage);
   if (Storage.empty())
     return WorkingDirectory;

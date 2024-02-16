@@ -37,17 +37,17 @@ void run_foo_tml() {
 
 
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_Z7foo_ovli.ifunc = weak_odr ifunc i32 (i32), ptr @_Z7foo_ovli.resolver
-// CHECK: @_Z7foo_ovlv.ifunc = weak_odr ifunc i32 (), ptr @_Z7foo_ovlv.resolver
-// CHECK: @_ZN7MyClassIssE7foo_tmlEv.ifunc = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv.resolver
-// CHECK: @_ZN7MyClassIisE7foo_tmlEv.ifunc = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv.resolver
+// CHECK: @_Z7foo_ovli = weak_odr ifunc i32 (i32), ptr @_Z7foo_ovli.resolver
+// CHECK: @_Z7foo_ovlv = weak_odr ifunc i32 (), ptr @_Z7foo_ovlv.resolver
+// CHECK: @_ZN7MyClassIssE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv.resolver
+// CHECK: @_ZN7MyClassIisE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv.resolver
 
 // CHECK-LABEL: @_Z7foo_ovli._Mfp16Mls64_v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @_Z7foo_ovli(
+// CHECK-LABEL: @_Z7foo_ovli.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
@@ -67,7 +67,7 @@ void run_foo_tml() {
 // CHECK-LABEL: @_Z7foo_ovlv._Mls64Mls64_accdata(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
-// CHECK-LABEL: @_Z7foo_ovlv(
+// CHECK-LABEL: @_Z7foo_ovlv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 // CHECK-LABEL: @_Z7foo_ovlv.resolver(
@@ -81,11 +81,11 @@ void run_foo_tml() {
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @_Z7foo_ovlv._Mls64Mls64_accdata
 // CHECK:       resolver_else:
-// CHECK-NEXT:    ret ptr @_Z7foo_ovlv
+// CHECK-NEXT:    ret ptr @_Z7foo_ovlv.default
 // CHECK-LABEL: @_Z3barv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z7foo_ovli.ifunc(i32 noundef 1)
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z7foo_ovlv.ifunc()
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z7foo_ovli(i32 noundef 1)
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_Z7foo_ovlv()
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
 // CHECK-NEXT:    ret i32 [[ADD]]
 // CHECK-LABEL: @_Z11run_foo_tmlv(
@@ -94,8 +94,8 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[MC2:%.*]] = alloca [[STRUCT_MYCLASS_0:%.*]], align 1
 // CHECK-NEXT:    [[MC3:%.*]] = alloca [[STRUCT_MYCLASS_1:%.*]], align 1
 // CHECK-NEXT:    [[MC4:%.*]] = alloca [[STRUCT_MYCLASS_2:%.*]], align 1
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClassIssE7foo_tmlEv.ifunc(ptr noundef nonnull align 1 dereferenceable(1) [[MC1]])
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN7MyClassIisE7foo_tmlEv.ifunc(ptr noundef nonnull align 1 dereferenceable(1) [[MC2]])
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZN7MyClassIssE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC1]])
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZN7MyClassIisE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC2]])
 // CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZN7MyClassIfsE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC3]])
 // CHECK-NEXT:    [[CALL3:%.*]] = call noundef i32 @_ZN7MyClassIdfE7foo_tmlEv(ptr noundef nonnull align 1 dereferenceable(1) [[MC4]])
 // CHECK-NEXT:    ret void
@@ -163,7 +163,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv(
+// CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
@@ -181,7 +181,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 2
-// CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv(
+// CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8

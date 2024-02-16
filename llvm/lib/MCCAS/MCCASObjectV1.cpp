@@ -1692,7 +1692,7 @@ Error MCCASBuilder::createPaddingRef(const MCSection *Sec) {
 
 Error MCCASBuilder::createStringSection(
     StringRef S, std::function<Error(StringRef)> CreateFn) {
-  assert(S.endswith("\0") && "String sections are null terminated");
+  assert(S.ends_with("\0") && "String sections are null terminated");
   if (DebugInfoUnopt)
     // Drop the null terminator at the end when not splitting the debug_string
     // section as it is always added when materializing.

@@ -148,6 +148,10 @@ public:
     return Error::success();
   }
 
+  Error setSizeLimit(std::optional<uint64_t> SizeLimit) final;
+  Expected<std::optional<uint64_t>> getStorageSize() const final;
+  Error pruneStorageData() final;
+
   PluginObjectStore(std::shared_ptr<PluginCASContext>);
 
   std::shared_ptr<PluginCASContext> Ctx;
@@ -360,6 +364,40 @@ ArrayRef<char> PluginObjectStore::getData(ObjectHandle Node,
   llcas_data_t c_data = Ctx->Functions.loaded_object_get_data(
       Ctx->c_cas, llcas_loaded_object_t{Node.getInternalRef(*this)});
   return ArrayRef((const char *)c_data.data, c_data.size);
+}
+
+Error PluginObjectStore::setSizeLimit(std::optional<uint64_t> SizeLimit) {
+  if (Ctx->Functions.cas_set_ondisk_size_limit) {
+    char *c_err = nullptr;
+    if (Ctx->Functions.cas_set_ondisk_size_limit(Ctx->c_cas,
+                                                 SizeLimit.value_or(0), &c_err))
+      return Ctx->errorAndDispose(c_err);
+  }
+  return Error::success();
+}
+
+Expected<std::optional<uint64_t>> PluginObjectStore::getStorageSize() const {
+  if (!Ctx->Functions.cas_get_ondisk_size)
+    return std::nullopt;
+  char *c_err = nullptr;
+  int64_t ret = Ctx->Functions.cas_get_ondisk_size(Ctx->c_cas, &c_err);
+  switch (ret) {
+  case -1:
+    return std::nullopt;
+  case -2:
+    return Ctx->errorAndDispose(c_err);
+  default:
+    return ret;
+  }
+}
+
+Error PluginObjectStore::pruneStorageData() {
+  if (Ctx->Functions.cas_prune_ondisk_data) {
+    char *c_err = nullptr;
+    if (Ctx->Functions.cas_prune_ondisk_data(Ctx->c_cas, &c_err))
+      return Ctx->errorAndDispose(c_err);
+  }
+  return Error::success();
 }
 
 PluginObjectStore::PluginObjectStore(std::shared_ptr<PluginCASContext> CASCtx)

@@ -17,6 +17,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBSymbolContextList.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
@@ -89,6 +90,15 @@ public:
   /// \return
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics();
+
+  /// Returns a dump of the collected statistics.
+  ///
+  /// \param[in] options
+  ///   An objects object that contains all options for the statistics dumping.
+  ///
+  /// \return
+  ///     A SBStructuredData with the statistics collected.
+  lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
   /// Return the platform object associated with the target.
   ///

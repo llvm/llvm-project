@@ -10,6 +10,8 @@ function(find_standalone_test_dependencies)
     message(WARNING "The check targets will not be available!")
     set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
     return()
+  else()
+    set(Python3_EXECUTABLE ${Python3_EXECUTABLE} PARENT_SCOPE)
   endif()
 
   # Find executables.

@@ -171,6 +171,7 @@ ifeq "$(SDKROOT)" ""
 else
 	SWIFTSDKROOT = $(SDKROOT)
 endif
+PYTHON ?= python3
 
 #----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
@@ -293,21 +294,33 @@ ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
   SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
 endif
 
+ifneq "$(SWIFT_ENABLE_EXPLICIT_MODULES)" ""
+SWIFTFLAGS += -explicit-module-build
+endif
+
 # Swift bridging headers.
 ifneq "$(SWIFT_BRIDGING_HEADER)" ""
+# These are incompatible.
+DISABLE_SWIFT_INTERFACE = YES
 ifneq "$(SWIFT_PRECOMPILE_BRIDGING_HEADER)" "NO"
 # With PCH.
-SWIFT_BRIDGING_PCH=$(patsubst %.h,%.pch,$(SWIFT_BRIDGING_HEADER))
-SWIFT_HFLAGS = -import-objc-header $(BUILDDIR)/$(SWIFT_BRIDGING_PCH)
+SWIFT_HFLAGS = -import-objc-header $(SRCDIR)/$(SWIFT_BRIDGING_HEADER) -enable-bridging-pch -pch-output-dir $(BUILDDIR)
 else
 # From source.
-SWIFT_BRIDGING_PCH :=
-SWIFT_HFLAGS = -import-objc-header $(SRCDIR)/$(SWIFT_BRIDGING_HEADER)
+SWIFT_HFLAGS = -import-objc-header $(SRCDIR)/$(SWIFT_BRIDGING_HEADER) -disable-bridging-pch
 endif
 else
 # No bridging header.
-SWIFT_BRIDGING_PCH :=
 SWIFT_HFLAGS :=
+endif
+
+# Clang headers generated from Swift sources.
+ifneq "$(SWIFT_OBJC_HEADER)" ""
+SWIFTFLAGS += -emit-objc-header-path $(SWIFT_OBJC_HEADER)
+endif
+ifneq "$(SWIFT_CXX_HEADER)" ""
+SWIFTFLAGS += -emit-clang-header-path $(SWIFT_CXX_HEADER)
+$(SWIFT_CXX_HEADER): $(strip $(SWIFT_SOURCES:.swift=.swift.o))
 endif
 
 ifeq "$(OS)" "Linux"
@@ -467,7 +480,7 @@ endif
 
 ifeq (1, $(USE_SYSTEM_STDLIB))
 	ifneq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP)),)
-		$(error Cannot use system's standard library and a custom standard library together)
+		$(error Cannot use system standard library and a custom standard library together)
 	endif
 endif
 
@@ -583,17 +596,17 @@ endif
 # Check if we have any Swift source files
 #----------------------------------------------------------------------
 ifneq "$(strip $(SWIFT_SOURCES))" ""
-	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
+	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.swift.o))
 	USESWIFTDRIVER = 1
 endif
 
 ifneq "$(strip $(DYLIB_SWIFT_SOURCES))" ""
-	DYLIB_OBJECTS +=$(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
+	DYLIB_OBJECTS +=$(strip $(DYLIB_SWIFT_SOURCES:.swift=.swift.o))
 	USESWIFTDRIVER = 1
 endif
 
 ifneq "$(strip $(SWIFT_SOURCES_FOR_CXX_HEADER))" ""
-	SWIFT_CXX_HEADER =$(strip $(SWIFT_SOURCES:.swift=.o))
+	SWIFT_CXX_HEADER =$(strip $(SWIFT_SOURCES:.swift=.swift.o))
 	USESWIFTDRIVER = 1
 endif
 
@@ -629,10 +642,18 @@ ifeq "$(SWIFT_CXX_INTEROP)" "1"
 endif
 
 #----------------------------------------------------------------------
+# Check if we should compile in Swift embedded mode
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
+	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -Xfrontend -disable-objc-interop -runtime-compatibility-version none
+	SWIFT_WMO = 1
+endif
+	
+#----------------------------------------------------------------------
 # Set up variables to run the Swift frontend directly.
 #----------------------------------------------------------------------
 SWIFT=$(shell dirname $(SWIFTC))/swift
-SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g') -enable-anonymous-context-mangled-names
+SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g')
 SWIFT_FE=$(SWIFT) -frontend
 
 #----------------------------------------------------------------------
@@ -678,9 +699,56 @@ endif
 
 VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES)) $(patsubst %,$(VPATH)/%,$(DYLIB_SWIFT_SOURCES))
 
+ALL_SWIFT_SOURCES = $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+SWIFT_OBJECTS = $(strip $(ALL_SWIFT_SOURCES:.swift=.swift.o))
+
+ifeq "$(DISABLE_SWIFT_INTERFACE)" ""
+SWIFT_INTERFACE_FLAGS=-emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface
+endif
+
+ifeq "$(SWIFT_WMO)" "1"
+SWIFTC_OUTPUT=-wmo -o $@
+else
+SWIFTC_OUTPUT=-output-file-map $(BUILDDIR)/$(MODULENAME)-output-file-map.json
+endif
+
+# The Swift object files are named .swift.o so they don't conflict
+# with the wrapped Swift module $(MODULENAME).o
+
+$(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+ifneq "$(SWIFT_WMO)" "1"
+	@echo "### Generating output file map"
+	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $^ $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
+endif
+	@echo "### Compiling" $^
+	@echo "### Swift driver expanded incovation will be:"
+	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
+	  -module-name $(MODULENAME) \
+          -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
+	  $(SWIFT_INTERFACE_FLAGS) -###
+	@echo "### Swift driver invocation:"
+	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
+	  -module-name $(MODULENAME) \
+          -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
+	  $(SWIFT_INTERFACE_FLAGS)
+ifneq "$(OS)" "Darwin"
+	@echo "### Wrapping Swift module:"
+	$(SWIFT) -modulewrap $(BUILDDIR)/$(MODULENAME).swiftmodule \
+	  -o $(BUILDDIR)/$(MODULENAME).o
+endif
+# Whole module optimization and primary file directives are at direct odds with each other. 
+# Either pick one or the other.
+ifeq "$(SWIFT_WMO)" "1"
+SWIFT_COMPILE_MODE_DIRECTIVE = "-wmo"
+else
+SWIFT_COMPILE_DIRECTIVE = "-primary-file"
+endif
+
 %.o: %.swift $(SWIFT_BRIDGING_PCH) $(SWIFT_OBJC_HEADER)
 	@echo "### Compiling" $<
-	$(SWIFT_FE) -c -primary-file $< \
+	$(SWIFT_FE) -c $(SWIFT_COMPILE_DIRECTIVE) $< \
 	  $(filter-out $(VPATH)/$<,$(filter-out $<,$(VPATHSOURCES))) \
 	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
 	  -module-name $(MODULENAME)  -emit-module-path \
@@ -695,58 +763,21 @@ else
 SWIFTMODULE =
 LD_SWIFTFLAGS =
 endif
-$(EXE): $(SWIFTMODULE) $(OBJECTS)
+$(EXE): $(OBJECTS)
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
 else # OS = Linux
-$(EXE): $(MODULENAME).swiftmodule.o $(OBJECTS)
+ifeq "$(HIDE_SWIFTMODULE)" ""
+WRAPPED_SWIFTMODULE = $(MODULENAME).o
+endif
+
+$(EXE): $(OBJECTS)
 	@echo "### Linking" $(EXE)
-ifneq "$(HIDE_SWIFTMODULE)" ""
-	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
-else
-	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
-endif
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 
-$(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
-	@echo "### Wrapping swift module"
-	$(SWIFT) -modulewrap $^ -o $(BUILDDIR)/$@
-endif
-
-$(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
-	@echo "### Merging swift modules for $(MODULENAME)"
-	$(SWIFT_FE) $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -merge-modules \
-	  -emit-module \
-	  -emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface \
-	  $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
-	  -disable-diagnostic-passes -disable-sil-perf-optzns \
-	  -module-name $(MODULENAME) \
-	  -o $(BUILDDIR)/$@
-
-# Swift precompiled bridging headers. Don't override the Clang .pch build rule.
-ifneq "$(SWIFT_BRIDGING_PCH)" ""
-$(SWIFT_BRIDGING_PCH): $(SWIFT_BRIDGING_HEADER)
-	@echo "### Precompiling" $<
-	$(SWIFT_FE) -emit-pch $(SWIFT_FEFLAGS) $< -o $(BUILDDIR)/$@
-endif
-
-# Swift Obj-C header.
-ifneq "$(SWIFT_OBJC_HEADER)" ""
-$(SWIFT_OBJC_HEADER): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
-	@echo "### Building Obj-C header"
-	$(SWIFT_FE) -typecheck $(VPATHSOURCES) \
-	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -module-name $(MODULENAME) \
-	  -emit-objc-header-path $(SWIFT_OBJC_HEADER)
-endif
-
-ifneq "$(SWIFT_CXX_HEADER)" ""
-$(SWIFT_CXX_HEADER): $(SWIFT_SOURCES) $(SWIFT_BRIDGING_PCH) 
-	@echo "### Building C++ header from Swift" $<
-	$(SWIFT_FE) -typecheck $(VPATHSOURCES) \
-	  $(SWIFT_FEFLAGS) $(SWIFT_HFLAGS) -module-name $(MODULENAME) \
-	 $(SWIFT_CXX_HEADER_FLAGS) -emit-clang-header-path  $(SWIFT_CXX_HEADER)
 endif
 
 else # USESWIFTDRIVER = 0

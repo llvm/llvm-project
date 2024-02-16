@@ -35,6 +35,22 @@ static cl::opt<bool>
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
                 cl::Optional, cl::init(false));
 
+static cl::list<SPIRV::Capability::Capability>
+    AvoidCapabilities("avoid-spirv-capabilities",
+                      cl::desc("SPIR-V capabilities to avoid if there are "
+                               "other options enabling a feature"),
+                      cl::ZeroOrMore, cl::Hidden,
+                      cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
+                                            "SPIR-V Shader capability")));
+// Use sets instead of cl::list to check "if contains" condition
+struct AvoidCapabilitiesSet {
+  SmallSet<SPIRV::Capability::Capability, 4> S;
+  AvoidCapabilitiesSet() {
+    for (auto Cap : AvoidCapabilities)
+      S.insert(Cap);
+  }
+};
+
 char llvm::SPIRVModuleAnalysis::ID = 0;
 
 namespace llvm {
@@ -58,6 +74,8 @@ static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
+  static AvoidCapabilitiesSet
+      AvoidCaps; // contains capabilities to avoid if there is another option
   unsigned ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   unsigned ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
   unsigned TargetVer = ST.getSPIRVVersion();
@@ -72,9 +90,26 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       return {false, {}, {}, 0, 0};
     }
   } else if (MinVerOK && MaxVerOK) {
-    for (auto Cap : ReqCaps) { // Only need 1 of the capabilities to work.
+    if (ReqCaps.size() == 1) {
+      auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap))
         return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+    } else {
+      // By SPIR-V specification: "If an instruction, enumerant, or other
+      // feature specifies multiple enabling capabilities, only one such
+      // capability needs to be declared to use the feature." However, one
+      // capability may be preferred over another. We use command line
+      // argument(s) and AvoidCapabilities to avoid selection of certain
+      // capabilities if there are other options.
+      CapabilityList UseCaps;
+      for (auto Cap : ReqCaps)
+        if (Reqs.isCapabilityAvailable(Cap))
+          UseCaps.push_back(Cap);
+      for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
+        auto Cap = UseCaps[i];
+        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
+          return {true, {Cap}, {}, ReqMinVer, ReqMaxVer};
+      }
     }
   }
   // If there are no capabilities, or we can't satisfy the version or
@@ -263,34 +298,6 @@ void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
       [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
 }
 
-// True if there is an instruction in the MS list with all the same operands as
-// the given instruction has (after the given starting index).
-// TODO: maybe it needs to check Opcodes too.
-static bool findSameInstrInMS(const MachineInstr &A,
-                              SPIRV::ModuleSectionType MSType,
-                              SPIRV::ModuleAnalysisInfo &MAI,
-                              unsigned StartOpIndex = 0) {
-  for (const auto *B : MAI.MS[MSType]) {
-    const unsigned NumAOps = A.getNumOperands();
-    if (NumAOps != B->getNumOperands() || A.getNumDefs() != B->getNumDefs())
-      continue;
-    bool AllOpsMatch = true;
-    for (unsigned i = StartOpIndex; i < NumAOps && AllOpsMatch; ++i) {
-      if (A.getOperand(i).isReg() && B->getOperand(i).isReg()) {
-        Register RegA = A.getOperand(i).getReg();
-        Register RegB = B->getOperand(i).getReg();
-        AllOpsMatch = MAI.getRegisterAlias(A.getMF(), RegA) ==
-                      MAI.getRegisterAlias(B->getMF(), RegB);
-      } else {
-        AllOpsMatch = A.getOperand(i).isIdenticalTo(B->getOperand(i));
-      }
-    }
-    if (AllOpsMatch)
-      return true;
-  }
-  return false;
-}
-
 // Look for IDs declared with Import linkage, and map the corresponding function
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
@@ -319,15 +326,69 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   }
 }
 
+// References to a function via function pointers generate virtual
+// registers without a definition. We are able to resolve this
+// reference using Globar Register info into an OpFunction instruction
+// and replace dummy operands by the corresponding global register references.
+void SPIRVModuleAnalysis::collectFuncPtrs() {
+  for (auto &MI : MAI.MS[SPIRV::MB_TypeConstVars])
+    if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL)
+      collectFuncPtrs(MI);
+}
+
+void SPIRVModuleAnalysis::collectFuncPtrs(MachineInstr *MI) {
+  const MachineOperand *FunUse = &MI->getOperand(2);
+  if (const MachineOperand *FunDef = GR->getFunctionDefinitionByUse(FunUse)) {
+    const MachineInstr *FunDefMI = FunDef->getParent();
+    assert(FunDefMI->getOpcode() == SPIRV::OpFunction &&
+           "Constant function pointer must refer to function definition");
+    Register FunDefReg = FunDef->getReg();
+    Register GlobalFunDefReg =
+        MAI.getRegisterAlias(FunDefMI->getMF(), FunDefReg);
+    assert(GlobalFunDefReg.isValid() &&
+           "Function definition must refer to a global register");
+    Register FunPtrReg = FunUse->getReg();
+    MAI.setRegisterAlias(MI->getMF(), FunPtrReg, GlobalFunDefReg);
+  }
+}
+
+using InstrSignature = SmallVector<size_t>;
+using InstrTraces = std::set<InstrSignature>;
+
+// Returns a representation of an instruction as a vector of MachineOperand
+// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
+// This creates a signature of the instruction with the same content
+// that MachineOperand::isIdenticalTo uses for comparison.
+static InstrSignature instrToSignature(MachineInstr &MI,
+                                       SPIRV::ModuleAnalysisInfo &MAI) {
+  InstrSignature Signature;
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    size_t h;
+    if (MO.isReg()) {
+      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
+      // mimic llvm::hash_value(const MachineOperand &MO)
+      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
+                       MO.isDef());
+    } else {
+      h = hash_value(MO);
+    }
+    Signature.push_back(h);
+  }
+  return Signature;
+}
+
 // Collect the given instruction in the specified MS. We assume global register
 // numbering has already occurred by this point. We can directly compare reg
 // arguments when detecting duplicates.
 static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
-                              SPIRV::ModuleSectionType MSType,
+                              SPIRV::ModuleSectionType MSType, InstrTraces &IS,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
-  if (findSameInstrInMS(MI, MSType, MAI))
-    return; // Found a duplicate, so don't add it.
+  InstrSignature MISign = instrToSignature(MI, MAI);
+  auto FoundMI = IS.insert(MISign);
+  if (!FoundMI.second)
+    return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.
   if (Append)
     MAI.MS[MSType].push_back(&MI);
@@ -338,6 +399,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // Some global instructions make reference to function-local ID regs, so cannot
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
+  InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     if ((*F).isDeclaration())
       continue;
@@ -349,20 +411,20 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           continue;
         const unsigned OpCode = MI.getOpcode();
         if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames);
+          collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints);
+          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
         } else if (TII->isDecorationInstr(MI)) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_Annotations);
+          collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
         } else if (TII->isConstantInstr(MI)) {
           // Now OpSpecConstant*s are not in DT,
           // but they need to be collected anyway.
-          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS);
         } else if (OpCode == SPIRV::OpFunction) {
           collectFuncNames(MI, &*F);
         } else if (OpCode == SPIRV::OpTypeForwardPointer) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, false);
+          collectOtherInstr(MI, MAI, SPIRV::MB_TypeConstVars, IS, false);
         }
       }
   }
@@ -405,16 +467,13 @@ void SPIRV::RequirementHandler::getAndAddRequirements(
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
-void SPIRV::RequirementHandler::pruneCapabilities(
+void SPIRV::RequirementHandler::recursiveAddCapabilities(
     const CapabilityList &ToPrune) {
   for (const auto &Cap : ToPrune) {
     AllCaps.insert(Cap);
-    auto FoundIndex = std::find(MinimalCaps.begin(), MinimalCaps.end(), Cap);
-    if (FoundIndex != MinimalCaps.end())
-      MinimalCaps.erase(FoundIndex);
     CapabilityList ImplicitDecls =
         getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
-    pruneCapabilities(ImplicitDecls);
+    recursiveAddCapabilities(ImplicitDecls);
   }
 }
 
@@ -425,7 +484,7 @@ void SPIRV::RequirementHandler::addCapabilities(const CapabilityList &ToAdd) {
       continue;
     CapabilityList ImplicitDecls =
         getSymbolicOperandCapabilities(OperandCategory::CapabilityOperand, Cap);
-    pruneCapabilities(ImplicitDecls);
+    recursiveAddCapabilities(ImplicitDecls);
     MinimalCaps.push_back(Cap);
   }
 }
@@ -620,6 +679,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     auto BuiltIn = static_cast<SPIRV::BuiltIn::BuiltIn>(BuiltInOp);
     Reqs.addRequirements(getSymbolicOperandRequirements(
         SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+  } else if (Dec == SPIRV::Decoration::LinkageAttributes) {
+    int64_t LinkageOp = MI.getOperand(MI.getNumOperands() - 1).getImm();
+    SPIRV::LinkageType::LinkageType LnkType =
+        static_cast<SPIRV::LinkageType::LinkageType>(LinkageOp);
+    if (LnkType == SPIRV::LinkageType::LinkOnceODR)
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_linkonce_odr);
   }
 }
 
@@ -907,11 +972,46 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpGroupNonUniformBallotFindMSB:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
     break;
+  case SPIRV::OpSubgroupShuffleINTEL:
+  case SPIRV::OpSubgroupShuffleDownINTEL:
+  case SPIRV::OpSubgroupShuffleUpINTEL:
+  case SPIRV::OpSubgroupShuffleXorINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupShuffleINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupBlockReadINTEL:
+  case SPIRV::OpSubgroupBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupBufferBlockIOINTEL);
+    }
+    break;
+  case SPIRV::OpSubgroupImageBlockReadINTEL:
+  case SPIRV::OpSubgroupImageBlockWriteINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_subgroups)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_subgroups);
+      Reqs.addCapability(SPIRV::Capability::SubgroupImageBlockIOINTEL);
+    }
+    break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
+    }
+    break;
+  case SPIRV::OpConstantFunctionPointerINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
+      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
+    }
+    break;
+  case SPIRV::OpFunctionPointerCallINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
+      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
     break;
   default:
@@ -1071,6 +1171,10 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);
+
+  // Update references to OpFunction instructions to use Global Registers
+  if (GR->hasConstFunPtr())
+    collectFuncPtrs();
 
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);

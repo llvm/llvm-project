@@ -27,6 +27,9 @@ let Definition = "target_experimental" in {
       "Dictionary">,
     ElementType<"String">,
     Desc<"A dictionary of plugin paths as keys and swift-plugin-server binaries as values">;
+  def SwiftEnableFullDwarfDebugging: Property<"swift-enable-full-dwarf-debugging", "Boolean">,
+  DefaultFalse,
+  Desc<"Read full debug information from DWARF for Swift debugging, whenever possible">;
 }
 
 let Definition = "target" in {

@@ -14,8 +14,9 @@ body:             |
     ; CHECK-LABEL: name: LdOffset
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x8 = ADDXri $x0, 253, 12
-    ; CHECK-NEXT: renamable $w0 = LDRBBui killed renamable $x8, 3704
+    ; CHECK-NEXT: renamable $w8 = MOVZWi 56952, 0
+    ; CHECK-NEXT: renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
+    ; CHECK-NEXT: renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
     ; CHECK-NEXT: RET undef $lr, implicit $w0
     renamable $w8 = MOVZWi 56952, 0
     renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8

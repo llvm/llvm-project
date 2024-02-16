@@ -60,6 +60,7 @@ enum class ActionType {
   ScanDepsByModuleName,
   MaterializeCachedJob,
   ReplayCachedJob,
+  PruneCAS,
   WatchDir,
 };
 
@@ -88,6 +89,7 @@ Action(cl::desc("Action:"), cl::init(ActionType::None),
                      "Materialize cached compilation data from upstream CAS"),
           clEnumValN(ActionType::ReplayCachedJob, "replay-cached-job",
                      "Replay a cached compilation from the CAS"),
+          clEnumValN(ActionType::PruneCAS, "prune-cas", "Prune CAS data"),
           clEnumValN(ActionType::WatchDir,
                      "watch-dir", "Watch directory for file events")),
        cl::cat(IndexTestCoreCategory));
@@ -484,7 +486,7 @@ static std::string findRecordNameForFile(indexstore::IndexStore &store,
 }
 
 static int printStoreFileRecord(StringRef storePath, StringRef filePath,
-                                Optional<unsigned> lineStart, unsigned lineCount,
+                                std::optional<unsigned> lineStart, unsigned lineCount,
                                 PathRemapper remapper, raw_ostream &OS) {
   std::string error;
   indexstore::IndexStore store(storePath, remapper, error);
@@ -696,7 +698,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     bool SerializeDiags, bool DependencyFile,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
                     CXCASDatabases DBs,
-                    Optional<std::string> ModuleName = std::nullopt) {
+                    std::optional<std::string> ModuleName = std::nullopt) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
   auto CleanupOpts = llvm::make_scope_exit([&] {
@@ -990,6 +992,43 @@ static int replayCachedJob(ArrayRef<const char *> Args,
   return 0;
 }
 
+static int pruneCAS(int64_t Limit, CXCASDatabases DBs) {
+  CXError Err = nullptr;
+  int64_t Size = clang_experimental_cas_Databases_get_storage_size(DBs, &Err);
+  if (Size == -2) {
+    llvm::errs() << "clang_experimental_cas_Databases_get_storage_size: "
+                 << clang_Error_getDescription(Err) << "\n";
+    clang_Error_dispose(Err);
+    return 1;
+  }
+  if (Size == -1) {
+    llvm::errs()
+        << "unsupported clang_experimental_cas_Databases_get_storage_size";
+    return 1;
+  }
+  if (Size == 0) {
+    llvm::errs()
+        << "clang_experimental_cas_Databases_get_storage_size returned 0";
+    return 1;
+  }
+
+  if (CXError Err =
+          clang_experimental_cas_Databases_set_size_limit(DBs, Limit)) {
+    llvm::errs() << "clang_experimental_cas_Databases_set_size_limit: "
+                 << clang_Error_getDescription(Err) << "\n";
+    clang_Error_dispose(Err);
+    return 1;
+  }
+  if (CXError Err = clang_experimental_cas_Databases_prune_ondisk_data(DBs)) {
+    llvm::errs() << "clang_experimental_cas_Databases_prune_ondisk_data: "
+                 << clang_Error_getDescription(Err) << "\n";
+    clang_Error_dispose(Err);
+    return 1;
+  }
+
+  return 0;
+}
+
 static void printSymbol(const IndexRecordDecl &Rec, raw_ostream &OS) {
   printSymbolInfo(Rec.SymInfo, OS);
   OS << " | ";
@@ -1154,7 +1193,7 @@ static int watchDirectory(StringRef dirPath) {
 
 bool deconstructPathAndRange(StringRef input,
                              std::string &filepath,
-                             Optional<unsigned> &lineStart,
+                             std::optional<unsigned> &lineStart,
                              unsigned &lineCount) {
   StringRef path, start, end;
   std::tie(path, end) = input.rsplit(':');
@@ -1233,7 +1272,7 @@ int indextest_core_main(int argc, const char **argv) {
   if (options::Action == ActionType::PrintRecord) {
     if (!options::FilePathAndRange.empty()) {
       std::string filepath;
-      Optional<unsigned> lineStart;
+      std::optional<unsigned> lineStart;
       unsigned lineCount;
       if (deconstructPathAndRange(options::FilePathAndRange,
                                   filepath, lineStart, lineCount))
@@ -1291,9 +1330,9 @@ int indextest_core_main(int argc, const char **argv) {
     return aggregateDataAsJSON(storePath, PathRemapper, OS);
   }
 
-  Optional<std::string> CASPath = options::CASPath.empty()
+  std::optional<std::string> CASPath = options::CASPath.empty()
                                       ? std::nullopt
-                                      : Optional<std::string>(options::CASPath);
+                                      : std::optional<std::string>(options::CASPath);
 
   CXCASOptions CASOpts = nullptr;
   CXCASDatabases DBs = nullptr;
@@ -1377,6 +1416,23 @@ int indextest_core_main(int argc, const char **argv) {
     }
     return replayCachedJob(CompArgs, options::WorkingDir,
                            options::InputFiles[0], DBs);
+  }
+
+  if (options::Action == ActionType::PruneCAS) {
+    if (options::InputFiles.empty()) {
+      errs() << "error: missing size limit\n";
+      return 1;
+    }
+    int64_t Limit;
+    if (StringRef(options::InputFiles[0]).getAsInteger(10, Limit)) {
+      errs() << "error: size limit not an integer\n";
+      return 1;
+    }
+    if (!DBs) {
+      errs() << "error: CAS was not configured\n";
+      return 1;
+    }
+    return pruneCAS(Limit, DBs);
   }
 
   if (options::Action == ActionType::WatchDir) {

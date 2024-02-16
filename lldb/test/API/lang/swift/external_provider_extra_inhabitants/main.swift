@@ -1,5 +1,7 @@
 import CoreGraphics
 
+func use<T>(_ t: T) {}
+
 public class MyClass {
   // CGImage is consulted through the external info provider.
   // This field is here to test that LLDB correctly calculates 
@@ -8,7 +10,11 @@ public class MyClass {
 	public var unused: CGImage? = nil
 	public var size: CGSize? = nil
 }
-let object = MyClass()
-object.size = CGSize(width:10, height:20)
-print(1) // Set breakpoint here.
+func f() {
+  let object = MyClass()
+  object.size = CGSize(width:10, height:20)
+  use(object)
+  print("Set breakpoint here.")
+}
 
+f()

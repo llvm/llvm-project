@@ -613,11 +613,10 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   StackFrameSP parent_frame = nullptr;
   addr_t return_pc = LLDB_INVALID_ADDRESS;
   uint32_t current_frame_idx = current_frame->GetFrameIndex();
-  uint32_t num_frames = thread->GetStackFrameCount();
-  for (uint32_t parent_frame_idx = current_frame_idx + 1;
-       parent_frame_idx < num_frames; ++parent_frame_idx) {
+
+  for (uint32_t parent_frame_idx = current_frame_idx + 1;;parent_frame_idx++) {
     parent_frame = thread->GetStackFrameAtIndex(parent_frame_idx);
-    // Require a valid sequence of frames.
+    // If this is null, we're at the end of the stack.
     if (!parent_frame)
       break;
 
@@ -758,7 +757,7 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   }
 #ifdef LLDB_ENABLE_SWIFT
   }
-  llvm::Optional<DWARFExpressionList> subexpr;
+  std::optional<DWARFExpressionList> subexpr;
   if (!matched_param) {
     auto *ctx_func = parent_func ? parent_func : current_func;
     subexpr.emplace(ctx_func->CalculateSymbolContextModule(),

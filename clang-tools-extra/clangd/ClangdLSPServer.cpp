@@ -844,15 +844,32 @@ void ClangdLSPServer::onWorkspaceSymbol(
 }
 
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
-                                      Callback<std::optional<Range>> Reply) {
+                                      Callback<PrepareRenameResult> Reply) {
   Server->prepareRename(
       Params.textDocument.uri.file(), Params.position, /*NewName*/ std::nullopt,
       Opts.Rename,
       [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
         if (!Result)
           return Reply(Result.takeError());
-        return Reply(std::move(Result->Target));
+        PrepareRenameResult PrepareResult{Result->Target, Result->OldName};
+        return Reply(std::move(PrepareResult));
       });
+}
+
+/// Validate that `Edits` are valid and form a `WorkspaceEdit` that contains
+/// the edits as its `changes`.
+static llvm::Expected<WorkspaceEdit>
+formWorkspaceEdit(const FileEdits &Edits, const ClangdServer &Server) {
+  if (auto Err = validateEdits(Server, Edits))
+    return std::move(Err);
+  WorkspaceEdit Result;
+  // FIXME: use documentChanges if SupportDocumentChanges is true.
+  Result.changes.emplace();
+  for (const auto &Rep : Edits) {
+    (*Result.changes)[URI::createFile(Rep.first()).toString()] =
+        Rep.second.asTextEdits();
+  }
+  return Result;
 }
 
 void ClangdLSPServer::onRename(const RenameParams &Params,
@@ -861,24 +878,31 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
   if (!Server->getDraft(File))
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
+  auto Callback = [Reply = std::move(Reply),
+                   this](llvm::Expected<RenameResult> R) mutable {
+    if (!R)
+      return Reply(R.takeError());
+    llvm::Expected<WorkspaceEdit> WorkspaceEdit =
+        formWorkspaceEdit(R->GlobalChanges, *Server);
+    Reply(std::move(WorkspaceEdit));
+  };
   Server->rename(File, Params.position, Params.newName, Opts.Rename,
-                 [File, Params, Reply = std::move(Reply),
-                  this](llvm::Expected<RenameResult> R) mutable {
-                   if (!R)
-                     return Reply(R.takeError());
-                   if (auto Err = validateEdits(*Server, R->GlobalChanges))
-                     return Reply(std::move(Err));
-                   WorkspaceEdit Result;
-                   // FIXME: use documentChanges if SupportDocumentChanges is
-                   // true.
-                   Result.changes.emplace();
-                   for (const auto &Rep : R->GlobalChanges) {
-                     (*Result
-                           .changes)[URI::createFile(Rep.first()).toString()] =
-                         Rep.second.asTextEdits();
-                   }
-                   Reply(Result);
-                 });
+                 std::move(Callback));
+}
+
+void ClangdLSPServer::onIndexedRename(const IndexedRenameParams &Params,
+                                      Callback<WorkspaceEdit> Reply) {
+  auto Callback = [Reply = std::move(Reply),
+                   this](llvm::Expected<FileEdits> Edits) mutable {
+    if (!Edits) {
+      return Reply(Edits.takeError());
+    }
+    llvm::Expected<WorkspaceEdit> WorkspaceEdit =
+        formWorkspaceEdit(*Edits, *Server);
+    Reply(std::move(WorkspaceEdit));
+  };
+  Server->indexedRename(Params.positions, Params.textDocument.uri.file(),
+                        Params.oldName, Params.newName, std::move(Callback));
 }
 
 void ClangdLSPServer::onDocumentDidClose(
@@ -1634,6 +1658,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("textDocument/switchSourceHeader", this, &ClangdLSPServer::onSwitchSourceHeader);
   Bind.method("textDocument/prepareRename", this, &ClangdLSPServer::onPrepareRename);
   Bind.method("textDocument/rename", this, &ClangdLSPServer::onRename);
+  Bind.method("workspace/indexedRename", this, &ClangdLSPServer::onIndexedRename);
   Bind.method("textDocument/hover", this, &ClangdLSPServer::onHover);
   Bind.method("textDocument/documentSymbol", this, &ClangdLSPServer::onDocumentSymbol);
   Bind.method("workspace/executeCommand", this, &ClangdLSPServer::onCommand);

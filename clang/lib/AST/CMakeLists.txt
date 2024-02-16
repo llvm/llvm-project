@@ -75,6 +75,7 @@ add_clang_library(clangAST
   Interp/Function.cpp
   Interp/InterpBuiltin.cpp
   Interp/Floating.cpp
+  Interp/EvaluationResult.cpp
   Interp/Interp.cpp
   Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp
@@ -112,6 +113,7 @@ add_clang_library(clangAST
   StmtCXX.cpp
   StmtIterator.cpp
   StmtObjC.cpp
+  StmtOpenACC.cpp
   StmtOpenMP.cpp
   StmtPrinter.cpp
   StmtProfile.cpp

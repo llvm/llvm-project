@@ -486,7 +486,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Predefine macros and configure the preprocessor.
   InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
-                         getFrontendOpts());
+                         getFrontendOpts(), getCodeGenOpts());
 
   // Initialize the header search object.  In CUDA compilations, we use the aux
   // triple (the host triple) to initialize our header search, since we need to
@@ -564,7 +564,7 @@ std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
   if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
-  return std::string(SpecificModuleCache.str());
+  return std::string(SpecificModuleCache);
 }
 
 // ASTContext
@@ -1980,9 +1980,16 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
     // Check whether M refers to the file in the prebuilt module path.
     if (M && M->getASTFile())
-      if (auto ModuleFile = FileMgr->getFile(ModuleFilename))
+      if (auto ModuleFile = FileMgr->getOptionalFileRef(ModuleFilename)) {
         if (*ModuleFile == M->getASTFile())
           return M;
+#if !defined(__APPLE__)
+        // Workaround for ext4 file system. Also check bypass file if exists.
+        if (auto Bypass = FileMgr->getBypassFile(*ModuleFile))
+          if (*Bypass == M->getASTFile())
+            return M;
+#endif
+      }
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
         << ModuleName;
@@ -2301,7 +2308,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   // Build the module, inheriting any modules that we've built locally.
   if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
                         ModuleFileName, PreBuildStep, PostBuildStep)) {
-    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName.str());
+    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName);
     llvm::sys::RemoveFileOnSignal(ModuleFileName);
   }
 }

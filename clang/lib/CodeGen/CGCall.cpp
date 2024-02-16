@@ -73,6 +73,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_Swift: return llvm::CallingConv::Swift;
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
   case CC_M68kRTD: return llvm::CallingConv::M68k_RTD;
+  case CC_PreserveNone: return llvm::CallingConv::PreserveNone;
   }
 }
 
@@ -255,6 +256,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<M68kRTDAttr>())
     return CC_M68kRTD;
+
+  if (D->hasAttr<PreserveNoneAttr>())
+    return CC_PreserveNone;
 
   return CC_C;
 }
@@ -1297,27 +1301,25 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   // If coercing a fixed vector to a scalable vector for ABI compatibility, and
   // the types match, use the llvm.vector.insert intrinsic to perform the
   // conversion.
-  if (auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(Ty)) {
-    if (auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
-      // If we are casting a fixed i8 vector to a scalable 16 x i1 predicate
+  if (auto *ScalableDstTy = dyn_cast<llvm::ScalableVectorType>(Ty)) {
+    if (auto *FixedSrcTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      // If we are casting a fixed i8 vector to a scalable i1 predicate
       // vector, use a vector insert and bitcast the result.
-      bool NeedsBitcast = false;
-      auto PredType =
-          llvm::ScalableVectorType::get(CGF.Builder.getInt1Ty(), 16);
-      llvm::Type *OrigType = Ty;
-      if (ScalableDst == PredType &&
-          FixedSrc->getElementType() == CGF.Builder.getInt8Ty()) {
-        ScalableDst = llvm::ScalableVectorType::get(CGF.Builder.getInt8Ty(), 2);
-        NeedsBitcast = true;
+      if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
+          ScalableDstTy->getElementCount().isKnownMultipleOf(8) &&
+          FixedSrcTy->getElementType()->isIntegerTy(8)) {
+        ScalableDstTy = llvm::ScalableVectorType::get(
+            FixedSrcTy->getElementType(),
+            ScalableDstTy->getElementCount().getKnownMinValue() / 8);
       }
-      if (ScalableDst->getElementType() == FixedSrc->getElementType()) {
+      if (ScalableDstTy->getElementType() == FixedSrcTy->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
-        auto *UndefVec = llvm::UndefValue::get(ScalableDst);
+        auto *UndefVec = llvm::UndefValue::get(ScalableDstTy);
         auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDst, UndefVec, Load, Zero, "cast.scalable");
-        if (NeedsBitcast)
-          Result = CGF.Builder.CreateBitCast(Result, OrigType);
+            ScalableDstTy, UndefVec, Load, Zero, "cast.scalable");
+        if (ScalableDstTy != Ty)
+          Result = CGF.Builder.CreateBitCast(Result, Ty);
         return Result;
       }
     }
@@ -1767,14 +1769,31 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
       FPT->isNothrow())
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
 
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+  unsigned SMEBits = FPT->getAArch64SMEAttributes();
+  if (SMEBits & FunctionType::SME_PStateSMEnabledMask)
     FuncAttrs.addAttribute("aarch64_pstate_sm_enabled");
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask)
+  if (SMEBits & FunctionType::SME_PStateSMCompatibleMask)
     FuncAttrs.addAttribute("aarch64_pstate_sm_compatible");
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask)
-    FuncAttrs.addAttribute("aarch64_pstate_za_shared");
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateZAPreservedMask)
-    FuncAttrs.addAttribute("aarch64_pstate_za_preserved");
+
+  // ZA
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
+    FuncAttrs.addAttribute("aarch64_preserves_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
+    FuncAttrs.addAttribute("aarch64_in_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Out)
+    FuncAttrs.addAttribute("aarch64_out_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_InOut)
+    FuncAttrs.addAttribute("aarch64_inout_za");
+
+  // ZT0
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Preserves)
+    FuncAttrs.addAttribute("aarch64_preserves_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_In)
+    FuncAttrs.addAttribute("aarch64_in_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Out)
+    FuncAttrs.addAttribute("aarch64_out_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
+    FuncAttrs.addAttribute("aarch64_inout_zt0");
 }
 
 static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,
@@ -2454,9 +2473,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
-
-    if (TargetDecl->hasAttr<ArmNewZAAttr>())
-      FuncAttrs.addAttribute("aarch64_pstate_za_new");
   }
 
   // Attach "no-builtins" attributes to:
@@ -3189,13 +3205,14 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         llvm::Value *Coerced = Fn->getArg(FirstIRArg);
         if (auto *VecTyFrom =
                 dyn_cast<llvm::ScalableVectorType>(Coerced->getType())) {
-          // If we are casting a scalable 16 x i1 predicate vector to a fixed i8
+          // If we are casting a scalable i1 predicate vector to a fixed i8
           // vector, bitcast the source and use a vector extract.
-          auto PredType =
-              llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-          if (VecTyFrom == PredType &&
+          if (VecTyFrom->getElementType()->isIntegerTy(1) &&
+              VecTyFrom->getElementCount().isKnownMultipleOf(8) &&
               VecTyTo->getElementType() == Builder.getInt8Ty()) {
-            VecTyFrom = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
+            VecTyFrom = llvm::ScalableVectorType::get(
+                VecTyTo->getElementType(),
+                VecTyFrom->getElementCount().getKnownMinValue() / 8);
             Coerced = Builder.CreateBitCast(Coerced, VecTyFrom);
           }
           if (VecTyFrom->getElementType() == VecTyTo->getElementType()) {
@@ -3210,6 +3227,25 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
+      llvm::StructType *STy =
+          dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
+      llvm::TypeSize StructSize;
+      llvm::TypeSize PtrElementSize;
+      if (ArgI.isDirect() && !ArgI.getCanBeFlattened() && STy &&
+          STy->getNumElements() > 1) {
+        StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        PtrElementSize =
+            CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(Ty));
+        if (STy->containsHomogeneousScalableVectorTypes()) {
+          assert(StructSize == PtrElementSize &&
+                 "Only allow non-fractional movement of structure with"
+                 "homogeneous scalable vector type");
+
+          ArgVals.push_back(ParamValue::forDirect(AI));
+          break;
+        }
+      }
+
       Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg),
                                      Arg->getName());
 
@@ -3218,7 +3254,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      llvm::StructType *STy = dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
           STy->getNumElements() > 1) {
         llvm::TypeSize StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
@@ -5286,6 +5321,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         break;
       }
 
+      llvm::StructType *STy =
+          dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
+      llvm::Type *SrcTy = ConvertTypeForMem(I->Ty);
+      llvm::TypeSize SrcTypeSize;
+      llvm::TypeSize DstTypeSize;
+      if (STy && ArgInfo.isDirect() && !ArgInfo.getCanBeFlattened()) {
+        SrcTypeSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
+        DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        if (STy->containsHomogeneousScalableVectorTypes()) {
+          assert(SrcTypeSize == DstTypeSize &&
+                 "Only allow non-fractional movement of structure with "
+                 "homogeneous scalable vector type");
+
+          IRCallArgs[FirstIRArg] = I->getKnownRValue().getScalarVal();
+          break;
+        }
+      }
+
       // FIXME: Avoid the conversion through memory if possible.
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
@@ -5301,8 +5354,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      llvm::StructType *STy =
-            dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         llvm::Type *SrcTy = Src.getElementType();
         llvm::TypeSize SrcTypeSize =
@@ -5851,12 +5902,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // If coercing a fixed vector from a scalable vector for ABI
       // compatibility, and the types match, use the llvm.vector.extract
       // intrinsic to perform the conversion.
-      if (auto *FixedDst = dyn_cast<llvm::FixedVectorType>(RetIRTy)) {
+      if (auto *FixedDstTy = dyn_cast<llvm::FixedVectorType>(RetIRTy)) {
         llvm::Value *V = CI;
-        if (auto *ScalableSrc = dyn_cast<llvm::ScalableVectorType>(V->getType())) {
-          if (FixedDst->getElementType() == ScalableSrc->getElementType()) {
+        if (auto *ScalableSrcTy =
+                dyn_cast<llvm::ScalableVectorType>(V->getType())) {
+          if (FixedDstTy->getElementType() == ScalableSrcTy->getElementType()) {
             llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
-            V = Builder.CreateExtractVector(FixedDst, V, Zero, "cast.fixed");
+            V = Builder.CreateExtractVector(FixedDstTy, V, Zero, "cast.fixed");
             return RValue::get(V);
           }
         }

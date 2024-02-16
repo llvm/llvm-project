@@ -200,10 +200,17 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
-    if (!Imported)
-      return; // File includes handled by LexedFileChanged.
+    // File includes are handled by LexedFileChanged.
+    if (!SuggestedModule)
+      return;
+
+    // Modules that will not be imported and were not loaded from an AST file
+    // (e.g. the module being implemented) are also handled by LexedFileChanged.
+    if (!ModuleImported && !SuggestedModule->getASTFile())
+      return;
 
     // Calculate EndLoc for the directive
     // FIXME: pass EndLoc through PPCallbacks; it is already calculated
@@ -219,7 +226,7 @@ public:
     } while (!Tok.isOneOf(tok::eod, tok::eof));
     SourceLocation EndLoc = L.getSourceLocation();
 
-    Builder.moduleImport(PP, Imported, EndLoc);
+    Builder.moduleImport(PP, SuggestedModule, EndLoc);
   }
 
   void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
@@ -454,6 +461,23 @@ void IncludeTreeBuilder::exitedInclude(Preprocessor &PP, FileID IncludedBy,
   assert(*check(getObjectForFile(PP, IncludedBy)) == IncludeStack.back().File);
   SourceManager &SM = PP.getSourceManager();
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedExpansionLoc(ExitLoc);
+
+  // If the file includes already has a node for the current source location, it
+  // must be an import that turned out to be spurious.
+  auto &CurIncludes = IncludeStack.back().Includes;
+  if (!CurIncludes.empty() && CurIncludes.back().Offset == LocInfo.second) {
+    assert(!IncludeTree->isSubmodule());
+    auto Import = CurIncludes.pop_back_val();
+    assert(Import.Kind == cas::IncludeTree::NodeKind::ModuleImport);
+    auto SpuriousImport = cas::IncludeTree::SpuriousImport::create(
+        DB, Import.Ref, IncludeTree->getRef());
+    if (!SpuriousImport)
+      return;
+    CurIncludes.push_back({SpuriousImport->getRef(), LocInfo.second,
+                           cas::IncludeTree::NodeKind::SpuriousImport});
+    return;
+  }
+
   IncludeStack.back().Includes.push_back({IncludeTree->getRef(), LocInfo.second,
                                           cas::IncludeTree::NodeKind::Tree});
 }

@@ -6,7 +6,7 @@ declare i8 @llvm.nvvm.ldu.global.i.i8.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i16 @llvm.nvvm.ldu.global.i.i16.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i32 @llvm.nvvm.ldu.global.i.i32.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i64 @llvm.nvvm.ldu.global.i.i64.p1(ptr addrspace(1) %ptr, i32 %align)
-declare ptr @llvm.nvvm.ldu.global.p.p1i8(ptr addrspace(1) %ptr, i32 %align)
+declare ptr @llvm.nvvm.ldu.global.p.p1(ptr addrspace(1) %ptr, i32 %align)
 declare float @llvm.nvvm.ldu.global.f.f32.p1(ptr addrspace(1) %ptr, i32 %align)
 declare double @llvm.nvvm.ldu.global.f.f64.p1(ptr addrspace(1) %ptr, i32 %align)
 declare half @llvm.nvvm.ldu.global.f.f16.p1(ptr addrspace(1) %ptr, i32 %align)
@@ -16,7 +16,7 @@ declare i8 @llvm.nvvm.ldg.global.i.i8.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i16 @llvm.nvvm.ldg.global.i.i16.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i64 @llvm.nvvm.ldg.global.i.i64.p1(ptr addrspace(1) %ptr, i32 %align)
-declare ptr @llvm.nvvm.ldg.global.p.p1i8(ptr addrspace(1) %ptr, i32 %align)
+declare ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1) %ptr, i32 %align)
 declare float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1) %ptr, i32 %align)
 declare double @llvm.nvvm.ldg.global.f.f64.p1(ptr addrspace(1) %ptr, i32 %align)
 declare half @llvm.nvvm.ldg.global.f.f16.p1(ptr addrspace(1) %ptr, i32 %align)
@@ -53,7 +53,7 @@ define i64 @test_ldu_i64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_p
 define ptr @test_ldu_p(ptr addrspace(1) %ptr) {
   ; CHECK: ldu.global.u64
-  %val = tail call ptr @llvm.nvvm.ldu.global.p.p1i8(ptr addrspace(1) %ptr, i32 8)
+  %val = tail call ptr @llvm.nvvm.ldu.global.p.p1(ptr addrspace(1) %ptr, i32 8)
   ret ptr %val
 }
 
@@ -117,7 +117,7 @@ define i64 @test_ldg_i64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_p
 define ptr @test_ldg_p(ptr addrspace(1) %ptr) {
   ; CHECK: ld.global.nc.u64
-  %val = tail call ptr @llvm.nvvm.ldg.global.p.p1i8(ptr addrspace(1) %ptr, i32 8)
+  %val = tail call ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1) %ptr, i32 8)
   ret ptr %val
 }
 

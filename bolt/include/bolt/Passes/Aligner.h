@@ -39,7 +39,7 @@ public:
   const char *getName() const override { return "aligner"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

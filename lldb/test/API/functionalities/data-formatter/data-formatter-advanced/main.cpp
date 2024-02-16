@@ -1,6 +1,7 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#include <string>
 
 struct i_am_cool
 {
@@ -191,6 +192,17 @@ int main (int argc, const char * argv[])
     VeryLong a_long_guy;
     
     QuiteNested quite_nested;
+
+    std::string some_string = "012345678901234567890123456789"
+                              "012345678901234567890123456789"
+                              "012345678901234567890123456789"
+                              "012345678901234567890123456789";
+    char const *some_cstring = some_string.c_str();
+
+    char const some_carr[] = "012345678901234567890123456789"
+                             "012345678901234567890123456789"
+                             "012345678901234567890123456789"
+                             "012345678901234567890123456789";
 
     return 0; // Set break point at this line.
 }

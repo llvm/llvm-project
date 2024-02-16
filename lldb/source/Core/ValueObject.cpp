@@ -900,8 +900,7 @@ static bool CopyStringDataToBufferSP(const StreamString &source,
 
 std::pair<size_t, bool>
 ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
-                               Status &error, uint32_t max_length,
-                               bool honor_array) {
+                               Status &error, bool honor_array) {
   bool was_capped = false;
   StreamString s;
   ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -914,8 +913,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     return {0, was_capped};
   }
 
-  if (max_length == 0)
-    max_length = target->GetMaximumSizeOfStringSummary();
+  const auto max_length = target->GetMaximumSizeOfStringSummary();
 
   size_t bytes_read = 0;
   size_t total_bytes_read = 0;
@@ -1236,9 +1234,10 @@ bool ValueObject::DumpPrintableRepresentation(
       {
         Status error;
         lldb::WritableDataBufferSP buffer_sp;
-        std::pair<size_t, bool> read_string = ReadPointedString(
-            buffer_sp, error, 0, (custom_format == eFormatVectorOfChar) ||
-                                     (custom_format == eFormatCharArray));
+        std::pair<size_t, bool> read_string =
+            ReadPointedString(buffer_sp, error,
+                              (custom_format == eFormatVectorOfChar) ||
+                                  (custom_format == eFormatCharArray));
         lldb_private::formatters::StringPrinter::
             ReadBufferAndDumpToStreamOptions options(*this);
         options.SetData(DataExtractor(
@@ -1400,6 +1399,8 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
     }
 
+    // If the requested display style produced no output, try falling back to
+    // alternative presentations.
     if (str.empty()) {
       if (val_obj_display == eValueObjectRepresentationStyleValue)
         str = GetSummaryAsCString();
@@ -1606,10 +1607,10 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-llvm::Optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
+std::optional<SwiftScratchContextReader> ValueObject::GetSwiftScratchContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
-    return llvm::None;
+    return std::nullopt;
   Status error;
   ExecutionContext ctx = GetExecutionContextRef().Lock(false);
   auto *exe_scope = ctx.GetBestExecutionContextScope();
@@ -2628,7 +2629,7 @@ void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
 #ifdef LLDB_ENABLE_SWIFT
   auto swift_scratch_ctx_lock = SwiftScratchContextLock(GetSwiftExeCtx(*this));
 #endif // LLDB_ENABLE_SWIFT
-  ValueObjectPrinter printer(this, &s, options);
+  ValueObjectPrinter printer(*this, &s, options);
   printer.PrintValueObject();
 }
 

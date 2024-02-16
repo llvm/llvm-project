@@ -10,6 +10,7 @@
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -72,6 +73,31 @@ private:
   bool EmitDependencyFile = false;
 };
 
+static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+                                   const HeaderSearchOptions &ExistingHSOpts,
+                                   DiagnosticsEngine *Diags,
+                                   const LangOptions &LangOpts) {
+  if (LangOpts.Modules) {
+    if (HSOpts.VFSOverlayFiles != ExistingHSOpts.VFSOverlayFiles) {
+      if (Diags) {
+        Diags->Report(diag::err_pch_vfsoverlay_mismatch);
+        auto VFSNote = [&](int Type, ArrayRef<std::string> VFSOverlays) {
+          if (VFSOverlays.empty()) {
+            Diags->Report(diag::note_pch_vfsoverlay_empty) << Type;
+          } else {
+            std::string Files = llvm::join(VFSOverlays, "\n");
+            Diags->Report(diag::note_pch_vfsoverlay_files) << Type << Files;
+          }
+        };
+        VFSNote(0, HSOpts.VFSOverlayFiles);
+        VFSNote(1, ExistingHSOpts.VFSOverlayFiles);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 
 /// A listener that collects the imported modules and optionally the input
@@ -80,16 +106,22 @@ class PrebuiltModuleListener : public ASTReaderListener {
 public:
   PrebuiltModuleListener(CompilerInstance &CI,
                          PrebuiltModuleFilesT &PrebuiltModuleFiles,
-                         llvm::SmallVector<std::string> &NewModuleFiles)
+                         llvm::SmallVector<std::string> &NewModuleFiles,
+                         DiagnosticsEngine &Diags)
       : CI(CI), PrebuiltModuleFiles(PrebuiltModuleFiles),
-
-        NewModuleFiles(NewModuleFiles) {}
+        NewModuleFiles(NewModuleFiles), Diags(Diags) {}
 
   bool needsImportVisitation() const override { return true; }
 
   void visitImport(StringRef ModuleName, StringRef Filename) override {
     if (PrebuiltModuleFiles.insert({ModuleName.str(), Filename.str()}).second)
       NewModuleFiles.push_back(Filename.str());
+  }
+
+  bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+                             bool Complain) override {
+    return checkHeaderSearchPaths(
+        HSOpts, CI.getHeaderSearchOpts(), Complain ? &Diags : nullptr, CI.getLangOpts());
   }
 
   bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
@@ -104,30 +136,42 @@ private:
   CompilerInstance &CI;
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::SmallVector<std::string> &NewModuleFiles;
+  DiagnosticsEngine &Diags;
 };
 
 /// Visit the given prebuilt module and collect all of the modules it
 /// transitively imports and contributing input files.
-static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
+static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 CompilerInstance &CI,
-                                PrebuiltModuleFilesT &ModuleFiles) {
+                                PrebuiltModuleFilesT &ModuleFiles,
+                                DiagnosticsEngine &Diags) {
   // List of module files to be processed.
-  llvm::SmallVector<std::string> Worklist{PrebuiltModuleFilename.str()};
-  PrebuiltModuleListener Listener(CI, ModuleFiles, Worklist);
+  llvm::SmallVector<std::string> Worklist;
+  PrebuiltModuleListener Listener(CI, ModuleFiles, Worklist, Diags);
 
-  while (!Worklist.empty())
-    ASTReader::readASTFileControlBlock(
-        Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
-        CI.getPCHContainerReader(),
-        /*FindModuleFileExtensions=*/false, Listener,
-        /*ValidateDiagnosticOptions=*/false);
+  if (ASTReader::readASTFileControlBlock(
+          PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
+          CI.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Listener,
+          /*ValidateDiagnosticOptions=*/false, ASTReader::ARR_OutOfDate))
+    return true;
+
+  while (!Worklist.empty()) {
+    if (ASTReader::readASTFileControlBlock(
+            Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
+            CI.getPCHContainerReader(),
+            /*FindModuleFileExtensions=*/false, Listener,
+            /*ValidateDiagnosticOptions=*/false))
+      return true;
+  }
+  return false;
 }
 
 /// Transform arbitrary file name into an object-like file name.
 static std::string makeObjFileName(StringRef FileName) {
   SmallString<128> ObjFileName(FileName);
   llvm::sys::path::replace_extension(ObjFileName, "o");
-  return std::string(ObjFileName.str());
+  return std::string(ObjFileName);
 }
 
 /// Deduce the dependency target based on the output file and input files.
@@ -317,6 +361,7 @@ public:
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
+    ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage = true;
 
     ScanInstance.setFileManager(FileMgr);
     // Support for virtual file system overlays.
@@ -330,9 +375,12 @@ public:
     // will prevent the implicit build to create duplicate modules and will
     // force reuse of the existing prebuilt module files instead.
     if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
-      visitPrebuiltModule(
-          ScanInstance.getPreprocessorOpts().ImplicitPCHInclude, ScanInstance,
-          ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles);
+      if (visitPrebuiltModule(
+              ScanInstance.getPreprocessorOpts().ImplicitPCHInclude,
+              ScanInstance,
+              ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
+              ScanInstance.getDiagnostics()))
+        return false;
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
@@ -454,6 +502,9 @@ public:
 
     if (Error E = Controller.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
+
+    if (ScanInstance.getDiagnostics().hasErrorOccurred())
+      return false;
 
     if (!ScanInstance.ExecuteAction(*Action))
       return false;

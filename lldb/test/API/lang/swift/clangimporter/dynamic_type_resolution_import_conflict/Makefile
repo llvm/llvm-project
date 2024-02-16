@@ -1,7 +1,10 @@
 SWIFT_SOURCES=main.swift
 SWIFT_OBJC_INTEROP := 1
 LD_EXTRAS=-lDylib -lConflict -L$(shell pwd)
-SWIFTFLAGS_EXTRAS= -Xcc -I$(SRCDIR)/hidden/Bar -I. -import-objc-header $(SRCDIR)/bridging.h
+SWIFTFLAGS_EXTRAS= -Xcc -I$(SRCDIR)/hidden/Bar -I.
+SWIFT_BRIDGING_HEADER := bridging.h
+SWIFT_PRECOMPILE_BRIDGING_HEADER := NO
+DISABLE_SWIFT_INTERFACE := YES
 
 all: libDylib.dylib libConflict.dylib a.out
 

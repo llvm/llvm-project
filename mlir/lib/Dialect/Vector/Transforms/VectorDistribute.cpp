@@ -182,7 +182,7 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
   auto yield =
       cast<vector::YieldOp>(newOpBody.getBlocks().begin()->getTerminator());
 
-  rewriter.updateRootInPlace(
+  rewriter.modifyOpInPlace(
       yield, [&]() { yield.getOperandsMutable().assign(newYieldedValues); });
   return newWarpOp;
 }
@@ -724,7 +724,7 @@ struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return failure();
     // Notify the rewriter that the warp op is changing (see the comment on
     // the WarpOpTransferRead pattern).
-    rewriter.startRootUpdate(warpOp);
+    rewriter.startOpModification(warpOp);
     unsigned operandIndex = yieldOperand->getOperandNumber();
     Attribute scalarAttr = dense.getSplatValue<Attribute>();
     auto newAttr = DenseElementsAttr::get(
@@ -733,7 +733,7 @@ struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.setInsertionPointAfter(warpOp);
     Value distConstant = rewriter.create<arith::ConstantOp>(loc, newAttr);
     rewriter.replaceAllUsesWith(warpOp.getResult(operandIndex), distConstant);
-    rewriter.finalizeRootUpdate(warpOp);
+    rewriter.finalizeOpModification(warpOp);
     return success();
   }
 };
@@ -1017,9 +1017,9 @@ struct WarpOpForwardOperand : public OpRewritePattern<WarpExecuteOnLane0Op> {
       return failure();
     // Notify the rewriter that the warp op is changing (see the comment on
     // the WarpOpTransferRead pattern).
-    rewriter.startRootUpdate(warpOp);
+    rewriter.startOpModification(warpOp);
     rewriter.replaceAllUsesWith(warpOp.getResult(resultIndex), valForwarded);
-    rewriter.finalizeRootUpdate(warpOp);
+    rewriter.finalizeOpModification(warpOp);
     return success();
   }
 };
@@ -1159,7 +1159,7 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     // Notify the rewriter that the warp op is changing (see the comment on
     // the WarpOpTransferRead pattern).
-    rewriter.startRootUpdate(warpOp);
+    rewriter.startOpModification(warpOp);
 
     AffineExpr s0, s1;
     bindSymbols(rewriter.getContext(), s0, s1);
@@ -1179,7 +1179,7 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto newMask =
         rewriter.create<vector::CreateMaskOp>(loc, distType, newOperands);
     rewriter.replaceAllUsesWith(warpOp.getResult(operandIndex), newMask);
-    rewriter.finalizeRootUpdate(warpOp);
+    rewriter.finalizeOpModification(warpOp);
     return success();
   }
 };

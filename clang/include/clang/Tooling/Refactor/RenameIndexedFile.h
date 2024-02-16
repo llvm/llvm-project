@@ -12,7 +12,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Refactor/RenamedSymbol.h"
-#include "clang/Tooling/Refactor/SymbolName.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Mutex.h"
 
@@ -36,7 +36,7 @@ struct IndexedOccurrence {
 };
 
 struct IndexedSymbol {
-  OldSymbolName Name;
+  SymbolName Name;
   std::vector<IndexedOccurrence> IndexedOccurrences;
   /// Whether this symbol is an Objective-C selector.
   bool IsObjCSelector;
@@ -44,7 +44,7 @@ struct IndexedSymbol {
   /// in string literal tokens.
   bool SearchForStringLiteralOccurrences;
 
-  IndexedSymbol(OldSymbolName Name,
+  IndexedSymbol(SymbolName Name,
                 std::vector<IndexedOccurrence> IndexedOccurrences,
                 bool IsObjCSelector,
                 bool SearchForStringLiteralOccurrences = false)

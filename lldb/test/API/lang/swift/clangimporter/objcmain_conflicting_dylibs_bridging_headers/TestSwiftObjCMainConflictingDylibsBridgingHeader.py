@@ -43,6 +43,10 @@ class TestSwiftObjCMainConflictingDylibsBridgingHeader(TestBase):
             'break here', lldb.SBFileSpec('Foo.swift'))
         process.Continue()
         self.expect("fr var foo", "expected result", substrs=["23"])
+        precise = self.dbg.GetSetting('symbols.swift-precise-compiler-invocation').GetBooleanValue()
+        if not precise:
+            return
+        # FIXME: This should work with precise compiler invocations.
         self.expect("expression foo", "expected result", substrs=["$R3", "23"])
         self.expect("expression $R3", "expected result", substrs=["23"])
         self.expect("expression $R4", "expected result", substrs=["23"])

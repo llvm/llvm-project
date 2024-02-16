@@ -46,7 +46,7 @@ static bool isZeroValue(Value val) {
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
   return enc && !llvm::all_of(enc.getLvlTypes(),
-                              [](auto lt) { return lt == LevelType::Dense; });
+                              [](auto lt) { return lt == LevelFormat::Dense; });
 }
 static bool isSparseTensor(OpOperand *op) { return isSparseTensor(op->get()); }
 
@@ -329,7 +329,7 @@ public:
                        .getCopy();
       AllocTensorOp a =
           op.getDpsInitOperand(0)->get().getDefiningOp<AllocTensorOp>();
-      rewriter.updateRootInPlace(a, [&]() { a.getCopyMutable().assign(init); });
+      rewriter.modifyOpInPlace(a, [&]() { a.getCopyMutable().assign(init); });
     }
     // Replace consumer with fused operation. Old producer
     // and consumer ops will be removed by DCE.
@@ -366,7 +366,7 @@ public:
     if (tensor::isSameTypeWithoutEncoding(srcType, dstType)) {
       if (Operation *def = op.getSource().getDefiningOp()) {
         if (def->hasOneUse() && isa<tensor::ExtractSliceOp>(def)) {
-          rewriter.updateRootInPlace(def, [&]() {
+          rewriter.modifyOpInPlace(def, [&]() {
             def->getResult(0).setType(op->getResultTypes()[0]);
           });
           rewriter.replaceOp(op, def->getResult(0));
@@ -543,14 +543,14 @@ public:
     if (!op.hasPureTensorSemantics() || op.getNumDpsInputs() != 1 ||
         op.getNumReductionLoops() == 0 || op.getNumResults() != 1)
       return failure();
-    auto inp = op.getDpsInputOperand(0);
-    auto init = op.getDpsInitOperand(0);
+    auto *inp = op.getDpsInputOperand(0);
+    auto *init = op.getDpsInitOperand(0);
     if (!isSparseTensor(inp))
       return failure();
     // Look for direct x = x OP y for semi-ring ready reductions.
-    auto red = cast<linalg::YieldOp>(op.getRegion().front().getTerminator())
-                   .getOperand(0)
-                   .getDefiningOp();
+    auto *red = cast<linalg::YieldOp>(op.getRegion().front().getTerminator())
+                    .getOperand(0)
+                    .getDefiningOp();
     if (!isa<arith::AndIOp, arith::MulIOp, arith::MulFOp, arith::MinimumFOp,
              arith::MinSIOp, arith::MinUIOp, arith::MaximumFOp, arith::MaxSIOp,
              arith::MaxUIOp>(red))
@@ -592,7 +592,7 @@ public:
     IRMapping irMap;
     irMap.map(red->getOperand(0), region->getArgument(0));
     irMap.map(red->getOperand(1), region->getArgument(1));
-    auto cloned = rewriter.clone(*red, irMap);
+    auto *cloned = rewriter.clone(*red, irMap);
     rewriter.create<sparse_tensor::YieldOp>(loc, cloned->getResult(0));
     rewriter.setInsertionPointAfter(custom);
     rewriter.replaceOp(red, custom.getResult());
@@ -804,7 +804,7 @@ public:
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
-      rewriter.updateRootInPlace(op, [&]() { op->setOperand(0, convert); });
+      rewriter.modifyOpInPlace(op, [&]() { op->setOperand(0, convert); });
       return success();
     }
     if (encDst) {
@@ -1126,7 +1126,7 @@ public:
     }
 
     Value vals = loopEmitter.getValBuffer()[0];
-    Value pos = loopEmitter.getPosits()[0].back();
+    Value pos = loopEmitter.getValPosits(0);
     // Loads the value from sparse tensor using position-index;
     // loads the value from dense tensor using coords.
     Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pos)
@@ -1148,17 +1148,17 @@ public:
     SmallVector<Value> reducValue = srcBlock->getTerminator()->getOperands();
     rewriter.eraseOp(srcBlock->getTerminator());
 
-    // Inline body.
-    if (!reducValue.empty()) {
-      rewriter.mergeBlocks(srcBlock, rewriter.getBlock(), args);
-    } else {
-      // This is annoying, since scf.for inserts a implicit yield op when
-      // there is no reduction variable upon creation, in this case we need to
-      // merge the block *before* the yield op.
-      rewriter.inlineBlockBefore(srcBlock, &*rewriter.getInsertionPoint(),
-                                 args);
+    Operation &last = rewriter.getBlock()->back();
+    if (llvm::isa<scf::YieldOp>(last)) {
+      // Because `scf.for` inserts an implicit yield op when there is no
+      // reduction variable upon creation, we reset the insertion point such
+      // that the block is inlined before *before* the yield op.
+      rewriter.setInsertionPoint(&last);
     }
 
+    rewriter.inlineBlockBefore(srcBlock, rewriter.getBlock(),
+                               rewriter.getInsertionPoint(), args);
+    rewriter.setInsertionPointToEnd(rewriter.getBlock());
     for (Level l = 0; l < lvlRank; l++) {
       // Link the reduction chain. Note that loop emitter update the reducValue
       // in place.

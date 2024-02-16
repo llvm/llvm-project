@@ -145,6 +145,19 @@ private:
 /// For debugging purposes. Equivalent to a call to Token::str().
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
 
+/// A list of tokens as lexed from the input file, without expanding
+/// preprocessor macros.
+class UnexpandedTokenBuffer {
+  std::vector<syntax::Token> Tokens;
+  std::unique_ptr<SourceManagerForFile> SrcMgr;
+
+public:
+  UnexpandedTokenBuffer(StringRef Code, const LangOptions &LangOpts);
+
+  ArrayRef<syntax::Token> tokens() const { return Tokens; }
+  const SourceManager &sourceManager() const { return SrcMgr->get(); }
+};
+
 /// A list of tokens obtained by preprocessing a text buffer and operations to
 /// map between the expanded and spelled tokens, i.e. TokenBuffer has
 /// information about two token streams:

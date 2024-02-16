@@ -135,6 +135,9 @@ if config.enable_cuda_runner:
 if config.enable_sycl_runner:
     tools.extend([add_runtime("mlir_sycl_runtime")])
 
+if config.mlir_run_arm_sve_tests or config.mlir_run_arm_sme_tests:
+    tools.extend([add_runtime("mlir_arm_runner_utils")])
+
 if config.mlir_run_arm_sme_tests:
     config.substitutions.append(
         (

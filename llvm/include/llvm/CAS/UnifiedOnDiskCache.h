@@ -91,6 +91,13 @@ public:
   /// \p SizeLimit was passed to the \p open call.
   Error close(bool CheckSizeLimit = true);
 
+  /// Set the size for limiting growth. This has an effect for when the instance
+  /// is closed.
+  void setSizeLimit(std::optional<uint64_t> SizeLimit);
+
+  /// \returns the storage size of the cache data.
+  uint64_t getStorageSize() const;
+
   /// \returns whether the primary store has exceeded the intended size limit.
   /// This can return false even if the overall size of the opened directory is
   /// over the \p SizeLimit passed to \p open. To know whether garbage
@@ -112,6 +119,8 @@ public:
   /// background, so that it has minimal effect on the workload of the process.
   static Error collectGarbage(StringRef Path);
 
+  Error collectGarbage();
+
   ~UnifiedOnDiskCache();
 
 private:
@@ -120,8 +129,11 @@ private:
   Expected<std::optional<ObjectID>>
   faultInFromUpstreamKV(ArrayRef<uint8_t> Key);
 
+  /// \returns the storage size of the primary directory.
+  uint64_t getPrimaryStorageSize() const;
+
   std::string RootPath;
-  std::optional<uint64_t> SizeLimit;
+  std::atomic<uint64_t> SizeLimit;
 
   int LockFD = -1;
 

@@ -56,6 +56,7 @@ public:
   class Node;
   class Module;
   class ModuleImport;
+  class SpuriousImport;
   class ModuleMap;
   class APINotes;
 
@@ -106,6 +107,7 @@ public:
   enum class NodeKind : uint8_t {
     Tree,
     ModuleImport,
+    SpuriousImport,
   };
 
   /// The kind of node included at the given index.
@@ -337,7 +339,8 @@ public:
   /// Whether this module should only be "marked visible" rather than imported.
   bool visibilityOnly() const { return (bool)getData()[0]; }
 
-  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0,
+                    char End = '\n');
 
   static bool isValid(const ObjectProxy &Node) {
     if (!IncludeTreeBase::isValid(Node))
@@ -356,9 +359,62 @@ public:
 
 private:
   friend class IncludeTreeBase<ModuleImport>;
+  friend class SpuriousImport;
   friend class Node;
 
   explicit ModuleImport(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+};
+
+class IncludeTree::SpuriousImport
+    : public IncludeTreeBase<SpuriousImport> {
+public:
+  static Expected<SpuriousImport>
+  create(ObjectStore &DB, ObjectRef ImportRef, ObjectRef TreeRef);
+
+  static constexpr StringRef getNodeKind() { return "SpIm"; }
+
+  Expected<ModuleImport> getModuleImport() {
+    std::optional<ObjectProxy> Proxy;
+    if (llvm::Error Err = getCAS().getProxy(getReference(0)).moveInto(Proxy))
+      return Err;
+    return ModuleImport(*Proxy);
+  }
+
+  Expected<IncludeTree> getIncludeTree() {
+    std::optional<ObjectProxy> Proxy;
+    if (llvm::Error Err = getCAS().getProxy(getReference(1)).moveInto(Proxy))
+      return Err;
+    return IncludeTree(*Proxy);
+  }
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    if (Base.getNumReferences() != 2 && Base.getData().size() != 0)
+      return false;
+    return ModuleImport::isValid(Base.getCAS(), Base.getReference(0)) &&
+           IncludeTree::isValid(Base.getCAS(), Base.getReference(1));
+  }
+
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  friend class IncludeTreeBase;
+  friend class Node;
+
+  explicit SpuriousImport(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
     assert(isValid(*this));
   }
 };
@@ -373,6 +429,10 @@ public:
   ModuleImport getModuleImport() const {
     assert(K == NodeKind::ModuleImport);
     return ModuleImport(N);
+  }
+  SpuriousImport getSpuriousImport() const {
+    assert(K == NodeKind::SpuriousImport);
+    return SpuriousImport(N);
   }
   NodeKind getKind() const { return K; }
 

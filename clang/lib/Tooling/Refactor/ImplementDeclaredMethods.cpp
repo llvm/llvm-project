@@ -135,7 +135,7 @@ clang::tooling::initiateImplementDeclaredMethodsOperation(
       return RefactoringOperationResult("templates are unsupported");
     llvm::SmallVector<const CXXMethodDecl *, 8> SelectedMethods;
     for (const CXXMethodDecl *M : CXXClass->methods()) {
-      if (M->isImplicit() || M->hasBody() || M->isPure() || M->isDefaulted() ||
+      if (M->isImplicit() || M->hasBody() || M->isPureVirtual() || M->isDefaulted() ||
           M->isDeletedAsWritten() || M->getDescribedFunctionTemplate())
         continue;
       if (Slice.isSourceRangeSelected(

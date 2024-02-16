@@ -155,7 +155,8 @@ CompilerInvocationBase::CompilerInvocationBase()
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
       DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
-      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()),
+      InstallAPIOpts(std::make_shared<InstallAPIOptions>()) {}
 
 CompilerInvocationBase &
 CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
@@ -174,6 +175,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
     DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
     PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
+    InstallAPIOpts = make_shared_copy(X.getInstallAPIOpts());
   }
   return *this;
 }
@@ -195,6 +197,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+    InstallAPIOpts = X.InstallAPIOpts;
   }
   return *this;
 }
@@ -2109,20 +2112,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_funified_lto))
       Opts.PrepareForThinLTO = true;
   }
-  if (Arg *A = Args.getLastArg(options::OPT_ffat_lto_objects,
-                               options::OPT_fno_fat_lto_objects)) {
-    if (A->getOption().matches(options::OPT_ffat_lto_objects)) {
-      if (Arg *Uni = Args.getLastArg(options::OPT_funified_lto,
-                                     options::OPT_fno_unified_lto)) {
-        if (Uni->getOption().matches(options::OPT_fno_unified_lto))
-          Diags.Report(diag::err_drv_incompatible_options)
-              << A->getAsString(Args) << "-fno-unified-lto";
-      } else
-        Diags.Report(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-funified-lto";
-    }
-  }
-
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -2429,6 +2418,34 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
 
   return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static bool ParseInstallAPIArgs(InstallAPIOptions &Opts, ArgList &Args,
+                                DiagnosticsEngine &Diags,
+                                frontend::ActionKind Action) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
+  InstallAPIOptions &InstallAPIOpts = Opts;
+#define INSTALLAPI_OPTION_WITH_MARSHALLING(...)                                \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef INSTALLAPI_OPTION_WITH_MARSHALLING
+  if (Arg *A = Args.getLastArg(options::OPT_current__version))
+    Opts.CurrentVersion.parse64(A->getValue());
+
+  return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static void GenerateInstallAPIArgs(const InstallAPIOptions &Opts,
+                                   ArgumentConsumer Consumer) {
+  const InstallAPIOptions &InstallAPIOpts = Opts;
+#define INSTALLAPI_OPTION_WITH_MARSHALLING(...)                                \
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
+#include "clang/Driver/Options.inc"
+#undef INSTALLAPI_OPTION_WITH_MARSHALLING
+  if (!Opts.CurrentVersion.empty())
+    GenerateArg(Consumer, OPT_current__version,
+                std::string(Opts.CurrentVersion));
 }
 
 static void GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
@@ -2853,6 +2870,7 @@ static const auto &getFrontendActionTable() {
       {frontend::GeneratePCH, OPT_emit_pch},
       {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
       {frontend::InitOnly, OPT_init_only},
+      {frontend::InstallAPI, OPT_installapi},
       {frontend::ParseSyntaxOnly, OPT_fsyntax_only},
       {frontend::ModuleFileInfo, OPT_module_file_info},
       {frontend::VerifyPCH, OPT_verify_pch},
@@ -3539,7 +3557,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       llvm::sys::fs::make_absolute(WorkingDir, P);
   }
   llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P.str());
+  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -3580,7 +3598,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       SmallString<32> Buffer;
       llvm::sys::path::append(Buffer, Opts.Sysroot,
                               llvm::StringRef(A->getValue()).substr(1));
-      Path = std::string(Buffer.str());
+      Path = std::string(Buffer);
     }
 
     Opts.AddPath(Path, Group, IsFramework,
@@ -3891,7 +3909,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 Twine(Major) + "." + Twine(Minor) + "." + Twine(Subminor));
   }
 
-  if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS()) {
+  if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17 && !Opts.C23) ||
+      T.isOSzOS()) {
     if (!Opts.Trigraphs)
       GenerateArg(Consumer, OPT_fno_trigraphs);
   } else {
@@ -4293,10 +4312,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Mimicking gcc's behavior, trigraphs are only enabled if -trigraphs
   // is specified, or -std is set to a conforming mode.
-  // Trigraphs are disabled by default in c++1z onwards.
+  // Trigraphs are disabled by default in C++17 and C23 onwards.
   // For z/OS, trigraphs are enabled by default (without regard to the above).
   Opts.Trigraphs =
-      (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS();
+      (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17 && !Opts.C23) ||
+      T.isOSzOS();
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
@@ -4653,19 +4673,34 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
     // handle PhysicalStorageBuffer64 memory model
     if (T.isDXIL() || T.isSPIRVLogical()) {
-      enum { ShaderModel, ShaderStage };
+      enum { ShaderModel, VulkanEnv, ShaderStage };
+      enum { OS, Environment };
+
+      int ExpectedOS = T.isSPIRVLogical() ? VulkanEnv : ShaderModel;
+
       if (T.getOSName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderModel << T.str();
-      } else if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
-        Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
-            << ShaderModel << T.getOSName() << T.str();
+            << ExpectedOS << OS << T.str();
       } else if (T.getEnvironmentName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderStage << T.str();
+            << ShaderStage << Environment << T.str();
       } else if (!T.isShaderStageEnvironment()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
             << ShaderStage << T.getEnvironmentName() << T.str();
+      }
+
+      if (T.isDXIL()) {
+        if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
+          Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+              << ShaderModel << T.getOSName() << T.str();
+        }
+      } else if (T.isSPIRVLogical()) {
+        if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
+          Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+              << VulkanEnv << T.getOSName() << T.str();
+        }
+      } else {
+        llvm_unreachable("expected DXIL or SPIR-V target");
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
@@ -4694,6 +4729,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::GenerateHeaderUnit:
   case frontend::GeneratePCH:
   case frontend::GenerateInterfaceStubs:
+  case frontend::InstallAPI:
   case frontend::ParseSyntaxOnly:
   case frontend::ModuleFileInfo:
   case frontend::VerifyPCH:
@@ -5088,6 +5124,11 @@ bool CompilerInvocation::CreateFromArgsImpl(
       Res.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
     LangOpts.NeededByPCHOrCompilationUsesPCH = true;
 
+  if (Args.hasArg(OPT_installapi)) {
+    ParseInstallAPIArgs(Res.getInstallAPIOpts(), Args, Diags,
+                        Res.getFrontendOpts().ProgramAction);
+  }
+
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
       !Res.getLangOpts().Sanitize.empty()) {
@@ -5195,6 +5236,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   if (hsOpts.ModulesStrictContextHash) {
     HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
     HBuilder.addRange(hsOpts.UserEntries);
+    HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();
 #define DIAGOPT(Name, Bits, Default) HBuilder.add(diagOpts.Name);
@@ -5299,6 +5341,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GeneratePreprocessorOutputArgs(getPreprocessorOutputOpts(), Consumer,
                                  getFrontendOpts().ProgramAction);
   GenerateDependencyOutputArgs(getDependencyOutputOpts(), Consumer);
+  GenerateInstallAPIArgs(getInstallAPIOpts(), Consumer);
 }
 
 std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {

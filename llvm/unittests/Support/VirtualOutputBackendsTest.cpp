@@ -426,7 +426,7 @@ std::optional<OnDiskFile> OnDiskFile::findTemp() const {
   for (sys::fs::directory_iterator I(ParentPath, EC), E; !EC && I != E;
        I.increment(EC)) {
     StringRef TempPath = I->path();
-    if (!TempPath.startswith(D.path()))
+    if (!TempPath.starts_with(D.path()))
       continue;
 
     // Look for "<stem>-*.<extension>.tmp".
@@ -438,9 +438,9 @@ std::optional<OnDiskFile> OnDiskFile::findTemp() const {
     if (sys::path::extension(TempStem) != Extension)
       continue;
     StringRef OriginalStem = sys::path::stem(TempStem);
-    if (!OriginalStem.startswith(Stem))
+    if (!OriginalStem.starts_with(Stem))
       continue;
-    if (!OriginalStem.drop_front(Stem.size()).startswith("-"))
+    if (!OriginalStem.drop_front(Stem.size()).starts_with("-"))
       continue;
 
     // Found it.

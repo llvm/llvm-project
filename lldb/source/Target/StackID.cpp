@@ -17,18 +17,17 @@
 
 using namespace lldb_private;
 
-bool StackID::IsStackAddress(lldb::addr_t addr,
-                             lldb::ThreadSP thread_sp) const {
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  if (thread_sp)
-    if (auto process_sp = thread_sp->GetProcess()) {
+bool StackID::IsCFAOnStack(Process &process) const {
+  if (m_cfa_on_stack == eLazyBoolCalculate) {
+    m_cfa_on_stack = eLazyBoolNo;
+    if (m_cfa != LLDB_INVALID_ADDRESS) {
       MemoryRegionInfo mem_info;
-      if (process_sp->GetMemoryRegionInfo(addr, mem_info).Success())
-        return mem_info.IsStackMemory() == MemoryRegionInfo::eYes;
+      if (process.GetMemoryRegionInfo(m_cfa, mem_info).Success())
+        if (mem_info.IsStackMemory() == MemoryRegionInfo::eYes)
+          m_cfa_on_stack = eLazyBoolYes;
     }
-  return true; // assumed
+  }
+  return m_cfa_on_stack == eLazyBoolYes;
 }
 
 void StackID::Dump(Stream *s) {
@@ -74,18 +73,19 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return lhs_scope != rhs_scope;
 }
 
-bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
+bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
+                        Process &process) {
+  // FIXME: rdar://76119439
+  // At the boundary between an async parent frame calling a regular child
+  // frame, the CFA of the parent async function is a heap addresses, and the
+  // CFA of concrete child function is a stack address. Therefore, if lhs is
+  // on stack, and rhs is not, lhs is considered less than rhs, independent of
+  // address values.
+  if (lhs.IsCFAOnStack(process) && !rhs.IsCFAOnStack(process))
+    return true;
+
   const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
   const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
-
-  // FIXME: rdar://76119439
-  // Heuristic: At the boundary between an async parent frame calling a regular
-  // child frame, the CFA of the parent async function is a heap addresses, and
-  // the CFA of concrete child function is a stack addresses. Therefore, if lhs
-  // is on stack, and rhs is not, lhs is considered less than rhs (regardless of
-  // address values).
-  if (lhs.IsCFAOnStack() && !rhs.IsCFAOnStack())
-    return true;
 
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on

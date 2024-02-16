@@ -125,7 +125,6 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[COPY1]](p0), %bb.1
   ; CHECK-NEXT:   $x0 = COPY [[PHI]](p0)

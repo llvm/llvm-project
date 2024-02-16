@@ -24,44 +24,12 @@ class TestSwiftArrayType(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        lldbtest.TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
     @swiftTest
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()
-        self.do_test()
-
-    def do_test(self):
-        """Check formatting for Swift.Array<T>"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, lldbtest.VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-
+        lldbutil.run_to_source_breakpoint(self, 'Set breakpoint here',
+                                          lldb.SBFileSpec('main.swift'))
         self.expect(
             "frame variable arrint",
             substrs=["([Int]) arrint = 0 values {}"])

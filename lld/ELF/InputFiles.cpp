@@ -41,8 +41,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-// This function is explicity instantiated in ARM.cpp, don't do it here to avoid
-// warnings with MSVC.
+// This function is explicitly instantiated in ARM.cpp, don't do it here to
+// avoid warnings with MSVC.
 extern template void ObjFile<ELF32LE>::importCmseSymbols();
 extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
@@ -323,7 +323,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
 
-// This function is explicity instantiated in ARM.cpp. Mark it extern here,
+// This function is explicitly instantiated in ARM.cpp. Mark it extern here,
 // to avoid warnings when building with MSVC.
 extern template void ObjFile<ELF32LE>::importCmseSymbols();
 extern template void ObjFile<ELF32BE>::importCmseSymbols();
@@ -1546,6 +1546,7 @@ template <class ELFT> void SharedFile::parse() {
       auto *s = symtab.addSymbol(
           SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
                        sym.getType(), sym.st_value, sym.st_size, alignment});
+      s->dsoDefined = true;
       if (s->file == this)
         s->versionId = ver;
     }
@@ -1563,6 +1564,7 @@ template <class ELFT> void SharedFile::parse() {
     auto *s = symtab.addSymbol(
         SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
+    s->dsoDefined = true;
     if (s->file == this)
       s->versionId = idx;
   }
@@ -1612,6 +1614,8 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
     return EM_RISCV;
   case Triple::sparcv9:
     return EM_SPARCV9;
+  case Triple::systemz:
+    return EM_S390;
   case Triple::x86:
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
@@ -1739,7 +1743,7 @@ void BitcodeFile::parseLazy() {
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
       auto *sym = symtab.insert(saver().save(irSym.getName()));
-      sym->resolve(LazyObject{*this});
+      sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }
 }
@@ -1785,6 +1789,15 @@ void BinaryFile::parse() {
                                       nullptr});
 }
 
+InputFile *elf::createInternalFile(StringRef name) {
+  auto *file =
+      make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+  // References from an internal file do not lead to --warn-backrefs
+  // diagnostics.
+  file->groupId = 0;
+  return file;
+}
+
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
                                 bool lazy) {
   ELFFileBase *f;
@@ -1821,7 +1834,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
     symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
-    symbols[i]->resolve(LazyObject{*this});
+    symbols[i]->resolve(LazySymbol{*this});
     if (!lazy)
       break;
   }

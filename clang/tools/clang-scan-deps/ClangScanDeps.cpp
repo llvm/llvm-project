@@ -176,6 +176,7 @@ static void ParseArgs(int argc, char **argv) {
             .Case("none", ScanningOptimizations::None)
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -1006,7 +1007,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
                            *Diags);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
-  if (!C)
+  if (!C || C->getJobs().empty())
     return nullptr;
 
   auto Cmd = C->getJobs().begin();

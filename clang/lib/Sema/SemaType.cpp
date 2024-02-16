@@ -137,7 +137,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_IntelOclBicc:                                            \
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
-  case ParsedAttr::AT_M68kRTD
+  case ParsedAttr::AT_M68kRTD:                                                 \
+  case ParsedAttr::AT_PreserveNone
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -147,8 +148,10 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_ArmStreamingCompatible:                                  \
-  case ParsedAttr::AT_ArmSharedZA:                                             \
-  case ParsedAttr::AT_ArmPreservesZA:                                          \
+  case ParsedAttr::AT_ArmPreserves:                                            \
+  case ParsedAttr::AT_ArmIn:                                                   \
+  case ParsedAttr::AT_ArmOut:                                                  \
+  case ParsedAttr::AT_ArmInOut:                                                \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
@@ -1651,6 +1654,19 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
+  case DeclSpec::TST_typename_pack_indexing: {
+    Expr *E = DS.getPackIndexingExpr();
+    assert(E && "Didn't get an expression for pack indexing");
+    QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
+    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
+                                     DS.getEllipsisLoc());
+    if (Result.isNull()) {
+      declarator.setInvalidType(true);
+      Result = Context.IntTy;
+    }
+    break;
+  }
+
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
     Result = S.GetTypeFromParser(DS.getRepAsType());
@@ -5893,6 +5909,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //  - the type-id in the default argument of a type-parameter, or
     //  - the type-id of a template-argument for a type-parameter
     //
+    // C++23 [dcl.fct]p6 (P0847R7)
+    // ... A member-declarator with an explicit-object-parameter-declaration
+    // shall not include a ref-qualifier or a cv-qualifier-seq and shall not be
+    // declared static or virtual ...
+    //
     // FIXME: Checking this here is insufficient. We accept-invalid on:
     //
     //   template<typename T> struct S { void f(T); };
@@ -5900,8 +5921,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //
     // ... for instance.
     if (IsQualifiedFunction &&
-        !(Kind == Member && !D.isExplicitObjectMemberFunction() &&
-          D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static) &&
+        // Check for non-static member function and not and
+        // explicit-object-parameter-declaration
+        (Kind != Member || D.isExplicitObjectMemberFunction() ||
+         D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+         (D.getContext() == clang::DeclaratorContext::Member &&
+          D.isStaticMember())) &&
         !IsTypedefName && D.getContext() != DeclaratorContext::TemplateArg &&
         D.getContext() != DeclaratorContext::TemplateTypeArg) {
       SourceLocation Loc = D.getBeginLoc();
@@ -6069,7 +6094,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 ///
 /// The result of this call will never be null, but the associated
 /// type may be a null type if there's an unrecoverable error.
-TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D, Scope *S) {
+TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D) {
   // Determine the type of the declarator. Not all forms of declarator
   // have a type.
 
@@ -6310,6 +6335,10 @@ namespace {
       assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
       TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+    }
+    void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+      assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
+      TL.setEllipsisLoc(DS.getEllipsisLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
@@ -6747,13 +6776,13 @@ void LocInfoType::getAsStringInternal(std::string &Str,
          " GetTypeFromParser");
 }
 
-TypeResult Sema::ActOnTypeName(Scope *S, Declarator &D) {
+TypeResult Sema::ActOnTypeName(Declarator &D) {
   // C99 6.7.6: Type names have no identifier.  This is already validated by
   // the parser.
   assert(D.getIdentifier() == nullptr &&
          "Type name should have no identifier!");
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
   if (D.isInvalidType())
     return true;
@@ -7900,6 +7929,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveAllAttr>(Ctx, Attr);
   case ParsedAttr::AT_M68kRTD:
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
+  case ParsedAttr::AT_PreserveNone:
+    return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -7922,6 +7953,52 @@ static bool checkMutualExclusion(TypeProcessingState &state,
   S.Diag(OtherAttr->getLoc(), diag::note_conflicting_attribute);
   Attr.setInvalid();
   return true;
+}
+
+static bool handleArmStateAttribute(Sema &S,
+                                    FunctionProtoType::ExtProtoInfo &EPI,
+                                    ParsedAttr &Attr,
+                                    FunctionType::ArmStateValue State) {
+  if (!Attr.getNumArgs()) {
+    S.Diag(Attr.getLoc(), diag::err_missing_arm_state) << Attr;
+    Attr.setInvalid();
+    return true;
+  }
+
+  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
+      return true;
+
+    unsigned Shift;
+    FunctionType::ArmStateValue ExistingState;
+    if (StateName == "za") {
+      Shift = FunctionType::SME_ZAShift;
+      ExistingState = FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
+    } else if (StateName == "zt0") {
+      Shift = FunctionType::SME_ZT0Shift;
+      ExistingState = FunctionType::getArmZT0State(EPI.AArch64SMEAttributes);
+    } else {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    // __arm_in(S), __arm_out(S), __arm_inout(S) and __arm_preserves(S)
+    // are all mutually exclusive for the same S, so check if there are
+    // conflicting attributes.
+    if (ExistingState != FunctionType::ARM_None && ExistingState != State) {
+      S.Diag(LiteralLoc, diag::err_conflicting_attributes_arm_state)
+          << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setArmSMEAttribute(
+        (FunctionType::AArch64SMETypeAttributes)((State << Shift)));
+  }
+  return false;
 }
 
 /// Process an individual function attribute.  Returns true to
@@ -8056,10 +8133,17 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
   if (attr.getKind() == ParsedAttr::AT_ArmStreaming ||
       attr.getKind() == ParsedAttr::AT_ArmStreamingCompatible ||
-      attr.getKind() == ParsedAttr::AT_ArmSharedZA ||
-      attr.getKind() == ParsedAttr::AT_ArmPreservesZA){
-    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      attr.getKind() == ParsedAttr::AT_ArmPreserves ||
+      attr.getKind() == ParsedAttr::AT_ArmIn ||
+      attr.getKind() == ParsedAttr::AT_ArmOut ||
+      attr.getKind() == ParsedAttr::AT_ArmInOut) {
+    if (S.CheckAttrTarget(attr))
       return true;
+
+    if (attr.getKind() == ParsedAttr::AT_ArmStreaming ||
+        attr.getKind() == ParsedAttr::AT_ArmStreamingCompatible)
+      if (S.CheckAttrNoArgs(attr))
+        return true;
 
     if (!unwrapped.isFunctionType())
       return false;
@@ -8087,11 +8171,21 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
         return true;
       EPI.setArmSMEAttribute(FunctionType::SME_PStateSMCompatibleMask);
       break;
-    case ParsedAttr::AT_ArmSharedZA:
-      EPI.setArmSMEAttribute(FunctionType::SME_PStateZASharedMask);
+    case ParsedAttr::AT_ArmPreserves:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_Preserves))
+        return true;
       break;
-    case ParsedAttr::AT_ArmPreservesZA:
-      EPI.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask);
+    case ParsedAttr::AT_ArmIn:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_In))
+        return true;
+      break;
+    case ParsedAttr::AT_ArmOut:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_Out))
+        return true;
+      break;
+    case ParsedAttr::AT_ArmInOut:
+      if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_InOut))
+        return true;
       break;
     default:
       llvm_unreachable("Unsupported attribute");
@@ -8674,21 +8768,30 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
 
   ASTContext::BuiltinVectorTypeInfo Info =
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
-  unsigned EltSize = S.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
+  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  unsigned ExpectedSize = VScale->first * MinElts;
+  QualType EltType = CurType->getRVVEltType(S.Context);
+  unsigned EltSize = S.Context.getTypeSize(EltType);
+  unsigned NumElts;
+  if (Info.ElementType == S.Context.BoolTy) {
+    NumElts = VecSize / S.Context.getCharWidth();
+    VecKind = VectorKind::RVVFixedLengthMask;
+  } else {
+    ExpectedSize *= EltSize;
+    NumElts = VecSize / EltSize;
+  }
+
   // The attribute vector size must match -mrvv-vector-bits.
-  unsigned ExpectedSize = VScale->first * MinElts * EltSize;
-  if (VecSize != ExpectedSize) {
+  if (ExpectedSize % 8 != 0 || VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
         << VecSize << ExpectedSize;
     Attr.setInvalid();
     return;
   }
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
-  VecSize /= EltSize;
-  CurType = S.Context.getVectorType(Info.ElementType, VecSize, VecKind);
+  CurType = S.Context.getVectorType(EltType, NumElts, VecKind);
 }
 
 /// Handle OpenCL Access Qualifier Attribute.
@@ -9753,6 +9856,9 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   if (auto *ImplCastExpr = dyn_cast<ImplicitCastExpr>(E))
     IDExpr = ImplCastExpr->getSubExpr();
 
+  if (auto *PackExpr = dyn_cast<PackIndexingExpr>(E))
+    IDExpr = PackExpr->getSelectedExpr();
+
   // C++11 [dcl.type.simple]p4:
   //   The type denoted by decltype(e) is defined as follows:
 
@@ -9822,6 +9928,54 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
     Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
   }
   return Context.getDecltypeType(E, getDecltypeForExpr(E));
+}
+
+QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                     SourceLocation Loc,
+                                     SourceLocation EllipsisLoc) {
+  if (!IndexExpr)
+    return QualType();
+
+  // Diagnose unexpanded packs but continue to improve recovery.
+  if (!Pattern->containsUnexpandedParameterPack())
+    Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
+
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+
+  if (!Type.isNull())
+    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_pack_indexing
+                                        : diag::ext_pack_indexing);
+  return Type;
+}
+
+QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                     SourceLocation Loc,
+                                     SourceLocation EllipsisLoc,
+                                     bool FullySubstituted,
+                                     ArrayRef<QualType> Expansions) {
+
+  std::optional<int64_t> Index;
+  if (FullySubstituted && !IndexExpr->isValueDependent() &&
+      !IndexExpr->isTypeDependent()) {
+    llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
+    ExprResult Res = CheckConvertedConstantExpression(
+        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+    if (!Res.isUsable())
+      return QualType();
+    Index = Value.getExtValue();
+    IndexExpr = Res.get();
+  }
+
+  if (FullySubstituted && Index) {
+    if (*Index < 0 || *Index >= int64_t(Expansions.size())) {
+      Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
+          << *Index << Pattern << Expansions.size();
+      return QualType();
+    }
+  }
+
+  return Context.getPackIndexingType(Pattern, IndexExpr, FullySubstituted,
+                                     Expansions, Index.value_or(-1));
 }
 
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,

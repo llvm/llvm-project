@@ -43,6 +43,12 @@ public:
     // Whether this module should only be "marked visible" rather than imported.
     bool VisibilityOnly;
   };
+  /// The module that is loaded and discarded for an \c #include directive, and
+  /// the file that is included instead.
+  struct SpuriousImport {
+    IncludeModule IM;
+    IncludeFile IF;
+  };
 
   virtual ~PPCachedActions() = default;
 
@@ -56,7 +62,8 @@ public:
   /// \returns the file that should be entered or module that should be imported
   /// for an \c #include directive. \c {} indicates that the directive
   /// should be skipped.
-  virtual std::variant<std::monostate, IncludeFile, IncludeModule>
+  virtual std::variant<std::monostate, IncludeFile, IncludeModule,
+                       SpuriousImport>
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) = 0;
 

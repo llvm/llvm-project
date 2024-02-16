@@ -248,6 +248,10 @@ public:
     return FS;
   }
 
+  /// Enable or disable tracking of VFS usage. Used to not track full header
+  /// search and implicit modulemap lookup.
+  void trackVFSUsage(bool Active);
+
   void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
     this->FS = std::move(FS);
   }
@@ -281,7 +285,7 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
-                   std::optional<cas::ObjectRef> *CASContents = nullptr) {
+                   std::optional<cas::ObjectRef> *CASContents = nullptr) const {
     return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
                                 RequiresNullTerminator, CASContents);
   }
@@ -297,7 +301,7 @@ private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
                        bool RequiresNullTerminator,
-                       std::optional<cas::ObjectRef> *CASContents);
+                       std::optional<cas::ObjectRef> *CASContents) const;
 
 public:
   /// Get the 'stat' information for the given \p Path.

@@ -15,10 +15,10 @@
 #define LLVM_IR_GLOBALPTRAUTHINFO_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace llvm {
 
@@ -47,7 +47,7 @@ public:
 
   /// Try to analyze \p V as an authenticated global reference, and return its
   /// information if successful.
-  static Optional<GlobalPtrAuthInfo> analyze(const Value *V);
+  static std::optional<GlobalPtrAuthInfo> analyze(const Value *V);
 
   /// Try to analyze \p V as an authenticated global reference, and return its
   /// information if successful, or an error explaining the failure if not.

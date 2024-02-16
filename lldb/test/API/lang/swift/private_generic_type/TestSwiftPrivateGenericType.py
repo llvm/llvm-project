@@ -151,3 +151,8 @@ class TestSwiftPrivateGenericType(TestBase):
                     substrs=["Could not evaluate the expression without binding generic types."], 
                     error=True)
 
+        # Check that if both binding and not binding the generic type parameters fail, we report 
+        # the "bind generic params" error message, as that's the default case that runs first.
+        self.expect("e --bind-generic-types auto -- self", 
+                    substrs=["Couldn't realize Swift AST type of self."], 
+                    error=True)

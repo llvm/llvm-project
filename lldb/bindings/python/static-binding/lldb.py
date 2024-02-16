@@ -5871,6 +5871,29 @@ class SBFileSpecList(object):
 
 # Register SBFileSpecList in _lldb:
 _lldb.SBFileSpecList_swigregister(SBFileSpecList)
+class SBFormat(object):
+    r"""Class that represents a format string that can be used to generate descriptions of objects like frames and threads. See https://lldb.llvm.org/use/formatting.html for more information."""
+
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        r"""
+        __init__(SBFormat self) -> SBFormat
+        __init__(SBFormat self, char const * format, SBError error) -> SBFormat
+        __init__(SBFormat self, SBFormat rhs) -> SBFormat
+        """
+        _lldb.SBFormat_swiginit(self, _lldb.new_SBFormat(*args))
+    __swig_destroy__ = _lldb.delete_SBFormat
+
+    def __nonzero__(self):
+        return _lldb.SBFormat___nonzero__(self)
+    __bool__ = __nonzero__
+
+
+
+# Register SBFormat in _lldb:
+_lldb.SBFormat_swigregister(SBFormat)
 class SBFrame(object):
     r"""
     Represents one of the stack frames associated with a thread.
@@ -6200,6 +6223,10 @@ class SBFrame(object):
     def GetDescription(self, description):
         r"""GetDescription(SBFrame self, SBStream description) -> bool"""
         return _lldb.SBFrame_GetDescription(self, description)
+
+    def GetDescriptionWithFormat(self, format, output):
+        r"""GetDescriptionWithFormat(SBFrame self, SBFormat format, SBStream output) -> SBError"""
+        return _lldb.SBFrame_GetDescriptionWithFormat(self, format, output)
 
     def __repr__(self):
         r"""__repr__(SBFrame self) -> std::string"""
@@ -11764,6 +11791,10 @@ class SBThread(object):
             or thread-stop-format (stop_format = true).
         """
         return _lldb.SBThread_GetDescription(self, *args)
+
+    def GetDescriptionWithFormat(self, format, output):
+        r"""GetDescriptionWithFormat(SBThread self, SBFormat format, SBStream output) -> SBError"""
+        return _lldb.SBThread_GetDescriptionWithFormat(self, format, output)
 
     def GetStatus(self, status):
         r"""GetStatus(SBThread self, SBStream status) -> bool"""

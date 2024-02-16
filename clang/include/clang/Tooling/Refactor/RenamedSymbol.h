@@ -12,7 +12,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Tooling/Refactor/SymbolName.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -27,7 +27,7 @@ namespace rename {
 /// \brief A symbol that has to be renamed.
 class Symbol {
 public:
-  OldSymbolName Name;
+  SymbolName Name;
   /// The index of this symbol in a \c SymbolOperation.
   unsigned SymbolIndex;
   /// The declaration that was used to initiate a refactoring operation for this

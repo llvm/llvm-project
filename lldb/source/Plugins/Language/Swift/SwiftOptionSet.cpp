@@ -50,8 +50,8 @@ GetAsEnumDecl(CompilerType swift_type) {
   if (!clang_ts)
     return {nullptr, nullptr};
 
-  auto qual_type =
-      clang::QualType::getFromOpaquePtr(clang_type.GetOpaqueQualType());
+  auto qual_type = clang::QualType::getFromOpaquePtr(
+      clang_type.GetCanonicalType().GetOpaqueQualType());
   if (qual_type->getTypeClass() != clang::Type::TypeClass::Enum)
     return {nullptr, nullptr};
 

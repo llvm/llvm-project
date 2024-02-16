@@ -68,6 +68,11 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     TargetABI = ABI_Unknown;
   }
 
+  if ((TargetABI == RISCVABI::ABI::ABI_ILP32E ||
+       (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
+      FeatureBits[RISCV::FeatureStdExtD])
+    report_fatal_error("ILP32E cannot be used with the D ISA extension");
+
   if (TargetABI != ABI_Unknown)
     return TargetABI;
 

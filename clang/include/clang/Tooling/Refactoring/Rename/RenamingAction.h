@@ -19,6 +19,7 @@
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
 #include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolOccurrences.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -115,6 +116,26 @@ private:
   /// A file path to replacements map.
   std::map<std::string, tooling::Replacements> &FileToReplaces;
 };
+
+enum class ObjCSymbolSelectorKind {
+  /// The rename location is an Objective-C method call, eg. `[self add: 1]`.
+  MessageSend,
+  
+  /// The rename location is an Objective-C method definition, eg.
+  /// ` - (void)add:(int)theValue`
+  MethodDecl,
+
+  /// It is unknown if the renamed location is a method call or declaration.
+  ///
+  /// The selector kind is being used to improve error recovery, passing unknown
+  /// does not lead to correctness issues.
+  Unknown
+};
+
+llvm::Error findObjCSymbolSelectorPieces(
+    ArrayRef<syntax::Token> Tokens, const SourceManager &SrcMgr,
+    SourceLocation RenameLoc, const SymbolName &OldName,
+    ObjCSymbolSelectorKind Kind, SmallVectorImpl<SourceLocation> &Result);
 
 } // end namespace tooling
 } // end namespace clang

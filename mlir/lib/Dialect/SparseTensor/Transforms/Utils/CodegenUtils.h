@@ -423,7 +423,7 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 /// Generates a constant of the internal dimension level type encoding.
 inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
                                        LevelType lt) {
-  return constantI8(builder, loc, static_cast<uint8_t>(lt));
+  return constantI64(builder, loc, static_cast<uint64_t>(lt));
 }
 
 inline bool isZeroRankedTensorOrScalar(Type type) {

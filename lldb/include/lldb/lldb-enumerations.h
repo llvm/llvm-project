@@ -771,6 +771,7 @@ enum SectionType {
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
   eSectionTypeCTF,
+  eSectionTypeLLDBTypeSummaries,
   eSectionTypeSwiftModules,
 };
 
@@ -889,6 +890,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
   eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindStructuralValue,
 };
 
 /// Type of match to be performed when looking for a formatter for a data type.
@@ -1340,6 +1342,12 @@ enum class ChildCacheState {
 
   eReuse = 1, ///< Children did not change and don't need to be recomputed;
               ///< re-use what we computed the last time we called Update.
+};
+
+enum SymbolDownload {
+  eSymbolDownloadOff = 0,
+  eSymbolDownloadBackground = 1,
+  eSymbolDownloadForeground = 2,
 };
 
 } // namespace lldb

@@ -1604,6 +1604,16 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   return qualified_name;
 }
 
+// BEGIN SWIFT  
+bool DWARFASTParserClang::IsSwiftInteropType(const DWARFDIE &die) {
+  for (DWARFDIE die : die.children())
+    if (die.Tag() == llvm::dwarf::DW_TAG_member &&
+        llvm::StringRef(die.GetName()) == "__swift_mangled_name")
+      return true;
+  return false;
+}
+// END SWIFT
+
 TypeSP
 DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
                                            const DWARFDIE &die,
@@ -1802,6 +1812,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     ClangASTMetadata metadata;
     metadata.SetUserID(die.GetID());
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
+    // BEGIN SWIFT
+    metadata.SetIsPotentiallySwiftInteropType(IsSwiftInteropType(die));
+    // END SWIFT
 
     TypeSystemClang::TemplateParameterInfos template_param_infos;
     if (ParseTemplateParameterInfos(die, template_param_infos)) {

@@ -126,6 +126,15 @@ class Builder:
             return ['SWIFTC="{}"'.format(configuration.swiftCompiler)]
         return []
 
+    def getPythonSpec(self):
+        """
+        Helper function to return the key-value string to specify the Python
+        interpreter used for the make system.
+        """
+        if configuration.python:
+            return ['PYTHON="{}"'.format(configuration.python)]
+        return []
+
     def getSDKRootSpec(self):
         """
         Helper function to return the key-value string to specify the SDK root
@@ -159,11 +168,6 @@ class Builder:
                     )
                 )
             return libcpp_args
-        return []
-
-    def getLLDBSwiftLibs(self):
-        if configuration.swift_libs_dir:
-            return ["SWIFT_LIBS_DIR={}".format(configuration.swift_libs_dir)]
         return []
 
     def getLLDBSwiftLibs(self):
@@ -206,6 +210,7 @@ class Builder:
             self.getSwiftTargetFlags(architecture),
             self.getCCSpec(compiler),
             self.getSwiftCSpec(),
+            self.getPythonSpec(),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),
             self.getModuleCacheSpec(),

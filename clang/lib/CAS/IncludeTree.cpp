@@ -36,6 +36,12 @@ Expected<NodeT> IncludeTreeBase<NodeT>::create(ObjectStore &DB,
   return NodeT(*Proxy);
 }
 
+Expected<IncludeTree::SpuriousImport>
+IncludeTree::SpuriousImport::create(ObjectStore &DB, ObjectRef ImportRef,
+                                    ObjectRef TreeRef) {
+  return IncludeTreeBase::create(DB, {ImportRef, TreeRef}, {});
+}
+
 Expected<IncludeTree::File> IncludeTree::File::create(ObjectStore &DB,
                                                       StringRef Filename,
                                                       ObjectRef Contents) {
@@ -138,7 +144,9 @@ Expected<IncludeTree> IncludeTree::create(
     assert((Include.Kind == NodeKind::Tree &&
             IncludeTree::isValid(DB, Include.Ref)) ||
            (Include.Kind == NodeKind::ModuleImport &&
-            ModuleImport::isValid(DB, Include.Ref)));
+            ModuleImport::isValid(DB, Include.Ref)) ||
+           (Include.Kind == NodeKind::SpuriousImport &&
+            SpuriousImport::isValid(DB, Include.Ref)));
     Refs.push_back(Include.Ref);
     Writer.write(Include.Offset);
     static_assert(sizeof(uint8_t) == sizeof(Kind));
@@ -671,12 +679,28 @@ llvm::Error IncludeTree::FileList::print(llvm::raw_ostream &OS,
 }
 
 llvm::Error IncludeTree::ModuleImport::print(llvm::raw_ostream &OS,
-                                             unsigned Indent) {
+                                             unsigned Indent, char End) {
   if (visibilityOnly())
     OS << "(Module for visibility only) ";
   else
     OS << "(Module) ";
-  OS << getModuleName() << '\n';
+  OS << getModuleName() << End;
+  return llvm::Error::success();
+}
+
+llvm::Error IncludeTree::SpuriousImport::print(llvm::raw_ostream &OS,
+                                               unsigned Indent) {
+  auto MI = getModuleImport();
+  if (!MI)
+    return MI.takeError();
+  auto IT = getIncludeTree();
+  if (!IT)
+    return IT.takeError();
+  OS << "(Spurious import) ";
+  if (llvm::Error E = MI->print(OS, Indent, /*End=*/' '))
+    return E;
+  if (llvm::Error E = IT->print(OS, Indent))
+    return E;
   return llvm::Error::success();
 }
 
@@ -686,6 +710,8 @@ llvm::Error IncludeTree::Node::print(llvm::raw_ostream &OS, unsigned Indent) {
     return getIncludeTree().print(OS, Indent);
   case NodeKind::ModuleImport:
     return getModuleImport().print(OS, Indent);
+  case NodeKind::SpuriousImport:
+    return getSpuriousImport().print(OS, Indent);
   }
 }
 

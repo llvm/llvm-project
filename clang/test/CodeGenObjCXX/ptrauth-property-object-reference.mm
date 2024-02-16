@@ -38,7 +38,7 @@ struct TCPPObject
 // CHECK:  call noundef ptr @_ZN10TCPPObjectC1ERKS_i(ptr noundef nonnull align {{[0-9]+}} dereferenceable(256) [[TWO]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[THREE]], i32 noundef [[CALL]])
 // CHECK:  ret void
 
-// CHECK: define internal void @"\01-[MyDocument MyProperty]"(ptr noalias sret(%{{.*}} align 4 %[[AGG_RESULT:.*]], ptr noundef %[[SELF:.*]],
+// CHECK: define internal void @"\01-[MyDocument MyProperty]"(ptr dead_on_unwind noalias writable sret(%{{.*}} align 4 %[[AGG_RESULT:.*]], ptr noundef %[[SELF:.*]],
 // CHECK: %[[RESULT_PTR:.*]] = alloca ptr, align 8
 // CHECK: %[[SELF_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[AGG_RESULT]], ptr %[[RESULT_PTR]], align 8

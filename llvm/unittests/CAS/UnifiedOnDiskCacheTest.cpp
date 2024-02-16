@@ -47,9 +47,9 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
   std::unique_ptr<UnifiedOnDiskCache> UniDB;
 
+  const uint64_t SizeLimit = 1024ull * 64;
   auto reopenDB = [&]() {
     UniDB.reset();
-    const uint64_t SizeLimit = 1024ull * 64;
     ASSERT_THAT_ERROR(UnifiedOnDiskCache::open(Temp.path(), SizeLimit, "blake3",
                                                sizeof(HashType))
                           .moveInto(UniDB),
@@ -129,10 +129,16 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
                       Succeeded());
   };
 
+  uint64_t PrevStoreSize = UniDB->getStorageSize();
   unsigned Index = 0;
   while (!UniDB->hasExceededSizeLimit()) {
     storeBigObject(Index++);
   }
+  EXPECT_GT(UniDB->getStorageSize(), PrevStoreSize);
+  UniDB->setSizeLimit(SizeLimit * 2);
+  EXPECT_FALSE(UniDB->hasExceededSizeLimit());
+  UniDB->setSizeLimit(SizeLimit);
+  EXPECT_TRUE(UniDB->hasExceededSizeLimit());
 
   reopenDB();
 
@@ -145,6 +151,7 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   while (!UniDB->hasExceededSizeLimit()) {
     storeBigObject(Index++);
   }
+  PrevStoreSize = UniDB->getStorageSize();
   ASSERT_THAT_ERROR(UniDB->close(), Succeeded());
   EXPECT_TRUE(UniDB->needsGarbaseCollection());
 
@@ -168,6 +175,8 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
 
   checkRootTree();
   checkKey(Key1Hash, "root");
+
+  EXPECT_LT(UniDB->getStorageSize(), PrevStoreSize);
 
   // 'Other' tree and 'Key2' got garbage-collected.
   {

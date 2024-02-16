@@ -45,10 +45,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "swift/ABI/ObjectFile.h"
-#endif //LLDB_ENABLE_SWIFT
-
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
     s->Printf("%-*s", width, #def);                                            \
@@ -1693,6 +1689,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
       .Case(".text", eSectionTypeCode)
+      .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
       .Case(".swift_ast", eSectionTypeSwiftModules)
       .Default(eSectionTypeOther);
 }
@@ -2901,9 +2898,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   if (!module_sp)
     return;
 
-  Progress progress(
-      llvm::formatv("Parsing symbol table for {0}",
-                    m_file.GetFilename().AsCString("<Unknown>")));
+  Progress progress("Parsing symbol table",
+                    m_file.GetFilename().AsCString("<Unknown>"));
   ElapsedTime elapsed(module_sp->GetSymtabParseTime());
 
   // We always want to use the main object file so we (hopefully) only have one
@@ -3618,14 +3614,4 @@ ObjectFileELF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
                                    uint64_t Offset) {
   return FileSystem::Instance().CreateWritableDataBuffer(file.GetPath(), Size,
                                                          Offset);
-}
-
-llvm::StringRef ObjectFileELF::GetReflectionSectionIdentifier(
-    swift::ReflectionSectionKind section) {
-#ifdef LLDB_ENABLE_SWIFT
-  swift::SwiftObjectFileFormatELF file_format_elf;
-  return file_format_elf.getSectionName(section);
-#else
-  llvm_unreachable("Swift support disabled");
-#endif //LLDB_ENABLE_SWIFT
 }

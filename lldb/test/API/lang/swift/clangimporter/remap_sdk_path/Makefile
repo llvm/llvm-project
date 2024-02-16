@@ -16,14 +16,14 @@ $(EXE): $(SWIFT_SOURCES)
 		VPATH=$(SRCDIR) -I $(SRCDIR) \
 		SDKROOT=$(BUILD_SDK) \
 		SWIFTFLAGS_EXTRAS="$(SWIFTFLAGS_EXTRAS)" \
-		-f  $(SRCDIR)/helper.mk clean main.o a.swiftmodule
+		-f $(SRCDIR)/helper.mk clean main.swift.o a.swiftmodule
 	echo "Sanity check that our SDK shenanigns worked"
-	dwarfdump -r 0 $(BUILDDIR)/main.o | egrep 'DW_AT_LLVM_i?sysroot' | grep -q LocalSDK
+	dwarfdump -r 0 $(BUILDDIR)/main.swift.o | egrep 'DW_AT_LLVM_i?sysroot' | grep -q LocalSDK
 	echo "Linking with regular SDK (otherwise the linker complains)"
 	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) \
 		SDKROOT=$(SDKROOT) \
-		-f  $(SRCDIR)/helper.mk all
+		-f $(SRCDIR)/helper.mk all
 	echo "Deleting build SDK"
 	rm -rf $(BUILDDIR)/LocalSDK

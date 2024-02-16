@@ -11,12 +11,12 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 

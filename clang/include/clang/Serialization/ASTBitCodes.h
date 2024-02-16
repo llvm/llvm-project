@@ -416,6 +416,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the indices of used header search entries.
   HEADER_SEARCH_ENTRY_USAGE,
+
+  /// Record code for the indices of used VFSs.
+  VFS_USAGE,
 };
 
 /// Record code for extension blocks.
@@ -1906,6 +1909,7 @@ enum StmtCode {
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
   EXPR_PACK_EXPANSION,                    // PackExpansionExpr
+  EXPR_PACK_INDEXING,                     // PackIndexingExpr
   EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr
@@ -2025,6 +2029,9 @@ enum StmtCode {
 
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
+
+  // OpenACC Constructs
+  STMT_OPENACC_COMPUTE_CONSTRUCT,
 };
 
 /// The kinds of designators that can occur in a

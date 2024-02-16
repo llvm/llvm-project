@@ -585,7 +585,7 @@ public:
   virtual bool HasSyntheticValue();
 
 #ifdef LLDB_ENABLE_SWIFT
-  llvm::Optional<SwiftScratchContextReader> GetSwiftScratchContext();
+  std::optional<SwiftScratchContextReader> GetSwiftScratchContext();
 #endif // LLDB_ENABLE_SWIFT
 
   virtual bool IsSynthetic() { return false; }
@@ -679,7 +679,7 @@ public:
 
   std::pair<size_t, bool>
   ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
-                    uint32_t max_length = 0, bool honor_array = true);
+                    bool honor_array);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);

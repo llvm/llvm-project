@@ -1,0 +1,6 @@
+SWIFT_SOURCES := main.swift
+SWIFT_BRIDGING_HEADER := bridging.h
+DISABLE_SWIFT_INTERFACE := YES
+HIDE_SWIFTMODULE := YES
+
+include Makefile.rules

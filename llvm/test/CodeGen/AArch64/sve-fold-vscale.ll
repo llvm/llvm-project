@@ -25,7 +25,7 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %2 = getelementptr inbounds [32000 x i32], ptr %addr, i64 0, i64 %index
-  %load = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %2, align 16
+  %load = load volatile <vscale x 4 x i32>, ptr %2, align 16
   %index.next = add i64 %index, %1
   %3 = icmp eq i64 %index.next, 0
   br i1 %3, label %for.cond.cleanup, label %vector.body
@@ -55,7 +55,7 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %2 = getelementptr inbounds [32000 x i32], ptr %addr, i64 0, i64 %index
-  store volatile <vscale x 4 x i32> %val, <vscale x 4 x i32>* %2, align 16
+  store volatile <vscale x 4 x i32> %val, ptr %2, align 16
   %index.next = add i64 %index, %1
   %3 = icmp eq i64 %index.next, 0
   br i1 %3, label %for.cond.cleanup, label %vector.body

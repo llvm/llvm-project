@@ -72,6 +72,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case GenerateInterfaceStubs:
     return std::make_unique<GenerateInterfaceStubsAction>();
   case InitOnly:               return std::make_unique<InitOnlyAction>();
+  case InstallAPI:
+    return std::make_unique<InstallAPIAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
   case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
@@ -185,7 +187,7 @@ CreateFrontendAction(CompilerInstance &CI) {
     CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
   }
   // Wrap the base FE action in an extract api action to generate
-  // symbol graph as a biproduct of comilation ( enabled with
+  // symbol graph as a biproduct of compilation ( enabled with
   // --emit-symbol-graph option )
   if (!FEOpts.SymbolGraphOutputDir.empty()) {
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;

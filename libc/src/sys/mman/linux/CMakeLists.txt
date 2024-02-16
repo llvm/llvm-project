@@ -22,9 +22,6 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-  COMPILE_OPTIONS
-    # TODO: https://github.com/llvm/llvm-project/issues/77395
-    -Wno-shorten-64-to-32
 )
 
 add_entrypoint_object(
@@ -63,4 +60,82 @@ add_entrypoint_object(
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  mincore
+  SRCS
+    mincore.cpp
+  HDRS
+    ../mincore.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mlock
+  SRCS
+    mlock.cpp
+  HDRS
+    ../mlock.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mlock2
+  SRCS
+    mlock2.cpp
+  HDRS
+    ../mlock2.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  munlock
+  SRCS
+    munlock.cpp
+  HDRS
+    ../munlock.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mlockall
+  SRCS
+    mlockall.cpp
+  HDRS
+    ../mlockall.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  munlockall
+  SRCS
+    munlockall.cpp
+  HDRS
+    ../munlockall.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
 )

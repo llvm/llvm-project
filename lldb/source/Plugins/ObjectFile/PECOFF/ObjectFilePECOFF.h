@@ -265,9 +265,6 @@ protected:
                                           const section_header_t &sect);
   size_t GetSectionDataSize(lldb_private::Section *section) override;
 
-  llvm::StringRef
-  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
-
   typedef std::vector<section_header_t> SectionHeaderColl;
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;
   typedef SectionHeaderColl::const_iterator SectionHeaderCollConstIter;

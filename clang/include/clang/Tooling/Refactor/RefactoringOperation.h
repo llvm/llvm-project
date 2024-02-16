@@ -15,8 +15,8 @@
 #include "clang/Tooling/Refactor/RefactoringOptionSet.h"
 #include "clang/Tooling/Refactor/RefactoringReplacement.h"
 #include "clang/Tooling/Refactor/SymbolOperation.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <string>
 #include <vector>
 

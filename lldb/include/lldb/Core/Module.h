@@ -31,7 +31,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
@@ -819,7 +819,7 @@ public:
 #ifdef LLDB_ENABLE_SWIFT
   void
   ReportWarningToolchainMismatch(CompileUnit &comp_unit,
-                                 llvm::Optional<lldb::user_id_t> debugger_id);
+                                 std::optional<lldb::user_id_t> debugger_id);
 
   bool IsSwiftCxxInteropEnabled();
 #endif

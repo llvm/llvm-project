@@ -156,7 +156,7 @@ static Error getAllDBDirs(StringRef Path,
 /// \returns Given a sub-directory named 'v<version>.<x>', it outputs the
 /// 'v<version>.<x+1>' name.
 static void getNextDBDirName(StringRef DBDir, llvm::raw_ostream &OS) {
-  assert(DBDir.startswith(DBDirPrefix));
+  assert(DBDir.starts_with(DBDirPrefix));
   uint64_t Count;
   bool Failed = DBDir.substr(DBDirPrefix.size()).getAsInteger(10, Count);
   assert(!Failed);
@@ -234,7 +234,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
 
   auto UniDB = std::unique_ptr<UnifiedOnDiskCache>(new UnifiedOnDiskCache());
   UniDB->RootPath = RootPath;
-  UniDB->SizeLimit = SizeLimit;
+  UniDB->SizeLimit = SizeLimit.value_or(0);
   UniDB->LockFD = LockFD;
   UniDB->NeedsGarbageCollection = DBDirs.size() > 2;
   UniDB->PrimaryDBDir = PrimaryDir;
@@ -246,8 +246,26 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   return std::move(UniDB);
 }
 
+void UnifiedOnDiskCache::setSizeLimit(std::optional<uint64_t> SizeLimit) {
+  this->SizeLimit = SizeLimit.value_or(0);
+}
+
+uint64_t UnifiedOnDiskCache::getStorageSize() const {
+  uint64_t TotalSize = getPrimaryStorageSize();
+  if (UpstreamGraphDB)
+    TotalSize += UpstreamGraphDB->getStorageSize();
+  if (UpstreamKVDB)
+    TotalSize += UpstreamKVDB->getStorageSize();
+  return TotalSize;
+}
+
+uint64_t UnifiedOnDiskCache::getPrimaryStorageSize() const {
+  return PrimaryGraphDB->getStorageSize() + PrimaryKVDB->getStorageSize();
+}
+
 bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
-  if (!SizeLimit)
+  uint64_t CurSizeLimit = SizeLimit;
+  if (!CurSizeLimit)
     return false;
   // We allow each of the directories in the chain to reach up to half the
   // intended size limit. Check whether the primary directory has exceeded half
@@ -259,8 +277,7 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
   // the primary has reached its own limit. Essentially in such situation we
   // prefer reclaiming the storage later in order to have more consistent cache
   // hits behavior.
-  return (*SizeLimit / 2) <
-         (PrimaryGraphDB->getStorageSize() + PrimaryKVDB->getStorageSize());
+  return (CurSizeLimit / 2) < getPrimaryStorageSize();
 }
 
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
@@ -337,3 +354,5 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
   }
   return Error::success();
 }
+
+Error UnifiedOnDiskCache::collectGarbage() { return collectGarbage(RootPath); }

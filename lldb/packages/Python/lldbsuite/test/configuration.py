@@ -10,17 +10,17 @@ how this invocation of the test suite should be run.
 # System modules
 import os
 import platform
-
+import sys
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 import lldbsuite
 
 
 # The test suite.
-suite = unittest2.TestSuite()
+suite = unittest.TestSuite()
 
 # The list of categories we said we care about
 categories_list = None
@@ -48,6 +48,7 @@ dsymutil = None
 sdkroot = None
 swiftCompiler = None
 swiftLibrary = None
+python = sys.executable
 
 # The overriden dwarf verison.
 dwarf_version = 0

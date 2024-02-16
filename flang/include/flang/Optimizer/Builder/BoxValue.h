@@ -527,9 +527,6 @@ public:
                  [](const auto &box) -> bool { return false; });
   }
 
-  /// Is this an assumed size array ?
-  bool isAssumedSize() const;
-
   /// LLVM style debugging of extended values
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
 
