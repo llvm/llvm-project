@@ -1182,7 +1182,6 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
   // Parses the list of clauses, if present.
   ParseOpenACCClauseList(DirKind);
 
-  Diag(getCurToken(), diag::warn_pragma_acc_unimplemented);
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
          "Didn't parse all OpenACC Clauses");
   SourceLocation EndLoc = ConsumeAnnotationToken();

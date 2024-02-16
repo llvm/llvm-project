@@ -361,6 +361,9 @@ CAST_OPERATION(AddressSpaceConversion)
 // Convert an integer initializer to an OpenCL sampler.
 CAST_OPERATION(IntToOCLSampler)
 
+// Truncate a vector type by dropping elements from the end (HLSL only).
+CAST_OPERATION(HLSLVectorTruncation)
+
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.
 // Note that additions to this should also update the StmtVisitor class,
