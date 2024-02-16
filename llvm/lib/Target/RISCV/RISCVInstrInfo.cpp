@@ -1229,7 +1229,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
     auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
       int64_t Imm;
-      return isLoadImm(&I, Imm) && Imm == C1;
+      return isLoadImm(&I, Imm) && Imm == C1 &&
+             I.getOperand(0).getReg().isVirtual();
     });
     if (DefC1 != E)
       return DefC1->getOperand(0).getReg();
