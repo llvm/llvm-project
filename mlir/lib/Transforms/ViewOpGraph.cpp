@@ -277,16 +277,20 @@ private:
   /// Process a block. Emit a cluster and one node per block argument and
   /// operation inside the cluster.
   void processBlock(Block &block) {
-    sortTopologically(&block);
-
     emitClusterStmt([&]() {
       for (BlockArgument &blockArg : block.getArguments())
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
 
+      SmallVector<Operation*> sortedOperations;
+      for (Operation &op : block) {
+        sortedOperations.push_back(&op);
+      }
+      computeTopologicalSorting(sortedOperations);
+
       // Emit a node for each operation.
       std::optional<Node> prevNode;
-      for (Operation &op : block) {
-        Node nextNode = processOperation(&op);
+      for (Operation *op : sortedOperations) {
+        Node nextNode = processOperation(op);
         if (printControlFlowEdges && prevNode)
           emitEdgeStmt(*prevNode, nextNode, /*label=*/"",
                        kLineStyleControlFlow);
