@@ -9,7 +9,7 @@ define <6 x double> @lift_through_add_matching_transpose_dimensions(<6 x double>
 ; CHECK-LABEL:  define <6 x double> @lift_through_add_matching_transpose_dimensions(<6 x double> %a, <6 x double> %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.+]] = fadd <6 x double> %a, %b
-; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[A]], i32 2, i32 3)
+; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[A]], i32 3, i32 2)
 ; CHECK-NEXT:    ret <6 x double> [[T]]
 ;
 entry:
@@ -25,7 +25,7 @@ define <6 x double> @lift_through_add_matching_transpose_dimensions_ops_also_hav
 ; CHECK-NEXT:    [[A:%.+]] = load <6 x double>, ptr %a.ptr
 ; CHECK-NEXT:    [[B:%.+]] = load <6 x double>, ptr %b.ptr
 ; CHECK-NEXT:    [[ADD:%.+]] = fadd <6 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[ADD]], i32 2, i32 3)
+; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[ADD]], i32 3, i32 2)
 ; CHECK-NEXT:    ret <6 x double> [[T]]
 ;
 entry:
@@ -41,10 +41,28 @@ define <6 x double> @lift_through_add_mismatching_dimensions_1(<6 x double> %a, 
 ; CHECK-LABEL:  define <6 x double> @lift_through_add_mismatching_dimensions_1(<6 x double> %a, <6 x double> %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.+]] = fadd <6 x double> %a, %b
-; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[A]], i32 2, i32 3)
+; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[A]], i32 1, i32 6)
 ; CHECK-NEXT:    ret <6 x double> [[T]]
 ;
 entry:
+  %a.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %a, i32 1, i32 6)
+  %b.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %b, i32 3, i32 2)
+  %add = fadd <6 x double> %a.t, %b.t
+  ret <6 x double> %add
+}
+
+define <6 x double> @lift_through_add_mismatching_dimensions_1_transpose_dimensions_ops_also_have_shape_info(ptr %a.ptr, ptr %b.ptr) {
+; CHECK-LABEL: define <6 x double> @lift_through_add_mismatching_dimensions_1_transpose_dimensions_ops_also_have_shape_info(ptr %a.ptr, ptr %b.ptr)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.+]] = load <6 x double>, ptr %a.ptr
+; CHECK-NEXT:    [[B:%.+]] = load <6 x double>, ptr %b.ptr
+; CHECK-NEXT:    [[ADD:%.+]] = fadd <6 x double> [[A]], [[B]]
+; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[ADD]], i32 1, i32 6)
+; CHECK-NEXT:    ret <6 x double> [[T]]
+;
+entry:
+  %a = load <6 x double>, ptr %a.ptr
+  %b = load <6 x double>, ptr %b.ptr
   %a.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %a, i32 1, i32 6)
   %b.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %b, i32 3, i32 2)
   %add = fadd <6 x double> %a.t, %b.t
@@ -55,11 +73,29 @@ define <6 x double> @lift_through_add_mismatching_dimensions_2(<6 x double> %a, 
 ; CHECK-LABEL:  define <6 x double> @lift_through_add_mismatching_dimensions_2(<6 x double> %a, <6 x double> %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.+]] = fadd <6 x double> %a, %b
-; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[A]], i32 1, i32 6)
+; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[A]], i32 3, i32 2)
 ; CHECK-NEXT:    ret <6 x double> [[T]]
 ;
 
 entry:
+  %a.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %a, i32 3, i32 2)
+  %b.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %b, i32 6, i32 1)
+  %add = fadd <6 x double> %a.t, %b.t
+  ret <6 x double> %add
+}
+
+define <6 x double> @lift_through_add_mismatching_dimensions_2_transpose_dimensions_ops_also_have_shape_info(ptr %a.ptr, ptr %b.ptr) {
+; CHECK-LABEL: define <6 x double> @lift_through_add_mismatching_dimensions_2_transpose_dimensions_ops_also_have_shape_info(ptr %a.ptr, ptr %b.ptr)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.+]] = load <6 x double>, ptr %a.ptr
+; CHECK-NEXT:    [[B:%.+]] = load <6 x double>, ptr %b.ptr
+; CHECK-NEXT:    [[ADD:%.+]] = fadd <6 x double> [[A]], [[B]]
+; CHECK-NEXT:    [[T:%.+]] = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[ADD]], i32 3, i32 2)
+; CHECK-NEXT:    ret <6 x double> [[T]]
+;
+entry:
+  %a = load <6 x double>, ptr %a.ptr
+  %b = load <6 x double>, ptr %b.ptr
   %a.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %a, i32 3, i32 2)
   %b.t = call <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> %b, i32 6, i32 1)
   %add = fadd <6 x double> %a.t, %b.t

@@ -786,17 +786,17 @@ allocReductionVars(T loop, llvm::IRBuilderBase &builder,
                    SmallVector<omp::ReductionDeclareOp> &reductionDecls,
                    SmallVector<llvm::Value *> &privateReductionVariables,
                    DenseMap<Value, llvm::Value *> &reductionVariableMap) {
-  unsigned numReductions = loop.getNumReductionVars();
-  privateReductionVariables.reserve(numReductions);
-  if (numReductions != 0) {
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.restoreIP(allocaIP);
-    for (unsigned i = 0; i < numReductions; ++i) {
-      llvm::Value *var = builder.CreateAlloca(
-          moduleTranslation.convertType(reductionDecls[i].getType()));
-      privateReductionVariables.push_back(var);
-      reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
-    }
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  builder.restoreIP(allocaIP);
+  auto args =
+      loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
+
+  for (std::size_t i = 0; i < loop.getNumReductionVars(); ++i) {
+    llvm::Value *var = builder.CreateAlloca(
+        moduleTranslation.convertType(reductionDecls[i].getType()));
+    moduleTranslation.mapValue(args[i], var);
+    privateReductionVariables.push_back(var);
+    reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
   }
 }
 
@@ -1018,19 +1018,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     // Allocate reduction vars
     SmallVector<llvm::Value *> privateReductionVariables;
     DenseMap<Value, llvm::Value *> reductionVariableMap;
-    {
-      llvm::IRBuilderBase::InsertPointGuard guard(builder);
-      builder.restoreIP(allocaIP);
-      auto args = opInst.getRegion().getArguments();
-
-      for (std::size_t i = 0; i < opInst.getNumReductionVars(); ++i) {
-        llvm::Value *var = builder.CreateAlloca(
-            moduleTranslation.convertType(reductionDecls[i].getType()));
-        moduleTranslation.mapValue(args[i], var);
-        privateReductionVariables.push_back(var);
-        reductionVariableMap.try_emplace(opInst.getReductionVars()[i], var);
-      }
-    }
+    allocReductionVars(opInst, builder, moduleTranslation, allocaIP,
+                       reductionDecls, privateReductionVariables,
+                       reductionVariableMap);
 
     // Store the mapping between reduction variables and their private copies on
     // ModuleTranslation stack. It can be then recovered when translating

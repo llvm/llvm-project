@@ -1764,9 +1764,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
-  if (Subtarget->isV9())
-    setMaxAtomicSizeInBitsSupported(64);
-  else if (Subtarget->hasLeonCasa())
+  if (Subtarget->isV9()) {
+    // TODO: we _ought_ to be able to support 64-bit atomics on 32-bit sparcv9,
+    // but it hasn't been implemented in the backend yet.
+    if (Subtarget->is64Bit())
+      setMaxAtomicSizeInBitsSupported(64);
+    else
+      setMaxAtomicSizeInBitsSupported(32);
+  } else if (Subtarget->hasLeonCasa())
     setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
