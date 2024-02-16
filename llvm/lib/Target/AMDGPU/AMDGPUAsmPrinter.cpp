@@ -156,6 +156,13 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
 
+  // TODO: We're checking this late, would be nice to check it earlier.
+  if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
+    report_fatal_error(
+        STM.getCPU() + " is only available on code object version 6 or better",
+        /*gen_crash_diag*/ false);
+  }
+
   // TODO: Which one is called first, emitStartOfAsmFile or
   // emitFunctionBodyStart?
   if (!getTargetStreamer()->getTargetID())
@@ -197,7 +204,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (MFI.getNumKernargPreloadedSGPRs() > 0) {
     assert(AMDGPU::hasKernargPreload(STM));
-    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI());
+    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI(),
+                                                  STM.isAmdHsaOS());
   }
 }
 
@@ -334,6 +342,9 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       break;
     case AMDGPU::AMDHSA_COV5:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
+      break;
+    case AMDGPU::AMDHSA_COV6:
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV6());
       break;
     default:
       report_fatal_error("Unexpected code object version");

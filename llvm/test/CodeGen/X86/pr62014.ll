@@ -158,7 +158,7 @@ define <8 x i16> @select_cast_cond_multiuse_v8i16(<8 x i16> %x, <8 x i16> %y, i8
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
+; SSE42-NEXT:    pmovzxbw {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
 ; SSE42-NEXT:    pand %xmm3, %xmm0
 ; SSE42-NEXT:    pcmpeqw %xmm3, %xmm0
 ; SSE42-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
@@ -170,7 +170,7 @@ define <8 x i16> @select_cast_cond_multiuse_v8i16(<8 x i16> %x, <8 x i16> %y, i8
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %xmm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
@@ -302,7 +302,7 @@ define <8 x float> @select_cast_cond_multiuse_v8i16_v8f32(<8 x float> %x, <8 x f
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm5 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,0,0]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
+; SSE42-NEXT:    pmovzxbw {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
 ; SSE42-NEXT:    pand %xmm5, %xmm6
 ; SSE42-NEXT:    pcmpeqw %xmm5, %xmm6
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,0,0]
@@ -311,7 +311,7 @@ define <8 x float> @select_cast_cond_multiuse_v8i16_v8f32(<8 x float> %x, <8 x f
 ; SSE42-NEXT:    pand %xmm7, %xmm0
 ; SSE42-NEXT:    pcmpeqd %xmm7, %xmm0
 ; SSE42-NEXT:    blendvps %xmm0, %xmm4, %xmm2
-; SSE42-NEXT:    pmovsxwd {{.*#+}} xmm0 = [16,32,64,128]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm0 = [16,32,64,128]
 ; SSE42-NEXT:    pand %xmm0, %xmm5
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -325,10 +325,10 @@ define <8 x float> @select_cast_cond_multiuse_v8i16_v8f32(<8 x float> %x, <8 x f
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX2-NEXT:    vpcmpeqw %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vpmovsxwd {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0

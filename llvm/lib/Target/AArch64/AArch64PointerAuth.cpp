@@ -12,6 +12,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -35,7 +36,10 @@ public:
 
 private:
   /// An immediate operand passed to BRK instruction, if it is ever emitted.
-  const unsigned BrkOperand = 0xc471;
+  static unsigned BrkOperandForKey(AArch64PACKey::ID KeyId) {
+    const unsigned BrkOperandBase = 0xc470;
+    return BrkOperandBase + KeyId;
+  }
 
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64InstrInfo *TII = nullptr;
@@ -245,7 +249,7 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
     return MBB;
   case AuthCheckMethod::DummyLoad:
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui), getWRegFromXReg(TmpReg))
-        .addReg(AArch64::LR)
+        .addReg(AuthenticatedReg)
         .addImm(0)
         .addMemOperand(createCheckMemOperand(MF, Subtarget));
     return MBB;
@@ -321,6 +325,10 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
 
 bool AArch64PointerAuth::checkAuthenticatedLR(
     MachineBasicBlock::iterator TI) const {
+  const AArch64FunctionInfo *MFnI = TI->getMF()->getInfo<AArch64FunctionInfo>();
+  AArch64PACKey::ID KeyId =
+      MFnI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
+
   AuthCheckMethod Method = Subtarget->getAuthenticatedLRCheckMethod();
 
   if (Method == AuthCheckMethod::None)
@@ -361,7 +369,7 @@ bool AArch64PointerAuth::checkAuthenticatedLR(
          "More than a single register is used by TCRETURN");
 
   checkAuthenticatedRegister(TI, Method, AArch64::LR, TmpReg, /*UseIKey=*/true,
-                             BrkOperand);
+                             BrkOperandForKey(KeyId));
 
   return true;
 }

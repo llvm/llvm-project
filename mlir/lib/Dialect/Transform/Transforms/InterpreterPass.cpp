@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
 
@@ -64,6 +65,20 @@ public:
         transform::detail::getPreloadedTransformModule(context);
     Operation *payloadRoot =
         findPayloadRoot(getOperation(), debugPayloadRootTag);
+    if (!payloadRoot)
+      return signalPassFailure();
+    auto debugBindNames = llvm::map_to_vector(
+        debugBindTrailingArgs,
+        [&](const std::string &name) { return OperationName(name, context); });
+    SmallVector<SmallVector<Operation *>, 2> trailingBindings;
+    trailingBindings.resize(debugBindNames.size());
+    payloadRoot->walk([&](Operation *payload) {
+      for (auto &&[position, name] : llvm::enumerate(debugBindNames)) {
+        if (payload->getName() == name)
+          trailingBindings[position].push_back(payload);
+      }
+    });
+
     Operation *transformEntryPoint = transform::detail::findTransformEntryPoint(
         getOperation(), transformModule, entryPoint);
     if (!transformEntryPoint) {
@@ -73,8 +88,15 @@ public:
       return signalPassFailure();
     }
 
+    RaggedArray<transform::MappedValue> bindings;
+    bindings.push_back(ArrayRef<Operation *>{payloadRoot});
+    for (SmallVector<Operation *> &trailing : trailingBindings)
+      bindings.push_back(std::move(trailing));
+
     if (failed(transform::applyTransformNamedSequence(
-            payloadRoot, transformEntryPoint, transformModule,
+            bindings,
+            cast<transform::TransformOpInterface>(transformEntryPoint),
+            transformModule,
             options.enableExpensiveChecks(!disableExpensiveChecks)))) {
       return signalPassFailure();
     }

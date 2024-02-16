@@ -27,7 +27,7 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
   auto TEST_FILE = libc_make_test_file_path(FILENAME2);
   constexpr const char *FILENAME3 = "fchdir.test";
   auto TEST_FILE_BASE = libc_make_test_file_path(FILENAME3);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
   ASSERT_GT(dir_fd, 0);
@@ -47,8 +47,8 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
 
 TEST(LlvmLibcChdirTest, ChangeToNonExistentDir) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_EQ(LIBC_NAMESPACE::fchdir(0), -1);
   ASSERT_ERRNO_FAILURE();
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

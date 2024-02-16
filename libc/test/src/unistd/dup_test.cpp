@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "dup.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);

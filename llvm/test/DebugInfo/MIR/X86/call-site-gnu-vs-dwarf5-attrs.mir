@@ -92,9 +92,9 @@
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
   ; Function Attrs: nounwind uwtable
-  define dso_local i32 @fn1(i32 (...)* nocapture %fn4) local_unnamed_addr !dbg !18 {
+  define dso_local i32 @fn1(ptr nocapture %fn4) local_unnamed_addr !dbg !18 {
   entry:
-    call void @llvm.dbg.value(metadata i32 (...)* %fn4, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %fn4, metadata !23, metadata !DIExpression()), !dbg !25
     tail call void (...) @fn(), !dbg !26
     tail call void @fn2(i32 5), !dbg !27
     %call = tail call i32 (...) %fn4(), !dbg !28

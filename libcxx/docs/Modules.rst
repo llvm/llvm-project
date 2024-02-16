@@ -218,8 +218,12 @@ Building this project is done with the following steps, assuming the files
 
   $ mkdir build
   $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_BUILD=<build>
+  $ ninja -j1 std -C build
   $ ninja -C build
   $ build/main
+
+.. note:: The ``std`` dependencies of ``std.compat`` is not always resolved when
+          building the ``std`` target using multiple jobs.
 
 .. warning:: ``<path-to-compiler>`` should point point to the real binary and
              not to a symlink.

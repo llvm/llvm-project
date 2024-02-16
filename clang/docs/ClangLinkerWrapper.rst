@@ -54,12 +54,38 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
     --pass-remarks=<value> Pass remarks for LTO
     --print-wrapped-module Print the wrapped module's IR for testing
     --ptxas-arg=<value>    Argument to pass to the 'ptxas' invocation
+    --relocatable           Link device code to create a relocatable offloading application
     --save-temps           Save intermediate results
     --sysroot<value>       Set the system root
     --verbose              Verbose output from tools
     --v                    Display the version number and exit
     --                     The separator for the wrapped linker arguments
 
+Relocatable Linking
+===================
+
+The ``clang-linker-wrapper`` handles linking embedded device code and then
+registering it with the appropriate runtime. Normally, this is only done when
+the executable is created so other files containing device code can be linked
+together. This can be somewhat problematic for users who wish to ship static
+libraries that contain offloading code to users without a compatible offloading
+toolchain.
+
+When using a relocatable link with ``-r``, the ``clang-linker-wrapper`` will
+perform the device linking and registration eagerly. This will remove the
+embedded device code and register it correctly with the runtime. Semantically,
+this is similar to creating a shared library object. If standard relocatable
+linking is desired, simply do not run the binaries through the
+``clang-linker-wrapper``. This will simply append the embedded device code so
+that it can be linked later.
+
+Matching
+========
+
+The linker wrapper will link extracted device code that is compatible with each
+other. Generally, this requires that the target triple and architecture match.
+An exception is made when the architecture is listed as ``generic``, which will
+cause it be linked with any other device code with the same target triple.
 
 Example
 =======

@@ -1,5 +1,4 @@
-//===- Transforms.h - AMDGPU Dialect transformations --------------*-
-// C++-*-===//
+//===- Transforms.h - AMDGPU Dialect transformations -------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +13,7 @@
 #ifndef MLIR_DIALECT_AMDGPU_TRANSFORMS_TRANSFORMS_H_
 #define MLIR_DIALECT_AMDGPU_TRANSFORMS_TRANSFORMS_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -45,8 +45,11 @@ namespace amdgpu {
 /// function that depends on the row Index. The permutation function is chosen
 /// to ensure that sequential distributed+vectorized reads/writes down a single
 /// dimension of the memref have minimal conflicts.
-mlir::LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
-                                                       Value memrefValue);
+LogicalResult optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
+                                                 Value memrefValue);
+
+std::optional<LogicalResult>
+optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp);
 
 } // namespace amdgpu
 } // namespace mlir

@@ -1127,8 +1127,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       Action = TargetLowering::Custom;
     break;
   case ISD::READCYCLECOUNTER:
-    // READCYCLECOUNTER returns an i64, even if type legalization might have
-    // expanded that to several smaller types.
+  case ISD::READSTEADYCOUNTER:
+    // READCYCLECOUNTER and READSTEADYCOUNTER return a i64, even if type
+    // legalization might have expanded that to several smaller types.
     Action = TLI.getOperationAction(Node->getOpcode(), MVT::i64);
     break;
   case ISD::READ_REGISTER:
@@ -1387,10 +1388,8 @@ static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
   int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
   uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOStore, ObjectSize, MFI.getObjectAlign(FI));
-
-  return MMO;
+  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                 ObjectSize, MFI.getObjectAlign(FI));
 }
 
 SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
@@ -3082,6 +3081,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Node->getOperand(0));
     break;
   case ISD::READCYCLECOUNTER:
+  case ISD::READSTEADYCOUNTER:
     // If the target didn't expand this, just return 'zero' and preserve the
     // chain.
     Results.append(Node->getNumValues() - 1,

@@ -106,6 +106,7 @@ module {
     vector.print %imag : f64
 
     // Release the resources.
+    bufferization.dealloc_tensor %0 : tensor<complex<f64>>
     bufferization.dealloc_tensor %a : tensor<?x?xcomplex<f64>, #SparseMatrix>
 
     return

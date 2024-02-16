@@ -669,7 +669,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       TokenSequence braced{path, 1, k - 1};
       include = braced.ToString();
     } else if ((include.substr(0, 1) == "\"" || include.substr(0, 1) == "'") &&
-        include.substr(include.size() - 1, 1) == include.substr(0, 1)) {
+        include.front() == include.back()) {
       // #include "foo" and #include 'foo'
       include = include.substr(1, include.size() - 2);
       // Start search in directory of file containing the directive
