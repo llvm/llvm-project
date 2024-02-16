@@ -1217,6 +1217,14 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (CI->isConvergent())
       return false;
 
+    // FIXME: Current LLVM IR semantics don't work well with coroutines and
+    // thread local globals. We currently treat getting the address of a thread
+    // local global as not accessing memory, even though it may not be a
+    // constant throughout a function with coroutines. Remove this check after
+    // we better model semantics of thread local globals.
+    if (CI->getFunction()->isPresplitCoroutine())
+      return false;
+
     using namespace PatternMatch;
     if (match(CI, m_Intrinsic<Intrinsic::assume>()))
       // Assumes don't actually alias anything or throw
@@ -1224,14 +1232,6 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
     // Handle simple cases by querying alias analysis.
     MemoryEffects Behavior = AA->getMemoryEffects(CI);
-
-    // FIXME: we don't handle the semantics of thread local well. So that the
-    // address of thread locals are fake constants in coroutines. So We forbid
-    // to treat onlyReadsMemory call in coroutines as constants now. Note that
-    // it is possible to hide a thread local access in a onlyReadsMemory call.
-    // Remove this check after we handle the semantics of thread locals well.
-    if (Behavior.onlyReadsMemory() && CI->getFunction()->isPresplitCoroutine())
-      return false;
 
     if (Behavior.doesNotAccessMemory())
       return true;
