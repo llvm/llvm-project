@@ -1,9 +1,8 @@
 """Test the lldb public C++ api breakpoint callbacks."""
 
-# __package__ = "lldbsuite.test"
-
-
 import os
+import subprocess
+
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -114,18 +113,10 @@ class SBBreakpointCallbackCase(TestBase):
         test_exe = self.getBuildArtifact(test_name)
         exe = [test_exe, self.getBuildArtifact(self.inferior)]
 
-        env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
-        if "LLDB_DEBUGSERVER_PATH" in os.environ:
-            env["LLDB_DEBUGSERVER_PATH"] = os.environ["LLDB_DEBUGSERVER_PATH"]
-        try:
-            if self.TraceOn():
-                print("Running test %s" % " ".join(exe))
-                check_call(exe, env=env)
-            else:
-                with open(os.devnull, "w") as fnull:
-                    check_call(exe, env=env, stdout=fnull, stderr=fnull)
-        except subprocess.CalledProcessError as e:
-            self.fail(e)
+        # check_call will raise a CalledProcessError if the executable doesn't
+        # return exit code 0 to indicate success.  We can let this exception go
+        # - the test harness will recognize it as a test failure.
+        subprocess.check_call(exe)
 
     def build_program(self, sources, program):
         return self.buildDriver(sources, program)
