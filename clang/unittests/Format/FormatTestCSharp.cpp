@@ -505,7 +505,7 @@ TEST_F(FormatTestCSharp, CSharpNullForgiving) {
 
 TEST_F(FormatTestCSharp, AttributesIndentation) {
   FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
 
   verifyFormat("[STAThread]\n"
                "static void Main(string[] args)\n"

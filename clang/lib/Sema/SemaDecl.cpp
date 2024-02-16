@@ -2960,7 +2960,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
         S.mergeHLSLNumThreadsAttr(D, *NT, NT->getX(), NT->getY(), NT->getZ());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.mergeHLSLShaderAttr(D, *SA, SA->getType());
-  else if (const auto *SupA = dyn_cast<SuppressAttr>(Attr))
+  else if (isa<SuppressAttr>(Attr))
     // Do nothing. Each redeclaration should be suppressed separately.
     NewAttr = nullptr;
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
@@ -6842,21 +6842,21 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   if (IdentifierInfo *II = NewTD->getIdentifier())
     if (!NewTD->isInvalidDecl() &&
         NewTD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-      switch (II->getInterestingIdentifierID()) {
-      case tok::InterestingIdentifierKind::FILE:
+      switch (II->getNotableIdentifierID()) {
+      case tok::NotableIdentifierKind::FILE:
         Context.setFILEDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::jmp_buf:
+      case tok::NotableIdentifierKind::jmp_buf:
         Context.setjmp_bufDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::sigjmp_buf:
+      case tok::NotableIdentifierKind::sigjmp_buf:
         Context.setsigjmp_bufDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::ucontext_t:
+      case tok::NotableIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::float_t:
-      case tok::InterestingIdentifierKind::double_t:
+      case tok::NotableIdentifierKind::float_t:
+      case tok::NotableIdentifierKind::double_t:
         NewTD->addAttr(AvailableOnlyInDefaultEvalMethodAttr::Create(Context));
         break;
       default:

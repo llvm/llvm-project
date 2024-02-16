@@ -26,6 +26,11 @@ def StdC : StandardSpec<"stdc"> {
       []
   >;
 
+  FunctionAttrSpec ConstAttr = FunctionAttrSpec<"__LIBC_CONST_ATTR", [
+    Cxx11FunctionAttr<"const", "gnu">,
+    GnuFunctionAttr<"const">,
+  ]>;
+
   HeaderSpec CType = HeaderSpec<
       "ctype.h",
       [], // Macros
@@ -366,7 +371,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ceill", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"ceilf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
 
-          FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>], [ConstAttr]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>], "LIBC_COMPILER_HAS_FLOAT128">,
@@ -413,6 +418,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"ldexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"ldexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
           FunctionSpec<"ldexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>]>,
+          GuardedFunctionSpec<"ldexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntType>], "LIBC_COMPILER_HAS_FLOAT128">,
 
           FunctionSpec<"log10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"log10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -781,7 +787,10 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"stdc_leading_ones">,
         Macro<"stdc_trailing_zeros">,
         Macro<"stdc_trailing_ones">,
-        Macro<"stdc_first_leading_zero">
+        Macro<"stdc_first_leading_zero">,
+        Macro<"stdc_first_leading_one">,
+        Macro<"stdc_first_trailing_zero">,
+        Macro<"stdc_first_trailing_one">
       ], // Macros
       [], // Types
       [], // Enumerations
@@ -810,7 +819,17 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"stdc_first_leading_zero_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
           FunctionSpec<"stdc_first_leading_zero_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
           FunctionSpec<"stdc_first_leading_zero_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
-          FunctionSpec<"stdc_first_leading_zero_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
+          FunctionSpec<"stdc_first_leading_zero_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_first_leading_one_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_first_leading_one_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_first_leading_one_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_first_leading_one_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_first_leading_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>,
+          FunctionSpec<"stdc_first_trailing_one_uc", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedCharType>]>,
+          FunctionSpec<"stdc_first_trailing_one_us", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedShortType>]>,
+          FunctionSpec<"stdc_first_trailing_one_ui", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"stdc_first_trailing_one_ul", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongType>]>,
+          FunctionSpec<"stdc_first_trailing_one_ull", RetValSpec<UnsignedIntType>, [ArgSpec<UnsignedLongLongType>]>
       ] // Functions
   >;
 

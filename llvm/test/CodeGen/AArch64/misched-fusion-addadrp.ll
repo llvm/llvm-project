@@ -15,6 +15,9 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v2     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=apple-a16 -mattr=-fuse-literals | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=apple-a17 -mattr=-fuse-literals | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1  -mattr=-fuse-literals | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1a -mattr=-fuse-literals | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1b -mattr=-fuse-literals | FileCheck %s
 
 @g = common local_unnamed_addr global ptr null, align 8
 

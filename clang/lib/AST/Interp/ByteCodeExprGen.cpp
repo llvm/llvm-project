@@ -1446,10 +1446,13 @@ bool ByteCodeExprGen<Emitter>::VisitPointerCompoundAssignOperator(
   if (!visit(RHS))
     return false;
 
-  if (Op == BO_AddAssign)
-    this->emitAddOffset(*RT, E);
-  else
-    this->emitSubOffset(*RT, E);
+  if (Op == BO_AddAssign) {
+    if (!this->emitAddOffset(*RT, E))
+      return false;
+  } else {
+    if (!this->emitSubOffset(*RT, E))
+      return false;
+  }
 
   if (DiscardResult)
     return this->emitStorePopPtr(E);
@@ -1829,8 +1832,19 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
         return false;
     }
 
-    if (!this->emitCall(Func, E))
-      return false;
+    if (Func->isVariadic()) {
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I) {
+        VarArgSize +=
+            align(primSize(classify(E->getArg(I)->getType()).value_or(PT_Ptr)));
+      }
+      if (!this->emitCallVar(Func, VarArgSize, E))
+        return false;
+    } else {
+      if (!this->emitCall(Func, 0, E))
+        return false;
+    }
 
     // Immediately call the destructor if we have to.
     if (DiscardResult) {
@@ -1863,7 +1877,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
           return false;
       }
 
-      if (!this->emitCall(Func, E))
+      if (!this->emitCall(Func, 0, E))
         return false;
     }
     return true;
@@ -2049,7 +2063,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
     Offset += align(primSize(PT));
   }
 
-  return this->emitCall(F, E);
+  return this->emitCall(F, 0, E);
 }
 
 template <class Emitter>
@@ -2575,7 +2589,7 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
       Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
       IsTemporary, /*IsMutable=*/false, Init);
   if (!D)
-    return {};
+    return std::nullopt;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
@@ -2824,14 +2838,6 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
-    // If the function is being compiled right now, this is a recursive call.
-    // In that case, the function can't be valid yet, even though it will be
-    // later.
-    // If the function is already fully compiled but not constexpr, it was
-    // found to be faulty earlier on, so bail out.
-    if (Func->isFullyCompiled() && !Func->isConstexpr())
-      return false;
-
     assert(HasRVO == Func->hasRVO());
 
     bool HasQualifier = false;
@@ -2846,20 +2852,38 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // and if the function has RVO, we already have the pointer on the stack to
     // write the result into.
     if (IsVirtual && !HasQualifier) {
-      if (!this->emitCallVirt(Func, E))
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
+        VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+
+      if (!this->emitCallVirt(Func, VarArgSize, E))
+        return false;
+    } else if (Func->isVariadic()) {
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
+        VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+      if (!this->emitCallVar(Func, VarArgSize, E))
         return false;
     } else {
-      if (!this->emitCall(Func, E))
+      if (!this->emitCall(Func, 0, E))
         return false;
     }
   } else {
     // Indirect call. Visit the callee, which will leave a FunctionPointer on
     // the stack. Cleanup of the returned value if necessary will be done after
     // the function call completed.
+
+    // Sum the size of all args from the call expr.
+    uint32_t ArgSize = 0;
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      ArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+
     if (!this->visit(E->getCallee()))
       return false;
 
-    if (!this->emitCallPtr(E))
+    if (!this->emitCallPtr(ArgSize, E))
       return false;
   }
 
@@ -3210,12 +3234,27 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrThisField(Offset, E);
   }
 
-  // Lazily visit global declarations we haven't seen yet.
-  // This happens in C.
-  if (!Ctx.getLangOpts().CPlusPlus) {
+  // Try to lazily visit (or emit dummy pointers for) declarations
+  // we haven't seen yet.
+  if (Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      // Dummy for static locals
+      if (VD->isStaticLocal()) {
+        if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+          return this->emitGetPtrGlobal(*I, E);
+        return false;
+      }
+      // Visit local const variables like normal.
+      if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
+        if (!this->visitVarDecl(VD))
+          return false;
+        // Retry.
+        return this->VisitDeclRefExpr(E);
+      }
+    }
+  } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && VD->getAnyInitializer() &&
-        VD->getType().isConstQualified()) {
+        VD && VD->getAnyInitializer() && VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.
@@ -3386,7 +3425,7 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
       assert(DtorFunc->getNumParams() == 1);
       if (!this->emitDupPtr(SourceInfo{}))
         return false;
-      if (!this->emitCall(DtorFunc, SourceInfo{}))
+      if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
         return false;
     }
   }

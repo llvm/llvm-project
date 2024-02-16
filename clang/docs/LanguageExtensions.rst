@@ -2791,8 +2791,8 @@ frequency is fixed, making it suitable for measuring elapsed time.
 
 The ``__builtin_readsteadycounter()`` builtin returns the frequency counter value.
 When not supported by the target, the return value is always zero. This builtin
-takes no arguments and produces an unsigned long long result. The builtin does 
-not guarantee any particular frequency, only that it is stable. Knowledge of the 
+takes no arguments and produces an unsigned long long result. The builtin does
+not guarantee any particular frequency, only that it is stable. Knowledge of the
 counter's true frequency will need to be provided by the user.
 
 Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
@@ -5274,6 +5274,11 @@ Intrinsics Support within Constant Expressions
 
 The following builtin intrinsics can be used in constant expressions:
 
+* ``__builtin_addcb``
+* ``__builtin_addcs``
+* ``__builtin_addc``
+* ``__builtin_addcl``
+* ``__builtin_addcll``
 * ``__builtin_bitreverse8``
 * ``__builtin_bitreverse16``
 * ``__builtin_bitreverse32``
@@ -5320,6 +5325,11 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_rotateright16``
 * ``__builtin_rotateright32``
 * ``__builtin_rotateright64``
+* ``__builtin_subcb``
+* ``__builtin_subcs``
+* ``__builtin_subc``
+* ``__builtin_subcl``
+* ``__builtin_subcll``
 
 The following x86-specific intrinsics can be used in constant expressions:
 
