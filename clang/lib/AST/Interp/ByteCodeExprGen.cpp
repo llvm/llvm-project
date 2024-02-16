@@ -167,7 +167,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitNull(classifyPrim(CE->getType()), CE);
 
   case CK_PointerToIntegral: {
-    // TODO: Discard handling.
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->visit(SubExpr))
       return false;
 
@@ -464,7 +466,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Special case for C++'s three-way/spaceship operator <=>, which
   // returns a std::{strong,weak,partial}_ordering (which is a class, so doesn't
   // have a PrimType).
-  if (!T && Ctx.getLangOpts().CPlusPlus) {
+  if (!T && BO->getOpcode() == BO_Cmp) {
     if (DiscardResult)
       return true;
     const ComparisonCategoryInfo *CmpInfo =
@@ -1444,10 +1446,13 @@ bool ByteCodeExprGen<Emitter>::VisitPointerCompoundAssignOperator(
   if (!visit(RHS))
     return false;
 
-  if (Op == BO_AddAssign)
-    this->emitAddOffset(*RT, E);
-  else
-    this->emitSubOffset(*RT, E);
+  if (Op == BO_AddAssign) {
+    if (!this->emitAddOffset(*RT, E))
+      return false;
+  } else {
+    if (!this->emitSubOffset(*RT, E))
+      return false;
+  }
 
   if (DiscardResult)
     return this->emitStorePopPtr(E);
@@ -1750,8 +1755,7 @@ bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
-  assert(!Initializing);
-  return this->visit(E->getFunctionName());
+  return this->delegate(E->getFunctionName());
 }
 
 template <class Emitter>
@@ -1828,8 +1832,19 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
         return false;
     }
 
-    if (!this->emitCall(Func, E))
-      return false;
+    if (Func->isVariadic()) {
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I) {
+        VarArgSize +=
+            align(primSize(classify(E->getArg(I)->getType()).value_or(PT_Ptr)));
+      }
+      if (!this->emitCallVar(Func, VarArgSize, E))
+        return false;
+    } else {
+      if (!this->emitCall(Func, 0, E))
+        return false;
+    }
 
     // Immediately call the destructor if we have to.
     if (DiscardResult) {
@@ -1862,7 +1877,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
           return false;
       }
 
-      if (!this->emitCall(Func, E))
+      if (!this->emitCall(Func, 0, E))
         return false;
     }
     return true;
@@ -2048,7 +2063,87 @@ bool ByteCodeExprGen<Emitter>::VisitCXXInheritedCtorInitExpr(
     Offset += align(primSize(PT));
   }
 
-  return this->emitCall(F, E);
+  return this->emitCall(F, 0, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExpressionTraitExpr(
+    const ExpressionTraitExpr *E) {
+  assert(Ctx.getLangOpts().CPlusPlus);
+  return this->emitConstBool(E->getValue(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
+  if (DiscardResult)
+    return true;
+  assert(!Initializing);
+
+  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(E->getGuidDecl());
+  if (!GlobalIndex)
+    return false;
+  if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    return false;
+
+  const Record *R = this->getRecord(E->getType());
+  assert(R);
+
+  const APValue &V = E->getGuidDecl()->getAsAPValue();
+  if (V.getKind() == APValue::None)
+    return true;
+
+  assert(V.isStruct());
+  assert(V.getStructNumBases() == 0);
+  // FIXME: This could be useful in visitAPValue, too.
+  for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I) {
+    const APValue &F = V.getStructField(I);
+    const Record::Field *RF = R->getField(I);
+
+    if (F.isInt()) {
+      PrimType T = classifyPrim(RF->Decl->getType());
+      if (!this->visitAPValue(F, T, E))
+        return false;
+      if (!this->emitInitField(T, RF->Offset, E))
+        return false;
+    } else if (F.isArray()) {
+      assert(RF->Desc->isPrimitiveArray());
+      const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
+      PrimType ElemT = classifyPrim(ArrType->getElementType());
+      assert(ArrType);
+
+      if (!this->emitDupPtr(E))
+        return false;
+      if (!this->emitGetPtrField(RF->Offset, E))
+        return false;
+
+      for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
+        if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
+          return false;
+        if (!this->emitInitElem(ElemT, A, E))
+          return false;
+      }
+
+      if (!this->emitPopPtr(E))
+        return false;
+    } else {
+      assert(false && "I don't think this should be possible");
+    }
+  }
+
+  return this->emitInitPtr(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Bool);
+  return this->emitConstBool(E->isSatisfied(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
+    const ConceptSpecializationExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Bool);
+  return this->emitConstBool(E->isSatisfied(), E);
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
@@ -2277,8 +2372,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceParam(
     const Expr *LV, PrimType T, const ParmVarDecl *PD, DerefKind AK,
     llvm::function_ref<bool(PrimType)> Direct,
     llvm::function_ref<bool(PrimType)> Indirect) {
-  auto It = this->Params.find(PD);
-  if (It != this->Params.end()) {
+  if (auto It = this->Params.find(PD); It != this->Params.end()) {
     unsigned Idx = It->second.Offset;
     switch (AK) {
     case DerefKind::Read:
@@ -2495,7 +2589,7 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
       Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
       IsTemporary, /*IsMutable=*/false, Init);
   if (!D)
-    return {};
+    return std::nullopt;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
@@ -2549,10 +2643,13 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
-    if (!this->visitLocalInitializer(E, *LocalOffset))
+    if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
-    if (!this->emitGetPtrLocal(*LocalOffset, E))
+    if (!visitInitializer(E))
+      return false;
+
+    if (!this->emitInitPtr(E))
       return false;
     return this->emitRetValue(E);
   }
@@ -2741,14 +2838,6 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
-    // If the function is being compiled right now, this is a recursive call.
-    // In that case, the function can't be valid yet, even though it will be
-    // later.
-    // If the function is already fully compiled but not constexpr, it was
-    // found to be faulty earlier on, so bail out.
-    if (Func->isFullyCompiled() && !Func->isConstexpr())
-      return false;
-
     assert(HasRVO == Func->hasRVO());
 
     bool HasQualifier = false;
@@ -2763,20 +2852,38 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // and if the function has RVO, we already have the pointer on the stack to
     // write the result into.
     if (IsVirtual && !HasQualifier) {
-      if (!this->emitCallVirt(Func, E))
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
+        VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+
+      if (!this->emitCallVirt(Func, VarArgSize, E))
+        return false;
+    } else if (Func->isVariadic()) {
+      uint32_t VarArgSize = 0;
+      unsigned NumParams = Func->getNumWrittenParams();
+      for (unsigned I = NumParams, N = E->getNumArgs(); I != N; ++I)
+        VarArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+      if (!this->emitCallVar(Func, VarArgSize, E))
         return false;
     } else {
-      if (!this->emitCall(Func, E))
+      if (!this->emitCall(Func, 0, E))
         return false;
     }
   } else {
     // Indirect call. Visit the callee, which will leave a FunctionPointer on
     // the stack. Cleanup of the returned value if necessary will be done after
     // the function call completed.
+
+    // Sum the size of all args from the call expr.
+    uint32_t ArgSize = 0;
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      ArgSize += align(primSize(classify(E->getArg(I)).value_or(PT_Ptr)));
+
     if (!this->visit(E->getCallee()))
       return false;
 
-    if (!this->emitCallPtr(E))
+    if (!this->emitCallPtr(ArgSize, E))
       return false;
   }
 
@@ -3056,6 +3163,10 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
     const Function *F = getFunction(FuncDecl);
     return F && this->emitGetFnPtr(F, E);
+  } else if (isa<TemplateParamObjectDecl>(D)) {
+    if (std::optional<unsigned> Index = P.getOrCreateGlobal(D))
+      return this->emitGetPtrGlobal(*Index, E);
+    return false;
   }
 
   // References are implemented via pointers, so when we see a DeclRefExpr
@@ -3127,12 +3238,27 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrThisField(Offset, E);
   }
 
-  // Lazily visit global declarations we haven't seen yet.
-  // This happens in C.
-  if (!Ctx.getLangOpts().CPlusPlus) {
+  // Try to lazily visit (or emit dummy pointers for) declarations
+  // we haven't seen yet.
+  if (Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      // Dummy for static locals
+      if (VD->isStaticLocal()) {
+        if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+          return this->emitGetPtrGlobal(*I, E);
+        return false;
+      }
+      // Visit local const variables like normal.
+      if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
+        if (!this->visitVarDecl(VD))
+          return false;
+        // Retry.
+        return this->VisitDeclRefExpr(E);
+      }
+    }
+  } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && VD->getAnyInitializer() &&
-        VD->getType().isConstQualified()) {
+        VD && VD->getAnyInitializer() && VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.
@@ -3303,7 +3429,7 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
       assert(DtorFunc->getNumParams() == 1);
       if (!this->emitDupPtr(SourceInfo{}))
         return false;
-      if (!this->emitCall(DtorFunc, SourceInfo{}))
+      if (!this->emitCall(DtorFunc, 0, SourceInfo{}))
         return false;
     }
   }

@@ -19,16 +19,16 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |     C1, C2, C3, C4    Result
 // CHECK-NEXT:  |  1 { F,  -,  F,  -  = F      }
-// CHECK-NEXT:  |  2 { T,  F,  F,  -  = F      }
-// CHECK-NEXT:  |  3 { F,  -,  T,  F  = F      }
+// CHECK-NEXT:  |  2 { F,  -,  T,  F  = F      }
+// CHECK-NEXT:  |  3 { T,  F,  F,  -  = F      }
 // CHECK-NEXT:  |  4 { T,  F,  T,  F  = F      }
-// CHECK-NEXT:  |  5 { T,  T,  -,  -  = T      }
-// CHECK-NEXT:  |  6 { T,  F,  T,  T  = T      }
+// CHECK-NEXT:  |  5 { T,  F,  T,  T  = T      }
+// CHECK-NEXT:  |  6 { T,  T,  -,  -  = T      }
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |  C1-Pair: covered: (1,5)
-// CHECK-NEXT:  |  C2-Pair: covered: (2,5)
-// CHECK-NEXT:  |  C3-Pair: covered: (2,6)
-// CHECK-NEXT:  |  C4-Pair: covered: (4,6)
+// CHECK-NEXT:  |  C1-Pair: covered: (1,6)
+// CHECK-NEXT:  |  C2-Pair: covered: (3,6)
+// CHECK-NEXT:  |  C3-Pair: covered: (3,5)
+// CHECK-NEXT:  |  C4-Pair: covered: (4,5)
 // CHECK-NEXT:  |  MC/DC Coverage for Decision: 100.00%
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------

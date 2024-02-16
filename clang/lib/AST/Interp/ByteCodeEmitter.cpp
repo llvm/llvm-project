@@ -22,6 +22,10 @@
 using namespace clang;
 using namespace clang::interp;
 
+static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
+  return BuiltinID == Builtin::BI__builtin_classify_type;
+}
+
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   bool IsLambdaStaticInvoker = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
@@ -122,7 +126,7 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Func) {
     bool IsUnevaluatedBuiltin = false;
     if (unsigned BI = FuncDecl->getBuiltinID())
-      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+      IsUnevaluatedBuiltin = isUnevaluatedBuiltin(BI);
 
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),

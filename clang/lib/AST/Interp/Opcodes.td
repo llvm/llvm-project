@@ -191,12 +191,12 @@ def NoRet : Opcode {}
 
 
 def Call : Opcode {
-  let Args = [ArgFunction];
+  let Args = [ArgFunction, ArgUint32];
   let Types = [];
 }
 
 def CallVirt : Opcode {
-  let Args = [ArgFunction];
+  let Args = [ArgFunction, ArgUint32];
   let Types = [];
 }
 
@@ -206,7 +206,12 @@ def CallBI : Opcode {
 }
 
 def CallPtr : Opcode {
-  let Args = [];
+  let Args = [ArgUint32];
+  let Types = [];
+}
+
+def CallVar : Opcode {
+  let Args = [ArgFunction, ArgUint32];
   let Types = [];
 }
 

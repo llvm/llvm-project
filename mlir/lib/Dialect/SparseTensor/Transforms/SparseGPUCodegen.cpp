@@ -77,8 +77,8 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
   // Then we insert a new kernel with given arguments into the module.
   builder.setInsertionPointToStart(&gpuModule.getBodyRegion().front());
   SmallVector<Type> argsTp;
-  for (unsigned i = 0, e = args.size(); i < e; i++)
-    argsTp.push_back(args[i].getType());
+  for (auto arg : args)
+    argsTp.push_back(arg.getType());
   FunctionType type = FunctionType::get(gpuModule->getContext(), argsTp, {});
   auto gpuFunc =
       builder.create<gpu::GPUFuncOp>(gpuModule->getLoc(), kernelName, type);
@@ -451,7 +451,7 @@ static bool isAdmissibleBSR(SparseTensorType &aTp) {
 /// Test for 2:4 matrix with suitable metadata.
 static bool isAdmissible24(SparseTensorType &aTp) {
   return aTp.getDimRank() == 2 && aTp.getLvlRank() == 3 && aTp.isDenseLvl(0) &&
-         aTp.isDenseLvl(1) && aTp.is2OutOf4Lvl(2) && isAdmissibleMetaData(aTp);
+         aTp.isDenseLvl(1) && aTp.isNOutOfMLvl(2) && isAdmissibleMetaData(aTp);
 }
 
 /// Test for conversion into 2:4 matrix.
