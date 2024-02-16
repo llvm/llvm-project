@@ -8,8 +8,8 @@
 # RUN: llvm-dwarfdump --debug-info -r 0 %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests checks that BOLT handles correctly empty arange. Before we would output 0x0,0x0.
-# Which tools interpreted as an end to aragnes list.
+## This tests checks that BOLT handles correctly empty arange. Before we would output 0x0,0x0.
+## Which tools interpreted as an end to aragnes list.
 
 # POSTCHECK:      Address Range Header
 # POSTCHECK-NOT:  Address Range Header
