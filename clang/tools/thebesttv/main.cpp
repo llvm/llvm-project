@@ -111,7 +111,73 @@ VarLocResult locateVariable(const std::string &signature, int line,
     return locateVariable(functionsInFile, loc.file, line, column);
 }
 
-void dumpIcfgNode(int u) {
+std::string getSourceCode(SourceManager &SM, const SourceRange &range) {
+    const auto &_b = range.getBegin();
+    const auto &_e = range.getEnd();
+    const char *b = SM.getCharacterData(_b);
+    const char *e = SM.getCharacterData(_e);
+
+    return std::string(b, e - b);
+}
+
+void saveLocationInfo(ASTContext &Context, const SourceRange &range,
+                      ordered_json &j) {
+    SourceManager &SM = Context.getSourceManager();
+
+    const SourceLocation &b = range.getBegin();
+    auto bLoc = Location::fromSourceLocation(Context, b);
+    if (bLoc) {
+        j["file"] = bLoc->file;
+        j["beginLine"] = bLoc->line;
+        j["beginColumn"] = bLoc->column;
+    } else {
+        j["file"] = "!!! begin loc invalid !!!";
+        j["beginLine"] = -1;
+        j["beginColumn"] = -1;
+    }
+
+    /**
+     * SourceRange中，endLoc是最后一个token的起始位置，所以需要找到这个token的结束位置
+     * See:
+     * https://stackoverflow.com/a/11154162/11938767
+     * https://discourse.llvm.org/t/problem-with-retrieving-the-binaryoperator-rhs-end-location/51897
+     * https://clang.llvm.org/docs/InternalsManual.html#sourcerange-and-charsourcerange
+     */
+    const SourceLocation &_e = range.getEnd();
+    SourceLocation e =
+        Lexer::getLocForEndOfToken(_e, 0, SM, Context.getLangOpts());
+    if (e.isInvalid())
+        e = _e;
+    auto eLoc = Location::fromSourceLocation(Context, e);
+
+    if (eLoc) {
+        j["endLine"] = eLoc->line;
+        j["endColumn"] = eLoc->column;
+    } else {
+        j["endLine"] = -1;
+        j["endColumn"] = -1;
+    }
+
+    std::string content;
+    if (b.isValid() && e.isValid()) {
+        const char *cb = SM.getCharacterData(b);
+        const char *ce = SM.getCharacterData(e);
+        auto length = ce - cb;
+        if (length < 0) {
+            content = "!!! length < 0 !!!";
+        } else {
+            if (length > 80) {
+                content = std::string(cb, 80);
+                content += " ...";
+            } else {
+                content = std::string(cb, length);
+            }
+        }
+    }
+    j["content"] = content;
+}
+
+void dumpICFGNode(int u, ordered_json &jPath) {
     auto [fid, bid] = Global.icfg.functionBlockOfNodeId[u];
     requireTrue(fid != -1);
 
@@ -144,6 +210,17 @@ void dumpIcfgNode(int u) {
             if (B.getBlockID() != bid)
                 continue;
 
+            bool isEntry = (&B == &fi->cfg->getEntry());
+            bool isExit = (&B == &fi->cfg->getExit());
+            if (isEntry || isExit) {
+                ordered_json j;
+                j["type"] = isEntry ? "entry" : "exit";
+                // TODO: content只要declaration就行，不然太大了
+                saveLocationInfo(Context, fi->D->getSourceRange(), j);
+                jPath.push_back(j);
+                return;
+            }
+
             // B.dump(fi->cfg, Context.getLangOpts(), true);
 
             std::vector<const Stmt *> allStmts;
@@ -169,19 +246,63 @@ void dumpIcfgNode(int u) {
                 if (isChild.find(S) != isChild.end())
                     continue;
                 // S is not child of any stmt in this CFGBlock
-                auto bLoc =
-                    Location::fromSourceLocation(Context, S->getBeginLoc());
-                auto eLoc =
-                    Location::fromSourceLocation(Context, S->getEndLoc());
-                llvm::errs()
-                    << "  Stmt " << bLoc->line << ":" << bLoc->column << " "
-                    << eLoc->line << ":" << eLoc->column << "\n";
+
+                // auto bLoc =
+                //     Location::fromSourceLocation(Context, S->getBeginLoc());
+                // auto eLoc =
+                //     Location::fromSourceLocation(Context, S->getEndLoc());
+                // llvm::errs()
+                //     << "  Stmt " << bLoc->line << ":" << bLoc->column << " "
+                //     << eLoc->line << ":" << eLoc->column << "\n";
                 // S->dumpColor();
+
+                ordered_json j;
+                j["type"] = "stmt";
+                saveLocationInfo(Context, S->getSourceRange(), j);
+                j["stmtKind"] = std::string(S->getStmtClassName());
+                jPath.push_back(j);
             }
 
             return;
         }
     }
+}
+
+void dumpPath(const std::vector<int> &path, ordered_json &j) {
+    ordered_json jPath;
+    for (int x : path) {
+        dumpICFGNode(x, jPath);
+    }
+
+    j["type"] = "handCraftedExample";
+    j["locations"] = jPath;
+}
+
+void saveAsJson(const std::string &filename,
+                const std::set<std::vector<int>> &results) {
+    ordered_json jResults;
+    std::vector<std::vector<int>> sortedResults(results.begin(), results.end());
+    // sort based on length
+    std::sort(sortedResults.begin(), sortedResults.end(),
+              [](const std::vector<int> &a, const std::vector<int> &b) {
+                  return a.size() < b.size();
+              });
+    int cnt = 0;
+    for (const auto &path : sortedResults) {
+        if (cnt++ > 10)
+            break;
+        ordered_json jPath;
+        dumpPath(path, jPath);
+        jResults.push_back(jPath);
+    }
+
+    ordered_json j;
+    j["results"] = jResults;
+
+    std::ofstream o(filename);
+    // o << std::setw(4) << j << std::endl;
+    o << j.dump(4, ' ', false, json::error_handler_t::replace) << std::endl;
+    o.close();
 }
 
 void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
@@ -199,16 +320,7 @@ void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
     ICFGPathFinder pFinder(icfg);
     pFinder.search(u, v, 3);
 
-    for (const auto &path : pFinder.results) {
-        llvm::errs() << "> p:";
-        for (int x : path) {
-            llvm::errs() << " " << x;
-        }
-        llvm::errs() << "\n";
-        for (int x : path)
-            dumpIcfgNode(x);
-        llvm::errs() << "\n";
-    }
+    saveAsJson("path.json", pFinder.results);
 }
 
 /**
@@ -282,10 +394,9 @@ int main(int argc, const char **argv) {
                     locateVariable("useAlias(const A &)", 19, 12));
 
     // std::string source = "IOPriorityPanel_new(IOPriority)";
-    // std::string target = "Vector_new(const ObjectClass *, _Bool, int)";
-
+    // std::string target = "Panel_setSelected(Panel *, int)";
     // findPathBetween(locateVariable(source, 23, 11),
-    //                 locateVariable(target, 31, 10));
+    //                 locateVariable(target, 207, 10));
 
     while (true) {
         std::string methodName;

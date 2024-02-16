@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <queue>
 #include <set>
@@ -22,6 +23,11 @@
 #include <vector>
 
 #include "ICFG.h"
+
+#include "lib/json.hpp"
+
+using json = nlohmann::json;
+using ordered_json = nlohmann::ordered_json;
 
 using namespace clang;
 using namespace clang::tooling;
