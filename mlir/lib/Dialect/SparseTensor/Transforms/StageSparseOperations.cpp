@@ -26,8 +26,8 @@ struct StageUnorderedSparseOps : public OpRewritePattern<StageWithSortOp> {
     Value tmpBuf = nullptr;
     auto itOp = llvm::cast<StageWithSortSparseOp>(op.getOperation());
     LogicalResult stageResult = itOp.stageWithSort(rewriter, tmpBuf);
-    // Deallocate tmpBuf, maybe delegate to buffer deallocation pass in the
-    // future.
+    // Deallocate tmpBuf.
+    // TODO: Delegate to buffer deallocation pass in the future.
     if (succeeded(stageResult) && tmpBuf)
       rewriter.create<bufferization::DeallocTensorOp>(loc, tmpBuf);
 

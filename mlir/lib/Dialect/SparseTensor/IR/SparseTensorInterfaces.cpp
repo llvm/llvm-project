@@ -16,6 +16,12 @@ using namespace mlir::sparse_tensor;
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp.inc"
 
+/// Stage the operations into a sequence of simple operations as follow:
+/// op -> unsorted_coo +
+/// unsorted_coo -> sorted_coo +
+/// sorted_coo -> dstTp.
+///
+/// return `tmpBuf` if a intermediate memory is allocated.
 LogicalResult sparse_tensor::detail::stageWithSortImpl(
     StageWithSortSparseOp op, PatternRewriter &rewriter, Value &tmpBufs) {
   if (!op.needsExtraSort())
