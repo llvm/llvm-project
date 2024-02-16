@@ -247,7 +247,8 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     return op.emitError(
         "'spirv.module' cannot contain external functions "
         "without 'Import' linkage_attributes (LinkageAttributes)");
-  } else if (op.isExternal() && hasImportLinkage) {
+  }
+  if (op.isExternal() && hasImportLinkage) {
     // Add an entry block to set up the block arguments
     // to match the signature of the function.
     // This is to generate OpFunctionParameter for functions with
