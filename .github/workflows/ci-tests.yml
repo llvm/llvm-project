@@ -1,0 +1,176 @@
+name: "CI Tests"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+    branches:
+      - 'release/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: True
+
+jobs:
+  compute-test-configs:
+    name: "Compute Configurations to Test"
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
+    runs-on: ubuntu-22.04
+    outputs:
+      skip-build: ${{ steps.vars.outputs.skip-build }}
+      test-platforms: ${{ steps.platforms.outputs.result }}
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Compute projects to test
+        id: vars
+        uses: ./.github/workflows/compute-projects-to-test
+
+      - name: Compute platforms to test
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        id: platforms
+        with:
+          script: |
+
+            function add_config(configs, config) {
+              if(config.check_targets) {
+                configs.push(config);
+              }
+            }
+
+            linuxConfig = {
+              name: "linux-x86_64",
+              runs_on: "ubuntu-22.04",
+              check_targets: "${{ steps.vars.outputs.Linux-check-targets }}",
+              projects: "${{ steps.vars.outputs.Linux-projects }}"
+            }
+            windowsConfig = {
+              name: "windows-x86_64",
+              runs_on: "windows-2022",
+              check_targets: "${{ steps.vars.outputs.Windows-check-targets }}",
+              projects: "${{ steps.vars.outputs.Windows-projects }}"
+            }
+            macConfig = {
+              name: "macos-x86_64",
+              runs_on: "macos-13",
+              check_targets: "${{ steps.vars.outputs.macOS-check-targets }}",
+              projects: "${{ steps.vars.outputs.macOS-projects }}"
+            }
+            macArmConfig = {
+              name: "macos-aarch64",
+              runs_on: "macos-14",
+              check_targets: "${{ steps.vars.outputs.macOS-check-targets }}",
+              projects: "${{ steps.vars.outputs.macOS-projects }}"
+            }
+
+            configs = []
+
+            const base_ref = process.env.GITHUB_BASE_REF;
+            if (base_ref.startsWith('release/')) {
+              // This is a pull request against a release branch.
+              add_config(configs, macConfig)
+              add_config(configs, macArmConfig)
+            }
+
+            if (configs.length == 0) {
+              core.setOutput('skip-build', 'true');
+            }
+            return configs;
+
+  ci-build-test:
+    # If this job name is changed, then we need to update the job-name
+    # paramater for the timeout-save step below.
+    name: "Build"
+    needs:
+      - compute-test-configs
+    permissions:
+      actions: write #pr-sccache-save may delete artifacts.
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.compute-test-configs.outputs.test-platforms) }}
+    if: needs.compute-test-configs.outputs.skip-build != 'true'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+
+      - name: Timeout Restore
+        id: timeout
+        uses: ./.github/workflows/timeout-restore
+        with:
+          artifact-name-suffix: ${{ matrix.name }}
+
+      - name: Setup Windows
+        uses: llvm/actions/setup-windows@main
+        if: ${{ runner.os == 'Windows' }}
+        with:
+          arch: amd64
+
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          max-size: 2G
+          variant: sccache
+          key: ci-${{ matrix.name }}
+
+      - name: Restore sccache from previous PR run
+        uses: ./.github/workflows/pr-sccache-restore
+        with:
+          artifact-name-suffix: ${{ matrix.name }}
+
+      - name: Configure
+        if: ${{ steps.timeout.outputs.exists != 'true' }}
+        shell: bash
+        run: |
+          # -DLLVM_DISABLE_ASSEMBLY_FILES=ON is a
+          # workaround for a test failure on some lld tests on MacOS
+          # https://github.com/llvm/llvm-project/issues/81967
+          cmake -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS="${{ matrix.projects }}" \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DLLVM_LIT_ARGS="-v --no-progress-bar" \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            ${{ (runner.os == 'macOS' && '-DLLVM_DISABLE_ASSEMBLY_FILES=ON') || ''}} \
+            -S llvm
+
+      - name: Build
+        shell: bash
+        timeout-minutes: 330
+        run: |
+          ninja -C build -k 0 ${{ matrix.check_targets }}
+
+      - name: Timeout Save
+        if: always()
+        uses: ./.github/workflows/timeout-save
+        with:
+          job-name: "Build (${{ matrix.name }}, ${{ matrix.runs_on }} ${{ matrix.check_targets }} ${{ matrix.projects }})"
+          artifact-name-suffix: ${{ matrix.name }}
+          timeout-step: "Build"
+          timeout-minutes: 330
+
+      - name: Save sccache for next PR run
+        if: always()
+        uses: ./.github/workflows/pr-sccache-save
+        with:
+          artifact-name-suffix: ${{ matrix.name }}
