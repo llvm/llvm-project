@@ -2423,7 +2423,7 @@ class VBUFFER_MTBUF_Real_gfx12<bits<4> op, MTBUF_Pseudo ps,
   let Inst{17-14} = op;
   let Inst{21-18} = 0b1000;
   let Inst{61-55} = format;
-  let AssemblerPredicate = isGFX12Plus;
+  let AssemblerPredicate = isGFX12Only;
   let DecoderNamespace = "GFX12";
 }
 
