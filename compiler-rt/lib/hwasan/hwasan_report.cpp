@@ -218,63 +218,63 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
     uptr pc_mask = (1ULL << kRecordFPShift) - 1;
     uptr pc = record & pc_mask;
     FrameInfo frame;
-    if (Symbolizer::GetOrInit()->SymbolizeFrame(pc, &frame)) {
-      for (LocalInfo &local : frame.locals) {
-        if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
-          continue;
-        if (!(local.name && internal_strlen(local.name)) &&
-            !(local.function_name && internal_strlen(local.function_name)) &&
-            !(local.decl_file && internal_strlen(local.decl_file)))
-          continue;
-        tag_t obj_tag = base_tag ^ local.tag_offset;
-        if (obj_tag != addr_tag)
-          continue;
-        // Guess top bits of local variable from the faulting address, because
-        // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
-        uptr local_beg = (fp + local.frame_offset) |
-                         (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
-        uptr local_end = local_beg + local.size;
+    if (!Symbolizer::GetOrInit()->SymbolizeFrame(pc, &frame))
+      continue;
+    for (LocalInfo &local : frame.locals) {
+      if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
+        continue;
+      if (!(local.name && internal_strlen(local.name)) &&
+          !(local.function_name && internal_strlen(local.function_name)) &&
+          !(local.decl_file && internal_strlen(local.decl_file)))
+        continue;
+      tag_t obj_tag = base_tag ^ local.tag_offset;
+      if (obj_tag != addr_tag)
+        continue;
+      // Guess top bits of local variable from the faulting address, because
+      // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
+      uptr local_beg = (fp + local.frame_offset) |
+                       (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
+      uptr local_end = local_beg + local.size;
 
-        if (!found_local) {
-          Printf("\nPotentially referenced stack objects:\n");
-          found_local = true;
-        }
-
-        uptr offset;
-        const char *whence;
-        const char *cause;
-        if (local_beg <= untagged_addr && untagged_addr < local_end) {
-          offset = untagged_addr - local_beg;
-          whence = "inside";
-          cause = "use-after-scope";
-        } else if (untagged_addr >= local_end) {
-          offset = untagged_addr - local_end;
-          whence = "after";
-          cause = "stack-buffer-overflow";
-        } else {
-          offset = local_beg - untagged_addr;
-          whence = "before";
-          cause = "stack-buffer-overflow";
-        }
-        Decorator d;
-        Printf("%s", d.Error());
-        Printf("Cause: %s\n", cause);
-        Printf("%s", d.Default());
-        Printf("%s", d.Location());
-        StackTracePrinter::GetOrInit()->RenderSourceLocation(
-            &location, local.decl_file, local.decl_line, /* column= */ 0,
-            common_flags()->symbolize_vs_style,
-            common_flags()->strip_path_prefix);
-        Printf(
-            "%p is located %zd bytes %s a %zd-byte local variable %s [%p,%p) "
-            "in %s %s\n",
-            untagged_addr, offset, whence, local_end - local_beg, local.name,
-            local_beg, local_end, local.function_name, location.data());
-        location.clear();
-        Printf("%s\n", d.Default());
+      if (!found_local) {
+        Printf("\nPotentially referenced stack objects:\n");
+        found_local = true;
       }
-      frame.Clear();
+
+      uptr offset;
+      const char *whence;
+      const char *cause;
+      if (local_beg <= untagged_addr && untagged_addr < local_end) {
+        offset = untagged_addr - local_beg;
+        whence = "inside";
+        cause = "use-after-scope";
+      } else if (untagged_addr >= local_end) {
+        offset = untagged_addr - local_end;
+        whence = "after";
+        cause = "stack-buffer-overflow";
+      } else {
+        offset = local_beg - untagged_addr;
+        whence = "before";
+        cause = "stack-buffer-overflow";
+      }
+      Decorator d;
+      Printf("%s", d.Error());
+      Printf("Cause: %s\n", cause);
+      Printf("%s", d.Default());
+      Printf("%s", d.Location());
+      StackTracePrinter::GetOrInit()->RenderSourceLocation(
+          &location, local.decl_file, local.decl_line, /* column= */ 0,
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
+      Printf(
+          "%p is located %zd bytes %s a %zd-byte local variable %s [%p,%p) "
+          "in %s %s\n",
+          untagged_addr, offset, whence, local_end - local_beg, local.name,
+          local_beg, local_end, local.function_name, location.data());
+      location.clear();
+      Printf("%s\n", d.Default());
     }
+    frame.Clear();
   }
 
   if (found_local)
