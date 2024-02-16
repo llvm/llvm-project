@@ -1371,9 +1371,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // handled.
       if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
           isa<VPInterleaveRecipe>(CurRec) ||
-          isa<VPScalarIVStepsRecipe>(CurRec) ||
-          isa<VPCanonicalIVPHIRecipe>(CurRec) ||
-          isa<VPActiveLaneMaskPHIRecipe>(CurRec))
+          isa<VPScalarIVStepsRecipe>(CurRec) || isa<VPHeaderPHIRecipe>(CurRec))
         continue;
 
       // This recipe contributes to the address computation of a widen
