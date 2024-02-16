@@ -157,7 +157,7 @@ define void @abs_v4i64_of_sext_v4i8(ptr %x) {
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vsext.vf8 v10, v8
+; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vse64.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %x
@@ -175,7 +175,7 @@ define void @abs_v4i64_of_sext_v4i16(ptr %x) {
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vsext.vf4 v10, v8
+; CHECK-NEXT:    vzext.vf4 v10, v8
 ; CHECK-NEXT:    vse64.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
@@ -193,7 +193,7 @@ define void @abs_v4i64_of_sext_v4i32(ptr %x) {
 ; CHECK-NEXT:    vrsub.vi v9, v8, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vse64.v v10, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x

@@ -15614,12 +15614,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ABS: {
     EVT VT = N->getValueType(0);
     SDValue N0 = N->getOperand(0);
-    // abs (sext) -> sext (abs)
+    // abs (sext) -> zext (abs)
     // abs (zext) -> zext (handled elsewhere)
     if (VT.isVector() && N0.hasOneUse() && N0.getOpcode() == ISD::SIGN_EXTEND) {
       SDValue Src = N0.getOperand(0);
       SDLoc DL(N);
-      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT,
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                          DAG.getNode(ISD::ABS, DL, Src.getValueType(), Src));
     }
     break;
