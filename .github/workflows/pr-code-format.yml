@@ -26,7 +26,7 @@ jobs:
           skip_initial_fetch: true
 
       # We need to pull the script from the main branch, so that we ensure
-      # we get a version of the script that supports the --wirte-comment-to-file
+      # we get a version of the script that supports the --write-comment-to-file
       # option.
       - name: Fetch code formatting utils
         uses: actions/checkout@v4

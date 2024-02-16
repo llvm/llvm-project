@@ -87,7 +87,7 @@ jobs:
             await comments.forEach(function (comment) {
               if (comment.id) {
                 // Security check: Ensure that this comment was created by
-                // the github-actions bot, so a malisious input won't overwrite
+                // the github-actions bot, so a malicious input won't overwrite
                 // a user's comment.
                 github.issues.getComment({
                   owner: context.repo.owner,
