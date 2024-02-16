@@ -664,7 +664,26 @@ LogicalResult SparseTensorEncodingAttr::verify(
                      [](LevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
+    // We can potentially support mixed SoA/AoS singleton levels.
+    if (!std::all_of(it, lvlTypes.end(), [it](LevelType i) {
+          return it->isa<LevelPropNonDefault::SoA>() ==
+                 i.isa<LevelPropNonDefault::SoA>();
+        })) {
+      return emitError() << "expected all singleton lvlTypes stored in the "
+                            "same memory layout (SoA vs AoS).";
+    }
   }
+
+  // SoA property can only be applied on singleton level.
+  auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
+    return lt.isa<LevelPropNonDefault::SoA>();
+  });
+  if (llvm::any_of(soaLvls, [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      })) {
+    return emitError() << "SoA is only applicable to singleton lvlTypes.";
+  }
+
   // TODO: audit formats that actually are supported by backend.
   if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
       it != std::end(lvlTypes)) {
