@@ -1077,7 +1077,8 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpGroupLogicalAndKHR:
   case SPIRV::OpGroupLogicalOrKHR:
   case SPIRV::OpGroupLogicalXorKHR:
-    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_uniform_group_instructions);
       Reqs.addCapability(SPIRV::Capability::GroupUniformArithmeticKHR);
     }
