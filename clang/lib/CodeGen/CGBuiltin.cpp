@@ -16543,9 +16543,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
 #include "llvm/TargetParser/PPCTargetParser.def"
-  // This lambda function converts builtin_cpu_is() into directly
-  // returning true or false, or it gets and checks the information from the
-  // kernel variable _system_configuration fromr the AIX OS.
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
                                      unsigned CompOp,
                                      unsigned OpValue) -> Value * {

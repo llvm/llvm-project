@@ -176,8 +176,8 @@ PPC_AIX_CPU("power9",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,COMP_EQ,AIX_PPC9_VALUE)
 PPC_AIX_CPU("power10",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,COMP_EQ,AIX_PPC10_VALUE)
 #undef PPC_AIX_CPU
 
-// PPC_SYSTEMCONFIG_TYPE defines the IR data struture of the _system_conf
-// found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
+// PPC_SYSTEMCONFIG_TYPE defines the IR data struture of the kernel variable
+// `_system_configuration` found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
 #ifndef PPC_SYSTEMCONFIG_TYPE
 #define PPC_SYSTEMCONFIG_TYPE \
 Int32Ty, Int32Ty, Int32Ty
