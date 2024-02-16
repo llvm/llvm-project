@@ -8,9 +8,12 @@ define float @pr80941(float %arg) {
 ; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 144)
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_EXIT:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[FPEXT:%.*]] = fpext float [[ARG]] to double
+; CHECK-NEXT:    [[SIGN:%.*]] = call double @llvm.copysign.f64(double 0.000000e+00, double [[FPEXT]])
+; CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc double [[SIGN]] to float
 ; CHECK-NEXT:    br label [[IF_EXIT]]
 ; CHECK:       if.exit:
-; CHECK-NEXT:    [[RET:%.*]] = phi float [ 0.000000e+00, [[IF_THEN]] ], [ [[ARG]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[FPTRUNC]], [[IF_THEN]] ], [ [[ARG]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
 entry:
