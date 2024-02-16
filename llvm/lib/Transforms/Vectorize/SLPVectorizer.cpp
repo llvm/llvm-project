@@ -13326,11 +13326,6 @@ void BoUpSLP::computeMinimumValueSizes() {
                                      MaxBitWidth);
   }
 
-  // True if the roots can be zero-extended back to their original type, rather
-  // than sign-extended. We know that if the leading bits are not demanded, we
-  // can safely zero-extend. So we initialize IsKnownPositive to True.
-  bool IsKnownPositive = true;
-
   // If all the bits of the roots are demanded, we can try a little harder to
   // compute a narrower type. This can happen, for example, if the roots are
   // getelementptr indices. InstCombine promotes these indices to the pointer
@@ -13347,38 +13342,16 @@ void BoUpSLP::computeMinimumValueSizes() {
       })) {
     MaxBitWidth = 8u;
 
-    // Determine if the sign bit of all the roots is known to be zero. If not,
-    // IsKnownPositive is set to False.
-    IsKnownPositive = llvm::all_of(TreeRoot, [&](Value *R) {
-      KnownBits Known = computeKnownBits(R, *DL);
-      return Known.isNonNegative();
-    });
-
     // Determine the maximum number of bits required to store the scalar
     // values.
     for (auto *Scalar : ToDemote) {
       auto NumSignBits = ComputeNumSignBits(Scalar, *DL, 0, AC, nullptr, DT);
       auto NumTypeBits = DL->getTypeSizeInBits(Scalar->getType());
-      MaxBitWidth = std::max<unsigned>(NumTypeBits - NumSignBits, MaxBitWidth);
+      KnownBits Known = computeKnownBits(Scalar, *DL);
+      unsigned RequiredSignBit =  !Known.isNonNegative();
+      unsigned LocalBitWidth = NumTypeBits - NumSignBits + RequiredSignBit;
+      MaxBitWidth = std::max<unsigned>(LocalBitWidth, MaxBitWidth);
     }
-
-    // If we can't prove that the sign bit is zero, we must add one to the
-    // maximum bit width to account for the unknown sign bit. This preserves
-    // the existing sign bit so we can safely sign-extend the root back to the
-    // original type. Otherwise, if we know the sign bit is zero, we will
-    // zero-extend the root instead.
-    //
-    // FIXME: This is somewhat suboptimal, as there will be cases where adding
-    //        one to the maximum bit width will yield a larger-than-necessary
-    //        type. In general, we need to add an extra bit only if we can't
-    //        prove that the upper bit of the original type is equal to the
-    //        upper bit of the proposed smaller type. If these two bits are the
-    //        same (either zero or one) we know that sign-extending from the
-    //        smaller type will result in the same value. Here, since we can't
-    //        yet prove this, we are just making the proposed smaller type
-    //        larger to ensure correctness.
-    if (!IsKnownPositive)
-      ++MaxBitWidth;
   }
 
   // Round MaxBitWidth up to the next power-of-two.
