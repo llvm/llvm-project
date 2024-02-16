@@ -92,7 +92,7 @@ using __largest_lock_free_type = short;
 #  elif ATOMIC_CHAR_LOCK_FREE == 2
 using __largest_lock_free_type = char;
 #  else
-#    define _LIBCPP_NO_LOCK_FREE_TYPES // There are no lockfree types (this can happen in freestanding)
+#    define _LIBCPP_NO_LOCK_FREE_TYPES // There are no lockfree types (this can happen on unusual platforms)
 #  endif
 
 #  ifndef _LIBCPP_NO_LOCK_FREE_TYPES
