@@ -1067,10 +1067,9 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::NotInOSSA:
     return "The module file was not compiled with -enable-ossa-modules when it "
            "was required to do so.";
-  case swift::serialization::Status::NotUsingNoncopyableGenerics:
-    return "The module file was not compiled with "
-           "-enable-experimental-feature NoncopyableGenerics when it "
-           "was required to do so.";
+  case swift::serialization::Status::NoncopyableGenericsMismatch:
+    return "The module file was compiled with a mismatching "
+           "-enable-experimental-feature NoncopyableGenerics setting.";
   case swift::serialization::Status::SDKMismatch:
     return "The module file was built with a different SDK version.";
   }
