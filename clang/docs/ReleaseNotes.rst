@@ -185,6 +185,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
 
+- Added diagnostics for C11 keywords being incompatible with language standards
+  before C11, under a new warning group: ``-Wpre-c11-compat``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
