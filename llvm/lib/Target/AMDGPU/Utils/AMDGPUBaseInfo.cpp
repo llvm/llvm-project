@@ -3201,6 +3201,15 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   case AMDGPU::V_MAD_U32_e64_dpp:
   case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
     return true;
+  case AMDGPU::V_CVT_SCALE_PK_F16_BF8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK_F16_BF8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK_F16_FP8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK_F16_FP8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK_BF16_BF8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK_BF16_BF8_e64_dpp_gfx1210:
+  case AMDGPU::V_CVT_SCALE_PK_BF16_FP8_e64_dpp:
+  case AMDGPU::V_CVT_SCALE_PK_BF16_FP8_e64_dpp_gfx1210:
+    return false;
   default:
     return hasAny64BitVGPROperands(OpDesc);
   }
