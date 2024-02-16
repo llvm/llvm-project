@@ -18,7 +18,6 @@ New headers:
 
 * stdbit.h
 * stdckdint.h
-* stdnoreturn.h
 
 Additions:
 
@@ -26,6 +25,7 @@ Additions:
 
   * mbrtoc8
   * c8rtomb
+  * char*_t
 
 * string.h
 
