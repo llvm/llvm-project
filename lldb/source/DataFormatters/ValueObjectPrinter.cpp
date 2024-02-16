@@ -574,7 +574,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
     }
 
     TypeSummaryImpl *entry = GetSummaryFormatter();
-    return curr_ptr_depth.CanAllowExpansion(false, entry, &valobj, m_summary);
+    return curr_ptr_depth.CanAllowExpansion(false, entry, valobj, m_summary);
   }
 
   return print_children || m_summary.empty();
