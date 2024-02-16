@@ -1842,6 +1842,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 #include "clang/Basic/TransformTypeTraits.def"
     return TPResult::True;
 
+  // C11 _Alignas
+  case tok::kw__Alignas:
+    return TPResult::True;
   // C11 _Atomic
   case tok::kw__Atomic:
     return TPResult::True;

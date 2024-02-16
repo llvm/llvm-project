@@ -259,6 +259,9 @@ Bug Fixes to C++ Support
   some of (`#80510 <https://github.com/llvm/llvm-project/issues/80510>`).
 - Clang now ignores top-level cv-qualifiers on function parameters in template partial orderings.
   (`#75404 <https://github.com/llvm/llvm-project/issues/75404>`_)
+- No longer reject valid use of the ``_Alignas`` specifier when declaring a
+  local variable, which is supported as a C11 extension in C++. Previously, it
+  was only accepted at namespace scope but not at local function scope.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
