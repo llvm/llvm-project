@@ -189,7 +189,8 @@ private:
   bool simplifyAddress(Address &Addr, MVT VT);
   void addLoadStoreOperands(Address &Addr, const MachineInstrBuilder &MIB,
                             MachineMemOperand::Flags Flags,
-                            unsigned ScaleFactor, MachineMemOperand *MMO);
+                            unsigned ScaleFactor, MachineMemOperand *MMO,
+                            MVT &VT, Align Alignment);
   bool isMemCpySmall(uint64_t Len, MaybeAlign Alignment);
   bool tryEmitSmallMemCpy(Address Dest, Address Src, uint64_t Len,
                           MaybeAlign Alignment);
@@ -224,9 +225,9 @@ private:
   bool emitICmp(MVT RetVT, const Value *LHS, const Value *RHS, bool IsZExt);
   bool emitICmp_ri(MVT RetVT, unsigned LHSReg, uint64_t Imm);
   bool emitFCmp(MVT RetVT, const Value *LHS, const Value *RHS);
-  unsigned emitLoad(MVT VT, MVT ResultVT, Address Addr, bool WantZExt = true,
-                    MachineMemOperand *MMO = nullptr);
-  bool emitStore(MVT VT, unsigned SrcReg, Address Addr,
+  unsigned emitLoad(MVT VT, MVT ResultVT, Address Addr, Align Alignment,
+                    bool WantZExt = true, MachineMemOperand *MMO = nullptr);
+  bool emitStore(MVT VT, unsigned SrcReg, Address Addr, Align Alignment,
                  MachineMemOperand *MMO = nullptr);
   bool emitStoreRelease(MVT VT, unsigned SrcReg, unsigned AddrReg,
                         MachineMemOperand *MMO = nullptr);
@@ -1125,16 +1126,19 @@ void AArch64FastISel::addLoadStoreOperands(Address &Addr,
                                            const MachineInstrBuilder &MIB,
                                            MachineMemOperand::Flags Flags,
                                            unsigned ScaleFactor,
-                                           MachineMemOperand *MMO) {
+                                           MachineMemOperand *MMO, MVT &VT,
+                                           Align Alignment) {
+
   int64_t Offset = Addr.getOffset() / ScaleFactor;
   // Frame base works a bit differently. Handle it separately.
   if (Addr.isFIBase()) {
     int FI = Addr.getFI();
-    // FIXME: We shouldn't be using getObjectSize/getObjectAlignment.  The size
-    // and alignment should be based on the VT.
+    unsigned Size = VT.getStoreSize();
+
+    // Get the size and alignment based on the MVT
     MMO = FuncInfo.MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, FI, Offset), Flags,
-        MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
+        Size, Alignment);
     // Now add the rest of the operands.
     MIB.addFrameIndex(FI).addImm(Offset);
   } else {
@@ -1142,9 +1146,9 @@ void AArch64FastISel::addLoadStoreOperands(Address &Addr,
     const MCInstrDesc &II = MIB->getDesc();
     unsigned Idx = (Flags & MachineMemOperand::MOStore) ? 1 : 0;
     Addr.setReg(
-      constrainOperandRegClass(II, Addr.getReg(), II.getNumDefs()+Idx));
-    Addr.setOffsetReg(
-      constrainOperandRegClass(II, Addr.getOffsetReg(), II.getNumDefs()+Idx+1));
+        constrainOperandRegClass(II, Addr.getReg(), II.getNumDefs() + Idx));
+    Addr.setOffsetReg(constrainOperandRegClass(II, Addr.getOffsetReg(),
+                                               II.getNumDefs() + Idx + 1));
     if (Addr.getOffsetReg()) {
       assert(Addr.getOffset() == 0 && "Unexpected offset");
       bool IsSigned = Addr.getExtendType() == AArch64_AM::SXTW ||
@@ -1749,7 +1753,8 @@ unsigned AArch64FastISel::emitAnd_ri(MVT RetVT, unsigned LHSReg,
 }
 
 unsigned AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
-                                   bool WantZExt, MachineMemOperand *MMO) {
+                                   Align Alignment, bool WantZExt,
+                                   MachineMemOperand *MMO) {
   if (!TLI.allowsMisalignedMemoryAccesses(VT))
     return 0;
 
@@ -1862,7 +1867,8 @@ unsigned AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
   Register ResultReg = createResultReg(RC);
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                     TII.get(Opc), ResultReg);
-  addLoadStoreOperands(Addr, MIB, MachineMemOperand::MOLoad, ScaleFactor, MMO);
+  addLoadStoreOperands(Addr, MIB, MachineMemOperand::MOLoad, ScaleFactor, MMO,
+                       VT, Alignment);
 
   // Loading an i1 requires special handling.
   if (VT == MVT::i1) {
@@ -1988,8 +1994,9 @@ bool AArch64FastISel::selectLoad(const Instruction *I) {
     }
   }
 
-  unsigned ResultReg =
-      emitLoad(VT, RetVT, Addr, WantZExt, createMachineMemOperandFor(I));
+  Align Alignment = I->getOperand(0)->getPointerAlignment(DL);
+  unsigned ResultReg = emitLoad(VT, RetVT, Addr, Alignment, WantZExt,
+                                createMachineMemOperandFor(I));
   if (!ResultReg)
     return false;
 
@@ -2074,7 +2081,7 @@ bool AArch64FastISel::emitStoreRelease(MVT VT, unsigned SrcReg,
 }
 
 bool AArch64FastISel::emitStore(MVT VT, unsigned SrcReg, Address Addr,
-                                MachineMemOperand *MMO) {
+                                Align Alignment, MachineMemOperand *MMO) {
   if (!TLI.allowsMisalignedMemoryAccesses(VT))
     return false;
 
@@ -2136,7 +2143,8 @@ bool AArch64FastISel::emitStore(MVT VT, unsigned SrcReg, Address Addr,
   SrcReg = constrainOperandRegClass(II, SrcReg, II.getNumDefs());
   MachineInstrBuilder MIB =
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II).addReg(SrcReg);
-  addLoadStoreOperands(Addr, MIB, MachineMemOperand::MOStore, ScaleFactor, MMO);
+  addLoadStoreOperands(Addr, MIB, MachineMemOperand::MOStore, ScaleFactor, MMO,
+                       VT, Alignment);
 
   return true;
 }
@@ -2203,7 +2211,8 @@ bool AArch64FastISel::selectStore(const Instruction *I) {
   if (!computeAddress(PtrV, Addr, Op0->getType()))
     return false;
 
-  if (!emitStore(VT, SrcReg, Addr, createMachineMemOperandFor(I)))
+  Align Alignment = PtrV->getPointerAlignment(DL);
+  if (!emitStore(VT, SrcReg, Addr, Alignment, createMachineMemOperandFor(I)))
     return false;
   return true;
 }
@@ -3089,7 +3098,7 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
           MachinePointerInfo::getStack(*FuncInfo.MF, Addr.getOffset()),
           MachineMemOperand::MOStore, ArgVT.getStoreSize(), Alignment);
 
-      if (!emitStore(ArgVT, ArgReg, Addr, MMO))
+      if (!emitStore(ArgVT, ArgReg, Addr, Alignment, MMO))
         return false;
     }
   }
@@ -3294,35 +3303,44 @@ bool AArch64FastISel::tryEmitSmallMemCpy(Address Dest, Address Src,
   Address OrigDest = Dest;
   Address OrigSrc = Src;
 
+  Align ActualAlign = Align(1);
+
   while (Len) {
     MVT VT;
     if (!Alignment || *Alignment >= 8) {
-      if (Len >= 8)
+      if (Len >= 8) {
         VT = MVT::i64;
-      else if (Len >= 4)
+        ActualAlign = Align(8);
+      } else if (Len >= 4) {
         VT = MVT::i32;
-      else if (Len >= 2)
+        ActualAlign = Align(4);
+      } else if (Len >= 2) {
         VT = MVT::i16;
-      else {
+        ActualAlign = Align(2);
+      } else {
         VT = MVT::i8;
+        ActualAlign = Align(1);
       }
     } else {
       assert(Alignment && "Alignment is set in this branch");
       // Bound based on alignment.
-      if (Len >= 4 && *Alignment == 4)
+      if (Len >= 4 && *Alignment == 4) {
         VT = MVT::i32;
-      else if (Len >= 2 && *Alignment == 2)
+        ActualAlign = Align(4);
+      } else if (Len >= 2 && *Alignment == 2) {
         VT = MVT::i16;
-      else {
+        ActualAlign = Align(2);
+      } else {
         VT = MVT::i8;
+        ActualAlign = Align(1);
       }
     }
 
-    unsigned ResultReg = emitLoad(VT, VT, Src);
+    unsigned ResultReg = emitLoad(VT, VT, Src, ActualAlign);
     if (!ResultReg)
       return false;
 
-    if (!emitStore(VT, ResultReg, Dest))
+    if (!emitStore(VT, ResultReg, Dest, ActualAlign))
       return false;
 
     int64_t Size = VT.getSizeInBits() / 8;
