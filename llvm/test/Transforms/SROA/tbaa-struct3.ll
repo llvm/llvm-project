@@ -10,9 +10,9 @@ define void @load_store_transfer_split_struct_tbaa_2_float(ptr dereferenceable(2
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[B]] to i32
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT0:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[RES]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES_SROA_IDX]], align 4, !tbaa [[TBAA1:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES_SROA_IDX]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[RES]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -32,9 +32,9 @@ define void @memcpy_transfer(ptr dereferenceable(24) %res, float %a, float %b) {
 ; CHECK-SAME: ptr dereferenceable(24) [[RES:%.*]], float [[A:%.*]], float [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_PTR:%.*]] = load ptr, ptr [[RES]], align 8
-; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_L_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[L_PTR]], i64 4
-; CHECK-NEXT:    store float [[B]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa [[TBAA1]]
+; CHECK-NEXT:    store float [[B]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -52,11 +52,11 @@ define void @memcpy_transfer_tbaa_field_and_size_do_not_align(ptr dereferenceabl
 ; CHECK-SAME: ptr dereferenceable(24) [[RES:%.*]], float [[A:%.*]], float [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L_PTR:%.*]] = load ptr, ptr [[RES]], align 8
-; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    store float [[A]], ptr [[L_PTR]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_L_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[L_PTR]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[B]] to i32
 ; CHECK-NEXT:    [[TMP_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-; CHECK-NEXT:    store i16 [[TMP_SROA_2_0_EXTRACT_TRUNC]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT5:![0-9]+]]
+; CHECK-NEXT:    store i16 [[TMP_SROA_2_0_EXTRACT_TRUNC]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -77,8 +77,8 @@ define void @load_store_transfer_split_struct_tbaa_2_i31(ptr dereferenceable(24)
 ; CHECK-NEXT:    store i31 [[A]], ptr [[TMP]], align 4
 ; CHECK-NEXT:    [[TMP_4_TMP_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 4
 ; CHECK-NEXT:    store i31 [[B]], ptr [[TMP_4_TMP_4_SROA_IDX]], align 4
-; CHECK-NEXT:    [[TMP_0_L1:%.*]] = load i62, ptr [[TMP]], align 4, !tbaa.struct [[TBAA_STRUCT0]]
-; CHECK-NEXT:    store i62 [[TMP_0_L1]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    [[TMP_0_L1:%.*]] = load i62, ptr [[TMP]], align 4, !tbaa.struct [[TBAA_STRUCT5:![0-9]+]]
+; CHECK-NEXT:    store i62 [[TMP_0_L1]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -98,9 +98,9 @@ define void @store_vector_part_first(ptr %y2, float %f) {
 ; CHECK-LABEL: define void @store_vector_part_first(
 ; CHECK-SAME: ptr [[Y2:%.*]], float [[F:%.*]]) {
 ; CHECK-NEXT:    [[V_1:%.*]] = call <2 x float> @foo(ptr [[Y2]])
-; CHECK-NEXT:    store <2 x float> [[V_1]], ptr [[Y2]], align 8, !tbaa.struct [[TBAA_STRUCT6:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[V_1]], ptr [[Y2]], align 8, !tbaa [[TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[X7_SROA_2_0_Y2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[Y2]], i64 8
-; CHECK-NEXT:    store float [[F]], ptr [[X7_SROA_2_0_Y2_SROA_IDX]], align 8, !tbaa [[TBAA1]]
+; CHECK-NEXT:    store float [[F]], ptr [[X7_SROA_2_0_Y2_SROA_IDX]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
   %x7 = alloca { float, float, float, float }
@@ -116,9 +116,9 @@ define void @store_vector_part_second(ptr %y2, float %f) {
 ; CHECK-LABEL: define void @store_vector_part_second(
 ; CHECK-SAME: ptr [[Y2:%.*]], float [[F:%.*]]) {
 ; CHECK-NEXT:    [[V_1:%.*]] = call <2 x float> @foo(ptr [[Y2]])
-; CHECK-NEXT:    store float [[F]], ptr [[Y2]], align 8, !tbaa.struct [[TBAA_STRUCT9:![0-9]+]]
+; CHECK-NEXT:    store float [[F]], ptr [[Y2]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[X7_SROA_2_0_Y2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[Y2]], i64 4
-; CHECK-NEXT:    store <2 x float> [[V_1]], ptr [[X7_SROA_2_0_Y2_SROA_IDX]], align 4, !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[V_1]], ptr [[X7_SROA_2_0_Y2_SROA_IDX]], align 4, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    ret void
 ;
   %x7 = alloca { float, float, float, float }
@@ -134,7 +134,7 @@ define void @store_vector_single(ptr %y2, float %f) {
 ; CHECK-LABEL: define void @store_vector_single(
 ; CHECK-SAME: ptr [[Y2:%.*]], float [[F:%.*]]) {
 ; CHECK-NEXT:    [[V_1:%.*]] = call <2 x float> @foo(ptr [[Y2]])
-; CHECK-NEXT:    store <2 x float> [[V_1]], ptr [[Y2]], align 4, !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[V_1]], ptr [[Y2]], align 4, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    ret void
 ;
   %x7 = alloca { float, float }
@@ -161,8 +161,8 @@ define void @memset(ptr %dst, ptr align 8 %src) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 1 [[A_SROA_4_0_SRC_SROA_IDX]], i32 10, i1 false)
 ; CHECK-NEXT:    store i16 1, ptr [[A_SROA_3]], align 2
 ; CHECK-NEXT:    [[A_SROA_0_1_A_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_1_A_1_SROA_IDX2]], i8 42, i32 6, i1 false), !tbaa.struct [[TBAA_STRUCT11:![0-9]+]]
-; CHECK-NEXT:    store i16 10794, ptr [[A_SROA_3]], align 2, !tbaa [[TBAA1]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_1_A_1_SROA_IDX2]], i8 42, i32 6, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
+; CHECK-NEXT:    store i16 10794, ptr [[A_SROA_3]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 7, i1 true)
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 7
 ; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_0_COPYLOAD1:%.*]] = load volatile i16, ptr [[A_SROA_3]], align 2
@@ -199,8 +199,8 @@ define void @memset2(ptr %dst, ptr align 8 %src) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 2 [[A_SROA_4_0_SRC_SROA_IDX]], i32 90, i1 false)
 ; CHECK-NEXT:    store i8 1, ptr [[A_SROA_3]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_202_A_202_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 202
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_202_A_202_SROA_IDX2]], i8 42, i32 7, i1 false), !tbaa.struct [[TBAA_STRUCT12:![0-9]+]]
-; CHECK-NEXT:    store i8 42, ptr [[A_SROA_3]], align 1, !tbaa [[TBAA7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_202_A_202_SROA_IDX2]], i8 42, i32 7, i1 false), !tbaa [[TBAA6]]
+; CHECK-NEXT:    store i8 42, ptr [[A_SROA_3]], align 1, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 209, i1 true)
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 209
 ; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_0_COPYLOAD1:%.*]] = load volatile i8, ptr [[A_SROA_3]], align 1
@@ -240,7 +240,7 @@ define void @slice_store_v2i8_1(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 6
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load <2 x i8>, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 2
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_SROA_0]], align 4
-; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> <i16 123> to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4, !tbaa.struct [[TBAA_STRUCT13:![0-9]+]]
+; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> <i16 123> to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 4
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4]], ptr [[DST_2]], align 2
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 6, i1 true)
@@ -279,8 +279,8 @@ define void @slice_store_v2i8_2(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-NEXT:    store i8 [[A_SROA_0_SROA_4_1_COPYLOAD]], ptr [[A_SROA_0_SROA_4]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_1_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 1 [[A_SROA_4_1_SRC_SROA_IDX]], i32 5, i1 false)
-; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[A_SROA_0_SROA_1]], align 2, !tbaa.struct [[TBAA_STRUCT14:![0-9]+]]
-; CHECK-NEXT:    store i8 0, ptr [[A_SROA_0_SROA_4]], align 1, !tbaa [[TBAA1]]
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[A_SROA_0_SROA_1]], align 2, !tbaa.struct [[TBAA_STRUCT9:![0-9]+]]
+; CHECK-NEXT:    store i8 0, ptr [[A_SROA_0_SROA_4]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 2
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4]], ptr [[DST_2]], align 2
 ; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_COPYLOAD3:%.*]] = load volatile <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 2
@@ -317,7 +317,7 @@ define double @tbaa_struct_load(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    [[TMP_SROA_3_0_COPYLOAD:%.*]] = load i64, ptr [[TMP_SROA_3_0_SRC_SROA_IDX]], align 8
 ; CHECK-NEXT:    store i64 [[TMP_SROA_3_0_COPYLOAD]], ptr [[TMP_SROA_3]], align 8
-; CHECK-NEXT:    [[TMP_SROA_0_0_TMP_SROA_0_0_LG:%.*]] = load double, ptr [[TMP_SROA_0]], align 8, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[TMP_SROA_0_0_TMP_SROA_0_0_LG:%.*]] = load double, ptr [[TMP_SROA_0]], align 8, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[TMP_SROA_0_0_TMP_SROA_0_0_COPYLOAD1:%.*]] = load volatile double, ptr [[TMP_SROA_0]], align 8
 ; CHECK-NEXT:    store volatile double [[TMP_SROA_0_0_TMP_SROA_0_0_COPYLOAD1]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[TMP_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
@@ -337,7 +337,7 @@ define i32 @shorten_integer_store_single_field(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 4, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i32, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD]], ptr [[DST]], align 1
@@ -356,7 +356,7 @@ define i32 @shorten_integer_store_multiple_fields(ptr %dst, ptr %dst.2, ptr %src
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA7]]
+; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i32, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD]], ptr [[DST]], align 1
@@ -375,7 +375,7 @@ define <2 x i16> @shorten_vector_store_multiple_fields(ptr %dst, ptr %dst.2, ptr
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x i32>, align 8
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8, !tbaa.struct [[TBAA_STRUCT0]]
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8, !tbaa.struct [[TBAA_STRUCT5]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load <2 x i16>, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 8 [[A_SROA_0]], i32 4, i1 true)
 ; CHECK-NEXT:    ret <2 x i16> [[A_SROA_0_0_A_SROA_0_0_L]]
@@ -393,7 +393,7 @@ define <2 x i16> @shorten_vector_store_single_fields(ptr %dst, ptr %dst.2, ptr %
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x i32>, align 8
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8, !tbaa.struct [[TBAA_STRUCT15:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8, !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load <2 x i16>, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 8 [[A_SROA_0]], i32 4, i1 true)
 ; CHECK-NEXT:    ret <2 x i16> [[A_SROA_0_0_A_SROA_0_0_L]]
@@ -429,11 +429,11 @@ define i32 @split_load_with_tbaa_struct(i32 %x, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[A3_SROA_5_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 9
 ; CHECK-NEXT:    [[A3_SROA_5_0_COPYLOAD:%.*]] = load i8, ptr [[A3_SROA_5_0_SRC_SROA_IDX]], align 1
 ; CHECK-NEXT:    store i8 [[A3_SROA_5_0_COPYLOAD]], ptr [[A3_SROA_5]], align 1
-; CHECK-NEXT:    [[A3_SROA_0_0_A3_SROA_0_0_LOAD4_FCA_0_LOAD:%.*]] = load i16, ptr [[A3_SROA_0]], align 8, !tbaa.struct [[TBAA_STRUCT16:![0-9]+]]
+; CHECK-NEXT:    [[A3_SROA_0_0_A3_SROA_0_0_LOAD4_FCA_0_LOAD:%.*]] = load i16, ptr [[A3_SROA_0]], align 8, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[LOAD4_FCA_0_INSERT:%.*]] = insertvalue { i16, float, i8 } poison, i16 [[A3_SROA_0_0_A3_SROA_0_0_LOAD4_FCA_0_LOAD]], 0
-; CHECK-NEXT:    [[A3_SROA_33_0_A3_SROA_33_4_LOAD4_FCA_1_LOAD:%.*]] = load float, ptr [[A3_SROA_33]], align 4, !tbaa.struct [[TBAA_STRUCT17:![0-9]+]]
+; CHECK-NEXT:    [[A3_SROA_33_0_A3_SROA_33_4_LOAD4_FCA_1_LOAD:%.*]] = load float, ptr [[A3_SROA_33]], align 4, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[LOAD4_FCA_1_INSERT:%.*]] = insertvalue { i16, float, i8 } [[LOAD4_FCA_0_INSERT]], float [[A3_SROA_33_0_A3_SROA_33_4_LOAD4_FCA_1_LOAD]], 1
-; CHECK-NEXT:    [[A3_SROA_4_0_A3_SROA_4_8_LOAD4_FCA_2_LOAD:%.*]] = load i8, ptr [[A3_SROA_4]], align 8, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[A3_SROA_4_0_A3_SROA_4_8_LOAD4_FCA_2_LOAD:%.*]] = load i8, ptr [[A3_SROA_4]], align 8, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[LOAD4_FCA_2_INSERT:%.*]] = insertvalue { i16, float, i8 } [[LOAD4_FCA_1_INSERT]], i8 [[A3_SROA_4_0_A3_SROA_4_8_LOAD4_FCA_2_LOAD]], 2
 ; CHECK-NEXT:    [[UNWRAP2:%.*]] = extractvalue { i16, float, i8 } [[LOAD4_FCA_2_INSERT]], 1
 ; CHECK-NEXT:    [[VALCAST2:%.*]] = bitcast float [[UNWRAP2]] to i32
@@ -492,11 +492,11 @@ define i32 @split_store_with_tbaa_struct(i32 %x, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[I_2:%.*]] = insertvalue { i16, float, i8 } [[I_1]], float 3.000000e+00, 1
 ; CHECK-NEXT:    [[I_3:%.*]] = insertvalue { i16, float, i8 } [[I_2]], i8 99, 2
 ; CHECK-NEXT:    [[I_3_FCA_0_EXTRACT:%.*]] = extractvalue { i16, float, i8 } [[I_3]], 0
-; CHECK-NEXT:    store i16 [[I_3_FCA_0_EXTRACT]], ptr [[A3_SROA_0]], align 8, !tbaa.struct [[TBAA_STRUCT16]]
+; CHECK-NEXT:    store i16 [[I_3_FCA_0_EXTRACT]], ptr [[A3_SROA_0]], align 8, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[I_3_FCA_1_EXTRACT:%.*]] = extractvalue { i16, float, i8 } [[I_3]], 1
-; CHECK-NEXT:    store float [[I_3_FCA_1_EXTRACT]], ptr [[A3_SROA_33]], align 4, !tbaa.struct [[TBAA_STRUCT17]]
+; CHECK-NEXT:    store float [[I_3_FCA_1_EXTRACT]], ptr [[A3_SROA_33]], align 4, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[I_3_FCA_2_EXTRACT:%.*]] = extractvalue { i16, float, i8 } [[I_3]], 2
-; CHECK-NEXT:    store i8 [[I_3_FCA_2_EXTRACT]], ptr [[A3_SROA_4]], align 8, !tbaa [[TBAA7]]
+; CHECK-NEXT:    store i8 [[I_3_FCA_2_EXTRACT]], ptr [[A3_SROA_4]], align 8, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    [[A3_SROA_0_0_A3_SROA_0_0_COPYLOAD1:%.*]] = load volatile i16, ptr [[A3_SROA_0]], align 8
 ; CHECK-NEXT:    store volatile i16 [[A3_SROA_0_0_A3_SROA_0_0_COPYLOAD1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[A3_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
@@ -548,22 +548,15 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !15 = !{i64 0, i64 7, !6, i64 7, i64 1, !6}
 !16 = !{i64 0, i64 2, !6, i64 4, i64 4, !6, i64 8, i64 1, !6}
 ;.
-; CHECK: [[TBAA_STRUCT0]] = !{i64 0, i64 4, [[TBAA1]], i64 4, i64 4, [[TBAA1]]}
-; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META2]] = !{!"float", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-; CHECK: [[META4]] = !{!"Simple C++ TBAA"}
-; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 4, [[TBAA1]]}
-; CHECK: [[TBAA_STRUCT6]] = !{i64 0, i64 8, [[TBAA7]], i64 8, i64 4, [[TBAA1]]}
-; CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-; CHECK: [[META8]] = !{!"v2f32", [[META3]], i64 0}
-; CHECK: [[TBAA_STRUCT9]] = !{i64 0, i64 4, [[TBAA1]], i64 4, i64 8, [[TBAA7]]}
-; CHECK: [[TBAA_STRUCT10]] = !{i64 0, i64 8, [[TBAA7]], i64 4, i64 8, [[TBAA1]]}
-; CHECK: [[TBAA_STRUCT11]] = !{i64 0, i64 2, [[TBAA1]], i64 2, i64 6, [[TBAA1]]}
-; CHECK: [[TBAA_STRUCT12]] = !{i64 0, i64 7, [[TBAA7]], i64 7, i64 1, [[TBAA7]]}
-; CHECK: [[TBAA_STRUCT13]] = !{i64 0, i64 2, [[TBAA1]], i64 2, i64 2, [[TBAA1]]}
-; CHECK: [[TBAA_STRUCT14]] = !{i64 0, i64 3, [[TBAA1]]}
-; CHECK: [[TBAA_STRUCT15]] = !{i64 0, i64 4, [[TBAA7]]}
-; CHECK: [[TBAA_STRUCT16]] = !{i64 0, i64 2, [[TBAA7]], i64 4, i64 4, [[TBAA7]], i64 8, i64 1, [[TBAA7]]}
-; CHECK: [[TBAA_STRUCT17]] = !{i64 0, i64 4, [[TBAA7]], i64 4, i64 1, [[TBAA7]]}
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
+; CHECK: [[TBAA_STRUCT4]] = !{i64 0, i64 4, [[TBAA0]]}
+; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 4, [[TBAA0]], i64 4, i64 4, [[TBAA0]]}
+; CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+; CHECK: [[META7]] = !{!"v2f32", [[META2]], i64 0}
+; CHECK: [[TBAA_STRUCT8]] = !{i64 0, i64 2, [[TBAA0]], i64 2, i64 6, [[TBAA0]]}
+; CHECK: [[TBAA_STRUCT9]] = !{i64 0, i64 3, [[TBAA0]]}
+; CHECK: [[TBAA_STRUCT10]] = !{i64 0, i64 4, [[TBAA6]]}
 ;.
