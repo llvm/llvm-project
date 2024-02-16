@@ -88,7 +88,7 @@ enum : uint64_t {
   DS = 1 << 25,
 
   // Combined SGPR/VGPR Spill bit
-  // logic to seperate them out is done in isSGPRSpill and isVGPRSpill
+  // Logic to separate them out is done in isSGPRSpill and isVGPRSpill
   Spill = 1 << 26,
 
   // LDSDIR instruction format.
