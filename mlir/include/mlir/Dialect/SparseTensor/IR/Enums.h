@@ -189,8 +189,9 @@ constexpr const char *toFormatString(LevelFormat lvlFmt) {
 
 /// This enum defines all the nondefault properties for storage formats.
 enum class LevelPropNonDefault : uint64_t {
-  Nonunique = 0x0001,
-  Nonordered = 0x0002,
+  Nonunique = 0x0001,  // 0b001
+  Nonordered = 0x0002, // 0b010
+  SoA = 0x0004,        // 0b100
 };
 
 /// Returns string representation of the given level properties.
@@ -200,6 +201,8 @@ constexpr const char *toPropString(LevelPropNonDefault lvlProp) {
     return "nonunique";
   case LevelPropNonDefault::Nonordered:
     return "nonordered";
+  case LevelPropNonDefault::SoA:
+    return "soa";
   }
   return "";
 }
@@ -333,6 +336,11 @@ public:
       if (!propStr.empty())
         propStr += ", ";
       propStr += toPropString(LevelPropNonDefault::Nonordered);
+    }
+    if (isa<LevelPropNonDefault::SoA>()) {
+      if (!propStr.empty())
+        propStr += ", ";
+      propStr += toPropString(LevelPropNonDefault::SoA);
     }
     if (!propStr.empty())
       lvlStr += ("(" + propStr + ")");

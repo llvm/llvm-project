@@ -94,6 +94,17 @@ func.func private @sparse_sorted_coo(tensor<10x10xf64, #SortedCOO>)
 
 // -----
 
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
+}>
+
+// CHECK-DAG: #[[$COO_SoA:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa)) }>
+// CHECK-LABEL: func private @sparse_coo(
+// CHECK-SAME: tensor<?x?xf32, #[[$COO_SoA]]>)
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
+
+// -----
+
 #BSR = #sparse_tensor.encoding<{
    map = ( i, j ) ->
       ( i floordiv 2 : dense,
