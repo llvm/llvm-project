@@ -1528,15 +1528,14 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
   RegisterOperand ret =
-      !if (!eq(VT.Size, 128), RegisterOperand<VReg_128>,
-           !if (!eq(VT.Size, 96), RegisterOperand<VReg_96>,
-                !if (!eq(VT.Size, 64), RegisterOperand<VReg_64>,
-                     !if (!eq(VT.Size, 48), RegisterOperand<VReg_64>,
-                          !if (!eq(VT.Size, 16),
-                               !if (IsTrue16,
-                                    !if (IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
-                                    RegisterOperand<VGPR_32>),
-                               RegisterOperand<VGPR_32>)))));
+  !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+        !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+        !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+        !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+        !eq(VT.Size, 16)  : !if(IsTrue16,
+                                !if(IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
+                                RegisterOperand<VGPR_32>),
+        1                 : RegisterOperand<VGPR_32>);
 }
 
 class getSDWASrcForVT <ValueType VT> {
