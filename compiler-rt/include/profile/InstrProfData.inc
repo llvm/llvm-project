@@ -210,17 +210,17 @@ VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
 /* For virtual table address profiling, the address point of the virtual table
  * (i.e., the address contained in objects pointing to a virtual table) are
  * profiled. Note this may not be the address of the per C++ class virtual table
- *  object (e.g., there might be an offset).
+ * object (e.g., there might be an offset).
  *
  * The profiled addresses are stored in raw profile, together with the following
  * two types of information.
  * 1. The (starting and ending) addresses of per C++ class virtual table objects.
  * 2. The (compressed) virtual table object names.
  * RawInstrProfReader converts profiled virtual table addresses to virtual table
- *  objects' MD5 hash.
+ * objects' MD5 hash.
  */
 VALUE_PROF_KIND(IPVK_VTableTarget, 2, "The address of the compatible vtable (i.e., "
-                                      "there is an offset from this address to per C++ "
+                                      "there is an offset from this address to a C++ "
                                       "class virtual table global variable.)")
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
