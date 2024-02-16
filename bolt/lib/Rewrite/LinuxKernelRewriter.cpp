@@ -221,8 +221,6 @@ void LinuxKernelRewriter::insertLKMarker(uint64_t PC, uint64_t SectionOffset,
 }
 
 void LinuxKernelRewriter::processLKSections() {
-  assert(BC.IsLinuxKernel && "Linux kernel binary expected.");
-
   processLKExTable();
   processLKPCIFixup();
   processLKKSymtab();
