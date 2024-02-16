@@ -126,6 +126,7 @@ module {
     %dv = sparse_tensor.convert %arg0 : tensor<?xf64, #SparseVector> to tensor<?xf64>
     %2 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<16xf64>
     vector.print %2 : vector<16xf64>
+    bufferization.dealloc_tensor %dv : tensor<?xf64>
     return
   }
 
@@ -140,6 +141,7 @@ module {
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #CSR> to tensor<?x?xf64>
     %2 = vector.transfer_read %dm[%c0, %c0], %d0: tensor<?x?xf64>, vector<5x5xf64>
     vector.print %2 : vector<5x5xf64>
+    bufferization.dealloc_tensor %dm : tensor<?x?xf64>
     return
   }
 

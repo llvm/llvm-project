@@ -72,6 +72,7 @@ module {
         : tensor<?xf64, #SparseVector> to tensor<?xf64>
     %3 = vector.transfer_read %dv[%c0], %d0: tensor<?xf64>, vector<32xf64>
     vector.print %3 : vector<32xf64>
+    bufferization.dealloc_tensor %dv : tensor<?xf64>
     return
   }
 
