@@ -1096,6 +1096,55 @@ TEST(RenameTest, ObjCWithinFileRename) {
                             [f setBar:[f bar] ];
                           }
                         )cpp",
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          - (int)fo^o;
+                          - (void)setFoo:(int)foo;
+                          @end
+                          @implementation Foo
+                          - (int)fo^o { return 0; }
+                          - (void)setFoo:(int)foo {}
+                          @end
+
+                          void func(Foo *f) {
+                            f.foo = f.fo^o + 1;
+                          }
+                        )cpp",
+                          "bar",
+                          R"cpp(
+                          @interface Foo
+                          - (int)bar;
+                          - (void)setFoo:(int)foo;
+                          @end
+                          @implementation Foo
+                          - (int)bar { return 0; }
+                          - (void)setFoo:(int)foo {}
+                          @end
+
+                          void func(Foo *f) {
+                            f.foo = f.bar + 1;
+                          }
+                        )cpp",
+                      },
+                      {
+                          R"cpp(
+                          @interface Foo
+                          - (int)foo;
+                          - (void)setFoo:(int)foo;
+                          @end
+                          @implementation Foo
+                          - (int)foo { return 1; }
+                          - (void)setFoo:(int)foo {}
+                          @end
+
+                          void func(Foo *f) {
+                            f.f^oo += 1;
+                          }
+                        )cpp",
+                          "bar",
+                          std::nullopt,
                       }};
   for (TestCase T : Tests) {
     SCOPED_TRACE(T.Input);
