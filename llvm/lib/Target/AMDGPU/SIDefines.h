@@ -87,9 +87,9 @@ enum : uint64_t {
   FLAT = 1 << 24,
   DS = 1 << 25,
 
-  // Pseudo instruction formats.
-  VGPRSpill = 1 << 26,
-  SGPRSpill = 1 << 27,
+  // Combined SGPR/VGPR Spill bit
+  // Logic to separate them out is done in isSGPRSpill and isVGPRSpill
+  Spill = 1 << 26,
 
   // LDSDIR instruction format.
   LDSDIR = 1 << 28,
