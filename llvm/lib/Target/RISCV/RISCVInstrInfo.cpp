@@ -1211,13 +1211,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!Op.isReg())
       return false;
     Register Reg = Op.getReg();
-    if (Reg == RISCV::X0) {
-      Imm = 0;
-      return true;
-    }
-    if (!Reg.isVirtual())
-      return false;
-    return isLoadImm(MRI.getVRegDef(Op.getReg()), Imm);
+    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
   };
 
   MachineOperand &LHS = MI.getOperand(0);
