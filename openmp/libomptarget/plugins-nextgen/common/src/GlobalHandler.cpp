@@ -219,30 +219,30 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
 }
 
 void GPUProfGlobals::dump() const {
-  llvm::outs() << "======= GPU Profile =======\nTarget: " << TargetTriple.str()
+  outs() << "======= GPU Profile =======\nTarget: " << TargetTriple.str()
                << "\n";
 
-  llvm::outs() << "======== Counters =========\n";
+  outs() << "======== Counters =========\n";
   for (const auto &Count : Counts) {
-    llvm::outs() << "[";
+    outs() << "[";
     for (size_t i = 0; i < Count.size(); i++) {
       if (i == 0)
-        llvm::outs() << " ";
-      llvm::outs() << Count[i] << " ";
+        outs() << " ";
+      outs() << Count[i] << " ";
     }
-    llvm::outs() << "]\n";
+    outs() << "]\n";
   }
 
-  llvm::outs() << "========== Data ===========\n";
+  outs() << "========== Data ===========\n";
   for (const auto &ProfData : Data) {
-    llvm::outs() << "{ ";
+    outs() << "{ ";
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
-  llvm::outs() << ProfData.Name << " ";
+  outs() << ProfData.Name << " ";
 #include "llvm/ProfileData/InstrProfData.inc"
-    llvm::outs() << "}\n";
+    outs() << "}\n";
   }
 
-  llvm::outs() << "======== Functions ========\n";
+  outs() << "======== Functions ========\n";
   std::string s;
   s.reserve(NamesData.size());
   for (uint8_t Name : NamesData) {
@@ -253,6 +253,6 @@ void GPUProfGlobals::dump() const {
   if (Error Err = Symtab.create(StringRef(s))) {
     consumeError(std::move(Err));
   }
-  Symtab.dumpNames(llvm::outs());
-  llvm::outs() << "===========================\n";
+  Symtab.dumpNames(outs());
+  outs() << "===========================\n";
 }

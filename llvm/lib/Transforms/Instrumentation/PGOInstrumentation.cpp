@@ -864,8 +864,8 @@ static void instrumentOneFunc(
                                   FuncInfo.FunctionHash);
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
-  auto *NormalizedPtr = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      Name, llvm::PointerType::get(M->getContext(), 0));
+  auto *NormalizedPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      Name, PointerType::get(M->getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
