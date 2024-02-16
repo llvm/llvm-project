@@ -234,7 +234,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       // We only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
       // So we know only `FP % kRecordFPModulus`, and we can only calculate
       // `local_beg % kRecordFPModulus`.
-      // Out of all possible `local_beg` we will only consider two candidates
+      // Out of all possible `local_beg` we will only consider 2 candidates
       // nearest to the `untagged_addr`.
       uptr local_beg_mod = (fp + local.frame_offset) % kRecordFPModulus;
       // Pick `local_beg` in the same 1 MiB block as `untagged_addr`.
@@ -271,9 +271,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
             cause = "stack-buffer-overflow";
             best_beg = local_beg;
           }
-        }
-
-        if (untagged_addr < local_beg) {
+        } else {
           uptr new_offset = local_beg - untagged_addr;
           if (new_offset < offset) {
             offset = new_offset;
