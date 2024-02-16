@@ -442,18 +442,14 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
                                         OnDeallocatedFunction OnDeallocated) {
   std::vector<sys::MemoryBlock> StandardSegmentsList;
-  std::vector<std::optional<std::vector<orc::shared::WrapperFunctionCall>>>
-      DeallocActionsList;
+  std::vector<std::vector<orc::shared::WrapperFunctionCall>> DeallocActionsList;
 
   {
     std::lock_guard<std::mutex> Lock(FinalizedAllocsMutex);
     for (auto &Alloc : Allocs) {
       auto *FA = Alloc.release().toPtr<FinalizedAllocInfo *>();
       StandardSegmentsList.push_back(std::move(FA->StandardSegments));
-      if (!FA->DeallocActions.empty())
-        DeallocActionsList.push_back(std::move(FA->DeallocActions));
-      else
-        DeallocActionsList.push_back(std::nullopt);
+      DeallocActionsList.push_back(std::move(FA->DeallocActions));
       FA->~FinalizedAllocInfo();
       FinalizedAllocInfos.Deallocate(FA);
     }
@@ -466,12 +462,11 @@ void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
     auto &StandardSegments = StandardSegmentsList.back();
 
     /// Run any deallocate calls.
-    if (DeallocActions.has_value())
-      while (!DeallocActions->empty()) {
-        if (auto Err = DeallocActions->back().runWithSPSRetErrorMerged())
-          DeallocErr = joinErrors(std::move(DeallocErr), std::move(Err));
-        DeallocActions->pop_back();
-      }
+    while (!DeallocActions.empty()) {
+      if (auto Err = DeallocActions.back().runWithSPSRetErrorMerged())
+        DeallocErr = joinErrors(std::move(DeallocErr), std::move(Err));
+      DeallocActions.pop_back();
+    }
 
     /// Release the standard segments slab.
     if (auto EC = sys::Memory::releaseMappedMemory(StandardSegments))
