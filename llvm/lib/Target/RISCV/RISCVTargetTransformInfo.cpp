@@ -334,7 +334,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             Tp->getElementType(), FSubTy->getNumElements() + 1));
         // Whole vector insert - just the vector itself.
         if (Index == 0 && SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
-            TpRegs / SubTpRegs > 1)
+            TpRegs >= SubTpRegs)
           return TTI::TCC_Free;
       }
       break;
