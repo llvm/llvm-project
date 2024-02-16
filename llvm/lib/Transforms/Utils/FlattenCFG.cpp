@@ -407,6 +407,10 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
 /// form, by inverting the condition and the branch successors. The same
 /// approach goes for the opposite case.
 bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
+  // We cannot merge the if-region if the merge point has phi nodes.
+  if (isa<PHINode>(BB->front()))
+    return false;
+
   BasicBlock *IfTrue2, *IfFalse2;
   BranchInst *DomBI2 = GetIfCondition(BB, IfTrue2, IfFalse2);
   if (!DomBI2)
