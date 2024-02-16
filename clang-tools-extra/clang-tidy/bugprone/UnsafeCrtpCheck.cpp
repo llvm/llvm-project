@@ -26,15 +26,12 @@ AST_MATCHER_P(CXXRecordDecl, isBoundNode, std::string, ID) {
 } // namespace
 
 void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      cxxRecordDecl(
-          decl().bind("record"),
-          hasAnyBase(hasType(
-              classTemplateSpecializationDecl(
-                  hasAnyTemplateArgument(refersToType(recordType(
-                      hasDeclaration(cxxRecordDecl(isBoundNode("record")))))))
-                  .bind("crtp")))),
-      this);
+  Finder->addMatcher(classTemplateSpecializationDecl(
+                         decl().bind("crtp"),
+                         hasAnyTemplateArgument(refersToType(recordType(
+                             hasDeclaration(cxxRecordDecl(isDerivedFrom(
+                                 cxxRecordDecl(isBoundNode("crtp"))))))))),
+                     this);
 }
 
 void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
@@ -42,43 +39,11 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
 
   MatchedCRTP->dump();
 
-  for (auto &&ctor : MatchedCRTP->ctors()) {
-    if (ctor->getAccess() != AS_private) {
-      ctor->dump();
+  for (auto &&Ctor : MatchedCRTP->ctors()) {
+    if (Ctor->getAccess() != AS_private) {
+      Ctor->dump();
     };
   }
-
-  return;
-
-  // if (!MatchedDecl->hasDefinition())
-  //   return;
-
-  // for (auto &&Base : MatchedDecl->bases()) {
-  //   const auto *TemplateSpecDecl =
-  //       llvm::dyn_cast_if_present<ClassTemplateSpecializationDecl>(
-  //           Base.getType()->getAsTagDecl());
-
-  //   if (!TemplateSpecDecl)
-  //     continue;
-
-  //   TemplateSpecDecl->dump();
-
-  //   for (auto &&TemplateArg : TemplateSpecDecl->getTemplateArgs().asArray())
-  //   {
-  //     if (TemplateArg.getKind() != TemplateArgument::Type)
-  //       continue;
-
-  //     const auto *Record = TemplateArg.getAsType()->getAsCXXRecordDecl();
-
-  //     if (Record && Record == MatchedDecl) {
-  //       diag(Record->getLocation(), "CRTP found");
-
-  //       diag(TemplateSpecDecl->getLocation(), "used as CRTP",
-  //            DiagnosticIDs::Note);
-  //       TemplateSpecDecl->dump();
-  //     }
-  //   }
-  // }
 
   // if (!MatchedDecl->getIdentifier() ||
   //     MatchedDecl->getName().startswith("awesome_"))
