@@ -28,12 +28,10 @@ ConeV mlir::presburger::detail::getDual(ConeH cone) {
   // is represented as a row [a1, ..., an, b]
   // and that b = 0.
 
-  for (auto i : llvm::seq<int>(0, numIneq)) {
+  for (int i : llvm::seq<int>(0, numIneq)) {
     assert(cone.atIneq(i, numVar) == 0 &&
            "H-representation of cone is not centred at the origin!");
-    for (unsigned j = 0; j < numVar; ++j) {
-      dual.at(i, j) = cone.atIneq(i, j);
-    }
+    dual.setRow(i, cone.getInequality(i).take_front(numVar));
   }
 
   // Now dual is of the form [ [a1, ..., an] , ... ]
@@ -130,8 +128,8 @@ mlir::presburger::detail::computeUnimodularConeGeneratingFunction(
   unsigned numRows = vertex.getNumRows();
   ParamPoint numerator(numColumns, numRows);
   SmallVector<Fraction> ithCol(numRows);
-  for (auto i : llvm::seq<int>(0, numColumns)) {
-    for (auto j : llvm::seq<int>(0, numRows))
+  for (int i : llvm::seq<int>(0, numColumns)) {
+    for (int j : llvm::seq<int>(0, numRows))
       ithCol[j] = vertex(j, i);
     numerator.setRow(i, transp.preMultiplyWithRow(ithCol));
     numerator.negateRow(i);
@@ -176,12 +174,12 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 
   // Perform row operations to make each column all zeros except for the
   // diagonal element, which is made to be one.
-  for (unsigned i = 0; i < d; ++i) {
+  for (int i : llvm::seq<int>(0, d)) {
     // First ensure that the diagonal element is nonzero, by swapping
     // it with a row that is non-zero at column i.
     if (equations(i, i) != 0)
       continue;
-    for (unsigned j = i + 1; j < d; ++j) {
+    for (int j : llvm::seq<int>(i + 1, d)) {
       if (equations(j, i) == 0)
         continue;
       equations.swapRows(j, i);
@@ -191,7 +189,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
     Fraction diagElement = equations(i, i);
 
     // Apply row operations to make all elements except the diagonal to zero.
-    for (unsigned j = 0; j < d; ++j) {
+    for (int j : llvm::seq<int>(0, d)) {
       if (i == j)
         continue;
       if (equations(j, i) == 0)
@@ -205,7 +203,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   }
 
   // Rescale diagonal elements to 1.
-  for (unsigned i = 0; i < d; ++i)
+  for (int i : llvm::seq<int>(0, d))
     equations.scaleRow(i, 1 / equations(i, i));
 
   // Now we have reduced the equations to the form
@@ -332,7 +330,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
   //
   // We start with the permutation that takes the last numVars inequalities.
   SmallVector<int> indicator(numIneqs);
-  for (unsigned i = numIneqs - numVars; i < numIneqs; ++i)
+  for (int i : llvm::seq<int>(numIneqs - numVars, numIneqs))
     indicator[i] = 1;
 
   do {
@@ -393,7 +391,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // Thus we premultiply [X | y] with each row of A2
     // and add each row of [B2 | c2].
     FracMatrix activeRegion(numIneqs - numVars, numSymbols + 1);
-    for (unsigned i = 0; i < numIneqs - numVars; i++) {
+    for (int i : llvm::seq<int>(0, numIneqs - numVars)) {
       activeRegion.setRow(i, vertex->preMultiplyWithRow(a2.getRow(i)));
       activeRegion.addToRow(i, b2c2.getRow(i), 1);
     }
@@ -412,9 +410,9 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // We translate the cones to be pointed at the origin by making the
     // constant terms zero.
     ConeH tangentCone = defineHRep(numVars);
-    for (unsigned j = 0, e = subset.getNumRows(); j < e; ++j) {
+    for (int j : llvm::seq<int>(0, subset.getNumRows())) {
       SmallVector<MPInt> ineq(numVars + 1);
-      for (unsigned k = 0; k < numVars; ++k)
+      for (int k : llvm::seq<int>(0, numVars))
         ineq[k] = subset(j, k);
       tangentCone.addInequality(ineq);
     }
@@ -482,7 +480,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
   Fraction maxDisallowedValue = -Fraction(1, 0),
            disallowedValue = Fraction(0, 1);
 
-  for (unsigned d = 1; d < dim; ++d) {
+  for (int d : llvm::seq<int>(1, dim)) {
     // Compute the disallowed values  - <x_i[:d-1], vs> / x_i[d] for each i.
     maxDisallowedValue = -Fraction(1, 0);
     for (const Point &vector : vectors) {
@@ -530,7 +528,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   coefficients.reserve(power + 1);
 
   coefficients.push_back(num[0] / den[0]);
-  for (unsigned i = 1; i <= power; ++i) {
+  for (unsigned i : llvm::seq<int>(1, power + 1)) {
     // If the power is not there in the numerator, the coefficient is zero.
     coefficients.push_back(i < num.size() ? num[i]
                                           : QuasiPolynomial(numParam, 0));
@@ -538,7 +536,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     // After den.size(), the coefficients are zero, so we stop
     // subtracting at that point (if it is less than i).
     unsigned limit = std::min<unsigned long>(i, den.size() - 1);
-    for (unsigned j = 1; j <= limit; ++j)
+    for (int j : llvm::seq<int>(1, limit + 1))
       coefficients[i] = coefficients[i] -
                         coefficients[i - j] * QuasiPolynomial(numParam, den[j]);
 
@@ -582,7 +580,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   ParamPoint vTranspose = v.transpose();
   std::vector<std::vector<SmallVector<Fraction>>> affine;
   affine.reserve(numDims);
-  for (unsigned j = 0; j < numDims; ++j)
+  for (int j : llvm::seq<int>(0, numDims))
     affine.push_back({SmallVector<Fraction>(vTranspose.getRow(j))});
 
   QuasiPolynomial num(numParams, coefficients, affine);
@@ -613,10 +611,10 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
   // denominator, and convert them to their absolute values.
   unsigned numNegExps = 0;
   Fraction sumNegExps(0, 1);
-  for (unsigned j = 0, e = dens.size(); j < e; ++j) {
-    if (dens[j] < 0) {
+  for (const Fraction &den : dens) {
+    if (den < 0) {
       numNegExps += 1;
-      sumNegExps += dens[j];
+      sumNegExps += den;
     }
   }
 
@@ -641,7 +639,7 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(r + 1);
   coefficients.push_back(QuasiPolynomial(numParams, 1));
-  for (unsigned j = 1; j <= r; ++j)
+  for (int j : llvm::seq<int>(1, r + 1))
     // We use the recursive formula for binomial coefficients here and below.
     coefficients.push_back(
         (coefficients[j - 1] * (n - QuasiPolynomial(numParams, j - 1)) /
@@ -701,7 +699,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   unsigned numParams = gf.getNumParams();
   const std::vector<std::vector<Point>> &ds = gf.getDenominators();
   QuasiPolynomial totalTerm(numParams, 0);
-  for (unsigned i = 0, e = ds.size(); i < e; ++i) {
+  for (int i : llvm::seq<int>(0, ds.size())) {
     int sign = gf.getSigns()[i];
 
     // Compute the new exponents of (s+1) for the numerator and the
@@ -722,7 +720,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // Then, using the formula for geometric series, we replace each (1 -
     // (s+1)^(dens[j])) with
     // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
-    for (unsigned j = 0, e = dens.size(); j < e; ++j)
+    for (int j : llvm::seq<int>(0, dens.size()))
       dens[j] = abs(dens[j]) - 1;
     // Note that at this point, the semantics of `dens[j]` changes to mean
     // a term (\sum_{0 ≤ k ≤ dens[j]} (s+1)^k). The denominator is, as before,
@@ -774,9 +772,10 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // of all the terms.
     std::vector<Fraction> denominatorCoefficients;
     denominatorCoefficients = eachTermDenCoefficients[0];
-    for (unsigned j = 1, e = eachTermDenCoefficients.size(); j < e; ++j)
-      denominatorCoefficients = multiplyPolynomials(denominatorCoefficients,
-                                                    eachTermDenCoefficients[j]);
+    for (const std::vector<Fraction> &eachTermDenCoefficient :
+         eachTermDenCoefficients)
+      denominatorCoefficients =
+          multiplyPolynomials(denominatorCoefficients, eachTermDenCoefficient);
 
     totalTerm =
         totalTerm + getCoefficientInRationalFunction(r, numeratorCoefficients,

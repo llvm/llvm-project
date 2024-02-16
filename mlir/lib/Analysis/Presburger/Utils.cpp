@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -534,7 +535,7 @@ Fraction presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b) {
   assert(a.size() == b.size() &&
          "dot product is only valid for vectors of equal sizes!");
   Fraction sum = 0;
-  for (unsigned i = 0, e = a.size(); i < e; i++)
+  for (int i : llvm::seq<int>(0, a.size()))
     sum += a[i] * b[i];
   return sum;
 }
@@ -557,9 +558,9 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
 
   std::vector<Fraction> convolution;
   convolution.reserve(len);
-  for (unsigned k = 0; k < len; ++k) {
+  for (int k : llvm::seq<int>(0, len)) {
     Fraction sum(0, 1);
-    for (unsigned l = 0; l <= k; ++l)
+    for (int l : llvm::seq<int>(0, k + 1))
       sum += getCoeff(a, l) * getCoeff(b, k - l);
     convolution.push_back(sum);
   }

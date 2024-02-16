@@ -11,6 +11,7 @@
 #include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -38,7 +39,7 @@ bool Matrix<T>::operator==(const Matrix<T> &m) const {
   if (nColumns != m.getNumColumns())
     return false;
 
-  for (unsigned i = 0; i < nRows; i++)
+  for (int i : llvm::seq<int>(0, nRows))
     if (getRow(i) != m.getRow(i))
       return false;
 
@@ -392,8 +393,8 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
          "end of column range must be after beginning!");
   assert(toColumn < nColumns && "end of column range out of bounds!");
   Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
-  for (unsigned i = fromRow; i <= toRow; ++i)
-    for (unsigned j = fromColumn; j <= toColumn; ++j)
+  for (int i : llvm::seq<int>(fromRow, toRow + 1))
+    for (int j : llvm::seq<int>(fromColumn, toColumn + 1))
       subMatrix(i - fromRow, j - fromColumn) = at(i, j);
   return subMatrix;
 }
@@ -413,7 +414,7 @@ template <typename T>
 std::pair<Matrix<T>, Matrix<T>>
 Matrix<T>::splitByBitset(ArrayRef<int> indicator) {
   Matrix<T> rowsForOne(0, nColumns), rowsForZero(0, nColumns);
-  for (unsigned i = 0; i < nRows; i++) {
+  for (int i : llvm::seq<int>(0, nRows)) {
     if (indicator[i] == 1)
       rowsForOne.appendExtraRow(getRow(i));
     else
@@ -566,8 +567,8 @@ MPInt IntMatrix::determinant(IntMatrix *inverse) const {
     return detM;
 
   *inverse = IntMatrix(nRows, nColumns);
-  for (unsigned i = 0; i < nRows; i++)
-    for (unsigned j = 0; j < nColumns; j++)
+  for (int i : llvm::seq<int>(0, nRows))
+    for (int j : llvm::seq<int>(0, nColumns))
       inverse->at(i, j) = (fracInverse.at(i, j) * detM).getAsInteger();
 
   return detM;
@@ -579,8 +580,8 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 
 FracMatrix::FracMatrix(IntMatrix m)
     : FracMatrix(m.getNumRows(), m.getNumColumns()) {
-  for (unsigned i = 0, r = m.getNumRows(); i < r; i++)
-    for (unsigned j = 0, c = m.getNumColumns(); j < c; j++)
+  for (int i : llvm::seq<int>(0, m.getNumRows()))
+    for (int j : llvm::seq<int>(0, m.getNumColumns()))
       this->at(i, j) = m.at(i, j);
 }
 
@@ -602,12 +603,12 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
   // which is initially identity.
   // Either way, the product of the diagonal elements
   // is then the determinant.
-  for (unsigned i = 0; i < nRows; i++) {
+  for (int i : llvm::seq<int>(0, nRows)) {
     if (m(i, i) == 0)
       // First ensure that the diagonal
       // element is nonzero, by swapping
       // it with a nonzero row.
-      for (unsigned j = i + 1; j < nRows; j++) {
+      for (int j : llvm::seq<int>(i + 1, nRows)) {
         if (m(j, i) != 0) {
           m.swapRows(j, i);
           if (inverse)
@@ -623,7 +624,7 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
     // Set all elements above the
     // diagonal to zero.
     if (inverse) {
-      for (unsigned j = 0; j < i; j++) {
+      for (int j : llvm::seq<int>(0, i)) {
         if (m.at(j, i) == 0)
           continue;
         a = m.at(j, i);
@@ -637,7 +638,7 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
 
     // Set all elements below the
     // diagonal to zero.
-    for (unsigned j = i + 1; j < nRows; j++) {
+    for (int j : llvm::seq<int>(i + 1, nRows)) {
       if (m.at(j, i) == 0)
         continue;
       a = m.at(j, i);
@@ -655,15 +656,15 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
   // normalize them and apply the same scale to the inverse matrix.
   // For efficiency we skip scaling m and just scale tempInv appropriately.
   if (inverse) {
-    for (unsigned i = 0; i < nRows; i++)
-      for (unsigned j = 0; j < nRows; j++)
+    for (int i : llvm::seq<int>(0, nRows))
+      for (int j : llvm::seq<int>(0, nRows))
         tempInv.at(i, j) = tempInv.at(i, j) / m(i, i);
 
     *inverse = std::move(tempInv);
   }
 
   Fraction determinant = 1;
-  for (unsigned i = 0; i < nRows; i++)
+  for (int i : llvm::seq<int>(0, nRows))
     determinant *= m.at(i, i);
 
   return determinant;
@@ -678,8 +679,8 @@ FracMatrix FracMatrix::gramSchmidt() const {
   // projection along each of the previous vectors.
   // This ensures that it has no component in the direction
   // of any of the previous vectors.
-  for (unsigned i = 1, e = getNumRows(); i < e; i++) {
-    for (unsigned j = 0; j < i; j++) {
+  for (int i : llvm::seq<int>(1, getNumRows())) {
+    for (int j : llvm::seq<int>(0, i)) {
       Fraction jNormSquared = dotProduct(orth.getRow(j), orth.getRow(j));
       assert(jNormSquared != 0 && "some row became zero! Inputs to this "
                                   "function must be linearly independent.");
@@ -730,7 +731,7 @@ void FracMatrix::LLL(Fraction delta) {
   // We start from the second row.
   unsigned k = 1;
   while (k < getNumRows()) {
-    for (unsigned j = k - 1; j < k; j--) {
+    for (int j : llvm::reverse(llvm::seq<int>(0, k))) {
       // Compute the Gram-Schmidt coefficient μ_jk.
       mu = dotProduct(getRow(k), gsOrth.getRow(j)) /
            dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
@@ -763,12 +764,12 @@ IntMatrix FracMatrix::normalizeRows() const {
   IntMatrix normalized(numRows, numColumns);
 
   MPInt lcmDenoms = MPInt(1);
-  for (unsigned i = 0; i < numRows; i++) {
+  for (int i : llvm::seq<int>(0, numRows)) {
     // For a row, first compute the LCM of the denominators.
-    for (unsigned j = 0; j < numColumns; j++)
+    for (int j : llvm::seq<int>(0, numColumns))
       lcmDenoms = lcm(lcmDenoms, at(i, j).den);
     // Then, multiply by it throughout and convert to integers.
-    for (unsigned j = 0; j < numColumns; j++)
+    for (int j : llvm::seq<int>(0, numColumns))
       normalized(i, j) = (at(i, j) * lcmDenoms).getAsInteger();
   }
   return normalized;

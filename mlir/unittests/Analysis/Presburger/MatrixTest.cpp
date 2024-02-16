@@ -344,8 +344,8 @@ TEST(MatrixTest, gramSchmidt) {
   FracMatrix gs = mat.gramSchmidt();
 
   EXPECT_EQ_FRAC_MATRIX(gs, gramSchmidt);
-  for (unsigned i = 0; i < 3u; i++)
-    for (unsigned j = i + 1; j < 3u; j++)
+  for (unsigned i = 0; i < 3u; ++i)
+    for (unsigned j = i + 1; j < 3u; ++j)
       EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
 
   mat = makeFracMatrix(3, 3,
@@ -362,8 +362,8 @@ TEST(MatrixTest, gramSchmidt) {
   gs = mat.gramSchmidt();
 
   EXPECT_EQ_FRAC_MATRIX(gs, gramSchmidt);
-  for (unsigned i = 0; i < 3u; i++)
-    for (unsigned j = i + 1; j < 3u; j++)
+  for (unsigned i = 0; i < 3u; ++i)
+    for (unsigned j = i + 1; j < 3u; ++j)
       EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
 
   mat = makeFracMatrix(
@@ -379,8 +379,8 @@ TEST(MatrixTest, gramSchmidt) {
   // but we can check that the result is linearly independent.
   ASSERT_FALSE(mat.determinant(nullptr) == 0);
 
-  for (unsigned i = 0; i < 4u; i++)
-    for (unsigned j = i + 1; j < 4u; j++)
+  for (unsigned i = 0; i < 4u; ++i)
+    for (unsigned j = i + 1; j < 4u; ++j)
       EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
 
   mat = FracMatrix::identity(/*dim=*/10);
@@ -394,8 +394,8 @@ void checkReducedBasis(FracMatrix mat, Fraction delta) {
   FracMatrix gsOrth = mat.gramSchmidt();
 
   // Size-reduced check.
-  for (unsigned i = 0, e = mat.getNumRows(); i < e; i++) {
-    for (unsigned j = 0; j < i; j++) {
+  for (int i : llvm::seq<int>(0, mat.getNumRows())) {
+    for (int j : llvm::seq<int>(0, i)) {
       Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(j)) /
                     dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
       EXPECT_TRUE(abs(mu) <= Fraction(1, 2));
@@ -403,7 +403,7 @@ void checkReducedBasis(FracMatrix mat, Fraction delta) {
   }
 
   // Lovasz condition check.
-  for (unsigned i = 1, e = mat.getNumRows(); i < e; i++) {
+  for (int i : llvm::seq<int>(1, mat.getNumRows())) {
     Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(i - 1)) /
                   dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1));
     EXPECT_TRUE(dotProduct(mat.getRow(i), mat.getRow(i)) >

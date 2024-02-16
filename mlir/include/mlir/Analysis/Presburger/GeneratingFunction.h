@@ -16,6 +16,7 @@
 
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "llvm/ADT/Sequence.h"
 
 namespace mlir {
 namespace presburger {
@@ -91,7 +92,7 @@ public:
   }
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
-    for (unsigned i = 0, e = signs.size(); i < e; i++) {
+    for (int i : llvm::seq<int>(0, signs.size())) {
       if (i == 0) {
         if (signs[i] == -1)
           os << "- ";
@@ -104,20 +105,20 @@ public:
 
       os << "x^[";
       unsigned r = numerators[i].getNumRows();
-      for (unsigned j = 0; j < r - 1; j++) {
+      for (unsigned j = 0; j < r - 1; ++j) {
         os << "[";
-        for (unsigned k = 0, c = numerators[i].getNumColumns(); k < c - 1; k++)
+        for (int k : llvm::seq<int>(0, numerators[i].getNumColumns() - 1))
           os << numerators[i].at(j, k) << ",";
         os << numerators[i].getRow(j).back() << "],";
       }
       os << "[";
-      for (unsigned k = 0, c = numerators[i].getNumColumns(); k < c - 1; k++)
+      for (int k : llvm::seq<int>(0, numerators[i].getNumColumns() - 1))
         os << numerators[i].at(r - 1, k) << ",";
       os << numerators[i].getRow(r - 1).back() << "]]/";
 
       for (const Point &den : denominators[i]) {
         os << "(x^[";
-        for (unsigned j = 0, e = den.size(); j < e - 1; j++)
+        for (int j : llvm::seq<int>(0, den.size() - 1))
           os << den[j] << ",";
         os << den.back() << "])";
       }
