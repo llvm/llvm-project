@@ -615,10 +615,14 @@ class FlattenContiguousRowMajorTransferReadPattern
       OpFoldResult offset =
           rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
 
+      auto srcType = dyn_cast<ShapedType>(source.getType());
       for (int64_t i = firstDimToCollapse; i < outputRank; ++i) {
-        int64_t dim = dyn_cast<ShapedType>(source.getType()).getDimSize(i);
+        // Multiply each index by the size of the next dimension. The last
+        // dimension (contiguous) is multiplied by one.
+        int64_t nextDimSize =
+            (i == outputRank - 1) ? 1 : srcType.getDimSize(i + 1);
         offset = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, offsetExpr + dim * idxExpr,
+            rewriter, loc, offsetExpr + nextDimSize * idxExpr,
             {offset, transferReadOp.getIndices()[i]});
       }
       if (offset.is<Value>()) {
