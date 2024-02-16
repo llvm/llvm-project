@@ -131,7 +131,8 @@ Changes in existing checks
   <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
   which was deprecated since :program:`clang-tidy` 17. This rule is now covered
   by :doc:`cppcoreguidelines-use-default-member-init
-  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`.
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` and fixes
+  incorrect hints when using list-initialization.
 
 - Improved :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check by replacing the local
