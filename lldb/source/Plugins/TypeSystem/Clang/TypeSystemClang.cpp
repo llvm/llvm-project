@@ -2165,7 +2165,6 @@ PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
   // (and we then would have suppressed them from the type name) and also setups
   // where LLDB wasn't able to reconstruct the default arguments.
   printing_policy.SuppressDefaultTemplateArgs = false;
-  printing_policy.AlwaysIncludeTypeForTemplateArgument = true;
   return printing_policy;
 }
 
@@ -9266,13 +9265,8 @@ ConstString TypeSystemClang::DeclContextGetName(void *opaque_decl_ctx) {
   if (opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
-    if (named_decl) {
-      std::string name;
-      llvm::raw_string_ostream stream{name};
-      named_decl->getNameForDiagnostic(stream, GetTypePrintingPolicy(),
-                                       /*qualified=*/false);
-      return ConstString(name);
-    }
+    if (named_decl)
+      return ConstString(named_decl->getName());
   }
   return ConstString();
 }
