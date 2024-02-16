@@ -5019,7 +5019,7 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "             .b = 2,\n"
                "         },\n"
                "     }) {\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTest, BracedInitializerIndentWidth) {
