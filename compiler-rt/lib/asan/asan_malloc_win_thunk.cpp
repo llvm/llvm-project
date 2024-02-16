@@ -33,6 +33,11 @@ __declspec(dllimport) void *__cdecl __asan_realloc(void *const ptr,
 __declspec(dllimport) void *__cdecl __asan_recalloc(void *const ptr,
                                                     const size_t nmemb,
                                                     const size_t size);
+__declspec(dllimport) void *__cdecl __asan_aligned_malloc(
+    const size_t size, const size_t alignment);
+
+__declspec(dllimport) void *__cdecl __asan_aligned_realloc(
+    void *const ptr, const size_t size, const size_t alignment);
 
 // Avoid tailcall optimization to preserve stack frames.
 #  pragma optimize("", off)
@@ -140,6 +145,20 @@ STATIC_MALLOC_INTERFACE void *_expand_dbg(void *, size_t, int, const char *,
                                           int) {
   return nullptr;
 }
+
+// _aligned
+STATIC_MALLOC_INTERFACE void *_aligned_malloc(size_t size, size_t alignment) {
+  return __asan_aligned_malloc(size, alignment);
+}
+
+STATIC_MALLOC_INTERFACE void *_aligned_realloc(void *ptr, size_t size,
+                                               size_t alignment) {
+  return __asan_aligned_realloc(ptr, size, alignment);
+}
+
+STATIC_MALLOC_INTERFACE void _aligned_free(void *ptr) { __asan_free(ptr); }
+
+STATIC_MALLOC_INTERFACE size_t _aligned_msize(void *ptr) { return _msize(ptr); }
 
 // We need to provide symbols for all the debug CRT functions if we decide to
 // provide any. Most of these functions make no sense under ASan and so we
