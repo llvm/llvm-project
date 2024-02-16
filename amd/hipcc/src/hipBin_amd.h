@@ -869,6 +869,11 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     }
   }
 
+  // to avoid using dk linker or MSVC linker
+  if (isWindows()) {
+    HIPLDFLAGS += " -fuse-ld=lld --ld-path=\"" + hipClangPath + "/lld-link.exe\"";
+  }
+
   if (!compileOnly) {
     string hip_path = getHipLibPath();
     if (!hip_path.empty()) {
