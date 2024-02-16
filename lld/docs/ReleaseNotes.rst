@@ -86,6 +86,11 @@ COFF Improvements
 * LLD now prefers library paths specified with ``-libpath:`` over the implicitly
   detected toolchain paths.
 
+* Use the ``SOURCE_DATE_EPOCH`` environment variable for the PE header and
+  debug directory timestamps, if neither the ``/Brepro`` nor ``/timestamp:``
+  options have been specified. This makes the linker output reproducible by
+  setting this environment variable.
+
 MinGW Improvements
 ------------------
 
