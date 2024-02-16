@@ -1446,10 +1446,13 @@ bool ByteCodeExprGen<Emitter>::VisitPointerCompoundAssignOperator(
   if (!visit(RHS))
     return false;
 
-  if (Op == BO_AddAssign)
-    this->emitAddOffset(*RT, E);
-  else
-    this->emitSubOffset(*RT, E);
+  if (Op == BO_AddAssign) {
+    if (!this->emitAddOffset(*RT, E))
+      return false;
+  } else {
+    if (!this->emitSubOffset(*RT, E))
+      return false;
+  }
 
   if (DiscardResult)
     return this->emitStorePopPtr(E);
