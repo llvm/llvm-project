@@ -36,7 +36,7 @@ public:
 
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false);
-  EvaluationResult interpretDecl(const VarDecl *VD);
+  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
 
   InterpState &getState() { return S; }
 
@@ -89,6 +89,9 @@ private:
   EvaluationResult EvalResult;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
+  /// Whether we should check if the result has been fully
+  /// initialized.
+  bool CheckFullyInitialized = false;
 
   /// Temporaries which require storage.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;

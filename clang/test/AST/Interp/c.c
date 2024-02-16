@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 -Wcast-qual %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -137,4 +137,16 @@ void t14(void) {
                       // ref-warning {{array index -1 is before the beginning of the array}} \
                       // pedantic-ref-warning {{array index -1 is before the beginning of the array}}
 
+}
+
+void bar_0(void) {
+  struct C {
+    const int a;
+    int b;
+  };
+
+  const struct C S = {0, 0};
+
+  *(int *)(&S.a) = 0; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+  *(int *)(&S.b) = 0; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
 }
