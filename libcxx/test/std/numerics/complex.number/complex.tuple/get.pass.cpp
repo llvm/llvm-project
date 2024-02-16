@@ -22,6 +22,8 @@
 #include <cassert>
 #include <complex>
 #include <concepts>
+#include <ranges>
+#include <vector>
 #include <utility>
 
 template <typename T>
