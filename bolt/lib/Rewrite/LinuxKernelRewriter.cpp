@@ -16,6 +16,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 
 #define DEBUG_TYPE "bolt-linux"
@@ -98,6 +99,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
     BinaryFunction *BF; /// Binary function corresponding to the entry.
     ORCState ORC;       /// Stack unwind info in ORC format.
 
+    /// ORC entries are sorted by their IPs. Terminator entries (NullORC)
+    /// should precede other entries with the same address.
     bool operator<(const ORCListEntry &Other) const {
       if (IP < Other.IP)
         return 1;
@@ -218,6 +221,8 @@ void LinuxKernelRewriter::insertLKMarker(uint64_t PC, uint64_t SectionOffset,
 }
 
 void LinuxKernelRewriter::processLKSections() {
+  assert(BC.IsLinuxKernel && "Linux kernel binary expected.");
+
   processLKExTable();
   processLKPCIFixup();
   processLKKSymtab();
@@ -560,6 +565,8 @@ Error LinuxKernelRewriter::readORCTables() {
     BC.MIB->addAnnotation(*Inst, "ORC", Entry.ORC);
   }
 
+  outs() << "BOLT-INFO: parsed " << NumORCEntries << " ORC entries\n";
+
   if (opts::DumpORC) {
     outs() << "BOLT-INFO: ORC unwind information:\n";
     for (const ORCListEntry &E : ORCEntries) {
@@ -612,6 +619,9 @@ Error LinuxKernelRewriter::readORCTables() {
 }
 
 Error LinuxKernelRewriter::processORCPostCFG() {
+  if (!NumORCEntries)
+    return Error::success();
+
   // Propagate ORC to the rest of the function. We can annotate every
   // instruction in every function, but to minimize the overhead, we annotate
   // the first instruction in every basic block to reflect the state at the
@@ -633,6 +643,10 @@ Error LinuxKernelRewriter::processORCPostCFG() {
 
         // Get state for the start of the function.
         if (!CurrentState) {
+          // A terminator entry (NullORC) can match the function address. If
+          // there's also a non-terminator entry, it will be placed after the
+          // terminator. Hence, we are looking for the last ORC entry that
+          // matches the address.
           auto It =
               llvm::partition_point(ORCEntries, [&](const ORCListEntry &E) {
                 return E.IP <= BF.getAddress();
@@ -640,14 +654,13 @@ Error LinuxKernelRewriter::processORCPostCFG() {
           if (It != ORCEntries.begin())
             --It;
 
-          if (It->IP != BF.getAddress() || It->BF != &BF)
-            dbgs() << "0x" << Twine::utohexstr(It->IP) << " : " << BF << '\n';
           assert(It->IP == BF.getAddress() && (!It->BF || It->BF == &BF) &&
-                 "Function entry expected.");
+                 "ORC info at function entry expected.");
 
-          if (It->ORC == NullORC && BF.hasORC())
+          if (It->ORC == NullORC && BF.hasORC()) {
             errs() << "BOLT-WARNING: ORC unwind info excludes prologue for "
                    << BF << '\n';
+          }
 
           It->BF = &BF;
 
@@ -667,7 +680,7 @@ Error LinuxKernelRewriter::processORCPostCFG() {
 }
 
 Error LinuxKernelRewriter::rewriteORCTables() {
-  if (!ORCUnwindSection || !ORCUnwindIPSection)
+  if (!NumORCEntries)
     return Error::success();
 
   // Update ORC sections in-place. As we change the code, the number of ORC
@@ -718,7 +731,7 @@ Error LinuxKernelRewriter::rewriteORCTables() {
     return Error::success();
   };
 
-  // Emit new ORC entries for an emitted function.
+  // Emit new ORC entries for the emitted function.
   auto emitORC = [&](const BinaryFunction &BF) -> Error {
     assert(!BF.isSplit() && "Split functions not supported by ORC writer yet.");
 

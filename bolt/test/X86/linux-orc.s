@@ -42,6 +42,8 @@
 # RUN:   |& FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
+# CHECK:      BOLT-INFO: parsed 9 ORC entries
+
   .text
   .globl _start
   .type _start, %function
