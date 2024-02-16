@@ -533,17 +533,6 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   return false;
 }
 
-bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
-                                   const Pointer &Ptr) {
-  if (!S.inConstantContext())
-    return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  return false;
-}
-
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status) {
   const SourceInfo &E = S.Current->getSource(OpPC);
