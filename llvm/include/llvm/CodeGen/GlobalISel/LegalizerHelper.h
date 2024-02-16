@@ -365,6 +365,7 @@ public:
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
 
+  LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(GAnyLoad &MI);
