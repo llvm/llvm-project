@@ -867,14 +867,29 @@ public:
   LIBC_INLINE const WordType *data() const { return val; }
 };
 
+namespace internal {
+// We default BigInt's WordType to 'uint64_t' or 'uint32_t' depending on type
+// availability.
 template <size_t Bits>
-using UInt =
-    typename cpp::conditional_t<Bits == 32, BigInt<32, false, uint32_t>,
-                                BigInt<Bits, false, uint64_t>>;
+struct WordTypeSelector : cpp::type_identity<
+#if defined(UINT64_MAX)
+                              uint64_t
+#else
+                              uint32_t
+#endif
+                              > {
+};
+// Except if we request 32 bits explicitly.
+template <> struct WordTypeSelector<32> : cpp::type_identity<uint32_t> {};
+template <size_t Bits>
+using WordTypeSelectorT = typename WordTypeSelector<Bits>::type;
+} // namespace internal
 
 template <size_t Bits>
-using Int = typename cpp::conditional_t<Bits == 32, BigInt<32, true, uint32_t>,
-                                        BigInt<Bits, true, uint64_t>>;
+using UInt = BigInt<Bits, false, internal::WordTypeSelectorT<Bits>>;
+
+template <size_t Bits>
+using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 
 // Provides limits of U/Int<128>.
 template <> class numeric_limits<UInt<128>> {
