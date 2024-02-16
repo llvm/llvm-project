@@ -164,6 +164,10 @@ Changes in existing checks
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check in ``GetConfigPerFile: true``
+  mode by resolving symbolic links to header files.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
