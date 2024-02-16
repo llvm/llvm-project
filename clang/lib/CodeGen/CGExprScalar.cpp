@@ -2477,8 +2477,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntegralToFloating: {
     if (E->getType()->isVectorType() && DestTy->isVectorType()) {
       // TODO: Support constrained FP intrinsics.
-      assert(!Builder.getIsFPConstrained() &&
-             "FP Constrained vector casts not supported yet.");
       QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
       if (SrcElTy->isSignedIntegerOrEnumerationType())
         return Builder.CreateSIToFP(Visit(E), ConvertType(DestTy), "conv");
@@ -2491,8 +2489,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingToIntegral: {
     if (E->getType()->isVectorType() && DestTy->isVectorType()) {
       // TODO: Support constrained FP intrinsics.
-      assert(!Builder.getIsFPConstrained() &&
-             "FP Constrained vector casts not supported yet.");
       QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
       if (DstElTy->isSignedIntegerOrEnumerationType())
         return Builder.CreateFPToSI(Visit(E), ConvertType(DestTy), "conv");
@@ -2505,8 +2501,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingCast: {
     if (E->getType()->isVectorType() && DestTy->isVectorType()) {
       // TODO: Support constrained FP intrinsics.
-      assert(!Builder.getIsFPConstrained() &&
-             "FP Constrained vector casts not supported yet.");
       QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
       QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
       if (DstElTy->castAs<BuiltinType>()->getKind() <
