@@ -1575,28 +1575,37 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
 
   RankedTensorType unpackTensorType = unpackOp.getSourceType();
 
-  SmallVector<int64_t> readMaskShape(unpackTensorType.getShape());
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
-  for (unsigned int i = 0; i < inputVectorSizes.size(); i++) {
-    readMaskShape[i] = inputVectorSizes[i];
+
+  SmallVector<int64_t> readMaskShape(inputVectorSizes.begin(),
+                                     inputVectorSizes.end());
+  ArrayRef<int64_t> outerDimsPerm = unpackOp.getOuterDimsPerm();
+  if (outerDimsPerm.empty() == false) {
+    applyPermutationToVector(readMaskShape, outerDimsPerm);
   }
+  ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
+  readMaskShape.append(sourceShape.begin() + inputVectorSizes.size(),
+                       sourceShape.end());
 
   // ReadMask is the size of tensor used to read and apply mask. It is
-  // set like this. Let's say the vectorSize (VS) array is size 'N' and
+  // set like this: Let's say the vectorSize (VS) array is size 'N' and
   // the sourceShape(SS) is 'M' where M >= N and InnerTileSizes (IT) of
   // size M-N
   // Thus:
-  // ReadMaskShape (initial) = [VS[0], ..., VS[N-1], SS[N], ..., SS[M-1]]
-  // Then divide all the readMaskShape locations pointed by innerDimPos
-  // by the innerTileSize attribute value.
+  // - initially: ReadMaskShape = vectorInputSizes
+  // - if outer_dims_perms is present: do that permutation on readMaskShape.
+  // - Append the remaining shape from SS
+  // - Divide all teh readMaskShape locations pointed by innerDimPos
+  //   by the innerTileSize attribute value.
   // E.g. let's say let's say unpackTensorType.getShape() = <8x8x32x16>
   // inner Dim Pos = [0, 1] and Inner Tiles = [32, 16], vector_sizes are [512,
-  // 128] then read shape is:
-  //   ReadMaskShape(initial): [8, 8, 32, 16]
-  //   After settin vectorSizes: [512, 128, 32, 16]
-  //   Final Value(after innerDim Adjustment): [512/32, 128/16, 32, 16]
-  //                                           = [16, 8, 32, 16]
+  // 128] and outer_dims_perm is [1, 0] then read shape is:
+  //   ReadMaskShape(initial): [512, 128]
+  //   After applying outer_dims_perm: [128, 512]
+  //   After appending the rest of the sourceShape: [128, 512, 32, 16]
+  //   Final Value(after innerDim Adjustment): [128/32, 512/16, 32, 16]
+  //                                           = [4, 32, 32, 16]
   for (auto [index, size] : enumerate(innerTiles)) {
     readMaskShape[innerDimPos[index]] =
         llvm::divideCeil(readMaskShape[innerDimPos[index]], size);
@@ -1755,14 +1764,6 @@ isValidMaskedInputVector(ArrayRef<int64_t> shape,
 static LogicalResult
 vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-
-  // Handling this case requires a bit more change. Right now
-  // just the required attributes are handled.
-  // TODO: Handle OuterDimsPerm.
-  if (!unpackOp.getOuterDimsPerm().empty()) {
-    LDBG("outer dimensions perms NYI for: " << unpackOp);
-    return failure();
-  }
 
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
         return !getConstantIntValue(res).has_value();
