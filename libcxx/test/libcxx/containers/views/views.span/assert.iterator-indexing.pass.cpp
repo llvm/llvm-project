@@ -17,7 +17,7 @@
 #include "check_assertion.h"
 
 struct Foo {
-    int x;
+  int x;
 };
 
 template <typename Iter>
@@ -142,33 +142,33 @@ void test_iterator(Iter begin, Iter end, bool reverse) {
 }
 
 int main(int, char**) {
-    // span<T>::iterator
-    {
-        Foo array[] = {{0}, {1}, {2}};
-        std::span<Foo> const span(array, 3);
-        test_iterator(span.begin(), span.end(), /*reverse=*/false);
-    }
+  // span<T>::iterator
+  {
+    Foo array[] = {{0}, {1}, {2}};
+    std::span<Foo> const span(array, 3);
+    test_iterator(span.begin(), span.end(), /*reverse=*/false);
+  }
 
-    // span<T, N>::iterator
-    {
-        Foo array[] = {{0}, {1}, {2}};
-        std::span<Foo, 3> const span(array, 3);
-        test_iterator(span.begin(), span.end(), /*reverse=*/false);
-    }
+  // span<T, N>::iterator
+  {
+    Foo array[] = {{0}, {1}, {2}};
+    std::span<Foo, 3> const span(array, 3);
+    test_iterator(span.begin(), span.end(), /*reverse=*/false);
+  }
 
-    // span<T>::reverse_iterator
-    {
-        Foo array[] = {{0}, {1}, {2}};
-        std::span<Foo> const span(array, 3);
-        test_iterator(span.rbegin(), span.rend(), /*reverse=*/true);
-    }
+  // span<T>::reverse_iterator
+  {
+    Foo array[] = {{0}, {1}, {2}};
+    std::span<Foo> const span(array, 3);
+    test_iterator(span.rbegin(), span.rend(), /*reverse=*/true);
+  }
 
-    // span<T, N>::reverse_iterator
-    {
-        Foo array[] = {{0}, {1}, {2}};
-        std::span<Foo, 3> const span(array, 3);
-        test_iterator(span.rbegin(), span.rend(), /*reverse=*/true);
-    }
+  // span<T, N>::reverse_iterator
+  {
+    Foo array[] = {{0}, {1}, {2}};
+    std::span<Foo, 3> const span(array, 3);
+    test_iterator(span.rbegin(), span.rend(), /*reverse=*/true);
+  }
 
-    return 0;
+  return 0;
 }
