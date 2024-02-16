@@ -26,6 +26,7 @@ body {
     border: 1px solid #aaa;
     margin: 0px 80px 0px 80px;
     min-width: 740px;
+    position: relative;
 }
 
 div.logo {
@@ -94,9 +95,11 @@ div.sphinxsidebar {
     margin: 0;
     padding: 0.5em 15px 15px 0;
     width: 210px;
-    float: right;
     font-size: 1em;
     text-align: left;
+    float: none;
+    position: absolute;
+    right: 0;
 }
 
 div.sphinxsidebar h3, div.sphinxsidebar h4 {
@@ -368,17 +371,4 @@ div.viewcode-block:target {
     background-color: #f4debf;
     border-top: 1px solid #ac9;
     border-bottom: 1px solid #ac9;
-}
-
-/*
-Move sidebar to the right without using floats. This fixes a large vertical
-blank space at the top of the page that was caused by the floating sidebar.
-*/
-body {
-    position: relative;
-}
-div.sphinxsidebar {
-    float: none;
-    position: absolute;
-    right: 0;
 }
