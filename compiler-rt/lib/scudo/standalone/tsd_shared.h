@@ -133,7 +133,7 @@ struct TSDRegistrySharedT {
   }
 
 private:
-  TSD<Allocator> *getTSDAndLock() NO_THREAD_SAFETY_ANALYSIS {
+  ALWAYS_INLINE TSD<Allocator> *getTSDAndLock() NO_THREAD_SAFETY_ANALYSIS {
     TSD<Allocator> *TSD = getCurrentTSD();
     DCHECK(TSD);
     // Try to lock the currently associated context.
