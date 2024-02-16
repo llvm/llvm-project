@@ -2067,6 +2067,10 @@ Constant *ConstantExpr::getBitCast(Constant *C, Type *DstTy,
 
 Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
                                          bool OnlyIfReduced) {
+  // Skip cast if types are identical
+  if (C->getType() == DstTy)
+    return C;
+
   assert(CastInst::castIsValid(Instruction::AddrSpaceCast, C, DstTy) &&
          "Invalid constantexpr addrspacecast!");
   return getFoldedCast(Instruction::AddrSpaceCast, C, DstTy, OnlyIfReduced);

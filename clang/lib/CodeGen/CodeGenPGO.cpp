@@ -1099,7 +1099,7 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
-  auto *NormalizedPtr = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+  auto *NormalizedPtr = llvm::ConstantExpr::getAddrSpaceCast(
       FuncNameVar, llvm::PointerType::get(CGM.getLLVMContext(), 0));
 
   llvm::Value *Args[] = {NormalizedPtr, Builder.getInt64(FunctionHash),
