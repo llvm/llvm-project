@@ -1,3 +1,16 @@
+# clang++ -O0 -g2 -S -ffunction-sections -o
+# int Foo;
+# int helper() {
+#   return 0;
+# }
+#
+# int helperhelper() {
+#   return 0;
+# }
+# int helperhelper2() {
+#   return 1;
+# }
+
 	.text
 	.file	"helper.cpp"
 	.file	0 "/repro2" "helper.cpp" md5 0xef451fc8d099ed067c9f2ff97d8aacf6

@@ -1,3 +1,9 @@
+# clang++ -O0 -g2 -S -ffunction-sections -o
+# extern int Foo;
+# int  main(int argc, char *argv[]) {
+#   return 0;
+# }
+
 	.text
 	.file	"main.cpp"
 	.section	.text.main,"ax",@progbits
