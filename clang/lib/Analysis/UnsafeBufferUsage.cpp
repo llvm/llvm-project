@@ -1677,15 +1677,6 @@ std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   return s;
 }
 
-// Return the text representation of the given `APInt Val`:
-static std::string getAPIntText(APInt Val) {
-  SmallVector<char> Txt;
-  Val.toString(Txt, 10, true);
-  // APInt::toString does not add '\0' to the end of the string for us:
-  Txt.push_back('\0');
-  return Txt.data();
-}
-
 // Return the source location of the last character of the AST `Node`.
 template <typename NodeTy>
 static std::optional<SourceLocation>
