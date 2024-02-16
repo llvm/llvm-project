@@ -497,16 +497,6 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   PBI->replaceUsesOfWith(PBI->getCondition(), NC);
   Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
 
-  // Handle PHI node to replace its predecessors to FirstEntryBlock.
-  for (BasicBlock *Succ : successors(PBI)) {
-    for (PHINode &Phi : Succ->phis()) {
-      for (unsigned i = 0, e = Phi.getNumIncomingValues(); i != e; ++i) {
-        if (Phi.getIncomingBlock(i) == SecondEntryBlock)
-          Phi.setIncomingBlock(i, FirstEntryBlock);
-      }
-    }
-  }
-
   // Remove IfTrue1
   if (IfTrue1 != FirstEntryBlock) {
     IfTrue1->dropAllReferences();
