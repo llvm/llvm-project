@@ -1630,6 +1630,8 @@ struct CStructNested2 {
 
 enum EnumLayout : int {};
 enum class EnumClassLayout {};
+enum EnumForward : int;
+enum class EnumClassForward;
 
 void is_layout_compatible()
 {
@@ -1656,6 +1658,10 @@ void is_layout_compatible()
   static_assert(!__is_layout_compatible(EnumLayout, int), "");
   static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
   static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
+  static_assert(__is_layout_compatible(EnumForward, EnumForward), "");
+  static_assert(!__is_layout_compatible(EnumForward, int), "");
+  static_assert(!__is_layout_compatible(EnumClassForward, int), "");
+  static_assert(__is_layout_compatible(EnumForward, EnumClassForward), "");
   static_assert(__is_layout_compatible(CStruct, CStruct2), "");
   static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
   static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
