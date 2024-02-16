@@ -63,6 +63,9 @@
 /* Define if dladdr() is available on this platform. */
 #cmakedefine CLANG_HAVE_DLADDR ${CLANG_HAVE_DLADDR}
 
+/* Define if we have sys/resource.h (rlimits) */
+#cmakedefine01 CLANG_ALLOW_IMPLICIT_RPATH
+
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 

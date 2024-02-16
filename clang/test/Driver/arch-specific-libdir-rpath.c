@@ -1,13 +1,6 @@
 // Test that the driver adds an arch-specific subdirectory in
 // {RESOURCE_DIR}/lib/linux to the linker search path and to '-rpath'
 //
-// Test the default behavior when neither -frtlib-add-rpath nor
-// -fno-rtlib-add-rpath is specified, which is to skip -rpath
-// RUN: %clang %s -### --target=x86_64-linux \
-// RUN:     -fsanitize=address -shared-libasan \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir 2>&1 \
-// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,NO-RPATH-X86_64 %s
-//
 // Test that -rpath is not added under -fno-rtlib-add-rpath even if other
 // conditions are met.
 // RUN: %clang %s -### --target=x86_64-linux \
