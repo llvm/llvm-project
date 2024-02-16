@@ -1721,16 +1721,17 @@ static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
 
   Value *Y, *Z;
   auto *DivOp = dyn_cast<Instruction>(II->getOperand(0));
-  if (!DivOp || !DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() ||
+  if (!DivOp)
+    return nullptr;
+  if (!match(DivOp, m_FDiv(m_Value(Y), m_Value(Z))))
+    return nullptr;
+  if (!DivOp->hasAllowReassoc() || !I.hasAllowReciprocal() ||
       !DivOp->hasOneUse())
     return nullptr;
-  if (match(DivOp, m_FDiv(m_Value(Y), m_Value(Z)))) {
-    Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
-    Value *NewSqrt =
-        Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), SwapDiv, II);
-    return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
-  }
-  return nullptr;
+  Value *SwapDiv = Builder.CreateFDivFMF(Z, Y, DivOp);
+  Value *NewSqrt =
+      Builder.CreateUnaryIntrinsic(II->getIntrinsicID(), SwapDiv, II);
+  return BinaryOperator::CreateFMulFMF(Op0, NewSqrt, &I);
 }
 
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {

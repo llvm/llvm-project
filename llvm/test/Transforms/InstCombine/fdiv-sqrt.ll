@@ -173,3 +173,20 @@ entry:
   ret double %div1
 }
 
+; Function Attrs: nounwind ssp uwtable(sync)
+define float @sqrt_non_div_operator(float %a) {
+; CHECK-LABEL: @sqrt_non_div_operator(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[A:%.*]] to double
+; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[CONV]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast double [[CONV]], [[SQRT]]
+; CHECK-NEXT:    [[CONV2:%.*]] = fptrunc double [[DIV]] to float
+; CHECK-NEXT:    ret float [[CONV2]]
+;
+entry:
+  %conv = fpext float %a to double
+  %sqrt = call fast double @llvm.sqrt.f64(double %conv)
+  %div = fdiv fast double %conv, %sqrt
+  %conv2 = fptrunc double %div to float
+  ret float %conv2
+}
