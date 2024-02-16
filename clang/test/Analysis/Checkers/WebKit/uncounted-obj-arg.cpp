@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
-//#include <type_traits>
 
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
@@ -60,11 +59,86 @@ NO_RETURN_DUE_TO_CRASH ALWAYS_INLINE void WTFCrashWithInfo(int line, const char*
     WTFCrashWithInfoImpl(line, file, function, counter, wtfCrashArg(reason));
 }
 
+enum class Flags : unsigned short {
+  Flag1 = 1 << 0,
+  Flag2 = 1 << 1,
+  Flag3 = 1 << 2,
+};
+
+template<typename E> class OptionSet {
+public:
+  using StorageType = unsigned short;
+
+  static constexpr OptionSet fromRaw(StorageType rawValue) {
+    return OptionSet(static_cast<E>(rawValue), FromRawValue);
+  }
+
+  constexpr OptionSet() = default;
+
+  constexpr OptionSet(E e)
+    : m_storage(static_cast<StorageType>(e)) {
+  }
+
+  constexpr StorageType toRaw() const { return m_storage; }
+
+  constexpr bool isEmpty() const { return !m_storage; }
+
+  constexpr explicit operator bool() const { return !isEmpty(); }
+
+  constexpr bool contains(E option) const { return containsAny(option); }
+  constexpr bool containsAny(OptionSet optionSet) const {
+    return !!(*this & optionSet);
+  }
+
+  constexpr bool containsAll(OptionSet optionSet) const {
+    return (*this & optionSet) == optionSet;
+  }
+
+  constexpr void add(OptionSet optionSet) { m_storage |= optionSet.m_storage; }
+
+  constexpr void remove(OptionSet optionSet)
+  {
+      m_storage &= ~optionSet.m_storage;
+  }
+
+  constexpr void set(OptionSet optionSet, bool value)
+  {
+    if (value)
+      add(optionSet);
+    else
+      remove(optionSet);
+  }
+
+  constexpr friend OptionSet operator|(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage | rhs.m_storage);
+  }
+
+  constexpr friend OptionSet operator&(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage & rhs.m_storage);
+  }
+
+  constexpr friend OptionSet operator-(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage & ~rhs.m_storage);
+  }
+
+  constexpr friend OptionSet operator^(OptionSet lhs, OptionSet rhs) {
+    return fromRaw(lhs.m_storage ^ rhs.m_storage);
+  }
+
+private:
+  enum InitializationTag { FromRawValue };
+  constexpr OptionSet(E e, InitializationTag)
+    : m_storage(static_cast<StorageType>(e)) {
+  }
+  StorageType m_storage { 0 };
+};
+
 class Number {
 public:
   Number(int v) : v(v) { }
   Number(double);
   Number operator+(const Number&);
+  const int& value() const { return v; }
 private:
   int v;
 };
@@ -111,6 +185,19 @@ public:
   RefCounted& trivial17() const { return const_cast<RefCounted&>(*this); }
   RefCounted& trivial18() const { RELEASE_ASSERT(this, "this must be not null"); return const_cast<RefCounted&>(*this); }
   void trivial19() const { return; }
+
+  static constexpr unsigned numBits = 4;
+  int trivial20() { return v >> numBits; }
+
+  const int* trivial21() { return number ? &number->value() : nullptr; }
+
+  enum class Enum : unsigned short  {
+      Value1 = 1,
+      Value2 = 2,
+  };
+  bool trivial22() { return enumValue == Enum::Value1; }
+
+  bool trivial23() const { return OptionSet<Flags>::fromRaw(v).contains(Flags::Flag1); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -170,6 +257,8 @@ public:
   }
 
   unsigned v { 0 };
+  Number* number { nullptr };
+  Enum enumValue { Enum::Value1 };
 };
 
 RefCounted* refCountedObj();
@@ -208,6 +297,10 @@ public:
     getFieldTrivial().trivial17(); // no-warning
     getFieldTrivial().trivial18(); // no-warning
     getFieldTrivial().trivial19(); // no-warning
+    getFieldTrivial().trivial20(); // no-warning
+    getFieldTrivial().trivial21(); // no-warning
+    getFieldTrivial().trivial22(); // no-warning
+    getFieldTrivial().trivial23(); // no-warning
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 
