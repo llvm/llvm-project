@@ -5,7 +5,7 @@ define void @test_guard_less_than_non_const(ptr nocapture %a, i32 %iv_start, i32
 ; CHECK-LABEL: 'test_guard_less_than_non_const'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_less_than_non_const
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ %iv_start, %entry ]
-; CHECK-NEXT:    --> {%iv_start,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%iv_start,+,1}<nsw><%for.body> U: full-set S: [-2147483648,2147483647) Exits: (-1 + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.05
 ; CHECK-NEXT:    --> {((4 * (sext i32 %iv_start to i64))<nsw> + %a),+,4}<nw><%for.body> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + (-1 * %iv_start) + %n) to i64))<nuw><nsw> + (4 * (sext i32 %iv_start to i64))<nsw> + %a) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nsw i32 %i.05, 1
@@ -40,7 +40,7 @@ define void @test_guard_less_than_non_const_sext(ptr nocapture %a, i32 %iv_start
 ; CHECK-NEXT:    %wide.trip.count = sext i32 %n to i64
 ; CHECK-NEXT:    --> (sext i32 %n to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT:    --> {(sext i32 %iv_start to i64),+,1}<nsw><%for.body> U: [-2147483648,-9223372036854775808) S: [-2147483648,-9223372036854775808) Exits: (-1 + (sext i32 %n to i64))<nsw> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(sext i32 %iv_start to i64),+,1}<nsw><%for.body> U: [-2147483648,-9223372036854775808) S: [-2147483648,2147483647) Exits: (-1 + (sext i32 %n to i64))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
 ; CHECK-NEXT:    --> {((4 * (sext i32 %iv_start to i64))<nsw> + %a),+,4}<nw><%for.body> U: full-set S: full-set Exits: (-4 + (4 * (sext i32 %n to i64))<nsw> + %a) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %1 = trunc i64 %indvars.iv to i32
