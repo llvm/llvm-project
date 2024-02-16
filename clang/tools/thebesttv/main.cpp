@@ -143,7 +143,42 @@ void dumpIcfgNode(int u) {
             const CFGBlock &B = **BI;
             if (B.getBlockID() != bid)
                 continue;
-            B.dump(fi->cfg, Context.getLangOpts(), true);
+
+            // B.dump(fi->cfg, Context.getLangOpts(), true);
+
+            std::vector<const Stmt *> allStmts;
+            std::set<const Stmt *> isChild;
+
+            // iterate over all elements to find stmts & record children
+            for (auto EI = B.begin(); EI != B.end(); ++EI) {
+                const CFGElement &E = *EI;
+                if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
+                    const Stmt *S = CS->getStmt();
+                    allStmts.push_back(S);
+
+                    // iterate over childern
+                    for (const Stmt *child : S->children()) {
+                        if (child != nullptr)
+                            isChild.insert(child);
+                    }
+                }
+            }
+
+            // print all non-child stmts
+            for (const Stmt *S : allStmts) {
+                if (isChild.find(S) != isChild.end())
+                    continue;
+                // S is not child of any stmt in this CFGBlock
+                auto bLoc =
+                    Location::fromSourceLocation(Context, S->getBeginLoc());
+                auto eLoc =
+                    Location::fromSourceLocation(Context, S->getEndLoc());
+                llvm::errs()
+                    << "  Stmt " << bLoc->line << ":" << bLoc->column << " "
+                    << eLoc->line << ":" << eLoc->column << "\n";
+                // S->dumpColor();
+            }
+
             return;
         }
     }
