@@ -23,6 +23,7 @@
 #  include <array>
 #  include <csignal>
 #  include <libutil.h>
+#  include <sys/cdefs.h>
 #  include <sys/proc.h>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
