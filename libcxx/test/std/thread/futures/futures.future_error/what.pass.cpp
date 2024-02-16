@@ -13,10 +13,6 @@
 //
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// VC Runtime's std::exception::what() method is not marked as noexcept, so
-// this fails.
-// XFAIL: target=x86_64-pc-windows-msvc && !libcpp-no-vcruntime
-
 // <future>
 //
 // class future_error

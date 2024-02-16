@@ -12,10 +12,6 @@
 
 // UNSUPPORTED: no-rtti
 
-// When we build for Windows on top of the VC runtime, `typeinfo::operator==` may not
-// be `constexpr` (depending on the version of the VC runtime). So this test can fail.
-// XFAIL: target={{.+}}-windows-msvc && !libcpp-no-vcruntime
-
 #include <typeinfo>
 #include <cassert>
 
