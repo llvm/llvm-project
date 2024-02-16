@@ -612,10 +612,15 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_fixed_point",
-    hdrs = ["src/__support/fixed_point/fx_rep.h"],
+    hdrs = [
+        "src/__support/fixed_point/fx_rep.h",
+        "src/__support/fixed_point/fx_bits.h",
+    ],
     deps = [
+        ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
+        ":__support_macros_optimization",
         ":llvm_libc_macros_stdfix_macros",
     ],
 )
