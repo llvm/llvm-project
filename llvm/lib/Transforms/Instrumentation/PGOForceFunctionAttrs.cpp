@@ -40,7 +40,6 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
   for (Function &F : M) {
     if (!shouldRunOnFunction(F, PSI, FAM))
       continue;
-    MadeChange = true;
     switch (ColdType) {
     case PGOOptions::ColdFuncOpt::Default:
       llvm_unreachable("bailed out for default above");
@@ -52,10 +51,14 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
       F.addFnAttr(Attribute::MinSize);
       break;
     case PGOOptions::ColdFuncOpt::OptNone:
+      // alwaysinline is incompatible with optnone.
+      if (F.hasFnAttribute(Attribute::AlwaysInline))
+        continue;
       F.addFnAttr(Attribute::OptimizeNone);
       F.addFnAttr(Attribute::NoInline);
       break;
     }
+    MadeChange = true;
   }
   return MadeChange ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
