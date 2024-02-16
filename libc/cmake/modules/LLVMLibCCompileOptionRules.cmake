@@ -1,4 +1,3 @@
-
 function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
