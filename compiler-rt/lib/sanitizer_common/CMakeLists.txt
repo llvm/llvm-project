@@ -207,7 +207,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_vector.h
   sanitizer_win.h
   sanitizer_win_defs.h
-  sanitizer_win_dll_thunk.h
   sanitizer_win_interception.h
   sanitizer_win_thunk_interception.h
   )
