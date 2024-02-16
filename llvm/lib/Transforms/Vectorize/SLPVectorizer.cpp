@@ -13243,7 +13243,7 @@ bool BoUpSLP::collectValuesToDemote(
     if (!Known.isNonNegative())
       ++BitWidth1;
     BitWidth = std::max(BitWidth, BitWidth1);
-    return BitWidth > 0 && OrigBitWidth / BitWidth > 1;
+    return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
   unsigned Start = 0;
   unsigned End = I->getNumOperands();
@@ -13259,8 +13259,6 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::ZExt:
   case Instruction::SExt:
     MaxDepthLevel = 1;
-    if (isa<InsertElementInst>(I->getOperand(0)))
-      return true;
     IsProfitableToDemote = true;
     break;
 
@@ -13345,7 +13343,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   if (VectorizableTree[NodeIdx]->State == TreeEntry::NeedToGather ||
       (NodeIdx == 0 && !VectorizableTree[NodeIdx]->UserTreeIndices.empty()) ||
       (NodeIdx != 0 && any_of(VectorizableTree[NodeIdx]->UserTreeIndices,
-                              [&](const EdgeInfo &EI) {
+                              [NodeIdx](const EdgeInfo &EI) {
                                 return EI.UserTE->Idx >
                                        static_cast<int>(NodeIdx);
                               })))
@@ -13380,7 +13378,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     // The maximum bit width required to represent all the values that can be
     // demoted without loss of precision. It would be safe to truncate the roots
     // of the expression to this width.
-    auto MaxBitWidth = 1u;
+    unsigned MaxBitWidth = 1u;
 
     // True if the roots can be zero-extended back to their original type,
     // rather than sign-extended. We know that if the leading bits are not
@@ -13396,8 +13394,8 @@ void BoUpSLP::computeMinimumValueSizes() {
     // We first check if all the bits of the roots are demanded. If they're not,
     // we can truncate the roots to this narrower type.
     for (auto *Root : TreeRoot) {
-      auto NumSignBits = ComputeNumSignBits(Root, *DL, 0, AC, nullptr, DT);
-      auto NumTypeBits = DL->getTypeSizeInBits(Root->getType());
+      unsigned NumSignBits = ComputeNumSignBits(Root, *DL, 0, AC, nullptr, DT);
+      TypeSize NumTypeBits = DL->getTypeSizeInBits(Root->getType());
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
       // If we can't prove that the sign bit is zero, we must add one to the
       // maximum bit width to account for the unknown sign bit. This preserves
@@ -13417,7 +13415,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       if (!IsKnownPositive)
         ++BitWidth1;
 
-      auto Mask = DB->getDemandedBits(cast<Instruction>(Root));
+      APInt Mask = DB->getDemandedBits(cast<Instruction>(Root));
       unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
       MaxBitWidth =
           std::max<unsigned>(std::min(BitWidth1, BitWidth2), MaxBitWidth);
