@@ -52,7 +52,6 @@ void test_iterator(Iter begin, Iter end, bool reverse) {
                 : "__bounded_iter::operator++: Attempt to advance an iterator past the end";
     auto it = end;
     TEST_LIBCPP_ASSERT_FAILURE(it++, msg);
-    it = end;
     TEST_LIBCPP_ASSERT_FAILURE(++it, msg);
   }
 
@@ -63,7 +62,6 @@ void test_iterator(Iter begin, Iter end, bool reverse) {
                 : "__bounded_iter::operator--: Attempt to rewind an iterator past the start";
     auto it = begin;
     TEST_LIBCPP_ASSERT_FAILURE(it--, msg);
-    it = begin;
     TEST_LIBCPP_ASSERT_FAILURE(--it, msg);
   }
 
