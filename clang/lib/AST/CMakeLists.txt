@@ -32,6 +32,7 @@ add_clang_library(clangAST
   ASTTypeTraits.cpp
   AttrDocTable.cpp
   AttrImpl.cpp
+  Availability.cpp
   Comment.cpp
   CommentBriefParser.cpp
   CommentCommandTraits.cpp
@@ -112,6 +113,7 @@ add_clang_library(clangAST
   StmtCXX.cpp
   StmtIterator.cpp
   StmtObjC.cpp
+  StmtOpenACC.cpp
   StmtOpenMP.cpp
   StmtPrinter.cpp
   StmtProfile.cpp

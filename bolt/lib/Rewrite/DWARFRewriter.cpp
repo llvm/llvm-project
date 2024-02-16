@@ -709,7 +709,7 @@ void DWARFRewriter::updateDebugInfo() {
                                 : LegacyRangesSectionWriter.get();
     // Skipping CUs that failed to load.
     if (SplitCU) {
-      DIEBuilder DWODIEBuilder(&(*SplitCU)->getContext(), true);
+      DIEBuilder DWODIEBuilder(BC, &(*SplitCU)->getContext(), true);
       DWODIEBuilder.buildDWOUnit(**SplitCU);
       std::string DWOName = updateDWONameCompDir(
           *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
@@ -754,7 +754,7 @@ void DWARFRewriter::updateDebugInfo() {
     AddrWriter->update(*DIEBlder, *Unit);
   };
 
-  DIEBuilder DIEBlder(BC.DwCtx.get());
+  DIEBuilder DIEBlder(BC, BC.DwCtx.get());
   DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
@@ -873,7 +873,9 @@ void DWARFRewriter::updateUnitDebugInfo(
         OutputRanges.push_back({0, 0});
       const uint64_t RangesSectionOffset =
           RangesSectionWriter.addRanges(OutputRanges);
-      if (!Unit.isDWOUnit())
+      // Don't emit the zero low_pc arange.
+      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
+          OutputRanges.back().LowPC)
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
@@ -919,15 +921,10 @@ void DWARFRewriter::updateUnitDebugInfo(
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
       if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal) {
+        if (LowPCVal && HighPCVal)
           FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        } else {
-          // I haven't seen this case, but who knows what other compilers
-          // generate.
+        else
           FunctionRanges.push_back({0, 1});
-          errs() << "BOLT-WARNING: [internal-dwarf-error]: subprogram got GCed "
-                    "by the linker, DW_AT_ranges is used\n";
-        }
       }
 
       if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
@@ -1655,7 +1652,8 @@ createDwarfOnlyBC(const object::ObjectFile &File) {
       &File, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler)));
+                           WithColor::defaultWarningHandler),
+      {llvm::outs(), llvm::errs()}));
 }
 
 StringMap<DWARFRewriter::KnownSectionsEntry>

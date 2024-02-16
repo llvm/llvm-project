@@ -915,6 +915,13 @@ static_assert(ignoredDecls() == 12, "");
 namespace DiscardExprs {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
+  typedef struct _GUID {
+    __UINT32_TYPE__ Data1;
+    __UINT16_TYPE__ Data2;
+    __UINT16_TYPE__ Data3;
+    __UINT8_TYPE__ Data4[8];
+  } GUID;
+  class __declspec(uuid("000000A0-0000-0000-C000-000000000049")) GuidType;
 
   struct A{ int a; };
   constexpr int ignoredExprs() {
@@ -951,6 +958,8 @@ namespace DiscardExprs {
     (float)1;
     (double)1.0f;
     (signed)4u;
+    __uuidof(GuidType);
+    __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
     return 0;
   }
@@ -1104,4 +1113,14 @@ namespace NonConstReads {
   int z; // both-note {{declared here}}
   static_assert(z == 0, ""); // both-error {{not an integral constant expression}} \
                              // both-note {{read of non-const variable 'z'}}
+}
+
+/// This test passes a MaterializedTemporaryExpr to evaluateAsRValue.
+/// That needs to return a null pointer after the lvalue-to-rvalue conversion.
+/// We used to fail to do that.
+namespace rdar8769025 {
+  __attribute__((nonnull)) void f1(int * const &p);
+  void test_f1() {
+    f1(0); // both-warning{{null passed to a callee that requires a non-null argument}}
+  }
 }
