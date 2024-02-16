@@ -242,12 +242,11 @@ func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
 
 // -----
 
-// expected-error@+1{{SoA is only applicable on singleton lvlTypes.}}
+// expected-error@+1{{SoA is only applicable to singleton lvlTypes.}}
 #COO_SoA = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique, soa), d1 : singleton(soa))
 }>
 func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
-
 
 // -----
 

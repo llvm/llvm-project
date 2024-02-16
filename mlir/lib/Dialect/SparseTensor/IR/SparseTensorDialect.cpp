@@ -674,14 +674,14 @@ LogicalResult SparseTensorEncodingAttr::verify(
     }
   }
 
-  // Property SoA can only be applied on singleton level.
+  // SoA property can only be applied on singleton level.
   auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
     return lt.isa<LevelPropNonDefault::SoA>();
   });
   if (llvm::any_of(soaLvls, [](LevelType lt) {
         return !lt.isa<LevelFormat::Singleton>();
       })) {
-    return emitError() << "SoA is only applicable on singleton lvlTypes.";
+    return emitError() << "SoA is only applicable to singleton lvlTypes.";
   }
 
   // TODO: audit formats that actually are supported by backend.
