@@ -92,6 +92,12 @@ int64_t collectiveProcessGroupSize(MeshAxesRange &&meshAxes,
   return res;
 }
 
+template <typename MeshAxesRange>
+int64_t collectiveProcessGroupSize(MeshAxesRange &&meshAxes, MeshOp mesh) {
+  return collectiveProcessGroupSize(std::forward<MeshAxesRange>(meshAxes),
+                                    mesh.getShape());
+}
+
 // Get the size of a sharded dimension.
 inline int64_t shardDimension(int64_t dimSize, int64_t shardCount) {
   if (ShapedType::isDynamic(dimSize) || ShapedType::isDynamic(shardCount))

@@ -641,7 +641,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtA()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
-    setMinCmpXchgSizeInBits(32);
+    if (Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas())
+      setMinCmpXchgSizeInBits(8);
+    else
+      setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
   } else {
@@ -3875,6 +3878,47 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                         DAG.getVectorIdxConstant(InsertIdx, DL));
     }
     return convertFromScalableVector(VT, Vec, DAG, Subtarget);
+  }
+
+  // For m1 vectors, if we have non-undef values in both halves of our vector,
+  // split the vector into low and high halves, build them separately, then
+  // use a vselect to combine them.  For long vectors, this cuts the critical
+  // path of the vslide1down sequence in half, and gives us an opportunity
+  // to special case each half independently.  Note that we don't change the
+  // length of the sub-vectors here, so if both fallback to the generic
+  // vslide1down path, we should be able to fold the vselect into the final
+  // vslidedown (for the undef tail) for the first half w/ masking.
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumUndefElts =
+      count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
+  unsigned NumDefElts = NumElts - NumUndefElts;
+  if (NumDefElts >= 8 && NumDefElts > NumElts / 2 &&
+      ContainerVT.bitsLE(getLMUL1VT(ContainerVT))) {
+    SmallVector<SDValue> SubVecAOps, SubVecBOps;
+    SmallVector<SDValue> MaskVals;
+    SDValue UndefElem = DAG.getUNDEF(Op->getOperand(0)->getValueType(0));
+    SubVecAOps.reserve(NumElts);
+    SubVecBOps.reserve(NumElts);
+    for (unsigned i = 0; i < NumElts; i++) {
+      SDValue Elem = Op->getOperand(i);
+      if (i < NumElts / 2) {
+        SubVecAOps.push_back(Elem);
+        SubVecBOps.push_back(UndefElem);
+      } else {
+        SubVecAOps.push_back(UndefElem);
+        SubVecBOps.push_back(Elem);
+      }
+      bool SelectMaskVal = (i < NumElts / 2);
+      MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    }
+    assert(SubVecAOps.size() == NumElts && SubVecBOps.size() == NumElts &&
+           MaskVals.size() == NumElts);
+
+    SDValue SubVecA = DAG.getBuildVector(VT, DL, SubVecAOps);
+    SDValue SubVecB = DAG.getBuildVector(VT, DL, SubVecBOps);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, SubVecA, SubVecB);
   }
 
   // Cap the cost at a value linear to the number of elements in the vector.
@@ -9804,10 +9848,11 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return Op;
   }
 
-  // Else SubVecVT is a fractional LMUL and may need to be slid down: if
-  // SubVecVT was > M1 then the index would need to be a multiple of VLMAX, and
-  // so would divide exactly.
-  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second);
+  // Else SubVecVT is M1 or smaller and may need to be slid down: if SubVecVT
+  // was > M1 then the index would need to be a multiple of VLMAX, and so would
+  // divide exactly.
+  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
+         getLMUL(ContainerSubVecVT) == RISCVII::VLMUL::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -11105,8 +11150,8 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
       // Slide off any elements from past EVL that were reversed into the low
       // elements.
       unsigned MinElts = GatherVT.getVectorMinNumElements();
-      SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                                  DAG.getConstant(MinElts, DL, XLenVT));
+      SDValue VLMax =
+          DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), MinElts));
       SDValue Diff = DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, EVL);
 
       Result = getVSlidedown(DAG, Subtarget, DL, GatherVT,
@@ -14958,8 +15003,8 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     if (CC == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(LHS.getOperand(1)) && isNullConstant(RHS)) {
-      uint64_t MaskVal = LHS.getConstantOperandVal(1);
-      if (isPowerOf2_64(MaskVal) && !isInt<12>(MaskVal))
+      const APInt &MaskVal = LHS.getConstantOperandAPInt(1);
+      if (MaskVal.isPowerOf2() && !MaskVal.isSignedIntN(12))
         return DAG.getSelect(DL, VT,
                              DAG.getSetCC(DL, CondVT, LHS, RHS, ISD::SETNE),
                              False, True);
@@ -19689,12 +19734,16 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     return AtomicExpansionKind::None;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16)
-    return AtomicExpansionKind::MaskedIntrinsic;
+  if (AI->getOperation() == AtomicRMWInst::Nand) {
+    if (Subtarget.hasStdExtZacas() &&
+        (Size >= 32 || Subtarget.hasStdExtZabha()))
+      return AtomicExpansionKind::CmpXChg;
+    if (Size < 32)
+      return AtomicExpansionKind::MaskedIntrinsic;
+  }
 
-  if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
-      (Size == Subtarget.getXLen() || Size == 32))
-    return AtomicExpansionKind::CmpXChg;
+  if (Size < 32 && !Subtarget.hasStdExtZabha())
+    return AtomicExpansionKind::MaskedIntrinsic;
 
   return AtomicExpansionKind::None;
 }
@@ -19817,7 +19866,8 @@ RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
     return AtomicExpansionKind::None;
 
   unsigned Size = CI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16)
+  if (!(Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas()) &&
+      (Size == 8 || Size == 16))
     return AtomicExpansionKind::MaskedIntrinsic;
   return AtomicExpansionKind::None;
 }
