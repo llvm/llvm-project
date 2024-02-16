@@ -13,11 +13,11 @@ class TestMultipleTargets(TestBase):
 
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @skipIfNoSBHeaders
-    @skipIfHostIncompatibleWithRemote
     @expectedFailureAll(
         oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr20282"
     )
     @expectedFlakeyNetBSD
+    @skipIfHostIncompatibleWithTarget
     def test_multiple_targets(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
