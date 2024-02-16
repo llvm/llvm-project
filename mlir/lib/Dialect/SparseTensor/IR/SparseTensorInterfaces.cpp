@@ -16,9 +16,8 @@ using namespace mlir::sparse_tensor;
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp.inc"
 
-LogicalResult
-sparse_tensor::detail::stageWithSortImpl(StageWithSortSparseOp op,
-                                         PatternRewriter &rewriter) {
+LogicalResult sparse_tensor::detail::stageWithSortImpl(
+    StageWithSortSparseOp op, PatternRewriter &rewriter, Value &tmpBufs) {
   if (!op.needsExtraSort())
     return failure();
 
@@ -44,9 +43,15 @@ sparse_tensor::detail::stageWithSortImpl(StageWithSortSparseOp op,
     rewriter.replaceOp(op, dstCOO);
   } else {
     // Need an extra conversion if the target type is not COO.
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, finalTp, dstCOO);
+    auto c = rewriter.replaceOpWithNewOp<ConvertOp>(op, finalTp, dstCOO);
+    rewriter.setInsertionPointAfter(c);
+    // Informs the caller about the intermediate buffer we allocated. We can not
+    // create a bufferization::DeallocateTensorOp here because it would
+    // introduce cyclic dependency between the SparseTensorDialect and the
+    // BufferizationDialect. Besides, whether the buffer need to be deallocated
+    // by SparseTensorDialect or by BufferDeallocationPass is still TBD.
+    tmpBufs = dstCOO;
   }
-  // TODO: deallocate extra COOs, we should probably delegate it to buffer
-  // deallocation pass.
+
   return success();
 }
