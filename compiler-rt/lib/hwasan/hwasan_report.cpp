@@ -230,33 +230,68 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       tag_t obj_tag = base_tag ^ local.tag_offset;
       if (obj_tag != addr_tag)
         continue;
-      // Guess top bits of local variable from the faulting address, because
-      // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
-      uptr local_beg = (fp + local.frame_offset) |
-                       (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
-      uptr local_end = local_beg + local.size;
+
+      // We only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
+      // So we know only `FP % kRecordFPModulus`, and we can only calculate
+      // `local_beg % kRecordFPModulus`.
+      // Out of all possible `local_beg` we will only consider 2 candidates
+      // nearest to the `untagged_addr`.
+      uptr local_beg_mod = (fp + local.frame_offset) % kRecordFPModulus;
+      // Pick `local_beg` in the same 1 MiB block as `untagged_addr`.
+      uptr local_beg =
+          RoundDownTo(untagged_addr, kRecordFPModulus) + local_beg_mod;
+      // Pick the largest `local_beg <= untagged_addr`. It's either the current
+      // one or the one before.
+      if (local_beg > untagged_addr)
+        local_beg -= kRecordFPModulus;
+
+      uptr offset = -1ull;
+      const char *whence;
+      const char *cause = nullptr;
+      uptr best_beg;
+
+      // Try two 1 MiB blocks options and pick nearest one.
+      for (uptr i = 0; i < 2; ++i, local_beg += kRecordFPModulus) {
+        uptr local_end = local_beg + local.size;
+        if (local_beg > local_end)
+          continue;  // This is a wraparound.
+        if (local_beg <= untagged_addr && untagged_addr < local_end) {
+          offset = untagged_addr - local_beg;
+          whence = "inside";
+          cause = "use-after-scope";
+          best_beg = local_beg;
+          break;  // This is as close at it can be.
+        }
+
+        if (untagged_addr >= local_end) {
+          uptr new_offset = untagged_addr - local_end;
+          if (new_offset < offset) {
+            offset = new_offset;
+            whence = "after";
+            cause = "stack-buffer-overflow";
+            best_beg = local_beg;
+          }
+        } else {
+          uptr new_offset = local_beg - untagged_addr;
+          if (new_offset < offset) {
+            offset = new_offset;
+            whence = "before";
+            cause = "stack-buffer-overflow";
+            best_beg = local_beg;
+          }
+        }
+      }
+
+      // To fail the `untagged_addr` must be near nullptr, which is impossible
+      // with Linux user space memory layout.
+      if (!cause)
+        continue;
 
       if (!found_local) {
         Printf("\nPotentially referenced stack objects:\n");
         found_local = true;
       }
 
-      uptr offset;
-      const char *whence;
-      const char *cause;
-      if (local_beg <= untagged_addr && untagged_addr < local_end) {
-        offset = untagged_addr - local_beg;
-        whence = "inside";
-        cause = "use-after-scope";
-      } else if (untagged_addr >= local_end) {
-        offset = untagged_addr - local_end;
-        whence = "after";
-        cause = "stack-buffer-overflow";
-      } else {
-        offset = local_beg - untagged_addr;
-        whence = "before";
-        cause = "stack-buffer-overflow";
-      }
       Decorator d;
       Printf("%s", d.Error());
       Printf("Cause: %s\n", cause);
@@ -267,10 +302,11 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
           common_flags()->symbolize_vs_style,
           common_flags()->strip_path_prefix);
       Printf(
-          "%p is located %zd bytes %s a %zd-byte local variable %s [%p,%p) "
+          "%p is located %zd bytes %s a %zd-byte local variable %s "
+          "[%p,%p) "
           "in %s %s\n",
-          untagged_addr, offset, whence, local_end - local_beg, local.name,
-          local_beg, local_end, local.function_name, location.data());
+          untagged_addr, offset, whence, local.size, local.name, best_beg,
+          best_beg + local.size, local.function_name, location.data());
       location.clear();
       Printf("%s\n", d.Default());
     }
