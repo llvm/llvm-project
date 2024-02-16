@@ -809,6 +809,34 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::vector_extract: {
+    // A vector extract at index 0 is a (free) subregister extract.
+    if (auto *CIdx = dyn_cast<ConstantInt>(ICA.getArgs()[1]);
+        CIdx && CIdx->isZero())
+      return TTI::TCC_Free;
+    break;
+  }
+  case Intrinsic::vector_insert: {
+    auto FitsSubreg = [this](Type *Ty) {
+      if (!isa<ScalableVectorType>(Ty))
+        return false;
+      // Any scalable vector LMUL >= 1 will fit exactly into a register group.
+      auto [_Cost, LT] = getTypeLegalizationCost(Ty);
+      auto [_Coeff, Fractional] =
+          RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(LT));
+      return !Fractional;
+    };
+
+    // A vector insert at index 0 is a (free) subregister insert if:
+    //
+    // - The subvec fits exactly into a register group or
+    // - The vector is undef
+    if (auto *CIdx = dyn_cast<ConstantInt>(ICA.getArgs()[2]);
+        CIdx && CIdx->isZero() &&
+        (FitsSubreg(ICA.getArgTypes()[1]) || isa<UndefValue>(ICA.getArgs()[0])))
+      return TTI::TCC_Free;
+    break;
+  }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
     unsigned Cost = 1; // vid
