@@ -221,6 +221,12 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
       attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins CArg<"TypeRange">:$result,
+                   CArg<"StringAttr">:$sym_name,
+                   CArg<"TypeAttr">:$type)>
+  ];
+
   let hasVerifier = 1;
 }
 

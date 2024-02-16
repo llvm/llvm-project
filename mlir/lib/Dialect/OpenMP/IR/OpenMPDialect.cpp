@@ -1858,6 +1858,15 @@ LogicalResult DataBoundsOp::verify() {
   return success();
 }
 
+void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                            TypeRange /*result_types*/, StringAttr symName,
+                            TypeAttr type) {
+  PrivateClauseOp::build(
+      odsBuilder, odsState, symName, type,
+      DataSharingClauseTypeAttr::get(odsBuilder.getContext(),
+                                     DataSharingClauseType::Private));
+}
+
 LogicalResult PrivateClauseOp::verify() {
   Type symType = getType();
 
