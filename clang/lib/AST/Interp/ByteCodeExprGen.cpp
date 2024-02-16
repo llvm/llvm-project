@@ -3237,9 +3237,20 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // Try to lazily visit (or emit dummy pointers for) declarations
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
-    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isStaticLocal()) {
-      if (std::optional<unsigned> I = P.getOrCreateDummy(D))
-        return this->emitGetPtrGlobal(*I, E);
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      // Dummy for static locals
+      if (VD->isStaticLocal()) {
+        if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+          return this->emitGetPtrGlobal(*I, E);
+        return false;
+      }
+      // Visit local const variables like normal.
+      if (VD->isLocalVarDecl() && VD->getType().isConstQualified()) {
+        if (!this->visitVarDecl(VD))
+          return false;
+        // Retry.
+        return this->VisitDeclRefExpr(E);
+      }
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
