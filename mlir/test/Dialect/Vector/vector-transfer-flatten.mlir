@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-transfer-flatten-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-transfer-flatten-patterns=target-vector-bitwidth=512 -split-input-file | FileCheck %s
 
 func.func @transfer_read_dims_match_contiguous(
       %arg : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
@@ -417,7 +417,4 @@ func.func @trailing_dim_larger_than_target_vector_bitwidth_write(
 
 // CHECK-LABEL:  func.func @trailing_dim_larger_than_target_vector_bitwidth_write(
 //   CHECK-NOT:    tensor.collapse_shape
-
-
-
 
