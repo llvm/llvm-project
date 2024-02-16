@@ -950,6 +950,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
+  bool isFastReductionEnabled() const { return IsFastReductionEnabled; }
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1045,6 +1047,8 @@ private:
 
   DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
+
+  bool IsFastReductionEnabled = false;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

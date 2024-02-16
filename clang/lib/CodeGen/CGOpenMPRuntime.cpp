@@ -9617,14 +9617,11 @@ static void emitTargetCallKernelLaunch(
                                                   OMPRTL_ompx_get_team_procs),
             DevIdVal, "team_procs");
 
-        // Compute CUMultiplier = (Max threads per CU) / (Block size)
-        int64_t XteamRedBlockSize = CGF.CGM.getXteamRedBlockSize(D);
-        int64_t CUMultiplier =
-            XteamRedBlockSize > 0
-                ? llvm::omp::xteam_red::MaxThreadsPerCU / XteamRedBlockSize
-                : llvm::omp::xteam_red::MaxCUMultiplier;
-        if (CUMultiplier > llvm::omp::xteam_red::MaxCUMultiplier)
-          CUMultiplier = llvm::omp::xteam_red::MaxCUMultiplier;
+        // Given the currently determined blocksize, compute the scaling
+        // factor for number of teams in terms of the number of CUs. This
+        // computation must stay in sync with the runtime.
+        uint32_t CUMultiplier = llvm::omp::xteam_red::getXteamRedCUMultiplier(
+            CGF.CGM.getXteamRedBlockSize(D));
 
         llvm::Value *Int64CUMultiplier =
             llvm::ConstantInt::get(CGF.Int64Ty, CUMultiplier);

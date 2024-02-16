@@ -1018,6 +1018,17 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
        DevEnvGlobal.getName().data());
     consumeError(std::move(Err));
   }
+
+  // From the image, read whether fast reduction is enabled.
+  StaticGlobalTy<int8_t> IsFastRedGlobal("__omp_plugin_enable_fast_reduction");
+  if (auto Err = GHandler.readGlobalFromImage(*this, Image, IsFastRedGlobal)) {
+    DP("Missing symbol %s, continue execution anyway.\n",
+       IsFastRedGlobal.getName().data());
+    consumeError(std::move(Err));
+  } else {
+    IsFastReductionEnabled = IsFastRedGlobal.getValue();
+  }
+
   return Plugin::success();
 }
 

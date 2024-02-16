@@ -294,6 +294,16 @@ constexpr int16_t DefaultBlockSize = 1024;
 // so that it is accessible for all targets.
 constexpr int16_t MaxBlockSize = 1024;
 
+// Compute CUMultiplier = (Max threads per CU) / (Block size)
+static inline uint32_t getXteamRedCUMultiplier(uint32_t BlockSize) {
+  uint32_t CUMultiplier =
+      BlockSize > 0 ? llvm::omp::xteam_red::MaxThreadsPerCU / BlockSize
+                    : llvm::omp::xteam_red::MaxCUMultiplier;
+  if (CUMultiplier > llvm::omp::xteam_red::MaxCUMultiplier)
+    CUMultiplier = llvm::omp::xteam_red::MaxCUMultiplier;
+  return CUMultiplier;
+}
+
 } // end namespace xteam_red
 
 /// A type of worksharing loop construct
@@ -305,6 +315,15 @@ enum class WorksharingLoopType {
   // Worksharing `distrbute parallel for`-loop
   DistributeForStaticLoop
 };
+
+static inline uint32_t getBlockSizeAsPowerOfTwo(uint32_t BlockSize) {
+  uint32_t Tmp = BlockSize;
+  do {
+    BlockSize = Tmp;
+    Tmp = BlockSize & (BlockSize - 1);
+  } while (Tmp != 0);
+  return BlockSize;
+}
 
 } // end namespace omp
 

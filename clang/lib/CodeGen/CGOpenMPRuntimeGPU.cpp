@@ -1000,6 +1000,19 @@ static void setPropertyExecutionMode(CodeGenModule &CGM, StringRef Name,
   CGM.addCompilerUsedGlobal(GVMode);
 }
 
+// Create a global variable to indicate whether fast reduction is enabled for
+// this file. This variable is read by the runtime while determining the launch
+// bounds.
+static void setIsFastReduction(CodeGenModule &CGM) {
+  auto *GVFastReduction = new llvm::GlobalVariable(
+      CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
+      llvm::GlobalValue::WeakAnyLinkage,
+      llvm::ConstantInt::get(CGM.Int8Ty,
+                             CGM.getLangOpts().OpenMPTargetFastReduction),
+      Twine("__omp_plugin_enable_fast_reduction"));
+  CGM.addCompilerUsedGlobal(GVFastReduction);
+}
+
 static OMPTgtExecModeFlags
 computeExecutionMode(bool Mode, const Stmt *DirectiveStmt, CodeGenModule &CGM) {
   if (!Mode)
@@ -1084,6 +1097,11 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
 
   if (CGM.getLangOpts().OpenMPCUDAMode)
     CurrentDataSharingMode = CGOpenMPRuntimeGPU::DS_CUDA;
+
+  // Write a global variable indicating whether fast reduction is enabled.
+  // This is done regardless of -nogpulib
+  if (!CGM.getLangOpts().OMPHostIRFile.empty())
+    setIsFastReduction(CGM);
 
   llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();
   if (CGM.getLangOpts().NoGPULib || CGM.getLangOpts().OMPHostIRFile.empty())

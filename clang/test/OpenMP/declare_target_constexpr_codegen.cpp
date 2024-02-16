@@ -18,7 +18,7 @@ public:
 //.
 // CHECK: @_ZN1A2piE = linkonce_odr constant double 0x400921FB54442D18, comdat, align 8
 // CHECK: @_ZL9anotherPi = internal constant double 3.140000e+00, align 8
-// CHECK: @llvm.compiler.used = appending global [2 x ptr] [ptr @"__ZN1A2piE$ref", ptr @"__ZL9anotherPi$ref"], section "llvm.metadata"
+// CHECK: @llvm.compiler.used = appending global [3 x ptr] [ptr @__omp_plugin_enable_fast_reduction, ptr @"__ZN1A2piE$ref", ptr @"__ZL9anotherPi$ref"], section "llvm.metadata"
 //.
   A() { ; }
   ~A() { ; }

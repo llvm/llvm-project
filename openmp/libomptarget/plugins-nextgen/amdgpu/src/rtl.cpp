@@ -945,32 +945,26 @@ private:
     }
 
     if (isXTeamReductionsMode()) {
-      // Note: The plugin does not know whether XteamReduction is running in
-      // fast mode. If fast mode, metadata is not used and the following
-      // restrictions are not required. But since the plugin does not know, it
-      // will assume that it is running in the default mode with constrained
-      // metadata.
-
-      // The number of teams must not exceed the upper limit determined during
-      // code generation. This upper limit is not currently communicated from
-      // codegen to the plugin. So compute it here again, note that this must
-      // be kept in sync with codegen.
-
-      // This is the block size that CodeGen used.
-      uint32_t XteamRedBlockSize = ConstWGSize;
-
-      int32_t CUMultiplier =
-          XteamRedBlockSize > 0
-              ? llvm::omp::xteam_red::MaxThreadsPerCU / XteamRedBlockSize
-              : llvm::omp::xteam_red::MaxCUMultiplier;
-      if (CUMultiplier > llvm::omp::xteam_red::MaxCUMultiplier)
-        CUMultiplier = llvm::omp::xteam_red::MaxCUMultiplier;
-
-      // Here's the default we use
+      // Here's the default number of teams.
       uint64_t NumGroups = DeviceNumCUs;
-
       // The number of teams must not exceed this upper limit.
-      uint64_t MaxNumGroups = DeviceNumCUs * CUMultiplier;
+      uint64_t MaxNumGroups = NumGroups;
+      if (GenericDevice.isFastReductionEnabled()) {
+        // When fast reduction is enabled, the number of teams is capped by
+        // the MaxCUMultiplier constant.
+        MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
+      } else {
+        // When fast reduction is not enabled, the number of teams is capped
+        // by the metadata that clang CodeGen created. The number of teams
+        // used here must not exceed the upper limit determined during
+        // CodeGen. This upper limit is not currently communicated from
+        // CodeGen to the plugin. So it is re-computed here.
+
+        // ConstWGSize is the block size that CodeGen used.
+        uint32_t CUMultiplier =
+            llvm::omp::xteam_red::getXteamRedCUMultiplier(ConstWGSize);
+        MaxNumGroups = DeviceNumCUs * CUMultiplier;
+      }
 
       // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
       // type, if possible.
@@ -1029,6 +1023,8 @@ private:
           NumGroups = std::min(MaxNumGroups, LowTripCountBlocks);
         }
       }
+      DP("xteam-red:NumCUs=%lu xteam-red:NumGroups=%lu\n", DeviceNumCUs,
+         NumGroups);
       return NumGroups;
     }
 

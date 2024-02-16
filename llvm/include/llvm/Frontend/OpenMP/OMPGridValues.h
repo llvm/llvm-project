@@ -120,15 +120,6 @@ static constexpr GV NVPTXGridValues = {
     128,       // GV_Default_WG_Size
 };
 
-static inline uint32_t getBlockSizeAsPowerOfTwo(uint32_t BlockSize) {
-  uint32_t Tmp = BlockSize;
-  do {
-    BlockSize = Tmp;
-    Tmp = BlockSize & (BlockSize - 1);
-  } while (Tmp != 0);
-  return BlockSize;
-}
-
 } // namespace omp
 } // namespace llvm
 
