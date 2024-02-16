@@ -13,6 +13,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
+#include "mlir/Transforms/TopologicalSortUtils.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <map>
@@ -276,6 +277,8 @@ private:
   /// Process a block. Emit a cluster and one node per block argument and
   /// operation inside the cluster.
   void processBlock(Block &block) {
+    sortTopologically(&block);
+
     emitClusterStmt([&]() {
       for (BlockArgument &blockArg : block.getArguments())
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
