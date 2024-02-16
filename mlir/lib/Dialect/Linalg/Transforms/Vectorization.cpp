@@ -1405,8 +1405,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 /// permutations.
 static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
                                               ArrayRef<int64_t> destShape) {
-  return applyPermutation(destShape,
-                          tensor::getPackUnPackInverseDestPerm(packOp));
+  return applyPermutation(destShape, tensor::getPackInverseDestPerm(packOp));
 }
 
 /// Create a TransferReadOp from `source` with static shape `readShape`. If the
@@ -1547,7 +1546,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
 
   // Create TransposeOp.
   auto destPermutation =
-      invertPermutationVector(tensor::getPackUnPackInverseDestPerm(packOp));
+      invertPermutationVector(tensor::getPackInverseDestPerm(packOp));
   auto transposeOp = rewriter.create<vector::TransposeOp>(
       loc, shapeCastOp.getResult(), destPermutation);
 
@@ -1559,7 +1558,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   return success();
 }
 
-/// Vectorize a `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
+/// Vectorize a `tensor::UnPackOp` to these 4 Ops:
 ///   Vector::TransferReadOp - Reads a vector from the source tensor
 ///   vector::TransposeOp - Transpose the Source tensor
 ///   ShapeCastOp - Reshape the data based on the target.
@@ -1581,7 +1580,7 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   SmallVector<int64_t> readMaskShape(inputVectorSizes.begin(),
                                      inputVectorSizes.end());
   ArrayRef<int64_t> outerDimsPerm = unpackOp.getOuterDimsPerm();
-  if (outerDimsPerm.empty() == false) {
+  if (!outerDimsPerm.empty()) {
     applyPermutationToVector(readMaskShape, outerDimsPerm);
   }
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
@@ -1632,7 +1631,7 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
 
   PackingMetadata packMetadata;
   SmallVector<int64_t> lastDimToInsertPosPerm = invertPermutationVector(
-      tensor::getPackUnPackInverseDestPerm(unpackOp, packMetadata));
+      tensor::getUnPackInverseSrcPerm(unpackOp, packMetadata));
   ShapedType maskedOpShapedType = cast<ShapedType>(readResult.getType());
   SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
   mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
@@ -1772,7 +1771,7 @@ vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
     return failure();
   }
   llvm::ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
-  if (inputVectorSizes.empty() == false &&
+  if (!inputVectorSizes.empty() &&
       failed(isValidMaskedInputVector(resultShape, inputVectorSizes)))
     return failure();
 

@@ -779,8 +779,8 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
   // CHECK: %[[C16:.*]] = arith.constant 16 : index
   // CHECK: %[[MSK0:.*]] = vector.create_mask %[[C8]], %[[C80]], %[[C32]], %[[C16]] : vector<4x16x32x16xi1>
   // CHECK: %[[READ:.*]] = vector.mask %[[MSK0]] {{.*}} : vector<4x16x32x16xi1> -> vector<4x16x32x16xf32>
-  // CHECK: %[[TRANSP:.*]] = vector.transpose %[[READ]], [0, 2, 1, 3] : vector<4x16x32x16xf32> to vector<4x32x16x16xf32>
-  // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[TRANSP]] : vector<4x32x16x16xf32> to vector<128x256xf32>
+  // CHECK: %[[TRANSP:.*]] = vector.transpose %[[READ]], [2, 0, 1, 3] : vector<4x16x32x16xf32> to vector<32x4x16x16xf32>
+  // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[TRANSP]] : vector<32x4x16x16xf32> to vector<128x256xf32>
   // CHECK: %[[EMPT:.*]] = tensor.empty() : tensor<256x128xf32>
   // CHECK: %[[C00:.*]] = arith.constant 0 : index
   // CHECK: %[[WRIT:.*]] = vector.transfer_write %[[SHAPC]], {{.*}} : vector<128x256xf32>, tensor<256x128xf32>
