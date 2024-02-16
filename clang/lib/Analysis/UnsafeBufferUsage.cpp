@@ -2324,6 +2324,7 @@ static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
   }
   // The only exception is that for `T *ident` we'll add a single space between
   // "std::span<T>" and "ident".
+  // FIXME: The condition is false for identifiers expended from macros.
   if (EndLocForReplacement.getLocWithOffset(1) == getVarDeclIdentifierLoc(D))
     SS << " ";
 
