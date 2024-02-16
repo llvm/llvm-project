@@ -1293,7 +1293,11 @@ Error IndexedInstrProfReader::readHeader() {
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
 
+    // Writer first writes the length of compressed string, and then the actual
+    // content.
     VTableNamePtr = (const char *)Ptr;
+    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
