@@ -29,7 +29,7 @@ struct TSDRegistrySharedT {
   using ThisT = TSDRegistrySharedT<Allocator, TSDsArraySize, DefaultTSDCount>;
 
   struct ScopedTSD {
-    ScopedTSD(ThisT &TSDRegistry) {
+    ALWAYS_INLINE ScopedTSD(ThisT &TSDRegistry) {
       CurrentTSD = TSDRegistry.getTSDAndLock();
       DCHECK_NE(CurrentTSD, nullptr);
     }
@@ -133,7 +133,7 @@ struct TSDRegistrySharedT {
   }
 
 private:
-  ALWAYS_INLINE TSD<Allocator> *getTSDAndLock() NO_THREAD_SAFETY_ANALYSIS {
+  TSD<Allocator> *getTSDAndLock() NO_THREAD_SAFETY_ANALYSIS {
     TSD<Allocator> *TSD = getCurrentTSD();
     DCHECK(TSD);
     // Try to lock the currently associated context.
