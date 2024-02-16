@@ -8,9 +8,6 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Spmdization.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
@@ -128,92 +125,24 @@ targetShardingInSplitLastAxis(MLIRContext *ctx, MeshShardingAttr sourceSharding,
       sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
 }
 
-static ShapedType targetShapeInSplitLastAxis(ShapedType sourceShape,
-                                             int64_t splitTensorAxis,
-                                             int64_t splitCount) {
-  SmallVector<int64_t> targetShape = llvm::to_vector(sourceShape.getShape());
-  targetShape[splitTensorAxis] =
-      shardDimension(targetShape[splitTensorAxis], splitCount);
-  return sourceShape.cloneWith(targetShape, sourceShape.getElementType());
-}
-
 // Split a replicated tensor along a mesh axis.
 // e.g. [[0, 1]] -> [[0, 1, 2]].
 // Returns the spmdized target value with its sharding.
-//
-// The implementation is the extract the tensor slice corresponding
-// to the current device.
 static std::tuple<TypedValue<ShapedType>, MeshShardingAttr>
 splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                           MeshShardingAttr sourceSharding,
                           TypedValue<ShapedType> sourceShard, MeshOp mesh,
                           int64_t splitTensorAxis, MeshAxis splitMeshAxis) {
-  MLIRContext *ctx = builder.getContext();
-  builder.setInsertionPointAfterValue(sourceShard);
-
-  Value zero = builder.create<arith::ConstantOp>(builder.getIndexAttr(0));
-
-  Value processIndexAlongAxis =
+  TypedValue<ShapedType> targetShard =
       builder
-          .create<ProcessMultiIndexOp>(mesh.getSymName(),
-                                       SmallVector<MeshAxis>({splitMeshAxis}))
-          .getResult()[0];
-
+          .create<AllSliceOp>(sourceShard, mesh,
+                              ArrayRef<MeshAxis>(splitMeshAxis),
+                              splitTensorAxis)
+          .getResult()
+          .cast<TypedValue<ShapedType>>();
   MeshShardingAttr targetSharding = targetShardingInSplitLastAxis(
-      ctx, sourceSharding, splitTensorAxis, splitMeshAxis);
-  ShapedType targetShape = targetShapeInSplitLastAxis(
-      sourceShard.getType(), splitTensorAxis, mesh.getShape()[splitMeshAxis]);
-
-  Value meshAxisSize =
-      builder
-          .create<MeshShapeOp>(mesh.getSymName(),
-                               SmallVector<MeshAxis>({splitMeshAxis}))
-          .getResult()[0];
-
-  Value sourceAxisSize =
-      builder.create<tensor::DimOp>(sourceShard, splitTensorAxis);
-  Value sourceAxisSizeModMeshAxisSize =
-      builder.create<arith::RemUIOp>(sourceAxisSize, meshAxisSize);
-  Value isTargetShapeExactlyDivisible = builder.create<arith::CmpIOp>(
-      arith::CmpIPredicate::eq, sourceAxisSizeModMeshAxisSize, zero);
-  builder.create<cf::AssertOp>(
-      isTargetShapeExactlyDivisible,
-      "Sharding a tensor with axis size that is not exactly divisible by the "
-      "mesh axis size is not supported.");
-  Value targetAxisSize =
-      builder.create<arith::DivUIOp>(sourceAxisSize, meshAxisSize);
-  Value axisOffset =
-      builder.create<arith::MulIOp>(targetAxisSize, processIndexAlongAxis);
-  SmallVector<int64_t> staticOffsets(targetShape.getRank(), 0);
-  staticOffsets[splitTensorAxis] = ShapedType::kDynamic;
-  DenseI64ArrayAttr staticOffsetsAttr =
-      DenseI64ArrayAttr::get(ctx, staticOffsets);
-  SmallVector<Value> dynamicOffsets(1, axisOffset);
-
-  DenseI64ArrayAttr staticSizesAttr =
-      DenseI64ArrayAttr::get(ctx, targetShape.getShape());
-  SmallVector<Value> dynamicSizes;
-  for (int64_t i = 0; i < targetShape.getRank(); ++i) {
-    if (ShapedType::isDynamic(staticSizesAttr.asArrayRef()[i])) {
-      if (i == splitTensorAxis) {
-        dynamicSizes.push_back(targetAxisSize);
-      } else {
-        Value dimSize = builder.create<tensor::DimOp>(sourceShard, i);
-        dynamicSizes.push_back(dimSize);
-      }
-    }
-  }
-
-  DenseI64ArrayAttr staticStridesAttr = DenseI64ArrayAttr::get(
-      ctx, SmallVector<int64_t>(targetShape.getRank(), 1));
-  TypedValue<RankedTensorType> targetShard =
-      builder
-          .create<tensor::ExtractSliceOp>(
-              targetShape, sourceShard, dynamicOffsets, dynamicSizes,
-              SmallVector<Value>({}), staticOffsetsAttr, staticSizesAttr,
-              staticStridesAttr)
-          .getResult();
-  return {targetShard.cast<TypedValue<ShapedType>>(), targetSharding};
+      builder.getContext(), sourceSharding, splitTensorAxis, splitMeshAxis);
+  return {targetShard, targetSharding};
 }
 
 // Detect if the resharding is of type e.g.
@@ -587,8 +516,7 @@ TypedValue<ShapedType> reshard(OpBuilder &builder, ShardOp source,
 }
 
 void reshardingRegisterDependentDialects(DialectRegistry &registry) {
-  registry.insert<arith::ArithDialect, mesh::MeshDialect, tensor::TensorDialect,
-                  cf::ControlFlowDialect>();
+  registry.insert<mesh::MeshDialect, tensor::TensorDialect>();
 }
 
 #define GEN_PASS_DEF_SPMDIZATION

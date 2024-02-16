@@ -123,7 +123,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
   // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64) {
+  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
     setLibcallName(RTLIB::REM_F128, "fmodf128");
     setLibcallName(RTLIB::FMA_F128, "fmaf128");
     setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
@@ -963,6 +963,9 @@ void TargetLoweringBase::initActions() {
 
   // Most targets also ignore the @llvm.readcyclecounter intrinsic.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Expand);
+
+  // Most targets also ignore the @llvm.readsteadycounter intrinsic.
+  setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Expand);
 
   // ConstantFP nodes default to expand.  Targets can either change this to
   // Legal, in which case all fp constants are legal, or use isFPImmLegal()

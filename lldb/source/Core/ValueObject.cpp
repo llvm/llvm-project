@@ -1312,6 +1312,8 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
     }
 
+    // If the requested display style produced no output, try falling back to
+    // alternative presentations.
     if (str.empty()) {
       if (val_obj_display == eValueObjectRepresentationStyleValue)
         str = GetSummaryAsCString();

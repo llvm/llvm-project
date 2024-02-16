@@ -91,6 +91,7 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %sparse_input2 : tensor<3x6xi8, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<5x6xi32>
 
     return
   }

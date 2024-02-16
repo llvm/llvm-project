@@ -3,63 +3,47 @@
 // RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -D__HLSL_ENABLE_16_BIT -o - | FileCheck %s --check-prefix=NO_HALF
+// RUN:   -o - | FileCheck %s --check-prefix=NO_HALF
 
 #ifdef __HLSL_ENABLE_16_BIT
 // CHECK: define noundef i16 @
 // CHECK: call i16 @llvm.smax.i16(
-// NO_HALF: define noundef i16 @"?test_max_short@@YAFFF@Z"(
-// NO_HALF: call i16 @llvm.smax.i16(
 int16_t test_max_short ( int16_t p0, int16_t p1 ) {
   return max ( p0, p1 );
 }
 // CHECK: define noundef <2 x i16> @
 // CHECK: call <2 x i16> @llvm.smax.v2i16(
-// NO_HALF: define noundef <2 x i16> @"?test_max_short2@@YAT?$__vector@F$01@__clang@@T12@0@Z"(
-// NO_HALF: call <2 x i16> @llvm.smax.v2i16(
 int16_t2 test_max_short2 ( int16_t2 p0, int16_t2 p1 ) {
   return max ( p0, p1 );
 }
 // CHECK: define noundef <3 x i16> @
 // CHECK: call <3 x i16> @llvm.smax.v3i16
-// NO_HALF: define noundef <3 x i16> @"?test_max_short3@@YAT?$__vector@F$02@__clang@@T12@0@Z"(
-// NO_HALF: call <3 x i16> @llvm.smax.v3i16(
 int16_t3 test_max_short3 ( int16_t3 p0, int16_t3 p1 ) {
   return max ( p0, p1 );
 }
 // CHECK: define noundef <4 x i16> @
 // CHECK: call <4 x i16> @llvm.smax.v4i16
-// NO_HALF: define noundef <4 x i16> @"?test_max_short4@@YAT?$__vector@F$03@__clang@@T12@0@Z"(
-// NO_HALF: call <4 x i16> @llvm.smax.v4i16(
 int16_t4 test_max_short4 ( int16_t4 p0, int16_t4 p1 ) {
   return max ( p0, p1 );
 }
 
 // CHECK: define noundef i16 @
 // CHECK: call i16 @llvm.umax.i16(
-// NO_HALF: define noundef i16 @"?test_max_ushort@@YAGGG@Z"(
-// NO_HALF: call i16 @llvm.umax.i16(
 uint16_t test_max_ushort ( uint16_t p0, uint16_t p1 ) {
   return max ( p0, p1 );
 }
 // CHECK: define noundef <2 x i16> @
 // CHECK: call <2 x i16> @llvm.umax.v2i16
-// NO_HALF: define noundef <2 x i16> @"?test_max_ushort2@@YAT?$__vector@G$01@__clang@@T12@0@Z"(
-// NO_HALF: call <2 x i16> @llvm.umax.v2i16(
 uint16_t2 test_max_ushort2 ( uint16_t2 p0, uint16_t2 p1 ) {
   return max ( p0, p1 );
 }
 // CHECK: define noundef <3 x i16> @
 // CHECK: call <3 x i16> @llvm.umax.v3i16
-// NO_HALF: define noundef <3 x i16> @"?test_max_ushort3@@YAT?$__vector@G$02@__clang@@T12@0@Z"(
-// NO_HALF: call <3 x i16> @llvm.umax.v3i16(
 uint16_t3 test_max_ushort3 ( uint16_t3 p0, uint16_t3 p1 ) {
   return max ( p0, p1 );
 }
 // CHECK: define noundef <4 x i16> @
 // CHECK: call <4 x i16> @llvm.umax.v4i16
-// NO_HALF: define noundef <4 x i16> @"?test_max_ushort4@@YAT?$__vector@G$03@__clang@@T12@0@Z"(
-// NO_HALF: call <4 x i16> @llvm.umax.v4i16(
 uint16_t4 test_max_ushort4 ( uint16_t4 p0, uint16_t4 p1 ) {
   return max ( p0, p1 );
 }

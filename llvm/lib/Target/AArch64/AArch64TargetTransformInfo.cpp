@@ -1630,6 +1630,36 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
+static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *A, *B;
+  Type *RetTy = II.getType();
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
+
+  // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
+  // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+  if ((match(II.getArgOperand(0),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
+       match(II.getArgOperand(1),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
+    auto *TyA = cast<ScalableVectorType>(A->getType());
+    if (TyA == B->getType() &&
+        RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
+      auto *SubVec = IC.Builder.CreateInsertVector(
+          RetTy, PoisonValue::get(RetTy), A, IC.Builder.getInt64(0));
+      auto *ConcatVec = IC.Builder.CreateInsertVector(
+          RetTy, SubVec, B, IC.Builder.getInt64(TyA->getMinNumElements()));
+      ConcatVec->takeName(&II);
+      return IC.replaceInstUsesWith(II, ConcatVec);
+    }
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // zip1(uzp1(A, B), uzp2(A, B)) --> A
@@ -2012,6 +2042,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_uzp1:
+    return instCombineSVEUzp1(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);

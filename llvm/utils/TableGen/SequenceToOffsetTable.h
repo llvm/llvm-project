@@ -87,7 +87,7 @@ public:
     if (I != Seqs.end() && isSuffix(Seq, I->first))
       return;
 
-    I = Seqs.insert(I, std::make_pair(Seq, 0u));
+    I = Seqs.insert(I, std::pair(Seq, 0u));
 
     // The entry before I may be a suffix of Seq that can now be erased.
     if (I != Seqs.begin() && isSuffix((--I)->first, Seq))
