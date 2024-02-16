@@ -1616,6 +1616,18 @@ struct CStructAlignment {
 
 struct CStructIncomplete;
 
+struct CStructNested {
+  int a;
+  CStruct s;
+  int b;
+};
+
+struct CStructNested2 {
+  int a2;
+  CStruct s2;
+  int b2;
+};
+
 enum EnumLayout : int {};
 enum class EnumClassLayout {};
 
@@ -1668,6 +1680,7 @@ void is_layout_compatible()
   static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*), "");
   static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)), "");
   static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)), "");
+  static_assert(__is_layout_compatible(CStructNested, CStructNested2), "");
 }
 
 void is_signed()
