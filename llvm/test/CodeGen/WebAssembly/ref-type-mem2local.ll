@@ -7,9 +7,12 @@ target triple = "wasm32-unknown-unknown"
 
 declare %funcref @get_funcref()
 declare %externref @get_externref()
+declare i32 @get_i32()
 declare void @take_funcref(%funcref)
 declare void @take_externref(%externref)
+declare void @take_i32(i32)
 
+; Reference type allocas should be moved to addrspace(1)
 ; CHECK-LABEL: @test_ref_type_mem2local
 define void @test_ref_type_mem2local() {
 entry:
@@ -34,6 +37,21 @@ entry:
   ; CHECK-NEXT: store ptr addrspace(20) %fref, ptr addrspace(1) %alloc.funcref.var, align 1
   ; CHECK-NEXT: %fref.loaded = load ptr addrspace(20), ptr addrspace(1) %alloc.funcref.var, align 1
   ; CHECK-NEXT: call void @take_funcref(ptr addrspace(20) %fref.loaded)
+
+  ret void
+}
+
+; POD type allocas should stay the same
+; CHECK-LABEL: @test_pod_type
+define void @test_pod_type() {
+entry:
+  %alloc.i32 = alloca i32
+  %i32 = call i32 @get_i32()
+  store i32 %i32, ptr %alloc.i32
+  %i32.loaded = load i32, ptr %alloc.i32
+  call void @take_i32(i32 %i32.loaded)
+  ; CHECK: %alloc.i32 = alloca i32, align 4{{$}}
+  ; CHECK-NOT: addrspace(1)
 
   ret void
 }
