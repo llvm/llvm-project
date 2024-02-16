@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 -Wcast-qual %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -24,6 +24,7 @@ _Static_assert(!!1, "");
 int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // all-error {{not an integral constant expression}}
 
+const int DiscardedPtrToIntCast = ((intptr_t)((void*)0), 0); // all-warning {{left operand of comma operator has no effect}}
 
 const int b = 3;
 _Static_assert(b == 3, ""); // pedantic-ref-warning {{not an integer constant expression}} \
@@ -112,3 +113,40 @@ _Static_assert(sizeof(name2) == 0, ""); // expected-error {{failed}} \
 #ifdef __SIZEOF_INT128__
 void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1]; // all-warning {{refers past the last possible element}}
 #endif
+
+extern float global_float;
+struct XX { int a, *b; };
+struct XY { int before; struct XX xx, *xp; float* after; } xy[] = {
+  0, 0, &xy[0].xx.a, &xy[0].xx, &global_float,
+  [1].xx = 0, &xy[1].xx.a, &xy[1].xx, &global_float,
+  0,              // all-note {{previous initialization is here}}
+  0,              // all-note {{previous initialization is here}}
+  [2].before = 0, // all-warning {{initializer overrides prior initialization of this subobject}}
+  0,              // all-warning {{initializer overrides prior initialization of this subobject}}
+  &xy[2].xx.a, &xy[2].xx, &global_float
+};
+
+void t14(void) {
+  int array[256] = { 0 }; // expected-note {{array 'array' declared here}} \
+                          // pedantic-expected-note {{array 'array' declared here}} \
+                          // ref-note {{array 'array' declared here}} \
+                          // pedantic-ref-note {{array 'array' declared here}}
+  const char b = -1;
+  int val = array[b]; // expected-warning {{array index -1 is before the beginning of the array}} \
+                      // pedantic-expected-warning {{array index -1 is before the beginning of the array}} \
+                      // ref-warning {{array index -1 is before the beginning of the array}} \
+                      // pedantic-ref-warning {{array index -1 is before the beginning of the array}}
+
+}
+
+void bar_0(void) {
+  struct C {
+    const int a;
+    int b;
+  };
+
+  const struct C S = {0, 0};
+
+  *(int *)(&S.a) = 0; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+  *(int *)(&S.b) = 0; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+}

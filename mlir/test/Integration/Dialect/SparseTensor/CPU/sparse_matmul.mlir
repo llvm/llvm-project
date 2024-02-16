@@ -316,10 +316,19 @@ module {
     bufferization.dealloc_tensor %b2 : tensor<8x4xf64, #DCSR>
     bufferization.dealloc_tensor %b3 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %b4 : tensor<8x4xf64, #DCSR>
+    bufferization.dealloc_tensor %c1 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c2 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c4 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c5 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c7 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c8 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %0 : tensor<4x4xf64>
     bufferization.dealloc_tensor %1 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %2 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %3 : tensor<4x4xf64>
     bufferization.dealloc_tensor %4 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %5 : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %6 : tensor<4x4xf64>
     bufferization.dealloc_tensor %7 : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %8 : tensor<4x4xf64, #DCSR>
 
