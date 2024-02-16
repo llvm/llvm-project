@@ -74,14 +74,14 @@ StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
                                               SourceLocation EndLoc,
                                               StmtResult AssocStmt) {
   switch (K) {
-    default:
-      return StmtEmpty();
-    case OpenACCDirectiveKind::Invalid:
-      return StmtError();
-    case OpenACCDirectiveKind::Parallel:
-      return OpenACCComputeConstruct::Create(
-          getASTContext(), K, StartLoc, EndLoc,
-          AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+  default:
+    return StmtEmpty();
+  case OpenACCDirectiveKind::Invalid:
+    return StmtError();
+  case OpenACCDirectiveKind::Parallel:
+    return OpenACCComputeConstruct::Create(
+        getASTContext(), K, StartLoc, EndLoc,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
@@ -90,7 +90,7 @@ StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
                                             StmtResult AssocStmt) {
   switch (K) {
   default:
-  llvm_unreachable("Unimplemented associated statement application");
+    llvm_unreachable("Unimplemented associated statement application");
   case OpenACCDirectiveKind::Parallel:
     // There really isn't any checking here that could happen. As long as we
     // have a statement to associate, this should be fine.
