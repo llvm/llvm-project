@@ -15,6 +15,7 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
 class ObjCRuntimeSyntheticProvider : public SyntheticChildren {
@@ -49,7 +50,9 @@ public:
 
     size_t CalculateNumChildren() override;
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-    bool Update() override { return false; }
+    lldb::ChildCacheState Update() override {
+      return lldb::ChildCacheState::eRefetch;
+    }
     bool MightHaveChildren() override { return true; }
     size_t GetIndexOfChildWithName(ConstString name) override;
 

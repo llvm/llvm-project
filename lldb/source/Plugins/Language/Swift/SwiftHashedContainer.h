@@ -13,6 +13,7 @@
 #ifndef liblldb_SwiftHashedContainer_h_
 #define liblldb_SwiftHashedContainer_h_
 
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Utility/ConstString.h"
@@ -135,7 +136,7 @@ public:
 
   size_t CalculateNumChildren() override;
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;
 

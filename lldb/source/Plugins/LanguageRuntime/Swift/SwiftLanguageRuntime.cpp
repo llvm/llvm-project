@@ -45,6 +45,7 @@
 #include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/Timer.h"
 
+#include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/RemoteInspection/ReflectionContext.h"
@@ -1759,7 +1760,9 @@ protected:
       return UINT32_MAX;
     }
 
-    bool Update() override { return false; }
+    lldb::ChildCacheState Update() override {
+      return ChildCacheState::eRefetch;
+    }
 
     bool MightHaveChildren() override { return true; }
 

@@ -22,6 +22,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 
 #include "Plugins/Language/ObjC/NSDictionary.h"
+#include "lldb/lldb-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -719,10 +720,10 @@ HashedSyntheticChildrenFrontEnd::GetChildAtIndex(size_t idx) {
   return child_sp;
 }
 
-bool
+lldb::ChildCacheState
 HashedSyntheticChildrenFrontEnd::Update() {
   m_buffer = m_config.CreateHandler(m_backend);
-  return false;
+  return ChildCacheState::eRefetch;
 }
 
 bool

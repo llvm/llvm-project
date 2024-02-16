@@ -22,6 +22,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-enumerations.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/ADT/StringRef.h"
@@ -712,7 +713,7 @@ public:
 
   size_t CalculateNumChildren() override;
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -748,13 +749,14 @@ lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetChildAtIndex(
   return m_backend.GetChildAtIndex(m_child_index, true);
 }
 
-bool lldb_private::formatters::swift::EnumSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::swift::EnumSyntheticFrontEnd::Update() {
   m_element_name.Clear();
   m_child_index = UINT32_MAX;
   m_exe_ctx_ref = m_backend.GetExecutionContextRef();
   m_element_name.SetCString(m_backend.GetValueAsCString());
   m_child_index = m_backend.GetIndexOfChildWithName(m_element_name);
-  return false;
+  return ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::swift::EnumSyntheticFrontEnd::

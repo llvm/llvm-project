@@ -13,6 +13,7 @@
 #ifndef liblldb_SwiftArray_h_
 #define liblldb_SwiftArray_h_
 
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Utility/ConstString.h"
@@ -165,7 +166,7 @@ public:
   ArraySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
   size_t CalculateNumChildren() override;
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
   size_t GetIndexOfChildWithName(ConstString name) override;
   bool IsValid();
