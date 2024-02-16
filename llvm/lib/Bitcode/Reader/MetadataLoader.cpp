@@ -1623,6 +1623,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Allocated = nullptr;
     Metadata *Rank = nullptr;
     Metadata *Annotations = nullptr;
+    Metadata *SpecificationOf = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported as
@@ -1671,19 +1672,22 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Record.size() > 21) {
         Annotations = getMDOrNull(Record[21]);
       }
+      if (Record.size() > 23) {
+        SpecificationOf = getMDOrNull(Record[23]);
+      }
     }
     DICompositeType *CT = nullptr;
     APInt SpareBitsMask;
     // SpareBitsMask is an optional field so the metadata loader has to check if
     // it was emitted before accessing it.
-    if (Record.size() > 23) {
+    if (Record.size() > 24) {
       if (IsBigInt) {
-        const uint64_t BitWidth = Record[23];
+        const uint64_t BitWidth = Record[24];
         const size_t NumWords = Record.size() - 3;
         SpareBitsMask =
-            readWideAPInt(ArrayRef(&Record[24], NumWords), BitWidth);
+            readWideAPInt(ArrayRef(&Record[25], NumWords), BitWidth);
       } else {
-        const uint64_t IntValue = Record[23];
+        const uint64_t IntValue = Record[24];
         SpareBitsMask = APInt(64, IntValue);
       }
     }
@@ -1691,10 +1695,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
-          SizeInBits, AlignInBits, OffsetInBits, NumExtraInhabitants,
-          SpareBitsMask, Flags, Elements, RuntimeLang, VTableHolder,
-          TemplateParams, Discriminator, DataLocation, Associated, Allocated,
-          Rank, Annotations);
+          SizeInBits, AlignInBits, OffsetInBits, SpecificationOf,
+          NumExtraInhabitants, SpareBitsMask, Flags, Elements, RuntimeLang,
+          VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
+          Allocated, Rank, Annotations);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1703,8 +1707,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
-                            Allocated, Rank, Annotations, NumExtraInhabitants,
-                            SpareBitsMask));
+                            Allocated, Rank, Annotations, SpecificationOf,
+                            NumExtraInhabitants, SpareBitsMask));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

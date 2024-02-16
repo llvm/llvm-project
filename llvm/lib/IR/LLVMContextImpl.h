@@ -652,6 +652,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *Allocated;
   Metadata *Rank;
   Metadata *Annotations;
+  Metadata *SpecificationOf;
   uint32_t NumExtraInhabitants;
   APInt SpareBitsMask;
 
@@ -663,7 +664,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
                 MDString *Identifier, Metadata *Discriminator,
                 Metadata *DataLocation, Metadata *Associated,
                 Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
-                uint32_t NumExtraInhabitants, APInt SpareBitsMask)
+                Metadata *SpecificationOf, uint32_t NumExtraInhabitants,
+                APInt SpareBitsMask)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
@@ -671,8 +673,9 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         TemplateParams(TemplateParams), Identifier(Identifier),
         Discriminator(Discriminator), DataLocation(DataLocation),
         Associated(Associated), Allocated(Allocated), Rank(Rank),
-        Annotations(Annotations), NumExtraInhabitants(NumExtraInhabitants),
-        SpareBitsMask(SpareBitsMask) {}
+        Annotations(Annotations), SpecificationOf(SpecificationOf),
+        NumExtraInhabitants(NumExtraInhabitants), SpareBitsMask(SpareBitsMask) {
+  }
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -686,6 +689,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         DataLocation(N->getRawDataLocation()),
         Associated(N->getRawAssociated()), Allocated(N->getRawAllocated()),
         Rank(N->getRawRank()), Annotations(N->getRawAnnotations()),
+        SpecificationOf(N->getSpecificationOf()),
         NumExtraInhabitants(N->getNumExtraInhabitants()),
         SpareBitsMask(N->getSpareBitsMask()) {}
 
@@ -706,6 +710,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            Associated == RHS->getRawAssociated() &&
            Allocated == RHS->getRawAllocated() && Rank == RHS->getRawRank() &&
            Annotations == RHS->getRawAnnotations() &&
+           SpecificationOf == RHS->getSpecificationOf() &&
            NumExtraInhabitants == RHS->getNumExtraInhabitants() &&
            SpareBitsMask == RHS->getSpareBitsMask();
   }

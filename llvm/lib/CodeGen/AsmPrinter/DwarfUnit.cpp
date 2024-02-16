@@ -1012,6 +1012,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
                 CC);
     }
+
+    if (auto *SpecifiedFrom = CTy->getSpecificationOf())
+      addDIEEntry(Buffer, dwarf::DW_AT_specification,
+                  *getOrCreateContextDIE(SpecifiedFrom));
+
     break;
   }
   default:
