@@ -1234,13 +1234,12 @@ static bool compareSegmentsByOffset(const Segment *A, const Segment *B) {
     return true;
   if (A->OriginalOffset > B->OriginalOffset)
     return false;
-  // If one is PT_LOAD and the other isn't (e.g. PT_INTERP, PT_GNU_RELRO,
-  // PT_TLS), order the PT_LOAD first to ensure ParentSegment relationship will
-  // be correct.
-  bool AIsLOAD = A->Type == PT_LOAD;
-  bool BIsLOAD = B->Type == PT_LOAD;
-  if (AIsLOAD != BIsLOAD)
-    return AIsLOAD;
+  // If alignments are different, the one with a smaller alignment cannot be the
+  // parent; otherwise, layoutSegments will not respect the larger alignment
+  // requirement. This rule ensures that PT_LOAD/PT_INTERP/PT_GNU_RELRO/PT_TLS
+  // segments at the same offset will be aligned correctly.
+  if (A->Align != B->Align)
+    return A->Align > B->Align;
   return A->Index < B->Index;
 }
 
