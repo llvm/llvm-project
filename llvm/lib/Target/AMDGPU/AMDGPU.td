@@ -227,6 +227,21 @@ def FeatureLdsBranchVmemWARHazard : SubtargetFeature<"lds-branch-vmem-war-hazard
   "Switching between LDS and VMEM-tex not waiting VM_VSRC=0"
 >;
 
+class FeatureMaxHardClauseLength<int size> : SubtargetFeature<
+  "max-hard-clause-length-"#size,
+  "MaxHardClauseLength",
+  !cast<string>(size),
+  "Maximum number of instructions in an explicit S_CLAUSE is "#size
+>;
+
+/// Work around a hardware bug on some chips that can be triggered
+/// under certain circumstances when clauses are longer than 32 operations.
+def FeatureMaxHardClauseLength32 : FeatureMaxHardClauseLength<32>;
+/// While the S_CLAUSE instruction permits encoding clause lengths up to 64,
+/// hardware documentation for gfx10+ indicates that 63 is the maximum
+/// permitted clause length.
+def FeatureMaxHardClauseLength63 : FeatureMaxHardClauseLength<63>;
+
 def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "HasNSAtoVMEMBug",
   "true",
@@ -1164,7 +1179,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength63
   ]
 >;
 
@@ -1184,7 +1200,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureDefaultComponentZero
+   FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength32
   ]
 >;
 
@@ -1603,7 +1620,9 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
-   FeatureDPPSrc1SGPR]>;
+   FeatureDPPSrc1SGPR,
+   FeatureMaxHardClauseLength32
+]>;
 
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
@@ -1645,7 +1664,9 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
    FeaturePrngInst,
-   FeatureSupportsSRAMECC]>;
+   FeatureSupportsSRAMECC,
+   FeatureMaxHardClauseLength63
+]>;
 
 //===----------------------------------------------------------------------===//
 

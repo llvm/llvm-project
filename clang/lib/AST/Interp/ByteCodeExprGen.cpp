@@ -2586,7 +2586,7 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
       Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
       IsTemporary, /*IsMutable=*/false, Init);
   if (!D)
-    return {};
+    return std::nullopt;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
@@ -2835,14 +2835,6 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
-    // If the function is being compiled right now, this is a recursive call.
-    // In that case, the function can't be valid yet, even though it will be
-    // later.
-    // If the function is already fully compiled but not constexpr, it was
-    // found to be faulty earlier on, so bail out.
-    if (Func->isFullyCompiled() && !Func->isConstexpr())
-      return false;
-
     assert(HasRVO == Func->hasRVO());
 
     bool HasQualifier = false;
@@ -3239,9 +3231,14 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrThisField(Offset, E);
   }
 
-  // Lazily visit global declarations we haven't seen yet.
-  // This happens in C.
-  if (!Ctx.getLangOpts().CPlusPlus) {
+  // Try to lazily visit (or emit dummy pointers for) declarations
+  // we haven't seen yet.
+  if (Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isStaticLocal()) {
+      if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+        return this->emitGetPtrGlobal(*I, E);
+    }
+  } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
         VD && VD->getAnyInitializer() && VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))

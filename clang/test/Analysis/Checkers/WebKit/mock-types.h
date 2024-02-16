@@ -19,6 +19,7 @@ template <typename T> struct RefPtr {
   RefPtr(T *t) : t(t) {}
   T *get() { return t; }
   T *operator->() { return t; }
+  const T *operator->() const { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *) { return *this; }
   operator bool() { return t; }
