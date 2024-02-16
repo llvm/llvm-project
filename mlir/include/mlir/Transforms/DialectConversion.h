@@ -604,6 +604,29 @@ private:
   using ConversionPattern::matchAndRewrite;
 };
 
+/// OpTraitConversionPattern is a wrapper around ConversionPattern that allows
+/// for matching and rewriting against instances of an operation that possess a
+/// given trait.
+template <template <typename> class TraitType>
+class OpTraitConversionPattern : public ConversionPattern {
+public:
+  OpTraitConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(Pattern::MatchTraitOpTypeTag(),
+                          TypeID::get<TraitType>(), benefit, context) {}
+  OpTraitConversionPattern(const TypeConverter &typeConverter,
+                           MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(typeConverter, Pattern::MatchTraitOpTypeTag(),
+                          TypeID::get<TraitType>(), benefit, context) {}
+};
+
+/// Generic utility to convert op result types according to type converter
+/// without knowing exact op type.
+/// Clones existing op with new result types and returns it.
+FailureOr<Operation *>
+convertOpResultTypes(Operation *op, ValueRange operands,
+                     const TypeConverter &converter,
+                     ConversionPatternRewriter &rewriter);
+
 /// Add a pattern to the given pattern list to convert the signature of a
 /// FunctionOpInterface op with the given type converter. This only supports
 /// ops which use FunctionType to represent their type.
@@ -632,8 +655,7 @@ struct ConversionPatternRewriterImpl;
 /// This class implements a pattern rewriter for use with ConversionPatterns. It
 /// extends the base PatternRewriter and provides special conversion specific
 /// hooks.
-class ConversionPatternRewriter final : public PatternRewriter,
-                                        public RewriterBase::Listener {
+class ConversionPatternRewriter final : public PatternRewriter {
 public:
   explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
@@ -712,10 +734,6 @@ public:
   /// implemented for dialect conversion.
   void eraseBlock(Block *block) override;
 
-  /// PatternRewriter hook creating a new block.
-  void notifyBlockInserted(Block *block, Region *previous,
-                           Region::iterator previousIt) override;
-
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
 
@@ -724,13 +742,10 @@ public:
                          ValueRange argValues = std::nullopt) override;
   using PatternRewriter::inlineBlockBefore;
 
-  /// PatternRewriter hook for inserting a new operation.
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
-
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
-  /// and not nested regions. Updates to regions will still require notification
-  /// through other more specific hooks above.
+  /// and not nested regions. Updates to regions will still require
+  /// notification through other more specific hooks above.
   void startOpModification(Operation *op) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
@@ -739,24 +754,12 @@ public:
   /// PatternRewriter hook for updating the given operation in-place.
   void cancelOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for notifying match failure reasons.
-  void
-  notifyMatchFailure(Location loc,
-                     function_ref<void(Diagnostic &)> reasonCallback) override;
-  using PatternRewriter::notifyMatchFailure;
-
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
   // Hide unsupported pattern rewriter API.
-  using OpBuilder::getListener;
   using OpBuilder::setListener;
-
-  void moveOpBefore(Operation *op, Block *block,
-                    Block::iterator iterator) override;
-  void moveOpAfter(Operation *op, Block *block,
-                   Block::iterator iterator) override;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };

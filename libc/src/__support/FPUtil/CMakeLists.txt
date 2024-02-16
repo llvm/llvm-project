@@ -76,24 +76,6 @@ add_header_library(
 )
 
 add_header_library(
-  manipulation_functions
-  HDRS
-    ManipulationFunctions.h
-  DEPENDS
-    .fenv_impl
-    .fp_bits
-    .nearest_integer_operations
-    .normal_float
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-    libc.src.__support.macros.optimization
-    libc.include.math
-    libc.src.errno.errno
-)
-
-add_header_library(
   basic_operations
   HDRS
     BasicOperations.h
@@ -219,6 +201,25 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.uint
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  manipulation_functions
+  HDRS
+    ManipulationFunctions.h
+  DEPENDS
+    .fenv_impl
+    .fp_bits
+    .dyadic_float
+    .nearest_integer_operations
+    .normal_float
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
+    libc.src.__support.macros.optimization
+    libc.include.math
+    libc.src.errno.errno
 )
 
 add_subdirectory(generic)
