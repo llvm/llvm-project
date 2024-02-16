@@ -220,7 +220,7 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
 
 void GPUProfGlobals::dump() const {
   outs() << "======= GPU Profile =======\nTarget: " << TargetTriple.str()
-               << "\n";
+         << "\n";
 
   outs() << "======== Counters =========\n";
   for (const auto &Count : Counts) {
