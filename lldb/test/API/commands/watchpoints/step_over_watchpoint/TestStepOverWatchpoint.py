@@ -20,7 +20,7 @@ class TestStepOverWatchpoint(TestBase):
 
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
-        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        macos_version=["<", "14.4"],
         archs=["aarch64", "arm"],
         bugnumber="<rdar://problem/106868647>",
     )
@@ -63,7 +63,7 @@ class TestStepOverWatchpoint(TestBase):
 
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
-        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        macos_version=["<", "14.4"],
         archs=["aarch64", "arm"],
         bugnumber="<rdar://problem/106868647>",
     )
