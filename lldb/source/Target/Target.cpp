@@ -1491,7 +1491,7 @@ static void LoadTypeSummariesForModule(ModuleSP module_sp) {
     return;
 
   Log *log = GetLog(LLDBLog::DataFormatters);
-  const char *module_name = module_sp->GetObjectName().GetCString();
+  const char *module_name = module_sp->GetFileSpec().GetFilename().GetCString();
 
   TypeCategoryImplSP category;
   DataVisualization::Categories::GetCategory(ConstString("default"), category);
@@ -1527,7 +1527,7 @@ static void LoadTypeSummariesForModule(ModuleSP module_sp) {
         auto summary_sp =
             std::make_shared<StringSummaryFormat>(flags, summary_string.data());
         FormatterMatchType match_type = eFormatterMatchExact;
-        if (summary_string.front() == '^' && summary_string.back() == '$')
+        if (type_name.front() == '^')
           match_type = eFormatterMatchRegex;
         category->AddTypeSummary(type_name, match_type, summary_sp);
         LLDB_LOGF(log, "Loaded embedded type summary for '%s' from %s.",
