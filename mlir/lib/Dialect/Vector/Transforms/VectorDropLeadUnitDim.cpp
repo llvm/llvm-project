@@ -73,7 +73,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     VectorType oldDstType = extractOp.getType();
     VectorType newDstType =
         VectorType::get(oldDstType.getShape().drop_front(dropCount),
-                        oldDstType.getElementType());
+                        oldDstType.getElementType(),
+                        oldDstType.getScalableDims().drop_front(dropCount));
 
     Location loc = extractOp.getLoc();
 

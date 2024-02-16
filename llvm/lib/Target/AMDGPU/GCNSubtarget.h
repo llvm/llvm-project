@@ -225,6 +225,8 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
 
+  bool RequiresCOV6 = false;
+
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
@@ -1168,6 +1170,8 @@ public:
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
+  bool requiresCodeObjectV6() const { return RequiresCOV6; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
@@ -1260,12 +1264,6 @@ public:
 
   // \returns true if preloading kernel arguments is supported.
   bool hasKernargPreload() const { return KernargPreload; }
-
-  // \returns true if we need to generate backwards compatible code when
-  // preloading kernel arguments.
-  bool needsKernargPreloadBackwardsCompatibility() const {
-    return hasKernargPreload() && !hasGFX940Insts();
-  }
 
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }

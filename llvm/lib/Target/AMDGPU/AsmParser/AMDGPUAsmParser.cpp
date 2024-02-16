@@ -316,8 +316,9 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
-  bool isRegOrInlineImmWithFP16InputMods() const {
-    return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f16);
+  template <bool IsFake16> bool isRegOrInlineImmWithFP16InputMods() const {
+    return isRegOrInline(
+        IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
   bool isRegOrInlineImmWithFP32InputMods() const {
@@ -3358,11 +3359,6 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       (isForcedDPP() && !(TSFlags & SIInstrFlags::DPP)) ||
       (isForcedSDWA() && !(TSFlags & SIInstrFlags::SDWA)) )
     return Match_InvalidOperand;
-
-  if ((TSFlags & SIInstrFlags::VOP3) &&
-      (TSFlags & SIInstrFlags::VOPAsmPrefer32Bit) &&
-      getForcedEncodingSize() != 64)
-    return Match_PreferE32;
 
   if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa_vi ||
       Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa_vi) {
@@ -8213,7 +8209,7 @@ ParseStatus AMDGPUAsmParser::parseOModSI(OperandVector &Operands) {
 
 // Determines which bit DST_OP_SEL occupies in the op_sel operand according to
 // the number of src operands present, then copies that bit into src0_modifiers.
-void cvtVOP3DstOpSelOnly(MCInst &Inst) {
+static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
   int Opc = Inst.getOpcode();
   int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
   if (OpSelIdx == -1)
@@ -8230,23 +8226,34 @@ void cvtVOP3DstOpSelOnly(MCInst &Inst) {
 
   unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
 
-  if ((OpSel & (1 << SrcNum)) != 0) {
-    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
-    uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
-    Inst.getOperand(ModIdx).setImm(ModVal | SISrcMods::DST_OP_SEL);
+  int DstIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+  if (DstIdx == -1)
+    return;
+
+  const MCOperand &DstOp = Inst.getOperand(DstIdx);
+  int ModIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+  uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
+  if (DstOp.isReg() &&
+      MRI.getRegClass(AMDGPU::VGPR_16RegClassID).contains(DstOp.getReg())) {
+    if (AMDGPU::isHi(DstOp.getReg(), MRI))
+      ModVal |= SISrcMods::DST_OP_SEL;
+  } else {
+    if ((OpSel & (1 << SrcNum)) != 0)
+      ModVal |= SISrcMods::DST_OP_SEL;
   }
+  Inst.getOperand(ModIdx).setImm(ModVal);
 }
 
 void AMDGPUAsmParser::cvtVOP3OpSel(MCInst &Inst,
                                    const OperandVector &Operands) {
   cvtVOP3P(Inst, Operands);
-  cvtVOP3DstOpSelOnly(Inst);
+  cvtVOP3DstOpSelOnly(Inst, *getMRI());
 }
 
 void AMDGPUAsmParser::cvtVOP3OpSel(MCInst &Inst, const OperandVector &Operands,
                                    OptionalImmIndexMap &OptionalIdx) {
   cvtVOP3P(Inst, Operands, OptionalIdx);
-  cvtVOP3DstOpSelOnly(Inst);
+  cvtVOP3DstOpSelOnly(Inst, *getMRI());
 }
 
 static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
@@ -8495,8 +8502,17 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 
     uint32_t ModVal = 0;
 
-    if ((OpSel & (1 << J)) != 0)
-      ModVal |= SISrcMods::OP_SEL_0;
+    const MCOperand &SrcOp = Inst.getOperand(OpIdx);
+    if (SrcOp.isReg() && getMRI()
+                             ->getRegClass(AMDGPU::VGPR_16RegClassID)
+                             .contains(SrcOp.getReg())) {
+      bool VGPRSuffixIsHi = AMDGPU::isHi(SrcOp.getReg(), *getMRI());
+      if (VGPRSuffixIsHi)
+        ModVal |= SISrcMods::OP_SEL_0;
+    } else {
+      if ((OpSel & (1 << J)) != 0)
+        ModVal |= SISrcMods::OP_SEL_0;
+    }
 
     if ((OpSelHi & (1 << J)) != 0)
       ModVal |= SISrcMods::OP_SEL_1;

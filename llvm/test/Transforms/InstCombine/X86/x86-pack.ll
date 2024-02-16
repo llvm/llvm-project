@@ -7,7 +7,7 @@
 
 define <8 x i16> @undef_packssdw_128() {
 ; CHECK-LABEL: @undef_packssdw_128(
-; CHECK-NEXT:    ret <8 x i16> undef
+; CHECK-NEXT:    ret <8 x i16> poison
 ;
   %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> undef, <4 x i32> undef)
   ret <8 x i16> %1
@@ -15,7 +15,7 @@ define <8 x i16> @undef_packssdw_128() {
 
 define <8 x i16> @undef_packusdw_128() {
 ; CHECK-LABEL: @undef_packusdw_128(
-; CHECK-NEXT:    ret <8 x i16> undef
+; CHECK-NEXT:    ret <8 x i16> poison
 ;
   %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> undef, <4 x i32> undef)
   ret <8 x i16> %1
@@ -23,7 +23,7 @@ define <8 x i16> @undef_packusdw_128() {
 
 define <16 x i8> @undef_packsswb_128() {
 ; CHECK-LABEL: @undef_packsswb_128(
-; CHECK-NEXT:    ret <16 x i8> undef
+; CHECK-NEXT:    ret <16 x i8> poison
 ;
   %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> undef, <8 x i16> undef)
   ret <16 x i8> %1
@@ -31,7 +31,7 @@ define <16 x i8> @undef_packsswb_128() {
 
 define <16 x i8> @undef_packuswb_128() {
 ; CHECK-LABEL: @undef_packuswb_128(
-; CHECK-NEXT:    ret <16 x i8> undef
+; CHECK-NEXT:    ret <16 x i8> poison
 ;
   %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> undef, <8 x i16> undef)
   ret <16 x i8> %1
@@ -39,7 +39,7 @@ define <16 x i8> @undef_packuswb_128() {
 
 define <16 x i16> @undef_packssdw_256() {
 ; CHECK-LABEL: @undef_packssdw_256(
-; CHECK-NEXT:    ret <16 x i16> undef
+; CHECK-NEXT:    ret <16 x i16> poison
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> undef, <8 x i32> undef)
   ret <16 x i16> %1
@@ -47,7 +47,7 @@ define <16 x i16> @undef_packssdw_256() {
 
 define <16 x i16> @undef_packusdw_256() {
 ; CHECK-LABEL: @undef_packusdw_256(
-; CHECK-NEXT:    ret <16 x i16> undef
+; CHECK-NEXT:    ret <16 x i16> poison
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> undef, <8 x i32> undef)
   ret <16 x i16> %1
@@ -55,7 +55,7 @@ define <16 x i16> @undef_packusdw_256() {
 
 define <32 x i8> @undef_packsswb_256() {
 ; CHECK-LABEL: @undef_packsswb_256(
-; CHECK-NEXT:    ret <32 x i8> undef
+; CHECK-NEXT:    ret <32 x i8> poison
 ;
   %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> undef, <16 x i16> undef)
   ret <32 x i8> %1
@@ -63,7 +63,7 @@ define <32 x i8> @undef_packsswb_256() {
 
 define <32 x i8> @undef_packuswb_256() {
 ; CHECK-LABEL: @undef_packuswb_256(
-; CHECK-NEXT:    ret <32 x i8> undef
+; CHECK-NEXT:    ret <32 x i8> poison
 ;
   %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> undef, <16 x i16> undef)
   ret <32 x i8> %1
@@ -71,7 +71,7 @@ define <32 x i8> @undef_packuswb_256() {
 
 define <32 x i16> @undef_packssdw_512() {
 ; CHECK-LABEL: @undef_packssdw_512(
-; CHECK-NEXT:    ret <32 x i16> undef
+; CHECK-NEXT:    ret <32 x i16> poison
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.packssdw.512(<16 x i32> undef, <16 x i32> undef)
   ret <32 x i16> %1
@@ -79,7 +79,7 @@ define <32 x i16> @undef_packssdw_512() {
 
 define <32 x i16> @undef_packusdw_512() {
 ; CHECK-LABEL: @undef_packusdw_512(
-; CHECK-NEXT:    ret <32 x i16> undef
+; CHECK-NEXT:    ret <32 x i16> poison
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.packusdw.512(<16 x i32> undef, <16 x i32> undef)
   ret <32 x i16> %1
@@ -87,7 +87,7 @@ define <32 x i16> @undef_packusdw_512() {
 
 define <64 x i8> @undef_packsswb_512() {
 ; CHECK-LABEL: @undef_packsswb_512(
-; CHECK-NEXT:    ret <64 x i8> undef
+; CHECK-NEXT:    ret <64 x i8> poison
 ;
   %1 = call <64 x i8> @llvm.x86.avx512.packsswb.512(<32 x i16> undef, <32 x i16> undef)
   ret <64 x i8> %1
@@ -95,7 +95,7 @@ define <64 x i8> @undef_packsswb_512() {
 
 define <64 x i8> @undef_packuswb_512() {
 ; CHECK-LABEL: @undef_packuswb_512(
-; CHECK-NEXT:    ret <64 x i8> undef
+; CHECK-NEXT:    ret <64 x i8> poison
 ;
   %1 = call <64 x i8> @llvm.x86.avx512.packuswb.512(<32 x i16> undef, <32 x i16> undef)
   ret <64 x i8> %1

@@ -2173,17 +2173,32 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   if (ResVT.isScalableVector() || SrcVT.isScalableVector())
     return false;
 
-  unsigned ResElts = ResVT.getVectorNumElements();
-  unsigned SrcElts = SrcVT.getVectorNumElements();
-
-  // Convervatively only handle extracting half of a vector.
-  // TODO: Relax this.
-  if ((ResElts * 2) != SrcElts)
-    return false;
+  EVT EltVT = ResVT.getVectorElementType();
+  assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
   // TODO: We can extract index 0 from a mask vector without a slide.
-  if (ResVT.getVectorElementType() == MVT::i1)
+  if (EltVT == MVT::i1)
+    return false;
+
+  unsigned ResElts = ResVT.getVectorNumElements();
+  unsigned SrcElts = SrcVT.getVectorNumElements();
+
+  unsigned MinVLen = Subtarget.getRealMinVLen();
+  unsigned MinVLMAX = MinVLen / EltVT.getSizeInBits();
+
+  // If we're extracting only data from the first VLEN bits of the source
+  // then we can always do this with an m1 vslidedown.vx.  Restricting the
+  // Index ensures we can use a vslidedown.vi.
+  // TODO: We can generalize this when the exact VLEN is known.
+  if (Index + ResElts <= MinVLMAX && Index < 31)
+    return true;
+
+  // Convervatively only handle extracting half of a vector.
+  // TODO: For sizes which aren't multiples of VLEN sizes, this may not be
+  // a cheap extract.  However, this case is important in practice for
+  // shuffled extracts of longer vectors.  How resolve?
+  if ((ResElts * 2) != SrcElts)
     return false;
 
   // Slide can support arbitrary index, but we only treat vslidedown.vi as
@@ -9712,12 +9727,15 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (OrigIdx == 0)
     return Op;
 
-  // If the subvector vector is a fixed-length type, we cannot use subregister
-  // manipulation to simplify the codegen; we don't know which register of a
-  // LMUL group contains the specific subvector as we only know the minimum
-  // register size. Therefore we must slide the vector group down the full
-  // amount.
-  if (SubVecVT.isFixedLengthVector()) {
+  const unsigned MinVLen = Subtarget.getRealMinVLen();
+  const unsigned MaxVLen = Subtarget.getRealMaxVLen();
+
+  // If the subvector vector is a fixed-length type and we don't know VLEN
+  // exactly, we cannot use subregister manipulation to simplify the codegen; we
+  // don't know which register of a LMUL group contains the specific subvector
+  // as we only know the minimum register size. Therefore we must slide the
+  // vector group down the full amount.
+  if (SubVecVT.isFixedLengthVector() && MinVLen != MaxVLen) {
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VecVT);
@@ -9749,19 +9767,48 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     return DAG.getBitcast(Op.getValueType(), Slidedown);
   }
 
+  if (VecVT.isFixedLengthVector()) {
+    VecVT = getContainerForFixedLengthVector(VecVT);
+    Vec = convertToScalableVector(VecVT, Vec, DAG, Subtarget);
+  }
+
+  MVT ContainerSubVecVT = SubVecVT;
+  if (SubVecVT.isFixedLengthVector())
+    ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
+
   unsigned SubRegIdx, RemIdx;
-  std::tie(SubRegIdx, RemIdx) =
-      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-          VecVT, SubVecVT, OrigIdx, TRI);
+  // extract_subvector scales the index by vscale is the subvector is scalable,
+  // and decomposeSubvectorInsertExtractToSubRegs takes this into account. So if
+  // we have a fixed length subvector, we need to adjust the index by 1/vscale.
+  if (SubVecVT.isFixedLengthVector()) {
+    assert(MinVLen == MaxVLen);
+    unsigned Vscale = MinVLen / RISCV::RVVBitsPerBlock;
+    std::tie(SubRegIdx, RemIdx) =
+        RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+            VecVT, ContainerSubVecVT, OrigIdx / Vscale, TRI);
+    RemIdx = (RemIdx * Vscale) + (OrigIdx % Vscale);
+  } else {
+    std::tie(SubRegIdx, RemIdx) =
+        RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+            VecVT, ContainerSubVecVT, OrigIdx, TRI);
+  }
 
   // If the Idx has been completely eliminated then this is a subvector extract
   // which naturally aligns to a vector register. These can easily be handled
   // using subregister manipulation.
-  if (RemIdx == 0)
+  if (RemIdx == 0) {
+    if (SubVecVT.isFixedLengthVector()) {
+      Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, ContainerSubVecVT, Vec);
+      return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
+    }
     return Op;
+  }
 
-  // Else SubVecVT is a fractional LMUL and may need to be slid down.
-  assert(RISCVVType::decodeVLMUL(getLMUL(SubVecVT)).second);
+  // Else SubVecVT is M1 or smaller and may need to be slid down: if SubVecVT
+  // was > M1 then the index would need to be a multiple of VLMAX, and so would
+  // divide exactly.
+  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
+         getLMUL(ContainerSubVecVT) == RISCVII::VLMUL::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -9776,10 +9823,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
-  SDValue SlidedownAmt =
-      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
+  SDValue SlidedownAmt;
+  if (SubVecVT.isFixedLengthVector())
+    SlidedownAmt = DAG.getConstant(RemIdx, DL, Subtarget.getXLenVT());
+  else
+    SlidedownAmt =
+        DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
 
   auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
+  if (SubVecVT.isFixedLengthVector())
+    VL = getVLOp(SubVecVT.getVectorNumElements(), InterSubVT, DL, DAG,
+                 Subtarget);
   SDValue Slidedown =
       getVSlidedown(DAG, Subtarget, DL, InterSubVT, DAG.getUNDEF(InterSubVT),
                     Vec, SlidedownAmt, Mask, VL);
@@ -11052,8 +11106,8 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
       // Slide off any elements from past EVL that were reversed into the low
       // elements.
       unsigned MinElts = GatherVT.getVectorMinNumElements();
-      SDValue VLMax = DAG.getNode(ISD::VSCALE, DL, XLenVT,
-                                  DAG.getConstant(MinElts, DL, XLenVT));
+      SDValue VLMax =
+          DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), MinElts));
       SDValue Diff = DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, EVL);
 
       Result = getVSlidedown(DAG, Subtarget, DL, GatherVT,
@@ -14956,6 +15010,11 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isOperationLegalOrCustom(Opcode, VT) || !TLI.isTypeLegal(VT))
     return SDValue();
 
+  // This BUILD_VECTOR involves an implicit truncation, and sinking
+  // truncates through binops is non-trivial.
+  if (N->op_begin()->getValueType() != VT.getVectorElementType())
+    return SDValue();
+
   SmallVector<SDValue> LHSOps;
   SmallVector<SDValue> RHSOps;
   for (SDValue Op : N->ops()) {
@@ -14983,6 +15042,7 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
     // have different LHS and RHS types.
     if (Op.getOperand(0).getValueType() != Op.getOperand(1).getValueType())
       return SDValue();
+
     RHSOps.push_back(Op.getOperand(1));
   }
 
@@ -15812,7 +15872,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
 
     if (Index.getOpcode() == ISD::BUILD_VECTOR &&
-        MGN->getExtensionType() == ISD::NON_EXTLOAD) {
+        MGN->getExtensionType() == ISD::NON_EXTLOAD && isTypeLegal(VT)) {
       if (std::optional<VIDSequence> SimpleVID = isSimpleVIDSequence(Index);
           SimpleVID && SimpleVID->StepDenominator == 1) {
         const int64_t StepNumerator = SimpleVID->StepNumerator;
