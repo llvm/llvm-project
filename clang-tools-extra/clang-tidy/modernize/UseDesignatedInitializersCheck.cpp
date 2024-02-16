@@ -112,7 +112,9 @@ void UseDesignatedInitializersCheck::check(
     }
     {
       DiagnosticBuilder Diag =
-          diag(InitList->getLBraceLoc(), "use designated initializer list");
+          diag(InitList->getLBraceLoc(),
+               "use designated initializer list to initialize %0");
+      Diag << Type->getDeclName();
       Diag << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
         const std::string Designator =
@@ -134,12 +136,14 @@ void UseDesignatedInitializersCheck::check(
     if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID()) {
       continue;
     }
-    DiagnosticBuilder Diag =
-        diag(InitExpr->getBeginLoc(), "use designated init expression");
-    Diag << InitExpr->getSourceRange();
     const std::string Designator =
         LazyDesignators()->at(InitExpr->getBeginLoc());
-    if (!Designator.empty()) {
+    DiagnosticBuilder Diag =
+        diag(InitExpr->getBeginLoc(),
+             "use designated init expression to initialize field '%0'");
+    Diag << InitExpr->getSourceRange();
+    if (!Designator.empty() && Designator.front() == '.') {
+      Diag << Designator.substr(1); // Strip leading dot
       Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
                                          Designator + "=");
     }
