@@ -49,43 +49,18 @@ using DeclareTargetCapturePair =
 //===----------------------------------------------------------------------===//
 
 static Fortran::semantics::Symbol *
-getOmpObjParentSymbol(const Fortran::parser::OmpObject &ompObject) {
-  Fortran::semantics::Symbol *sym = nullptr;
-  std::visit(
-      Fortran::common::visitors{
-          [&](const Fortran::parser::Designator &designator) {
-            if (auto *structComp = Fortran::parser::Unwrap<
-                    Fortran::parser::StructureComponent>(designator)) {
-              sym = GetFirstName(structComp->base).symbol;
-            } else if (auto *arrayEle = Fortran::parser::Unwrap<
-                           Fortran::parser::ArrayElement>(designator)) {
-              sym = GetFirstName(arrayEle->base).symbol;
-            } else if (auto *structComp = Fortran::parser::Unwrap<
-                           Fortran::parser::StructureComponent>(designator)) {
-              sym = structComp->component.symbol;
-            } else if (const Fortran::parser::Name *name =
-                           Fortran::semantics::getDesignatorNameIfDataRef(
-                               designator)) {
-              sym = name->symbol;
-            }
-          },
-          [&](const Fortran::parser::Name &name) { sym = name.symbol; }},
-      ompObject.u);
-  return sym;
-}
-
-static Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
   Fortran::semantics::Symbol *sym = nullptr;
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::Designator &designator) {
-            if (auto *structComp = Fortran::parser::Unwrap<
-                    Fortran::parser::StructureComponent>(designator)) {
-              sym = structComp->component.symbol;
-            } else if (auto *arrayEle = Fortran::parser::Unwrap<
-                           Fortran::parser::ArrayElement>(designator)) {
+            if (auto *arrayEle =
+                    Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
+                        designator)) {
               sym = GetLastName(arrayEle->base).symbol;
+            } else if (auto *structComp = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(designator)) {
+              sym = structComp->component.symbol;
             } else if (const Fortran::parser::Name *name =
                            Fortran::semantics::getDesignatorNameIfDataRef(
                                designator)) {
@@ -638,14 +613,13 @@ public:
   // store the original type, location and Fortran symbol for the map operands.
   // They may be used later on to create the block_arguments for some of the
   // target directives that require it.
-  bool processMap(mlir::Location currentLocation,
-                  const llvm::omp::Directive &directive,
-                  Fortran::lower::StatementContext &stmtCtx,
-                  llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-                  llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
-                  llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
-                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                      *mapSymbols = nullptr) const;
+  bool processMap(
+      mlir::Location currentLocation, const llvm::omp::Directive &directive,
+      Fortran::lower::StatementContext &stmtCtx,
+      llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols,
+      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
+      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr) const;
   bool
   processReduction(mlir::Location currentLocation,
                    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
@@ -1882,42 +1856,44 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
   return op;
 }
 
-int findComponenetMemberPlacement(
+int findComponentMemberPlacement(
     const Fortran::semantics::Symbol *dTypeSym,
     const Fortran::semantics::Symbol *componentSym) {
-  int placement = -1;
-  if (const auto *derived{
-          dTypeSym->detailsIf<Fortran::semantics::DerivedTypeDetails>()}) {
-    for (auto t : derived->componentNames()) {
-      placement++;
-      if (t == componentSym->name())
-        return placement;
-    }
+  const auto *derived =
+      dTypeSym->detailsIf<Fortran::semantics::DerivedTypeDetails>();
+  if (!derived)
+    return -1;
+
+  int placement = 0;
+  for (auto t : derived->componentNames()) {
+    if (t == componentSym->name())
+      return placement;
+    placement++;
   }
-  return placement;
+
+  return -1;
 }
 
 static void
 checkAndApplyDeclTargetMapFlags(Fortran::lower::AbstractConverter &converter,
                                 llvm::omp::OpenMPOffloadMappingFlags &mapFlags,
                                 Fortran::semantics::Symbol *symbol) {
-  mlir::Operation *op =
-      converter.getModuleOp().lookupSymbol(converter.mangleName(*symbol));
-  if (op)
-    if (auto declareTargetOp =
-            llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op)) {
-      // only Link clauses have OMP_MAP_PTR_AND_OBJ applied, To clause
-      // functions fairly different.
-      if (declareTargetOp.getDeclareTargetCaptureClause() ==
-          mlir::omp::DeclareTargetCaptureClause::link)
-        mapFlags |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
-    }
+  if (auto declareTargetOp =
+          llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(
+              converter.getModuleOp().lookupSymbol(
+                  converter.mangleName(*symbol)))) {
+    // Only Link clauses have OMP_MAP_PTR_AND_OBJ applied, To clause
+    // seems to function differently.
+    if (declareTargetOp.getDeclareTargetCaptureClause() ==
+        mlir::omp::DeclareTargetCaptureClause::link)
+      mapFlags |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+  }
 }
 
 static void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<const Fortran::semantics::Symbol *> &memberParentSyms,
-    llvm::SmallVector<mlir::Value> &memberMaps,
+    llvm::SmallVector<mlir::omp::MapInfoOp> &memberMaps,
     llvm::SmallVector<mlir::Attribute> &memberPlacementIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
@@ -1932,37 +1908,36 @@ static void insertChildMapInfoIntoParent(
       if ((*mapSymbols)[i] == sym) {
         parentExists = true;
         parentIdx = i;
+        break;
       }
     }
 
     if (parentExists) {
+      auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
+          mapOperands[parentIdx].getDefiningOp());
+      assert(mapOp && "Parent provided to insertChildMapInfoIntoParent was not "
+                      "an expected MapInfoOp");
+
       // found a parent, append.
-      if (auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
-              mapOperands[parentIdx].getDefiningOp())) {
-        mapOp.getMembersMutable().append(memberMaps[idx]);
-        llvm::SmallVector<mlir::Attribute> memberIndexTmp{
-            mapOp.getMembersIndexAttr().begin(),
-            mapOp.getMembersIndexAttr().end()};
-        memberIndexTmp.push_back(memberPlacementIndices[idx]);
-        mapOp.setMembersIndexAttr(mlir::ArrayAttr::get(
-            converter.getFirOpBuilder().getContext(), memberIndexTmp));
-      }
+      mapOp.getMembersMutable().append((mlir::Value)memberMaps[idx]);
+      llvm::SmallVector<mlir::Attribute> memberIndexTmp{
+          mapOp.getMembersIndexAttr().begin(),
+          mapOp.getMembersIndexAttr().end()};
+      memberIndexTmp.push_back(memberPlacementIndices[idx]);
+      mapOp.setMembersIndexAttr(mlir::ArrayAttr::get(
+          converter.getFirOpBuilder().getContext(), memberIndexTmp));
     } else {
       // NOTE: We take the map type of the first child, this may not
       // be the correct thing to do, however, we shall see. For the moment
       // it allows this to work with enter and exit without causing MLIR
       // verification issues. The more appropriate thing may be to take
       // the "main" map type clause from the directive being used.
-      uint64_t mapType = 0;
-      if (auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
-              memberMaps[idx].getDefiningOp()))
-        mapType = mapOp.getMapType().value_or(0);
+      uint64_t mapType = memberMaps[idx].getMapType().value_or(0);
 
       // create parent to emplace and bind members
       auto origSymbol = converter.getSymbolAddress(*sym);
       mlir::Value mapOp = createMapInfoOp(
-          converter.getFirOpBuilder(),
-          converter.getFirOpBuilder().getUnknownLoc(), origSymbol,
+          converter.getFirOpBuilder(), origSymbol.getLoc(), origSymbol,
           mlir::Value(), sym->name().ToString(), {}, {memberMaps[idx]},
           mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                memberPlacementIndices[idx]),
@@ -1984,16 +1959,14 @@ bool ClauseProcessor::processMap(
     mlir::Location currentLocation, const llvm::omp::Directive &directive,
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols)
-    const {
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  llvm::SmallVector<mlir::Value> memberMaps;
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMaps;
   llvm::SmallVector<mlir::Attribute> memberPlacementIndices;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> memberParentSyms,
-      mapSyms;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> memberParentSyms;
 
   bool clauseFound = findRepeatableClause<ClauseTy::Map>(
       [&](const ClauseTy::Map *mapClause,
@@ -2051,12 +2024,17 @@ bool ClauseProcessor::processMap(
           const Fortran::semantics::Symbol *parentSym = nullptr;
 
           if (getOmpObjectSymbol(ompObject)->owner().IsDerivedType()) {
-            memberPlacementIndices.push_back(
-                firOpBuilder.getI64IntegerAttr(findComponenetMemberPlacement(
-                    getOmpObjectSymbol(ompObject)->owner().symbol(),
-                    getOmpObjectSymbol(ompObject))));
-            parentSym = getOmpObjParentSymbol(ompObject);
+            const auto *designator =
+                Fortran::parser::Unwrap<Fortran::parser::Designator>(
+                    ompObject.u);
+            assert(designator && "Expected a designator from derived type "
+                                 "component during map clause processing");
+            parentSym = GetFirstName(*designator).symbol;
             memberParentSyms.push_back(parentSym);
+            memberPlacementIndices.push_back(
+                firOpBuilder.getI64IntegerAttr(findComponentMemberPlacement(
+                    &parentSym->GetType()->derivedTypeSpec().typeSymbol(),
+                    getOmpObjectSymbol(ompObject))));
           }
 
           Fortran::lower::AddrAndBoundsInfo info =
@@ -2075,7 +2053,7 @@ bool ClauseProcessor::processMap(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
               firOpBuilder, clauseLocation, symAddr, mlir::Value{},
               asFortran.str(), bounds, {}, mlir::ArrayAttr{},
               static_cast<
@@ -2087,7 +2065,7 @@ bool ClauseProcessor::processMap(
             memberMaps.push_back(mapOp);
           } else {
             mapOperands.push_back(mapOp);
-            mapSyms.push_back(getOmpObjectSymbol(ompObject));
+            mapSymbols->push_back(getOmpObjectSymbol(ompObject));
             if (mapSymTypes)
               mapSymTypes->push_back(symAddr.getType());
             if (mapSymLocs)
@@ -2098,10 +2076,7 @@ bool ClauseProcessor::processMap(
 
   insertChildMapInfoIntoParent(converter, memberParentSyms, memberMaps,
                                memberPlacementIndices, mapOperands, mapSymTypes,
-                               mapSymLocs, &mapSyms);
-
-  if (mapSymbols)
-    *mapSymbols = mapSyms;
+                               mapSymLocs, mapSymbols);
 
   return clauseFound;
 }
@@ -2184,7 +2159,7 @@ template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
-  llvm::SmallVector<mlir::Value> memberMaps;
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMaps;
   llvm::SmallVector<mlir::Attribute> memberPlacementIndices;
   llvm::SmallVector<const Fortran::semantics::Symbol *> memberParentSyms,
       mapSymbols;
@@ -2213,12 +2188,17 @@ bool ClauseProcessor::processMotionClauses(
           const Fortran::semantics::Symbol *parentSym = nullptr;
 
           if (getOmpObjectSymbol(ompObject)->owner().IsDerivedType()) {
-            memberPlacementIndices.push_back(
-                firOpBuilder.getI64IntegerAttr(findComponenetMemberPlacement(
-                    getOmpObjectSymbol(ompObject)->owner().symbol(),
-                    getOmpObjectSymbol(ompObject))));
-            parentSym = getOmpObjParentSymbol(ompObject);
+            const auto *designator =
+                Fortran::parser::Unwrap<Fortran::parser::Designator>(
+                    ompObject.u);
+            assert(designator && "Expected a designator from derived type "
+                                 "component during motion clause processing");
+            parentSym = GetFirstName(*designator).symbol;
             memberParentSyms.push_back(parentSym);
+            memberPlacementIndices.push_back(
+                firOpBuilder.getI64IntegerAttr(findComponentMemberPlacement(
+                    &parentSym->GetType()->derivedTypeSpec().typeSymbol(),
+                    getOmpObjectSymbol(ompObject))));
           }
 
           Fortran::lower::AddrAndBoundsInfo info =
@@ -2237,7 +2217,7 @@ bool ClauseProcessor::processMotionClauses(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
               firOpBuilder, clauseLocation, symAddr, mlir::Value{},
               asFortran.str(), bounds, {}, mlir::ArrayAttr{},
               static_cast<
@@ -2941,7 +2921,8 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
       deviceAddrOperands;
   llvm::SmallVector<mlir::Type> useDeviceTypes;
   llvm::SmallVector<mlir::Location> useDeviceLocs;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols,
+      mapSymbols;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
@@ -2952,7 +2933,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   cp.processUseDeviceAddr(deviceAddrOperands, useDeviceTypes, useDeviceLocs,
                           useDeviceSymbols);
   cp.processMap(currentLocation, llvm::omp::Directive::OMPD_target_data,
-                stmtCtx, mapOperands);
+                stmtCtx, mapOperands, &mapSymbols);
 
   auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
@@ -2974,6 +2955,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifClauseOperand, deviceOperand;
   mlir::UnitAttr nowaitAttr;
   llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
   llvm::omp::Directive directive;
@@ -3005,7 +2987,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
                                                               mapOperands);
 
   } else {
-    cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
+    cp.processMap(currentLocation, directive, stmtCtx, mapOperands,
+                  &mapSymbols);
   }
 
   cp.processTODO<Fortran::parser::OmpClause::Depend>(currentLocation,
@@ -3191,8 +3174,9 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processNowait(nowaitAttr);
-  cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
-                &mapSymLocs, &mapSymbols);
+  cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymbols,
+                &mapSymTypes, &mapSymLocs);
+  
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,

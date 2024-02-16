@@ -941,8 +941,8 @@ func.func @omp_map_info_derived_type_explicit_member_conversion(%arg0 : !fir.ref
   %5 = omp.map_info var_ptr(%4 : !fir.ref<f32>, f32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f32> {name = "dtype%real"}    
   // CHECK: %[[MAP_PARENT:.*]] = omp.map_info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.struct<"_QFderived_type", (f32, array<10 x i32>, i32)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : !llvm.ptr, !llvm.ptr : [2, 0]) -> !llvm.ptr {name = "dtype", partial_map = true} 
   %6 = omp.map_info var_ptr(%arg0 : !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(tofrom) capture(ByRef) members(%2, %5 : !fir.ref<i32>, !fir.ref<f32> : [2, 0]) -> !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>> {name = "dtype", partial_map = true}
-  // CHECK: omp.target map_entries(%[[MAP_MEMBER_1]] -> %arg1, %[[MAP_MEMBER_2]] -> %arg2, %[[MAP_PARENT]] -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-  // CHECK: ^bb0(%arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  // CHECK: omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG_1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG_2:.*]], %[[MAP_PARENT]] -> %[[ARG_3:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+  // CHECK: ^bb0(%[[ARG_1]]: !llvm.ptr, %[[ARG_2]]: !llvm.ptr, %[[ARG_3]]: !llvm.ptr):
   omp.target map_entries(%2 -> %arg1, %5 -> %arg2, %6 -> %arg3 : !fir.ref<i32>, !fir.ref<f32>, !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>) {
   ^bb0(%arg1: !fir.ref<f32>, %arg2: !fir.ref<i32>, %arg3: !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>):
     omp.terminator

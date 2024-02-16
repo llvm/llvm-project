@@ -157,7 +157,7 @@ struct BigInt {
 
   LIBC_INLINE constexpr explicit operator bool() const { return !is_zero(); }
 
-  LIBC_INLINE BigInt &operator=(const BigInt &other) = default;
+  LIBC_INLINE constexpr BigInt &operator=(const BigInt &other) = default;
 
   LIBC_INLINE constexpr bool is_zero() const {
     for (size_t i = 0; i < WORD_COUNT; ++i) {
@@ -172,7 +172,7 @@ struct BigInt {
   LIBC_INLINE constexpr WordType add(const BigInt &x) {
     SumCarry<WordType> s{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      s = add_with_carry_const(val[i], x.val[i], s.carry);
+      s = add_with_carry(val[i], x.val[i], s.carry);
       val[i] = s.sum;
     }
     return s.carry;
@@ -194,7 +194,7 @@ struct BigInt {
     BigInt result;
     SumCarry<WordType> s{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      s = add_with_carry_const(val[i], other.val[i], s.carry);
+      s = add_with_carry(val[i], other.val[i], s.carry);
       result.val[i] = s.sum;
     }
     return result;
@@ -210,7 +210,7 @@ struct BigInt {
   LIBC_INLINE constexpr WordType sub(const BigInt &x) {
     DiffBorrow<WordType> d{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      d = sub_with_borrow_const(val[i], x.val[i], d.borrow);
+      d = sub_with_borrow(val[i], x.val[i], d.borrow);
       val[i] = d.diff;
     }
     return d.borrow;
@@ -230,7 +230,7 @@ struct BigInt {
     BigInt result;
     DiffBorrow<WordType> d{0, 0};
     for (size_t i = 0; i < WORD_COUNT; ++i) {
-      d = sub_with_borrow_const(val[i], other.val[i], d.borrow);
+      d = sub_with_borrow(val[i], other.val[i], d.borrow);
       result.val[i] = d.diff;
     }
     return result;
