@@ -621,6 +621,72 @@ func.func @pad_along_unpacked_dim(%arg0: tensor<1x2x56x56x32xf32>) -> tensor<1x5
 
 // -----
 
+func.func @pad_valid_pack_propagation(%arg0: tensor<1x64x56x56xf32>) -> tensor<1x2x58x58x32xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%arg3: index, %arg4: index, %arg5: index, %arg6: index):
+    tensor.yield %cst : f32
+  } : tensor<1x64x56x56xf32> to tensor<1x64x58x58xf32>
+  %0 = tensor.empty() : tensor<1x2x58x58x32xf32>
+  %1 = tensor.pack %padded inner_dims_pos = [1] inner_tiles = [32] into %0 : tensor<1x64x58x58xf32> -> tensor<1x2x58x58x32xf32>
+  return %1 : tensor<1x2x58x58x32xf32>
+}
+
+// CHECK-LABEL: func.func @pad_valid_pack_propagation(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<1x64x56x56xf32>)
+// CHECK:         %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x2x56x56x32xf32>
+// CHECK:         %[[PACKED:.+]] = tensor.pack %[[ARG0]] inner_dims_pos = [1] inner_tiles = [32]
+// CHECK-SAME:      into %[[EMPTY]] : tensor<1x64x56x56xf32> -> tensor<1x2x56x56x32xf32>
+// CHECK:         %[[PADDED:.+]] = tensor.pad %[[PACKED]] low[0, 0, 1, 1, 0] high[0, 0, 1, 1, 0]
+// CHECK:         return %[[PADDED]]
+
+// -----
+
+func.func @pad_valid_outer_dims_pack_propagation(%arg0: tensor<1x64x56x56xf32>) -> tensor<1x58x58x2x32xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%arg3: index, %arg4: index, %arg5: index, %arg6: index):
+    tensor.yield %cst : f32
+  } : tensor<1x64x56x56xf32> to tensor<1x64x58x58xf32>
+  %0 = tensor.empty() : tensor<1x58x58x2x32xf32>
+  %1 = tensor.pack %padded outer_dims_perm = [0, 3, 2, 1] inner_dims_pos = [1] inner_tiles = [32] into %0 : tensor<1x64x58x58xf32> -> tensor<1x58x58x2x32xf32>
+  return %1 : tensor<1x58x58x2x32xf32>
+}
+
+// CHECK-LABEL: func.func @pad_valid_outer_dims_pack_propagation(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<1x64x56x56xf32>)
+// CHECK:         %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x56x56x2x32xf32>
+// CHECK:         %[[PACKED:.+]] = tensor.pack %[[ARG0]]
+// CHECK-SAME:      outer_dims_perm = [0, 3, 2, 1] inner_dims_pos = [1] inner_tiles = [32]
+// CHECK-SAME:      into %[[EMPTY]] : tensor<1x64x56x56xf32> -> tensor<1x56x56x2x32xf32>
+// CHECK:         %[[PADDED:.+]] = tensor.pad %[[PACKED]] low[0, 1, 1, 0, 0] high[0, 1, 1, 0, 0]
+// CHECK:         return %[[PADDED]]
+
+// -----
+
+func.func @pad_along_packed_dim(%arg0: tensor<1x60x56x56xf32>) -> tensor<1x2x58x58x32xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[0, 2, 1, 1] high[0, 2, 1, 1] {
+    ^bb0(%arg3: index, %arg4: index, %arg5: index, %arg6: index):
+    tensor.yield %cst : f32
+  } : tensor<1x60x56x56xf32> to tensor<1x64x58x58xf32>
+  %0 = tensor.empty() : tensor<1x2x58x58x32xf32>
+  %1 = tensor.pack %padded inner_dims_pos = [1] inner_tiles = [32] into %0 : tensor<1x64x58x58xf32> -> tensor<1x2x58x58x32xf32>
+  return %1 : tensor<1x2x58x58x32xf32>
+}
+
+// CHECK-LABEL: func.func @pad_along_packed_dim(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<1x60x56x56xf32>)
+// CHECK:         %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK:         %[[PADDED:.+]] = tensor.pad %[[ARG0]] low[0, 2, 1, 1] high[0, 2, 1, 1]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x2x58x58x32xf32>
+// CHECK:         tensor.pack %[[PADDED]] inner_dims_pos = [1] inner_tiles = [32]
+// CHECK-SAME:      into %[[EMPTY]] : tensor<1x64x58x58xf32> -> tensor<1x2x58x58x32xf32>
+
+// -----
+
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 func.func @would_break_dominance(%arg0: tensor<128x256xi32>) -> tensor<4x16x16x32xi32>{
   %init = tensor.empty() : tensor<128x256xi32>
