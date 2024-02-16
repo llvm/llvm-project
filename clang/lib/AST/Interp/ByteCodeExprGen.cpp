@@ -3163,6 +3163,10 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
     const Function *F = getFunction(FuncDecl);
     return F && this->emitGetFnPtr(F, E);
+  } else if (isa<TemplateParamObjectDecl>(D)) {
+    if (std::optional<unsigned> Index = P.getOrCreateGlobal(D))
+      return this->emitGetPtrGlobal(*Index, E);
+    return false;
   }
 
   // References are implemented via pointers, so when we see a DeclRefExpr

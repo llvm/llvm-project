@@ -213,3 +213,15 @@ namespace ThisCapture {
   static_assert(F.a == 33, "");
   static_assert(F.Aplus2() == (33 + 2), "");
 }
+
+namespace GH62611 {
+  template <auto A = [](auto x){}>
+  struct C {
+    static constexpr auto B = A;
+  };
+
+  int test() {
+    C<>::B(42);
+    return 0;
+  }
+}
