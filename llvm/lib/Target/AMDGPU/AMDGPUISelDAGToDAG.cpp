@@ -327,7 +327,7 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
     return TII->isInlineConstant(C->getAPIntValue());
 
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+    return TII->isInlineConstant(C->getValueAPF());
 
   return false;
 }
@@ -3589,7 +3589,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
       int64_t HiImm = Hi32->getAPIntValue().getSExtValue();
       int64_t Imm64I = (HiImm << 32) + LoImm;
       if (i == 0) {
-        if (!isInlineImmediate64(Imm64I))
+        if (!isInlineImmediate(APInt(64,Imm64I)))
           return false;
         Imm64 = Imm64I;
       } else if (Imm64I != Imm64)

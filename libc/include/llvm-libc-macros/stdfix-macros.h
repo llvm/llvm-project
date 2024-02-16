@@ -9,12 +9,10 @@
 #ifndef __LLVM_LIBC_MACROS_STDFIX_MACROS_H
 #define __LLVM_LIBC_MACROS_STDFIX_MACROS_H
 
-#ifdef __clang__
-#if (!defined(__cplusplus) || (__clang_major__ >= 18))
+#ifdef __FRACT_FBIT__
 // _Fract and _Accum types are available
 #define LIBC_COMPILER_HAS_FIXED_POINT
-#endif // __cplusplus
-#endif // __clang__
+#endif // __FRACT_FBIT__
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 

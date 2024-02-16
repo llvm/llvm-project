@@ -141,6 +141,9 @@ Non-comprehensive list of changes in this release
 - Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
   counters.
 
+- ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
+  builtins are now constexpr and may be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -326,6 +329,8 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+
+- ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 
 clang-format
 ------------
