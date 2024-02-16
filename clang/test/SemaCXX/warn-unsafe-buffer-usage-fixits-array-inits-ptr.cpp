@@ -13,7 +13,7 @@ void safe_array_initing_unsafe_ptr(unsigned idx) {
   int buffer[123321123];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int* ptr = buffer;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:13}:"std::span<int> ptr"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:7}:"std::span<int>"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}123321123
   ptr[idx + 1] = 0;
 }
