@@ -1811,7 +1811,7 @@ define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-; negative test - extra use
+; extra use of xor is ok
 
 define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask_use2(
@@ -1918,7 +1918,7 @@ define i16 @invert_signbit_splat_mask_use2(i8 %x, i16 %y) {
   ret i16 %r
 }
 
-; negative test - extra use
+; extra use of sext is ok 
 
 define i16 @invert_signbit_splat_mask_use3(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_use3(
@@ -2782,40 +2782,4 @@ define i32 @and_sext_multiuse(i32 %x, i32 %y, i32 %a, i32 %b) {
   %and2 = and i32 %sext, %b
   %add = add i32 %and1, %and2
   ret i32 %add
-}
-
-define <2 x i32> @and_sext_multiuse_with_vector(<2 x i32> %x, <2 x i32> %y, <2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: @and_sext_multiuse_with_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[TMP1]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i32> [[ADD]]
-;
-  %cmp = icmp sgt <2 x i32> %x, %y
-  %sext = sext <2 x i1> %cmp to <2 x i32>
-  %and1 = and <2 x i32> %a, %sext
-  %and2 = and <2 x i32> %b, %sext
-  %add = add <2 x i32> %and1, %and2
-  ret <2 x i32> %add
-}
-
-define <2 x i32> @and_sext_multiuse_commuted(<2 x i32> %x, <2 x i32> %y, <2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
-; CHECK-LABEL: @and_sext_multiuse_commuted(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[ADD3:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[TMP3]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i32> [[ADD3]]
-;
-  %cmp = icmp sgt <2 x i32> %x, %y
-  %sext = sext <2 x i1> %cmp to <2 x i32>
-  %and1 = and <2 x i32> %sext, %a
-  %and2 = and <2 x i32> %b, %sext
-  %and3 = and <2 x i32> %c, %sext
-  %and4 = and <2 x i32> %sext, %d
-  %add1 = add <2 x i32> %and1, %and2
-  %add2 = add <2 x i32> %and3, %and4
-  %add3 = add <2 x i32> %add1, %add2
-  ret <2 x i32> %add3
 }
