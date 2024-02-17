@@ -59,20 +59,6 @@ module __fortran_ieee_exceptions
   G(2) G(3) G(4) G(8) G(16)
 #endif
 
-! Set PRIVATE accessibility for specifics with 1 LOGICAL or REAL argument for
-! generic G.
-#if 0
-#define PRIVATE_L(G) private :: \
-  G##_l1, G##_l2, G##_l4, G##_l8
-#if __x86_64__
-#define PRIVATE_R(G) private :: \
-  G##_a2, G##_a3, G##_a4, G##_a8, G##_a10, G##_a16
-#else
-#define PRIVATE_R(G) private :: \
-  G##_a2, G##_a3, G##_a4, G##_a8, G##_a16
-#endif
-#endif
-
 #define IEEE_GET_FLAG_L(FVKIND) \
   elemental subroutine ieee_get_flag_l##FVKIND(flag, flag_value); \
     import ieee_flag_type; \
