@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -200,29 +199,10 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
-  return true;
-}
-
-void AArch64TargetInfo::setSupportedArgTypes() {
-  if (!(FPU & FPUMode) && ABI != "aapcs-soft") {
-    // When a hard-float ABI is used on a target without an FPU, all
-    // floating-point argument and return types are rejected because they must
-    // be passed in FP registers.
-    HasFPTypes = false;
-  }
-}
-
-bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
-  if (hasFeature("fp") && ABI == "aapcs-soft") {
-    // aapcs-soft is not allowed for targets with an FPU, to avoid there being
-    // two incomatible ABIs.
-    Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
-    return false;
-  }
   return true;
 }
 
@@ -706,8 +686,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Cases("aarch64", "arm64", "arm", true)
       .Case("fmv", HasFMV)
-      .Case("fp", FPU & FPUMode)
-      .Cases("neon", "simd", FPU & NeonMode)
+      .Cases("neon", "fp", "simd", FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)

@@ -356,8 +356,6 @@ def warn_target_unrecognized_env : Warning<
 def warn_knl_knm_isa_support_removed : Warning<
   "KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.">,
   InGroup<DiagGroup<"knl-knm-isa-support-removed">>;
-def err_target_unsupported_abi_with_fpu : Error<
-  "'%0' ABI is not supported with FPU">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
