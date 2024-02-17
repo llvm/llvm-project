@@ -305,7 +305,7 @@ MLIR includes several specialized classes for common situations:
 Similarly to operations, Attribute and Type classes may attach `Traits` that
 provide additional mixin methods and other data. `Trait`s may be attached via
 the trailing template argument, i.e. the `traits` list parameter in the example
-above. See the main [`Trait`](../Traits.md) documentation for more information
+above. See the main [`Trait`](../Traits) documentation for more information
 on defining and using traits.
 
 ### Interfaces
