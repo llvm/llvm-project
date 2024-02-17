@@ -8,13 +8,13 @@
 //       DFG:     subgraph cluster_3 {
 //       DFG:       v4 [label = " ", shape = plain];
 //       DFG:       label = "";
-//       DFG:       v5 [fillcolor = "0.333333 1.0 1.0", label = "arith.constant : (index)\n\nvalue: 0 : index", shape = ellipse, style = filled];
-//       DFG:       v6 [fillcolor = "0.333333 1.0 1.0", label = "arith.constant : (index)\n\nvalue: 1 : index", shape = ellipse, style = filled];
-//       DFG:       v7 [fillcolor = "0.000000 1.0 1.0", label = "arith.addi : (index)\n\noverflowFlags: #arith.overflow<none...", shape = ellipse, style = filled];
+//       DFG:       v5 [fillcolor = "0.000000 1.0 1.0", label = "arith.addi : (index)\n\noverflowFlags: #arith.overflow<none...", shape = ellipse, style = filled];
+//       DFG:       v6 [fillcolor = "0.333333 1.0 1.0", label = "arith.constant : (index)\n\nvalue: 0 : index", shape = ellipse, style = filled];
+//       DFG:       v7 [fillcolor = "0.333333 1.0 1.0", label = "arith.constant : (index)\n\nvalue: 1 : index", shape = ellipse, style = filled];
 //       DFG:     }
 //       DFG:   }
-//       DFG:   v5 -> v7 [label = "0", style = solid];
-//       DFG:   v6 -> v7 [label = "1", style = solid];
+//       DFG:   v6 -> v5 [label = "0", style = solid];
+//       DFG:   v7 -> v5 [label = "1", style = solid];
 //       DFG: }
 
 module {
