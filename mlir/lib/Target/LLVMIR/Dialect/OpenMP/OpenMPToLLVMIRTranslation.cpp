@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <any>
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -1785,12 +1786,9 @@ void collectMapDataFromMapOperands(MapInfoData &mapData,
 
 static int getMapDataMemberIdx(MapInfoData &mapData,
                                mlir::omp::MapInfoOp memberOp) {
-  int memberDataIdx = -1;
-  for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
-    if (mapData.MapClause[i] == memberOp)
-      memberDataIdx = i;
-  }
-  return memberDataIdx;
+  auto *res = llvm::find(mapData.MapClause, memberOp);
+  assert(res != mapData.MapClause.end());
+  return std::distance(mapData.MapClause.begin(), res);
 }
 
 static mlir::omp::MapInfoOp
@@ -1801,78 +1799,117 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
             mapInfo.getMembers()[0].getDefiningOp()))
       return mapOp;
 
-  int64_t curPos =
-      mapInfo.getMembersIndex()->begin()->cast<mlir::IntegerAttr>().getInt();
-
-  int64_t idx = 1, curIdx = 0, memberPlacement = 0;
-  for (const auto *iter = std::next(mapInfo.getMembersIndex()->begin());
-       iter != mapInfo.getMembersIndex()->end(); iter++) {
-    memberPlacement = iter->cast<mlir::IntegerAttr>().getInt();
-    if (first) {
-      if (memberPlacement < curPos) {
-        curIdx = idx;
-        curPos = memberPlacement;
-      }
-    } else {
-      if (memberPlacement > curPos) {
-        curIdx = idx;
-        curPos = memberPlacement;
-      }
-    }
-    idx++;
-  }
+  std::vector<size_t> indices(mapInfo.getMembersIndexAttr().size());
+  std::iota(indices.begin(), indices.end(), 0);
+  llvm::sort(indices.begin(), indices.end(),
+             [&](const size_t a, const size_t b) {
+               return mapInfo.getMembersIndexAttr()[a]
+                          .cast<mlir::IntegerAttr>()
+                          .getInt() < mapInfo.getMembersIndexAttr()[b]
+                                          .cast<mlir::IntegerAttr>()
+                                          .getInt();
+             });
 
   if (auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
-          mapInfo.getMembers()[curIdx].getDefiningOp()))
+          mapInfo.getMembers()[((first) ? indices.front() : indices.back())]
+              .getDefiningOp()))
     return mapOp;
 
-  return {};
+  assert(false && "getFirstOrLastMappedMemberPtr could not find approproaite "
+                  "map information");
 }
 
+/// This function calculates the array/pointer offset for map data provided
+/// with bounds operations, e.g. when provided something like the following:
+///
+/// Fortran
+///     map(tofrom: array(2:5, 3:2))
+///   or
+/// C++
+///   map(tofrom: array[1:4][2:3])
+/// We must calculate the initial pointer offset to pass across, this function
+/// performs this using bounds.
+///
+/// NOTE: which while specified in row-major order it currently needs to be
+/// flipped for Fortran's column order array allocation and access (as
+/// opposed to C++'s row-major, hence the backwards processing where order is
+/// important). This is likely important to keep in mind for the future when
+/// we incorporate a C++ frontend, both frontends will need to agree on the
+/// ordering of generated bounds operations (one may have to flip them) to
+/// make the below lowering frontend agnostic. The offload size
+/// calcualtion may also have to be adjusted for C++.
 std::vector<llvm::Value *>
 calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
                       llvm::IRBuilderBase &builder, bool isArrayTy,
                       mlir::OperandRange bounds) {
   std::vector<llvm::Value *> idx;
-  llvm::Value *offsetAddress = nullptr;
-  if (!bounds.empty()) {
-    idx.push_back(builder.getInt64(0));
-    if (isArrayTy) {
-      for (int i = bounds.size() - 1; i >= 0; --i) {
-        if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::DataBoundsOp>(
-                bounds[i].getDefiningOp())) {
-          idx.push_back(moduleTranslation.lookupValue(boundOp.getLowerBound()));
-        }
-      }
-    } else {
-      std::vector<llvm::Value *> dimensionIndexSizeOffset{builder.getInt64(1)};
-      for (size_t i = 1; i < bounds.size(); ++i) {
-        if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::DataBoundsOp>(
-                bounds[i].getDefiningOp())) {
-          dimensionIndexSizeOffset.push_back(builder.CreateMul(
-              moduleTranslation.lookupValue(boundOp.getExtent()),
-              dimensionIndexSizeOffset[i - 1]));
-        }
-      }
+  // There's no bounds to calculate an offset from, we can safely
+  // ignore and return no indices.
+  if (bounds.empty())
+    return idx;
 
-      for (int i = bounds.size() - 1; i >= 0; --i) {
-        if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::DataBoundsOp>(
-                bounds[i].getDefiningOp())) {
-          if (!offsetAddress)
-            offsetAddress = builder.CreateMul(
-                moduleTranslation.lookupValue(boundOp.getLowerBound()),
-                dimensionIndexSizeOffset[i]);
-          else
-            offsetAddress = builder.CreateAdd(
-                offsetAddress, builder.CreateMul(moduleTranslation.lookupValue(
-                                                     boundOp.getLowerBound()),
-                                                 dimensionIndexSizeOffset[i]));
-        }
+  // If we have an array type, then we have its type so can treat it as a
+  // normal GEP instruction where the bounds operations are simply indexes
+  // into the array. We currently do reverse order of the bounds, which
+  // I believe leans more towards Fortran's column-major in memory.
+  if (isArrayTy) {
+    idx.push_back(builder.getInt64(0));
+    for (int i = bounds.size() - 1; i >= 0; --i) {
+      if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::DataBoundsOp>(
+              bounds[i].getDefiningOp())) {
+        idx.push_back(moduleTranslation.lookupValue(boundOp.getLowerBound()));
+      }
+    }
+  } else {
+    // If we do not have an array type, but we have bounds, then we're dealing
+    // with a pointer that's being treated like an array and we have the
+    // underlying type e.g. an i32, or f64 etc, e.g. a fortran descriptor base
+    // address (pointer pointing to the actual data) so we must caclulate the
+    // offset using a single index which the following two loops attempts to
+    // compute.
+
+    // Calculates the size offset we need to make per row e.g. first row or
+    // column only needs to be offset by one, but the next would have to be
+    // the previous row/column offset multiplied by the extent of current row.
+    //
+    // For example ([1][10][100]):
+    //
+    //  - First row/column we move by 1 for each index increment
+    //  - Second row/column we move by 1 (first row/column) * 10 (extent/size of
+    //  current) for 10 for each index increment
+    //  - Third row/column we would move by 10 (second row/column) *
+    //  (extent/size of current) 100 for 1000 for each index increment
+    std::vector<llvm::Value *> dimensionIndexSizeOffset{builder.getInt64(1)};
+    for (size_t i = 1; i < bounds.size(); ++i) {
+      if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::DataBoundsOp>(
+              bounds[i].getDefiningOp())) {
+        dimensionIndexSizeOffset.push_back(builder.CreateMul(
+            moduleTranslation.lookupValue(boundOp.getExtent()),
+            dimensionIndexSizeOffset[i - 1]));
+      }
+    }
+
+    // Now that we have calculated how much we move by per index, we must
+    // multiply each lower bound offset in indexes by the size offset we
+    // have calculated in the previous and accumulate the results to get
+    // our final resulting offset.
+    for (int i = bounds.size() - 1; i >= 0; --i) {
+      if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::DataBoundsOp>(
+              bounds[i].getDefiningOp())) {
+        if (idx.empty())
+          idx.emplace_back(builder.CreateMul(
+              moduleTranslation.lookupValue(boundOp.getLowerBound()),
+              dimensionIndexSizeOffset[i]));
+        else
+          idx.back() = builder.CreateAdd(
+              idx.back(), builder.CreateMul(moduleTranslation.lookupValue(
+                                                boundOp.getLowerBound()),
+                                            dimensionIndexSizeOffset[i]));
       }
     }
   }
 
-  return offsetAddress ? std::vector<llvm::Value *>{offsetAddress} : idx;
+  return idx;
 }
 
 // This creates two insertions into the MapInfosTy data structure for the
@@ -1887,6 +1924,9 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
 // which is utilised in subsequent member mappings (by modifying there map type
 // with it) to indicate that a member is part of this parent and should be
 // treated by the runtime as such. Important to achieve the correct mapping.
+//
+// This function borrows a lot from it's Clang parallel function
+// emitCombinedEntry inside of CGOpenMPRuntime.cpp
 static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
     LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl,
@@ -1944,10 +1984,13 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
       /*isSigned=*/false);
   combinedInfo.Sizes.push_back(size);
 
+  // TODO: This will need expanded to include the whole host of logic for the
+  // map flags that Clang currently supports (e.g. it hsould take the map flag
+  // of the parent map flag, remove the OMP_MAP_TARGET_PARAM and do some further
+  // case specific flag modifications), for the moment it handles what we
+  // support as expected.
   llvm::omp::OpenMPOffloadMappingFlags mapFlag =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-  if (isTargetParams)
-    mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
   llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
       ompBuilder.getMemberOfFlag(combinedInfo.BasePointers.size() - 1);
