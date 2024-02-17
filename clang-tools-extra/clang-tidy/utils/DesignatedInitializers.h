@@ -1,4 +1,4 @@
-//===--- DesignatedInitializers.h -------------------------------*- C++ -*-===//
+//===--- DesignatedInitializers.h - clang-tidy ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 
-namespace clang::tooling {
+namespace clang::tidy::utils {
 
 /// Get designators describing the elements of a (syntactic) init list.
 ///
@@ -39,4 +39,4 @@ namespace clang::tooling {
 llvm::DenseMap<clang::SourceLocation, std::string>
 getUnwrittenDesignators(const clang::InitListExpr *Syn);
 
-} // namespace clang::tooling
+} // namespace clang::tidy::utils

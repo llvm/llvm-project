@@ -106,7 +106,6 @@ add_clang_library(clangTooling
   ArgumentsAdjusters.cpp
   CommonOptionsParser.cpp
   CompilationDatabase.cpp
-  DesignatedInitializers.cpp
   Execution.cpp
   ExpandResponseFilesCompilationDatabase.cpp
   FileMatchTrie.cpp

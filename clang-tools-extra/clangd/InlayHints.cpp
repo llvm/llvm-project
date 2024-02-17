@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "InlayHints.h"
+#include "../clang-tidy/utils/DesignatedInitializers.h"
 #include "AST.h"
 #include "Config.h"
 #include "HeuristicResolver.h"
@@ -23,7 +24,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Tooling/DesignatedInitializers.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -692,7 +692,7 @@ public:
     if (Syn->isIdiomaticZeroInitializer(AST.getLangOpts()))
       return true;
     llvm::DenseMap<SourceLocation, std::string> Designators =
-        clang::tooling::getUnwrittenDesignators(Syn);
+        tidy::utils::getUnwrittenDesignators(Syn);
     for (const Expr *Init : Syn->inits()) {
       if (llvm::isa<DesignatedInitExpr>(Init))
         continue;

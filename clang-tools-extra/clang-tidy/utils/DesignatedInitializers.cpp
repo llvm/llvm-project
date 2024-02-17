@@ -1,4 +1,4 @@
-//===--- DesignatedInitializers.cpp ---------------------------------------===//
+//===--- DesignatedInitializers.cpp - clang-tidy --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,12 +11,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DesignatedInitializers.h"
+#include "DesignatedInitializers.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 
-namespace clang::tooling {
+namespace clang::tidy::utils {
 
 namespace {
 
@@ -192,4 +192,4 @@ getUnwrittenDesignators(const InitListExpr *Syn) {
   return Designators;
 }
 
-} // namespace clang::tooling
+} // namespace clang::tidy::utils

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseDesignatedInitializersCheck.h"
+#include "../utils/DesignatedInitializers.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -16,7 +17,6 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/DesignatedInitializers.h"
 
 using namespace clang::ast_matchers;
 
@@ -96,10 +96,9 @@ void UseDesignatedInitializersCheck::check(
   std::optional<llvm::DenseMap<clang::SourceLocation, std::string>>
       Designators{};
   const auto LazyDesignators = [SyntacticInitList, &Designators] {
-    return Designators
-               ? Designators
-               : Designators.emplace(clang::tooling::getUnwrittenDesignators(
-                     SyntacticInitList));
+    return Designators ? Designators
+                       : Designators.emplace(
+                             utils::getUnwrittenDesignators(SyntacticInitList));
   };
   const unsigned NumberOfDesignated = getNumberOfDesignated(SyntacticInitList);
   if (0 == NumberOfDesignated) {
