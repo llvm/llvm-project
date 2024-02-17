@@ -490,7 +490,7 @@ struct TestFlattenVectorTransferPatterns
       *this, "target-vector-bitwidth",
       llvm::cl::desc(
           "Minimum vector bitwidth to enable the flattening transformation"),
-      llvm::cl::init(512)};
+      llvm::cl::init(std::numeric_limits<unsigned>::max())};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
