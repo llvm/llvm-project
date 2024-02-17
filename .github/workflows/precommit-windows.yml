@@ -27,12 +27,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1
-        with:
-          max-size: 500M
-          variant: sccache
-          key: precommit-windows
+            #      - name: Setup ccache
+            #        uses: hendrikmuhs/ccache-action@v1
+            #        with:
+            #          max-size: 500M
+            #          variant: sccache
+            #          key: precommit-windows
       - name: Compute projects to test
         id: compute-projects
         uses: ./.github/workflows/compute-projects-to-test
@@ -44,8 +44,6 @@ jobs:
           cmake -B build -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_PROJECTS="${{ steps.compute-projects.outputs.projects }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DLLVM_LIT_ARGS="-v --no-progress-bar" \
             -S llvm
