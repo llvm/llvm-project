@@ -11,6 +11,7 @@
 
 #include <cstdint>
 
+#include <condition_variable>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -366,6 +367,10 @@ public:
 
   lldb::DWIMPrintVerbosity GetDWIMPrintVerbosity() const;
 
+  uint64_t GetProgressUpdateFrequency() const;
+
+  uint64_t GetProgressMinDuration() const;
+
   bool GetEscapeNonPrintables() const;
 
   bool GetNotifyVoid() const;
@@ -589,6 +594,9 @@ public:
     return m_source_file_cache;
   }
 
+  /// Notify the progress thread that there is new progress data.
+  void NotifyProgress(std::unique_ptr<ProgressEventData> &data_up);
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -660,6 +668,12 @@ protected:
 
   lldb::thread_result_t DefaultEventHandler();
 
+  bool StartProgressThread();
+
+  void StopProgressThread();
+
+  lldb::thread_result_t ProgressThread();
+
   void HandleBreakpointEvent(const lldb::EventSP &event_sp);
 
   void HandleProcessEvent(const lldb::EventSP &event_sp);
@@ -722,6 +736,30 @@ protected:
   LoadedPluginsList m_loaded_plugins;
   HostThread m_event_handler_thread;
   HostThread m_io_handler_thread;
+  HostThread m_progress_thread;
+  std::mutex m_progress_mutex;
+  std::condition_variable m_progress_condition;
+  bool m_progress_thread_running = false;
+  using ProgressClock = std::chrono::system_clock;
+  using ProgressTimePoint = std::chrono::time_point<ProgressClock>;
+  using ProgressDuration = ProgressTimePoint::duration;
+  struct ProgressInfo {
+    ProgressInfo(ProgressEventData *data_ptr, uint64_t min_duration_ms) :
+      data_up(data_ptr), start(ProgressClock::now()) {
+      next_event_time = start + std::chrono::milliseconds(min_duration_ms);
+    }
+
+    std::unique_ptr<ProgressEventData> data_up;
+    /// The time the first progress was reported.
+    ProgressTimePoint start;
+    /// Only broadcast an event if the current time is >= this time.
+    ProgressTimePoint next_event_time;
+    /// If valid, the last time a notification was sent out for this progress.
+    std::optional<ProgressTimePoint> last_notification_time;
+  };
+  std::map<uint64_t, ProgressInfo> m_progress_map;
+  ///< Each time m_progress_map is updated, this gets incremented.
+  uint64_t m_progress_update_id = 0;
   Broadcaster m_sync_broadcaster; ///< Private debugger synchronization.
   Broadcaster m_broadcaster;      ///< Public Debugger event broadcaster.
   lldb::ListenerSP m_forward_listener_sp;

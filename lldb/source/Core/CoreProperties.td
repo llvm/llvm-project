@@ -225,4 +225,12 @@ let Definition = "debugger" in {
     DefaultEnumValue<"eDWIMPrintVerbosityNone">,
     EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
     Desc<"The verbosity level used by dwim-print.">;
+  def ProgressUpdateFrequency: Property<"progress-update-frequency", "UInt64">,
+    Global,
+    DefaultUnsignedValue<1000>,
+    Desc<"The minimum time in milliseconds between progress updates for progress notifications that have a valid count.">;
+  def ProgressMinDuration: Property<"progress-minimum-duration", "UInt64">,
+    Global,
+    DefaultUnsignedValue<500>,
+    Desc<"The minimum time in milliseconds required for a progress to get reported. If a progress starts and completes and the elapsed time is under this threshold, then no progress will get reported.">;
 }
