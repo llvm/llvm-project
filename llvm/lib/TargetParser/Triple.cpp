@@ -1458,7 +1458,7 @@ void Triple::setOSAndEnvironmentName(StringRef Str) {
   setTriple(getArchName() + "-" + getVendorName() + "-" + Str);
 }
 
-static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
+unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   switch (Arch) {
   case llvm::Triple::UnknownArch:
     return 0;
