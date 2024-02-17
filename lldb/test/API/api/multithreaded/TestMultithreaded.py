@@ -29,6 +29,7 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfRemote
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
+    @skipIfHostIncompatibleWithTarget
     def test_python_stop_hook(self):
         """Test that you can run a python command in a stop-hook when stdin is File based."""
         self.build_and_test("driver.cpp test_stop-hook.cpp", "test_python_stop_hook")
@@ -36,6 +37,7 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfRemote
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
+    @skipIfHostIncompatibleWithTarget
     def test_breakpoint_callback(self):
         """Test the that SBBreakpoint callback is invoked when a breakpoint is hit."""
         self.build_and_test(
@@ -45,6 +47,7 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfRemote
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
+    @skipIfHostIncompatibleWithTarget
     def test_breakpoint_location_callback(self):
         """Test the that SBBreakpointLocation callback is invoked when a breakpoint is hit."""
         self.build_and_test(
@@ -56,6 +59,7 @@ class SBBreakpointCallbackCase(TestBase):
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     @expectedFlakeyFreeBSD
+    @skipIfHostIncompatibleWithTarget
     def test_sb_api_listener_event_description(self):
         """Test the description of an SBListener breakpoint event is valid."""
         self.build_and_test(
@@ -67,6 +71,7 @@ class SBBreakpointCallbackCase(TestBase):
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     @expectedFlakeyFreeBSD
+    @skipIfHostIncompatibleWithTarget
     def test_sb_api_listener_event_process_state(self):
         """Test that a registered SBListener receives events when a process
         changes state.
@@ -81,6 +86,7 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfWindows
     @expectedFlakeyFreeBSD
     @skipIf(oslist=["linux"])  # flakey
+    @skipIfHostIncompatibleWithTarget
     def test_sb_api_listener_resume(self):
         """Test that a process can be resumed from a non-main thread."""
         self.build_and_test(
