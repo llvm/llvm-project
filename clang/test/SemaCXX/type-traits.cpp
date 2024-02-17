@@ -1628,15 +1628,56 @@ struct CStructNested2 {
   int b2;
 };
 
+struct CStructWithBitfelds {
+  int a : 5;
+  int : 0;
+};
+
+struct CStructWithBitfelds2 {
+  int a : 5;
+  int : 0;
+};
+
+struct CStructWithBitfelds3 {
+  int : 0;
+  int b : 5;
+};
+
 enum EnumLayout : int {};
 enum class EnumClassLayout {};
 enum EnumForward : int;
 enum class EnumClassForward;
 
-void is_layout_compatible()
+union UnionLayout {
+  int a;
+  double b;
+  CStruct c;
+  [[no_unique_address]] CEmptyStruct d;
+  [[no_unique_address]] CEmptyStruct2 e;
+};
+
+union UnionLayout2 {
+  CStruct c;
+  int a;
+  CEmptyStruct2 e;
+  double b;
+  [[no_unique_address]] CEmptyStruct d;
+};
+
+union UnionLayout3 {
+  CStruct c;
+  int a;
+  double b;
+  [[no_unique_address]] CEmptyStruct d;
+};
+
+void is_layout_compatible(int n)
 {
   static_assert(__is_layout_compatible(void, void), "");
   static_assert(!__is_layout_compatible(void, int), "");
+  static_assert(!__is_layout_compatible(void, const void), ""); // FIXME: this is CWG1719
+  static_assert(!__is_layout_compatible(void, volatile void), ""); // FIXME: this is CWG1719
+  static_assert(!__is_layout_compatible(const int, volatile int), ""); // FIXME: this is CWG1719
   static_assert(__is_layout_compatible(int, int), "");
   static_assert(!__is_layout_compatible(int, const int), ""); // FIXME: this is CWG1719
   static_assert(!__is_layout_compatible(int, volatile int), ""); // FIXME: this is CWG1719
@@ -1647,6 +1688,8 @@ void is_layout_compatible()
   static_assert(!__is_layout_compatible(unsigned char, signed char), "");
   static_assert(__is_layout_compatible(int[], int[]), "");
   static_assert(__is_layout_compatible(int[2], int[2]), "");
+  static_assert(!__is_layout_compatible(int[n], int[2]), ""); // FIXME: VLAs should be rejected
+  static_assert(!__is_layout_compatible(int[n], int[n]), ""); // FIXME: VLAs should be rejected
   static_assert(__is_layout_compatible(int&, int&), "");
   static_assert(!__is_layout_compatible(int&, char&), "");
   static_assert(__is_layout_compatible(void(int), void(int)), "");
@@ -1655,6 +1698,16 @@ void is_layout_compatible()
   static_assert(!__is_layout_compatible(void(&)(int), void(&)(char)), "");
   static_assert(__is_layout_compatible(void(*)(int), void(*)(int)), "");
   static_assert(!__is_layout_compatible(void(*)(int), void(*)(char)), "");
+  using function_type = void();
+  using function_type2 = void(char);
+  static_assert(__is_layout_compatible(const function_type, const function_type), "");
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  // expected-warning@-2 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  static_assert(__is_layout_compatible(function_type, const function_type), "");
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  static_assert(!__is_layout_compatible(const function_type, const function_type2), "");
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
   static_assert(!__is_layout_compatible(EnumLayout, int), "");
   static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
   static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
@@ -1680,13 +1733,21 @@ void is_layout_compatible()
   static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
-  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), "");
-  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
+  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
+  static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
+  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
   static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*), "");
   static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*), "");
   static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)), "");
   static_assert(!__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(char)), "");
   static_assert(__is_layout_compatible(CStructNested, CStructNested2), "");
+  static_assert(__is_layout_compatible(UnionLayout, UnionLayout), "");
+  static_assert(__is_layout_compatible(UnionLayout, UnionLayout2), "");
+  static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
+  // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
+  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), ""); 
+  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
+  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]), "");
 }
 
 void is_signed()
