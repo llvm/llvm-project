@@ -226,6 +226,17 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
           return false;
       }
     }
+
+    if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(S)) {
+      for (const Stmt *CB : dyn_cast<CompoundStmt>(SS->getBody())->body()) {
+        for (const Decl *D : dyn_cast<DeclStmt>(CB)->decls()) {
+          // Once we reach the declaration of the VD we can return.
+          if (D->getCanonicalDecl() == VD)
+            return false;
+        }
+      }
+    }
+
     // Check the usage of the pass-by-ref function calls and adress-of operator
     // on VD and reference initialized by VD.
     ASTContext &ASTCtx =
