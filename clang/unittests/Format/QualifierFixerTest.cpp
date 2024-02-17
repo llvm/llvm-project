@@ -1177,6 +1177,19 @@ TEST_F(QualifierFixerTest, DontPushQualifierThroughNonSpecifiedTypes) {
   verifyFormat("const inline static Foo;", Style);
 }
 
+TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "inline", "type"};
+
+  verifyFormat("inline\n"
+               "#if FOO\n"
+               "    constexpr\n"
+               "#endif\n"
+               "    int i = 0;",
+               Style);
+}
+
 TEST_F(QualifierFixerTest, UnsignedQualifier) {
 
   FormatStyle Style = getLLVMStyle();
