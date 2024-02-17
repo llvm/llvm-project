@@ -518,6 +518,16 @@ bool isStrided(MemRefType t);
 /// stride. Also return "true" for types with no strides.
 bool isLastMemrefDimUnitStride(MemRefType type);
 
+/// Return "true" if the last N dimensions of the given type are contiguous.
+///
+/// Examples:
+///   - memref<5x4x3x2xi8, strided<[24, 6, 2, 1]> is contiguous when
+///   considering both _all_ and _only_ the trailing 3 dims,
+///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
+///   considering the trailing 3 dims.
+///
+bool trailingNDimsContiguous(MemRefType type, int64_t n);
+
 } // namespace mlir
 
 #endif // MLIR_IR_BUILTINTYPES_H
