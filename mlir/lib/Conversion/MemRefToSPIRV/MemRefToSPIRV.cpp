@@ -481,6 +481,14 @@ calculateRequiredAlignment(Value accessedPtr, Operation *memrefAccessOp) {
   assert((isa<memref::LoadOp, memref::StoreOp>(memrefAccessOp)) &&
          "Bad op type");
 
+  auto nontemporalAttr = memrefAccessOp->getAttrOfType<BoolAttr>("nontemporal");
+  if (nontemporalAttr && nontemporalAttr.getValue()) {
+    return std::pair{
+        spirv::MemoryAccessAttr::get(accessedPtr.getContext(),
+                                     spirv::MemoryAccess::Nontemporal),
+        IntegerAttr{}};
+  }
+
   auto memrefMemAccess = memrefAccessOp->getAttrOfType<spirv::MemoryAccessAttr>(
       spirv::attributeName<spirv::MemoryAccess>());
   auto memrefAlignment =
@@ -623,7 +631,8 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!loadPtr)
     return failure();
 
-  AlignmentRequirements requiredAlignment = calculateRequiredAlignment(loadPtr);
+  AlignmentRequirements requiredAlignment =
+      calculateRequiredAlignment(loadPtr, loadOp);
   if (failed(requiredAlignment))
     return rewriter.notifyMatchFailure(
         loadOp, "failed to determine alignment requirements");
