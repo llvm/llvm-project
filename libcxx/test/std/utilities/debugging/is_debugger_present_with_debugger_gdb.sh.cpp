@@ -8,11 +8,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // REQUIRES: host-has-gdb-with-python
-// UNSUPPORTED: android
+// The Android libc++ tests are run on a non-Android host, connected to an
+// Android device over adb. gdb needs special support to make this work (e.g.
+// gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
+// support gdb anymore, favoring lldb instead.
+// UNSUPPORTED: android, linux && no-filesystem && no-localization
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{gdb} %t.exe -ex "source %S/is_debugger_present_with_debugger_gdb.py" --silent
+// RUN: "%{gdb}" %t.exe -ex "source %S/is_debugger_present_with_debugger_gdb.py" --silent
 
 // <debugging>
 

@@ -102,6 +102,17 @@ bool __is_debugger_present() noexcept {
 #  elif defined(__linux__)
 
 bool __is_debugger_present() noexcept {
+#    if defined(_LIBCPP_HAS_NO_FILESYSTEM)
+  _LIBCPP_ASSERT_INTERNAL(false,
+                          "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
+                          "compiled with _LIBCPP_HAS_NO_FILESYSTEM.");
+  return false;
+#    elif defined(_LIBCPP_HAS_NO_LOCALIZATION)
+  _LIBCPP_ASSERT_INTERNAL(false,
+                          "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
+                          "compiled with _LIBCPP_HAS_NO_LOCALIZATION.");
+  return false;
+#    else
   // https://docs.kernel.org/filesystems/proc.html
 
   // Get the status information of a process by reading the file /proc/PID/status.
@@ -124,6 +135,7 @@ bool __is_debugger_present() noexcept {
   }
 
   return false;
+#    endif // _LIBCPP_HAS_NO_FILESYSTEM
 }
 
 #  else

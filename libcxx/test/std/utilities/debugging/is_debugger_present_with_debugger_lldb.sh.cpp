@@ -8,11 +8,13 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // REQUIRES: host-has-lldb-with-python
-// UNSUPPORTED: android
+// The Android libc++ tests are run on a non-Android host, connected to an
+// Android device over adb.
+// UNSUPPORTED: android, linux && no-filesystem && no-localization
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{lldb} %t.exe -o "command script import %S/is_debugger_present_with_debugger_lldb.py"
+// RUN: "%{lldb}" %t.exe -o "command script import %S/is_debugger_present_with_debugger_lldb.py"
 
 // <debugging>
 
