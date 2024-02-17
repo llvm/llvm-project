@@ -36,8 +36,6 @@ jobs:
       - name: Compute projects to test
         id: compute-projects
         uses: ./.github/workflows/compute-projects-to-test
-        with:
-          projects: clang llvm lld
 
       - name: Configure LLVM
         shell: bash
@@ -51,11 +49,7 @@ jobs:
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DLLVM_LIT_ARGS="-v --no-progress-bar" \
             -S llvm
-      - name: Build LLVM
-        if: ${{ steps.compute-projects.outputs.check-targets }}
-        run: |
-          ninja -C build test-depends
       - name: Check LLVM
         if: ${{ steps.compute-projects.outputs.check-targets }}
         run: |
-          ninja -C build "${{ steps.compute-projects.outputs.check-targets }}"
+          ninja -C build ${{ steps.compute-projects.outputs.check-targets }}

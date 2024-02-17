@@ -207,9 +207,11 @@ echo "modified_projects: $modified_projects"
 if [ "${RUNNER_OS}" = "Linux" ]; then
   projects_to_test=$(exclude-linux $(compute-projects-to-test ${modified_projects}))
 elif [ "${RUNNER_OS}" = "Windows" ]; then
-  projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
+  # Don't run dependent projects on Windows for now.
+  projects_to_test=$(exclude-windows ${modified_projects})
 else
   echo "Unknown runner OS: $RUNNER_OS"
+  exit 1
 fi
 check_targets=$(check-targets $(remove-unwanted-projects ${projects_to_test}) | sort | uniq)
 projects=$(remove-unwanted-projects $(add-dependencies ${projects_to_test}) | sort | uniq)
