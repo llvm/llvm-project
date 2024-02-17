@@ -448,32 +448,55 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   AFI->setDPRCalleeSavedAreaSize(DPRCSSize);
 
   if (RegInfo->hasStackRealignment(MF)) {
-    const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
-    // Emit the following sequence, using R4 as a temporary, since we cannot use
-    // SP as a source or destination register for the shifts:
-    // mov  r4, sp
-    // lsrs r4, r4, #NrBitsToZero
-    // lsls r4, r4, #NrBitsToZero
-    // mov  sp, r4
-    BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::R4)
-      .addReg(ARM::SP, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+    const Align Alignment = MFI.getMaxAlign();
+    const unsigned NrBitsToZero = Log2(Alignment);
+    const unsigned AlignMask = ~(~0U << NrBitsToZero);
 
-    BuildMI(MBB, MBBI, dl, TII.get(ARM::tLSRri), ARM::R4)
-      .addDef(ARM::CPSR)
-      .addReg(ARM::R4, RegState::Kill)
-      .addImm(NrBitsToZero)
-      .add(predOps(ARMCC::AL));
+    // Emit the following sequence, using R4 as a temporary, since we cannot
+    // use SP as a source or destination register:
+    //   mov r4, sp
+    //
+    // Then, if the mask to zero the required number of bits
+    // can be encoded in the bic immediate field:
+    //   bic r4, r4, Alignment-1
+    // otherwise, emit:
+    //   lsr r4, r4, log2(Alignment)
+    //   lsl r4, r4, log2(Alignment)
+    //
+    // Finally, save back to sp:
+    //   mov sp, r4
+    if (AlignMask <= 255) {
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::R4)
+          .addReg(ARM::SP, RegState::Kill)
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tBIC), ARM::R4)
+          .addReg(ARM::R4, RegState::Kill)
+          .addImm(AlignMask)
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
+          .addReg(ARM::R4, RegState::Kill)
+          .add(predOps(ARMCC::AL));
+    } else {
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::R4)
+          .addReg(ARM::SP, RegState::Kill)
+          .add(predOps(ARMCC::AL));
 
-    BuildMI(MBB, MBBI, dl, TII.get(ARM::tLSLri), ARM::R4)
-      .addDef(ARM::CPSR)
-      .addReg(ARM::R4, RegState::Kill)
-      .addImm(NrBitsToZero)
-      .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tLSRri), ARM::R4)
+          .addDef(ARM::CPSR)
+          .addReg(ARM::R4, RegState::Kill)
+          .addImm(NrBitsToZero)
+          .add(predOps(ARMCC::AL));
 
-    BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
-      .addReg(ARM::R4, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tLSLri), ARM::R4)
+          .addDef(ARM::CPSR)
+          .addReg(ARM::R4, RegState::Kill)
+          .addImm(NrBitsToZero)
+          .add(predOps(ARMCC::AL));
+
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
+          .addReg(ARM::R4, RegState::Kill)
+          .add(predOps(ARMCC::AL));
+    }
 
     AFI->setShouldRestoreSPFromFP(true);
   }
