@@ -2713,18 +2713,19 @@ An error will be given if:
   }];
 }
 
-def AMDGPUNumWorkGroupsDocs : Documentation {
+def AMDGPUMaxNumWorkGroupsDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
-The number of work groups specifies the number of work groups when the kernel
+This attribute specifies the max number of work groups when the kernel
 is dispatched.
 
 Clang supports the
-``__attribute__((amdgpu_num_work_groups(<x>, <y>, <z>)))`` attribute for the
-AMDGPU target. This attribute may be attached to a kernel function definition
-and is an optimization hint.
+``__attribute__((amdgpu_max_num_work_groups(<x>, <y>, <z>)))`` or
+``[[clang::amdgpu_max_num_work_groups(<x>, <y>, <z>)]]`` attribute for the
+AMDGPU target. This attribute may be attached to HIP or OpenCL kernel function
+definitions and is an optimization hint.
 
-``<x>`` parameter specifies the maximum number of work groups in the x dimentsion.
+``<x>`` parameter specifies the maximum number of work groups in the x dimension.
 Similarly ``<y>`` and ``<z>`` are for the y and z dimensions respectively.
 
 If specified, the AMDGPU target backend might be able to produce better machine

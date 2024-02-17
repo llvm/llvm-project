@@ -357,17 +357,16 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUNumWorkGroupsAttr>()) {
-    uint32_t X = Attr->getNumWorkGroupsX();
-    uint32_t Y = Attr->getNumWorkGroupsY();
-    uint32_t Z = Attr->getNumWorkGroupsZ();
+  if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
+    uint32_t X = Attr->getMaxNumWorkGroupsX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    uint32_t Y = Attr->getMaxNumWorkGroupsY()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    uint32_t Z = Attr->getMaxNumWorkGroupsZ()->EvaluateKnownConstInt(M.getContext()).getExtValue();
 
-    if (X != 0 && Y != 0 && Z != 0) {
-      std::string AttrVal = llvm::utostr(X) + std::string(", ") +
-                            llvm::utostr(Y) + std::string(", ") +
-                            llvm::utostr(Z);
-      F->addFnAttr("amdgpu-num-work-groups", AttrVal);
-    }
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ", " << Y << ", " << Z;
+     
+    F->addFnAttr("amdgpu-max-num-work-groups", AttrVal.str());
   }
 }
 

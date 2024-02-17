@@ -494,13 +494,13 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
-  unsigned NumWGX = MFI.getNumWorkGroupsX();
-  unsigned NumWGY = MFI.getNumWorkGroupsY();
-  unsigned NumWGZ = MFI.getNumWorkGroupsZ();
+  unsigned NumWGX = MFI.getMaxNumWorkGroupsX();
+  unsigned NumWGY = MFI.getMaxNumWorkGroupsY();
+  unsigned NumWGZ = MFI.getMaxNumWorkGroupsZ();
   if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0) {
-    Kern[".num_work_groups_x"] = Kern.getDocument()->getNode(NumWGX);
-    Kern[".num_work_groups_y"] = Kern.getDocument()->getNode(NumWGY);
-    Kern[".num_work_groups_z"] = Kern.getDocument()->getNode(NumWGZ);
+    Kern[".max_num_work_groups_x"] = Kern.getDocument()->getNode(NumWGX);
+    Kern[".max_num_work_groups_y"] = Kern.getDocument()->getNode(NumWGY);
+    Kern[".max_num_work_groups_z"] = Kern.getDocument()->getNode(NumWGZ);
   }
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
