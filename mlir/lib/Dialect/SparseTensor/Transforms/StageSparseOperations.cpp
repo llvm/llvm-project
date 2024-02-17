@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
@@ -21,8 +22,16 @@ struct StageUnorderedSparseOps : public OpRewritePattern<StageWithSortOp> {
 
   LogicalResult matchAndRewrite(StageWithSortOp op,
                                 PatternRewriter &rewriter) const override {
-    return llvm::cast<StageWithSortSparseOp>(op.getOperation())
-        .stageWithSort(rewriter);
+    Location loc = op.getLoc();
+    Value tmpBuf = nullptr;
+    auto itOp = llvm::cast<StageWithSortSparseOp>(op.getOperation());
+    LogicalResult stageResult = itOp.stageWithSort(rewriter, tmpBuf);
+    // Deallocate tmpBuf.
+    // TODO: Delegate to buffer deallocation pass in the future.
+    if (succeeded(stageResult) && tmpBuf)
+      rewriter.create<bufferization::DeallocTensorOp>(loc, tmpBuf);
+
+    return stageResult;
   }
 };
 } // namespace
