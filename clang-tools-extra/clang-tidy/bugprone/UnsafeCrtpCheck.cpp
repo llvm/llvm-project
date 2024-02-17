@@ -9,6 +9,7 @@
 #include "UnsafeCrtpCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -23,26 +24,80 @@ AST_MATCHER_P(CXXRecordDecl, isBoundNode, std::string, ID) {
         return BoundRecord != &Node;
       });
 }
+
+bool hasPrivateConstructor(const CXXRecordDecl *RD) {
+  for (auto &&Ctor : RD->ctors()) {
+    if (Ctor->getAccess() == AS_private)
+      return true;
+  }
+
+  return false;
+}
+
+bool isDerivedBefriended(const CXXRecordDecl *CRTP,
+                         const CXXRecordDecl *Derived) {
+  for (auto &&Friend : CRTP->friends()) {
+    if (Friend->getFriendType()->getType()->getAsCXXRecordDecl() == Derived)
+      return true;
+  }
+
+  return false;
+}
 } // namespace
 
 void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(classTemplateSpecializationDecl(
-                         decl().bind("crtp"),
-                         hasAnyTemplateArgument(refersToType(recordType(
-                             hasDeclaration(cxxRecordDecl(isDerivedFrom(
-                                 cxxRecordDecl(isBoundNode("crtp"))))))))),
-                     this);
+  Finder->addMatcher(
+      classTemplateSpecializationDecl(
+          decl().bind("crtp"),
+          hasAnyTemplateArgument(refersToType(recordType(hasDeclaration(
+              cxxRecordDecl(isDerivedFrom(cxxRecordDecl(isBoundNode("crtp"))))
+                  .bind("derived")))))),
+      this);
 }
 
 void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MatchedCRTP = Result.Nodes.getNodeAs<CXXRecordDecl>("crtp");
 
-  MatchedCRTP->dump();
+  const auto *MatchedCRTP =
+      Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("crtp");
+  const auto *MatchedDerived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
 
-  for (auto &&Ctor : MatchedCRTP->ctors()) {
-    if (Ctor->getAccess() != AS_private) {
-      Ctor->dump();
-    };
+  if (!MatchedCRTP->hasUserDeclaredConstructor()) {
+    diag(MatchedCRTP->getLocation(),
+         "the implicit default constructor of the CRTP is publicly accessible")
+        << MatchedCRTP
+        << FixItHint::CreateInsertion(
+               MatchedCRTP->getBraceRange().getBegin().getLocWithOffset(1),
+               "private: " + MatchedCRTP->getNameAsString() + "() = default;");
+
+    diag(MatchedCRTP->getLocation(), "consider making it private",
+         DiagnosticIDs::Note);
+  }
+
+  // FIXME: Extract this.
+  size_t idx = 0;
+  for (auto &&TemplateArg : MatchedCRTP->getTemplateArgs().asArray()) {
+    if (TemplateArg.getKind() == TemplateArgument::Type &&
+        TemplateArg.getAsType()->getAsCXXRecordDecl() == MatchedDerived) {
+      break;
+    }
+    ++idx;
+  }
+
+  if (hasPrivateConstructor(MatchedCRTP) &&
+      !isDerivedBefriended(MatchedCRTP, MatchedDerived)) {
+    diag(MatchedCRTP->getLocation(),
+         "the CRTP cannot be constructed from the derived class")
+        << MatchedCRTP
+        << FixItHint::CreateInsertion(
+               MatchedCRTP->getBraceRange().getEnd().getLocWithOffset(-1),
+               "friend " +
+                   MatchedCRTP->getSpecializedTemplate()
+                       ->getTemplateParameters()
+                       ->asArray()[idx]
+                       ->getNameAsString() +
+                   ';');
+    diag(MatchedCRTP->getLocation(),
+         "consider declaring the derived class as friend", DiagnosticIDs::Note);
   }
 
   // if (!MatchedDecl->getIdentifier() ||
