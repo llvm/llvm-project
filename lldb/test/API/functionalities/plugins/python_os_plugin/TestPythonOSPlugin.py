@@ -212,7 +212,7 @@ class PluginPythonOSPlugin(TestBase):
             "main.c",
             "Make sure we stepped from line 5 to line 6 in main.c",
         )
-        self.assertEquals(
+        self.assertEqual(
             line_entry.GetLine(),
             6,
             "Make sure we stepped from line 5 to line 6 in main.c",

@@ -26,16 +26,16 @@ class TestVTableValue(TestBase):
         # Test a shape instance to make sure we get the vtable correctly.
         shape = self.frame().FindVariable("shape")
         vtable = shape.GetVTable()
-        self.assertEquals(vtable.GetName(), "vtable for Shape")
-        self.assertEquals(vtable.GetTypeName(), "vtable for Shape")
+        self.assertEqual(vtable.GetName(), "vtable for Shape")
+        self.assertEqual(vtable.GetTypeName(), "vtable for Shape")
         # Make sure we have the right number of virtual functions in our vtable
         # for the shape class.
-        self.assertEquals(vtable.GetNumChildren(), 4)
+        self.assertEqual(vtable.GetNumChildren(), 4)
 
         # Verify vtable address
         vtable_addr = vtable.GetValueAsUnsigned(0)
         expected_addr = self.expected_vtable_addr(shape)
-        self.assertEquals(vtable_addr, expected_addr)
+        self.assertEqual(vtable_addr, expected_addr)
 
         for idx, vtable_entry in enumerate(vtable.children):
             self.verify_vtable_entry(vtable_entry, vtable_addr, idx)
@@ -43,16 +43,16 @@ class TestVTableValue(TestBase):
         # Test a shape reference to make sure we get the vtable correctly.
         shape = self.frame().FindVariable("shape_ref")
         vtable = shape.GetVTable()
-        self.assertEquals(vtable.GetName(), "vtable for Shape")
-        self.assertEquals(vtable.GetTypeName(), "vtable for Shape")
+        self.assertEqual(vtable.GetName(), "vtable for Shape")
+        self.assertEqual(vtable.GetTypeName(), "vtable for Shape")
         # Make sure we have the right number of virtual functions in our vtable
         # for the shape class.
-        self.assertEquals(vtable.GetNumChildren(), 4)
+        self.assertEqual(vtable.GetNumChildren(), 4)
 
         # Verify vtable address
         vtable_addr = vtable.GetValueAsUnsigned(0)
         expected_addr = self.expected_vtable_addr(shape)
-        self.assertEquals(vtable_addr, expected_addr)
+        self.assertEqual(vtable_addr, expected_addr)
 
         for idx, vtable_entry in enumerate(vtable.children):
             self.verify_vtable_entry(vtable_entry, vtable_addr, idx)
@@ -60,17 +60,17 @@ class TestVTableValue(TestBase):
         # Test we get the right vtable for the Rectangle instance.
         rect = self.frame().FindVariable("rect")
         vtable = rect.GetVTable()
-        self.assertEquals(vtable.GetName(), "vtable for Rectangle")
-        self.assertEquals(vtable.GetTypeName(), "vtable for Rectangle")
+        self.assertEqual(vtable.GetName(), "vtable for Rectangle")
+        self.assertEqual(vtable.GetTypeName(), "vtable for Rectangle")
 
         # Make sure we have the right number of virtual functions in our vtable
         # with the extra virtual function added by the Rectangle class
-        self.assertEquals(vtable.GetNumChildren(), 5)
+        self.assertEqual(vtable.GetNumChildren(), 5)
 
         # Verify vtable address
         vtable_addr = vtable.GetValueAsUnsigned()
         expected_addr = self.expected_vtable_addr(rect)
-        self.assertEquals(vtable_addr, expected_addr)
+        self.assertEqual(vtable_addr, expected_addr)
 
         for idx, vtable_entry in enumerate(vtable.children):
             self.verify_vtable_entry(vtable_entry, vtable_addr, idx)
@@ -88,15 +88,15 @@ class TestVTableValue(TestBase):
 
         shape_ptr = self.frame().FindVariable("shape_ptr")
         shape_ptr_vtable = shape_ptr.GetVTable()
-        self.assertEquals(shape_ptr_vtable.GetName(), "vtable for Rectangle")
-        self.assertEquals(shape_ptr_vtable.GetNumChildren(), 5)
-        self.assertEquals(shape_ptr.GetValueAsUnsigned(0), rect.GetLoadAddress())
+        self.assertEqual(shape_ptr_vtable.GetName(), "vtable for Rectangle")
+        self.assertEqual(shape_ptr_vtable.GetNumChildren(), 5)
+        self.assertEqual(shape_ptr.GetValueAsUnsigned(0), rect.GetLoadAddress())
         lldbutil.continue_to_source_breakpoint(
             self, process, "Shape is Shape", lldb.SBFileSpec("main.cpp")
         )
-        self.assertEquals(shape_ptr.GetValueAsUnsigned(0), shape.GetLoadAddress())
-        self.assertEquals(shape_ptr_vtable.GetNumChildren(), 4)
-        self.assertEquals(shape_ptr_vtable.GetName(), "vtable for Shape")
+        self.assertEqual(shape_ptr.GetValueAsUnsigned(0), shape.GetLoadAddress())
+        self.assertEqual(shape_ptr_vtable.GetNumChildren(), 4)
+        self.assertEqual(shape_ptr_vtable.GetName(), "vtable for Shape")
 
     @skipUnlessPlatform(["linux", "macosx"])
     def test_no_vtable(self):
@@ -127,11 +127,11 @@ class TestVTableValue(TestBase):
         # Test a shape instance to make sure we get the vtable correctly.
         shape = self.frame().FindVariable("shape")
         vtable = shape.GetVTable()
-        self.assertEquals(vtable.GetName(), "vtable for Shape")
-        self.assertEquals(vtable.GetTypeName(), "vtable for Shape")
+        self.assertEqual(vtable.GetName(), "vtable for Shape")
+        self.assertEqual(vtable.GetTypeName(), "vtable for Shape")
         # Make sure we have the right number of virtual functions in our vtable
         # for the shape class.
-        self.assertEquals(vtable.GetNumChildren(), 4)
+        self.assertEqual(vtable.GetNumChildren(), 4)
 
         # Overwrite the first entry in the vtable and make sure we can still
         # see the bogus value which should have no summary
@@ -145,11 +145,11 @@ class TestVTableValue(TestBase):
         process.WriteMemory(vtable_addr, data, error)
 
         scribbled_child = vtable.GetChildAtIndex(0)
-        self.assertEquals(
+        self.assertEqual(
             scribbled_child.GetValueAsUnsigned(0),
             0x0101010101010101 if is_64bit else 0x01010101,
         )
-        self.assertEquals(scribbled_child.GetSummary(), None)
+        self.assertEqual(scribbled_child.GetSummary(), None)
 
     def expected_vtable_addr(self, var: lldb.SBValue) -> int:
         load_addr = var.GetLoadAddress()
@@ -179,7 +179,7 @@ class TestVTableValue(TestBase):
         """
         # Check function ptr
         vtable_entry_func_ptr = vtable_entry.GetValueAsUnsigned(0)
-        self.assertEquals(
+        self.assertEqual(
             vtable_entry_func_ptr,
             self.expected_vtable_entry_func_ptr(vtable_addr, idx),
         )
@@ -190,8 +190,8 @@ class TestVTableValue(TestBase):
         # Make sure the type is the same as the function type
         func_type = sym_ctx.GetFunction().GetType()
         if func_type.IsValid():
-            self.assertEquals(vtable_entry.GetType(), func_type.GetPointerType())
+            self.assertEqual(vtable_entry.GetType(), func_type.GetPointerType())
 
         # The summary should be the address description of the function pointer
         summary = vtable_entry.GetSummary()
-        self.assertEquals(str(sb_addr), summary)
+        self.assertEqual(str(sb_addr), summary)

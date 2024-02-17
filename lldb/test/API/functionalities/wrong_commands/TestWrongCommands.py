@@ -23,7 +23,7 @@ class UnknownCommandTestCase(TestBase):
         )
         self.assertRegexpMatches(result.GetError(), "gui")
         self.assertRegexpMatches(result.GetError(), "gdb-remote")
-        self.assertEquals(1, result.GetError().count("gdb-remote"))
+        self.assertEqual(1, result.GetError().count("gdb-remote"))
 
     @no_debug_info_test
     def test_unknown_command(self):
@@ -33,4 +33,4 @@ class UnknownCommandTestCase(TestBase):
 
         command_interpreter.HandleCommand("qbert", result)
         self.assertFalse(result.Succeeded())
-        self.assertEquals(result.GetError(), "error: 'qbert' is not a valid command.\n")
+        self.assertEqual(result.GetError(), "error: 'qbert' is not a valid command.\n")

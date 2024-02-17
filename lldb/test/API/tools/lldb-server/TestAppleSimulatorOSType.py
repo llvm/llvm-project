@@ -135,7 +135,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(process_info)
 
         # Check that ostype is correct
-        self.assertEquals(process_info["ostype"], platform_name + "simulator")
+        self.assertEqual(process_info["ostype"], platform_name + "simulator")
 
         # Now for dylibs
         dylib_info_raw = context.get("dylib_info_raw")
@@ -150,7 +150,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             break
 
         self.assertIsNotNone(image_info)
-        self.assertEquals(image["min_version_os_name"], platform_name + "simulator")
+        self.assertEqual(image["min_version_os_name"], platform_name + "simulator")
 
     @apple_simulator_test("iphone")
     @skipIfRemote

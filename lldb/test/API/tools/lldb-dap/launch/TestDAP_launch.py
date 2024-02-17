@@ -118,7 +118,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         for line in lines:
             if line.startswith(prefix):
                 found = True
-                self.assertEquals(
+                self.assertEqual(
                     program_parent_dir,
                     line[len(prefix) :],
                     "lldb-dap working dir '%s' == '%s'"
@@ -145,7 +145,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             if line.startswith(prefix):
                 found = True
                 quoted_path = '"%s"' % (program_dir)
-                self.assertEquals(
+                self.assertEqual(
                     quoted_path,
                     line[len(prefix) :],
                     "lldb-dap working dir %s == %s" % (quoted_path, line[6:]),
@@ -164,7 +164,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
         # Now get the STDOUT and verify our program argument is correct
         output = self.get_stdout()
-        self.assertEquals(output, None, "expect no program output")
+        self.assertEqual(output, None, "expect no program output")
 
     @skipIfWindows
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
@@ -327,7 +327,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Set 2 breakpoints so we can verify that "stopCommands" get run as the
         # breakpoints get hit
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEquals(
+        self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
 

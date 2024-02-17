@@ -560,12 +560,12 @@ class LldbGdbServerTestCase(
             # Ensure the stop signal is the signal we delivered.
             # stop_signo = context.get("stop_signo")
             # self.assertIsNotNone(stop_signo)
-            # self.assertEquals(int(stop_signo,16), lldbutil.get_signal_number('SIGUSR1'))
+            # self.assertEqual(int(stop_signo,16), lldbutil.get_signal_number('SIGUSR1'))
 
             # Ensure the stop thread is the thread to which we delivered the signal.
             # stop_thread_id = context.get("stop_thread_id")
             # self.assertIsNotNone(stop_thread_id)
-            # self.assertEquals(int(stop_thread_id,16), thread_id)
+            # self.assertEqual(int(stop_thread_id,16), thread_id)
 
             # Ensure we haven't seen this thread id yet.  The inferior's
             # self-obtained thread ids are not guaranteed to match the stub

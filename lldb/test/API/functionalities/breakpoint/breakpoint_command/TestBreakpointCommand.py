@@ -361,8 +361,8 @@ class BreakpointCommandTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         # Check the value of canary variables.
-        self.assertEquals("one liner was here", side_effect.one_liner)
-        self.assertEquals("function was here", side_effect.bktptcmd)
+        self.assertEqual("one liner was here", side_effect.one_liner)
+        self.assertEqual("function was here", side_effect.bktptcmd)
 
         # Finish the program.
         self.runCmd("process continue")
@@ -558,10 +558,10 @@ class BreakpointCommandTestCase(TestBase):
         return json.loads(stream.GetData())
 
     def verify_source_map_entry_pair(self, entry, original, replacement):
-        self.assertEquals(
+        self.assertEqual(
             entry[0], original, "source map entry 'original' does not match"
         )
-        self.assertEquals(
+        self.assertEqual(
             entry[1], replacement, "source map entry 'replacement' does not match"
         )
 
@@ -604,7 +604,7 @@ class BreakpointCommandTestCase(TestBase):
         # "./a/b/c/main.cpp".
 
         source_map_json = self.get_source_map_json()
-        self.assertEquals(
+        self.assertEqual(
             len(source_map_json), 0, "source map should be empty initially"
         )
         self.verify_source_map_deduce_statistics(target, 0)
@@ -621,7 +621,7 @@ class BreakpointCommandTestCase(TestBase):
         )
 
         source_map_json = self.get_source_map_json()
-        self.assertEquals(len(source_map_json), 1, "source map should not be empty")
+        self.assertEqual(len(source_map_json), 1, "source map should not be empty")
         self.verify_source_map_entry_pair(source_map_json[0], ".", "/x/y")
         self.verify_source_map_deduce_statistics(target, 1)
 
@@ -640,7 +640,7 @@ class BreakpointCommandTestCase(TestBase):
         )
 
         source_map_json = self.get_source_map_json()
-        self.assertEquals(len(source_map_json), 0, "source map should not be deduced")
+        self.assertEqual(len(source_map_json), 0, "source map should not be deduced")
 
     def test_breakpoint_statistics_hitcount(self):
         """Test breakpoints statistics have hitCount field."""
