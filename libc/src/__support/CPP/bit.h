@@ -259,9 +259,10 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
       ++count;
   return count;
 }
-#define ADD_SPECIALIZATION(TYPE, BUILTIN)                                \
-  template <> [[nodiscard]] LIBC_INLINE constexpr int count_ones<TYPE>(TYPE value) { \
-    return BUILTIN(value); \
+#define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
+  template <>                                                                  \
+  [[nodiscard]] LIBC_INLINE constexpr int count_ones<TYPE>(TYPE value) {       \
+    return BUILTIN(value);                                                     \
   }
 ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
