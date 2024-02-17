@@ -1677,15 +1677,6 @@ std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   return s;
 }
 
-// Return the text representation of the given `APInt Val`:
-static std::string getAPIntText(APInt Val) {
-  SmallVector<char> Txt;
-  Val.toString(Txt, 10, true);
-  // APInt::toString does not add '\0' to the end of the string for us:
-  Txt.push_back('\0');
-  return Txt.data();
-}
-
 // Return the source location of the last character of the AST `Node`.
 template <typename NodeTy>
 static std::optional<SourceLocation>
@@ -2304,20 +2295,6 @@ static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
   std::stringstream SS;
 
   SS << *SpanTyText;
-  // Append qualifiers to the type of `D`, if any:
-  if (D->getType().hasQualifiers())
-    SS << " " << D->getType().getQualifiers().getAsString();
-
-  // The end of the range of the original source that will be replaced
-  // by `std::span<T> ident`:
-  SourceLocation EndLocForReplacement = D->getEndLoc();
-  std::optional<StringRef> IdentText =
-      getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());
-
-  if (!IdentText) {
-    DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the identifier");
-    return {};
-  }
   // Fix the initializer if it exists:
   if (const Expr *Init = D->getInit()) {
     std::optional<FixItList> InitFixIts =
@@ -2326,15 +2303,22 @@ static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
       return {};
     FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts->begin()),
                   std::make_move_iterator(InitFixIts->end()));
-    // If the declaration has the form `T *ident = init`, we want to replace
-    // `T *ident = ` with `std::span<T> ident`:
-    EndLocForReplacement = Init->getBeginLoc().getLocWithOffset(-1);
   }
-  SS << " " << IdentText->str();
+  // For declaration of the form `T * ident = init;`, we want to replace
+  // `T * ` with `std::span<T>`.
+  // We ignore CV-qualifiers so for `T * const ident;` we also want to replace
+  // just `T *` with `std::span<T>`.
+  const SourceLocation EndLocForReplacement = D->getTypeSpecEndLoc();
   if (!EndLocForReplacement.isValid()) {
     DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the end of the declaration");
     return {};
   }
+  // The only exception is that for `T *ident` we'll add a single space between
+  // "std::span<T>" and "ident".
+  // FIXME: The condition is false for identifiers expended from macros.
+  if (EndLocForReplacement.getLocWithOffset(1) == getVarDeclIdentifierLoc(D))
+    SS << " ";
+
   FixIts.push_back(FixItHint::CreateReplacement(
       SourceRange(D->getBeginLoc(), EndLocForReplacement), SS.str()));
   return FixIts;
