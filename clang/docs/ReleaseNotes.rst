@@ -260,16 +260,13 @@ Bug Fixes to C++ Support
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Fixes
   some of (`#80510 <https://github.com/llvm/llvm-project/issues/80510>`).
-<<<<<<< HEAD
 - Clang now ignores top-level cv-qualifiers on function parameters in template partial orderings.
   (`#75404 <https://github.com/llvm/llvm-project/issues/75404>`_)
 - No longer reject valid use of the ``_Alignas`` specifier when declaring a
   local variable, which is supported as a C11 extension in C++. Previously, it
   was only accepted at namespace scope but not at local function scope.
-=======
 - Fix a crash in codegen when lambdas declared in an unevaluated context.
   Fixes (`#76674 <https://github.com/llvm/llvm-project/issues/76674>`_)
->>>>>>> 5430d0709c2a ([Clang][Sema] fix crash in codegen stage when an lambda expression declared in an unevaluated context)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
