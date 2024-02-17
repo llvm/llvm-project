@@ -5210,6 +5210,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FCOPYSIGN:
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_USUBSAT:
   case TargetOpcode::G_SADDSAT:
