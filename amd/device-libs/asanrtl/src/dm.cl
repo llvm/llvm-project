@@ -333,6 +333,8 @@ __asan_free_impl(ulong aa, ulong pc)
     if (!aa)
         return;
 
+    pc -= CALL_BYTES;
+
     uptr sa = MEM_TO_SHADOW(aa);
     s8 sb = *(__global s8*) sa;
     if (sb != 0 && ((s8)(aa & (SHADOW_GRANULARITY-1)) >= sb)) {
@@ -613,6 +615,8 @@ NO_SANITIZE_ADDR
 ulong
 __asan_malloc_impl(ulong sz, ulong pc)
 {
+    pc -= CALL_BYTES;
+
     if (sz > SLAB_THRESHOLD)
         return non_slab_malloc(sz, pc);
     else

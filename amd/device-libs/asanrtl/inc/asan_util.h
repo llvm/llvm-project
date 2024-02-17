@@ -19,7 +19,8 @@ typedef unsigned long u64;
 
 #define SHADOW_GRANULARITY (1ULL << ASAN_SHADOW)
 
-#define GET_CALLER_PC() (uptr) __builtin_return_address(0)
+#define CALL_BYTES 4
+#define GET_CALLER_PC() ((uptr)__builtin_return_address(0) - CALL_BYTES)
 
 #define WORKGROUP_ID(dim) __builtin_amdgcn_workgroup_id_##dim()
 
