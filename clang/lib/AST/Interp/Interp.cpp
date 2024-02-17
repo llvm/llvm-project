@@ -477,6 +477,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
           return false;
 
+        // If the declaration is defined _and_ declared 'constexpr', the below
+        // diagnostic doesn't add anything useful.
+        if (DiagDecl->isDefined() && DiagDecl->isConstexpr())
+          return false;
+
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
         S.Note(DiagDecl->getLocation(), diag::note_declared_at);

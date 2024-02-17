@@ -16,8 +16,8 @@
 namespace LIBC_NAMESPACE {
 
 template <typename T> struct NumberPair {
-  T lo;
-  T hi;
+  T lo = T(0);
+  T hi = T(0);
 };
 
 template <typename T>
