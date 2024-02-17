@@ -831,16 +831,6 @@ corresponding to the byte size of the data type.");
 
   ~CommandObjectWatchpointSetVariable() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() != 0)
-      return;
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eVariablePathCompletion, request,
-        nullptr);
-  }
-
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
