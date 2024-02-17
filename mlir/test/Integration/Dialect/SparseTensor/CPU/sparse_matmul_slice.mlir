@@ -264,7 +264,13 @@ module {
     %du = tensor.cast %r : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%du) : (tensor<*xf64>) -> ()
 
-    // Releases resources (we do not need to deallocate slices).
+    // Releases resources.
+    bufferization.dealloc_tensor %c2 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c3 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c4 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c4_coo : tensor<4x4xf64>
+    bufferization.dealloc_tensor %c4_dyn : tensor<4x4xf64>
+    bufferization.dealloc_tensor %d : tensor<4x4xf64>
     bufferization.dealloc_tensor %b1 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %t1 : tensor<8x8xf64, #CSR>
     bufferization.dealloc_tensor %b1_coo : tensor<8x4xf64, #COO>
