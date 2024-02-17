@@ -209,7 +209,7 @@ class TypeAndTypeListTestCase(TestBase):
             int_scoped_enum_type = scoped_enum_type.GetEnumerationIntegerType()
             self.assertTrue(int_scoped_enum_type)
             self.DebugSBType(int_scoped_enum_type)
-            self.assertEquals(int_scoped_enum_type.GetName(), "int")
+            self.assertEqual(int_scoped_enum_type.GetName(), "int")
 
             enum_uchar = target.FindFirstType("EnumUChar")
             self.assertTrue(enum_uchar)
@@ -217,4 +217,4 @@ class TypeAndTypeListTestCase(TestBase):
             int_enum_uchar = enum_uchar.GetEnumerationIntegerType()
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
-            self.assertEquals(int_enum_uchar.GetName(), "unsigned char")
+            self.assertEqual(int_enum_uchar.GetName(), "unsigned char")

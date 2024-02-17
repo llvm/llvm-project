@@ -873,7 +873,9 @@ void DWARFRewriter::updateUnitDebugInfo(
         OutputRanges.push_back({0, 0});
       const uint64_t RangesSectionOffset =
           RangesSectionWriter.addRanges(OutputRanges);
-      if (!Unit.isDWOUnit())
+      // Don't emit the zero low_pc arange.
+      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
+          OutputRanges.back().LowPC)
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,

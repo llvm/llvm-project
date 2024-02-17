@@ -1677,15 +1677,6 @@ std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   return s;
 }
 
-// Return the text representation of the given `APInt Val`:
-static std::string getAPIntText(APInt Val) {
-  SmallVector<char> Txt;
-  Val.toString(Txt, 10, true);
-  // APInt::toString does not add '\0' to the end of the string for us:
-  Txt.push_back('\0');
-  return Txt.data();
-}
-
 // Return the source location of the last character of the AST `Node`.
 template <typename NodeTy>
 static std::optional<SourceLocation>
@@ -2152,15 +2143,18 @@ UPCPreIncrementGadget::getFixits(const FixitStrategy &S) const {
 // In many cases, this function cannot figure out the actual extent `S`.  It
 // then will use a place holder to replace `S` to ask users to fill `S` in.  The
 // initializer shall be used to initialize a variable of type `std::span<T>`.
+// In some cases (e. g. constant size array) the initializer should remain
+// unchanged and the function returns empty list. In case the function can't
+// provide the right fixit it will return nullopt.
 //
 // FIXME: Support multi-level pointers
 //
 // Parameters:
 //   `Init` a pointer to the initializer expression
 //   `Ctx` a reference to the ASTContext
-static FixItList
+static std::optional<FixItList>
 FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
-                                 const StringRef UserFillPlaceHolder) {
+                          const StringRef UserFillPlaceHolder) {
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
 
@@ -2176,11 +2170,11 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
     std::optional<SourceLocation> InitLocation =
         getEndCharLoc(Init, SM, LangOpts);
     if (!InitLocation)
-      return {};
+      return std::nullopt;
 
     SourceRange SR(Init->getBeginLoc(), *InitLocation);
 
-    return {FixItHint::CreateRemoval(SR)};
+    return FixItList{FixItHint::CreateRemoval(SR)};
   }
 
   FixItList FixIts{};
@@ -2199,7 +2193,7 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
       if (!Ext->HasSideEffects(Ctx)) {
         std::optional<StringRef> ExtentString = getExprText(Ext, SM, LangOpts);
         if (!ExtentString)
-          return {};
+          return std::nullopt;
         ExtentText = *ExtentString;
       }
     } else if (!CxxNew->isArray())
@@ -2208,10 +2202,10 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
       ExtentText = One;
   } else if (const auto *CArrTy = Ctx.getAsConstantArrayType(
                  Init->IgnoreImpCasts()->getType())) {
-    // In cases `Init` is of an array type after stripping off implicit casts,
-    // the extent is the array size.  Note that if the array size is not a
-    // constant, we cannot use it as the extent.
-    ExtentText = getAPIntText(CArrTy->getSize());
+    // std::span has a single parameter constructor for initialization with
+    // constant size array. The size is auto-deduced as the constructor is a
+    // function template. The correct fixit is empty - no changes should happen.
+    return FixItList{};
   } else {
     // In cases `Init` is of the form `&Var` after stripping of implicit
     // casts, where `&` is the built-in operator, the extent is 1.
@@ -2227,7 +2221,7 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
   std::optional<SourceLocation> LocPassInit = getPastLoc(Init, SM, LangOpts);
 
   if (!LocPassInit)
-    return {};
+    return std::nullopt;
 
   StrBuffer.append(", ");
   StrBuffer.append(ExtentText);
@@ -2301,37 +2295,30 @@ static FixItList fixLocalVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
   std::stringstream SS;
 
   SS << *SpanTyText;
-  // Append qualifiers to the type of `D`, if any:
-  if (D->getType().hasQualifiers())
-    SS << " " << D->getType().getQualifiers().getAsString();
-
-  // The end of the range of the original source that will be replaced
-  // by `std::span<T> ident`:
-  SourceLocation EndLocForReplacement = D->getEndLoc();
-  std::optional<StringRef> IdentText =
-      getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());
-
-  if (!IdentText) {
-    DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the identifier");
-    return {};
-  }
   // Fix the initializer if it exists:
   if (const Expr *Init = D->getInit()) {
-    FixItList InitFixIts =
+    std::optional<FixItList> InitFixIts =
         FixVarInitializerWithSpan(Init, Ctx, UserFillPlaceHolder);
-    if (InitFixIts.empty())
+    if (!InitFixIts)
       return {};
-    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
-                  std::make_move_iterator(InitFixIts.end()));
-    // If the declaration has the form `T *ident = init`, we want to replace
-    // `T *ident = ` with `std::span<T> ident`:
-    EndLocForReplacement = Init->getBeginLoc().getLocWithOffset(-1);
+    FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts->begin()),
+                  std::make_move_iterator(InitFixIts->end()));
   }
-  SS << " " << IdentText->str();
+  // For declaration of the form `T * ident = init;`, we want to replace
+  // `T * ` with `std::span<T>`.
+  // We ignore CV-qualifiers so for `T * const ident;` we also want to replace
+  // just `T *` with `std::span<T>`.
+  const SourceLocation EndLocForReplacement = D->getTypeSpecEndLoc();
   if (!EndLocForReplacement.isValid()) {
     DEBUG_NOTE_DECL_FAIL(D, " : failed to locate the end of the declaration");
     return {};
   }
+  // The only exception is that for `T *ident` we'll add a single space between
+  // "std::span<T>" and "ident".
+  // FIXME: The condition is false for identifiers expended from macros.
+  if (EndLocForReplacement.getLocWithOffset(1) == getVarDeclIdentifierLoc(D))
+    SS << " ";
+
   FixIts.push_back(FixItHint::CreateReplacement(
       SourceRange(D->getBeginLoc(), EndLocForReplacement), SS.str()));
   return FixIts;
