@@ -596,6 +596,8 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
                     LostDebugLocObserver &LocObserver, MachineInstr *MI) {
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   const char *Name = TLI.getLibcallName(Libcall);
+  if (!Name)
+    return LegalizerHelper::UnableToLegalize;
   const CallingConv::ID CC = TLI.getLibcallCallingConv(Libcall);
   return createLibcall(MIRBuilder, Name, Result, Args, CC, LocObserver, MI);
 }
@@ -5208,6 +5210,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FCOPYSIGN:
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_USUBSAT:
   case TargetOpcode::G_SADDSAT:

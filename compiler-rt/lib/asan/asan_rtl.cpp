@@ -449,6 +449,8 @@ static bool AsanInitInternal() {
     return false;
   }
 
+  // Make sure we are not statically linked.
+  __interception::DoesNotSupportStaticLinking();
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
@@ -459,9 +461,6 @@ static bool AsanInitInternal() {
   InitializePlatformExceptionHandlers();
 
   InitializeHighMemEnd();
-
-  // Make sure we are not statically linked.
-  AsanDoesNotSupportStaticLinkage();
 
   // Install tool-specific callbacks in sanitizer_common.
   AddDieCallback(AsanDie);
