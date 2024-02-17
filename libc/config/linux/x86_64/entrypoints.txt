@@ -451,6 +451,18 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.abslk
     libc.src.stdfix.abslr
+    libc.src.stdfix.roundhk
+    libc.src.stdfix.roundhr
+    libc.src.stdfix.roundk
+    libc.src.stdfix.roundr
+    libc.src.stdfix.roundlk
+    libc.src.stdfix.roundlr
+    libc.src.stdfix.rounduhk
+    libc.src.stdfix.rounduhr
+    libc.src.stdfix.rounduk
+    libc.src.stdfix.roundur
+    libc.src.stdfix.roundulk
+    libc.src.stdfix.roundulr
   )
 endif()
 
