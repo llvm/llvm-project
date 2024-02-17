@@ -8079,7 +8079,7 @@ static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
-                                          const ParsedAttr &AL) {
+                                             const ParsedAttr &AL) {
   uint32_t NumWGX = 0;
   uint32_t NumWGY = 0;
   uint32_t NumWGZ = 0;
@@ -8093,9 +8093,9 @@ static void handleAMDGPUMaxNumWorkGroupsAttr(Sema &S, Decl *D,
   if (!checkUInt32Argument(S, AL, NumWGZExpr, NumWGZ))
     return;
 
-  if (NumWGX != 0 && NumWGY != 0 && NumWGZ !=0)
-    D->addAttr(::new (S.Context) AMDGPUMaxNumWorkGroupsAttr(S.Context, AL, NumWGXExpr,
-                                                       NumWGYExpr, NumWGZExpr));
+  if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0)
+    D->addAttr(::new (S.Context) AMDGPUMaxNumWorkGroupsAttr(
+        S.Context, AL, NumWGXExpr, NumWGYExpr, NumWGZExpr));
 }
 
 static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,

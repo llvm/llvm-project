@@ -358,14 +358,20 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   }
 
   if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
-    uint32_t X = Attr->getMaxNumWorkGroupsX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
-    uint32_t Y = Attr->getMaxNumWorkGroupsY()->EvaluateKnownConstInt(M.getContext()).getExtValue();
-    uint32_t Z = Attr->getMaxNumWorkGroupsZ()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    uint32_t X = Attr->getMaxNumWorkGroupsX()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
+    uint32_t Y = Attr->getMaxNumWorkGroupsY()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
+    uint32_t Z = Attr->getMaxNumWorkGroupsZ()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
 
     llvm::SmallString<32> AttrVal;
     llvm::raw_svector_ostream OS(AttrVal);
     OS << X << ", " << Y << ", " << Z;
-     
+
     F->addFnAttr("amdgpu-max-num-work-groups", AttrVal.str());
   }
 }
