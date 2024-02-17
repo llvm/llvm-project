@@ -161,7 +161,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let AsmMatchConverter =
     !if(isVOP3P,
         "cvtVOP3P",
-        !if(!or(P.HasModifiers, P.HasOMod, P.HasIntClamp),
+        !if(!or(P.HasModifiers, P.HasOMod, P.HasClamp),
             "cvtVOP3",
             ""));
 }
