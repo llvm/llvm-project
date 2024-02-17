@@ -911,7 +911,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
   ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
   ASSERT_EQ(SizePtr, 3u);
   EXPECT_EQ(Depot->at(RingPosPtr), 1u);
-  EXPECT_EQ(Depot->at(RingPosPtr + 1) 2u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2u);
   EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
