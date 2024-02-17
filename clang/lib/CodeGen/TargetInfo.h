@@ -416,7 +416,6 @@ enum class AArch64ABIKind {
   AAPCS = 0,
   DarwinPCS,
   Win64,
-  AAPCSSoft,
 };
 
 std::unique_ptr<TargetCodeGenInfo>
