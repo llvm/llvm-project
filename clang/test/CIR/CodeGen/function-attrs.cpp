@@ -24,10 +24,13 @@ int s3(int a, int b) {
   return x;
 }
 
+// CIR: #fn_attr = #cir<extra({inline = #cir.inline<hint>, nothrow = #cir.nothrow})>
+// CIR: #fn_attr1 = #cir<extra({inline = #cir.inline<no>, nothrow = #cir.nothrow})>
+// CIR: #fn_attr2 = #cir<extra({inline = #cir.inline<always>, nothrow = #cir.nothrow})>
 
-// CIR:   cir.func linkonce_odr @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra( {inline = #cir.inline<hint>, nothrow = #cir.nothrow} )
-// CIR:   cir.func @_Z2s1ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra( {inline = #cir.inline<no>, nothrow = #cir.nothrow} )
-// CIR:   cir.func @_Z2s2ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra( {inline = #cir.inline<always>, nothrow = #cir.nothrow} )
+// CIR:   cir.func linkonce_odr @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra(#fn_attr)
+// CIR:   cir.func @_Z2s1ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra(#fn_attr1)
+// CIR:   cir.func @_Z2s2ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra(#fn_attr2)
 // CIR:   cir.func @_Z2s3ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} {
 
 // LLVM: define i32 @_Z2s1ii(i32 %0, i32 %1) {{.*}} #[[#ATTR1:]]

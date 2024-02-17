@@ -17,8 +17,10 @@ int s0(int a, int b) {
   return x;
 }
 
-// CIR-O0:   cir.func @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra( {inline = #cir.inline<no>, nothrow = #cir.nothrow, optnone = #cir.optnone} )
-// CIR-O2-NOT:   cir.func @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} optnone
+// CIR-O0: #fn_attr = #cir<extra({inline = #cir.inline<no>, nothrow = #cir.nothrow, optnone = #cir.optnone})>
+// CIR-O0:   cir.func @_Z2s0ii(%arg0:{{.*}}, %arg1:{{.*}} -> {{.*}} extra(#fn_attr)
+
+// CIR-O2-NOT: #fn_attr ={{.*}} optnone
 
 // LLVM-O0: define i32 @_Z2s0ii(i32 %0, i32 %1) #[[#ATTR:]]
 // LLVM-O0: attributes #[[#ATTR]] = { noinline nounwind optnone }

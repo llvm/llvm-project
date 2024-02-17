@@ -10,7 +10,7 @@ module  {
 }
 
 //      MLIR: module {
-// MLIR-NEXT:  llvm.func @foo(%arg0: i32) attributes {cir.extra_attrs = #cir<extra({})>} {
+// MLIR-NEXT:  llvm.func @foo(%arg0: i32) attributes {cir.extra_attrs = #fn_attr} {
 // MLIR-NEXT:    %0 = llvm.alloca %arg0 x i32 {alignment = 16 : i64} : (i32) -> !llvm.ptr
 // MLIR-NEXT:    llvm.return
 // MLIR-NEXT:  }
