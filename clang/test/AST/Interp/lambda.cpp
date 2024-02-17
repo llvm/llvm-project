@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref -std=c++20 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int a = 12;
 constexpr int f = [c = a]() { return c; }();
@@ -43,18 +43,15 @@ static_assert(add2(4, 5) == 11);
 
 constexpr int div(int a, int b) {
   auto f = [=]() {
-    return a / b; // expected-note {{division by zero}} \
-                  // ref-note {{division by zero}}
+    return a / b; // both-note {{division by zero}}
   };
 
   return f(); // expected-note {{in call to '&f->operator()()'}} \
               // ref-note {{in call to 'f.operator()()'}}
 }
 static_assert(div(8, 2) == 4);
-static_assert(div(8, 0) == 4); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{in call to 'div(8, 0)'}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'div(8, 0)'}}
+static_assert(div(8, 0) == 4); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to 'div(8, 0)'}}
 
 
 struct F {
