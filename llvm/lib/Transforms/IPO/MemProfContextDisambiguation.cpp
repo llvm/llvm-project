@@ -578,7 +578,7 @@ class ModuleCallsiteContextGraph
 public:
   ModuleCallsiteContextGraph(
       Module &M,
-      function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
+      llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
 
 private:
   friend CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
@@ -606,7 +606,7 @@ private:
                        unsigned CloneNo) const;
 
   const Module &Mod;
-  function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
+  llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
 };
 
 /// Represents a call in the summary index graph, which can either be an
@@ -641,7 +641,7 @@ class IndexCallsiteContextGraph
 public:
   IndexCallsiteContextGraph(
       ModuleSummaryIndex &Index,
-      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+      llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           isPrevailing);
 
   ~IndexCallsiteContextGraph() {
@@ -687,7 +687,7 @@ private:
   std::map<const FunctionSummary *, ValueInfo> FSToVIMap;
 
   const ModuleSummaryIndex &Index;
-  function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+  llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       isPrevailing;
 
   // Saves/owns the callsite info structures synthesized for missing tail call
@@ -1524,7 +1524,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackIdsWithContextNodes(
 }
 
 ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
-    Module &M, function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter)
+    Module &M,
+    llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter)
     : Mod(M), OREGetter(OREGetter) {
   for (auto &F : M) {
     std::vector<CallInfo> CallsWithMetadata;
@@ -1583,7 +1584,7 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
 IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     ModuleSummaryIndex &Index,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing)
     : Index(Index), isPrevailing(isPrevailing) {
   for (auto &I : Index) {
@@ -3470,17 +3471,23 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             auto *MIBMD = cast<const MDNode>(MDOp);
             MDNode *StackMDNode = getMIBStackNode(MIBMD);
             assert(StackMDNode);
-            SmallVector<unsigned> StackIdsFromMetadata;
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
-            for (auto ContextIter =
-                     StackContext.beginAfterSharedPrefix(CallsiteContext);
+            auto ContextIterBegin =
+                StackContext.beginAfterSharedPrefix(CallsiteContext);
+            // Skip the checking on the first iteration.
+            uint64_t LastStackContextId =
+                (ContextIterBegin != StackContext.end() &&
+                 *ContextIterBegin == 0)
+                    ? 1
+                    : 0;
+            for (auto ContextIter = ContextIterBegin;
                  ContextIter != StackContext.end(); ++ContextIter) {
               // If this is a direct recursion, simply skip the duplicate
               // entries, to be consistent with how the summary ids were
               // generated during ModuleSummaryAnalysis.
-              if (!StackIdsFromMetadata.empty() &&
-                  StackIdsFromMetadata.back() == *ContextIter)
+              if (LastStackContextId == *ContextIter)
                 continue;
+              LastStackContextId = *ContextIter;
               assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
               assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
                      *ContextIter);
@@ -3623,7 +3630,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
 
 bool MemProfContextDisambiguation::processModule(
     Module &M,
-    function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
+    llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
 
   // If we have an import summary, then the cloning decisions were made during
   // the thin link on the index. Apply them and return.
@@ -3690,7 +3697,7 @@ PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
 
 void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
   // TODO: If/when other types of memprof cloning are enabled beyond just for
   // hot and cold, we will need to change this to individually control the

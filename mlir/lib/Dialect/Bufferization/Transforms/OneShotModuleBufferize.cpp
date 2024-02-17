@@ -458,6 +458,15 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
       foldMemRefCasts(funcOp);
   }
 
+  // Bufferize all other ops.
+  for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
+    // Functions were already bufferized.
+    if (isa<func::FuncOp>(&op))
+      continue;
+    if (failed(bufferizeOp(&op, options, statistics)))
+      return failure();
+  }
+
   // Post-pass cleanup of function argument attributes.
   removeBufferizationAttributesInModule(moduleOp);
 

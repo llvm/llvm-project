@@ -178,6 +178,8 @@ variable and type on the CMake command line:
 
   $ cmake -DVARIABLE:TYPE=value path/to/llvm/source
 
+.. _cmake_frequently_used_variables:
+
 Frequently-used CMake variables
 -------------------------------
 
@@ -275,7 +277,7 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_STANDARD**:STRING
   Sets the C++ standard to conform to when building LLVM.  Possible values are
-  17 and 20.  LLVM Requires C++ 17 or higher.  This defaults to 17.
+  17 and 20.  LLVM Requires C++17 or higher.  This defaults to 17.
 
 **CMAKE_INSTALL_BINDIR**:PATH
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.

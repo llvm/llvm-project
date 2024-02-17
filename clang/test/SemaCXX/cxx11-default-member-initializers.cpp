@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s -pedantic
+// RUN: %clang_cc1 -std=c++11 -verify %s -pedantic -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++20 -verify %s -pedantic
+// RUN: %clang_cc1 -std=c++20 -verify %s -pedantic -fexperimental-new-constant-interpreter
 
 
 namespace PR31692 {

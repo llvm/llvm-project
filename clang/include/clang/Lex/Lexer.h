@@ -198,11 +198,11 @@ public:
   /// from.  Currently this is only used by _Pragma handling.
   SourceLocation getFileLoc() const { return FileLoc; }
 
-private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
 
+private:
   /// Called when the preprocessor is in 'dependency scanning lexing mode'.
   bool LexDependencyDirectiveToken(Token &Result);
 

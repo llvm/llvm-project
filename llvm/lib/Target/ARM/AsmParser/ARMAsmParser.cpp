@@ -8308,6 +8308,14 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
     break;
   }
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL: {
+    if (Operands[2]->getReg() == Operands[3]->getReg()) {
+      return Error(Operands[2]->getStartLoc(),
+                   "Rda register and Rm register can't be identical");
+    }
+    break;
+  }
   case ARM::UMAAL:
   case ARM::UMLAL:
   case ARM::UMULL:
@@ -12668,11 +12676,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_MAVERICK, {}, {}},
       {ARM::AEK_XSCALE, {}, {}},
   };
-  bool EnableFeature = true;
-  if (Name.starts_with_insensitive("no")) {
-    EnableFeature = false;
-    Name = Name.substr(2);
-  }
+  bool EnableFeature = !Name.consume_front_insensitive("no");
   uint64_t FeatureKind = ARM::parseArchExt(Name);
   if (FeatureKind == ARM::AEK_INVALID)
     return Error(ExtLoc, "unknown architectural extension: " + Name);

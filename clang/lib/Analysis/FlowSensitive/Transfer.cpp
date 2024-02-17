@@ -42,6 +42,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   assert(BlockIt != CFCtx.getStmtToBlock().end());
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
+  if (BlockIt->getSecond()->getBlockID() == CurBlockID)
+    return &CurState.Env;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
   if (!(State))
     return nullptr;
@@ -533,8 +535,30 @@ public:
         return;
 
       copyRecord(*LocSrc, *LocDst, Env);
-      Env.setStorageLocation(*S, *LocDst);
+
+      // If the expr is a glvalue, we can reasonably assume the operator is
+      // returning T& and thus we can assign it `LocDst`.
+      if (S->isGLValue()) {
+        Env.setStorageLocation(*S, *LocDst);
+      } else if (S->getType()->isRecordType()) {
+        // Make sure that we have a `RecordValue` for this expression so that
+        // `Environment::getResultObjectLocation()` is able to return a location
+        // for it.
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
+      }
+
+      return;
     }
+
+    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
+    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
+    // can return a value.
+    VisitCallExpr(S);
+  }
+
+  void VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+    propagateValue(*RBO->getSemanticForm(), *RBO, Env);
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {

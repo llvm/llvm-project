@@ -1,4 +1,4 @@
-//===- Utility.cpp ------ Collection of geneirc offloading utilities ------===//
+//===- Utility.cpp ------ Collection of generic offloading utilities ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::offloading;
@@ -28,21 +29,24 @@ StructType *offloading::getEntryTy(Module &M) {
 }
 
 // TODO: Rework this interface to be more generic.
-void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                                     uint64_t Size, int32_t Flags, int32_t Data,
-                                     StringRef SectionName) {
+std::pair<Constant *, GlobalVariable *>
+offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
+                                          StringRef Name, uint64_t Size,
+                                          int32_t Flags, int32_t Data) {
   llvm::Triple Triple(M.getTargetTriple());
-
   Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
 
   Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
 
+  StringRef Prefix = Triple.isNVPTX() ? "$omp_offloading$entry_name"
+                                      : ".omp_offloading.entry_name";
+
   // Create the constant string used to look up the symbol in the device.
-  auto *Str = new GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
-                                 GlobalValue::InternalLinkage, AddrName,
-                                 ".omp_offloading.entry_name");
+  auto *Str =
+      new GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
+                         GlobalValue::InternalLinkage, AddrName, Prefix);
   Str->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
   // Construct the offloading entry.
@@ -54,11 +58,23 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
       ConstantInt::get(Int32Ty, Data),
   };
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
+  return {EntryInitializer, Str};
+}
 
+void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
+                                     uint64_t Size, int32_t Flags, int32_t Data,
+                                     StringRef SectionName) {
+  llvm::Triple Triple(M.getTargetTriple());
+
+  auto [EntryInitializer, NameGV] =
+      getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
+
+  StringRef Prefix =
+      Triple.isNVPTX() ? "$omp_offloading$entry." : ".omp_offloading.entry.";
   auto *Entry = new GlobalVariable(
       M, getEntryTy(M),
       /*isConstant=*/true, GlobalValue::WeakAnyLinkage, EntryInitializer,
-      ".omp_offloading.entry." + Name, nullptr, GlobalValue::NotThreadLocal,
+      Prefix + Name, nullptr, GlobalValue::NotThreadLocal,
       M.getDataLayout().getDefaultGlobalsAddressSpace());
 
   // The entry has to be created in the section the linker expects it to be.
@@ -77,14 +93,16 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
   auto *EntryInit = Triple.isOSBinFormatCOFF() ? ZeroInitilaizer : nullptr;
   auto *EntryType = ArrayType::get(getEntryTy(M), 0);
+  auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
+                                            : GlobalValue::ExternalLinkage;
 
-  auto *EntriesB = new GlobalVariable(M, EntryType, /*isConstant=*/true,
-                                      GlobalValue::ExternalLinkage, EntryInit,
-                                      "__start_" + SectionName);
+  auto *EntriesB =
+      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
+                         "__start_" + SectionName);
   EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE = new GlobalVariable(M, EntryType, /*isConstant=*/true,
-                                      GlobalValue::ExternalLinkage, EntryInit,
-                                      "__stop_" + SectionName);
+  auto *EntriesE =
+      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
+                         "__stop_" + SectionName);
   EntriesE->setVisibility(GlobalValue::HiddenVisibility);
 
   if (Triple.isOSBinFormatELF()) {
@@ -93,10 +111,10 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
     // valid C-identifier is present. We define a dummy variable here to force
     // the linker to always provide these symbols.
     auto *DummyEntry = new GlobalVariable(
-        M, ZeroInitilaizer->getType(), true, GlobalVariable::ExternalLinkage,
+        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
-    DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
+    appendToCompilerUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a
     // single section. The order of entries in this section will be sorted

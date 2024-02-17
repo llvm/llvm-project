@@ -1,6 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator.h"
+
+void clang_analyzer_eval(int);
 
 void check_fread(void) {
   FILE *fp = tmpfile();
@@ -36,6 +38,18 @@ void check_fputc(void) {
 void check_fputs(void) {
   FILE *fp = tmpfile();
   fputs("ABC", fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fprintf(void) {
+  FILE *fp = tmpfile();
+  fprintf(fp, "ABC"); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fscanf(void) {
+  FILE *fp = tmpfile();
+  fscanf(fp, "ABC"); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
@@ -271,9 +285,8 @@ void check_escape4(void) {
     return;
   fwrite("1", 1, 1, F); // may fail
 
-  // no escape at (non-StreamChecker-handled) system call
-  // FIXME: all such calls should be handled by the checker
-  fprintf(F, "0");
+  // no escape at a non-StreamChecker-handled system call
+  setbuf(F, "0");
 
   fwrite("1", 1, 1, F); // expected-warning {{might be 'indeterminate'}}
   fclose(F);
@@ -305,3 +318,24 @@ void check_leak_noreturn_2(void) {
 } // expected-warning {{Opened stream never closed. Potential resource leak}}
 // FIXME: This warning should be placed at the `return` above.
 // See https://reviews.llvm.org/D83120 about details.
+
+void fflush_after_fclose(void) {
+  FILE *F = tmpfile();
+  int Ret;
+  fflush(NULL);                      // no-warning
+  if (!F)
+    return;
+  if ((Ret = fflush(F)) != 0)
+    clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
+  fclose(F);
+  fflush(F);                         // expected-warning {{Stream might be already closed}}
+}
+
+void fflush_on_open_failed_stream(void) {
+  FILE *F = tmpfile();
+  if (!F) {
+    fflush(F); // no-warning
+    return;
+  }
+  fclose(F);
+}

@@ -1,6 +1,38 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
+# ATT:   {nf}	andnl	%ecx, %edx, %r10d
+# INTEL: {nf}	andn	r10d, edx, ecx
+0x62,0x72,0x6c,0x0c,0xf2,0xd1
+
+# ATT:   andnl	%ecx, %edx, %r10d
+# INTEL: andn	r10d, edx, ecx
+0x62,0x72,0x6c,0x08,0xf2,0xd1
+
+# ATT:   {nf}	andnq	%r9, %r15, %r11
+# INTEL: {nf}	andn	r11, r15, r9
+0x62,0x52,0x84,0x0c,0xf2,0xd9
+
+# ATT:   andnq	%r9, %r15, %r11
+# INTEL: andn	r11, r15, r9
+0x62,0x52,0x84,0x08,0xf2,0xd9
+
+# ATT:   {nf}	andnl	123(%rax,%rbx,4), %ecx, %edx
+# INTEL: {nf}	andn	edx, ecx, dword ptr [rax + 4*rbx + 123]
+0x62,0xf2,0x74,0x0c,0xf2,0x54,0x98,0x7b
+
+# ATT:   andnl	123(%rax,%rbx,4), %ecx, %edx
+# INTEL: andn	edx, ecx, dword ptr [rax + 4*rbx + 123]
+0x62,0xf2,0x74,0x08,0xf2,0x54,0x98,0x7b
+
+# ATT:   {nf}	andnq	123(%rax,%rbx,4), %r9, %r15
+# INTEL: {nf}	andn	r15, r9, qword ptr [rax + 4*rbx + 123]
+0x62,0x72,0xb4,0x0c,0xf2,0x7c,0x98,0x7b
+
+# ATT:   andnq	123(%rax,%rbx,4), %r9, %r15
+# INTEL: andn	r15, r9, qword ptr [rax + 4*rbx + 123]
+0x62,0x72,0xb4,0x08,0xf2,0x7c,0x98,0x7b
+
 # ATT:   andnl	%r18d, %r22d, %r26d
 # INTEL: andn	r26d, r22d, r18d
 0x62,0x6a,0x4c,0x00,0xf2,0xd2

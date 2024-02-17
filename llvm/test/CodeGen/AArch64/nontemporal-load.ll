@@ -624,7 +624,7 @@ define <16 x double> @test_ldnp_v16f64(ptr %A) {
   ret <16 x double> %lv
 }
 
-define <vscale x 20 x float> @test_ldnp_v20f32_vscale(<vscale x 20 x float>* %A) {
+define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ; CHECK-LABEL: test_ldnp_v20f32_vscale:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
@@ -644,7 +644,7 @@ define <vscale x 20 x float> @test_ldnp_v20f32_vscale(<vscale x 20 x float>* %A)
 ; CHECK-BE-NEXT:    ld1w { z3.s }, p0/z, [x0, #3, mul vl]
 ; CHECK-BE-NEXT:    ld1w { z4.s }, p0/z, [x0, #4, mul vl]
 ; CHECK-BE-NEXT:    ret
-  %lv = load<vscale x 20 x float>, <vscale x 20 x float>* %A, align 8, !nontemporal !0
+  %lv = load<vscale x 20 x float>, ptr %A, align 8, !nontemporal !0
   ret <vscale x 20 x float> %lv
 }
 

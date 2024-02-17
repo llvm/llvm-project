@@ -56,6 +56,11 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
     return {__g(std::integral_constant<size_t, 0>())};
   }
+
+  template <class _Up>
+  static _LIBCPP_HIDE_FROM_ABI void __load(_SimdStorage& __s, const _Up* __mem) noexcept {
+    __s.__data = static_cast<_Tp>(__mem[0]);
+  }
 };
 
 template <class _Tp>
@@ -63,6 +68,8 @@ struct __mask_operations<_Tp, simd_abi::__scalar> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
 
   static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept { return {__v}; }
+
+  static _LIBCPP_HIDE_FROM_ABI void __load(_MaskStorage& __s, const bool* __mem) noexcept { __s.__data = __mem[0]; }
 };
 
 } // namespace parallelism_v2

@@ -23,7 +23,7 @@ TEST_F(LlvmLibcSinTest, Range) {
   constexpr StorageType COUNT = 100'000;
   constexpr StorageType STEP = STORAGE_MAX / COUNT;
   for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    double x = double(FPBits(v));
+    double x = FPBits(v).get_val();
     // TODO: Expand the range of testing after range reduction is implemented.
     if (isnan(x) || isinf(x) || x > _2pi || x < -_2pi)
       continue;

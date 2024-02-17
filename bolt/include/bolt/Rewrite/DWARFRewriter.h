@@ -96,7 +96,7 @@ private:
   std::unordered_map<uint64_t, uint64_t> DwoRangesBase;
 
   std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
-  std::unordered_map<DWARFUnit *, uint64_t> TypeUnitRelocMap;
+  std::unordered_map<const DWARFUnit *, uint64_t> TypeUnitRelocMap;
 
   /// Entries for GDB Index Types CU List
   using GDBIndexTUEntryType = std::vector<GDBIndexTUEntry>;

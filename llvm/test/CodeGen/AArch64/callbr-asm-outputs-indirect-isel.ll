@@ -174,7 +174,6 @@ define i32 @dont_split3() {
   ; CHECK-NEXT: bb.1.x:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.v (machine-block-address-taken, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
   ; CHECK-NEXT:   $w0 = COPY [[MOVi32imm]]
@@ -423,7 +422,6 @@ define i32 @split_me3() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.y:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.out:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32all = PHI [[COPY1]], %bb.1, [[COPY]], %bb.2

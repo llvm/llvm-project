@@ -524,7 +524,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       ErrorCallback(ReturnCode, ErrBuf);
   };
 
-  if (opts::LinuxKernelMode) {
+  if (BC.IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
     // MMap entries for linux kernel uses PERF_RECORD_MMAP
     // format instead of typical PERF_RECORD_MMAP2 format.
@@ -649,19 +649,17 @@ DataAggregator::getBinaryFunctionContainingAddress(uint64_t Address) const {
                                                 /*UseMaxSize=*/true);
 }
 
-std::pair<StringRef, bool>
-DataAggregator::getLocationName(const BinaryFunction &Func) const {
+StringRef DataAggregator::getLocationName(BinaryFunction &Func,
+                                          uint64_t Count) {
   if (!BAT)
-    return {Func.getOneName(), false};
+    return Func.getOneName();
 
-  bool LinkedToHot = false;
   const BinaryFunction *OrigFunc = &Func;
   if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress())) {
+    NumColdSamples += Count;
     BinaryFunction *HotFunc = getBinaryFunctionContainingAddress(HotAddr);
-    if (HotFunc) {
+    if (HotFunc)
       OrigFunc = HotFunc;
-      LinkedToHot = true;
-    }
   }
   // If it is a local function, prefer the name containing the file name where
   // the local function was declared
@@ -672,9 +670,9 @@ DataAggregator::getLocationName(const BinaryFunction &Func) const {
     if (FileNameIdx == StringRef::npos ||
         AlternativeName.find('/', FileNameIdx + 1) == StringRef::npos)
       continue;
-    return {AlternativeName, LinkedToHot};
+    return AlternativeName;
   }
-  return {OrigFunc->getOneName(), LinkedToHot};
+  return OrigFunc->getOneName();
 }
 
 bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
@@ -682,11 +680,7 @@ bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
     bool Success;
-    bool LinkedToHot;
-    StringRef LocName;
-    std::tie(LocName, LinkedToHot) = getLocationName(Func);
-    if (LinkedToHot)
-      NumColdSamples += Count;
+    StringRef LocName = getLocationName(Func, Count);
     std::tie(I, Success) = NamesToSamples.insert(
         std::make_pair(Func.getOneName(),
                        FuncSampleData(LocName, FuncSampleData::ContainerTy())));
@@ -706,10 +700,7 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
   FuncBranchData *AggrData = getBranchData(Func);
   if (!AggrData) {
     AggrData = &NamesToBranches[Func.getOneName()];
-    bool LinkedToHot;
-    std::tie(AggrData->Name, LinkedToHot) = getLocationName(Func);
-    if (LinkedToHot)
-      NumColdSamples += Count;
+    AggrData->Name = getLocationName(Func, Count);
     setBranchData(Func, AggrData);
   }
 
@@ -738,10 +729,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   StringRef SrcFunc;
   StringRef DstFunc;
   if (FromFunc) {
-    bool LinkedToHot;
-    std::tie(SrcFunc, LinkedToHot) = getLocationName(*FromFunc);
-    if (LinkedToHot)
-      NumColdSamples += Count;
+    SrcFunc = getLocationName(*FromFunc, Count);
     FromAggrData = getBranchData(*FromFunc);
     if (!FromAggrData) {
       FromAggrData = &NamesToBranches[FromFunc->getOneName()];
@@ -755,7 +743,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
-    std::tie(DstFunc, std::ignore) = getLocationName(*ToFunc);
+    DstFunc = getLocationName(*ToFunc, 0);
     ToAggrData = getBranchData(*ToFunc);
     if (!ToAggrData) {
       ToAggrData = &NamesToBranches[ToFunc->getOneName()];
@@ -1068,7 +1056,7 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   if (std::error_code EC = PIDRes.getError())
     return EC;
   auto MMapInfoIter = BinaryMMapInfo.find(*PIDRes);
-  if (!opts::LinuxKernelMode && MMapInfoIter == BinaryMMapInfo.end()) {
+  if (!BC->IsLinuxKernel && MMapInfoIter == BinaryMMapInfo.end()) {
     consumeRestOfLine();
     return make_error_code(errc::no_such_process);
   }
@@ -1289,7 +1277,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
-  if (opts::LinuxKernelMode) {
+  if (BC->IsLinuxKernel) {
     opts::HeatmapMaxAddress = 0xffffffffffffffff;
     opts::HeatmapMinAddress = KernelBaseAddr;
   }

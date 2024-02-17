@@ -130,6 +130,7 @@ void ARMTargetInfo::setArchInfo(llvm::ARM::ArchKind Kind) {
   SubArch = llvm::ARM::getSubArch(ArchKind);
   ArchProfile = llvm::ARM::parseArchProfile(SubArch);
   ArchVersion = llvm::ARM::parseArchVersion(SubArch);
+  ArchMinorVersion = llvm::ARM::parseArchMinorVersion(SubArch);
 
   // cache CPU related strings
   CPUAttr = getCPUAttr();
@@ -227,6 +228,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_3A";
   case llvm::ARM::ArchKind::ARMV9_4A:
     return "9_4A";
+  case llvm::ARM::ArchKind::ARMV9_5A:
+    return "9_5A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -734,9 +737,16 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (!CPUAttr.empty())
     Builder.defineMacro("__ARM_ARCH_" + CPUAttr + "__");
 
-  // ACLE 6.4.1 ARM/Thumb instruction set architecture
-  // __ARM_ARCH is defined as an integer value indicating the current ARM ISA
-  Builder.defineMacro("__ARM_ARCH", Twine(ArchVersion));
+  // __ARM_ARCH is defined as an integer value indicating the current ARM ISA.
+  // For ISAs up to and including v8, __ARM_ARCH is equal to the major version
+  // number. For ISAs from v8.1 onwards, __ARM_ARCH is scaled up to include the
+  // minor version number, e.g. for ARM architecture ARMvX.Y:
+  // __ARM_ARCH = X * 100 + Y.
+  if (ArchVersion >= 9 || ArchMinorVersion != 0)
+    Builder.defineMacro("__ARM_ARCH",
+                        Twine(ArchVersion * 100 + ArchMinorVersion));
+  else
+    Builder.defineMacro("__ARM_ARCH", Twine(ArchVersion));
 
   if (ArchVersion >= 8) {
     // ACLE 6.5.7 Crypto Extension
@@ -889,6 +899,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_2A:
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
+  case llvm::ARM::ArchKind::ARMV9_5A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1057,6 +1068,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_2A:
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
+  case llvm::ARM::ArchKind::ARMV9_5A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

@@ -183,6 +183,16 @@ static void HarvestInitializerSymbols(
       if (symbol->scope()) {
         HarvestInitializerSymbols(set, *symbol->scope());
       }
+    } else if (const auto &generic{symbol->detailsIf<GenericDetails>()};
+               generic && generic->derivedType()) {
+      const Symbol &dtSym{*generic->derivedType()};
+      if (dtSym.has<DerivedTypeDetails>()) {
+        if (dtSym.scope()) {
+          HarvestInitializerSymbols(set, *dtSym.scope());
+        }
+      } else {
+        CHECK(dtSym.has<UseErrorDetails>());
+      }
     } else if (IsNamedConstant(*symbol) || scope.IsDerivedType()) {
       if (const auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
         if (object->init()) {
@@ -1464,6 +1474,9 @@ void SubprogramSymbolCollector::DoSymbol(
                         DoType(details.type());
                       }
                     },
+                    [this](const ProcBindingDetails &details) {
+                      DoSymbol(details.symbol());
+                    },
                     [](const auto &) {},
                 },
       symbol.details());
@@ -1489,17 +1502,21 @@ void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
   default:
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
       const auto &typeSymbol{derived->typeSymbol()};
-      if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
-        DoSymbol(extends->name(), extends->typeSymbol());
-      }
       for (const auto &pair : derived->parameters()) {
         DoParamValue(pair.second);
       }
-      for (const auto &pair : *typeSymbol.scope()) {
-        const Symbol &comp{*pair.second};
-        DoSymbol(comp);
+      // The components of the type (including its parent component, if
+      // any) matter to IMPORT symbol collection only for derived types
+      // defined in the subprogram.
+      if (typeSymbol.owner() == scope_) {
+        if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
+          DoSymbol(extends->name(), extends->typeSymbol());
+        }
+        for (const auto &pair : *typeSymbol.scope()) {
+          DoSymbol(*pair.second);
+        }
       }
-      DoSymbol(derived->name(), derived->typeSymbol());
+      DoSymbol(derived->name(), typeSymbol);
     }
   }
 }
@@ -1531,8 +1548,8 @@ bool SubprogramSymbolCollector::NeedImport(
     // detect import from ancestor of use-associated symbol
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {
-    // "found" can be null in the case of a use-associated derived type's parent
-    // type
+    // "found" can be null in the case of a use-associated derived type's
+    // parent type
     CHECK(symbol.has<DerivedTypeDetails>());
     return false;
   }

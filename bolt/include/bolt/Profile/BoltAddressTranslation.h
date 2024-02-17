@@ -85,7 +85,7 @@ public:
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
-  std::error_code parse(StringRef Buf);
+  std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
   void dump(raw_ostream &OS);
@@ -111,16 +111,13 @@ public:
   /// addresses when aggregating profile
   bool enabledFor(llvm::object::ELFObjectFileBase *InputFile) const;
 
-  /// Save function and basic block hashes used for metadata dump.
-  void saveMetadata(BinaryContext &BC);
-
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
   /// emitted for the start of the BB. More entries may be emitted to cover
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
-                         uint64_t FuncAddress, uint64_t FuncInputAddress);
+                         uint64_t FuncAddress);
 
   /// Write the serialized address translation table for a function.
   template <bool Cold>
@@ -143,14 +140,8 @@ private:
 
   std::map<uint64_t, MapTy> Maps;
 
-  using BBHashMap = std::unordered_map<uint32_t, size_t>;
-  std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
-
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
-
-  /// Links output address of a main fragment back to input address.
-  std::unordered_map<uint64_t, uint64_t> ReverseMap;
 
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry

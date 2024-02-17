@@ -306,6 +306,8 @@ template <> struct traits_t<unsigned long long> {
    !KMP_MIC)
 
 #if KMP_OS_WINDOWS
+// Don't include everything related to NT status code, we'll do that explicitly
+#define WIN32_NO_STATUS
 #include <windows.h>
 
 static inline int KMP_GET_PAGE_SIZE(void) {
@@ -465,7 +467,7 @@ enum kmp_mem_fence_type {
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)
 #pragma intrinsic(InterlockedExchange)
-#if !(KMP_COMPILER_ICX && KMP_32_BIT_ARCH)
+#if !KMP_32_BIT_ARCH
 #pragma intrinsic(InterlockedExchange64)
 #endif
 #endif
@@ -1295,6 +1297,20 @@ extern void *__kmp_lookup_symbol(const char *name, bool next = false);
 #else
 #define KMP_DLSYM(name) dlsym(RTLD_DEFAULT, name)
 #define KMP_DLSYM_NEXT(name) dlsym(RTLD_NEXT, name)
+#endif
+
+// MSVC doesn't have this, but clang/clang-cl does.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+// Same as LLVM_BUILTIN_UNREACHABLE. States that it is UB to reach this point.
+#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
+#define KMP_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define KMP_BUILTIN_UNREACHABLE __assume(false)
+#else
+#define KMP_BUILTIN_UNREACHABLE
 #endif
 
 #endif /* KMP_OS_H */

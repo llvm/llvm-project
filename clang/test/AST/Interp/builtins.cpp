@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated
-// RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify -fms-extensions
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -fms-extensions -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated -fms-extensions
+// RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated %s -fms-extensions -S -emit-llvm -o - | FileCheck %s
 
 // expected-no-diagnostics
 // ref-no-diagnostics
@@ -26,6 +26,8 @@ bool is_this_constant() {
 constexpr bool assume() {
   __builtin_assume(true);
   __builtin_assume(false);
+  __assume(1);
+  __assume(false);
   return true;
 }
 static_assert(assume(), "");

@@ -291,7 +291,7 @@ The following examples illustrate the lowering of signed and unsigned functions:
 *   cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
 *   cast_unsigned(F32 -> I32) -> `arith.FPToUIOp`
 *   max_signed -> `arith.MaxSIOp`
-*   max_unsinged -> `arith.MaxUIOp`
+*   max_unsigned -> `arith.MaxUIOp`
 
 Not all functions are applicable for all numeric types, and on mismatch, op
 verification will fail.

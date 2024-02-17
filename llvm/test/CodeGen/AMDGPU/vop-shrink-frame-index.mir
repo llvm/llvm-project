@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 --- |
 
   define amdgpu_kernel void @fold_fi_vgpr() {

@@ -323,7 +323,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX940-GFX942-CDNA3]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx900``                  ``amdgcn``   dGPU  - xnack           - Absolute      - *rocm-amdhsa* - Radeon Vega
                                                                         flat          - *pal-amdhsa*    Frontier Edition
@@ -357,12 +357,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
+     ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* - AMD Instinct MI210 Accelerator
+                                                    - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
+                                                    - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
                                                                         flat                          - Ryzen 7 4700GE
@@ -520,6 +520,108 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      =========== =============== ============ ===== ================= =============== =============== ======================
 
+Generic processors allow execution of a single code object on any of the processors that
+it supports. Such code objects may not perform as well as those for the non-generic processors.
+
+Generic processors are only available on code object V6 and above (see :ref:`amdgpu-elf-code-object`).
+
+Generic processor code objects are versioned (see :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`) between 1 and 255.
+The version of non-generic code objects is always set to 0.
+
+For a generic code object, adding a new supported processor may require the code generated for the generic target to be changed
+so it can continue to execute on the previously supported processors as well as on the new one.
+When this happens, the generic code object version number is incremented at the same time as the generic target is updated.
+
+Each supported processor of a generic target is mapped to the version it was introduced in.
+A generic code object can execute on a supported processor if the version of the code object being loaded is
+greater than or equal to the version in which the processor was added to the generic target.
+
+  .. table:: AMDGPU Generic Processors
+     :name: amdgpu-generic-processor-table
+
+     ==================== ============== ================= ================== ================= =================================
+     Processor             Target        Supported         Target Features    Target Properties Target Restrictions
+                           Triple        Processors        Supported
+                           Architecture
+
+     ==================== ============== ================= ================== ================= =================================
+     ``gfx9-generic``     ``amdgcn``     - ``gfx900``      - xnack            - Absolute flat   - ``v_mad_mix`` instructions
+                                         - ``gfx902``                           scratch           are not available on
+                                         - ``gfx904``                                             ``gfx900``, ``gfx902``,
+                                         - ``gfx906``                                             ``gfx909``, ``gfx90c``
+                                         - ``gfx909``                                           - ``v_fma_mix`` instructions
+                                         - ``gfx90c``                                             are not available on ``gfx904``
+                                                                                                - sramecc is not available on
+                                                                                                  ``gfx906``
+                                                                                                - The following instructions
+                                                                                                  are not available on ``gfx906``:
+
+                                                                                                  - ``v_fmac_f32``
+                                                                                                  - ``v_xnor_b32``
+                                                                                                  - ``v_dot4_i32_i8``
+                                                                                                  - ``v_dot8_i32_i4``
+                                                                                                  - ``v_dot2_i32_i16``
+                                                                                                  - ``v_dot2_u32_u16``
+                                                                                                  - ``v_dot4_u32_u8``
+                                                                                                  - ``v_dot8_u32_u4``
+                                                                                                  - ``v_dot2_f32_f16``
+
+
+     ``gfx10.1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
+                                         - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
+                                         - ``gfx1012``     - cumode                               and ``gfx1012``
+                                         - ``gfx1013``
+                                                                                                  - ``v_dot4_i32_i8``
+                                                                                                  - ``v_dot8_i32_i4``
+                                                                                                  - ``v_dot2_i32_i16``
+                                                                                                  - ``v_dot2_u32_u16``
+                                                                                                  - ``v_dot2c_f32_f16``
+                                                                                                  - ``v_dot4c_i32_i8``
+                                                                                                  - ``v_dot4_u32_u8``
+                                                                                                  - ``v_dot8_u32_u4``
+                                                                                                  - ``v_dot2_f32_f16``
+
+                                                                                                - BVH Ray Tracing instructions
+                                                                                                  are not available on
+                                                                                                  ``gfx1013``
+
+
+     ``gfx10.3-generic``  ``amdgcn``     - ``gfx1030``     - wavefrontsize64  - Absolute flat   No restrictions.
+                                         - ``gfx1031``     - cumode             scratch
+                                         - ``gfx1032``
+                                         - ``gfx1033``
+                                         - ``gfx1034``
+                                         - ``gfx1035``
+                                         - ``gfx1036``
+
+
+     ``gfx11-generic``    ``amdgcn``     - ``gfx1100``     - wavefrontsize64  - Architected     Various codegen pessimizations
+                                         - ``gfx1101``     - cumode             flat scratch    are applied to work around some
+                                         - ``gfx1102``                        - Packed          hazards specific to some targets
+                                         - ``gfx1103``                          work-item       within this family.
+                                         - ``gfx1150``                          IDs
+                                         - ``gfx1151``                                          Not all VGPRs can be used on:
+
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1151``
+
+                                                                                                SALU floating point instructions
+                                                                                                and single-use VGPR hint
+                                                                                                instructions are not available
+                                                                                                on:
+
+                                                                                                - ``gfx1150``
+                                                                                                - ``gfx1151``
+
+                                                                                                SGPRs are not supported for src1
+                                                                                                in dpp instructions for:
+
+                                                                                                - ``gfx1150``
+                                                                                                - ``gfx1151``
+     ==================== ============== ================= ================== ================= =================================
+
+
 .. _amdgpu-target-features:
 
 Target Features
@@ -533,7 +635,7 @@ generating the code. A mismatch of features may result in incorrect
 execution, or a reduction in performance.
 
 The target features supported by each processor is listed in
-:ref:`amdgpu-processor-table`.
+:ref:`amdgpu-processors`.
 
 Target features are controlled by exactly one of the following Clang
 options:
@@ -1182,6 +1284,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
+  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
+                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
+                                                   performs subtraction only if the memory value is greater than or
+                                                   equal to the data value.
+
+  llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
+                                                   sign-extended from the width of the underlying PC hardware register even on
+                                                   processors where the s_getpc_b64 instruction returns a zero-extended value.
+
   ==============================================   ==========================================================
 
 .. TODO::
@@ -1434,6 +1545,7 @@ The AMDGPU backend uses the following ELF header:
                                 - ``ELFABIVERSION_AMDGPU_HSA_V3``
                                 - ``ELFABIVERSION_AMDGPU_HSA_V4``
                                 - ``ELFABIVERSION_AMDGPU_HSA_V5``
+                                - ``ELFABIVERSION_AMDGPU_HSA_V6``
                                 - ``ELFABIVERSION_AMDGPU_PAL``
                                 - ``ELFABIVERSION_AMDGPU_MESA3D``
      ``e_type``                 - ``ET_REL``
@@ -1442,7 +1554,8 @@ The AMDGPU backend uses the following ELF header:
      ``e_entry``                0
      ``e_flags``                See :ref:`amdgpu-elf-header-e_flags-v2-table`,
                                 :ref:`amdgpu-elf-header-e_flags-table-v3`,
-                                and :ref:`amdgpu-elf-header-e_flags-table-v4-onwards`
+                                :ref:`amdgpu-elf-header-e_flags-table-v4-v5`,
+                                and :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`
      ========================== ===============================
 
 ..
@@ -1462,6 +1575,7 @@ The AMDGPU backend uses the following ELF header:
      ``ELFABIVERSION_AMDGPU_HSA_V3`` 1
      ``ELFABIVERSION_AMDGPU_HSA_V4`` 2
      ``ELFABIVERSION_AMDGPU_HSA_V5`` 3
+     ``ELFABIVERSION_AMDGPU_HSA_V6`` 4
      ``ELFABIVERSION_AMDGPU_PAL``    0
      ``ELFABIVERSION_AMDGPU_MESA3D`` 0
      =============================== =====
@@ -1501,12 +1615,16 @@ The AMDGPU backend uses the following ELF header:
 
   * ``ELFABIVERSION_AMDGPU_HSA_V4`` is used to specify the version of AMD HSA
     runtime ABI for code object V4. Specify using the Clang option
-    ``-mcode-object-version=4``. This is the default code object
-    version if not specified.
+    ``-mcode-object-version=4``.
 
   * ``ELFABIVERSION_AMDGPU_HSA_V5`` is used to specify the version of AMD HSA
     runtime ABI for code object V5. Specify using the Clang option
-    ``-mcode-object-version=5``.
+    ``-mcode-object-version=5``. This is the default code object
+    version if not specified.
+
+  * ``ELFABIVERSION_AMDGPU_HSA_V6`` is used to specify the version of AMD HSA
+    runtime ABI for code object V6. Specify using the Clang option
+    ``-mcode-object-version=6``.
 
   * ``ELFABIVERSION_AMDGPU_PAL`` is used to specify the version of AMD PAL
     runtime ABI.
@@ -1534,8 +1652,9 @@ The AMDGPU backend uses the following ELF header:
   ``NT_AMD_HSA_ISA_VERSION`` note record for code object V2 (see
   :ref:`amdgpu-note-records-v2`) and in the ``EF_AMDGPU_MACH`` bit field of the
   ``e_flags`` for code object V3 and above (see
-  :ref:`amdgpu-elf-header-e_flags-table-v3` and
-  :ref:`amdgpu-elf-header-e_flags-table-v4-onwards`).
+  :ref:`amdgpu-elf-header-e_flags-table-v3`,
+  :ref:`amdgpu-elf-header-e_flags-table-v4-v5` and
+  :ref:`amdgpu-elf-header-e_flags-table-v6-onwards`).
 
 ``e_entry``
   The entry point is 0 as the entry points for individual kernels must be
@@ -1606,8 +1725,8 @@ The AMDGPU backend uses the following ELF header:
                                              :ref:`amdgpu-target-features`.
      ================================= ===== =============================
 
-  .. table:: AMDGPU ELF Header ``e_flags`` for Code Object V4 and After
-     :name: amdgpu-elf-header-e_flags-table-v4-onwards
+  .. table:: AMDGPU ELF Header ``e_flags`` for Code Object V4 and V5
+     :name: amdgpu-elf-header-e_flags-table-v4-v5
 
      ============================================ ===== ===================================
      Name                                         Value      Description
@@ -1633,80 +1752,119 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
      ============================================ ===== ===================================
 
+  .. table:: AMDGPU ELF Header ``e_flags`` for Code Object V6 and After
+     :name: amdgpu-elf-header-e_flags-table-v6-onwards
+
+     ============================================ ========== =========================================
+     Name                                         Value      Description
+     ============================================ ========== =========================================
+     ``EF_AMDGPU_MACH``                           0x0ff      AMDGPU processor selection
+                                                             mask for
+                                                             ``EF_AMDGPU_MACH_xxx`` values
+                                                             defined in
+                                                             :ref:`amdgpu-ef-amdgpu-mach-table`.
+     ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300      XNACK selection mask for
+                                                             ``EF_AMDGPU_FEATURE_XNACK_*_V4``
+                                                             values.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000      XNACK unsupported.
+     ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100      XNACK can have any value.
+     ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200      XNACK disabled.
+     ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300      XNACK enabled.
+     ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00      SRAMECC selection mask for
+                                                             ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
+                                                             values.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400      SRAMECC can have any value.
+     ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800      SRAMECC disabled,
+     ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00      SRAMECC enabled.
+     ``EF_AMDGPU_GENERIC_VERSION_V``              0xff000000 Generic code object version selection
+                                                             mask. This is a value between 1 and 255,
+                                                             stored in the most significant byte
+                                                             of EFLAGS.
+                                                             See :ref:`amdgpu-generic-processor-table`
+     ============================================ ========== =========================================
+
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
      :name: amdgpu-ef-amdgpu-mach-table
 
-     ==================================== ========== =============================
-     Name                                 Value      Description (see
-                                                     :ref:`amdgpu-processor-table`)
-     ==================================== ========== =============================
-     ``EF_AMDGPU_MACH_NONE``              0x000      *not specified*
-     ``EF_AMDGPU_MACH_R600_R600``         0x001      ``r600``
-     ``EF_AMDGPU_MACH_R600_R630``         0x002      ``r630``
-     ``EF_AMDGPU_MACH_R600_RS880``        0x003      ``rs880``
-     ``EF_AMDGPU_MACH_R600_RV670``        0x004      ``rv670``
-     ``EF_AMDGPU_MACH_R600_RV710``        0x005      ``rv710``
-     ``EF_AMDGPU_MACH_R600_RV730``        0x006      ``rv730``
-     ``EF_AMDGPU_MACH_R600_RV770``        0x007      ``rv770``
-     ``EF_AMDGPU_MACH_R600_CEDAR``        0x008      ``cedar``
-     ``EF_AMDGPU_MACH_R600_CYPRESS``      0x009      ``cypress``
-     ``EF_AMDGPU_MACH_R600_JUNIPER``      0x00a      ``juniper``
-     ``EF_AMDGPU_MACH_R600_REDWOOD``      0x00b      ``redwood``
-     ``EF_AMDGPU_MACH_R600_SUMO``         0x00c      ``sumo``
-     ``EF_AMDGPU_MACH_R600_BARTS``        0x00d      ``barts``
-     ``EF_AMDGPU_MACH_R600_CAICOS``       0x00e      ``caicos``
-     ``EF_AMDGPU_MACH_R600_CAYMAN``       0x00f      ``cayman``
-     ``EF_AMDGPU_MACH_R600_TURKS``        0x010      ``turks``
-     *reserved*                           0x011 -    Reserved for ``r600``
-                                          0x01f      architecture processors.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX600``     0x020      ``gfx600``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX601``     0x021      ``gfx601``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX700``     0x022      ``gfx700``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX701``     0x023      ``gfx701``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX702``     0x024      ``gfx702``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX703``     0x025      ``gfx703``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX704``     0x026      ``gfx704``
-     *reserved*                           0x027      Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX801``     0x028      ``gfx801``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX802``     0x029      ``gfx802``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX803``     0x02a      ``gfx803``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX810``     0x02b      ``gfx810``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX900``     0x02c      ``gfx900``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX902``     0x02d      ``gfx902``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX904``     0x02e      ``gfx904``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX906``     0x02f      ``gfx906``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX908``     0x030      ``gfx908``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX909``     0x031      ``gfx909``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX90C``     0x032      ``gfx90c``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1010``    0x033      ``gfx1010``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1011``    0x034      ``gfx1011``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1012``    0x035      ``gfx1012``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1030``    0x036      ``gfx1030``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1031``    0x037      ``gfx1031``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1032``    0x038      ``gfx1032``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1033``    0x039      ``gfx1033``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX602``     0x03a      ``gfx602``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX705``     0x03b      ``gfx705``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX805``     0x03c      ``gfx805``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1035``    0x03d      ``gfx1035``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1034``    0x03e      ``gfx1034``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX90A``     0x03f      ``gfx90a``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX940``     0x040      ``gfx940``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1100``    0x041      ``gfx1100``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1150``    0x043      ``gfx1150``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1103``    0x044      ``gfx1103``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1036``    0x045      ``gfx1036``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x046      ``gfx1101``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x047      ``gfx1102``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1200``    0x048      ``gfx1200``
-     *reserved*                           0x049      Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1151``    0x04a      ``gfx1151``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX941``     0x04b      ``gfx941``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX942``     0x04c      ``gfx942``
-     *reserved*                           0x04d      Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1201``    0x04e      ``gfx1201``
-     ==================================== ========== =============================
+     ========================================== ========== =============================
+     Name                                       Value      Description (see
+                                                           :ref:`amdgpu-processor-table`)
+     ========================================== ========== =============================
+     ``EF_AMDGPU_MACH_NONE``                    0x000      *not specified*
+     ``EF_AMDGPU_MACH_R600_R600``               0x001      ``r600``
+     ``EF_AMDGPU_MACH_R600_R630``               0x002      ``r630``
+     ``EF_AMDGPU_MACH_R600_RS880``              0x003      ``rs880``
+     ``EF_AMDGPU_MACH_R600_RV670``              0x004      ``rv670``
+     ``EF_AMDGPU_MACH_R600_RV710``              0x005      ``rv710``
+     ``EF_AMDGPU_MACH_R600_RV730``              0x006      ``rv730``
+     ``EF_AMDGPU_MACH_R600_RV770``              0x007      ``rv770``
+     ``EF_AMDGPU_MACH_R600_CEDAR``              0x008      ``cedar``
+     ``EF_AMDGPU_MACH_R600_CYPRESS``            0x009      ``cypress``
+     ``EF_AMDGPU_MACH_R600_JUNIPER``            0x00a      ``juniper``
+     ``EF_AMDGPU_MACH_R600_REDWOOD``            0x00b      ``redwood``
+     ``EF_AMDGPU_MACH_R600_SUMO``               0x00c      ``sumo``
+     ``EF_AMDGPU_MACH_R600_BARTS``              0x00d      ``barts``
+     ``EF_AMDGPU_MACH_R600_CAICOS``             0x00e      ``caicos``
+     ``EF_AMDGPU_MACH_R600_CAYMAN``             0x00f      ``cayman``
+     ``EF_AMDGPU_MACH_R600_TURKS``              0x010      ``turks``
+     *reserved*                                 0x011 -    Reserved for ``r600``
+                                                0x01f      architecture processors.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX600``           0x020      ``gfx600``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX601``           0x021      ``gfx601``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX700``           0x022      ``gfx700``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX701``           0x023      ``gfx701``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX702``           0x024      ``gfx702``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX703``           0x025      ``gfx703``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX704``           0x026      ``gfx704``
+     *reserved*                                 0x027      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX801``           0x028      ``gfx801``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX802``           0x029      ``gfx802``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX803``           0x02a      ``gfx803``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX810``           0x02b      ``gfx810``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX900``           0x02c      ``gfx900``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX902``           0x02d      ``gfx902``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX904``           0x02e      ``gfx904``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX906``           0x02f      ``gfx906``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX908``           0x030      ``gfx908``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX909``           0x031      ``gfx909``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX90C``           0x032      ``gfx90c``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1010``          0x033      ``gfx1010``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1011``          0x034      ``gfx1011``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1012``          0x035      ``gfx1012``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1030``          0x036      ``gfx1030``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1031``          0x037      ``gfx1031``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1032``          0x038      ``gfx1032``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1033``          0x039      ``gfx1033``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX602``           0x03a      ``gfx602``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX705``           0x03b      ``gfx705``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX805``           0x03c      ``gfx805``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1035``          0x03d      ``gfx1035``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1034``          0x03e      ``gfx1034``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX90A``           0x03f      ``gfx90a``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX940``           0x040      ``gfx940``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1100``          0x041      ``gfx1100``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1013``          0x042      ``gfx1013``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1150``          0x043      ``gfx1150``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1103``          0x044      ``gfx1103``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1036``          0x045      ``gfx1036``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1101``          0x046      ``gfx1101``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1102``          0x047      ``gfx1102``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
+     *reserved*                                 0x049      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX941``           0x04b      ``gfx941``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
+     *reserved*                                 0x04d      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
+     *reserved*                                 0x04f      Reserved.
+     *reserved*                                 0x050      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10.1-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10.3-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC``    0x054      ``gfx11-generic``
+     *reserved*                                 0x055      Reserved.
+     ========================================== ========== =============================
 
 Sections
 --------
@@ -3940,6 +4098,10 @@ same *vendor-name*.
 Code Object V4 Metadata
 +++++++++++++++++++++++
 
+. warning::
+  Code object V4 is not the default code object version emitted by this version
+  of LLVM.
+
 Code object V4 metadata is the same as
 :ref:`amdgpu-amdhsa-code-object-metadata-v3` with the changes and additions
 defined in table :ref:`amdgpu-amdhsa-code-object-metadata-map-table-v4`.
@@ -3969,11 +4131,6 @@ defined in table :ref:`amdgpu-amdhsa-code-object-metadata-map-table-v4`.
 
 Code Object V5 Metadata
 +++++++++++++++++++++++
-
-.. warning::
-  Code object V5 is not the default code object version emitted by this version
-  of LLVM.
-
 
 Code object V5 metadata is the same as
 :ref:`amdgpu-amdhsa-code-object-metadata-v4` with the changes defined in table
@@ -5358,7 +5515,10 @@ additional 256 bytes to the kernel_code_entry_byte_offset. This addition
 facilitates the incorporation of a prologue to the kernel entry to handle cases
 where code designed for kernarg preloading is executed on hardware equipped with
 incompatible firmware. If hardware has compatible firmware the 256 bytes at the
-start of the kernel entry will be skipped.
+start of the kernel entry will be skipped. Additionally, the compiler backend
+may insert a trap instruction at the start of the kernel prologue to manage
+situations where kernarg preloading is attempted on hardware with incompatible
+firmware.
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
@@ -12131,8 +12291,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12161,8 +12321,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12268,8 +12428,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12299,8 +12459,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         3. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -12495,8 +12655,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              the
                                                              fence-paired-atomic.
 
-                                                         2. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         2. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before any
                                                              following global/generic
@@ -13209,8 +13369,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         4. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -13284,8 +13444,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         4. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -13512,8 +13672,8 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              requirements of
                                                              release.
 
-                                                         2. buffer_gl0_inv;
-                                                            buffer_gl1_inv
+                                                         2. buffer_gl1_inv;
+                                                            buffer_gl0_inv
 
                                                            - Must happen before
                                                              any following
@@ -14949,8 +15109,9 @@ For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
-[AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_, [AMD-GCN-GFX10-RDNA1]_,
-[AMD-GCN-GFX10-RDNA2]_ and [AMD-GCN-GFX11-RDNA3]_.
+[AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
+[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_
+and [AMD-GCN-GFX11-RDNA3]_.
 
 Operands
 ~~~~~~~~
@@ -15419,6 +15580,14 @@ command-line options such as ``-triple``, ``-mcpu``, and
   The target ID syntax used for code object V2 to V3 for this directive differs
   from that used elsewhere. See :ref:`amdgpu-target-id-v2-v3`.
 
+.. _amdgpu-assembler-directive-amdhsa-code-object-version:
+
+.amdhsa_code_object_version <version>
++++++++++++++++++++++++++++++++++++++
+
+Optional directive which declares the code object version to be generated by the
+assembler. If not present, a default value will be used.
+
 .amdhsa_kernel <name>
 +++++++++++++++++++++
 
@@ -15736,6 +15905,7 @@ Additional Documentation
 .. [AMD-GCN-GFX906-VEGA7NM] `AMD Vega 7nm Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/11/Vega_7nm_Shader_ISA_26November2019.pdf>`__
 .. [AMD-GCN-GFX908-CDNA1] `AMD Instinct MI100 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA1_Shader_ISA_14December2020.pdf>`__
 .. [AMD-GCN-GFX90A-CDNA2] `AMD Instinct MI200 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA2_Shader_ISA_4February2022.pdf>`__
+.. [AMD-GCN-GFX940-GFX942-CDNA3] `AMD Instinct MI300 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/amd-instinct-mi300-cdna3-instruction-set-architecture.pdf>`__
 .. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
