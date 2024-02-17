@@ -33,7 +33,7 @@ namespace __asan {
 
 // -------------------- User-specified callbacks ----------------- {{{1
 static void (*error_report_callback)(const char*);
-typedef InternalMmapVectorNoCtor<char, true> ErrorMessageBuffer;
+using ErrorMessageBuffer = InternalMmapVectorNoCtor<char, true>;
 static ALIGNED(
     alignof(ErrorMessageBuffer)) char error_message_buffer_placeholder
     [sizeof(ErrorMessageBuffer)];
