@@ -122,11 +122,21 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
 
 bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
   assert(F);
-  QualType type = F->getReturnType();
+  return isTypeRefCounted(F->getReturnType());
+}
+
+bool isTypeRefCounted(QualType type) {
+  assert(F);
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
       type = elaboratedT->desugar();
       continue;
+    }
+    if (auto *deduced = type->getAs<DeducedTemplateSpecializationType>()) {
+      if (auto *decl = deduced->getTemplateName().getAsTemplateDecl()) {
+        auto name = decl->getNameAsString();
+        return name == "Ref" || name == "RefPtr";
+      }
     }
     if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
       if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {

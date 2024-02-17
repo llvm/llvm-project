@@ -27,6 +27,13 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
       E = tempExpr->getSubExpr();
       continue;
     }
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      auto *decl = DRE->getFoundDecl();
+      if (auto *VD = dyn_cast<VarDecl>(decl)) {
+        if (isTypeRefCounted(VD->getType()))
+          return {E, true};
+      }
+    }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =
@@ -99,7 +106,7 @@ bool isASafeCallArg(const Expr *E) {
   assert(E);
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
     if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-      if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+      if (isa<ParmVarDecl>(D))
         return true;
     }
   }

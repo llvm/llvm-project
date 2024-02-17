@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_ANALYZER_WEBKIT_PTRTYPESEMANTICS_H
 #define LLVM_CLANG_ANALYZER_WEBKIT_PTRTYPESEMANTICS_H
 
-#include "llvm/ADT/APInt.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
 
@@ -54,6 +54,9 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F);
 
 /// \returns true if \p F returns a ref-counted object, false if not.
 bool isReturnValueRefCounted(const clang::FunctionDecl *F);
+
+/// \returns true if \p type is ref-counted object, false if not.
+bool isTypeRefCounted(QualType type);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfRefCounted(const clang::CXXMethodDecl* Method);
