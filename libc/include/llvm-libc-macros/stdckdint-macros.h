@@ -1,4 +1,4 @@
-//===-- Definition of macros for stdchdint.h ------------------------------===//
+//===-- Definition of macros for stdckdint.h ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_STDCHDINT_MACROS_H
-#define __LLVM_LIBC_MACROS_STDCHDINT_MACROS_H
+#ifndef __LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
+#define __LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
 
+// We need to use __builtin_*_overflow from GCC/Clang to implement the overflow
+// macros. Check __GNUC__ for availability of such builtins.
 #ifdef __GNUC__
-
+// clang/gcc overlay may provides similar macros, we need to avoid redefining
+// them.
 #ifndef __STDC_VERSION_STDCKDINT_H__
 #define __STDC_VERSION_STDCKDINT_H__ 202311L
 
@@ -19,4 +22,4 @@
 #define ckd_mul(R, A, B) __builtin_mul_overflow((A), (B), (R))
 #endif // __STDC_VERSION_STDCKDINT_H__
 #endif // __GNUC__
-#endif // __LLVM_LIBC_MACROS_STDCHDINT_MACROS_H
+#endif // __LLVM_LIBC_MACROS_STDCKDINT_MACROS_H
