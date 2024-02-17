@@ -747,6 +747,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
     NewG = Function::Create(G->getFunctionType(), G->getLinkage(),
                             G->getAddressSpace(), "", G->getParent());
     NewG->setComdat(G->getComdat());
+    NewG->IsNewDbgInfoFormat = G->IsNewDbgInfoFormat;
     BB = BasicBlock::Create(F->getContext(), "", NewG);
   }
 
@@ -874,6 +875,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    NewF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
