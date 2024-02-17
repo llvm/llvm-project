@@ -255,8 +255,13 @@ static void __kmp_stg_parse_bool(char const *name, char const *value,
 // placed here in order to use __kmp_round4k static function
 void __kmp_check_stksize(size_t *val) {
   // if system stack size is too big then limit the size for worker threads
+#if KMP_OS_AIX
+  if (*val > KMP_DEFAULT_STKSIZE * 2) // Use 2 times, 16 is too large for AIX.
+    *val = KMP_DEFAULT_STKSIZE * 2;
+#else
   if (*val > KMP_DEFAULT_STKSIZE * 16) // just a heuristics...
     *val = KMP_DEFAULT_STKSIZE * 16;
+#endif
   if (*val < __kmp_sys_min_stksize)
     *val = __kmp_sys_min_stksize;
   if (*val > KMP_MAX_STKSIZE)
