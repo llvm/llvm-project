@@ -124,9 +124,9 @@ Improvements and New Features
   ``-DLIBCXX_INSTALL_MODULE_DIR=<path>``. The default location is
   ``${PREFIX}/share/libc++/v1``.
 
-- AddressSanitizer annotations have been added to ``std::basic_string``
-  external buffers (long strings only).
-  Enabled with all allocators by default.
+- AddressSanitizer annotations have been added to ``std::basic_string``.
+  These annotations are enabled for all allocators by default.
+  It's only enable for long string, string using the small buffer optimization are not annotated.
 
 - The libc++ source code has been formatted with ``clang-format``. This
   `discourse thread <https://discourse.llvm.org/t/rfc-clang-formatting-all-of-libc-once-and-for-all>`_
