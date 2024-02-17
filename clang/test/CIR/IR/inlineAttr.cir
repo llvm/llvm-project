@@ -1,11 +1,15 @@
 // RUN: cir-opt %s | FileCheck %s -check-prefix=CIR
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 
+#fn_attr = #cir<extra({inline = #cir.inline<no>})>
+
 module {
-  cir.func @l0() extra( {cir.inline = #cir.inline<no>} )  {
+  cir.func @l0() extra(#fn_attr)  {
     cir.return
   }
 }
 
-// CIR: cir.func @l0() extra( {cir.inline = #cir.inline<no>} ) {
-// MLIR: llvm.func @l0() attributes {cir.extra_attrs = #cir<extra({cir.inline = #cir.inline<no>})>}
+// CIR: #fn_attr = #cir<extra({inline = #cir.inline<no>})>
+// CIR: cir.func @l0() extra(#fn_attr) {
+
+// MLIR: llvm.func @l0() attributes {cir.extra_attrs = #fn_attr}

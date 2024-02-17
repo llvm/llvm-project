@@ -84,6 +84,11 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << "bfi_" << bitfield.getName().str();
       return AliasResult::FinalAlias;
     }
+    if (auto extraFuncAttr =
+            attr.dyn_cast<mlir::cir::ExtraFuncAttributesAttr>()) {
+      os << "fn_attr";
+      return AliasResult::FinalAlias;
+    }
 
     return AliasResult::NoAlias;
   }
@@ -1717,20 +1722,20 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
-  // If extra func attributes are present, parse them.
-  NamedAttrList extraAttrs;
+  Attribute extraAttrs;
   if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
     if (parser.parseLParen().failed())
       return failure();
-    if (parser.parseOptionalAttrDict(extraAttrs).failed())
+    if (parser.parseAttribute(extraAttrs).failed())
       return failure();
     if (parser.parseRParen().failed())
       return failure();
+  } else {
+    NamedAttrList empty;
+    extraAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
+        builder.getContext(), empty.getDictionary(builder.getContext()));
   }
-  state.addAttribute(getExtraAttrsAttrName(state.name),
-                     mlir::cir::ExtraFuncAttributesAttr::get(
-                         builder.getContext(),
-                         extraAttrs.getDictionary(builder.getContext())));
+  state.addAttribute(getExtraAttrsAttrName(state.name), extraAttrs);
 
   // Parse the optional function body.
   auto *body = state.addRegion();
@@ -1821,8 +1826,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (!getExtraAttrs().getElements().empty()) {
     p << " extra(";
-    p.printOptionalAttrDict(getExtraAttrs().getElements().getValue());
-    p << " )";
+    p.printAttributeWithoutType(getExtraAttrs());
+    p << ")";
   }
 
   // Print the body if this is not an external function.
