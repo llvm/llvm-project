@@ -81,11 +81,17 @@ declare i32 @llvm.aarch64.neon.saddlv.i32.v4i16(<4 x i16>)
 declare i32 @llvm.aarch64.neon.saddlv.i32.v8i8(<8 x i8>)
 
 define i16 @test_vaddlv_s8(<8 x i8> %a) {
-; CHECK-LABEL: test_vaddlv_s8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlv h0, v0.8b
-; CHECK-NEXT:    smov w0, v0.h[0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_vaddlv_s8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    saddlv h0, v0.8b
+; CHECK-SD-NEXT:    smov w0, v0.h[0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vaddlv_s8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    saddlv h0, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %saddlvv.i = tail call i32 @llvm.aarch64.neon.saddlv.i32.v8i8(<8 x i8> %a)
   %0 = trunc i32 %saddlvv.i to i16
@@ -127,11 +133,17 @@ entry:
 }
 
 define i16 @test_vaddlvq_s8(<16 x i8> %a) {
-; CHECK-LABEL: test_vaddlvq_s8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlv h0, v0.16b
-; CHECK-NEXT:    smov w0, v0.h[0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_vaddlvq_s8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    saddlv h0, v0.16b
+; CHECK-SD-NEXT:    smov w0, v0.h[0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vaddlvq_s8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    saddlv h0, v0.16b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %saddlvv.i = tail call i32 @llvm.aarch64.neon.saddlv.i32.v16i8(<16 x i8> %a)
   %0 = trunc i32 %saddlvv.i to i16

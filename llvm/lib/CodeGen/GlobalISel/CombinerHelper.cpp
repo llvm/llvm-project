@@ -28,10 +28,12 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
@@ -220,21 +222,11 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   replaceRegWith(MRI, DstReg, SrcReg);
 }
 
-bool CombinerHelper::tryCombineConcatVectors(MachineInstr &MI) {
-  bool IsUndef = false;
-  SmallVector<Register, 4> Ops;
-  if (matchCombineConcatVectors(MI, IsUndef, Ops)) {
-    applyCombineConcatVectors(MI, IsUndef, Ops);
-    return true;
-  }
-  return false;
-}
-
-bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                               SmallVectorImpl<Register> &Ops) {
+bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS &&
          "Invalid instruction");
-  IsUndef = true;
+  bool IsUndef = true;
   MachineInstr *Undef = nullptr;
 
   // Walk over all the operands of concat vectors and check if they are
@@ -244,6 +236,8 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
     Register Reg = MO.getReg();
     MachineInstr *Def = MRI.getVRegDef(Reg);
     assert(Def && "Operand not defined");
+    if (!MRI.hasOneNonDBGUse(Reg))
+      return false;
     switch (Def->getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
       IsUndef = false;
@@ -273,10 +267,21 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
       return false;
     }
   }
+
+  // Check if the combine is illegal
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, MRI.getType(Ops[0])}})) {
+    return false;
+  }
+
+  if (IsUndef)
+    Ops.clear();
+
   return true;
 }
-void CombinerHelper::applyCombineConcatVectors(
-    MachineInstr &MI, bool IsUndef, const ArrayRef<Register> Ops) {
+void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   // We determined that the concat_vectors can be flatten.
   // Generate the flattened build_vector.
   Register DstReg = MI.getOperand(0).getReg();
@@ -287,9 +292,9 @@ void CombinerHelper::applyCombineConcatVectors(
   // checking that at all Ops are undef.  Alternatively, we could have
   // generate a build_vector of undefs and rely on another combine to
   // clean that up.  For now, given we already gather this information
-  // in tryCombineConcatVectors, just save compile time and issue the
+  // in matchCombineConcatVectors, just save compile time and issue the
   // right thing.
-  if (IsUndef)
+  if (Ops.empty())
     Builder.buildUndef(NewDstReg);
   else
     Builder.buildBuildVector(NewDstReg, Ops);
@@ -2374,6 +2379,9 @@ bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
   assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
+  Register OriginalSrcReg = getSrcRegIgnoringCopies(SrcReg, MRI);
+  if (OriginalSrcReg.isValid())
+    SrcReg = OriginalSrcReg;
   LLT DstTy = MRI.getType(DstReg);
   return mi_match(SrcReg, MRI,
                   m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
@@ -2400,6 +2408,9 @@ bool CombinerHelper::matchCombineExtOfExt(
           MI.getOpcode() == TargetOpcode::G_ZEXT) &&
          "Expected a G_[ASZ]EXT");
   Register SrcReg = MI.getOperand(1).getReg();
+  Register OriginalSrcReg = getSrcRegIgnoringCopies(SrcReg, MRI);
+  if (OriginalSrcReg.isValid())
+    SrcReg = OriginalSrcReg;
   MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
   // Match exts with the same opcode, anyext([sz]ext) and sext(zext).
   unsigned Opc = MI.getOpcode();
@@ -3874,9 +3885,8 @@ bool CombinerHelper::matchLoadOrCombine(
 
 bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
                                             MachineInstr *&ExtMI) {
-  assert(MI.getOpcode() == TargetOpcode::G_PHI);
-
-  Register DstReg = MI.getOperand(0).getReg();
+  auto &PHI = cast<GPhi>(MI);
+  Register DstReg = PHI.getReg(0);
 
   // TODO: Extending a vector may be expensive, don't do this until heuristics
   // are better.
@@ -3905,8 +3915,8 @@ bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
   // they'll be optimized in some way.
   // Collect the unique incoming values.
   SmallPtrSet<MachineInstr *, 4> InSrcs;
-  for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
-    auto *DefMI = getDefIgnoringCopies(MI.getOperand(Idx).getReg(), MRI);
+  for (unsigned I = 0; I < PHI.getNumIncomingValues(); ++I) {
+    auto *DefMI = getDefIgnoringCopies(PHI.getIncomingValue(I), MRI);
     switch (DefMI->getOpcode()) {
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_TRUNC:
@@ -3914,7 +3924,7 @@ bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_CONSTANT:
-      InSrcs.insert(getDefIgnoringCopies(MI.getOperand(Idx).getReg(), MRI));
+      InSrcs.insert(DefMI);
       // Don't try to propagate if there are too many places to create new
       // extends, chances are it'll increase code size.
       if (InSrcs.size() > 2)
@@ -3929,7 +3939,7 @@ bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
 
 void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
                                             MachineInstr *&ExtMI) {
-  assert(MI.getOpcode() == TargetOpcode::G_PHI);
+  auto &PHI = cast<GPhi>(MI);
   Register DstReg = ExtMI->getOperand(0).getReg();
   LLT ExtTy = MRI.getType(DstReg);
 
@@ -3938,8 +3948,9 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
   // deterministic iteration order.
   SmallSetVector<MachineInstr *, 8> SrcMIs;
   SmallDenseMap<MachineInstr *, MachineInstr *, 8> OldToNewSrcMap;
-  for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); SrcIdx += 2) {
-    auto *SrcMI = MRI.getVRegDef(MI.getOperand(SrcIdx).getReg());
+  for (unsigned I = 0; I < PHI.getNumIncomingValues(); ++I) {
+    auto SrcReg = PHI.getIncomingValue(I);
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (!SrcMIs.insert(SrcMI))
       continue;
 
@@ -3951,8 +3962,7 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
 
     Builder.setInsertPt(*SrcMI->getParent(), InsertPt);
     Builder.setDebugLoc(MI.getDebugLoc());
-    auto NewExt = Builder.buildExtOrTrunc(ExtMI->getOpcode(), ExtTy,
-                                          SrcMI->getOperand(0).getReg());
+    auto NewExt = Builder.buildExtOrTrunc(ExtMI->getOpcode(), ExtTy, SrcReg);
     OldToNewSrcMap[SrcMI] = NewExt;
   }
 
@@ -6548,6 +6558,90 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   return false;
 }
 
+bool CombinerHelper::tryFoldSelectToIntMinMax(GSelect *Select,
+                                              BuildFnTy &MatchInfo) {
+  Register DstReg = Select->getReg(0);
+  Register Cond = Select->getCondReg();
+  Register True = Select->getTrueReg();
+  Register False = Select->getFalseReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (DstTy.isPointer())
+    return false;
+
+  // We need an G_ICMP on the condition register.
+  GICmp *Cmp = getOpcodeDef<GICmp>(Cond, MRI);
+  if (!Cmp)
+    return false;
+
+  // We want to fold the icmp and replace the select.
+  if (!MRI.hasOneNonDBGUse(Cmp->getReg(0)))
+    return false;
+
+  CmpInst::Predicate Pred = Cmp->getCond();
+  // We need a larger or smaller predicate for
+  // canonicalization.
+  if (CmpInst::isEquality(Pred))
+    return false;
+
+  Register CmpLHS = Cmp->getLHSReg();
+  Register CmpRHS = Cmp->getRHSReg();
+
+  // We can swap CmpLHS and CmpRHS for higher hitrate.
+  if (True == CmpRHS && False == CmpLHS) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  // (icmp X, Y) ? X : Y -> integer minmax.
+  // see matchSelectPattern in ValueTracking.
+  // Legality between G_SELECT and integer minmax can differ.
+  if (True == CmpLHS && False == CmpRHS) {
+    switch (Pred) {
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_UGE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMAX, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUMax(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_SGE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMAX, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSMax(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_ULE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMIN, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUMin(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_SLE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMIN, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSMin(DstReg, True, False);
+      };
+      return true;
+    }
+    default:
+      return false;
+    }
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
   GSelect *Select = cast<GSelect>(&MI);
 
@@ -6555,6 +6649,187 @@ bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
     return true;
 
   if (tryFoldBoolSelectToLogic(Select, MatchInfo))
+    return true;
+
+  if (tryFoldSelectToIntMinMax(Select, MatchInfo))
+    return true;
+
+  return false;
+}
+
+/// Fold (icmp Pred1 V1, C1) && (icmp Pred2 V2, C2)
+/// or   (icmp Pred1 V1, C1) || (icmp Pred2 V2, C2)
+/// into a single comparison using range-based reasoning.
+/// see InstCombinerImpl::foldAndOrOfICmpsUsingRanges.
+bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
+                                                    BuildFnTy &MatchInfo) {
+  assert(Logic->getOpcode() != TargetOpcode::G_XOR && "unexpected xor");
+  bool IsAnd = Logic->getOpcode() == TargetOpcode::G_AND;
+  Register DstReg = Logic->getReg(0);
+  Register LHS = Logic->getLHSReg();
+  Register RHS = Logic->getRHSReg();
+  unsigned Flags = Logic->getFlags();
+
+  // We need an G_ICMP on the LHS register.
+  GICmp *Cmp1 = getOpcodeDef<GICmp>(LHS, MRI);
+  if (!Cmp1)
+    return false;
+
+  // We need an G_ICMP on the RHS register.
+  GICmp *Cmp2 = getOpcodeDef<GICmp>(RHS, MRI);
+  if (!Cmp2)
+    return false;
+
+  // We want to fold the icmps.
+  if (!MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp2->getReg(0)))
+    return false;
+
+  APInt C1;
+  APInt C2;
+  std::optional<ValueAndVReg> MaybeC1 =
+      getIConstantVRegValWithLookThrough(Cmp1->getRHSReg(), MRI);
+  if (!MaybeC1)
+    return false;
+  C1 = MaybeC1->Value;
+
+  std::optional<ValueAndVReg> MaybeC2 =
+      getIConstantVRegValWithLookThrough(Cmp2->getRHSReg(), MRI);
+  if (!MaybeC2)
+    return false;
+  C2 = MaybeC2->Value;
+
+  Register R1 = Cmp1->getLHSReg();
+  Register R2 = Cmp2->getLHSReg();
+  CmpInst::Predicate Pred1 = Cmp1->getCond();
+  CmpInst::Predicate Pred2 = Cmp2->getCond();
+  LLT CmpTy = MRI.getType(Cmp1->getReg(0));
+  LLT CmpOperandTy = MRI.getType(R1);
+
+  // We build ands, adds, and constants of type CmpOperandTy.
+  // They must be legal to build.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, CmpOperandTy}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, CmpOperandTy}) ||
+      !isConstantLegalOrBeforeLegalizer(CmpOperandTy))
+    return false;
+
+  // Look through add of a constant offset on R1, R2, or both operands. This
+  // allows us to interpret the R + C' < C'' range idiom into a proper range.
+  std::optional<APInt> Offset1;
+  std::optional<APInt> Offset2;
+  if (R1 != R2) {
+    if (GAdd *Add = getOpcodeDef<GAdd>(R1, MRI)) {
+      std::optional<ValueAndVReg> MaybeOffset1 =
+          getIConstantVRegValWithLookThrough(Add->getRHSReg(), MRI);
+      if (MaybeOffset1) {
+        R1 = Add->getLHSReg();
+        Offset1 = MaybeOffset1->Value;
+      }
+    }
+    if (GAdd *Add = getOpcodeDef<GAdd>(R2, MRI)) {
+      std::optional<ValueAndVReg> MaybeOffset2 =
+          getIConstantVRegValWithLookThrough(Add->getRHSReg(), MRI);
+      if (MaybeOffset2) {
+        R2 = Add->getLHSReg();
+        Offset2 = MaybeOffset2->Value;
+      }
+    }
+  }
+
+  if (R1 != R2)
+    return false;
+
+  // We calculate the icmp ranges including maybe offsets.
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, C1);
+  if (Offset1)
+    CR1 = CR1.subtract(*Offset1);
+
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, C2);
+  if (Offset2)
+    CR2 = CR2.subtract(*Offset2);
+
+  bool CreateMask = false;
+  APInt LowerDiff;
+  std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
+  if (!CR) {
+    // We need non-wrapping ranges.
+    if (CR1.isWrappedSet() || CR2.isWrappedSet())
+      return false;
+
+    // Check whether we have equal-size ranges that only differ by one bit.
+    // In that case we can apply a mask to map one range onto the other.
+    LowerDiff = CR1.getLower() ^ CR2.getLower();
+    APInt UpperDiff = (CR1.getUpper() - 1) ^ (CR2.getUpper() - 1);
+    APInt CR1Size = CR1.getUpper() - CR1.getLower();
+    if (!LowerDiff.isPowerOf2() || LowerDiff != UpperDiff ||
+        CR1Size != CR2.getUpper() - CR2.getLower())
+      return false;
+
+    CR = CR1.getLower().ult(CR2.getLower()) ? CR1 : CR2;
+    CreateMask = true;
+  }
+
+  if (IsAnd)
+    CR = CR->inverse();
+
+  CmpInst::Predicate NewPred;
+  APInt NewC, Offset;
+  CR->getEquivalentICmp(NewPred, NewC, Offset);
+
+  // We take the result type of one of the original icmps, CmpTy, for
+  // the to be build icmp. The operand type, CmpOperandTy, is used for
+  // the other instructions and constants to be build. The types of
+  // the parameters and output are the same for add and and.  CmpTy
+  // and the type of DstReg might differ. That is why we zext or trunc
+  // the icmp into the destination register.
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (CreateMask && Offset != 0) {
+      auto TildeLowerDiff = B.buildConstant(CmpOperandTy, ~LowerDiff);
+      auto And = B.buildAnd(CmpOperandTy, R1, TildeLowerDiff); // the mask.
+      auto OffsetC = B.buildConstant(CmpOperandTy, Offset);
+      auto Add = B.buildAdd(CmpOperandTy, And, OffsetC, Flags);
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, Add, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else if (CreateMask && Offset == 0) {
+      auto TildeLowerDiff = B.buildConstant(CmpOperandTy, ~LowerDiff);
+      auto And = B.buildAnd(CmpOperandTy, R1, TildeLowerDiff); // the mask.
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, And, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else if (!CreateMask && Offset != 0) {
+      auto OffsetC = B.buildConstant(CmpOperandTy, Offset);
+      auto Add = B.buildAdd(CmpOperandTy, R1, OffsetC, Flags);
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, Add, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else if (!CreateMask && Offset == 0) {
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, R1, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else {
+      llvm_unreachable("unexpected configuration of CreateMask and Offset");
+    }
+  };
+  return true;
+}
+
+bool CombinerHelper::matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  GAnd *And = cast<GAnd>(&MI);
+
+  if (tryFoldAndOrOrICmpsUsingRanges(And, MatchInfo))
+    return true;
+
+  return false;
+}
+
+bool CombinerHelper::matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  GOr *Or = cast<GOr>(&MI);
+
+  if (tryFoldAndOrOrICmpsUsingRanges(Or, MatchInfo))
     return true;
 
   return false;

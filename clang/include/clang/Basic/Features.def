@@ -269,6 +269,10 @@ EXTENSION(cxx_fixed_enum, true)
 EXTENSION(cxx_binary_literals, true)
 EXTENSION(cxx_init_captures, LangOpts.CPlusPlus11)
 EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
+//C++20
+EXTENSION(cxx_generalized_nttp, LangOpts.CPlusPlus20)
+//C++23
+EXTENSION(cxx_explicit_this_parameter, LangOpts.CPlusPlus23)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)

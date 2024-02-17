@@ -165,6 +165,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_AARCH64_GOT_PAGE_PC;
+  case R_AARCH64_GOTPCREL32:
+    return R_GOT_PC;
   case R_AARCH64_NONE:
     return R_NONE;
   default:
@@ -374,6 +376,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32(loc, val);
     break;
   case R_AARCH64_PLT32:
+  case R_AARCH64_GOTPCREL32:
     checkInt(loc, val, 32, rel);
     write32(loc, val);
     break;

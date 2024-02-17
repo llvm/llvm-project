@@ -2,10 +2,15 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.ctype
     libc.include.fenv
     libc.include.errno
+    libc.include.float
     libc.include.inttypes
     libc.include.math
+    libc.include.stdbit
     libc.include.stdlib
     libc.include.string
     libc.include.strings
     libc.include.search
+
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.include.sys_epoll
 )

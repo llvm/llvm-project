@@ -19,8 +19,8 @@ def ADD_CO : I<(outs GPR32:$dst, GPR8:$flag),
 // GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
-// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 def : Pat <
   (add i32:$src0, i32:$src1),
   (ADD_CO GPR32:$src0, GPR32:$src1)

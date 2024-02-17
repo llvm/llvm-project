@@ -34,11 +34,11 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], <i32 19, i32 19, i32 19, i32 19>
+; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i1> [[TMP8]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP13:%.*]] = and <4 x i1> [[TMP7]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD2]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> <i32 4, i32 4, i32 4, i32 4>, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP11:%.*]] = and <4 x i1> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i1> [[TMP8]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP13:%.*]] = and <4 x i1> [[TMP7]], [[TMP12]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32> <i32 9, i32 9, i32 9, i32 9>
 ; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP13]], <4 x i32> [[TMP10]], <4 x i32> [[PREDPHI]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI3]], ptr [[TMP5]], align 4, !alias.scope [[META0]], !noalias [[META3]]

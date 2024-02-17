@@ -8,15 +8,14 @@ target triple = "riscv64"
 define void @test1(ptr %a) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 128000
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 32000, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[T21]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -39,15 +38,14 @@ exit:                                             ; preds = %loop
 define void @test2(ptr %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 128000
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 32000, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[T21]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    ret void
@@ -72,19 +70,18 @@ exit:                                             ; preds = %loop
 define void @test3(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 128000
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[SCEVGEP3:%.*]], [[LOOP]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[B:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 32000, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[B]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[T17:%.*]] = load float, ptr [[LSR_IV2]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = fadd float [[T17]], 1.000000e+00
 ; CHECK-NEXT:    store float [[T18]], ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 4
-; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[T21]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[SCEVGEP]], [[SCEVGEP4]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -110,19 +107,18 @@ exit:                                             ; preds = %loop
 define void @test4(ptr %a, ptr %b) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 128000
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[SCEVGEP3:%.*]], [[LOOP]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[B:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 32000, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ [[B]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[T17:%.*]] = load float, ptr [[LSR_IV2]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = fadd float [[T17]], 1.000000e+00
 ; CHECK-NEXT:    store float [[T18]], ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 4
-; CHECK-NEXT:    [[T21:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[T21]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[SCEVGEP]], [[SCEVGEP4]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(ptr [[A]])
 ; CHECK-NEXT:    call void @use(ptr [[B]])

@@ -61,7 +61,7 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define{{.*}} void @f13(ptr noalias sret(%struct.s13_0) align 8 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, ptr noundef byval({{.*}}) align 8 %e, i32 noundef %f)
+// CHECK: define{{.*}} void @f13(ptr dead_on_unwind noalias writable sret(%struct.s13_0) align 8 %agg.result, i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d, ptr noundef byval({{.*}}) align 8 %e, i32 noundef %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };

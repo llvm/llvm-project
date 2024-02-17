@@ -79,13 +79,13 @@ MCInst RISCVInstrInfo::getNop() const {
       .addImm(0);
 }
 
-unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   unsigned Dummy;
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex,
                                              unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
@@ -120,13 +120,13 @@ unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   unsigned Dummy;
   return isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex,
                                             unsigned &MemBytes) const {
   switch (MI.getOpcode()) {
@@ -414,15 +414,16 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RISCV::GPRPF64RegClass.contains(DstReg, SrcReg)) {
-    // Emit an ADDI for both parts of GPRPF64.
+  if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
+    // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
-            TRI->getSubReg(DstReg, RISCV::sub_32))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32), getKillRegState(KillSrc))
+            TRI->getSubReg(DstReg, RISCV::sub_gpr_even))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_even),
+                getKillRegState(KillSrc))
         .addImm(0);
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
-            TRI->getSubReg(DstReg, RISCV::sub_32_hi))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32_hi),
+            TRI->getSubReg(DstReg, RISCV::sub_gpr_odd))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd),
                 getKillRegState(KillSrc))
         .addImm(0);
     return;
@@ -607,7 +608,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
              RISCV::SW : RISCV::SD;
     IsScalableVector = false;
-  } else if (RISCV::GPRPF64RegClass.hasSubClassEq(RC)) {
+  } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxSD;
     IsScalableVector = false;
   } else if (RISCV::FPR16RegClass.hasSubClassEq(RC)) {
@@ -690,7 +691,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
              RISCV::LW : RISCV::LD;
     IsScalableVector = false;
-  } else if (RISCV::GPRPF64RegClass.hasSubClassEq(RC)) {
+  } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxLD;
     IsScalableVector = false;
   } else if (RISCV::FPR16RegClass.hasSubClassEq(RC)) {
@@ -1114,7 +1115,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // FIXME: A virtual register must be used initially, as the register
   // scavenger won't work with empty blocks (SIInstrInfo::insertIndirectBranch
   // uses the same workaround).
-  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRJALRRegClass);
   auto II = MBB.end();
   // We may also update the jump target to RestoreBB later.
   MachineInstr &MI = *BuildMI(MBB, II, DL, get(RISCV::PseudoJump))
@@ -1171,7 +1172,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   SmallVector<MachineOperand, 3> Cond;
   if (analyzeBranch(*MBB, TBB, FBB, Cond, /*AllowModify=*/false))
     return false;
-  (void)FBB;
 
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
@@ -1211,13 +1211,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!Op.isReg())
       return false;
     Register Reg = Op.getReg();
-    if (Reg == RISCV::X0) {
-      Imm = 0;
-      return true;
-    }
-    if (!Reg.isVirtual())
-      return false;
-    return isLoadImm(MRI.getVRegDef(Op.getReg()), Imm);
+    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
   };
 
   MachineOperand &LHS = MI.getOperand(0);
@@ -1228,7 +1222,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
     auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
       int64_t Imm;
-      return isLoadImm(&I, Imm) && Imm == C1;
+      return isLoadImm(&I, Imm) && Imm == C1 &&
+             I.getOperand(0).getReg().isVirtual();
     });
     if (DefC1 != E)
       return DefC1->getOperand(0).getReg();
@@ -2378,7 +2373,11 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TPREL_HI, "riscv-tprel-hi"},
       {MO_TPREL_ADD, "riscv-tprel-add"},
       {MO_TLS_GOT_HI, "riscv-tls-got-hi"},
-      {MO_TLS_GD_HI, "riscv-tls-gd-hi"}};
+      {MO_TLS_GD_HI, "riscv-tls-gd-hi"},
+      {MO_TLSDESC_HI, "riscv-tlsdesc-hi"},
+      {MO_TLSDESC_LOAD_LO, "riscv-tlsdesc-load-lo"},
+      {MO_TLSDESC_ADD_LO, "riscv-tlsdesc-add-lo"},
+      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"}};
   return ArrayRef(TargetFlags);
 }
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
@@ -2433,10 +2432,8 @@ RISCVInstrInfo::getOutliningCandidateInfo(
 
   unsigned SequenceSize = 0;
 
-  auto I = RepeatedSequenceLocs[0].front();
-  auto E = std::next(RepeatedSequenceLocs[0].back());
-  for (; I != E; ++I)
-    SequenceSize += getInstSizeInBytes(*I);
+  for (auto &MI : RepeatedSequenceLocs[0])
+    SequenceSize += getInstSizeInBytes(MI);
 
   // call t0, function = 8 bytes.
   unsigned CallOverhead = 8;
@@ -3125,17 +3122,38 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else {
+  } else if (STI.hasStdExtM() || STI.hasStdExtZmmul()) {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     movImm(MBB, II, DL, N, NumOfVReg, Flag);
-    if (!STI.hasStdExtM() && !STI.hasStdExtZmmul())
-      MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
-          MF.getFunction(),
-          "M- or Zmmul-extension must be enabled to calculate the vscaled size/"
-          "offset."});
     BuildMI(MBB, II, DL, get(RISCV::MUL), DestReg)
         .addReg(DestReg, RegState::Kill)
         .addReg(N, RegState::Kill)
+        .setMIFlag(Flag);
+  } else {
+    Register Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, get(RISCV::ADDI), Acc)
+        .addReg(RISCV::X0)
+        .addImm(0)
+        .setMIFlag(Flag);
+    uint32_t PrevShiftAmount = 0;
+    for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
+      if (NumOfVReg & (1LL << ShiftAmount)) {
+        if (ShiftAmount)
+          BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
+              .addReg(DestReg, RegState::Kill)
+              .addImm(ShiftAmount - PrevShiftAmount)
+              .setMIFlag(Flag);
+        if (NumOfVReg >> (ShiftAmount + 1))
+          BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
+              .addReg(Acc, RegState::Kill)
+              .addReg(DestReg)
+              .setMIFlag(Flag);
+        PrevShiftAmount = ShiftAmount;
+      }
+    }
+    BuildMI(MBB, II, DL, get(RISCV::ADD), DestReg)
+        .addReg(DestReg, RegState::Kill)
+        .addReg(Acc)
         .setMIFlag(Flag);
   }
 }

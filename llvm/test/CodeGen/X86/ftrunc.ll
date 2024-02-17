@@ -122,7 +122,7 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
 ; SSE2-NEXT:    subsd %xmm2, %xmm1
 ; SSE2-NEXT:    cvttsd2si %xmm1, %rax
@@ -170,7 +170,7 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v4f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movapd %xmm1, %xmm2
-; SSE2-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; SSE2-NEXT:    movsd {{.*#+}} xmm3 = [9.2233720368547758E+18,0.0E+0]
 ; SSE2-NEXT:    subsd %xmm3, %xmm1
 ; SSE2-NEXT:    cvttsd2si %xmm1, %rax
 ; SSE2-NEXT:    cvttsd2si %xmm2, %rcx

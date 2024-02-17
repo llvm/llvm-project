@@ -48,6 +48,7 @@ public:
   NODE(std, uint64_t)
   NODE_ENUM(common, CUDADataAttr)
   NODE_ENUM(common, CUDASubprogramAttrs)
+  NODE_ENUM(common, OpenACCDeviceType)
   NODE(format, ControlEditDesc)
   NODE(format::ControlEditDesc, Kind)
   NODE(format, DerivedTypeDataEditDesc)
@@ -101,7 +102,7 @@ public:
   NODE(parser, AccSelfClause)
   NODE(parser, AccStandaloneDirective)
   NODE(parser, AccDeviceTypeExpr)
-  NODE_ENUM(parser::AccDeviceTypeExpr, Device)
+
   NODE(parser, AccDeviceTypeExprList)
   NODE(parser, AccTileExpr)
   NODE(parser, AccTileExprList)

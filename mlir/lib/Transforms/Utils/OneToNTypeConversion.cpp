@@ -93,7 +93,7 @@ enum class CastKind {
   // cast becomes a target materialization.)
   Target
 };
-}
+} // namespace
 
 /// Mapping of enum values to string values.
 StringRef getCastKindName(CastKind kind) {
@@ -113,6 +113,11 @@ static const char *const castKindAttrName =
 /// result types. Returns the result values of the cast.
 static ValueRange buildUnrealizedCast(OpBuilder &builder, TypeRange resultTypes,
                                       ValueRange inputs, CastKind kind) {
+  // Special case: 1-to-N conversion with N = 0. No need to build an
+  // UnrealizedConversionCastOp because the op will always be dead.
+  if (resultTypes.empty())
+    return ValueRange();
+
   // Create cast.
   Location loc = builder.getUnknownLoc();
   if (!inputs.empty())

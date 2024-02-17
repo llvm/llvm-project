@@ -152,6 +152,34 @@ class CheckImmOperand_s<int Index, string Value> : CheckOperandBase<Index> {
   string ImmVal = Value;
 }
 
+// Check that the operand at position `Index` is less than `Imm`.
+// If field `FunctionMapper` is a non-empty string, then function
+// `FunctionMapper` is applied to the operand value, and the return value is then
+// compared against `Imm`.
+class CheckImmOperandLT<int Index, int Imm> : CheckOperandBase<Index> {
+  int ImmVal = Imm;
+}
+
+// Check that the operand at position `Index` is greater than `Imm`.
+// If field `FunctionMapper` is a non-empty string, then function
+// `FunctionMapper` is applied to the operand value, and the return value is then
+// compared against `Imm`.
+class CheckImmOperandGT<int Index, int Imm> : CheckOperandBase<Index> {
+  int ImmVal = Imm;
+}
+
+// Check that the operand at position `Index` is less than or equal to `Imm`.
+// If field `FunctionMapper` is a non-empty string, then function
+// `FunctionMapper` is applied to the operand value, and the return value is then
+// compared against `Imm`.
+class CheckImmOperandLE<int Index, int Imm> : CheckNot<CheckImmOperandGT<Index, Imm>>;
+
+// Check that the operand at position `Index` is greater than or equal to `Imm`.
+// If field `FunctionMapper` is a non-empty string, then function
+// `FunctionMapper` is applied to the operand value, and the return value is then
+// compared against `Imm`.
+class CheckImmOperandGE<int Index, int Imm> : CheckNot<CheckImmOperandLT<Index, Imm>>;
+
 // Expands to a call to `FunctionMapper` if field `FunctionMapper` is set.
 // Otherwise, it expands to a CheckNot<CheckInvalidRegOperand<Index>>.
 class CheckRegOperandSimple<int Index> : CheckOperandBase<Index>;
@@ -203,6 +231,12 @@ class CheckAll<list<MCInstPredicate> Sequence>
 class CheckAny<list<MCInstPredicate> Sequence>
     : CheckPredicateSequence<Sequence>;
 
+// Check that the operand at position `Index` is in range [Start, End].
+// If field `FunctionMapper` is a non-empty string, then function
+// `FunctionMapper` is applied to the operand value, and the return value is then
+// compared against range [Start, End].
+class CheckImmOperandRange<int Index, int Start, int End>
+  : CheckAll<[CheckImmOperandGE<Index, Start>, CheckImmOperandLE<Index, End>]>;
 
 // Used to expand the body of a function predicate. See the definition of
 // TIIPredicate below.

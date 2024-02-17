@@ -1352,7 +1352,7 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
       return true;
     }
 
-    if (name.substr(0, 3).equals_insensitive("asr") &&
+    if (name.starts_with_insensitive("asr") &&
         !name.substr(3).getAsInteger(10, intVal) && intVal > 0 && intVal < 32) {
       RegNo = ASRRegs[intVal];
       RegKind = SparcOperand::rk_Special;
@@ -1421,7 +1421,7 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
     }
 
     // %fcc0 - %fcc3
-    if (name.substr(0, 3).equals_insensitive("fcc") &&
+    if (name.starts_with_insensitive("fcc") &&
         !name.substr(3).getAsInteger(10, intVal) && intVal < 4) {
       // FIXME: check 64bit and  handle %fcc1 - %fcc3
       RegNo = Sparc::FCC0 + intVal;
@@ -1430,40 +1430,40 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
     }
 
     // %g0 - %g7
-    if (name.substr(0, 1).equals_insensitive("g") &&
+    if (name.starts_with_insensitive("g") &&
         !name.substr(1).getAsInteger(10, intVal) && intVal < 8) {
       RegNo = IntRegs[intVal];
       RegKind = SparcOperand::rk_IntReg;
       return true;
     }
     // %o0 - %o7
-    if (name.substr(0, 1).equals_insensitive("o") &&
+    if (name.starts_with_insensitive("o") &&
         !name.substr(1).getAsInteger(10, intVal) && intVal < 8) {
       RegNo = IntRegs[8 + intVal];
       RegKind = SparcOperand::rk_IntReg;
       return true;
     }
-    if (name.substr(0, 1).equals_insensitive("l") &&
+    if (name.starts_with_insensitive("l") &&
         !name.substr(1).getAsInteger(10, intVal) && intVal < 8) {
       RegNo = IntRegs[16 + intVal];
       RegKind = SparcOperand::rk_IntReg;
       return true;
     }
-    if (name.substr(0, 1).equals_insensitive("i") &&
+    if (name.starts_with_insensitive("i") &&
         !name.substr(1).getAsInteger(10, intVal) && intVal < 8) {
       RegNo = IntRegs[24 + intVal];
       RegKind = SparcOperand::rk_IntReg;
       return true;
     }
     // %f0 - %f31
-    if (name.substr(0, 1).equals_insensitive("f") &&
+    if (name.starts_with_insensitive("f") &&
         !name.substr(1, 2).getAsInteger(10, intVal) && intVal < 32) {
       RegNo = FloatRegs[intVal];
       RegKind = SparcOperand::rk_FloatReg;
       return true;
     }
     // %f32 - %f62
-    if (name.substr(0, 1).equals_insensitive("f") &&
+    if (name.starts_with_insensitive("f") &&
         !name.substr(1, 2).getAsInteger(10, intVal) && intVal >= 32 &&
         intVal <= 62 && (intVal % 2 == 0)) {
       // FIXME: Check V9
@@ -1473,7 +1473,7 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
     }
 
     // %r0 - %r31
-    if (name.substr(0, 1).equals_insensitive("r") &&
+    if (name.starts_with_insensitive("r") &&
         !name.substr(1, 2).getAsInteger(10, intVal) && intVal < 31) {
       RegNo = IntRegs[intVal];
       RegKind = SparcOperand::rk_IntReg;
@@ -1481,7 +1481,7 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &RegNo,
     }
 
     // %c0 - %c31
-    if (name.substr(0, 1).equals_insensitive("c") &&
+    if (name.starts_with_insensitive("c") &&
         !name.substr(1).getAsInteger(10, intVal) && intVal < 32) {
       RegNo = CoprocRegs[intVal];
       RegKind = SparcOperand::rk_CoprocReg;

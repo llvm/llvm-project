@@ -15,8 +15,24 @@
 // RUN: -ffast-math -complex-range=limited -emit-llvm -o - %s \
 // RUN: | FileCheck %s --check-prefix=LMTD-FAST
 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN: -ffast-math -complex-range=full -emit-llvm -o - %s \
+// RUN: | FileCheck %s --check-prefix=FULL
+
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -fno-cx-fortran-rules -o - | FileCheck %s --check-prefix=FULL
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -fcx-limited-range -fno-cx-limited-range -o - \
+// RUN: | FileCheck %s --check-prefix=FULL
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -fno-cx-limited-range -fcx-limited-range -o - \
+// RUN: | FileCheck %s --check-prefix=FULL
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -fno-cx-fortran-rules -fcx-fortran-rules -o - \
+// RUN: | FileCheck %s --check-prefix=FULL
 
 _Complex float div(_Complex float a, _Complex float b) {
   // LABEL: define {{.*}} @div(

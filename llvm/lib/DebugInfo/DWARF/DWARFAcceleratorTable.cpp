@@ -493,7 +493,7 @@ static bool isSentinel(const DWARFDebugNames::AttributeEncoding &AE) {
 }
 
 static DWARFDebugNames::Abbrev sentinelAbbrev() {
-  return DWARFDebugNames::Abbrev(0, dwarf::Tag(0), {});
+  return DWARFDebugNames::Abbrev(0, dwarf::Tag(0), 0, {});
 }
 
 static bool isSentinel(const DWARFDebugNames::Abbrev &Abbr) {
@@ -505,7 +505,7 @@ DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getEmptyKey() {
 }
 
 DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getTombstoneKey() {
-  return DWARFDebugNames::Abbrev(~0, dwarf::Tag(0), {});
+  return DWARFDebugNames::Abbrev(~0, dwarf::Tag(0), 0, {});
 }
 
 Expected<DWARFDebugNames::AttributeEncoding>
@@ -540,7 +540,7 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
     return createStringError(errc::illegal_byte_sequence,
                              "Incorrectly terminated abbreviation table.");
   }
-
+  const uint64_t AbbrevOffset = *Offset;
   uint32_t Code = Section.AccelSection.getULEB128(Offset);
   if (Code == 0)
     return sentinelAbbrev();
@@ -549,7 +549,7 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
   auto AttrEncOr = extractAttributeEncodings(Offset);
   if (!AttrEncOr)
     return AttrEncOr.takeError();
-  return Abbrev(Code, dwarf::Tag(Tag), std::move(*AttrEncOr));
+  return Abbrev(Code, dwarf::Tag(Tag), AbbrevOffset, std::move(*AttrEncOr));
 }
 
 Error DWARFDebugNames::NameIndex::extract() {
@@ -611,6 +611,10 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   return std::nullopt;
 }
 
+bool DWARFDebugNames::Entry::hasParentInformation() const {
+  return lookup(dwarf::DW_IDX_parent).has_value();
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
     return Off->getAsReferenceUVal();
@@ -650,13 +654,48 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
   return std::nullopt;
 }
 
+Expected<std::optional<DWARFDebugNames::Entry>>
+DWARFDebugNames::Entry::getParentDIEEntry() const {
+  // The offset of the accelerator table entry for the parent.
+  std::optional<DWARFFormValue> ParentEntryOff = lookup(dwarf::DW_IDX_parent);
+  assert(ParentEntryOff.has_value() && "hasParentInformation() must be called");
+
+  if (ParentEntryOff->getForm() == dwarf::Form::DW_FORM_flag_present)
+    return std::nullopt;
+  return NameIdx->getEntryAtRelativeOffset(ParentEntryOff->getRawUValue());
+}
+
+void DWARFDebugNames::Entry::dumpParentIdx(
+    ScopedPrinter &W, const DWARFFormValue &FormValue) const {
+  Expected<std::optional<Entry>> ParentEntry = getParentDIEEntry();
+  if (!ParentEntry) {
+    W.getOStream() << "<invalid offset data>";
+    consumeError(ParentEntry.takeError());
+    return;
+  }
+
+  if (!ParentEntry->has_value()) {
+    W.getOStream() << "<parent not indexed>";
+    return;
+  }
+
+  auto AbsoluteOffset = NameIdx->EntriesBase + FormValue.getRawUValue();
+  W.getOStream() << "Entry @ 0x" + Twine::utohexstr(AbsoluteOffset);
+}
+
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
   W.startLine() << formatv("Abbrev: {0:x}\n", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);
   assert(Abbr->Attributes.size() == Values.size());
   for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
-    W.startLine() << formatv("{0}: ", std::get<0>(Tuple).Index);
-    std::get<1>(Tuple).dump(W.getOStream());
+    auto Index = std::get<0>(Tuple).Index;
+    W.startLine() << formatv("{0}: ", Index);
+
+    auto FormValue = std::get<1>(Tuple);
+    if (Index == dwarf::Index::DW_IDX_parent)
+      dumpParentIdx(W, FormValue);
+    else
+      FormValue.dump(W.getOStream());
     W.getOStream() << '\n';
   }
 }
@@ -808,8 +847,14 @@ void DWARFDebugNames::NameIndex::dumpForeignTUs(ScopedPrinter &W) const {
 
 void DWARFDebugNames::NameIndex::dumpAbbreviations(ScopedPrinter &W) const {
   ListScope AbbrevsScope(W, "Abbreviations");
-  for (const auto &Abbr : Abbrevs)
-    Abbr.dump(W);
+  std::vector<const Abbrev *> AbbrevsVect;
+  for (const DWARFDebugNames::Abbrev &Abbr : Abbrevs)
+    AbbrevsVect.push_back(&Abbr);
+  llvm::sort(AbbrevsVect, [](const Abbrev *LHS, const Abbrev *RHS) {
+    return LHS->AbbrevOffset < RHS->AbbrevOffset;
+  });
+  for (const DWARFDebugNames::Abbrev *Abbr : AbbrevsVect)
+    Abbr->dump(W);
 }
 
 void DWARFDebugNames::NameIndex::dumpBucket(ScopedPrinter &W,
@@ -882,7 +927,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
   if (Hdr.BucketCount == 0) {
     // No Hash Table, We need to search through all names in the Name Index.
     for (const NameTableEntry &NTE : *CurrentIndex) {
-      if (NTE.getString() == Key)
+      if (NTE.sameNameAs(Key))
         return NTE.getEntryOffset();
     }
     return std::nullopt;
@@ -898,12 +943,15 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
     return std::nullopt; // Empty bucket
 
   for (; Index <= Hdr.NameCount; ++Index) {
-    uint32_t Hash = CurrentIndex->getHashArrayEntry(Index);
-    if (Hash % Hdr.BucketCount != Bucket)
+    uint32_t HashAtIndex = CurrentIndex->getHashArrayEntry(Index);
+    if (HashAtIndex % Hdr.BucketCount != Bucket)
       return std::nullopt; // End of bucket
+    // Only compare names if the hashes match.
+    if (HashAtIndex != Hash)
+      continue;
 
     NameTableEntry NTE = CurrentIndex->getNameTableEntry(Index);
-    if (NTE.getString() == Key)
+    if (NTE.sameNameAs(Key))
       return NTE.getEntryOffset();
   }
   return std::nullopt;

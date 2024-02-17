@@ -118,7 +118,8 @@ struct TestMachineFunctionPass : public PassInfoMixin<TestMachineFunctionPass> {
 
     // Query module analysis result.
     MachineModuleInfo &MMI =
-        MFAM.getResult<MachineModuleAnalysis>(*MF.getFunction().getParent());
+        MFAM.getResult<MachineModuleAnalysis>(*MF.getFunction().getParent())
+            .getMMI();
     // 1 + 1 + 1 = 3
     Count += (MMI.getModule() == MF.getFunction().getParent());
 
@@ -144,7 +145,7 @@ struct TestMachineModulePass : public PassInfoMixin<TestMachineModulePass> {
       : Count(Count), MachineModulePassCount(MachineModulePassCount) {}
 
   Error run(Module &M, MachineFunctionAnalysisManager &MFAM) {
-    MachineModuleInfo &MMI = MFAM.getResult<MachineModuleAnalysis>(M);
+    MachineModuleInfo &MMI = MFAM.getResult<MachineModuleAnalysis>(M).getMMI();
     // + 1
     Count += (MMI.getModule() == &M);
     MachineModulePassCount.push_back(Count);
@@ -209,6 +210,7 @@ TEST_F(PassManagerTest, Basic) {
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
+  MachineModuleInfo MMI(LLVMTM);
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
@@ -220,7 +222,7 @@ TEST_F(PassManagerTest, Basic) {
 
   FAM.registerPass([&] { return TestFunctionAnalysis(); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-  MAM.registerPass([&] { return MachineModuleAnalysis(LLVMTM); });
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
   MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
 
   MachineFunctionAnalysisManager MFAM;

@@ -301,25 +301,29 @@ OPTIONS
   enabled can help determine the effects of the frontend and can be used to
   improve latency and throughput estimates.
 
-.. option:: --repetition-mode=[duplicate|loop|min]
+.. option:: --repetition-mode=[duplicate|loop|min|middle-half-duplicate|middle-half-loop]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
- basic block with `num-repetitions` instructions (repeating the snippet
- `num-repetitions`/`snippet size` times). `loop` will, optionally, duplicate the
+ basic block with `min-instructions` instructions (repeating the snippet
+ `min-instructions`/`snippet size` times). `loop` will, optionally, duplicate the
  snippet until the loop body contains at least `loop-body-size` instructions,
- and then wrap the result in a loop which will execute `num-repetitions`
+ and then wrap the result in a loop which will execute `min-instructions`
  instructions (thus, again, repeating the snippet
- `num-repetitions`/`snippet size` times). The `loop` mode, especially with loop
+ `min-instructions`/`snippet size` times). The `loop` mode, especially with loop
  unrolling tends to better hide the effects of the CPU frontend on architectures
  that cache decoded instructions, but consumes a register for counting
  iterations. If performing an analysis over many opcodes, it may be best to
  instead use the `min` mode, which will run each other mode,
- and produce the minimal measured result.
+ and produce the minimal measured result. The middle half repetition modes
+ will either duplicate or run the snippet in a loop depending upon the specific
+ mode. The middle half repetition modes will run two benchmarks, one twice the
+ length of the first one, and then subtract the difference between them to get
+ values without overhead.
 
-.. option:: --num-repetitions=<Number of repetitions>
+.. option:: --min-instructions=<Number of instructions>
 
  Specify the target number of executed instructions. Note that the actual
- repetition count of the snippet will be `num-repetitions`/`snippet size`.
+ repetition count of the snippet will be `min-instructions`/`snippet size`.
  Higher values lead to more accurate measurements but lengthen the benchmark.
 
 .. option:: --loop-body-size=<Preferred loop body size>

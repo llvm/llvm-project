@@ -2,7 +2,7 @@
 ; RUN: opt -S < %s -passes=print-alias-sets 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Alias sets for function 'sn'
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (ptr %p, unknown after)
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %p, LocationSize::precise(vscale x 16)), (ptr %p, LocationSize::precise(8))
 define void @sn(ptr %p) {;
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2
   store i64 0, ptr %p, align 2
@@ -10,7 +10,7 @@ define void @sn(ptr %p) {;
 }
 
 ; CHECK-LABEL: Alias sets for function 'ns'
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (ptr %p, unknown after)
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %p, LocationSize::precise(8)), (ptr %p, LocationSize::precise(vscale x 16))
 define void @ns(ptr %p) {
   store i64 0, ptr %p, align 2
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2
@@ -18,7 +18,7 @@ define void @ns(ptr %p) {
 }
 
 ; CHECK-LABEL: Alias sets for function 'ss':
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Pointers: (ptr %p, LocationSize::precise(vscale x 16))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %p, LocationSize::precise(vscale x 16))
 define void @ss(ptr %p) {
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2
@@ -26,7 +26,7 @@ define void @ss(ptr %p) {
 }
 
 ; CHECK-LABEL: Alias sets for function 'ss2':
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Pointers: (ptr %p, unknown after)
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %p, LocationSize::precise(vscale x 16)), (ptr %p, LocationSize::precise(vscale x 32))
 define void @ss2(ptr %p) {
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2
@@ -34,7 +34,8 @@ define void @ss2(ptr %p) {
   ret void
 }
 ; CHECK-LABEL: Alias sets for function 'son':
-; CHECK: AliasSet[{{.*}}, 2] may alias, Mod       Pointers: (ptr %g, LocationSize::precise(vscale x 16)), (ptr %p, LocationSize::precise(8))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %g, LocationSize::precise(vscale x 16))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %p, LocationSize::precise(8))
 define void @son(ptr %p) {
   %g = getelementptr i8, ptr %p, i64 8
   store <vscale x 2 x i64> zeroinitializer, ptr %g, align 2
@@ -43,7 +44,7 @@ define void @son(ptr %p) {
 }
 
 ; CHECK-LABEL: Alias sets for function 'sno':
-; CHECK: AliasSet[{{.*}}, 2] may alias, Mod       Pointers: (ptr %p, LocationSize::precise(vscale x 16)), (ptr %g, LocationSize::precise(8))
+; CHECK: AliasSet[{{.*}}, 2] may alias, Mod       Memory locations: (ptr %p, LocationSize::precise(vscale x 16)), (ptr %g, LocationSize::precise(8))
 define void @sno(ptr %p) {
   %g = getelementptr i8, ptr %p, i64 8
   store <vscale x 2 x i64> zeroinitializer, ptr %p, align 2

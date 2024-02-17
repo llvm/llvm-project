@@ -87,9 +87,9 @@ enum : uint64_t {
   FLAT = 1 << 24,
   DS = 1 << 25,
 
-  // Pseudo instruction formats.
-  VGPRSpill = 1 << 26,
-  SGPRSpill = 1 << 27,
+  // Combined SGPR/VGPR Spill bit
+  // Logic to separate them out is done in isSGPRSpill and isVGPRSpill
+  Spill = 1 << 26,
 
   // LDSDIR instruction format.
   LDSDIR = 1 << 28,
@@ -105,10 +105,16 @@ enum : uint64_t {
   WQM = UINT64_C(1) << 35,
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
-  SOPK_ZEXT = UINT64_C(1) << 38,
+
+  // Reserved, must be 0.
+  Reserved0 = UINT64_C(1) << 38,
+
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
-  VOPAsmPrefer32Bit = UINT64_C(1) << 41,
+
+  // Reserved, must be 0.
+  Reserved1 = UINT64_C(1) << 41,
+
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
   renamedInGFX9 = UINT64_C(1) << 44,
@@ -167,6 +173,9 @@ enum : uint64_t {
 
   // ds_gws_* instructions.
   GWS = UINT64_C(1) << 62,
+
+  // Is a SWMMAC instruction.
+  IsSWMMAC = UINT64_C(1) << 63,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -193,9 +202,12 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_INT16,
   OPERAND_REG_IMM_FP32,
   OPERAND_REG_IMM_FP64,
+  OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
+  OPERAND_REG_IMM_BF16_DEFERRED,
   OPERAND_REG_IMM_FP16_DEFERRED,
   OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
   OPERAND_REG_IMM_V2INT32,
@@ -205,10 +217,12 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_INT32,
   OPERAND_REG_INLINE_C_INT64,
+  OPERAND_REG_INLINE_C_BF16,
   OPERAND_REG_INLINE_C_FP16,
   OPERAND_REG_INLINE_C_FP32,
   OPERAND_REG_INLINE_C_FP64,
   OPERAND_REG_INLINE_C_V2INT16,
+  OPERAND_REG_INLINE_C_V2BF16,
   OPERAND_REG_INLINE_C_V2FP16,
   OPERAND_REG_INLINE_C_V2INT32,
   OPERAND_REG_INLINE_C_V2FP32,
@@ -223,10 +237,12 @@ enum OperandType : unsigned {
   /// Operands with an AccVGPR register or inline constant
   OPERAND_REG_INLINE_AC_INT16,
   OPERAND_REG_INLINE_AC_INT32,
+  OPERAND_REG_INLINE_AC_BF16,
   OPERAND_REG_INLINE_AC_FP16,
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
   OPERAND_REG_INLINE_AC_V2INT16,
+  OPERAND_REG_INLINE_AC_V2BF16,
   OPERAND_REG_INLINE_AC_V2FP16,
   OPERAND_REG_INLINE_AC_V2INT32,
   OPERAND_REG_INLINE_AC_V2FP32,
@@ -400,6 +416,10 @@ enum CPol {
   TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
   TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
   TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+
+  // Volatile (used to preserve/signal operation volatility for buffer
+  // operations not a real instruction bit)
+  VOLATILE = 1 << 31,
 };
 
 } // namespace CPol
@@ -1172,11 +1192,13 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 
 #define R_00B860_COMPUTE_TMPRING_SIZE                                   0x00B860
 #define   S_00B860_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
-#define   S_00B860_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX11(x)                                  (((x) & 0x7FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX12Plus(x)                              (((x) & 0x3FFFF) << 12)
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
 #define   S_0286E8_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
-#define   S_0286E8_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX11(x)                                  (((x) & 0x7FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX12Plus(x)                              (((x) & 0x3FFFF) << 12)
 
 #define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
 #define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)

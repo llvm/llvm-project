@@ -479,7 +479,7 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name == ".llvmbc" || Name == ".llvmcmd")
     return SectionKind::getMetadata();
 
-  if (Name.empty() || Name[0] != '.') return K;
+  if (!Name.starts_with(".")) return K;
 
   // Default implementation based on some magic section names.
   if (Name == ".bss" || Name.starts_with(".bss.") ||
@@ -635,7 +635,8 @@ static SmallString<128>
 getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            Mangler &Mang, const TargetMachine &TM,
                            unsigned EntrySize, bool UniqueSectionName) {
-  SmallString<128> Name;
+  SmallString<128> Name =
+      getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
@@ -643,13 +644,13 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
         cast<GlobalVariable>(GO));
 
-    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    Name = SizeSpec + utostr(Alignment.value());
-  } else if (Kind.isMergeableConst()) {
-    Name = ".rodata.cst";
+    Name += ".str";
     Name += utostr(EntrySize);
-  } else {
-    Name = getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
+    Name += ".";
+    Name += utostr(Alignment.value());
+  } else if (Kind.isMergeableConst()) {
+    Name += ".cst";
+    Name += utostr(EntrySize);
   }
 
   bool HasPrefix = false;
@@ -1669,9 +1670,18 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  StringRef Name = GO->getSection();
+  if (Name == getInstrProfSectionName(IPSK_covmap, Triple::COFF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covfun, Triple::COFF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covdata, Triple::COFF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covname, Triple::COFF,
+                                      /*AddSegmentInfo=*/false))
+    Kind = SectionKind::getMetadata();
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
-  StringRef Name = GO->getSection();
   StringRef COMDATSymName = "";
   if (GO->hasComdat()) {
     Selection = getSelectionForCOFF(GO);
@@ -2415,8 +2425,10 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     if (GVar->hasAttribute("toc-data")) {
       SmallString<128> Name;
       getNameWithPrefix(Name, GO, TM);
+      XCOFF::SymbolType symType =
+          GO->hasCommonLinkage() ? XCOFF::XTY_CM : XCOFF::XTY_SD;
       return getContext().getXCOFFSection(
-          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TD, XCOFF::XTY_SD),
+          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TD, symType),
           /* MultiSymbolsAllowed*/ true);
     }
 

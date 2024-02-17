@@ -9,6 +9,7 @@
 #ifndef LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 #define LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 
+#include <concepts>
 #include <iterator>
 #include <ranges>
 
@@ -81,5 +82,11 @@ static_assert(std::ranges::borrowed_range<BorrowedView>);
 using NonBorrowedView = std::ranges::single_view<int>;
 static_assert(std::ranges::view<NonBorrowedView>);
 static_assert(!std::ranges::borrowed_range<NonBorrowedView>);
+
+template <class Range>
+concept simple_view =
+    std::ranges::view<Range> && std::ranges::range<const Range> &&
+    std::same_as<std::ranges::iterator_t<Range>, std::ranges::iterator_t<const Range>> &&
+    std::same_as<std::ranges::sentinel_t<Range>, std::ranges::sentinel_t<const Range>>;
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

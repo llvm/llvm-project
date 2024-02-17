@@ -46,8 +46,12 @@ class X86CompressEVEXTablesEmitter {
 
   typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
       Entry;
+  typedef std::map<const Record *, std::vector<const CodeGenInstruction *>>
+      PredicateInstMap;
 
   std::vector<Entry> Table;
+  // Hold all compressed instructions that need to check predicate
+  PredicateInstMap PredicateInsts;
 
 public:
   X86CompressEVEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
@@ -58,12 +62,15 @@ public:
 private:
   // Prints the given table as a C++ array of type X86CompressEVEXTableEntry
   void printTable(const std::vector<Entry> &Table, raw_ostream &OS);
+  // Prints function which checks target feature for compressed instructions.
+  void printCheckPredicate(const PredicateInstMap &PredicateInsts,
+                           raw_ostream &OS);
 };
 
 void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
                                               raw_ostream &OS) {
 
-  OS << "static const X86CompressEVEXTableEntry X86CompressEVEXTable[] = { \n";
+  OS << "static const X86CompressEVEXTableEntry X86CompressEVEXTable[] = {\n";
 
   // Print all entries added to the table
   for (const auto &Pair : Table)
@@ -71,6 +78,23 @@ void X86CompressEVEXTablesEmitter::printTable(const std::vector<Entry> &Table,
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
 
   OS << "};\n\n";
+}
+
+void X86CompressEVEXTablesEmitter::printCheckPredicate(
+    const PredicateInstMap &PredicateInsts, raw_ostream &OS) {
+
+  OS << "static bool checkPredicate(unsigned Opc, const X86Subtarget "
+        "*Subtarget) {\n"
+     << "  switch (Opc) {\n"
+     << "  default: return true;\n";
+  for (const auto &[Key, Val] : PredicateInsts) {
+    for (const auto &Inst : Val)
+      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
+    OS << "    return " << Key->getValueAsString("CondString") << ";\n";
+  }
+
+  OS << "  }\n";
+  OS << "}\n\n";
 }
 
 static uint8_t byteFromBitsInit(const BitsInit *B) {
@@ -96,12 +120,11 @@ public:
     RecognizableInstrBase OldRI(*OldInst);
 
     // Return false if any of the following fields of does not match.
-    if (std::make_tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
-                        OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
-                        OldRI.Form) !=
-        std::make_tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
-                        NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W,
-                        NewRI.Form))
+    if (std::tuple(OldRI.IsCodeGenOnly, OldRI.OpMap, NewRI.OpPrefix,
+                   OldRI.HasVEX_4V, OldRI.HasVEX_L, OldRI.HasREX_W,
+                   OldRI.Form) !=
+        std::tuple(NewRI.IsCodeGenOnly, NewRI.OpMap, OldRI.OpPrefix,
+                   NewRI.HasVEX_4V, NewRI.HasVEX_L, NewRI.HasREX_W, NewRI.Form))
       return false;
 
     for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
@@ -184,9 +207,9 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
           NewInst = &TempInst;
       }
     } else {
-      // For each pre-compression instruction look for a match in the appropriate
-      // vector (instructions with the same opcode) using function object
-      // IsMatch.
+      // For each pre-compression instruction look for a match in the
+      // appropriate vector (instructions with the same opcode) using function
+      // object IsMatch.
       auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
       if (Match != CompressedInsts[Opcode].end())
         NewInst = *Match;
@@ -195,10 +218,19 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
     if (!NewInst)
       continue;
 
-    Table.push_back(std::make_pair(Inst, NewInst));
+    Table.push_back(std::pair(Inst, NewInst));
+    auto Predicates = NewInst->TheDef->getValueAsListOfDefs("Predicates");
+    auto It = llvm::find_if(Predicates, [](const Record *R) {
+      StringRef Name = R->getName();
+      return Name == "HasAVXNECONVERT" || Name == "HasAVXVNNI" ||
+             Name == "HasAVXIFMA";
+    });
+    if (It != Predicates.end())
+      PredicateInsts[*It].push_back(NewInst);
   }
 
   printTable(Table, OS);
+  printCheckPredicate(PredicateInsts, OS);
 }
 } // namespace
 

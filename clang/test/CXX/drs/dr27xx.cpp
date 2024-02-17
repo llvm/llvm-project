@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2789 { // dr2789: 18 open
+namespace dr2789 { // dr2789: 18
 #if __cplusplus >= 202302L
 template <typename T = int>
 struct Base {
@@ -42,7 +42,7 @@ void test() {
 #endif
 }
 
-namespace dr2798 { // dr2798: 17 drafting
+namespace dr2798 { // dr2798: 17
 #if __cpp_static_assert >= 202306
 struct string {
   constexpr string() {

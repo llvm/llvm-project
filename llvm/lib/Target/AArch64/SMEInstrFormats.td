@@ -1268,7 +1268,7 @@ multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
 }
 
 class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
-    : I<(outs zpr_ty:$Zd), (ins zpr_ty:$Zn, zpr_ty:$Zm, zpr_ty:$_Zd),
+    : I<(outs zpr_ty:$Zd), (ins zpr_ty:$_Zd, zpr_ty:$Zn, zpr_ty:$Zm),
         asm, "\t$Zd, $Zn, $Zm", "", []>,
       Sched<[]> {
   bits<5> Zm;

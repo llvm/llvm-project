@@ -2,13 +2,13 @@
 
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -33,7 +33,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smopa.za32.nxv8i16(i32 3, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmopa_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za {
+void test_svmopa_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svmopa_za32,_s16,_m,)(3, pn, pm, zn, zm);
 }
 
@@ -51,7 +51,7 @@ void test_svmopa_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) __arm
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umopa.za32.nxv8i16(i32 3, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmopa_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za {
+void test_svmopa_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svmopa_za32,_u16,_m,)(3, pn, pm, zn, zm);
 }
 
@@ -71,7 +71,7 @@ void test_svmopa_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svuint16_t zm) __a
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smops.za32.nxv8i16(i32 3, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmops_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za {
+void test_svmops_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svmops_za32,_s16,_m,)(3, pn, pm, zn, zm);
 }
 
@@ -89,6 +89,6 @@ void test_svmops_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) __arm
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umops.za32.nxv8i16(i32 3, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmops_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za {
+void test_svmops_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svmops_za32,_u16,_m,)(3, pn, pm, zn, zm);
 }

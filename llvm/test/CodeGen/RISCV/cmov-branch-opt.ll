@@ -3,13 +3,13 @@
 ; RUN:   | FileCheck -check-prefix=NOCMOV %s
 ; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-NOZICOND %s
-; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+experimental-zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-ZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+experimental-zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-ZICOND %s
 
 ; The conditional move optimization in sifive-p450 requires that only a

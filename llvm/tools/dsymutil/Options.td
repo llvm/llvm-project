@@ -198,7 +198,7 @@ def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'apple'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 
