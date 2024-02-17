@@ -736,9 +736,9 @@ public:
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                           std::vector<uint64_t> &Counts);
 
-  /// Fill Bitmap Bytes with the profile data for the given function name.
-  Error getFunctionBitmapBytes(StringRef FuncName, uint64_t FuncHash,
-                               std::vector<uint8_t> &BitmapBytes);
+  /// Fill Bitmap with the profile data for the given function name.
+  Error getFunctionBitmap(StringRef FuncName, uint64_t FuncHash,
+                          BitVector &Bitmap);
 
   /// Return the maximum of all known function counts.
   /// \c UseCS indicates whether to use the context-sensitive count.

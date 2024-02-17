@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -192,6 +193,66 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = false;
 };
 
+const char *validationEventToString(exegesis::ValidationEvent VE) {
+  switch (VE) {
+  case exegesis::ValidationEvent::InstructionRetired:
+    return "instructions-retired";
+  case exegesis::ValidationEvent::L1DCacheLoadMiss:
+    return "l1d-cache-load-misses";
+  case exegesis::ValidationEvent::L1DCacheStoreMiss:
+    return "l1d-cache-store-misses";
+  case exegesis::ValidationEvent::L1ICacheLoadMiss:
+    return "l1i-cache-load-misses";
+  case exegesis::ValidationEvent::DataTLBLoadMiss:
+    return "data-tlb-load-misses";
+  case exegesis::ValidationEvent::DataTLBStoreMiss:
+    return "data-tlb-store-misses";
+  case exegesis::ValidationEvent::InstructionTLBLoadMiss:
+    return "instruction-tlb-load-misses";
+  }
+  llvm_unreachable("Unhandled exegesis::ValidationEvent enum");
+}
+
+Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
+  if (Input == "instructions-retired")
+    return exegesis::ValidationEvent::InstructionRetired;
+  else if (Input == "l1d-cache-load-misses")
+    return exegesis::ValidationEvent::L1DCacheLoadMiss;
+  else if (Input == "l1d-cache-store-misses")
+    return exegesis::ValidationEvent::L1DCacheStoreMiss;
+  else if (Input == "l1i-cache-load-misses")
+    return exegesis::ValidationEvent::L1ICacheLoadMiss;
+  else if (Input == "data-tlb-load-misses")
+    return exegesis::ValidationEvent::DataTLBLoadMiss;
+  else if (Input == "data-tlb-store-misses")
+    return exegesis::ValidationEvent::DataTLBStoreMiss;
+  else if (Input == "instruction-tlb-load-misses")
+    return exegesis::ValidationEvent::InstructionTLBLoadMiss;
+  else
+    return make_error<StringError>("Invalid validation event string",
+                                   errc::invalid_argument);
+}
+
+template <>
+struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
+  static void inputOne(IO &Io, StringRef KeyStr,
+                       std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    Expected<exegesis::ValidationEvent> Key = stringToValidationEvent(KeyStr);
+    if (!Key) {
+      Io.setError("Key is not a valid validation event");
+      return;
+    }
+    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+  }
+
+  static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    for (auto &IndividualVI : VI) {
+      Io.mapRequired(validationEventToString(IndividualVI.first),
+                     IndividualVI.second);
+    }
+  }
+};
+
 // exegesis::Measure is rendererd as a flow instead of a list.
 // e.g. { "key": "the key", "value": 0123 }
 template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
@@ -203,6 +264,7 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
     }
     Io.mapRequired("value", Obj.PerInstructionValue);
     Io.mapOptional("per_snippet_value", Obj.PerSnippetValue);
+    Io.mapOptional("validation_counters", Obj.ValidationCounters);
   }
   static const bool flow = true;
 };
@@ -293,7 +355,17 @@ struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
-    Io.mapRequired("num_repetitions", Obj.NumRepetitions);
+    // Optionally map num_repetitions and min_instructions to the same
+    // value to preserve backwards compatibility.
+    // TODO(boomanaiden154): Move min_instructions to mapRequired and
+    // remove num_repetitions once num_repetitions is ready to be removed
+    // completely.
+    if (Io.outputting())
+      Io.mapRequired("min_instructions", Obj.MinInstructions);
+    else {
+      Io.mapOptional("num_repetitions", Obj.MinInstructions);
+      Io.mapOptional("min_instructions", Obj.MinInstructions);
+    }
     Io.mapRequired("measurements", Obj.Measurements);
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);

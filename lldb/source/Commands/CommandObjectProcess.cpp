@@ -646,9 +646,7 @@ protected:
           for (size_t loc_idx = 0; loc_idx < num_locations; loc_idx++) {
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
-            size_t position = 0;
-            if (!with_locs.FindBreakpointID(tmp_id, &position)
-                && loc_sp->IsEnabled()) {
+            if (!with_locs.Contains(tmp_id) && loc_sp->IsEnabled()) {
               locs_disabled.push_back(tmp_id);
               loc_sp->SetEnabled(false);
             }

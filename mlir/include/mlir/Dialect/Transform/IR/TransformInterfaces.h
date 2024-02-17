@@ -992,7 +992,7 @@ protected:
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
   /// failure occurred.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -1282,9 +1282,9 @@ public:
   }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand
-/// single-result operations that use their operand without consuming and
-/// without modifying the Payload IR to produce a new handle.
+/// Trait implementing the MemoryEffectOpInterface for operations that use their
+/// operands without consuming and without modifying the Payload IR to
+/// potentially produce new handles.
 template <typename OpTy>
 class NavigationTransformOpTrait
     : public OpTrait::TraitBase<OpTy, NavigationTransformOpTrait> {
@@ -1294,15 +1294,16 @@ public:
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
     onlyReadsHandle(this->getOperation()->getOperands(), effects);
     producesHandle(this->getOperation()->getResults(), effects);
-    onlyReadsPayload(effects);
+    if (llvm::any_of(this->getOperation()->getOperandTypes(), [](Type t) {
+          return isa<TransformHandleTypeInterface,
+                     TransformValueHandleTypeInterface>(t);
+        })) {
+      onlyReadsPayload(effects);
+    }
   }
 
   /// Checks that the op matches the expectation of this trait.
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
-                  "expected single-operand op");
-    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
-                  "expected single-result op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
       op->emitError() << "NavigationTransformOpTrait should only be attached "
                          "to ops that implement MemoryEffectOpInterface";

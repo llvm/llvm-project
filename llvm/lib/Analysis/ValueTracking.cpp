@@ -706,28 +706,40 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   }
 }
 
+static void computeKnownBitsFromCond(const Value *V, Value *Cond,
+                                     KnownBits &Known, unsigned Depth,
+                                     const SimplifyQuery &SQ, bool Invert) {
+  Value *A, *B;
+  if (Depth < MaxAnalysisRecursionDepth &&
+      (Invert ? match(Cond, m_LogicalOr(m_Value(A), m_Value(B)))
+              : match(Cond, m_LogicalAnd(m_Value(A), m_Value(B))))) {
+    computeKnownBitsFromCond(V, A, Known, Depth + 1, SQ, Invert);
+    computeKnownBitsFromCond(V, B, Known, Depth + 1, SQ, Invert);
+  }
+
+  if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+    computeKnownBitsFromCmp(
+        V, Invert ? Cmp->getInversePredicate() : Cmp->getPredicate(),
+        Cmp->getOperand(0), Cmp->getOperand(1), Known, SQ);
+}
+
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
-                                      unsigned Depth, const SimplifyQuery &Q) {
+                                       unsigned Depth, const SimplifyQuery &Q) {
   if (!Q.CxtI)
     return;
 
   if (Q.DC && Q.DT) {
     // Handle dominating conditions.
     for (BranchInst *BI : Q.DC->conditionsFor(V)) {
-      auto *Cmp = dyn_cast<ICmpInst>(BI->getCondition());
-      if (!Cmp)
-        continue;
-
       BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
       if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
-        computeKnownBitsFromCmp(V, Cmp->getPredicate(), Cmp->getOperand(0),
-                                Cmp->getOperand(1), Known, Q);
+        computeKnownBitsFromCond(V, BI->getCondition(), Known, Depth, Q,
+                                 /*Invert*/ false);
 
       BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
       if (Q.DT->dominates(Edge1, Q.CxtI->getParent()))
-        computeKnownBitsFromCmp(V, Cmp->getInversePredicate(),
-                                Cmp->getOperand(0), Cmp->getOperand(1), Known,
-                                Q);
+        computeKnownBitsFromCond(V, BI->getCondition(), Known, Depth, Q,
+                                 /*Invert*/ true);
     }
 
     if (Known.hasConflict())
@@ -2739,6 +2751,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         break;
       case Intrinsic::vscale:
         return true;
+      case Intrinsic::experimental_get_vector_length:
+        return isKnownNonZero(I->getOperand(0), Depth, Q);
       default:
         break;
       }
@@ -3704,205 +3718,6 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   return Intrinsic::not_intrinsic;
 }
 
-/// Deprecated, use computeKnownFPClass instead.
-///
-/// If \p SignBitOnly is true, test for a known 0 sign bit rather than a
-/// standard ordered compare. e.g. make -0.0 olt 0.0 be true because of the sign
-/// bit despite comparing equal.
-static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
-                                            const DataLayout &DL,
-                                            const TargetLibraryInfo *TLI,
-                                            bool SignBitOnly, unsigned Depth) {
-  // TODO: This function does not do the right thing when SignBitOnly is true
-  // and we're lowering to a hypothetical IEEE 754-compliant-but-evil platform
-  // which flips the sign bits of NaNs.  See
-  // https://llvm.org/bugs/show_bug.cgi?id=31702.
-
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
-    return !CFP->getValueAPF().isNegative() ||
-           (!SignBitOnly && CFP->getValueAPF().isZero());
-  }
-
-  // Handle vector of constants.
-  if (auto *CV = dyn_cast<Constant>(V)) {
-    if (auto *CVFVTy = dyn_cast<FixedVectorType>(CV->getType())) {
-      unsigned NumElts = CVFVTy->getNumElements();
-      for (unsigned i = 0; i != NumElts; ++i) {
-        auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
-        if (!CFP)
-          return false;
-        if (CFP->getValueAPF().isNegative() &&
-            (SignBitOnly || !CFP->getValueAPF().isZero()))
-          return false;
-      }
-
-      // All non-negative ConstantFPs.
-      return true;
-    }
-  }
-
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
-  const Operator *I = dyn_cast<Operator>(V);
-  if (!I)
-    return false;
-
-  switch (I->getOpcode()) {
-  default:
-    break;
-  // Unsigned integers are always nonnegative.
-  case Instruction::UIToFP:
-    return true;
-  case Instruction::FDiv:
-    // X / X is always exactly 1.0 or a NaN.
-    if (I->getOperand(0) == I->getOperand(1) &&
-        (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
-      return true;
-
-    // Set SignBitOnly for RHS, because X / -0.0 is -Inf (or NaN).
-    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                           SignBitOnly, Depth + 1) &&
-           cannotBeOrderedLessThanZeroImpl(I->getOperand(1), DL, TLI,
-                                           /*SignBitOnly*/ true, Depth + 1);
-  case Instruction::FMul:
-    // X * X is always non-negative or a NaN.
-    if (I->getOperand(0) == I->getOperand(1) &&
-        (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
-      return true;
-
-    [[fallthrough]];
-  case Instruction::FAdd:
-  case Instruction::FRem:
-    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                           SignBitOnly, Depth + 1) &&
-           cannotBeOrderedLessThanZeroImpl(I->getOperand(1), DL, TLI,
-                                           SignBitOnly, Depth + 1);
-  case Instruction::Select:
-    return cannotBeOrderedLessThanZeroImpl(I->getOperand(1), DL, TLI,
-                                           SignBitOnly, Depth + 1) &&
-           cannotBeOrderedLessThanZeroImpl(I->getOperand(2), DL, TLI,
-                                           SignBitOnly, Depth + 1);
-  case Instruction::FPExt:
-  case Instruction::FPTrunc:
-    // Widening/narrowing never change sign.
-    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                           SignBitOnly, Depth + 1);
-  case Instruction::ExtractElement:
-    // Look through extract element. At the moment we keep this simple and skip
-    // tracking the specific element. But at least we might find information
-    // valid for all elements of the vector.
-    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                           SignBitOnly, Depth + 1);
-  case Instruction::Call:
-    const auto *CI = cast<CallInst>(I);
-    Intrinsic::ID IID = getIntrinsicForCallSite(*CI, TLI);
-    switch (IID) {
-    default:
-      break;
-    case Intrinsic::canonicalize:
-    case Intrinsic::arithmetic_fence:
-    case Intrinsic::floor:
-    case Intrinsic::ceil:
-    case Intrinsic::trunc:
-    case Intrinsic::rint:
-    case Intrinsic::nearbyint:
-    case Intrinsic::round:
-    case Intrinsic::roundeven:
-    case Intrinsic::fptrunc_round:
-      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                             SignBitOnly, Depth + 1);
-    case Intrinsic::maxnum: {
-      Value *V0 = I->getOperand(0), *V1 = I->getOperand(1);
-      auto isPositiveNum = [&](Value *V) {
-        if (SignBitOnly) {
-          // With SignBitOnly, this is tricky because the result of
-          // maxnum(+0.0, -0.0) is unspecified. Just check if the operand is
-          // a constant strictly greater than 0.0.
-          const APFloat *C;
-          return match(V, m_APFloat(C)) &&
-                 *C > APFloat::getZero(C->getSemantics());
-        }
-
-        // -0.0 compares equal to 0.0, so if this operand is at least -0.0,
-        // maxnum can't be ordered-less-than-zero.
-        return isKnownNeverNaN(V, DL, TLI) &&
-               cannotBeOrderedLessThanZeroImpl(V, DL, TLI, false, Depth + 1);
-      };
-
-      // TODO: This could be improved. We could also check that neither operand
-      //       has its sign bit set (and at least 1 is not-NAN?).
-      return isPositiveNum(V0) || isPositiveNum(V1);
-    }
-
-    case Intrinsic::maximum:
-      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                             SignBitOnly, Depth + 1) ||
-             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), DL, TLI,
-                                             SignBitOnly, Depth + 1);
-    case Intrinsic::minnum:
-    case Intrinsic::minimum:
-      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                             SignBitOnly, Depth + 1) &&
-             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), DL, TLI,
-                                             SignBitOnly, Depth + 1);
-    case Intrinsic::exp:
-    case Intrinsic::exp2:
-    case Intrinsic::fabs:
-      return true;
-    case Intrinsic::copysign:
-      // Only the sign operand matters.
-      return cannotBeOrderedLessThanZeroImpl(I->getOperand(1), DL, TLI, true,
-                                             Depth + 1);
-    case Intrinsic::sqrt:
-      // sqrt(x) is always >= -0 or NaN.  Moreover, sqrt(x) == -0 iff x == -0.
-      if (!SignBitOnly)
-        return true;
-      return CI->hasNoNaNs() &&
-             (CI->hasNoSignedZeros() ||
-              cannotBeNegativeZero(CI->getOperand(0), DL, TLI));
-
-    case Intrinsic::powi:
-      if (ConstantInt *Exponent = dyn_cast<ConstantInt>(I->getOperand(1))) {
-        // powi(x,n) is non-negative if n is even.
-        if (Exponent->getBitWidth() <= 64 && Exponent->getSExtValue() % 2u == 0)
-          return true;
-      }
-      // TODO: This is not correct.  Given that exp is an integer, here are the
-      // ways that pow can return a negative value:
-      //
-      //   pow(x, exp)    --> negative if exp is odd and x is negative.
-      //   pow(-0, exp)   --> -inf if exp is negative odd.
-      //   pow(-0, exp)   --> -0 if exp is positive odd.
-      //   pow(-inf, exp) --> -0 if exp is negative odd.
-      //   pow(-inf, exp) --> -inf if exp is positive odd.
-      //
-      // Therefore, if !SignBitOnly, we can return true if x >= +0 or x is NaN,
-      // but we must return false if x == -0.  Unfortunately we do not currently
-      // have a way of expressing this constraint.  See details in
-      // https://llvm.org/bugs/show_bug.cgi?id=31702.
-      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), DL, TLI,
-                                             SignBitOnly, Depth + 1);
-
-    case Intrinsic::fma:
-    case Intrinsic::fmuladd:
-      // x*x+y is non-negative if y is non-negative.
-      return I->getOperand(0) == I->getOperand(1) &&
-             (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()) &&
-             cannotBeOrderedLessThanZeroImpl(I->getOperand(2), DL, TLI,
-                                             SignBitOnly, Depth + 1);
-    }
-    break;
-  }
-  return false;
-}
-
-bool llvm::SignBitMustBeZero(const Value *V, const DataLayout &DL,
-                             const TargetLibraryInfo *TLI) {
-  // FIXME: Use computeKnownFPClass and pass all arguments
-  return cannotBeOrderedLessThanZeroImpl(V, DL, TLI, true, 0);
-}
-
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
 static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
@@ -3995,6 +3810,45 @@ void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
   propagateNaN(Src, /*PreserveSign=*/true);
 }
 
+/// Given an exploded icmp instruction, return true if the comparison only
+/// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
+/// the result of the comparison is true when the input value is signed.
+bool llvm::isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
+                          bool &TrueIfSigned) {
+  switch (Pred) {
+  case ICmpInst::ICMP_SLT: // True if LHS s< 0
+    TrueIfSigned = true;
+    return RHS.isZero();
+  case ICmpInst::ICMP_SLE: // True if LHS s<= -1
+    TrueIfSigned = true;
+    return RHS.isAllOnes();
+  case ICmpInst::ICMP_SGT: // True if LHS s> -1
+    TrueIfSigned = false;
+    return RHS.isAllOnes();
+  case ICmpInst::ICMP_SGE: // True if LHS s>= 0
+    TrueIfSigned = false;
+    return RHS.isZero();
+  case ICmpInst::ICMP_UGT:
+    // True if LHS u> RHS and RHS == sign-bit-mask - 1
+    TrueIfSigned = true;
+    return RHS.isMaxSignedValue();
+  case ICmpInst::ICMP_UGE:
+    // True if LHS u>= RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
+    TrueIfSigned = true;
+    return RHS.isMinSignedValue();
+  case ICmpInst::ICMP_ULT:
+    // True if LHS u< RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
+    TrueIfSigned = false;
+    return RHS.isMinSignedValue();
+  case ICmpInst::ICMP_ULE:
+    // True if LHS u<= RHS and RHS == sign-bit-mask - 1
+    TrueIfSigned = false;
+    return RHS.isMaxSignedValue();
+  default:
+    return false;
+  }
+}
+
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
 /// same result as an fcmp with the given operands.
 std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
@@ -4011,67 +3865,110 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
 std::pair<Value *, FPClassTest>
 llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
                       const APFloat *ConstRHS, bool LookThroughSrc) {
+
+  auto [Src, ClassIfTrue, ClassIfFalse] =
+      fcmpImpliesClass(Pred, F, LHS, *ConstRHS, LookThroughSrc);
+  if (Src && ClassIfTrue == ~ClassIfFalse)
+    return {Src, ClassIfTrue};
+  return {nullptr, fcAllFlags};
+}
+
+/// Return the return value for fcmpImpliesClass for a compare that produces an
+/// exact class test.
+static std::tuple<Value *, FPClassTest, FPClassTest> exactClass(Value *V,
+                                                                FPClassTest M) {
+  return {V, M, ~M};
+}
+
+std::tuple<Value *, FPClassTest, FPClassTest>
+llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                       FPClassTest RHSClass, bool LookThroughSrc) {
+  assert(RHSClass != fcNone);
+
+  const FPClassTest OrigClass = RHSClass;
+
+  Value *Src = LHS;
+  const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
+  const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
+  const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
+
+  if (IsNaN) {
+    // fcmp o__ x, nan -> false
+    // fcmp u__ x, nan -> true
+    return exactClass(Src, CmpInst::isOrdered(Pred) ? fcNone : fcAllFlags);
+  }
+
   // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
-  if (Pred == FCmpInst::FCMP_ORD && !ConstRHS->isNaN())
-    return {LHS, ~fcNan};
+  if (Pred == FCmpInst::FCMP_ORD)
+    return exactClass(Src, ~fcNan);
 
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
-  if (Pred == FCmpInst::FCMP_UNO && !ConstRHS->isNaN())
-    return {LHS, fcNan};
+  if (Pred == FCmpInst::FCMP_UNO)
+    return exactClass(Src, fcNan);
 
-  if (ConstRHS->isZero()) {
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return exactClass(Src, fcAllFlags);
+
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return exactClass(Src, fcNone);
+
+  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+  if (IsFabs)
+    RHSClass = llvm::inverse_fabs(RHSClass);
+
+  const bool IsZero = (OrigClass & fcZero) == OrigClass;
+  if (IsZero) {
+    assert(Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO);
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
     // TODO: Handle DAZ by expanding masks to cover subnormal cases.
-    if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
-        !inputDenormalIsIEEE(F, LHS->getType()))
-      return {nullptr, fcAllFlags};
+    if (!inputDenormalIsIEEE(F, LHS->getType()))
+      return {nullptr, fcAllFlags, fcAllFlags};
 
     switch (Pred) {
     case FCmpInst::FCMP_OEQ: // Match x == 0.0
-      return {LHS, fcZero};
+      return exactClass(Src, fcZero);
     case FCmpInst::FCMP_UEQ: // Match isnan(x) || (x == 0.0)
-      return {LHS, fcZero | fcNan};
+      return exactClass(Src, fcZero | fcNan);
     case FCmpInst::FCMP_UNE: // Match (x != 0.0)
-      return {LHS, ~fcZero};
+      return exactClass(Src, ~fcZero);
     case FCmpInst::FCMP_ONE: // Match !isnan(x) && x != 0.0
-      return {LHS, ~fcNan & ~fcZero};
+      return exactClass(Src, ~fcNan & ~fcZero);
     case FCmpInst::FCMP_ORD:
       // Canonical form of ord/uno is with a zero. We could also handle
       // non-canonical other non-NaN constants or LHS == RHS.
-      return {LHS, ~fcNan};
+      return exactClass(Src, ~fcNan);
     case FCmpInst::FCMP_UNO:
-      return {LHS, fcNan};
+      return exactClass(Src, fcNan);
     case FCmpInst::FCMP_OGT: // x > 0
-      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf};
+      return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf);
     case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
-      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan};
+      return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan);
     case FCmpInst::FCMP_OGE: // x >= 0
-      return {LHS, fcPositive | fcNegZero};
+      return exactClass(Src, fcPositive | fcNegZero);
     case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
-      return {LHS, fcPositive | fcNegZero | fcNan};
+      return exactClass(Src, fcPositive | fcNegZero | fcNan);
     case FCmpInst::FCMP_OLT: // x < 0
-      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf};
+      return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf);
     case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
-      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan};
+      return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan);
     case FCmpInst::FCMP_OLE: // x <= 0
-      return {LHS, fcNegative | fcPosZero};
+      return exactClass(Src, fcNegative | fcPosZero);
     case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
-      return {LHS, fcNegative | fcPosZero | fcNan};
+      return exactClass(Src, fcNegative | fcPosZero | fcNan);
     default:
-      break;
+      llvm_unreachable("all compare types are handled");
     }
 
-    return {nullptr, fcAllFlags};
+    return {nullptr, fcAllFlags, fcAllFlags};
   }
 
-  Value *Src = LHS;
-  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+  const bool IsDenormalRHS = (OrigClass & fcSubnormal) == OrigClass;
 
-  // Compute the test mask that would return true for the ordered comparisons.
-  FPClassTest Mask;
+  const bool IsInf = (OrigClass & fcInf) == OrigClass;
+  if (IsInf) {
+    FPClassTest Mask = fcAllFlags;
 
-  if (ConstRHS->isInfinity()) {
     switch (Pred) {
     case FCmpInst::FCMP_OEQ:
     case FCmpInst::FCMP_UNE: {
@@ -4086,8 +3983,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       //   fcmp une fabs(x), +inf -> is_fpclass x, ~fcInf
       //   fcmp une x, -inf -> is_fpclass x, ~fcNegInf
       //   fcmp une fabs(x), -inf -> is_fpclass x, fcAllFlags -> true
-
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         Mask = fcNegInf;
         if (IsFabs)
           Mask = fcNone;
@@ -4096,7 +3992,6 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
         if (IsFabs)
           Mask |= fcNegInf;
       }
-
       break;
     }
     case FCmpInst::FCMP_ONE:
@@ -4111,7 +4006,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       //   fcmp ueq (fabs x), +inf -> is_fpclass x, fcInf|fcNan
       //   fcmp ueq x, -inf -> is_fpclass x, fcNegInf|fcNan
       //   fcmp ueq fabs(x), -inf -> is_fpclass x, fcNan
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         Mask = ~fcNegInf & ~fcNan;
         if (IsFabs)
           Mask = ~fcNan;
@@ -4125,7 +4020,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OLT:
     case FCmpInst::FCMP_UGE: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         // No value is ordered and less than negative infinity.
         // All values are unordered with or at least negative infinity.
         // fcmp olt x, -inf -> false
@@ -4145,7 +4040,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         // fcmp oge x, -inf -> ~fcNan
         // fcmp oge fabs(x), -inf -> ~fcNan
         // fcmp ult x, -inf -> fcNan
@@ -4165,7 +4060,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGT:
     case FCmpInst::FCMP_ULE: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         // fcmp ogt x, -inf -> fcmp one x, -inf
         // fcmp ogt fabs(x), -inf -> fcmp ord x, x
         // fcmp ule x, -inf -> fcmp ueq x, -inf
@@ -4178,10 +4073,146 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       Mask = fcNone;
       break;
     }
-    default:
-      return {nullptr, fcAllFlags};
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_UGT: {
+      if (IsNegativeRHS) {
+        Mask = IsFabs ? fcNone : fcNegInf;
+        break;
+      }
+
+      // fcmp ole x, +inf -> fcmp ord x, x
+      // fcmp ole fabs(x), +inf -> fcmp ord x, x
+      // fcmp ole x, -inf -> fcmp oeq x, -inf
+      // fcmp ole fabs(x), -inf -> false
+      Mask = ~fcNan;
+      break;
     }
-  } else if (ConstRHS->isSmallestNormalized() && !ConstRHS->isNegative()) {
+    default:
+      llvm_unreachable("all compare types are handled");
+    }
+
+    // Invert the comparison for the unordered cases.
+    if (FCmpInst::isUnordered(Pred))
+      Mask = ~Mask;
+
+    return exactClass(Src, Mask);
+  }
+
+  if (Pred == FCmpInst::FCMP_OEQ)
+    return {Src, RHSClass, fcAllFlags};
+
+  if (Pred == FCmpInst::FCMP_UEQ) {
+    FPClassTest Class = RHSClass | fcNan;
+    return {Src, Class, ~fcNan};
+  }
+
+  if (Pred == FCmpInst::FCMP_ONE)
+    return {Src, ~fcNan, RHSClass | fcNan};
+
+  if (Pred == FCmpInst::FCMP_UNE)
+    return {Src, fcAllFlags, RHSClass};
+
+  assert((RHSClass == fcNone || RHSClass == fcPosNormal ||
+          RHSClass == fcNegNormal || RHSClass == fcNormal ||
+          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal ||
+          RHSClass == fcSubnormal) &&
+         "should have been recognized as an exact class test");
+
+  if (IsNegativeRHS) {
+    // TODO: Handle fneg(fabs)
+    if (IsFabs) {
+      // fabs(x) o> -k -> fcmp ord x, x
+      // fabs(x) u> -k -> true
+      // fabs(x) o< -k -> false
+      // fabs(x) u< -k -> fcmp uno x, x
+      switch (Pred) {
+      case FCmpInst::FCMP_OGT:
+      case FCmpInst::FCMP_OGE:
+        return {Src, ~fcNan, fcNan};
+      case FCmpInst::FCMP_UGT:
+      case FCmpInst::FCMP_UGE:
+        return {Src, fcAllFlags, fcNone};
+      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_OLE:
+        return {Src, fcNone, fcAllFlags};
+      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_ULE:
+        return {Src, fcNan, ~fcNan};
+      default:
+        break;
+      }
+
+      return {nullptr, fcAllFlags, fcAllFlags};
+    }
+
+    FPClassTest ClassesLE = fcNegInf | fcNegNormal;
+    FPClassTest ClassesGE = fcPositive | fcNegZero | fcNegSubnormal;
+
+    if (IsDenormalRHS)
+      ClassesLE |= fcNegSubnormal;
+    else
+      ClassesGE |= fcNegNormal;
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_OGE:
+      return {Src, ClassesGE, ~ClassesGE | RHSClass};
+    case FCmpInst::FCMP_UGT:
+    case FCmpInst::FCMP_UGE:
+      return {Src, ClassesGE | fcNan, ~(ClassesGE | fcNan) | RHSClass};
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_OLE:
+      return {Src, ClassesLE, ~ClassesLE | RHSClass};
+    case FCmpInst::FCMP_ULT:
+    case FCmpInst::FCMP_ULE:
+      return {Src, ClassesLE | fcNan, ~(ClassesLE | fcNan) | RHSClass};
+    default:
+      break;
+    }
+  } else if (IsPositiveRHS) {
+    FPClassTest ClassesGE = fcPosNormal | fcPosInf;
+    FPClassTest ClassesLE = fcNegative | fcPosZero | fcPosSubnormal;
+    if (IsDenormalRHS)
+      ClassesGE |= fcPosSubnormal;
+    else
+      ClassesLE |= fcPosNormal;
+
+    if (IsFabs) {
+      ClassesGE = llvm::inverse_fabs(ClassesGE);
+      ClassesLE = llvm::inverse_fabs(ClassesLE);
+    }
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_OGE:
+      return {Src, ClassesGE, ~ClassesGE | RHSClass};
+    case FCmpInst::FCMP_UGT:
+    case FCmpInst::FCMP_UGE:
+      return {Src, ClassesGE | fcNan, ~(ClassesGE | fcNan) | RHSClass};
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_OLE:
+      return {Src, ClassesLE, ~ClassesLE | RHSClass};
+    case FCmpInst::FCMP_ULT:
+    case FCmpInst::FCMP_ULE:
+      return {Src, ClassesLE | fcNan, ~(ClassesLE | fcNan) | RHSClass};
+    default:
+      break;
+    }
+  }
+
+  return {nullptr, fcAllFlags, fcAllFlags};
+}
+
+std::tuple<Value *, FPClassTest, FPClassTest>
+llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                       const APFloat &ConstRHS, bool LookThroughSrc) {
+  // We can refine checks against smallest normal / largest denormal to an
+  // exact class test.
+  if (!ConstRHS.isNegative() && ConstRHS.isSmallestNormalized()) {
+    Value *Src = LHS;
+    const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+
+    FPClassTest Mask;
     // Match pattern that's used in __builtin_isnormal.
     switch (Pred) {
     case FCmpInst::FCMP_OLT:
@@ -4208,25 +4239,78 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       break;
     }
     default:
-      return {nullptr, fcAllFlags};
+      return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(),
+                              LookThroughSrc);
     }
-  } else if (ConstRHS->isNaN()) {
-    // fcmp o__ x, nan -> false
-    // fcmp u__ x, nan -> true
-    Mask = fcNone;
-  } else
-    return {nullptr, fcAllFlags};
 
-  // Invert the comparison for the unordered cases.
-  if (FCmpInst::isUnordered(Pred))
-    Mask = ~Mask;
+    // Invert the comparison for the unordered cases.
+    if (FCmpInst::isUnordered(Pred))
+      Mask = ~Mask;
 
-  return {Src, Mask};
+    return exactClass(Src, Mask);
+  }
+
+  return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(), LookThroughSrc);
 }
 
-static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
-                                                  const SimplifyQuery &Q) {
-  FPClassTest KnownFromAssume = fcAllFlags;
+std::tuple<Value *, FPClassTest, FPClassTest>
+llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                       Value *RHS, bool LookThroughSrc) {
+  const APFloat *ConstRHS;
+  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+    return {nullptr, fcAllFlags, fcAllFlags};
+
+  // TODO: Just call computeKnownFPClass for RHS to handle non-constants.
+  return fcmpImpliesClass(Pred, F, LHS, *ConstRHS, LookThroughSrc);
+}
+
+static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
+                                        bool CondIsTrue,
+                                        const Instruction *CxtI,
+                                        KnownFPClass &KnownFromContext) {
+  CmpInst::Predicate Pred;
+  Value *LHS;
+  uint64_t ClassVal = 0;
+  const APFloat *CRHS;
+  // TODO: handle sign-bit check idiom
+  if (match(Cond, m_FCmp(Pred, m_Value(LHS), m_APFloat(CRHS)))) {
+    auto [CmpVal, MaskIfTrue, MaskIfFalse] = fcmpImpliesClass(
+        Pred, *CxtI->getParent()->getParent(), LHS, *CRHS, LHS != V);
+    if (CmpVal == V)
+      KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
+  } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(
+                             m_Value(LHS), m_ConstantInt(ClassVal)))) {
+    FPClassTest Mask = static_cast<FPClassTest>(ClassVal);
+    KnownFromContext.knownNot(CondIsTrue ? ~Mask : Mask);
+  }
+}
+
+static KnownFPClass computeKnownFPClassFromContext(const Value *V,
+                                                   const SimplifyQuery &Q) {
+  KnownFPClass KnownFromContext;
+
+  if (!Q.CxtI)
+    return KnownFromContext;
+
+  if (Q.DC && Q.DT) {
+    // Handle dominating conditions.
+    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+      Value *Cond = BI->getCondition();
+
+      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+      if (Q.DT->dominates(Edge0, Q.CxtI->getParent()))
+        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/true, Q.CxtI,
+                                    KnownFromContext);
+
+      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+      if (Q.DT->dominates(Edge1, Q.CxtI->getParent()))
+        computeKnownFPClassFromCond(V, Cond, /*CondIsTrue=*/false, Q.CxtI,
+                                    KnownFromContext);
+    }
+  }
+
+  if (!Q.AC)
+    return KnownFromContext;
 
   // Try to restrict the floating-point classes based on information from
   // assumptions.
@@ -4234,9 +4318,8 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
     if (!AssumeVH)
       continue;
     CallInst *I = cast<CallInst>(AssumeVH);
-    const Function *F = I->getFunction();
 
-    assert(F == Q.CxtI->getParent()->getParent() &&
+    assert(I->getFunction() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
     assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
@@ -4244,31 +4327,11 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
       continue;
 
-    CmpInst::Predicate Pred;
-    Value *LHS, *RHS;
-    uint64_t ClassVal = 0;
-    if (match(I->getArgOperand(0), m_FCmp(Pred, m_Value(LHS), m_Value(RHS)))) {
-      auto [TestedValue, TestedMask] =
-          fcmpToClassTest(Pred, *F, LHS, RHS, true);
-      // First see if we can fold in fabs/fneg into the test.
-      if (TestedValue == V)
-        KnownFromAssume &= TestedMask;
-      else {
-        // Try again without the lookthrough if we found a different source
-        // value.
-        auto [TestedValue, TestedMask] =
-            fcmpToClassTest(Pred, *F, LHS, RHS, false);
-        if (TestedValue == V)
-          KnownFromAssume &= TestedMask;
-      }
-    } else if (match(I->getArgOperand(0),
-                     m_Intrinsic<Intrinsic::is_fpclass>(
-                         m_Value(LHS), m_ConstantInt(ClassVal)))) {
-      KnownFromAssume &= static_cast<FPClassTest>(ClassVal);
-    }
+    computeKnownFPClassFromCond(V, I->getArgOperand(0), /*CondIsTrue=*/true,
+                                Q.CxtI, KnownFromContext);
   }
 
-  return KnownFromAssume;
+  return KnownFromContext;
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
@@ -4307,7 +4370,6 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   // Infinity needs a range check.
 }
 
-// TODO: Merge implementation of cannotBeOrderedLessThanZero into here.
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          unsigned Depth, const SimplifyQuery &Q) {
@@ -4332,6 +4394,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
     Known.KnownFPClasses = fcNone;
+    bool SignBitAllZero = true;
+    bool SignBitAllOne = true;
 
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
@@ -4349,10 +4413,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      KnownFPClass KnownElt{CElt->getValueAPF().classify(), CElt->isNegative()};
-      Known |= KnownElt;
+      const APFloat &C = CElt->getValueAPF();
+      Known.KnownFPClasses |= C.classify();
+      if (C.isNegative())
+        SignBitAllZero = false;
+      else
+        SignBitAllOne = false;
     }
-
+    if (SignBitAllOne != SignBitAllZero)
+      Known.SignBit = SignBitAllOne;
     return;
   }
 
@@ -4370,10 +4439,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownNotFromFlags |= fcInf;
   }
 
-  if (Q.AC) {
-    FPClassTest AssumedClasses = computeKnownFPClassFromAssumes(V, Q);
-    KnownNotFromFlags |= ~AssumedClasses;
-  }
+  KnownFPClass AssumedClasses = computeKnownFPClassFromContext(V, Q);
+  KnownNotFromFlags |= ~AssumedClasses.KnownFPClasses;
 
   // We no longer need to find out about these bits from inputs if we can
   // assume this from flags/attributes.
@@ -4381,6 +4448,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
+    if (!Known.SignBit && AssumedClasses.SignBit) {
+      if (*AssumedClasses.SignBit)
+        Known.signBitMustBeOne();
+      else
+        Known.signBitMustBeZero();
+    }
   });
 
   if (!Op)
@@ -4407,7 +4480,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     FPClassTest FilterRHS = fcAllFlags;
 
     Value *TestedValue = nullptr;
-    FPClassTest TestedMask = fcNone;
+    FPClassTest MaskIfTrue = fcAllFlags;
+    FPClassTest MaskIfFalse = fcAllFlags;
     uint64_t ClassVal = 0;
     const Function *F = cast<Instruction>(Op)->getFunction();
     CmpInst::Predicate Pred;
@@ -4419,20 +4493,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // TODO: In some degenerate cases we can infer something if we try again
       // without looking through sign operations.
       bool LookThroughFAbsFNeg = CmpLHS != LHS && CmpLHS != RHS;
-      std::tie(TestedValue, TestedMask) =
-          fcmpToClassTest(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
+      std::tie(TestedValue, MaskIfTrue, MaskIfFalse) =
+          fcmpImpliesClass(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
     } else if (match(Cond,
                      m_Intrinsic<Intrinsic::is_fpclass>(
                          m_Value(TestedValue), m_ConstantInt(ClassVal)))) {
-      TestedMask = static_cast<FPClassTest>(ClassVal);
+      FPClassTest TestedMask = static_cast<FPClassTest>(ClassVal);
+      MaskIfTrue = TestedMask;
+      MaskIfFalse = ~TestedMask;
     }
 
     if (TestedValue == LHS) {
       // match !isnan(x) ? x : y
-      FilterLHS = TestedMask;
-    } else if (TestedValue == RHS) {
+      FilterLHS = MaskIfTrue;
+    } else if (TestedValue == RHS) { // && IsExactClass
       // match !isnan(x) ? y : x
-      FilterRHS = ~TestedMask;
+      FilterRHS = MaskIfFalse;
     }
 
     KnownFPClass Known2;
@@ -4488,7 +4564,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(2), DemandedElts, InterestedClasses,
                           KnownAddend, Depth + 1, Q);
 
-      // TODO: Known sign bit with no nans
       if (KnownAddend.cannotBeOrderedLessThanZero())
         Known.knownNot(fcNegative);
       break;
@@ -4522,7 +4597,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))) {
         Known.knownNot(fcNegZero);
         if (KnownSrc.isKnownNeverNaN())
-          Known.SignBit = false;
+          Known.signBitMustBeZero();
       }
 
       break;
@@ -4592,7 +4667,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // subtargets on AMDGPU the min/max instructions would not flush the
       // output and return the original value.
       //
-      // TODO: This could be refined based on the sign
       if ((Known.KnownFPClasses & fcZero) != fcNone &&
           !Known.isKnownNeverSubnormal()) {
         const Function *Parent = II->getFunction();
@@ -4605,6 +4679,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.KnownFPClasses |= fcZero;
       }
 
+      if (Known.isKnownNeverNaN()) {
+        if (KnownLHS.SignBit && KnownRHS.SignBit &&
+            *KnownLHS.SignBit == *KnownRHS.SignBit) {
+          if (*KnownLHS.SignBit)
+            Known.signBitMustBeOne();
+          else
+            Known.signBitMustBeZero();
+        } else if ((IID == Intrinsic::maximum || IID == Intrinsic::minimum) ||
+                   ((KnownLHS.isKnownNeverNegZero() ||
+                     KnownRHS.isKnownNeverPosZero()) &&
+                    (KnownLHS.isKnownNeverPosZero() ||
+                     KnownRHS.isKnownNeverNegZero()))) {
+          if ((IID == Intrinsic::maximum || IID == Intrinsic::maxnum) &&
+              (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
+            Known.signBitMustBeZero();
+          else if ((IID == Intrinsic::minimum || IID == Intrinsic::minnum) &&
+                   (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
+            Known.signBitMustBeOne();
+        }
+      }
       break;
     }
     case Intrinsic::canonicalize: {
@@ -4704,7 +4798,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           KnownSrc, Depth + 1, Q);
       if (KnownSrc.isKnownNeverNaN()) {
         Known.knownNot(fcNan);
-        Known.SignBit = false;
+        Known.signBitMustBeZero();
       }
 
       break;
@@ -4953,6 +5047,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         Depth + 1, Q);
     if (!KnownLHS.isKnownNeverNaN())
       break;
+
+    if (KnownLHS.SignBit && KnownRHS.SignBit) {
+      if (*KnownLHS.SignBit == *KnownRHS.SignBit)
+        Known.signBitMustBeZero();
+      else
+        Known.signBitMustBeOne();
+    }
 
     // If 0 * +/-inf produces NaN.
     if (KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity()) {
@@ -5254,7 +5355,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       bool First = true;
 
-      for (Value *IncValue : P->incoming_values()) {
+      for (const Use &U : P->operands()) {
+        Value *IncValue = U.get();
         // Skip direct self references.
         if (IncValue == P)
           continue;
@@ -5263,8 +5365,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Recurse, but cap the recursion to two levels, because we don't want
         // to waste time spinning around in loops. We need at least depth 2 to
         // detect known sign bits.
-        computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
-                            PhiRecursionLimit, Q);
+        computeKnownFPClass(
+            IncValue, DemandedElts, InterestedClasses, KnownSrc,
+            PhiRecursionLimit,
+            Q.getWithInstruction(P->getIncomingBlock(U)->getTerminator()));
 
         if (First) {
           Known = KnownSrc;
@@ -5285,26 +5389,23 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
 }
 
-KnownFPClass llvm::computeKnownFPClass(
-    const Value *V, const APInt &DemandedElts, const DataLayout &DL,
-    FPClassTest InterestedClasses, unsigned Depth, const TargetLibraryInfo *TLI,
-    AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
-    bool UseInstrInfo) {
+KnownFPClass llvm::computeKnownFPClass(const Value *V,
+                                       const APInt &DemandedElts,
+                                       FPClassTest InterestedClasses,
+                                       unsigned Depth,
+                                       const SimplifyQuery &SQ) {
   KnownFPClass KnownClasses;
-  ::computeKnownFPClass(
-      V, DemandedElts, InterestedClasses, KnownClasses, Depth,
-      SimplifyQuery(DL, TLI, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
+  ::computeKnownFPClass(V, DemandedElts, InterestedClasses, KnownClasses, Depth,
+                        SQ);
   return KnownClasses;
 }
 
-KnownFPClass llvm::computeKnownFPClass(
-    const Value *V, const DataLayout &DL, FPClassTest InterestedClasses,
-    unsigned Depth, const TargetLibraryInfo *TLI, AssumptionCache *AC,
-    const Instruction *CxtI, const DominatorTree *DT, bool UseInstrInfo) {
+KnownFPClass llvm::computeKnownFPClass(const Value *V,
+                                       FPClassTest InterestedClasses,
+                                       unsigned Depth,
+                                       const SimplifyQuery &SQ) {
   KnownFPClass Known;
-  ::computeKnownFPClass(
-      V, Known, InterestedClasses, Depth,
-      SimplifyQuery(DL, TLI, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
+  ::computeKnownFPClass(V, Known, InterestedClasses, Depth, SQ);
   return Known;
 }
 

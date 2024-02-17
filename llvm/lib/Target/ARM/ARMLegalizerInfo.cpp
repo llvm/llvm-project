@@ -193,6 +193,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .legalForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .legalForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).legalFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
@@ -219,6 +222,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .libcallForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV})
+        .libcall();
   }
 
   // Just expand whatever loads and stores are left.

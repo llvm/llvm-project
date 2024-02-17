@@ -227,6 +227,28 @@ constexpr bool test() {
     }
   }
 
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true> x(std::unexpect);
+      CheckForInvalidWrites<true> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
+    {
+      CheckForInvalidWrites<false> x(std::unexpect);
+      CheckForInvalidWrites<false> y;
+
+      x.swap(y);
+
+      assert(x.check());
+      assert(y.check());
+    }
+  }
+
   return true;
 }
 

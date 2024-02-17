@@ -18,7 +18,7 @@ EOF
 // RUN:   -verify \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
-// RUN: dsymutil --linker llvm -f -oso-prepend-path=%t.dir \
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%t.dir \
 // RUN:   -verify \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s

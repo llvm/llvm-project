@@ -9,6 +9,9 @@ add_fp_unittest(
     dyadic_float_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.dyadic_float
+  COMPILE_OPTIONS
+    # Prevent constant folding with a default rounding mode.
+    "-frounding-math"
 )
 
 add_libc_test(

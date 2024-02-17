@@ -43,7 +43,7 @@ module attributes {transform.with_named_sequence} {
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
     %p = transform.num_associations %copy_back : (!transform.op<"bufferization.materialize_in_destination">) -> !transform.param<i64>
     // expected-remark @below {{1}}
-    transform.test_print_param %p : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
     transform.yield
   }
 }

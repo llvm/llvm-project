@@ -83,7 +83,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
     if (genericOp.getNumParallelLoops() != genericOp.getNumLoops())
       return failure();
@@ -457,8 +457,8 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
     Type operandType = operand.get().getType();
     if (auto memrefOperandType = dyn_cast_or_null<MemRefType>(operandType)) {
       return memrefOperandType.getLayout().isIdentity();
-    } else if (auto tensorOperandType =
-                   dyn_cast<RankedTensorType>(operandType)) {
+    }
+    if (auto tensorOperandType = dyn_cast<RankedTensorType>(operandType)) {
       return tensorOperandType.getEncoding() == nullptr;
     }
     return false;

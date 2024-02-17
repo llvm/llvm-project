@@ -11,7 +11,7 @@ import tempfile
 import subprocess
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB modules
 import lldb
@@ -113,16 +113,31 @@ def _compiler_supports(
     return True
 
 
+def expectedFailureIf(condition, bugnumber=None):
+    def expectedFailure_impl(func):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        if condition:
+            return unittest.expectedFailure(func)
+        return func
+
+    if callable(bugnumber):
+        return expectedFailure_impl(bugnumber)
+    else:
+        return expectedFailure_impl
+
+
 def expectedFailureIfFn(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
 
         @wraps(func)
         def wrapper(*args, **kwargs):
             xfail_reason = expected_fn(*args, **kwargs)
             if xfail_reason is not None:
-                xfail_func = unittest2.expectedFailure(func)
+                xfail_func = unittest.expectedFailure(func)
                 xfail_func(*args, **kwargs)
             else:
                 func(*args, **kwargs)
@@ -142,11 +157,11 @@ def expectedFailureIfFn(expected_fn, bugnumber=None):
 
 def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
             reason = expected_fn()
             # The return value is the reason (or None if we don't skip), so
             # reason is used for both args.
-            return unittest2.skipIf(condition=reason, reason=reason)(func)
+            return unittest.skipIf(condition=reason, reason=reason)(func)
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -174,6 +189,34 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
+def _xfailForDebugInfo(expected_fn, bugnumber=None):
+    def expectedFailure_impl(func):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        return func
+
+    if callable(bugnumber):
+        return expectedFailure_impl(bugnumber)
+    else:
+        return expectedFailure_impl
+
+
+def _skipForDebugInfo(expected_fn, bugnumber=None):
+    def skipImpl(func):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        func.__skip_for_debug_info_cat_fn__ = expected_fn
+        return func
+
+    if callable(bugnumber):
+        return skipImpl(bugnumber)
+    else:
+        return skipImpl
+
+
 def _decorateTest(
     mode,
     bugnumber=None,
@@ -191,7 +234,7 @@ def _decorateTest(
     dwarf_version=None,
     setting=None,
 ):
-    def fn(self):
+    def fn(actual_debug_info=None):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -204,7 +247,7 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, self.getDebugInfo())
+        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -279,9 +322,13 @@ def _decorateTest(
         return reason_str
 
     if mode == DecorateMode.Skip:
+        if debug_info:
+            return _skipForDebugInfo(fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
-        return expectedFailureIfFn(fn, bugnumber)
+        if debug_info:
+            return _xfailForDebugInfo(fn, bugnumber)
+        return expectedFailureIf(fn(), bugnumber)
     else:
         return None
 
@@ -387,7 +434,7 @@ def add_test_categories(cat):
     cat = test_categories.validate(cat, True)
 
     def impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception(
                 "@add_test_categories can only be used to decorate a test method"
             )
@@ -418,7 +465,7 @@ def benchmarks_test(func):
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+    if isinstance(func, type) and issubclass(func, unittest.TestCase):
         raise Exception(
             "@no_debug_info_test can only be used to decorate a test method"
         )
@@ -584,7 +631,7 @@ def skipIfOutOfTreeDebugserver(func):
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
-    return unittest2.skipIf(lldb.remote_platform, "skip on remote platform")(func)
+    return unittest.skipIf(lldb.remote_platform, "skip on remote platform")(func)
 
 
 def skipIfNoSBHeaders(func):
@@ -721,7 +768,7 @@ def skipUnlessDarwin(func):
 
 
 def skipUnlessTargetAndroid(func):
-    return unittest2.skipUnless(
+    return unittest.skipUnless(
         lldbplatformutil.target_is_android(), "requires target to be Android"
     )(func)
 
@@ -762,7 +809,7 @@ def skipIfPlatform(oslist):
     """Decorate the item to skip tests if running on one of the listed platforms."""
     # This decorator cannot be ported to `skipIf` yet because it is used on entire
     # classes, which `skipIf` explicitly forbids.
-    return unittest2.skipIf(
+    return unittest.skipIf(
         lldbplatformutil.getPlatform() in oslist, "skip on %s" % (", ".join(oslist))
     )
 
@@ -771,7 +818,7 @@ def skipUnlessPlatform(oslist):
     """Decorate the item to skip tests unless running on one of the listed platforms."""
     # This decorator cannot be ported to `skipIf` yet because it is used on entire
     # classes, which `skipIf` explicitly forbids.
-    return unittest2.skipUnless(
+    return unittest.skipUnless(
         lldbplatformutil.getPlatform() in oslist,
         "requires one of %s" % (", ".join(oslist)),
     )
@@ -1031,7 +1078,7 @@ def _get_bool_config(key, fail_value=True):
 
 def _get_bool_config_skip_if_decorator(key):
     have = _get_bool_config(key)
-    return unittest2.skipIf(not have, "requires " + key)
+    return unittest.skipIf(not have, "requires " + key)
 
 
 def skipIfCursesSupportMissing(func):
@@ -1063,7 +1110,7 @@ def skipIfLLVMTargetMissing(target):
             found = True
             break
 
-    return unittest2.skipIf(not found, "requires " + target)
+    return unittest.skipIf(not found, "requires " + target)
 
 
 # Call sysctl on darwin to see if a specified hardware feature is available on this machine.

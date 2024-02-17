@@ -64,8 +64,8 @@ def LOAD16Imm : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/2, /*MergeInsnID's*/0, 1,
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: // GIR_Coverage, 3,
 // CHECK-NEXT: GIR_Done,
 // CHECK-NEXT: // Label [[L2_ID]]: @[[L2_AT]]

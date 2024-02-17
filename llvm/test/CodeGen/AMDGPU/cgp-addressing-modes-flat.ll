@@ -4,10 +4,10 @@
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 < %s | FileCheck --check-prefixes=OPT,OPT-GFX9 %s
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=gfx1030 < %s | FileCheck --check-prefixes=OPT,OPT-GFX10 %s
 
-; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck --check-prefix=GFX7 %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 < %s | FileCheck --check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck --check-prefix=GFX7 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck --check-prefix=GFX10 %s
 
 define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-GFX7-LABEL: @test_sinkable_flat_small_offset_i32(

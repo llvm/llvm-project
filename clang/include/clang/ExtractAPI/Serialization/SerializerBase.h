@@ -65,7 +65,7 @@ public:
 
     getDerived()->traverseGlobalFunctionTemplateSpecializationRecords();
 
-    getDerived()->traverseStructRecords();
+    getDerived()->traverseRecordRecords();
 
     getDerived()->traverseObjCInterfaces();
 
@@ -98,9 +98,9 @@ public:
       getDerived()->visitEnumRecord(*Enum.second);
   }
 
-  void traverseStructRecords() {
-    for (const auto &Struct : API.getStructs())
-      getDerived()->visitStructRecord(*Struct.second);
+  void traverseRecordRecords() {
+    for (const auto &Record : API.getRecords())
+      getDerived()->visitRecordRecord(*Record.second);
   }
 
   void traverseStaticFieldRecords() {
@@ -238,8 +238,8 @@ public:
   /// Visit an enum record.
   void visitEnumRecord(const EnumRecord &Record){};
 
-  /// Visit a struct record.
-  void visitStructRecord(const StructRecord &Record){};
+  /// Visit a record record.
+  void visitRecordRecord(const RecordRecord &Record){};
 
   void visitStaticFieldRecord(const StaticFieldRecord &Record){};
 

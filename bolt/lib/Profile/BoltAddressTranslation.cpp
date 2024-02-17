@@ -22,8 +22,7 @@ const char *BoltAddressTranslation::SECTION_NAME = ".note.bolt_bat";
 
 void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
                                                const BinaryBasicBlock &BB,
-                                               uint64_t FuncAddress,
-                                               uint64_t FuncInputAddress) {
+                                               uint64_t FuncAddress) {
   const uint64_t BBOutputOffset =
       BB.getOutputAddressRange().first - FuncAddress;
   const uint32_t BBInputOffset = BB.getInputOffset();
@@ -37,12 +36,9 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
   if (BBInputOffset == BinaryBasicBlock::INVALID_OFFSET)
     return;
 
-  LLVM_DEBUG(dbgs() << "BB " << BB.getName() << "\n"
-                    << "  Key: " << Twine::utohexstr(BBOutputOffset)
-                    << " Val: " << Twine::utohexstr(BBInputOffset) << " Hash: "
-                    << Twine::utohexstr(
-                           FuncHashes[FuncInputAddress].second[BBInputOffset])
-                    << '\n';);
+  LLVM_DEBUG(dbgs() << "BB " << BB.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "  Key: " << Twine::utohexstr(BBOutputOffset)
+                    << " Val: " << Twine::utohexstr(BBInputOffset) << "\n");
   // In case of conflicts (same Key mapping to different Vals), the last
   // update takes precedence. Of course it is not ideal to have conflicts and
   // those happen when we have an empty BB that either contained only
@@ -81,21 +77,15 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     if (Function.isIgnored() || (!BC.HasRelocations && !Function.isSimple()))
       continue;
 
-    LLVM_DEBUG(
-        dbgs() << "Function name: " << Function.getPrintName() << "\n"
-               << " Address reference: 0x"
-               << Twine::utohexstr(Function.getOutputAddress()) << "\n"
-               << " Hash: 0x"
-               << Twine::utohexstr(FuncHashes[Function.getAddress()].first)
-               << '\n');
+    LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
+    LLVM_DEBUG(dbgs() << " Address reference: 0x"
+                      << Twine::utohexstr(Function.getOutputAddress()) << "\n");
 
     MapTy Map;
     for (const BinaryBasicBlock *const BB :
          Function.getLayout().getMainFragment())
-      writeEntriesForBB(Map, *BB, Function.getOutputAddress(),
-                        Function.getAddress());
+      writeEntriesForBB(Map, *BB, Function.getOutputAddress());
     Maps.emplace(Function.getOutputAddress(), std::move(Map));
-    ReverseMap.emplace(Function.getOutputAddress(), Function.getAddress());
 
     if (!Function.isSplit())
       continue;
@@ -106,7 +96,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
          Function.getLayout().getSplitFragments()) {
       Map.clear();
       for (const BinaryBasicBlock *const BB : FF)
-        writeEntriesForBB(Map, *BB, FF.getAddress(), Function.getAddress());
+        writeEntriesForBB(Map, *BB, FF.getAddress());
 
       Maps.emplace(FF.getAddress(), std::move(Map));
       ColdPartSource.emplace(FF.getAddress(), Function.getOutputAddress());
@@ -118,13 +108,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   writeMaps</*Cold=*/false>(Maps, PrevAddress, OS);
   writeMaps</*Cold=*/true>(Maps, PrevAddress, OS);
 
-  outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
-  outs() << "BOLT-INFO: Wrote " << FuncHashes.size() << " function and "
-         << std::accumulate(FuncHashes.begin(), FuncHashes.end(), 0ull,
-                            [](size_t Acc, const auto &B) {
-                              return Acc + B.second.second.size();
-                            })
-         << " basic block hashes\n";
+  BC.outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
 }
 
 APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
@@ -171,15 +155,10 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
     // Only process cold fragments in cold mode, and vice versa.
     if (Cold != ColdPartSource.count(Address))
       continue;
-    const uint64_t HotInputAddress =
-        ReverseMap[Cold ? ColdPartSource[Address] : Address];
     MapTy &Map = MapEntry.second;
     const uint32_t NumEntries = Map.size();
     LLVM_DEBUG(dbgs() << "Writing " << NumEntries << " entries for 0x"
                       << Twine::utohexstr(Address) << ".\n");
-    std::pair<size_t, BBHashMap> &FuncHashPair = FuncHashes[HotInputAddress];
-    if (!Cold)
-      LLVM_DEBUG(dbgs() << "Hash: " << formatv("{0:x}\n", FuncHashPair.first));
     encodeULEB128(Address - PrevAddress, OS);
     PrevAddress = Address;
     if (Cold) {
@@ -187,9 +166,6 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
           std::distance(ColdPartSource.begin(), ColdPartSource.find(Address));
       encodeULEB128(HotIndex - PrevIndex, OS);
       PrevIndex = HotIndex;
-    } else {
-      // Function hash
-      OS.write(reinterpret_cast<char *>(&FuncHashPair.first), 8);
     }
     encodeULEB128(NumEntries, OS);
     // For hot fragments only: encode the number of equal offsets
@@ -221,18 +197,11 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
       if (Index++ >= EqualElems)
         encodeSLEB128(KeyVal.second - InOffset, OS);
       InOffset = KeyVal.second; // Keeping InOffset as if BRANCHENTRY is encoded
-      if ((InOffset & BRANCHENTRY) == 0) {
-        // Basic block hash
-        size_t BBHash = FuncHashPair.second[InOffset >> 1];
-        OS.write(reinterpret_cast<char *>(&BBHash), 8);
-        LLVM_DEBUG(dbgs() << formatv("{0:x} -> {1:x} {2:x}\n", KeyVal.first,
-                                     InOffset >> 1, BBHash));
-      }
     }
   }
 }
 
-std::error_code BoltAddressTranslation::parse(StringRef Buf) {
+std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
   DataExtractor DE = DataExtractor(Buf, true, 8);
   uint64_t Offset = 0;
   if (Buf.size() < 12)
@@ -256,7 +225,7 @@ std::error_code BoltAddressTranslation::parse(StringRef Buf) {
   uint64_t PrevAddress = 0;
   parseMaps</*Cold=*/false>(HotFuncs, PrevAddress, DE, Offset, Err);
   parseMaps</*Cold=*/true>(HotFuncs, PrevAddress, DE, Offset, Err);
-  outs() << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
+  OS << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
   return errorToErrorCode(std::move(Err));
 }
 
@@ -270,39 +239,33 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
   size_t HotIndex = 0;
   for (uint32_t I = 0; I < NumFunctions; ++I) {
     const uint64_t Address = PrevAddress + DE.getULEB128(&Offset, &Err);
-    uint64_t HotAddress = Cold ? 0 : Address;
     PrevAddress = Address;
     if (Cold) {
       HotIndex += DE.getULEB128(&Offset, &Err);
-      HotAddress = HotFuncs[HotIndex];
-      ColdPartSource.emplace(Address, HotAddress);
+      ColdPartSource.emplace(Address, HotFuncs[HotIndex]);
     } else {
       HotFuncs.push_back(Address);
-      // Function hash
-      const size_t FuncHash = DE.getU64(&Offset, &Err);
-      FuncHashes[Address].first = FuncHash;
-      LLVM_DEBUG(dbgs() << formatv("{0:x}: hash {1:x}\n", Address, FuncHash));
     }
     const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
     // Equal offsets, hot fragments only.
     size_t EqualElems = 0;
-    APInt *BEBitMask(nullptr);
+    APInt BEBitMask;
     if (!Cold) {
       EqualElems = DE.getULEB128(&Offset, &Err);
       LLVM_DEBUG(dbgs() << formatv("Equal offsets: {0}, {1} bytes\n",
                                    EqualElems, getULEB128Size(EqualElems)));
       if (EqualElems) {
         const size_t BranchEntriesBytes = alignTo(EqualElems, 8) / 8;
-        BEBitMask = new APInt(alignTo(EqualElems, 8), 0);
+        BEBitMask = APInt(alignTo(EqualElems, 8), 0);
         LoadIntFromMemory(
-            *BEBitMask,
+            BEBitMask,
             reinterpret_cast<const uint8_t *>(
                 DE.getBytes(&Offset, BranchEntriesBytes, &Err).data()),
             BranchEntriesBytes);
         LLVM_DEBUG({
           dbgs() << "BEBitMask: ";
           SmallString<8> BitMaskStr;
-          BEBitMask->toString(BitMaskStr, 2, false);
+          BEBitMask.toString(BitMaskStr, 2, false);
           dbgs() << BitMaskStr << ", " << BranchEntriesBytes << " bytes\n";
         });
       }
@@ -319,29 +282,19 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
       PrevAddress = OutputAddress;
       int64_t InputDelta = 0;
       if (J < EqualElems) {
-        InputOffset = (OutputOffset << 1) | (*BEBitMask)[J];
+        InputOffset = (OutputOffset << 1) | BEBitMask[J];
       } else {
         InputDelta = DE.getSLEB128(&Offset, &Err);
         InputOffset += InputDelta;
       }
       Map.insert(std::pair<uint32_t, uint32_t>(OutputOffset, InputOffset));
-      size_t BBHash = 0;
-      if ((InputOffset & BRANCHENTRY) == 0)
-        // Map basic block hash to hot fragment by input offset
-        BBHash = FuncHashes[HotAddress].second[InputOffset >> 1] =
-            DE.getU64(&Offset, &Err);
-      LLVM_DEBUG({
-        dbgs() << formatv(
-            "{0:x} -> {1:x} ({2}/{3}b -> {4}/{5}b), {6:x}", OutputOffset,
-            InputOffset, OutputDelta, getULEB128Size(OutputDelta), InputDelta,
-            (J < EqualElems) ? 0 : getSLEB128Size(InputDelta), OutputAddress);
-        if (BBHash)
-          dbgs() << formatv(" {0:x}", BBHash);
-        dbgs() << '\n';
-      });
+      LLVM_DEBUG(
+          dbgs() << formatv("{0:x} -> {1:x} ({2}/{3}b -> {4}/{5}b), {6:x}\n",
+                            OutputOffset, InputOffset, OutputDelta,
+                            getULEB128Size(OutputDelta), InputDelta,
+                            (J < EqualElems) ? 0 : getSLEB128Size(InputDelta),
+                            OutputAddress));
     }
-    if (BEBitMask)
-      delete BEBitMask;
     Maps.insert(std::pair<uint64_t, MapTy>(Address, Map));
   }
 }
@@ -350,12 +303,7 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
   const size_t NumTables = Maps.size();
   OS << "BAT tables for " << NumTables << " functions:\n";
   for (const auto &MapEntry : Maps) {
-    const uint64_t Address = MapEntry.first;
-    const uint64_t HotAddress = fetchParentAddress(Address);
-    OS << "Function Address: 0x" << Twine::utohexstr(Address);
-    if (HotAddress == 0)
-      OS << ", hash: " << Twine::utohexstr(FuncHashes[Address].first);
-    OS << "\n";
+    OS << "Function Address: 0x" << Twine::utohexstr(MapEntry.first) << "\n";
     OS << "BB mappings:\n";
     for (const auto &Entry : MapEntry.second) {
       const bool IsBranch = Entry.second & BRANCHENTRY;
@@ -364,10 +312,6 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
          << "0x" << Twine::utohexstr(Val);
       if (IsBranch)
         OS << " (branch)";
-      else
-        OS << " hash: "
-           << Twine::utohexstr(
-                  FuncHashes[HotAddress ? HotAddress : Address].second[Val]);
       OS << "\n";
     }
     OS << "\n";
@@ -479,21 +423,6 @@ bool BoltAddressTranslation::enabledFor(
       return true;
   }
   return false;
-}
-
-void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
-  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    // We don't need a translation table if the body of the function hasn't
-    // changed
-    if (BF.isIgnored() || (!BC.HasRelocations && !BF.isSimple()))
-      continue;
-    // Prepare function and block hashes
-    FuncHashes[BF.getAddress()].first = BF.computeHash();
-    BF.computeBlockHashes();
-    for (const BinaryBasicBlock &BB : BF)
-      FuncHashes[BF.getAddress()].second.emplace(BB.getInputOffset(),
-                                                 BB.getHash());
-  }
 }
 } // namespace bolt
 } // namespace llvm

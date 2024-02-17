@@ -18,7 +18,6 @@
 ;   }
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
 
 @B = common global ptr null, align 8
 @A = common global ptr null, align 8
@@ -79,6 +78,7 @@ entry:
 
 
 ; VECTORIZE: mul <4 x i32>
+; VECTORIZE-NOT: mul <4 x i32>
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]

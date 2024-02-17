@@ -31,19 +31,19 @@
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
-RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM -a --verbose | FileCheck %s
+RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM -a --verbose | FileCheck %s --check-prefixes=CHECK,WITH-PARENTS
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --no-odr --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --no-odr --linker parallel -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
 RUN:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \
-RUN:   -a --verbose | FileCheck %s
+RUN:   -a --verbose | FileCheck %s --check-prefixes=CHECK,NO-PARENTS
 
 ### Uncomment following when llvm-dwarfdump will dump address ranges
 ### correctly for severall compile units case.
 COM: rm -rf %t.dir && mkdir -p %t.dir
-COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
 COM:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
 COM:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 COM: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \
@@ -219,7 +219,10 @@ CHECK-NEXT: 0x00000028: 000000dc "int"
 CHECK: .debug_names contents:
 CHECK-NEXT: Name Index @ 0x0 {
 CHECK-NEXT:   Header {
-CHECK-NEXT:     Length: 0xC4
+; FIXME: when the parallel dwarf linker is able to generate DW_IDX_parent,
+; these headers should be the same.
+WITH-PARENTS-NEXT: Length: 0xC8
+NO-PARENTS-NEXT:   Length: 0xC4
 CHECK-NEXT:     Format: DWARF32
 CHECK-NEXT:     Version: 5
 CHECK-NEXT:     CU count: 2
@@ -227,6 +230,7 @@ CHECK-NEXT:     Local TU count: 0
 CHECK-NEXT:     Foreign TU count: 0
 CHECK-NEXT:     Bucket count: 5
 CHECK-NEXT:     Name count: 5
-CHECK-NEXT:     Abbreviations table size: 0x13
+WITH-PARENTS-NEXT:     Abbreviations table size: 0x17
+NO-PARENTS-NEXT:       Abbreviations table size: 0x13
 CHECK-NEXT:     Augmentation: 'LLVM0700'
 CHECK-NEXT:   }

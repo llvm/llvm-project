@@ -14,8 +14,12 @@
 #include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
+#include <chrono>
 #include <ctime>
+#include <signal.h>
+#include <thread>
 
 #ifdef _WIN32
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -24,7 +28,7 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
   RUNTIME_CHECK(terminator, error == 0);
 }
 #elif _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || \
-    _POSIX_SOURCE
+    defined(_POSIX_SOURCE)
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   const char *res{ctime_r(&cur_time, buffer)};
@@ -47,8 +51,7 @@ extern "C" {
 
 namespace Fortran::runtime {
 
-void GetUsernameEnvVar(
-    const char *envName, std::byte *arg, std::int64_t length) {
+void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
       1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
@@ -91,40 +94,48 @@ std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
 // CALL GETARG(N, ARG)
 void FORTRAN_PROCEDURE_NAME(getarg)(
-    std::int32_t &n, std::int8_t *arg, std::int64_t length) {
+    std::int32_t &n, char *arg, std::int64_t length) {
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
   (void)RTNAME(GetCommandArgument)(
       n, &value, nullptr, nullptr, __FILE__, __LINE__);
 }
 
 // CALL GETLOG(USRNAME)
-void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
+void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-  int nameMaxLen;
-#ifdef LOGIN_NAME_MAX
-  nameMaxLen = LOGIN_NAME_MAX + 1;
-#else
-  nameMaxLen = sysconf(_SC_LOGIN_NAME_MAX) + 1;
-  if (nameMaxLen == -1)
-    nameMaxLen = _POSIX_LOGIN_NAME_MAX + 1;
-#endif
-  std::vector<char> str(nameMaxLen);
-
-  int error{getlogin_r(str.data(), nameMaxLen)};
-  if (error == 0) {
-    // no error: find first \0 in string then pad from there
-    CopyAndPad(reinterpret_cast<char *>(arg), str.data(), length,
-        std::strlen(str.data()));
-  } else {
-    // error occur: get username from environment variable
-    GetUsernameEnvVar("LOGNAME", arg, length);
+  if (length >= 1 && getlogin_r(arg, length) == 0) {
+    auto loginLen{std::strlen(arg)};
+    std::memset(
+        arg + loginLen, ' ', static_cast<std::size_t>(length) - loginLen);
+    return;
   }
-#elif _WIN32
-  // Get username from environment to avoid link to Advapi32.lib
+#endif
+#if _WIN32
   GetUsernameEnvVar("USERNAME", arg, length);
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
+}
+
+std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int)) {
+  // using auto for portability:
+  // on Windows, this is a void *
+  // on POSIX, this has the same type as handler
+  auto result = signal(number, handler);
+
+  // GNU defines the intrinsic as returning an integer, not a pointer. So we
+  // have to reinterpret_cast
+  return static_cast<int64_t>(reinterpret_cast<std::uintptr_t>(result));
+}
+
+// CALL SLEEP(SECONDS)
+void RTNAME(Sleep)(std::int64_t seconds) {
+  // ensure that conversion to unsigned makes sense,
+  // sleep(0) is an immidiate return anyway
+  if (seconds < 1) {
+    return;
+  }
+  std::this_thread::sleep_for(std::chrono::seconds(seconds));
 }
 
 } // namespace Fortran::runtime

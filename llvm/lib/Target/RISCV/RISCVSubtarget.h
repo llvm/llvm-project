@@ -27,6 +27,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
 
+#define GET_RISCV_MACRO_FUSION_PRED_DECL
+#include "RISCVGenMacroFusion.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"
 
@@ -194,11 +197,6 @@ public:
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
-  }
-
-  bool hasMacroFusion() const {
-    return hasLUIADDIFusion() || hasAUIPCADDIFusion() || hasZExtHFusion() ||
-           hasZExtWFusion() || hasShiftedZExtWFusion() || hasLDADDFusion();
   }
 
   // Vector codegen related methods.

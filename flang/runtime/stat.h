@@ -51,6 +51,7 @@ enum Stat {
   StatValueTooShort = FORTRAN_RUNTIME_STAT_VALUE_TOO_SHORT,
   StatMoveAllocSameAllocatable =
       FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE,
+  StatBadPointerDeallocation = FORTRAN_RUNTIME_STAT_BAD_POINTER_DEALLOCATION,
 };
 
 RT_API_ATTRS const char *StatErrorString(int);

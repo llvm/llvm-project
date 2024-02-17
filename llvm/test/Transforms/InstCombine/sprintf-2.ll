@@ -18,21 +18,21 @@ declare i32 @snprintf(ptr, i64, ptr, ...)
 define void @fold_snprintf_member_pC(ptr %pi) {
 ; CHECK-LABEL: @fold_snprintf_member_pC(
 ; CHECK-NEXT:    store i32 1, ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0AP1:%.*]] = getelementptr i32, ptr [[PI]], i64 1
+; CHECK-NEXT:    [[PIA0AP1:%.*]] = getelementptr i8, ptr [[PI]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[PIA0AP1]], align 4
-; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i32, ptr [[PI]], i64 2
+; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i8, ptr [[PI]], i64 8
 ; CHECK-NEXT:    store i32 2, ptr [[PIA0B]], align 4
-; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i32, ptr [[PI]], i64 3
+; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i8, ptr [[PI]], i64 12
 ; CHECK-NEXT:    store i32 1, ptr [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[PIA0BP2:%.*]] = getelementptr i32, ptr [[PI]], i64 4
+; CHECK-NEXT:    [[PIA0BP2:%.*]] = getelementptr i8, ptr [[PI]], i64 16
 ; CHECK-NEXT:    store i32 0, ptr [[PIA0BP2]], align 4
-; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i32, ptr [[PI]], i64 5
+; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i8, ptr [[PI]], i64 20
 ; CHECK-NEXT:    store i32 3, ptr [[PIA0C]], align 4
-; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i32, ptr [[PI]], i64 6
+; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i8, ptr [[PI]], i64 24
 ; CHECK-NEXT:    store i32 4, ptr [[PIA1A]], align 4
-; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i32, ptr [[PI]], i64 7
+; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i8, ptr [[PI]], i64 28
 ; CHECK-NEXT:    store i32 5, ptr [[PIA1B]], align 4
-; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i32, ptr [[PI]], i64 8
+; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i8, ptr [[PI]], i64 32
 ; CHECK-NEXT:    store i32 6, ptr [[PIA1C]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -38,13 +38,13 @@ module attributes {transform.with_named_sequence} {
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
     %p = transform.num_associations %fill_op : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_param %p : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
 
     // Ensure that one linalg.copy was generated.
     %mat = transform.select "bufferization.materialize_in_destination" in %new : (!transform.any_op) -> !transform.any_op
     %p2 = transform.num_associations %mat : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_param %p2 : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
     transform.yield
   }
 }
@@ -77,19 +77,19 @@ module attributes {transform.with_named_sequence} {
     %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
     %p = transform.num_associations %fill_op : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_param %p : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
 
     // Ensure that one linalg.copy was generated.
     %linalg_copy = transform.select "linalg.copy" in %new : (!transform.any_op) -> !transform.any_op
     %p2 = transform.num_associations %linalg_copy : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_param %p2 : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p2 : !transform.param<i64>
 
     // Ensure that one memref.alloca was generated.
     %alloca = transform.select "memref.alloca" in %new : (!transform.any_op) -> !transform.any_op
     %p3 = transform.num_associations %alloca : (!transform.any_op) -> !transform.param<i64>
     // expected-remark @below{{1}}
-    transform.test_print_param %p3 : !transform.param<i64>
+    transform.debug.emit_param_as_remark %p3 : !transform.param<i64>
 
     // Make sure that One-Shot Bufferize can bufferize the rest.
     %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op

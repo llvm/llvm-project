@@ -861,7 +861,7 @@ public:
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI size_type bucket(const _Key& __k) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         bucket_count() > 0, "unordered container::bucket(key) called when bucket_count() == 0");
     return std::__constrain_hash(hash_function()(__k), bucket_count());
   }
