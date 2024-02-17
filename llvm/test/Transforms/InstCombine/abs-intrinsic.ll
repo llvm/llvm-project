@@ -11,9 +11,8 @@ declare void @use(i32)
 
 define i8 @test_abs_abs_a_mul_b_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_abs_abs_a_mul_b_i8(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 true)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[MUL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[ABS2]]
 ;
   %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 true)
@@ -25,9 +24,8 @@ define i8 @test_abs_abs_a_mul_b_i8(i8 %a, i8 %b) {
 define i8 @test_abs_a_mul_abs_b_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_abs_a_mul_abs_b_i8(
 ; CHECK-NEXT:    [[A1:%.*]] = urem i8 123, [[A:%.*]]
-; CHECK-NEXT:    [[ABS1:%.*]] = call i8 @llvm.abs.i8(i8 [[B:%.*]], i1 true)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A1]], [[ABS1]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[MUL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[A1]], [[B:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[ABS2]]
 ;
   %a1 = urem i8 123, %a  ; thwart complexity-based canonicalization
@@ -39,9 +37,8 @@ define i8 @test_abs_a_mul_abs_b_i8(i8 %a, i8 %b) {
 
 define i32 @test_abs_abs_a_mul_b_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_abs_abs_a_mul_b_i32(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[MUL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[ABS2]]
 ;
   %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
@@ -52,9 +49,8 @@ define i32 @test_abs_abs_a_mul_b_i32(i32 %a, i32 %b) {
 
 define i32 @test_abs_abs_a_mul_b_i32_abs_false_true(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_false_true(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 false)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[MUL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[ABS2]]
 ;
   %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 false)
@@ -65,9 +61,8 @@ define i32 @test_abs_abs_a_mul_b_i32_abs_false_true(i32 %a, i32 %b) {
 
 define i32 @test_abs_abs_a_mul_b_i32_abs_true_false(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_true_false(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 true)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[MUL]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i32 [[ABS2]]
 ;
   %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 true)
@@ -78,9 +73,8 @@ define i32 @test_abs_abs_a_mul_b_i32_abs_true_false(i32 %a, i32 %b) {
 
 define i32 @test_abs_abs_a_mul_b_i32_abs_false_false(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_abs_abs_a_mul_b_i32_abs_false_false(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i32 @llvm.abs.i32(i32 [[A:%.*]], i1 false)
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[MUL]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i32 [[ABS2]]
 ;
   %abs1 = call i32 @llvm.abs.i32(i32 %a, i1 false)
@@ -92,9 +86,8 @@ define i32 @test_abs_abs_a_mul_b_i32_abs_false_false(i32 %a, i32 %b) {
 ; this should work
 define i8 @test_nsw_with_true(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_nsw_with_true(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 false)
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[MUL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[ABS2]]
 ;
   %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 false)
@@ -106,9 +99,8 @@ define i8 @test_nsw_with_true(i8 %a, i8 %b) {
 ; this should't propagate the nsw
 define i8 @test_nsw_with_false(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_nsw_with_false(
-; CHECK-NEXT:    [[ABS1:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 false)
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[ABS1]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[MUL]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i8 [[ABS2]]
 ;
   %abs1 = call i8 @llvm.abs.i8(i8 %a, i1 false)
@@ -134,9 +126,8 @@ define i32 @test_abs_abs_a_mul_b_more_one_use(i32 %a, i32 %b) {
 
 define <2 x i8> @test_abs_abs_a_mul_b_vector_i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @test_abs_abs_a_mul_b_vector_i8(
-; CHECK-NEXT:    [[ABS:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[A:%.*]], i1 true)
-; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[ABS]], [[B:%.*]]
-; CHECK-NEXT:    [[ABS2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[MUL]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i8> [[ABS2]]
 ;
   %abs = call <2 x i8> @llvm.abs.v2i8(<2 x i8> %a, i1 true)
