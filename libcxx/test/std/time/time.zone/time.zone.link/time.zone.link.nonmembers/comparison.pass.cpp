@@ -17,28 +17,23 @@
 
 // <chrono>
 
-// const tzdb& get_tzdb();
+// bool operator==(const time_zone_link& x, const time_zone_link& y) noexcept;
+// strong_ordering operator<=>(const time_zone_link& x, const time_zone_link& y) noexcept;
 
-#include <algorithm>
-#include <cassert>
 #include <chrono>
+#include <cassert>
 
 #include "test_macros.h"
+#include "test_comparisons.h"
 
 int main(int, const char**) {
-  const std::chrono::tzdb& db = std::chrono::get_tzdb();
+  const std::chrono::tzdb& tzdb = std::chrono::get_tzdb();
+  assert(tzdb.links.size() > 2);
 
-  assert(!db.version.empty());
+  AssertOrderAreNoexcept<std::chrono::time_zone_link>();
+  AssertOrderReturn<std::strong_ordering, std::chrono::time_zone_link>();
 
-  LIBCPP_ASSERT(!db.__rules.empty());
-
-  assert(!db.zones.empty());
-  assert(std::ranges::is_sorted(db.zones));
-  assert(std::ranges::adjacent_find(db.zones) == db.zones.end()); // is unique?
-
-  assert(!db.links.empty());
-  assert(std::ranges::is_sorted(db.links));
-  assert(std::ranges::adjacent_find(db.links) == db.links.end()); // is unique?
+  assert(testOrder(tzdb.links[0], tzdb.links[1], std::strong_ordering::less));
 
   return 0;
 }
