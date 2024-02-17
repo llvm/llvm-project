@@ -58,4 +58,4 @@ jobs:
       - name: Check LLVM
         if: ${{ steps.compute-projects.outputs.check-targets }}
         run: |
-          ninja -C build "${{ steps.compute-projects.outputs.check-targets }}"
+          ninja -C build ${{ steps.compute-projects.outputs.check-targets }}
