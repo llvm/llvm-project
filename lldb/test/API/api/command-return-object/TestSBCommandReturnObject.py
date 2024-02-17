@@ -12,6 +12,7 @@ class TestSBCommandReturnObject(TestBase):
     @expectedFailureAll(
         oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr43570"
     )
+    @skipIfHostIncompatibleWithTarget
     def test_sb_command_return_object(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
