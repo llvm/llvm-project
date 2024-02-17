@@ -272,22 +272,18 @@ private:
   // Walk the binary decision diagram and try assigning both false and true to
   // each node. When a terminal node (ID == 0) is reached, fill in the value in
   // the truth table.
-  void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID,
-                       unsigned Index) {
-    assert((Index & (1 << ID)) == 0);
-
+  void buildTestVector(MCDCRecord::TestVector &TV, mcdc::ConditionID ID) {
     for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
       static_assert(MCDCRecord::MCDC_False == 0);
       static_assert(MCDCRecord::MCDC_True == 1);
-      Index |= MCDCCond << ID;
-      TV[ID] = MCDCCond;
+      TV.set(ID, MCDCCond);
       auto NextID = CondsMap[ID][MCDCCond];
       if (NextID >= 0) {
-        buildTestVector(TV, NextID, Index);
+        buildTestVector(TV, NextID);
         continue;
       }
 
-      if (!Bitmap[BitmapIdx + Index])
+      if (!Bitmap[BitmapIdx + TV.getIndex()])
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
@@ -299,7 +295,7 @@ private:
     }
 
     // Reset back to DontCare.
-    TV[ID] = MCDCRecord::MCDC_DontCare;
+    TV.set(ID, MCDCRecord::MCDC_DontCare);
   }
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
@@ -309,7 +305,7 @@ private:
     // We start at the root node (ID == 0) with all values being DontCare.
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-    buildTestVector(TV, 0, 0);
+    buildTestVector(TV, 0);
   }
 
   // Find an independence pair for each condition:
@@ -323,22 +319,15 @@ private:
       for (unsigned J = 0; J < I; ++J) {
         const MCDCRecord::TestVector &B = ExecVectors[J];
         // Enumerate two execution vectors whose outcomes are different.
-        if (A[NumConditions] == B[NumConditions])
+        if (!A.isDifferentOutcome(B))
           continue;
-        unsigned Flip = NumConditions, Idx;
-        for (Idx = 0; Idx < NumConditions; ++Idx) {
-          MCDCRecord::CondState ACond = A[Idx], BCond = B[Idx];
-          if (ACond == BCond || ACond == MCDCRecord::MCDC_DontCare ||
-              BCond == MCDCRecord::MCDC_DontCare)
-            continue;
-          if (Flip != NumConditions)
-            break;
-          Flip = Idx;
-        }
         // If the two vectors differ in exactly one condition, ignoring DontCare
         // conditions, we have found an independence pair.
-        if (Idx == NumConditions && Flip != NumConditions)
-          IndependencePairs.insert({Flip, std::make_pair(J + 1, I + 1)});
+        auto AB = A.getDifferences(B);
+        assert(AB[NumConditions] && "The last element should be different");
+        if (AB.count() == 2) // The single condition and the last element
+          IndependencePairs.insert(
+              {AB.find_first(), std::make_pair(J + 1, I + 1)});
       }
     }
   }
