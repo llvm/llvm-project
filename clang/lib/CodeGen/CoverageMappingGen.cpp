@@ -1942,6 +1942,8 @@ struct CounterCoverageMappingBuilder
 
       extendRegion(E->getTrueExpr());
       OutCount = propagateCounts(TrueCount, E->getTrueExpr());
+    } else {
+      OutCount = TrueCount;
     }
 
     extendRegion(E->getFalseExpr());
