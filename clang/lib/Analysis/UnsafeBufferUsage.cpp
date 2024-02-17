@@ -287,7 +287,7 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   // clang-format off
   auto CallArgMatcher = callExpr(
     forEachArgumentWithParamType(
-      InnerMatcher, 
+      InnerMatcher,
       isAnyPointer() /* array also decays to pointer type*/),
     unless(callee(
       functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
