@@ -78,9 +78,10 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
 ///   b) Compute the permutation vector to move outer dims if the
 ///      `outerPerm` parameter is not empty.
 /// Apply (b) permutation on (a) permutation to get the final permutation.
-SmallVector<int64_t> mlir::tensor::computePackUnPackPerm(
-    int64_t rank, ArrayRef<int64_t> &innerDimsPos, ArrayRef<int64_t> &outerPerm,
-    PackingMetadata &packingMetadata) {
+static SmallVector<int64_t>
+computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
+                      ArrayRef<int64_t> &outerPerm,
+                      PackingMetadata &packingMetadata) {
   int64_t numPackedDims = innerDimsPos.size();
   auto lastDims =
       llvm::to_vector(llvm::seq<int64_t>(rank - numPackedDims, rank));
@@ -100,31 +101,41 @@ SmallVector<int64_t> mlir::tensor::computePackUnPackPerm(
 }
 
 /// Shell function to compute the Destination Permutation of PackOp
+/// This function uses the helper function `computePackUnPackPerm` to get
+/// the permutation vector. Only major difference between UnPack and Pack is
+/// that packOp uses destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
 
   PackingMetadata pMetadata;
   int64_t packedRank = packOp.getDestType().getRank();
   ArrayRef<int64_t> innerDimPos = packOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = packOp.getOuterDimsPerm();
-  SmallVector<int64_t> packInvDestPerm = mlir::tensor::computePackUnPackPerm(
-      packedRank, innerDimPos, outerPerm, pMetadata);
+  SmallVector<int64_t> packInvDestPerm =
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, pMetadata);
   return packInvDestPerm;
 }
 
+/// Shell function to compute the Source Permutation of unPackOp.
+/// This function, like the getPackInverseDestPerm uses the helper function
+/// computePackUnPackPerm` to get the permutation vector.
+/// Only major difference between UnPack and Pack is that packOp uses
+/// destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp) {
   PackingMetadata metadata;
   return mlir::tensor::getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
 /// Shell function to compute the Source rank permutation for unpackOp
+/// Unpack requires some packing metadata data information, so created
+/// another function where this value is passed by reference.
 SmallVector<int64_t>
 mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp,
                                       PackingMetadata &metadata) {
   int64_t unpackRank = unpackOp.getSourceType().getRank();
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = unpackOp.getOuterDimsPerm();
-  SmallVector<int64_t> unpackInvSrcPerm = mlir::tensor::computePackUnPackPerm(
-      unpackRank, innerDimPos, outerPerm, metadata);
+  SmallVector<int64_t> unpackInvSrcPerm =
+      computePackUnPackPerm(unpackRank, innerDimPos, outerPerm, metadata);
   return unpackInvSrcPerm;
 }
 

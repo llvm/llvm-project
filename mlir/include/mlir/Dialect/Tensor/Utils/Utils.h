@@ -32,25 +32,9 @@ FailureOr<RankedTensorType>
 computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
 
-/// Given a tensor::PackOp, compute the permutation vector to shuffle the
-/// packed shape into the shape before any outer or inner permutations have
-/// been applied.
-/// i.e. for a pack from an ABCD layout to an ABCDba:
-/// The packed shape would be ABCDba.
-/// The pre-permutation shape would be AaBbCD.
-SmallVector<int64_t> computePackUnPackPerm(int64_t rank,
-                                           ArrayRef<int64_t> &innerDimsPos,
-                                           ArrayRef<int64_t> &outerPerm,
-                                           PackingMetadata &packingMetadata);
-
-/// This function uses the helper function `computePackUnPackPerm` to get
-/// the permutation vector. Only major difference between UnPack and Pack is
-/// that packOp uses destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> getPackInverseDestPerm(tensor::PackOp packOp);
 SmallVector<int64_t> getUnPackInverseSrcPerm(tensor::UnPackOp unpackOp);
 
-/// Unpack requires some packing metadata data, so create another
-/// function where this value is passed by reference.
 SmallVector<int64_t> getUnPackInverseSrcPerm(tensor::UnPackOp,
                                              PackingMetadata &metadata);
 

@@ -1595,7 +1595,7 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   // - initially: ReadMaskShape = vectorInputSizes
   // - if outer_dims_perms is present: do that permutation on readMaskShape.
   // - Append the remaining shape from SS
-  // - Divide all teh readMaskShape locations pointed by innerDimPos
+  // - Divide all the readMaskShape locations pointed by innerDimPos
   //   by the innerTileSize attribute value.
   // E.g. let's say let's say unpackTensorType.getShape() = <8x8x32x16>
   // inner Dim Pos = [0, 1] and Inner Tiles = [32, 16], vector_sizes are [512,
