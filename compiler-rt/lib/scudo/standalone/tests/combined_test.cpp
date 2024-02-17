@@ -909,10 +909,10 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
   scudo::uptr RingPosPtr = 0;
   scudo::uptr SizePtr = 0;
   ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
-  ASSERT_EQ(SizePtr, 3);
-  EXPECT_EQ(Depot->at(RingPosPtr), 1);
-  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2);
-  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3);
+  ASSERT_EQ(SizePtr, 3u);
+  EXPECT_EQ(Depot->at(RingPosPtr), 1u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1) 2u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
 #if SCUDO_CAN_USE_PRIMARY64
