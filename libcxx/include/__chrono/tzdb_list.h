@@ -18,8 +18,9 @@
 
 #  include <__availability>
 #  include <__chrono/tzdb.h>
+#  include <__config>
+#  include <__fwd/string.h>
 #  include <forward_list>
-#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -32,9 +33,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
+// TODO TZDB
+// Libc++ recently switched to only export __ugly_names from the dylib.
+// Since the library is still experimental the functions in this header
+// should be adapted to this new style. The other tzdb headers should be
+// evaluated too.
+
 class _LIBCPP_AVAILABILITY_TZDB tzdb_list {
 public:
-  _LIBCPP_EXPORTED_FROM_ABI explicit tzdb_list(tzdb&& __tzdb);
+  class __impl; // public to allow construction in dylib
+  _LIBCPP_HIDE_FROM_ABI explicit tzdb_list(__impl* __p) : __impl_(__p) {
+    _LIBCPP_ASSERT_NON_NULL(__impl_ != nullptr, "initialized time_zone without a valid pimpl object");
+  }
   _LIBCPP_EXPORTED_FROM_ABI ~tzdb_list();
 
   tzdb_list(const tzdb_list&)            = delete;
@@ -46,16 +56,15 @@ public:
 
   _LIBCPP_EXPORTED_FROM_ABI const_iterator erase_after(const_iterator __p);
 
-  _LIBCPP_EXPORTED_FROM_ABI tzdb& __emplace_front(tzdb&& __tzdb);
-
   _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator begin() const noexcept;
   _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator end() const noexcept;
 
   _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator cbegin() const noexcept;
   _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator cend() const noexcept;
 
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __impl& __implementation() { return *__impl_; }
+
 private:
-  class __impl;
   __impl* __impl_;
 };
 

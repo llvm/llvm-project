@@ -17,28 +17,22 @@
 
 // <chrono>
 
-// const tzdb& get_tzdb();
+// class time_zone_link;
 
-#include <algorithm>
+// string_view name()   const noexcept;
+
 #include <cassert>
 #include <chrono>
 
 #include "test_macros.h"
 
 int main(int, const char**) {
-  const std::chrono::tzdb& db = std::chrono::get_tzdb();
+  const std::chrono::tzdb& tzdb = std::chrono::get_tzdb();
+  assert(tzdb.links.size() > 1);
 
-  assert(!db.version.empty());
-
-  LIBCPP_ASSERT(!db.__rules.empty());
-
-  assert(!db.zones.empty());
-  assert(std::ranges::is_sorted(db.zones));
-  assert(std::ranges::adjacent_find(db.zones) == db.zones.end()); // is unique?
-
-  assert(!db.links.empty());
-  assert(std::ranges::is_sorted(db.links));
-  assert(std::ranges::adjacent_find(db.links) == db.links.end()); // is unique?
+  std::same_as<std::string_view> auto name = tzdb.links[0].name();
+  static_assert(noexcept(tzdb.links[0].name()));
+  assert(name != tzdb.links[1].name());
 
   return 0;
 }
