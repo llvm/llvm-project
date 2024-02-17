@@ -57,8 +57,36 @@ void local_variable_qualifiers_specifiers() {
   int tmp;
   tmp = p[5];
   tmp = q[5];
+
+  [[deprecated]] const int * x = a;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:18-[[@LINE-1]]:29}:"std::span<int const>"
+  const int * y [[deprecated]];
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:14}:"std::span<int const>"
+  tmp = x[5];
+  tmp = y[5];
 }
 
+void local_variable_unsupported_specifiers() {
+  int a[10];
+  const int * p [[deprecated]] = a; //  not supported because the attribute overlaps the source range of the declaration
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  static const int * q = a; //  storage specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  extern int * x; //  storage specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  constexpr int * y = 0; //  `constexpr` specifier not supported yet
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+
+  int tmp;
+
+  tmp = p[5];
+  tmp = q[5];
+  tmp = x[5];
+  tmp = y[5];
+}
 
 void local_array_subscript_variable_extent() {
   int n = 10;
