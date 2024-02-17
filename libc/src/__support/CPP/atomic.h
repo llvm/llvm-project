@@ -161,6 +161,21 @@ LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
 #endif
 }
 
+// Establishes memory synchronization ordering of non-atomic and relaxed atomic
+// accesses, as instructed by order, between a thread and a signal handler
+// executed on the same thread. This is equivalent to atomic_thread_fence,
+// except no instructions for memory ordering are issued. Only reordering of
+// the instructions by the compiler is suppressed as order instructs.
+LIBC_INLINE void atomic_signal_fence(MemoryOrder mem_ord) {
+#if __has_builtin(__atomic_signal_fence)
+  __atomic_signal_fence(int(mem_ord));
+#else
+  // if the builtin is not ready, use asm as a full compiler barrier.
+  (void)mem_ord;
+  asm volatile("" ::: "memory");
+#endif
+}
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE
 
