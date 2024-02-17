@@ -37,7 +37,7 @@ jobs:
         id: compute-projects
         uses: ./.github/workflows/compute-projects-to-test
         with:
-          projects: clang llvm lld mlir clang-tools-extra
+          projects: clang llvm lld mlir
 
       - name: Configure LLVM
         shell: bash
