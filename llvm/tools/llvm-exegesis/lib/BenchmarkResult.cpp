@@ -24,6 +24,24 @@ static constexpr const char kIntegerPrefix[] = "i_0x";
 static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
 
+// When adding a new validation counter, a new event type needs to be added
+// to llvm::exegesis::ValidationEvent, a mapping needs to be added below,
+// a command line option needs to be added in llvm-exegesis.cpp, and the
+// event type needs to be added (with matching naming) in TargetPfmCounters.td
+// and appropriate mappings need to be added in the relevant architecture
+// Pfm descriptions.
+static constexpr const std::pair<llvm::exegesis::ValidationEvent,
+                                 llvm::StringRef>
+    kValidationEventNames[] = {
+        {llvm::exegesis::InstructionRetired, "instructions-retired"},
+        {llvm::exegesis::L1DCacheLoadMiss, "l1d-cache-load-misses"},
+        {llvm::exegesis::L1DCacheStoreMiss, "l1d-cache-store-misses"},
+        {llvm::exegesis::L1ICacheLoadMiss, "l1i-cache-load-misses"},
+        {llvm::exegesis::DataTLBLoadMiss, "data-tlb-load-misses"},
+        {llvm::exegesis::DataTLBStoreMiss, "data-tlb-store-misses"},
+        {llvm::exegesis::InstructionTLBLoadMiss,
+         "instruction-tlb-load-misses"}};
+
 namespace llvm {
 
 namespace {
@@ -194,43 +212,22 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
 };
 
 const char *validationEventToString(exegesis::ValidationEvent VE) {
-  switch (VE) {
-  case exegesis::ValidationEvent::InstructionRetired:
-    return "instructions-retired";
-  case exegesis::ValidationEvent::L1DCacheLoadMiss:
-    return "l1d-cache-load-misses";
-  case exegesis::ValidationEvent::L1DCacheStoreMiss:
-    return "l1d-cache-store-misses";
-  case exegesis::ValidationEvent::L1ICacheLoadMiss:
-    return "l1i-cache-load-misses";
-  case exegesis::ValidationEvent::DataTLBLoadMiss:
-    return "data-tlb-load-misses";
-  case exegesis::ValidationEvent::DataTLBStoreMiss:
-    return "data-tlb-store-misses";
-  case exegesis::ValidationEvent::InstructionTLBLoadMiss:
-    return "instruction-tlb-load-misses";
+  for (const auto [ValidationEventType, ValidationEventName] :
+       kValidationEventNames) {
+    if (VE == ValidationEventType)
+      return ValidationEventName.data();
   }
   llvm_unreachable("Unhandled exegesis::ValidationEvent enum");
 }
 
 Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
-  if (Input == "instructions-retired")
-    return exegesis::ValidationEvent::InstructionRetired;
-  else if (Input == "l1d-cache-load-misses")
-    return exegesis::ValidationEvent::L1DCacheLoadMiss;
-  else if (Input == "l1d-cache-store-misses")
-    return exegesis::ValidationEvent::L1DCacheStoreMiss;
-  else if (Input == "l1i-cache-load-misses")
-    return exegesis::ValidationEvent::L1ICacheLoadMiss;
-  else if (Input == "data-tlb-load-misses")
-    return exegesis::ValidationEvent::DataTLBLoadMiss;
-  else if (Input == "data-tlb-store-misses")
-    return exegesis::ValidationEvent::DataTLBStoreMiss;
-  else if (Input == "instruction-tlb-load-misses")
-    return exegesis::ValidationEvent::InstructionTLBLoadMiss;
-  else
-    return make_error<StringError>("Invalid validation event string",
-                                   errc::invalid_argument);
+  for (const auto [ValidationEventType, ValidationEventName] :
+       kValidationEventNames) {
+    if (Input == ValidationEventName)
+      return ValidationEventType;
+  }
+  return make_error<StringError>("Invalid validation event string",
+                                 errc::invalid_argument);
 }
 
 template <>
