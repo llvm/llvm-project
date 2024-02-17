@@ -4070,12 +4070,67 @@ private:
     return true;
   }
 
+  bool foldGEPPhiConst(GetElementPtrInst &GEPI) {
+    if (GEPI.getNumIndices() != 1)
+      return false;
+
+    PHINode *PHI = cast<PHINode>(GEPI.getOperand(1));
+    if (!all_of(PHI->incoming_values(), [&](auto &V) {
+          auto *Parent = PHI->getIncomingBlock(V);
+          return isa<ConstantInt>(V) && !succ_empty(Parent) &&
+                 Parent->isLegalToHoistInto();
+        }))
+      return false;
+
+    LLVM_DEBUG(
+        dbgs() << "  Rewriting gep(ptr, phi(const)) -> phi(gep(ptr, const)):"
+               << "\n    original: " << *PHI << "\n              " << GEPI
+               << "\n          to: ");
+
+    SmallVector<Value *, 4> Index(GEPI.indices());
+    bool IsInBounds = GEPI.isInBounds();
+    IRB.SetInsertPoint(GEPI.getParent(), GEPI.getParent()->getFirstNonPHIIt());
+    PHINode *NewPN = IRB.CreatePHI(GEPI.getType(), PHI->getNumIncomingValues(),
+                                   PHI->getName() + ".sroa.phi");
+    for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
+      BasicBlock *B = PHI->getIncomingBlock(I);
+      Value *NewVal = nullptr;
+      int Idx = NewPN->getBasicBlockIndex(B);
+      if (Idx >= 0) {
+        NewVal = NewPN->getIncomingValue(Idx);
+      } else {
+        Value *In = PHI->getIncomingValue(I);
+        BasicBlock *Parent = PHI->getIncomingBlock(I);
+        IRB.SetInsertPoint(Parent, Parent->getTerminator()->getIterator());
+        Type *Ty = GEPI.getSourceElementType();
+        NewVal = IRB.CreateGEP(Ty, GEPI.getPointerOperand(), In,
+                               In->getName() + ".sroa.gep", IsInBounds);
+      }
+      NewPN->addIncoming(NewVal, B);
+    }
+
+    Visited.erase(&GEPI);
+    GEPI.replaceAllUsesWith(NewPN);
+    GEPI.eraseFromParent();
+    Visited.insert(NewPN);
+    enqueueUsers(*NewPN);
+
+    LLVM_DEBUG(for (Value *In
+                    : NewPN->incoming_values()) dbgs()
+                   << "\n              " << *In;
+               dbgs() << "\n              " << *NewPN << '\n');
+
+    return true;
+  }
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     if (foldGEPSelect(GEPI))
       return true;
 
-    if (isa<PHINode>(GEPI.getPointerOperand()) &&
-        foldGEPPhi(GEPI))
+    if (isa<PHINode>(GEPI.getPointerOperand()) && foldGEPPhi(GEPI))
+      return true;
+
+    if (GEPI.hasIndices() && isa<PHINode>(GEPI.getOperand(1)) &&
+        foldGEPPhiConst(GEPI))
       return true;
 
     enqueueUsers(GEPI);
