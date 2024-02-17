@@ -149,6 +149,21 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
   return false;
 }
 
+static mlir::Value readDim3Value(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value dim3Addr, llvm::StringRef comp) {
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type refI32Ty = fir::ReferenceType::get(i32Ty);
+  llvm::SmallVector<mlir::Value> lenParams;
+
+  mlir::Value designate = builder.create<hlfir::DesignateOp>(
+      loc, refI32Ty, dim3Addr, /*component=*/comp,
+      /*componentShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+      /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+      mlir::Value{}, lenParams);
+
+  return hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{designate});
+}
+
 std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
@@ -394,7 +409,67 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
 
   mlir::Value callResult;
   unsigned callNumResults;
-  if (caller.requireDispatchCall()) {
+
+  if (!caller.getCallDescription().chevrons().empty()) {
+    // A call to a CUDA kernel with the chevron syntax.
+
+    mlir::Type i32Ty = builder.getI32Type();
+    mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+
+    mlir::Value grid_x, grid_y;
+    if (caller.getCallDescription().chevrons()[0].GetType()->category() ==
+        Fortran::common::TypeCategory::Integer) {
+      // If grid is an integer, it is converted to dim3(grid,1,1). Since z is
+      // not used for the number of thread blocks, it is omitted in the op.
+      grid_x = builder.createConvert(
+          loc, i32Ty,
+          fir::getBase(converter.genExprValue(
+              caller.getCallDescription().chevrons()[0], stmtCtx)));
+      grid_y = one;
+    } else {
+      auto dim3Addr = converter.genExprAddr(
+          caller.getCallDescription().chevrons()[0], stmtCtx);
+      grid_x = readDim3Value(builder, loc, fir::getBase(dim3Addr), "x");
+      grid_y = readDim3Value(builder, loc, fir::getBase(dim3Addr), "y");
+    }
+
+    mlir::Value block_x, block_y, block_z;
+    if (caller.getCallDescription().chevrons()[1].GetType()->category() ==
+        Fortran::common::TypeCategory::Integer) {
+      // If block is an integer, it is converted to dim3(block,1,1).
+      block_x = builder.createConvert(
+          loc, i32Ty,
+          fir::getBase(converter.genExprValue(
+              caller.getCallDescription().chevrons()[1], stmtCtx)));
+      block_y = one;
+      block_z = one;
+    } else {
+      auto dim3Addr = converter.genExprAddr(
+          caller.getCallDescription().chevrons()[1], stmtCtx);
+      block_x = readDim3Value(builder, loc, fir::getBase(dim3Addr), "x");
+      block_y = readDim3Value(builder, loc, fir::getBase(dim3Addr), "y");
+      block_z = readDim3Value(builder, loc, fir::getBase(dim3Addr), "z");
+    }
+
+    mlir::Value bytes; // bytes is optional.
+    if (caller.getCallDescription().chevrons().size() > 2)
+      bytes = builder.createConvert(
+          loc, i32Ty,
+          fir::getBase(converter.genExprValue(
+              caller.getCallDescription().chevrons()[2], stmtCtx)));
+
+    mlir::Value stream; // stream is optional.
+    if (caller.getCallDescription().chevrons().size() > 3)
+      stream = builder.createConvert(
+          loc, i32Ty,
+          fir::getBase(converter.genExprValue(
+              caller.getCallDescription().chevrons()[3], stmtCtx)));
+
+    builder.create<fir::CUDAKernelLaunch>(
+        loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, block_x,
+        block_y, block_z, bytes, stream, operands);
+    callNumResults = 0;
+  } else if (caller.requireDispatchCall()) {
     // Procedure call requiring a dynamic dispatch. Call is created with
     // fir.dispatch.
 
