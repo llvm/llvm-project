@@ -117,3 +117,38 @@ class TestStatsAPI(TestBase):
         self.assertNotIn("bt", command_stats)
         # Verify bt's regex command is not duplicatedly captured.
         self.assertNotIn("_regexp-bt", command_stats)
+
+    def test_command_stats_force(self):
+        """
+        Test reporting all pssible debug info stats by force loading all debug
+        info. For example, dwo files
+        """
+        src_dir = self.getSourceDir()
+        dwo_yaml_path = os.path.join(src_dir, "main.dwo.yaml")
+        obj_yaml_path = os.path.join(src_dir, "main.o.yaml")
+        dwo_path = self.getBuildArtifact("main.dwo")
+        obj_path = self.getBuildArtifact("main.o")
+        self.yaml2obj(dwo_yaml_path, dwo_path)
+        self.yaml2obj(obj_yaml_path, obj_path)
+
+        # We need the current working directory to be set to the build directory
+        os.chdir(self.getBuildDir())
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(obj_path)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Get statistics
+        stats_options = lldb.SBStatisticsOptions()
+        stats = target.GetStatistics(stats_options)
+        stream = lldb.SBStream()
+        stats.GetAsJSON(stream)
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual(debug_stats["totalDebugInfoByteSize"], 188)
+
+        # Get statistics with force loading
+        stats_options.SetReportAllAvailableDebugInfo(True)
+        stats_force = target.GetStatistics(stats_options)
+        stream_force = lldb.SBStream()
+        stats_force.GetAsJSON(stream_force)
+        debug_stats_force = json.loads(stream_force.GetData())
+        self.assertEqual(debug_stats_force["totalDebugInfoByteSize"], 435)
