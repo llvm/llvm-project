@@ -1542,7 +1542,7 @@ private:
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
     DCHECK(isPowerOfTwo(RingSize));
 
-    StackDepotSize = sizeof(Depot) + sizeof(atomic_u64) * RingSize +
+    StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
                      sizeof(atomic_u32) * TabSize;
     MemMapT DepotMap;
     DepotMap.map(
