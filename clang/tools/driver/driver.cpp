@@ -369,8 +369,9 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
     return cc1gen_reproducer_main(ArrayRef(ArgV).slice(2), ArgV[0],
                                   GetExecutablePathVP, ToolContext);
   // Reject unknown tools.
-  llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
-               << "Valid tools include '-cc1' and '-cc1as'.\n";
+  llvm::errs()
+      << "error: unknown integrated tool '" << Tool << "'. "
+      << "Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.\n";
   return 1;
 }
 

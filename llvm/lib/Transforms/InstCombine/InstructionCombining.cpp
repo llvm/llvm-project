@@ -1474,21 +1474,6 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
-  // If it's a bitcast involving vectors, make sure it has the same number of
-  // elements on both sides.
-  if (auto *BC = dyn_cast<BitCastInst>(&Op)) {
-    VectorType *DestTy = dyn_cast<VectorType>(BC->getDestTy());
-    VectorType *SrcTy = dyn_cast<VectorType>(BC->getSrcTy());
-
-    // Verify that either both or neither are vectors.
-    if ((SrcTy == nullptr) != (DestTy == nullptr))
-      return nullptr;
-
-    // If vectors, verify that they have the same number of elements.
-    if (SrcTy && SrcTy->getElementCount() != DestTy->getElementCount())
-      return nullptr;
-  }
-
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -2375,6 +2360,33 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     }
   }
 
+  if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    SmallVector<std::pair<Value *, BasicBlock *>, 8> IncomingValues;
+    for (Use &U : PN->operands()) {
+      BasicBlock *IncomingBlock = PN->getIncomingBlock(U);
+      Value *NewIncomingVal = getFreelyInvertedImpl(
+          U.get(), /*WillInvertAllUses=*/false,
+          /*Builder=*/nullptr, DoesConsume, MaxAnalysisRecursionDepth - 1);
+      if (NewIncomingVal == nullptr)
+        return nullptr;
+      // Make sure that we can safely erase the original PHI node.
+      if (NewIncomingVal == V)
+        return nullptr;
+      if (Builder != nullptr)
+        IncomingValues.emplace_back(NewIncomingVal, IncomingBlock);
+    }
+    if (Builder != nullptr) {
+      IRBuilderBase::InsertPointGuard Guard(*Builder);
+      Builder->SetInsertPoint(PN);
+      PHINode *NewPN =
+          Builder->CreatePHI(PN->getType(), PN->getNumIncomingValues());
+      for (auto [Val, Pred] : IncomingValues)
+        NewPN->addIncoming(Val, Pred);
+      return NewPN;
+    }
+    return NonNull;
+  }
+
   return nullptr;
 }
 
@@ -3093,8 +3105,22 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  // Nothing for now.
-  return nullptr;
+  Value *RetVal = RI.getReturnValue();
+  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+    return nullptr;
+
+  Function *F = RI.getFunction();
+  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
+  if (ReturnClass == fcNone)
+    return nullptr;
+
+  KnownFPClass KnownClass;
+  Value *Simplified =
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+  if (!Simplified)
+    return nullptr;
+
+  return ReturnInst::Create(RI.getContext(), Simplified);
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!

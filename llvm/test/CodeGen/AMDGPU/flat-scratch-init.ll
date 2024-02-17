@@ -12,7 +12,7 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; FLAT_SCR_OPT-NEXT:    s_mov_b64 s[0:1], src_private_base
-; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 4
+; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 0
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v1, s1
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v2, 0
 ; FLAT_SCR_OPT-NEXT:    flat_store_dword v[0:1], v2
@@ -22,7 +22,7 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; FLAT_SCR_ARCH-LABEL: stack_object_addrspacecast_in_kernel_no_calls:
 ; FLAT_SCR_ARCH:       ; %bb.0:
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b64 s[0:1], src_private_base
-; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v0, 4
+; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v0, 0
 ; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v1, s1
 ; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v2, 0
 ; FLAT_SCR_ARCH-NEXT:    flat_store_dword v[0:1], v2
@@ -43,7 +43,7 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 0
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s0 offset:4
+; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s0
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_OPT-NEXT:    s_endpgm
 ;
@@ -51,7 +51,7 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; FLAT_SCR_ARCH:       ; %bb.0:
 ; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v0, 0
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s0 offset:4
+; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s0
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)
@@ -120,7 +120,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s2, 0
 ; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v0, s3, 1
 ; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s2, 4
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s2, 0
 ; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s2 ; 4-byte Folded Spill
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
@@ -221,7 +221,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    ;;#ASMSTART
 ; FLAT_SCR_OPT-NEXT:    ;;#ASMEND
 ; FLAT_SCR_OPT-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 4
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 0
 ; FLAT_SCR_OPT-NEXT:    scratch_load_dword v1, off, s0 ; 4-byte Folded Reload
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s105
@@ -243,7 +243,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s2, 0
 ; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v0, s3, 1
 ; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s2, 4
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s2, 0
 ; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s2 ; 4-byte Folded Spill
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
@@ -344,7 +344,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_ARCH-NEXT:    ;;#ASMSTART
 ; FLAT_SCR_ARCH-NEXT:    ;;#ASMEND
 ; FLAT_SCR_ARCH-NEXT:    s_or_saveexec_b32 s105, -1
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 4
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 0
 ; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v1, off, s0 ; 4-byte Folded Reload
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s105
