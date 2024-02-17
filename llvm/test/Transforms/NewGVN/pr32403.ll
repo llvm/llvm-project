@@ -17,7 +17,8 @@ define void @reorder_ref_pic_list() local_unnamed_addr {
 ; CHECK-NEXT:    [[INC_I:%.*]] = add nsw i32 [[REFIDXLX_0]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY8_I:%.*]]
 ; CHECK:       for.body8.i:
-; CHECK-NEXT:    br i1 undef, label [[FOR_INC24_I:%.*]], label [[IF_THEN17_I:%.*]]
+; CHECK-NEXT:    [[NIDX_052_I:%.*]] = phi i32 [ [[INC_I]], [[IF_THEN13]] ], [ [[NIDX_052_I]], [[FOR_INC24_I:%.*]] ]
+; CHECK-NEXT:    br i1 undef, label [[FOR_INC24_I]], label [[IF_THEN17_I:%.*]]
 ; CHECK:       if.then17.i:
 ; CHECK-NEXT:    br label [[FOR_INC24_I]]
 ; CHECK:       for.inc24.i:
