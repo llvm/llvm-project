@@ -714,7 +714,7 @@ void LoopConvertCheck::doConversion(
             // removed except in case of a `sizeof` operator call.
             const DynTypedNodeList GrandParents = Context->getParents(*Paren);
             if (GrandParents.size() != 1 ||
-                !GrandParents[0].get<UnaryExprOrTypeTraitExpr>()) {
+                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
               Range = Paren->getSourceRange();
             }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
