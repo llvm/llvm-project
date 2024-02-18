@@ -2156,7 +2156,7 @@ SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   return type_system_or_err;
 }
 
-uint64_t SymbolFileNativePDB::GetDebugInfoSize(bool load_all_debug_info) {
+uint64_t SymbolFileNativePDB::GetDebugInfoSize() {
   // PDB files are a separate file that contains all debug info.
   return m_index->pdb().getFileSize();
 }

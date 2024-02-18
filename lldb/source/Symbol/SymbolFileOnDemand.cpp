@@ -535,11 +535,11 @@ void SymbolFileOnDemand::PreloadSymbols() {
   return m_sym_file_impl->PreloadSymbols();
 }
 
-uint64_t SymbolFileOnDemand::GetDebugInfoSize(bool load_all_debug_info) {
+uint64_t SymbolFileOnDemand::GetDebugInfoSize() {
   // Always return the real debug info size.
   LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
            __FUNCTION__);
-  return m_sym_file_impl->GetDebugInfoSize(load_all_debug_info);
+  return m_sym_file_impl->GetDebugInfoSize();
 }
 
 StatsDuration::Duration SymbolFileOnDemand::GetDebugInfoParseTime() {
