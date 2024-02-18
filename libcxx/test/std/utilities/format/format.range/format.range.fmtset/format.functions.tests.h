@@ -34,8 +34,10 @@ void test_char_default(TestFunction check, ExceptionTest check_exception) {
   check(SV("{'a', 'b', 'c'}^42"), SV("{:}^42"), input);
   // when one is present there is no escaping,
   check(SV("{a, b, c}"), SV("{::}"), input);
+  check(SV("{a, b, c}"), SV("{::<}"), input);
   // unless forced by the type specifier.
   check(SV("{'a', 'b', 'c'}"), SV("{::?}"), input);
+  check(SV("{'a', 'b', 'c'}"), SV("{::<?}"), input);
 
   // ***** underlying has no format-spec
 
@@ -270,8 +272,10 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   check(SV("{'a', 'b', 'c'}^42"), SV("{:}^42"), input);
   // when one is present there is no escaping,
   check(SV("{a, b, c}"), SV("{::}"), input);
+  check(SV("{a, b, c}"), SV("{::<}"), input);
   // unless forced by the type specifier.
   check(SV("{'a', 'b', 'c'}"), SV("{::?}"), input);
+  check(SV("{'a', 'b', 'c'}"), SV("{::<?}"), input);
 
   // ***** underlying has no format-spec
 

@@ -35,8 +35,10 @@ void test_char_default(TestFunction check, ExceptionTest check_exception, auto&&
 
   // when one is present there is no escaping,
   check(SV("[H, e, l, l, o]"), SV("{::}"), input);
+  check(SV("[H, e, l, l, o]"), SV("{::<}"), input);
   // unless forced by the type specifier.
   check(SV("['H', 'e', 'l', 'l', 'o']"), SV("{::?}"), input);
+  check(SV("['H', 'e', 'l', 'l', 'o']"), SV("{::<?}"), input);
 
   // ***** underlying has no format-spec
 
