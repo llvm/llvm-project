@@ -591,7 +591,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   The full list is:
   ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp;pstl;llvm-libgcc``
   To enable the default recommended set of runtimes for usage
-  with ``LLVM_ENABLE_PROJECTS=all`` of them, use: ``LLVM_ENABLE_RUNTIMES=all``.
+  with ``LLVM_ENABLE_PROJECTS=all``, use: ``LLVM_ENABLE_RUNTIMES=all``.
   Note: ``all`` does not enable all runtimes from the full list.
 
 
