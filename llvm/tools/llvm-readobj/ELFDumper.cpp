@@ -1095,7 +1095,8 @@ const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
 };
 
 const EnumEntry<unsigned> ARMElfOSABI[] = {
-  {"ARM", "ARM", ELF::ELFOSABI_ARM}
+    {"ARM", "ARM", ELF::ELFOSABI_ARM},
+    {"ARM FDPIC", "ARM FDPIC", ELF::ELFOSABI_ARM_FDPIC},
 };
 
 const EnumEntry<unsigned> C6000ElfOSABI[] = {
@@ -3553,6 +3554,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   if (e.e_ident[ELF::EI_OSABI] >= ELF::ELFOSABI_FIRST_ARCH &&
       e.e_ident[ELF::EI_OSABI] <= ELF::ELFOSABI_LAST_ARCH) {
     switch (e.e_machine) {
+    case ELF::EM_ARM:
+      OSABI = ArrayRef(ARMElfOSABI);
+      break;
     case ELF::EM_AMDGPU:
       OSABI = ArrayRef(AMDGPUElfOSABI);
       break;

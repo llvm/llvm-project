@@ -154,6 +154,8 @@ struct AssemblerInvocation {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IncrementalLinkerCompatible : 1;
   LLVM_PREFERRED_TYPE(bool)
+  unsigned FDPIC : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned EmbedBitcode : 1;
 
   /// Whether to emit DWARF unwind info.
@@ -346,6 +348,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
   Opts.NoWarn = Args.hasArg(OPT_massembler_no_warn);
   Opts.NoTypeCheck = Args.hasArg(OPT_mno_type_check);
+  Opts.FDPIC = Args.hasArg(OPT_fdpic);
   Opts.RelocationModel =
       std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
   Opts.TargetABI = std::string(Args.getLastArgValue(OPT_target_abi));
@@ -520,6 +523,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.MCNoWarn = Opts.NoWarn;
   MCOptions.MCFatalWarnings = Opts.FatalWarnings;
   MCOptions.MCNoTypeCheck = Opts.NoTypeCheck;
+  MCOptions.FDPIC = Opts.FDPIC;
   MCOptions.ABIName = Opts.TargetABI;
 
   // FIXME: There is a bit of code duplication with addPassesToEmitFile.

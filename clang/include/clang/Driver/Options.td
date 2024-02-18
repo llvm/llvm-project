@@ -7954,6 +7954,8 @@ def dwarf_debug_producer : Separate<["-"], "dwarf-debug-producer">,
 def defsym : Separate<["-"], "defsym">,
   HelpText<"Define a value for a symbol">;
 
+def fdpic : Flag<["--"], "fdpic">, HelpText<"Enable FDPIC ABI (ARM only)">;
+
 } // let Visibility = [CC1AsOption]
 
 //===----------------------------------------------------------------------===//

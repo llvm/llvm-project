@@ -2530,6 +2530,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       case llvm::Triple::thumbeb:
       case llvm::Triple::arm:
       case llvm::Triple::armeb:
+        if (Value == "--fdpic") {
+          CmdArgs.push_back("--fdpic");
+          continue;
+        }
         if (Value.starts_with("-mimplicit-it=")) {
           // Only store the value; the last value set takes effect.
           ImplicitIt = Value.split("=").second;
