@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter='transform-library-paths=%p/match_matmul_common.mlir' --verify-diagnostics
+// RUN: mlir-opt %s --transform-preload-library='transform-library-paths=%p/match_matmul_common.mlir' --transform-interpreter --verify-diagnostics
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @_match_matmul_like(
@@ -31,20 +31,20 @@ module attributes { transform.with_named_sequence } {
       %lhs_type: !transform.type {transform.readonly},
       %rhs_type: !transform.type {transform.readonly},
       %res_type: !transform.type {transform.readonly}) {
-    transform.test_print_remark_at_operand %fill, "fill" : !transform.any_op
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
-    transform.test_print_param %dims, "dimensions" at %matmul : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %lhs_type, "LHS type" at %matmul : !transform.type, !transform.any_op
-    transform.test_print_param %rhs_type, "RHS type" at %matmul : !transform.type, !transform.any_op
-    transform.test_print_param %res_type, "result type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_remark_at %fill, "fill" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_param_as_remark %dims, "dimensions" at %matmul : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %lhs_type, "LHS type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_param_as_remark %rhs_type, "RHS type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_param_as_remark %res_type, "result type" at %matmul : !transform.type, !transform.any_op
     transform.yield
   }
 
-  transform.sequence failures(propagate) {
-  ^bb(%root: !transform.any_op):
-    foreach_match in %root
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.consumed}) {
+    transform.foreach_match in %root
       @match_matmul -> @print_matmul
       : (!transform.any_op) -> !transform.any_op
+    transform.yield
   }
 }
 

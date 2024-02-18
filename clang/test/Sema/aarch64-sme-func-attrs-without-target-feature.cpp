@@ -4,16 +4,18 @@
 
 void streaming_compatible_def() __arm_streaming_compatible {} // OK
 void streaming_def() __arm_streaming { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
-void shared_za_def() __arm_shared_za { } // expected-error {{function using ZA state requires 'sme'}}
-__arm_new_za void new_za_def() { } // expected-error {{function using ZA state requires 'sme'}}
+void shared_za_def() __arm_inout("za") { } // expected-error {{function using ZA state requires 'sme'}}
+__arm_new("za") void new_za_def() { } // expected-error {{function using ZA state requires 'sme'}}
 __arm_locally_streaming void locally_streaming_def() { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
-void streaming_shared_za_def() __arm_streaming __arm_shared_za { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
+void streaming_shared_za_def() __arm_streaming __arm_inout("za") { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
+void inout_za_def() __arm_inout("za") { } // expected-error {{function using ZA state requires 'sme'}}
+void inout_zt0_def() __arm_inout("zt0") { } // expected-error {{function using ZT0 state requires 'sme2'}}
 
 // It should work fine when we explicitly add the target("sme") attribute.
 __attribute__((target("sme"))) void streaming_compatible_def_sme_attr() __arm_streaming_compatible {} // OK
 __attribute__((target("sme"))) void streaming_def_sme_attr() __arm_streaming { } // OK
-__attribute__((target("sme"))) void shared_za_def_sme_attr() __arm_shared_za { } // OK
-__arm_new_za __attribute__((target("sme"))) void new_za_def_sme_attr() {} // OK
+__attribute__((target("sme"))) void shared_za_def_sme_attr() __arm_inout("za") { } // OK
+__arm_new("za") __attribute__((target("sme"))) void new_za_def_sme_attr() {} // OK
 __arm_locally_streaming __attribute__((target("sme"))) void locally_streaming_def_sme_attr() {} // OK
 
 // Test that it also works with the target("sme2") attribute.
@@ -22,7 +24,7 @@ __attribute__((target("sme2"))) void streaming_def_sme2_attr() __arm_streaming {
 // No code is generated for declarations, so it should be fine to declare using the attribute.
 void streaming_compatible_decl() __arm_streaming_compatible; // OK
 void streaming_decl() __arm_streaming; // OK
-void shared_za_decl() __arm_shared_za; // OK
+void shared_za_decl() __arm_inout("za"); // OK
 
 void non_streaming_decl();
 void non_streaming_def(void (*streaming_fn_ptr)(void) __arm_streaming,

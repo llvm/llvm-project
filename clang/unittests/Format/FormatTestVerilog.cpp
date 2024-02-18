@@ -229,12 +229,12 @@ TEST_F(FormatTestVerilog, Case) {
                "  16'd1: fork\n"
                "    result = 10'b1011111111;\n"
                "  join\n"
-               "endcase\n");
+               "endcase");
   verifyFormat("case (data)\n"
                "  16'd1: fork : x\n"
                "    result = 10'b1011111111;\n"
                "  join : x\n"
-               "endcase\n");
+               "endcase");
   // Test default.
   verifyFormat("case (data)\n"
                "  default\n"
@@ -300,17 +300,17 @@ TEST_F(FormatTestVerilog, Case) {
   verifyFormat("case ('{x : x, default : 9})\n"
                "endcase",
                Style);
-  verifyFormat("x = '{x : x, default : 9};\n", Style);
+  verifyFormat("x = '{x : x, default : 9};", Style);
   verifyFormat("default:\n"
-               "  x = '{x : x, default : 9};\n",
+               "  x = '{x : x, default : 9};",
                Style);
   Style.SpacesInContainerLiterals = false;
   verifyFormat("case ('{x: x, default: 9})\n"
                "endcase",
                Style);
-  verifyFormat("x = '{x: x, default: 9};\n", Style);
+  verifyFormat("x = '{x: x, default: 9};", Style);
   verifyFormat("default:\n"
-               "  x = '{x: x, default: 9};\n",
+               "  x = '{x: x, default: 9};",
                Style);
   // When the line following the case label needs to be broken, the continuation
   // should be indented correctly.
@@ -344,6 +344,20 @@ TEST_F(FormatTestVerilog, Case) {
                "        longfunction( //\n"
                "            arg);\n"
                "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    //\n"
+               "    result = //\n"
+               "        10'b0111111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    //\n"
+               "\n"
+               "    //\n"
+               "    result = //\n"
+               "        10'b0111111111;\n"
+               "endcase");
   Style = getDefaultStyle();
   Style.ContinuationIndentWidth = 1;
   verifyFormat("case (data)\n"
@@ -359,6 +373,11 @@ TEST_F(FormatTestVerilog, Case) {
                "      arg);\n"
                "endcase",
                Style);
+
+  verifyFormat("case (v) matches\n"
+               "  tagged Valid .n:\n"
+               "    ;\n"
+               "endcase");
 }
 
 TEST_F(FormatTestVerilog, Coverage) {
@@ -594,6 +613,17 @@ TEST_F(FormatTestVerilog, Headers) {
                "      (input var x aaaaaaaaaaaaaaa``x, \\\n"
                "                   b);",
                Style);
+  // When the ports line is not to be formatted, following lines should not take
+  // on its indentation.
+  verifyFormat("module x\n"
+               "    (output x);\n"
+               "  assign x = 0;\n"
+               "endmodule",
+               "module x\n"
+               "    (output x);\n"
+               "    assign x = 0;\n"
+               "endmodule",
+               getDefaultStyle(), {tooling::Range(25, 18)});
 }
 
 TEST_F(FormatTestVerilog, Hierarchy) {
@@ -657,7 +687,7 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "    implements x, x, x;\n"
                "  generate\n"
                "  endgenerate\n"
-               "endclass : x\n");
+               "endclass : x");
   verifyFormat("function automatic logic [1 : 0] x\n"
                "    (input x);\n"
                "  generate\n"
@@ -1005,7 +1035,7 @@ TEST_F(FormatTestVerilog, Operators) {
   verifyFormat("x = x ^~ x;");
   verifyFormat("x = x && x;");
   verifyFormat("x = x || x;");
-  verifyFormat("x = x->x;");
+  verifyFormat("x = x -> x;");
   verifyFormat("x = x <-> x;");
   verifyFormat("x += x;");
   verifyFormat("x -= x;");
@@ -1278,12 +1308,17 @@ TEST_F(FormatTestVerilog, StructLiteral) {
   verifyFormat("c = '{'{1, 1.0}, '{2, 2.0}};");
   verifyFormat("c = '{a: 0, b: 0.0};");
   verifyFormat("c = '{a: 0, b: 0.0, default: 0};");
+  verifyFormat("d = {int: 1, shortreal: 1.0};");
+  verifyFormat("c = '{default: 0};");
+
+  // The identifier before the quote can be either a tag or a type case.  There
+  // should be a space between the tag and the quote.
   verifyFormat("c = ab'{a: 0, b: 0.0};");
   verifyFormat("c = ab'{cd: cd'{1, 1.0}, ef: ef'{2, 2.0}};");
   verifyFormat("c = ab'{cd'{1, 1.0}, ef'{2, 2.0}};");
-  verifyFormat("d = {int: 1, shortreal: 1.0};");
   verifyFormat("d = ab'{int: 1, shortreal: 1.0};");
-  verifyFormat("c = '{default: 0};");
+  verifyFormat("x = tagged Add '{e1, 4, ed};");
+
   auto Style = getDefaultStyle();
   Style.SpacesInContainerLiterals = true;
   verifyFormat("c = '{a : 0, b : 0.0};", Style);

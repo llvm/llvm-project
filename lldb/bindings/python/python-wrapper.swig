@@ -229,49 +229,6 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject
   return pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger_sp)), dict);
 }
 
-PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedObject(
-    const char *python_class_name, const char *session_dictionary_name,
-    lldb::ExecutionContextRefSP exe_ctx_sp,
-    const lldb_private::StructuredDataImpl &args_impl,
-    std::string &error_string) {
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated()) {
-    error_string.append("could not find script class: ");
-    error_string.append(python_class_name);
-    return PythonObject();
-  }
-
-  llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
-  if (!arg_info) {
-    llvm::handleAllErrors(
-        arg_info.takeError(),
-        [&](PythonException &E) { error_string.append(E.ReadBacktrace()); },
-        [&](const llvm::ErrorInfoBase &E) {
-          error_string.append(E.message());
-        });
-    return PythonObject();
-  }
-
-  PythonObject result = {};
-  if (arg_info.get().max_positional_args == 2) {
-      result = pfunc(SWIGBridge::ToSWIGWrapper(exe_ctx_sp), SWIGBridge::ToSWIGWrapper(args_impl));
-  } else {
-    error_string.assign("wrong number of arguments in __init__, should be 2 "
-                        "(not including self)");
-  }
-  return result;
-}
-
 PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedThreadPlan(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb_private::StructuredDataImpl &args_impl,
@@ -330,12 +287,12 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedThrea
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Event *event,
+    void *implementer, const char *method_name, lldb_private::Event *event,
     bool &got_error) {
   got_error = false;
 
   PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
   if (!pfunc.IsAllocated())
@@ -368,12 +325,12 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Stream *stream,
+    void *implementer, const char *method_name, lldb_private::Stream *stream,
     bool &got_error) {
   got_error = false;
 
   PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
   if (!pfunc.IsAllocated()) 
@@ -870,6 +827,29 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), PythonString(args),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+
+  return true;
+}
+
+#include "lldb/Interpreter/CommandReturnObject.h"
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("__call__");
+
+  if (!pfunc.IsAllocated()) {
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    return false;
+  }
+
+  pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
+        SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
   return true;
 }

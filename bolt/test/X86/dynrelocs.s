@@ -12,7 +12,7 @@
 # but it can happen. In these cases we cannot corrupt the
 # output binary by writing out dynamic relocs incorrectly. The linker
 # avoids emitting relocs against read-only sections but we override
-# this behvior with the -z notext flag. During runtime, these pages
+# this behavior with the -z notext flag. During runtime, these pages
 # are mapped with write permission and then changed to read-only after
 # the dynamic linker finishes processing the dynamic relocs.
 

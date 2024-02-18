@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized -Wno-vla
 // RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized -Wno-vla
 // RUN: %clang_cc1 -verify=expected,ge50,ge51,omp,ge51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized -Wno-vla
-// RUN: %clang_cc1 -verify=expected,ge50,ge51,ge52,omp,ge52-omp -fopenmp -fno-openmp-extensions -fopenmp-version=52 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,ge52,omp,ge52-omp,omp52 -fopenmp -fno-openmp-extensions -fopenmp-version=52 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized -Wno-vla
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp -fno-openmp-extensions -ferror-limit 300 -x c %s -Wno-openmp -Wuninitialized -Wno-vla
 
 // -fopenmp-simd, -fno-openmp-extensions
@@ -232,10 +232,11 @@ struct SA {
     // expected-error@+1 {{missing map type}}
     #pragma omp target map( , f, : a)
     {}
-    #pragma omp target map(always close: a)   // expected-error {{missing map type}}
+    #pragma omp target map(always close: a)   // expected-error {{missing map type}} omp52-error{{missing ',' after map type modifier}}
     {}
-    #pragma omp target map(always close bf: a)   // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+    #pragma omp target map(always close bf: a)   // omp52-error 2 {{missing ',' after map type modifier}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}} 
     {}
+    // omp52-error@+4 {{missing ',' after map type modifier}}
     // ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
     // lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     // expected-error@+1 {{missing map type}}
@@ -245,7 +246,7 @@ struct SA {
     // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(tofrom from: a)
     {}
-    #pragma omp target map(close bf: a)   // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+    #pragma omp target map(close bf: a)   // omp52-error {{missing ',' after map type modifier}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
     {}
     #pragma omp target map(([b[I]][bf])f)  // lt50-error {{expected ',' or ']' in lambda capture list}} lt50-error {{expected ')'}} lt50-note {{to match this '('}}
     {}

@@ -1,4 +1,5 @@
 ; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
+; RUN: opt -passes=mem2reg %s -S -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ;; Check that mem2reg removes dbg.value(%param.addr, DIExpression(DW_OP_deref...))
 ;; when promoting the alloca %param.addr.

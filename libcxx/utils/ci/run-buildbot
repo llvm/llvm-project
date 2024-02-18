@@ -47,11 +47,6 @@ CLANG_FORMAT        The clang-format binary to use when generating the format
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
                     is optional.
 
-ENABLE_STD_MODULES  Whether to enable or disable building the C++23 std
-                    modules. This variable is optional.
-                    TODO MODULES remove when all supported compilers support
-                    modules.
-
 EOF
 }
 
@@ -120,10 +115,6 @@ if [ -z "${ENABLE_CLANG_TIDY}" ]; then
     ENABLE_CLANG_TIDY=Off
 fi
 
-if [ -n "${ENABLE_STD_MODULES}" ]; then
-    ENABLE_STD_MODULES="-DLIBCXX_ENABLE_STD_MODULES=${ENABLE_STD_MODULES}"
-fi
-
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -136,8 +127,7 @@ function generate-cmake-base() {
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
           -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
-          ${ENABLE_STD_MODULES} \
-          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
 
@@ -203,6 +193,43 @@ function check-cxx-benchmarks() {
     ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
 }
 
+function test-armv7m-picolibc() {
+    clean
+
+    # To make it easier to get this builder up and running, build picolibc
+    # from scratch. Anecdotally, the build-picolibc script takes about 16 seconds.
+    # This could be optimised by building picolibc into the Docker container.
+    ${MONOREPO_ROOT}/libcxx/utils/ci/build-picolibc.sh \
+        --build-dir "${BUILD_DIR}" \
+        --install-dir "${INSTALL_DIR}" \
+        --target armv7m-none-eabi
+
+    echo "--- Generating CMake"
+    flags="--sysroot=${INSTALL_DIR}"
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/compiler-rt" \
+        -B "${BUILD_DIR}/compiler-rt" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
+        "${@}"
+    generate-cmake \
+        -DLIBCXX_TEST_CONFIG="armv7m-picolibc-libc++.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="armv7m-picolibc-libc++abi.cfg.in" \
+        -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        "${@}"
+
+    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
+    mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
+
+    check-runtimes
+}
+
 # Print the version of a few tools to aid diagnostics in some cases
 ${CMAKE} --version
 ${NINJA} --version
@@ -231,20 +258,6 @@ check-generated-output)
         false
     fi
 
-    echo "+++ Making sure libcxx/utils/data/ignore_format.txt was updated appropriately"
-    cp ${MONOREPO_ROOT}/libcxx/utils/data/ignore_format.txt ${BUILD_DIR}/before.txt
-    ${MONOREPO_ROOT}/libcxx/utils/generate_ignore_format.sh
-    diff ${BUILD_DIR}/before.txt ${MONOREPO_ROOT}/libcxx/utils/data/ignore_format.txt | tee ${BUILD_DIR}/ignore_format.diff || true
-    if [ -s ${BUILD_DIR}/ignore_format.diff ]; then
-        echo "It looks like the list of not formatted files has changed."
-        echo "If a file is now properly formatted with clang-format, remove the file name from "
-        echo "libcxx/utils/data/ignore_format.txt. Otherwise you have to fix the"
-        echo "formatting of some of the changed files. The diff above represents the "
-        echo "changes that would be needed to ignore_format.txt to keep it representative "
-        echo "of which files are mis-formatted in the project."
-        false
-    fi
-
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
     set -x
@@ -262,9 +275,6 @@ check-generated-output)
            --exclude 'transcoding.pass.cpp' \
            --exclude 'underflow.pass.cpp' \
            || false
-
-    # Reject code with trailing whitespace
-    ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
 ;;
 #
 # Various Standard modes
@@ -372,7 +382,7 @@ bootstrapping-build)
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
-          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
+          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
@@ -395,28 +405,29 @@ generic-merged)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
     check-runtimes
 ;;
-generic-hardened-mode)
+generic-hardening-mode-fast)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-safe-mode)
+generic-hardening-mode-fast-with-abi-breaks)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-safe-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast-with-abi-breaks.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-debug-mode)
+generic-hardening-mode-extensive)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-extensive.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-with_llvm_unwinder)
+generic-hardening-mode-debug)
     clean
-    generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-debug.cmake"
     check-runtimes
+    check-abi-list
 ;;
 #
 # Module builds
@@ -483,12 +494,22 @@ generic-no-exceptions)
     check-runtimes
     check-abi-list
 ;;
+generic-no-rtti)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-rtti.cmake"
+    check-runtimes
+;;
 #
 # Other miscellaneous jobs
 #
 generic-abi-unstable)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
+    check-runtimes
+;;
+generic-optimized-speed)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
 apple-system)
@@ -533,7 +554,7 @@ apple-system-backdeployment-hardened-*)
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
-    PARAMS+=";hardening_mode=hardened"
+    PARAMS+=";hardening_mode=fast"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
@@ -587,13 +608,6 @@ benchmarks)
     generate-cmake
     check-cxx-benchmarks
 ;;
-documentation)
-    clean
-    generate-cmake -DLLVM_ENABLE_SPHINX=ON
-
-    echo "+++ Generating documentation"
-    ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
-;;
 aarch64)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
@@ -627,6 +641,18 @@ armv7-no-exceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
     check-runtimes
+;;
+armv7m-picolibc)
+    test-armv7m-picolibc \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake"
+;;
+armv7m-picolibc-no-exceptions)
+    test-armv7m-picolibc \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
+        -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXX_ENABLE_RTTI=OFF
 ;;
 clang-cl-dll)
     clean
@@ -738,6 +764,7 @@ android-ndk-*)
                            -DCMAKE_SYSROOT=/opt/android/ndk/sysroot \
                            -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                            -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
+    check-abi-list
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
 
     # Start the emulator and make sure we can connect to the adb server running

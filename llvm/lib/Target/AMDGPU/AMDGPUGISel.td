@@ -51,13 +51,37 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
-def gi_dotiuvop3pmods :
-    GIComplexOperandMatcher<s32, "selectDotIUVOP3PMods">,
-    GIComplexPatternEquiv<DotIUVOP3PMods>;
+def gi_vop3pmodsneg :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
+    GIComplexPatternEquiv<VOP3PModsNeg>;
 
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
+
+def gi_wmmavisrc :
+    GIComplexOperandMatcher<s32, "selectWMMAVISrc">,
+    GIComplexPatternEquiv<WMMAVISrc>;
+
+def gi_wmmamods :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF32NegAbs">,
+    GIComplexPatternEquiv<WMMAModsF32NegAbs>;
+
+def gi_wmmamodsf16Neg :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF16Neg">,
+    GIComplexPatternEquiv<WMMAModsF16Neg>;
+
+def gi_wmmamodsf16NegAbs :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF16NegAbs">,
+    GIComplexPatternEquiv<WMMAModsF16NegAbs>;
+
+def gi_swmmacindex8 :
+    GIComplexOperandMatcher<s32, "selectSWMMACIndex8">,
+    GIComplexPatternEquiv<SWMMACIndex8>;
+
+def gi_swmmacindex16 :
+    GIComplexOperandMatcher<s32, "selectSWMMACIndex16">,
+    GIComplexPatternEquiv<SWMMACIndex16>;
 
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
@@ -105,6 +129,11 @@ def gi_global_saddr :
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
     GIComplexPatternEquiv<MUBUFScratchOffset>;
+
+def gi_buf_soffset :
+    GIComplexOperandMatcher<s32, "selectBUFSOffset">,
+    GIComplexPatternEquiv<BUFSOffset>;
+
 def gi_mubuf_scratch_offen :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffen">,
     GIComplexPatternEquiv<MUBUFScratchOffen>;
@@ -256,10 +285,16 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD, SIbuffer_atomic_fadd>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD_BF16, SIbuffer_atomic_fadd_bf16>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMIN, SIbuffer_atomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32, SIbuffer_atomic_cond_sub_u32>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SBYTE, SIsbuffer_load_byte>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_UBYTE, SIsbuffer_load_ubyte>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SSHORT, SIsbuffer_load_short>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_USHORT, SIsbuffer_load_ushort>;
 
 def : GINodeEquiv<G_FPTRUNC_ROUND_UPWARD, SIfptrunc_round_upward>;
 def : GINodeEquiv<G_FPTRUNC_ROUND_DOWNWARD, SIfptrunc_round_downward>;
@@ -374,8 +409,8 @@ def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
 
-def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
-  GISDNodeXFormEquiv<set_glc>;
+def gi_extract_cpol_set_glc : GICustomOperandRenderer<"renderExtractCpolSetGLC">,
+  GISDNodeXFormEquiv<extract_cpol_set_glc>;
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;

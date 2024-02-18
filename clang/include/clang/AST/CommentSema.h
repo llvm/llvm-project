@@ -244,8 +244,7 @@ private:
                               StringRef Typo,
                               const TemplateParameterList *TemplateParameters);
 
-  InlineCommandComment::RenderKind
-  getInlineCommandRenderKind(StringRef Name) const;
+  InlineCommandRenderKind getInlineCommandRenderKind(StringRef Name) const;
 };
 
 } // end namespace comments

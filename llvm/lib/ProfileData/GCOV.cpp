@@ -337,7 +337,7 @@ StringRef GCOVFunction::getName(bool demangle) const {
     return Name;
   if (demangled.empty()) {
     do {
-      if (Name.startswith("_Z")) {
+      if (Name.starts_with("_Z")) {
         // Name is guaranteed to be NUL-terminated.
         if (char *res = itaniumDemangle(Name.data())) {
           demangled = res;
@@ -666,7 +666,7 @@ static std::string mangleCoveragePath(StringRef Filename, bool PreservePaths) {
 
   if (S < I)
     Result.append(S, I);
-  return std::string(Result.str());
+  return std::string(Result);
 }
 
 std::string Context::getCoveragePath(StringRef filename,

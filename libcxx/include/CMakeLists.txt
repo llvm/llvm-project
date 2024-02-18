@@ -22,6 +22,8 @@ set(files
   __algorithm/find_first_of.h
   __algorithm/find_if.h
   __algorithm/find_if_not.h
+  __algorithm/find_segment_if.h
+  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -87,6 +89,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
+  __algorithm/pstl_equal.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
@@ -96,6 +99,7 @@ set(files
   __algorithm/pstl_merge.h
   __algorithm/pstl_move.h
   __algorithm/pstl_replace.h
+  __algorithm/pstl_rotate_copy.h
   __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
@@ -105,6 +109,8 @@ set(files
   __algorithm/ranges_any_of.h
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
+  __algorithm/ranges_contains.h
+  __algorithm/ranges_contains_subrange.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -285,6 +291,8 @@ set(files
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/time_zone.h
+  __chrono/time_zone_link.h
   __chrono/tzdb.h
   __chrono/tzdb_list.h
   __chrono/weekday.h
@@ -422,7 +430,6 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/fstream.h
-  __fwd/get.h
   __fwd/hash.h
   __fwd/ios.h
   __fwd/istream.h
@@ -482,9 +489,17 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/locale_base_api.h
+  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/fuchsia.h
+  __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/locale_guard.h
+  __locale_dir/locale_base_api/musl.h
+  __locale_dir/locale_base_api/newlib.h
+  __locale_dir/locale_base_api/openbsd.h
+  __locale_dir/locale_base_api/win32.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -564,6 +579,7 @@ set(files
   __numeric/pstl_reduce.h
   __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
+  __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
@@ -660,16 +676,9 @@ set(files
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
-  __support/android/locale_bionic.h
-  __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/ibm/xlocale.h
-  __support/musl/xlocale.h
-  __support/newlib/xlocale.h
-  __support/openbsd/xlocale.h
-  __support/win32/locale_win32.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
@@ -682,10 +691,14 @@ set(files
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
+  __thread/support.h
+  __thread/support/c11.h
+  __thread/support/external.h
+  __thread/support/pthread.h
+  __thread/support/windows.h
   __thread/this_thread.h
   __thread/thread.h
   __thread/timed_backoff_policy.h
-  __threading_support
   __tree
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
@@ -798,6 +811,7 @@ set(files
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_move_assignable.h
   __type_traits/is_trivially_move_constructible.h
+  __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
@@ -815,7 +829,6 @@ set(files
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
   __type_traits/operation_traits.h
-  __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -836,6 +849,7 @@ set(files
   __type_traits/void_t.h
   __undef_macros
   __utility/as_const.h
+  __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/convert_to_integral.h
@@ -849,10 +863,12 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/move.h
+  __utility/no_destroy.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
   __utility/rel_ops.h
+  __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
   __utility/unreachable.h
@@ -906,11 +922,8 @@ set(files
   execution
   expected
   experimental/__config
-  experimental/__memory
-  experimental/__simd/abi_tag.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
-  experimental/__simd/internal_declaration.h
   experimental/__simd/reference.h
   experimental/__simd/scalar.h
   experimental/__simd/simd.h
@@ -918,22 +931,12 @@ set(files
   experimental/__simd/traits.h
   experimental/__simd/utility.h
   experimental/__simd/vec_ext.h
-  experimental/deque
-  experimental/forward_list
   experimental/iterator
-  experimental/list
-  experimental/map
-  experimental/memory_resource
+  experimental/memory
   experimental/propagate_const
-  experimental/regex
-  experimental/set
   experimental/simd
-  experimental/string
   experimental/type_traits
-  experimental/unordered_map
-  experimental/unordered_set
   experimental/utility
-  experimental/vector
   ext/__hash
   ext/hash_map
   ext/hash_set
@@ -997,6 +1000,7 @@ set(files
   string.h
   string_view
   strstream
+  syncstream
   system_error
   tgmath.h
   thread
@@ -1024,9 +1028,11 @@ endforeach()
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1060,6 +1066,12 @@ if (LIBCXX_INSTALL_HEADERS)
   # Install the generated __config_site file to the per-target include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated __assertion_handler file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 

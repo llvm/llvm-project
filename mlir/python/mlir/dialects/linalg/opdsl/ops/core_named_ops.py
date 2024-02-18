@@ -518,6 +518,24 @@ def batch_matvec(
 
 
 @linalg_structured_op
+def batch_vecmat(
+    A=TensorDef(T1, Batch, S.K),
+    B=TensorDef(T2, Batch, S.K, S.N),
+    C=TensorDef(U, Batch, S.N, output=True),
+):
+    """Performs a batched matrix-vector multiplication.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    domain(D.b, D.n, D.k)
+    implements(ContractionOpInterface)
+    C[D.b, D.n] += TypeFn.cast_signed(U, A[D.b, D.k]) * TypeFn.cast_signed(
+        U, B[D.b, D.k, D.n]
+    )
+
+
+@linalg_structured_op
 def dot(A=TensorDef(T1, S.M), B=TensorDef(T2, S.M), C=TensorDef(U, output=True)):
     """Performs a dot product of two vectors to a scalar result.
 
@@ -762,7 +780,7 @@ def conv_2d_ngchw_fgchw(
         T1, S.N, S.G, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW
     ),
     K=TensorDef(T2, S.FG, S.G, S.C, S.KH, S.KW),
-    O=TensorDef(U, S.N, S.FG, S.G, S.OH, S.OW, output=True),
+    O=TensorDef(U, S.N, S.G, S.FG, S.OH, S.OW, output=True),
     strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
     dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
 ):
@@ -771,6 +789,32 @@ def conv_2d_ngchw_fgchw(
     Layout:
       * Input: NGCHW.
       * Kernel: FGCHW.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.g, D.fg, D.oh, D.ow, D.c, D.kh, D.kw)
+    O[D.n, D.g, D.fg, D.oh, D.ow] += TypeFn.cast_signed(
+        U, I[D.n, D.g, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
+    ) * TypeFn.cast_signed(U, K[D.fg, D.g, D.c, D.kh, D.kw])
+
+
+@linalg_structured_op
+def conv_2d_ngchw_gfchw(
+    I=TensorDef(
+        T1, S.N, S.G, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.C, S.KH, S.KW),
+    O=TensorDef(U, S.N, S.G, S.FG, S.OH, S.OW, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution.
+
+    Layout:
+      * Input: NGCHW.
+      * Kernel: GFCHW.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.

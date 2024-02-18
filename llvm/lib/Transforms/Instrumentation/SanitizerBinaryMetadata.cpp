@@ -198,17 +198,16 @@ bool SanitizerBinaryMetadata::run() {
   // metadata features.
   //
 
-  auto *Int8PtrTy = IRB.getInt8PtrTy();
-  auto *Int8PtrPtrTy = PointerType::getUnqual(Int8PtrTy);
+  auto *PtrTy = IRB.getPtrTy();
   auto *Int32Ty = IRB.getInt32Ty();
-  const std::array<Type *, 3> InitTypes = {Int32Ty, Int8PtrPtrTy, Int8PtrPtrTy};
+  const std::array<Type *, 3> InitTypes = {Int32Ty, PtrTy, PtrTy};
   auto *Version = ConstantInt::get(Int32Ty, getVersion());
 
   for (const MetadataInfo *MI : MIS) {
     const std::array<Value *, InitTypes.size()> InitArgs = {
         Version,
-        getSectionMarker(getSectionStart(MI->SectionSuffix), Int8PtrTy),
-        getSectionMarker(getSectionEnd(MI->SectionSuffix), Int8PtrTy),
+        getSectionMarker(getSectionStart(MI->SectionSuffix), PtrTy),
+        getSectionMarker(getSectionEnd(MI->SectionSuffix), PtrTy),
     };
     // We declare the _add and _del functions as weak, and only call them if
     // there is a valid symbol linked. This allows building binaries with
@@ -306,11 +305,11 @@ bool isUARSafeCall(CallInst *CI) {
   // It's safe to both pass pointers to local variables to them
   // and to tail-call them.
   return F && (F->isIntrinsic() || F->doesNotReturn() ||
-               F->getName().startswith("__asan_") ||
-               F->getName().startswith("__hwsan_") ||
-               F->getName().startswith("__ubsan_") ||
-               F->getName().startswith("__msan_") ||
-               F->getName().startswith("__tsan_"));
+               F->getName().starts_with("__asan_") ||
+               F->getName().starts_with("__hwsan_") ||
+               F->getName().starts_with("__ubsan_") ||
+               F->getName().starts_with("__msan_") ||
+               F->getName().starts_with("__tsan_"));
 }
 
 bool hasUseAfterReturnUnsafeUses(Value &V) {
@@ -368,11 +367,11 @@ bool SanitizerBinaryMetadata::pretendAtomicAccess(const Value *Addr) {
     const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
     const auto ProfSec =
         getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
-    if (GV->getSection().endswith(ProfSec))
+    if (GV->getSection().ends_with(ProfSec))
       return true;
   }
-  if (GV->getName().startswith("__llvm_gcov") ||
-      GV->getName().startswith("__llvm_gcda"))
+  if (GV->getName().starts_with("__llvm_gcov") ||
+      GV->getName().starts_with("__llvm_gcda"))
     return true;
 
   return false;

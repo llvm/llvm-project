@@ -6,7 +6,6 @@
 //
 //===-----------------------------------------------------------------------===/
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include <algorithm>
@@ -17,7 +16,7 @@
 
 namespace llvm {
 struct ExportedSymbol {
-  MachO::SymbolKind Kind = MachO::SymbolKind::GlobalSymbol;
+  MachO::EncodeKind Kind = MachO::EncodeKind::GlobalSymbol;
   std::string Name = {};
   bool Weak = false;
   bool ThreadLocalValue = false;

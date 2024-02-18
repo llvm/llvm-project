@@ -23,7 +23,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -768,10 +767,28 @@ bool RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
     if (Cand.PhysReg) {
       if (!addThroughConstraints(Cand.Intf, NewBlocks))
         return false;
-    } else
-      // Provide a strong negative bias on through blocks to prevent unwanted
-      // liveness on loop backedges.
-      SpillPlacer->addPrefSpill(NewBlocks, /* Strong= */ true);
+    } else {
+      // Providing that the variable being spilled does not look like a loop
+      // induction variable, which is expensive to spill around and better
+      // pushed into a condition inside the loop if possible, provide a strong
+      // negative bias on through blocks to prevent unwanted liveness on loop
+      // backedges.
+      bool PrefSpill = true;
+      if (SA->looksLikeLoopIV() && NewBlocks.size() >= 2) {
+        // Check that the current bundle is adding a Header + start+end of
+        // loop-internal blocks. If the block is indeed a header, don't make
+        // the NewBlocks as PrefSpill to allow the variable to be live in
+        // Header<->Latch.
+        MachineLoop *L = Loops->getLoopFor(MF->getBlockNumbered(NewBlocks[0]));
+        if (L && L->getHeader()->getNumber() == (int)NewBlocks[0] &&
+            all_of(NewBlocks.drop_front(), [&](unsigned Block) {
+              return L == Loops->getLoopFor(MF->getBlockNumbered(Block));
+            }))
+          PrefSpill = false;
+      }
+      if (PrefSpill)
+        SpillPlacer->addPrefSpill(NewBlocks, /* Strong= */ true);
+    }
     AddedTo = ActiveBlocks.size();
 
     // Perhaps iterating can enable more bundles?

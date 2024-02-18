@@ -773,7 +773,10 @@ enum NodeType {
   /// into new bits.
   SIGN_EXTEND,
 
-  /// ZERO_EXTEND - Used for integer types, zeroing the new bits.
+  /// ZERO_EXTEND - Used for integer types, zeroing the new bits. Can carry
+  /// the NonNeg SDNodeFlag to indicate that the input is known to be
+  /// non-negative. If the flag is present and the input is negative, the result
+  /// is poison.
   ZERO_EXTEND,
 
   /// ANY_EXTEND - Used for integer types.  The high bits are undefined.
@@ -1175,6 +1178,12 @@ enum NodeType {
   /// The result is the content of the architecture-specific cycle
   /// counter-like register (or other high accuracy low latency clock source).
   READCYCLECOUNTER,
+
+  /// READSTEADYCOUNTER - This corresponds to the readfixedcounter intrinsic.
+  /// It has the same semantics as the READCYCLECOUNTER implementation except
+  /// that the result is the content of the architecture-specific fixed
+  /// frequency counter suitable for measuring elapsed time.
+  READSTEADYCOUNTER,
 
   /// HANDLENODE node - Used as a handle for various purposes.
   HANDLENODE,

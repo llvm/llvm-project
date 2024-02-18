@@ -64,49 +64,174 @@ bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
   return true;
 }
 
-void CompilerContext::Dump() const {
+static CompilerContextKind ConvertTypeClass(lldb::TypeClass type_class) {
+  if (type_class == eTypeClassAny)
+    return CompilerContextKind::AnyType;
+  uint16_t result = 0;
+  if (type_class & lldb::eTypeClassClass)
+    result |= (uint16_t)CompilerContextKind::Class;
+  if (type_class & lldb::eTypeClassStruct)
+    result |= (uint16_t)CompilerContextKind::Struct;
+  if (type_class & lldb::eTypeClassUnion)
+    result |= (uint16_t)CompilerContextKind::Union;
+  if (type_class & lldb::eTypeClassEnumeration)
+    result |= (uint16_t)CompilerContextKind::Enum;
+  if (type_class & lldb::eTypeClassFunction)
+    result |= (uint16_t)CompilerContextKind::Function;
+  if (type_class & lldb::eTypeClassTypedef)
+    result |= (uint16_t)CompilerContextKind::Typedef;
+  return (CompilerContextKind)result;
+}
+
+TypeQuery::TypeQuery(llvm::StringRef name, TypeQueryOptions options)
+    : m_options(options) {
+  llvm::StringRef scope, basename;
+  lldb::TypeClass type_class = lldb::eTypeClassAny;
+  if (Type::GetTypeScopeAndBasename(name, scope, basename, type_class)) {
+    if (scope.consume_front("::"))
+      m_options |= e_exact_match;
+    if (!scope.empty()) {
+      std::pair<llvm::StringRef, llvm::StringRef> scope_pair =
+          scope.split("::");
+      while (!scope_pair.second.empty()) {
+        m_context.push_back({CompilerContextKind::AnyDeclContext,
+                             ConstString(scope_pair.first.str())});
+        scope_pair = scope_pair.second.split("::");
+      }
+      m_context.push_back({CompilerContextKind::AnyDeclContext,
+                           ConstString(scope_pair.first.str())});
+    }
+    m_context.push_back(
+        {ConvertTypeClass(type_class), ConstString(basename.str())});
+  } else {
+    m_context.push_back(
+        {CompilerContextKind::AnyType, ConstString(name.str())});
+  }
+}
+
+TypeQuery::TypeQuery(const CompilerDeclContext &decl_ctx,
+                     ConstString type_basename, TypeQueryOptions options)
+    : m_options(options) {
+  // Always use an exact match if we are looking for a type in compiler context.
+  m_options |= e_exact_match;
+  m_context = decl_ctx.GetCompilerContext();
+  m_context.push_back({CompilerContextKind::AnyType, type_basename});
+}
+
+TypeQuery::TypeQuery(
+    const llvm::ArrayRef<lldb_private::CompilerContext> &context,
+    TypeQueryOptions options)
+    : m_context(context), m_options(options) {
+  // Always use an exact match if we are looking for a type in compiler context.
+  m_options |= e_exact_match;
+}
+
+TypeQuery::TypeQuery(const CompilerDecl &decl, TypeQueryOptions options)
+    : m_options(options) {
+  // Always for an exact match if we are looking for a type using a declaration.
+  m_options |= e_exact_match;
+  m_context = decl.GetCompilerContext();
+}
+
+ConstString TypeQuery::GetTypeBasename() const {
+  if (m_context.empty())
+    return ConstString();
+  return m_context.back().name;
+}
+
+void TypeQuery::AddLanguage(LanguageType language) {
+  if (!m_languages)
+    m_languages = LanguageSet();
+  m_languages->Insert(language);
+}
+
+void TypeQuery::SetLanguages(LanguageSet languages) {
+  m_languages = std::move(languages);
+}
+
+bool TypeQuery::ContextMatches(
+    llvm::ArrayRef<CompilerContext> context_chain) const {
+  if (GetExactMatch() || context_chain.size() == m_context.size())
+    return ::contextMatches(context_chain, m_context);
+
+  // We don't have an exact match, we need to bottom m_context.size() items to
+  // match for a successful lookup.
+  if (context_chain.size() < m_context.size())
+    return false; // Not enough items in context_chain to allow for a match.
+
+  size_t compare_count = context_chain.size() - m_context.size();
+  return ::contextMatches(
+      llvm::ArrayRef<CompilerContext>(context_chain.data() + compare_count,
+                                      m_context.size()),
+      m_context);
+}
+
+bool TypeQuery::LanguageMatches(lldb::LanguageType language) const {
+  // If we have no language filterm language always matches.
+  if (!m_languages.has_value())
+    return true;
+  return (*m_languages)[language];
+}
+
+bool TypeResults::AlreadySearched(lldb_private::SymbolFile *sym_file) {
+  return !m_searched_symbol_files.insert(sym_file).second;
+}
+
+bool TypeResults::InsertUnique(const lldb::TypeSP &type_sp) {
+  if (type_sp)
+    return m_type_map.InsertUnique(type_sp);
+  return false;
+}
+
+bool TypeResults::Done(const TypeQuery &query) const {
+  if (query.GetFindOne())
+    return !m_type_map.Empty();
+  return false;
+}
+
+void CompilerContext::Dump(Stream &s) const {
   switch (kind) {
   default:
-    printf("Invalid");
+    s << "Invalid";
     break;
   case CompilerContextKind::TranslationUnit:
-    printf("TranslationUnit");
+    s << "TranslationUnit";
     break;
   case CompilerContextKind::Module:
-    printf("Module");
+    s << "Module";
     break;
   case CompilerContextKind::Namespace:
-    printf("Namespace");
+    s << "Namespace";
     break;
   case CompilerContextKind::Class:
-    printf("Class");
+    s << "Class";
     break;
   case CompilerContextKind::Struct:
-    printf("Structure");
+    s << "Structure";
     break;
   case CompilerContextKind::Union:
-    printf("Union");
+    s << "Union";
     break;
   case CompilerContextKind::Function:
-    printf("Function");
+    s << "Function";
     break;
   case CompilerContextKind::Variable:
-    printf("Variable");
+    s << "Variable";
     break;
   case CompilerContextKind::Enum:
-    printf("Enumeration");
+    s << "Enumeration";
     break;
   case CompilerContextKind::Typedef:
-    printf("Typedef");
+    s << "Typedef";
     break;
   case CompilerContextKind::AnyModule:
-    printf("AnyModule");
+    s << "AnyModule";
     break;
   case CompilerContextKind::AnyType:
-    printf("AnyType");
+    s << "AnyType";
     break;
   }
-  printf("(\"%s\")\n", name.GetCString());
+  s << "(" << name << ")";
 }
 
 class TypeAppendVisitor {
@@ -641,6 +766,8 @@ bool Type::GetTypeScopeAndBasename(llvm::StringRef name,
   if (name.empty())
     return false;
 
+  // Clear the scope in case we have just a type class and a basename.
+  scope = llvm::StringRef();
   basename = name;
   if (basename.consume_front("struct "))
     type_class = eTypeClassStruct;
@@ -654,8 +781,10 @@ bool Type::GetTypeScopeAndBasename(llvm::StringRef name,
     type_class = eTypeClassTypedef;
 
   size_t namespace_separator = basename.find("::");
-  if (namespace_separator == llvm::StringRef::npos)
-    return false;
+  if (namespace_separator == llvm::StringRef::npos) {
+    // If "name" started a type class we need to return true with no scope.
+    return type_class != eTypeClassAny;
+  }
 
   size_t template_begin = basename.find('<');
   while (namespace_separator != llvm::StringRef::npos) {
@@ -746,6 +875,10 @@ void TypeAndOrName::SetName(ConstString type_name) {
 
 void TypeAndOrName::SetName(const char *type_name_cstr) {
   m_type_name.SetCString(type_name_cstr);
+}
+
+void TypeAndOrName::SetName(llvm::StringRef type_name) {
+  m_type_name.SetString(type_name);
 }
 
 void TypeAndOrName::SetTypeSP(lldb::TypeSP type_sp) {
@@ -1045,16 +1178,19 @@ CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
     return CompilerType();
   auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
   auto *symbol_file = type_system->GetSymbolFile();
+  if (!symbol_file)
+    return CompilerType();
   auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
   if (!decl_context.IsValid())
     return CompilerType();
-  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  TypeMap search_result;
-  symbol_file->FindTypes(ConstString(name), decl_context, /*max_matches*/ 1,
-                         searched_symbol_files, search_result);
-  if (search_result.Empty())
-    return CompilerType();
-  return search_result.GetTypeAtIndex(0)->GetFullCompilerType();
+  TypeQuery query(decl_context, ConstString(name),
+                  TypeQueryOptions::e_find_one);
+  TypeResults results;
+  symbol_file->FindTypes(query, results);
+  TypeSP type_sp = results.GetFirstType();
+  if (type_sp)
+    return type_sp->GetFullCompilerType();
+  return CompilerType();
 }
 
 bool TypeMemberFunctionImpl::IsValid() {

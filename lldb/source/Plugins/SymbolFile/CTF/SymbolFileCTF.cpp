@@ -320,12 +320,12 @@ static uint32_t GetBytes(uint32_t bits) { return bits / sizeof(unsigned); }
 static clang::TagTypeKind TranslateRecordKind(CTFType::Kind type) {
   switch (type) {
   case CTFType::Kind::eStruct:
-    return clang::TTK_Struct;
+    return clang::TagTypeKind::Struct;
   case CTFType::Kind::eUnion:
-    return clang::TTK_Union;
+    return clang::TagTypeKind::Union;
   default:
     lldbassert(false && "Invalid record kind!");
-    return clang::TTK_Struct;
+    return clang::TagTypeKind::Struct;
   }
 }
 
@@ -503,9 +503,9 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
 llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateRecord(const CTFRecord &ctf_record) {
   const clang::TagTypeKind tag_kind = TranslateRecordKind(ctf_record.kind);
-  CompilerType record_type =
-      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), eAccessPublic,
-                              ctf_record.name.data(), tag_kind, eLanguageTypeC);
+  CompilerType record_type = m_ast->CreateRecordType(
+      nullptr, OptionalClangModuleID(), eAccessPublic, ctf_record.name.data(),
+      llvm::to_underlying(tag_kind), eLanguageTypeC);
   m_compiler_types[record_type.GetOpaqueQualType()] = &ctf_record;
   Declaration decl;
   return MakeType(ctf_record.uid, ConstString(ctf_record.name), ctf_record.size,
@@ -562,7 +562,7 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateForward(const CTFForward &ctf_forward) {
   CompilerType forward_compiler_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), eAccessPublic, ctf_forward.name,
-      clang::TTK_Struct, eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Struct), eLanguageTypeC);
   Declaration decl;
   return MakeType(ctf_forward.uid, ConstString(ctf_forward.name), 0, nullptr,
                   LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
@@ -603,6 +603,7 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
                       ctf_type->uid, ctf_type->name, ctf_type->kind),
         llvm::inconvertibleErrorCode());
   }
+  llvm_unreachable("Unexpected CTF type kind");
 }
 
 llvm::Expected<std::unique_ptr<CTFType>>
@@ -1020,23 +1021,18 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
   return type_sp.get();
 }
 
-void SymbolFileCTF::FindTypes(
-    lldb_private::ConstString name,
-    const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    lldb_private::TypeMap &types) {
+void SymbolFileCTF::FindTypes(const lldb_private::TypeQuery &match,
+                              lldb_private::TypeResults &results) {
+  // Make sure we haven't already searched this SymbolFile before.
+  if (results.AlreadySearched(this))
+    return;
 
-  searched_symbol_files.clear();
-  searched_symbol_files.insert(this);
-
-  size_t matches = 0;
+  ConstString name = match.GetTypeBasename();
   for (TypeSP type_sp : GetTypeList().Types()) {
-    if (matches == max_matches)
-      break;
     if (type_sp && type_sp->GetName() == name) {
-      types.Insert(type_sp);
-      matches++;
+      results.InsertUnique(type_sp);
+      if (results.Done(match))
+        return;
     }
   }
 }

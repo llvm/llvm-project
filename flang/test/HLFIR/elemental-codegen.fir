@@ -185,7 +185,7 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
 // CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:           %[[VAL_29:.*]] = fir.convert %[[EX1]] : (index) -> i64
 // CHECK:           %[[VAL_30:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_26]], %[[VAL_27]], %[[VAL_28]], %[[VAL_29]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
-// CHECK:           %[[VAL_31:.*]] = fir.address_of(@_QQcl.
+// CHECK:           %[[VAL_31:.*]] = fir.address_of(@_QQclX
 // CHECK:           %[[VAL_32:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_33:.*]] = arith.constant {{.*}} : i32
 // CHECK:           %[[VAL_34:.*]] = arith.constant false

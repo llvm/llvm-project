@@ -372,13 +372,11 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
       #define DECL /* Comment */ int x
       $r[[DECL;]])cpp");
 
-  // Does not include comments when only the decl or the comment come from a
-  // macro.
-  // FIXME: Change code to allow this.
   Visit(R"cpp(
       #define DECL int x
-      // Comment
-      $r[[DECL;]])cpp");
+      $r[[// Comment
+      DECL;]])cpp");
+  // Does not include comments when only the comment come from a macro.
   Visit(R"cpp(
       #define COMMENT /* Comment */
       COMMENT

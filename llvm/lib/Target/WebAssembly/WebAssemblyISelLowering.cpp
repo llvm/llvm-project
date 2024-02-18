@@ -1869,8 +1869,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     Ops[OpIdx++] = Op.getOperand(2);
     while (OpIdx < 18) {
       const SDValue &MaskIdx = Op.getOperand(OpIdx + 1);
-      if (MaskIdx.isUndef() ||
-          cast<ConstantSDNode>(MaskIdx.getNode())->getZExtValue() >= 32) {
+      if (MaskIdx.isUndef() || MaskIdx.getNode()->getAsZExtVal() >= 32) {
         bool isTarget = MaskIdx.getNode()->getOpcode() == ISD::TargetConstant;
         Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32, isTarget);
       } else {
@@ -1912,7 +1911,7 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   const SDNode *Index = Extract.getOperand(1).getNode();
   if (!isa<ConstantSDNode>(Index))
     return SDValue();
-  unsigned IndexVal = cast<ConstantSDNode>(Index)->getZExtValue();
+  unsigned IndexVal = Index->getAsZExtVal();
   unsigned Scale =
       ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
   assert(Scale > 1);
@@ -2335,7 +2334,7 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
   if (isa<ConstantSDNode>(IdxNode)) {
     // Ensure the index type is i32 to match the tablegen patterns
-    uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
+    uint64_t Idx = IdxNode->getAsZExtVal();
     SmallVector<SDValue, 3> Ops(Op.getNode()->ops());
     Ops[Op.getNumOperands() - 1] =
         DAG.getConstant(Idx, SDLoc(IdxNode), MVT::i32);
@@ -2472,8 +2471,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (!N->getOperand(1).isUndef())
     return SDValue();
   SDValue CastOp = Bitcast.getOperand(0);
-  MVT SrcType = CastOp.getSimpleValueType();
-  MVT DstType = Bitcast.getSimpleValueType();
+  EVT SrcType = CastOp.getValueType();
+  EVT DstType = Bitcast.getValueType();
   if (!SrcType.is128BitVector() ||
       SrcType.getVectorNumElements() != DstType.getVectorNumElements())
     return SDValue();

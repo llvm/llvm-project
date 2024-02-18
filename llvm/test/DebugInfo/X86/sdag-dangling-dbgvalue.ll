@@ -5,6 +5,16 @@
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
+; Repeat checks with experimental debginfo iterators.
+; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -try-experimental-debuginfo-iterators \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -try-experimental-debuginfo-iterators \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
+
 ;--------------------------------------------------------------------
 ; This test case is basically generated from the following C code.
 ; Compiled with "--target=x86_64-apple-darwin -S -g -O3" to get debug

@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
@@ -27,18 +28,13 @@
 namespace fir {
 
 LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
-                                     bool forceUnifiedTBAATree)
-    : mlir::LLVMTypeConverter(module.getContext(),
-                              [&] {
-                                mlir::LowerToLLVMOptions options(
-                                    module.getContext());
-                                options.useOpaquePointers = false;
-                                return options;
-                              }()),
+                                     bool forceUnifiedTBAATree,
+                                     const mlir::DataLayout &dl)
+    : mlir::LLVMTypeConverter(module.getContext()),
       kindMapping(getKindMapping(module)),
-      specifics(CodeGenSpecifics::get(module.getContext(),
-                                      getTargetTriple(module),
-                                      getKindMapping(module))),
+      specifics(CodeGenSpecifics::get(
+          module.getContext(), getTargetTriple(module), getKindMapping(module),
+          getTargetCPU(module), getTargetFeatures(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
                                                 forceUnifiedTBAATree)) {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
@@ -169,7 +165,7 @@ mlir::Type LLVMTypeConverter::indexType() const {
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
 std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
-  auto name = derived.getName();
+  auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
 
   auto &callStack = getCurrentThreadRecursiveStack();
@@ -205,7 +201,8 @@ bool LLVMTypeConverter::requiresExtendedDesc(mlir::Type boxElementType) const {
 
 // This corresponds to the descriptor as defined in ISO_Fortran_binding.h and
 // the addendum defined in descriptor.h.
-mlir::Type LLVMTypeConverter::convertBoxType(BaseBoxType box, int rank) const {
+mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
+                                                     int rank) const {
   // (base_addr*, elem_len, version, rank, type, attribute, f18Addendum, [dim]
   llvm::SmallVector<mlir::Type> dataDescFields;
   mlir::Type ele = box.getEleTy();
@@ -217,7 +214,8 @@ mlir::Type LLVMTypeConverter::convertBoxType(BaseBoxType box, int rank) const {
   if (ele.isa<SequenceType>() && eleTy.isa<mlir::LLVM::LLVMPointerType>())
     dataDescFields.push_back(eleTy);
   else
-    dataDescFields.push_back(mlir::LLVM::LLVMPointerType::get(eleTy));
+    dataDescFields.push_back(
+        mlir::LLVM::LLVMPointerType::get(eleTy.getContext()));
   // elem_len
   dataDescFields.push_back(
       getDescFieldTypeModel<kElemLenPosInBox>()(&getContext()));
@@ -266,28 +264,24 @@ mlir::Type LLVMTypeConverter::convertBoxType(BaseBoxType box, int rank) const {
             mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
       }
   }
-  // TODO: send the box type and the converted LLVM structure layout
-  // to tbaaBuilder for proper creation of TBAATypeDescriptorOp.
-  return mlir::LLVM::LLVMPointerType::get(
-      mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
-                                             /*isPacked=*/false));
+  return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
+                                                /*isPacked=*/false);
 }
 
 /// Convert fir.box type to the corresponding llvm struct type instead of a
 /// pointer to this struct type.
-mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box) const {
-  return convertBoxType(box)
-      .cast<mlir::LLVM::LLVMPointerType>()
-      .getElementType();
+mlir::Type LLVMTypeConverter::convertBoxType(BaseBoxType box, int rank) const {
+  // TODO: send the box type and the converted LLVM structure layout
+  // to tbaaBuilder for proper creation of TBAATypeDescriptorOp.
+  return mlir::LLVM::LLVMPointerType::get(box.getContext());
 }
 
 // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
 mlir::Type LLVMTypeConverter::convertBoxProcType(BoxProcType boxproc) const {
   auto funcTy = convertType(boxproc.getEleTy());
-  auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(
-      mlir::IntegerType::get(&getContext(), 8));
-  llvm::SmallVector<mlir::Type, 2> tuple = {funcTy, i8PtrTy};
-  return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), tuple,
+  auto voidPtrTy = mlir::LLVM::LLVMPointerType::get(boxproc.getContext());
+  llvm::SmallVector<mlir::Type, 2> tuple = {funcTy, voidPtrTy};
+  return mlir::LLVM::LLVMStructType::getLiteral(boxproc.getContext(), tuple,
                                                 /*isPacked=*/false);
 }
 
@@ -315,7 +309,7 @@ mlir::Type LLVMTypeConverter::convertRealType(fir::KindTy kind) const {
 mlir::Type LLVMTypeConverter::convertSequenceType(SequenceType seq) const {
   auto baseTy = convertType(seq.getEleTy());
   if (characterWithDynamicLen(seq.getEleTy()))
-    return mlir::LLVM::LLVMPointerType::get(baseTy);
+    return baseTy;
   auto shape = seq.getShape();
   auto constRows = seq.getConstantRows();
   if (constRows) {
@@ -328,7 +322,7 @@ mlir::Type LLVMTypeConverter::convertSequenceType(SequenceType seq) const {
     if (!seq.hasDynamicExtents())
       return baseTy;
   }
-  return mlir::LLVM::LLVMPointerType::get(baseTy);
+  return baseTy;
 }
 
 // fir.tdesc<any>  -->  llvm<"i8*">
@@ -336,8 +330,7 @@ mlir::Type LLVMTypeConverter::convertSequenceType(SequenceType seq) const {
 // the f18 object v. class distinction (F2003).
 mlir::Type
 LLVMTypeConverter::convertTypeDescType(mlir::MLIRContext *ctx) const {
-  return mlir::LLVM::LLVMPointerType::get(
-      mlir::IntegerType::get(&getContext(), 8));
+  return mlir::LLVM::LLVMPointerType::get(ctx);
 }
 
 // Relay TBAA tag attachment to TBAABuilder.

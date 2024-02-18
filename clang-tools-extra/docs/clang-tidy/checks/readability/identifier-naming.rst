@@ -42,10 +42,12 @@ The following options are described below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
  - :option:`AggressiveDependentMemberLookup`
+ - :option:`CheckAnonFieldInParent`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`, :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
  - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
+ - :option:`ConceptCase`, :option:`ConceptPrefix`, :option:`ConceptSuffix`, :option:`ConceptIgnoredRegexp`
  - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`, :option:`ConstantIgnoredRegexp`, :option:`ConstantHungarianPrefix`
  - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`, :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`, :option:`ConstantMemberHungarianPrefix`
  - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`, :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`, :option:`ConstantParameterHungarianPrefix`
@@ -205,6 +207,32 @@ After if AggressiveDependentMemberLookup is `true`:
         this->bad_named_member = 0;
       }
     };
+
+.. option:: CheckAnonFieldInParent
+
+    When set to `true`, fields in anonymous records (i.e. anonymous
+    unions and structs) will be treated as names in the enclosing scope
+    rather than public members of the anonymous record for the purpose
+    of name checking.
+
+For example:
+
+.. code-block:: c++
+
+    class Foo {
+    private:
+      union {
+        int iv_;
+        float fv_;
+      };
+    };
+
+If :option:`CheckAnonFieldInParent` is `false`, you may get warnings
+that ``iv_`` and ``fv_`` are not coherent to public member names, because
+``iv_`` and ``fv_`` are public members of the anonymous union. When
+:option:`CheckAnonFieldInParent` is `true`, ``iv_`` and ``fv_`` will be
+treated as private data members of ``Foo`` for the purpose of name checking
+and thus no warnings will be emitted.
 
 .. option:: ClassCase
 
@@ -409,6 +437,46 @@ After:
     public:
       int pre_class_member_post();
     };
+
+.. option:: ConceptCase
+
+    When defined, the check will ensure concept names conform to the
+    selected casing.
+
+.. option:: ConceptPrefix
+
+    When defined, the check will ensure concept names will add the
+    prefixed with the given value (regardless of casing).
+
+.. option:: ConceptIgnoredRegexp
+
+    Identifier naming checks won't be enforced for concept names
+    matching this regular expression.
+
+.. option:: ConceptSuffix
+
+    When defined, the check will ensure concept names will add the
+    suffix with the given value (regardless of casing).
+
+For example using values of:
+
+   - ConceptCase of ``CamelCase``
+   - ConceptPrefix of ``Pre``
+   - ConceptSuffix of ``Post``
+
+Identifies and/or transforms concept names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    template<typename T> concept my_concept = requires (T t) { {t++}; };
+
+After:
+
+.. code-block:: c++
+
+    template<typename T> concept PreMyConceptPost = requires (T t) { {t++}; };
 
 .. option:: ConstantCase
 

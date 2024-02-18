@@ -143,7 +143,7 @@ Then we type:
 .. code-block:: console
 
   $ clang++ -std=c++20 Hello.cppm --precompile -o Hello.pcm
-  $ clang++ -std=c++20 use.cpp -fprebuilt-module-path=. Hello.pcm -o Hello.out
+  $ clang++ -std=c++20 use.cpp -fmodule-file=Hello=Hello.pcm Hello.pcm -o Hello.out
   $ ./Hello.out
   Hello World!
 
@@ -200,15 +200,15 @@ Then we are able to compile the example by the following command:
   $ clang++ -std=c++20 interface_part.cppm --precompile -o M-interface_part.pcm
   $ clang++ -std=c++20 impl_part.cppm --precompile -fprebuilt-module-path=. -o M-impl_part.pcm
   $ clang++ -std=c++20 M.cppm --precompile -fprebuilt-module-path=. -o M.pcm
-  $ clang++ -std=c++20 Impl.cpp -fmodule-file=M=M.pcm -c -o Impl.o
+  $ clang++ -std=c++20 Impl.cpp -fprebuilt-module-path=. -c -o Impl.o
 
   # Compiling the user
   $ clang++ -std=c++20 User.cpp -fprebuilt-module-path=. -c -o User.o
 
   # Compiling the module and linking it together
-  $ clang++ -std=c++20 M-interface_part.pcm -c -o M-interface_part.o
-  $ clang++ -std=c++20 M-impl_part.pcm -c -o M-impl_part.o
-  $ clang++ -std=c++20 M.pcm -c -o M.o
+  $ clang++ -std=c++20 M-interface_part.pcm -fprebuilt-module-path=. -c -o M-interface_part.o
+  $ clang++ -std=c++20 M-impl_part.pcm -fprebuilt-module-path=. -c -o M-impl_part.o
+  $ clang++ -std=c++20 M.pcm -fprebuilt-module-path=. -c -o M.o
   $ clang++ User.o M-interface_part.o  M-impl_part.o M.o Impl.o -o a.out
 
 We explain the options in the following sections.
@@ -218,7 +218,6 @@ How to enable standard C++ modules
 
 Currently, standard C++ modules are enabled automatically
 if the language standard is ``-std=c++20`` or newer.
-The ``-fmodules-ts`` option is deprecated and is planned to be removed.
 
 How to produce a BMI
 ~~~~~~~~~~~~~~~~~~~~
@@ -346,6 +345,9 @@ In case all ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<pat
 takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
 highest precedence.
 
+We need to specify all the dependent (directly and indirectly) BMIs.
+See https://github.com/llvm/llvm-project/issues/62707 for detail.
+
 When we compile a ``module implementation unit``, we must specify the BMI of the corresponding
 ``primary module interface unit``.
 Since the language specification says a module implementation unit implicitly imports
@@ -364,6 +366,10 @@ the above example could be rewritten into:
 .. code-block:: console
 
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
+
+When there are multiple ``-fmodule-file=<module-name>=`` options for the same
+``<module-name>``, the last ``-fmodule-file=<module-name>=`` will override the previous
+``-fmodule-file=<module-name>=`` options.
 
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
 it saves time for file lookup.
@@ -450,6 +456,29 @@ Note that **currently** the compiler doesn't consider inconsistent macro definit
 
 Currently Clang would accept the above example. But it may produce surprising results if the
 debugging code depends on consistent use of ``NDEBUG`` also in other translation units.
+
+Definitions consistency
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The C++ language defines that same declarations in different translation units should have
+the same definition, as known as ODR (One Definition Rule). Prior to modules, the translation
+units don't dependent on each other and the compiler itself can't perform a strong
+ODR violation check. With the introduction of modules, now the compiler have
+the chance to perform ODR violations with language semantics across translation units.
+
+However, in the practice, we found the existing ODR checking mechanism is not stable
+enough. Many people suffers from the false positive ODR violation diagnostics, AKA,
+the compiler are complaining two identical declarations have different definitions
+incorrectly. Also the true positive ODR violations are rarely reported.
+Also we learned that MSVC don't perform ODR check for declarations in the global module
+fragment.
+
+So in order to get better user experience, save the time checking ODR and keep consistent
+behavior with MSVC, we disabled the ODR check for the declarations in the global module
+fragment by default. Users who want more strict check can still use the
+``-Xclang -fno-skip-odr-check-in-gmf`` flag to get the ODR check enabled. It is also
+encouraged to report issues if users find false positive ODR violations or false negative ODR
+violations with the flag enabled.
 
 ABI Impacts
 -----------
@@ -686,14 +715,68 @@ the BMI within ``clang-cl.exe``.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/64118
 
-delayed template parsing is not supported/broken with C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+false positive ODR violation diagnostic due to using inconsistent qualified but the same type
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The feature `-fdelayed-template-parsing` can't work well with C++ modules now.
-Note that this is significant on Windows since the option will be enabled by default
-on Windows.
+ODR violation is a pretty common issue when using modules.
+Sometimes the program violated the One Definition Rule actually.
+But sometimes it shows the compiler gives false positive diagnostics.
 
-This is tracked in: https://github.com/llvm/llvm-project/issues/61068
+One often reported example is:
+
+.. code-block:: c++
+
+  // part.cc
+  module;
+  typedef long T;
+  namespace ns {
+  inline void fun() {
+      (void)(T)0;
+  }
+  }
+  export module repro:part;
+
+  // repro.cc
+  module;
+  typedef long T;
+  namespace ns {
+      using ::T;
+  }
+  namespace ns {
+  inline void fun() {
+      (void)(T)0;
+  }
+  }
+  export module repro;
+  export import :part;
+
+Currently the compiler complains about the inconsistent definition of `fun()` in
+2 module units. This is incorrect. Since both definitions of `fun()` has the same
+spelling and `T` refers to the same type entity finally. So the program should be
+fine.
+
+This is tracked in https://github.com/llvm/llvm-project/issues/78850.
+
+Using TU-local entity in other units
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Module units are translation units. So the entities which should only be local to the
+module unit itself shouldn't be used by other units in any means.
+
+In the language side, to address the idea formally, the language specification defines
+the concept of ``TU-local`` and ``exposure`` in
+`basic.link/p14 <https://eel.is/c++draft/basic.link#14>`_,
+`basic.link/p15 <https://eel.is/c++draft/basic.link#15>`_,
+`basic.link/p16 <https://eel.is/c++draft/basic.link#16>`_,
+`basic.link/p17 <https://eel.is/c++draft/basic.link#17>`_ and
+`basic.link/p18 <https://eel.is/c++draft/basic.link#18>`_.
+
+However, the compiler doesn't support these 2 ideas formally.
+This results in unclear and confusing diagnostic messages.
+And it is worse that the compiler may import TU-local entities to other units without any
+diagnostics.
+
+This is tracked in https://github.com/llvm/llvm-project/issues/78173.
 
 Header Units
 ============
@@ -1152,6 +1235,45 @@ instead a real binary. There are 4 potential solutions to the problem:
 
   $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 -resource-dir <resource-dir> mod.cppm -c -o mod.o
 
+
+Import modules with clang-repl
+==============================
+
+We're able to import C++20 named modules with clang-repl.
+
+Let's start with a simple example:
+
+.. code-block:: c++
+
+  // M.cppm
+  export module M;
+  export const char* Hello() {
+      return "Hello Interpreter for Modules!";
+  }
+
+We still need to compile the named module in ahead.
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
+  $ clang++ M.pcm -c -o M.o
+  $ clang++ -shared M.o -o libM.so
+
+Note that we need to compile the module unit into a dynamic library so that the clang-repl
+can load the object files of the module units.
+
+Then we are able to import module ``M`` in clang-repl.
+
+.. code-block:: console
+
+  $ clang-repl -Xcc=-std=c++20 -Xcc=-fprebuilt-module-path=.
+  # We need to load the dynamic library first before importing the modules.
+  clang-repl> %lib libM.so
+  clang-repl> import M;
+  clang-repl> extern "C" int printf(const char *, ...);
+  clang-repl> printf("%s\n", Hello());
+  Hello Interpreter for Modules!
+  clang-repl> %quit
 
 Possible Questions
 ==================

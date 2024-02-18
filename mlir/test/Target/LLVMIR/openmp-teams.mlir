@@ -19,6 +19,31 @@ llvm.func @omp_teams_simple() {
 
 // -----
 
+llvm.func @foo()
+
+// CHECK-LABEL: @omp_teams_func_attrs
+// CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr @[[OUTLINED_FN:.+]])
+llvm.func @omp_teams_func_attrs() attributes {
+    target_cpu = "x86-64",
+    target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+    omp.teams {
+        llvm.call @foo() : () -> ()
+        omp.terminator
+    }
+    llvm.return
+}
+
+// CHECK:      define internal void @[[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK-SAME: #[[ATTR:[0-9]+]]
+// CHECK:      call void @foo()
+
+// CHECK: attributes #[[ATTR]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
+
+// -----
+
 llvm.func @foo(i32) -> ()
 
 // CHECK-LABEL: @omp_teams_shared_simple
@@ -45,8 +70,8 @@ llvm.func @omp_teams_shared_simple(%arg0: i32) {
 
 // -----
 
-llvm.func @my_alloca_fn() -> !llvm.ptr<i32>
-llvm.func @foo(i32, f32, !llvm.ptr<i32>, f128, !llvm.ptr<i32>, i32) -> ()
+llvm.func @my_alloca_fn() -> !llvm.ptr
+llvm.func @foo(i32, f32, !llvm.ptr, f128, !llvm.ptr, i32) -> ()
 llvm.func @bar()
 
 // CHECK-LABEL: @omp_teams_branching_shared
@@ -79,15 +104,15 @@ llvm.func @bar()
 // CHECK: br label
 // CHECK: call void @bar()
 // CHECK: ret void
-llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %arg2: !llvm.ptr<i32>, %arg3: f128) {
-    %allocated = llvm.call @my_alloca_fn(): () -> !llvm.ptr<i32>
-    %loaded = llvm.load %allocated : !llvm.ptr<i32>
+llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %arg2: !llvm.ptr, %arg3: f128) {
+    %allocated = llvm.call @my_alloca_fn(): () -> !llvm.ptr
+    %loaded = llvm.load %allocated : !llvm.ptr -> i32
     llvm.br ^codegenBlock
 ^codegenBlock:
     omp.teams {
         llvm.cond_br %condition, ^true_block, ^false_block
     ^true_block:
-        llvm.call @foo(%arg0, %arg1, %arg2, %arg3, %allocated, %loaded) : (i32, f32, !llvm.ptr<i32>, f128, !llvm.ptr<i32>, i32) -> ()
+        llvm.call @foo(%arg0, %arg1, %arg2, %arg3, %allocated, %loaded) : (i32, f32, !llvm.ptr, f128, !llvm.ptr, i32) -> ()
         llvm.br ^exit
     ^false_block:
         llvm.br ^exit

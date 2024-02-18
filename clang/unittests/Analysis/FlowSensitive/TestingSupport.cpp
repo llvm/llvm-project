@@ -4,6 +4,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -15,9 +16,9 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Annotations/Annotations.h"
+#include "gtest/gtest.h"
 #include <cassert>
 #include <functional>
-#include <memory>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -172,7 +173,8 @@ llvm::Error test::checkDataflowWithNoopAnalysis(
         void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
              ASTContext &)>
         VerifyResults,
-    DataflowAnalysisOptions Options, LangStandard::Kind Std) {
+    DataflowAnalysisOptions Options, LangStandard::Kind Std,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback) {
   llvm::SmallVector<std::string, 3> ASTBuildArgs = {
       // -fnodelayed-template-parsing is the default everywhere but on Windows.
       // Set it explicitly so that tests behave the same on Windows as on other
@@ -182,8 +184,10 @@ llvm::Error test::checkDataflowWithNoopAnalysis(
           std::string(LangStandard::getLangStandardForKind(Std).getName())};
   AnalysisInputs<NoopAnalysis> AI(
       Code, TargetFuncMatcher,
-      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
-                                                          Environment &Env) {
+      [UseBuiltinModel = Options.BuiltinOpts.has_value(),
+       &SyntheticFieldCallback](ASTContext &C, Environment &Env) {
+        Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
+            std::move(SyntheticFieldCallback));
         return NoopAnalysis(
             C,
             DataflowAnalysisOptions{
@@ -216,5 +220,20 @@ const IndirectFieldDecl *test::findIndirectFieldDecl(ASTContext &ASTCtx,
   assert(TargetNodes.size() == 1 && "Name must be unique");
   const auto *Result = selectFirst<IndirectFieldDecl>("i", TargetNodes);
   assert(Result != nullptr);
+  return Result;
+}
+
+std::vector<const Formula *> test::parseFormulas(Arena &A, StringRef Lines) {
+  std::vector<const Formula *> Result;
+  while (!Lines.empty()) {
+    auto [First, Rest] = Lines.split('\n');
+    Lines = Rest;
+    if (First.trim().empty())
+      continue;
+    if (auto F = A.parseFormula(First))
+      Result.push_back(&*F);
+    else
+      ADD_FAILURE() << llvm::toString(F.takeError());
+  }
   return Result;
 }

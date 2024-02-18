@@ -31,6 +31,14 @@ protected:
   _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
+TEST(FormatTestObjCStyle, DetectsObjCInStdin) {
+  auto Style = getStyle("LLVM", "<stdin>", "none",
+                        "@interface\n"
+                        "- (id)init;");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+}
+
 TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   auto Style = getStyle("LLVM", "a.h", "none",
                         "@interface\n"
@@ -62,35 +70,33 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "@interface Foo\n@end\n");
+  Style = getStyle("{}", "a.h", "none", "@interface Foo\n@end");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
   Style = getStyle("{}", "a.h", "none",
-                   "const int interface = 1;\nconst int end = 2;\n");
+                   "const int interface = 1;\nconst int end = 2;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "@protocol Foo\n@end\n");
+  Style = getStyle("{}", "a.h", "none", "@protocol Foo\n@end");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
   Style = getStyle("{}", "a.h", "none",
-                   "const int protocol = 1;\nconst int end = 2;\n");
+                   "const int protocol = 1;\nconst int end = 2;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "typedef NS_ENUM(int, Foo) {};\n");
+  Style = getStyle("{}", "a.h", "none", "typedef NS_ENUM(int, Foo) {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style =
-      getStyle("{}", "a.h", "none", "typedef NS_CLOSED_ENUM(int, Foo) {};\n");
+  Style = getStyle("{}", "a.h", "none", "typedef NS_CLOSED_ENUM(int, Foo) {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style =
-      getStyle("{}", "a.h", "none", "typedef NS_ERROR_ENUM(int, Foo) {};\n");
+  Style = getStyle("{}", "a.h", "none", "typedef NS_ERROR_ENUM(int, Foo) {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
@@ -118,45 +124,43 @@ FOUNDATION_EXPORT void DoStuff(void);
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
-  Style =
-      getStyle("{}", "a.h", "none", "inline void Foo() { Log(@\"Foo\"); }\n");
+  Style = getStyle("{}", "a.h", "none", "inline void Foo() { Log(@\"Foo\"); }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style =
-      getStyle("{}", "a.h", "none", "inline void Foo() { Log(\"Foo\"); }\n");
+  Style = getStyle("{}", "a.h", "none", "inline void Foo() { Log(\"Foo\"); }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
   Style =
-      getStyle("{}", "a.h", "none", "inline void Foo() { id = @[1, 2, 3]; }\n");
+      getStyle("{}", "a.h", "none", "inline void Foo() { id = @[1, 2, 3]; }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
   Style = getStyle("{}", "a.h", "none",
-                   "inline void Foo() { id foo = @{1: 2, 3: 4, 5: 6}; }\n");
+                   "inline void Foo() { id foo = @{1: 2, 3: 4, 5: 6}; }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
   Style = getStyle("{}", "a.h", "none",
-                   "inline void Foo() { int foo[] = {1, 2, 3}; }\n");
+                   "inline void Foo() { int foo[] = {1, 2, 3}; }");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 
   // ObjC characteristic types.
-  Style = getStyle("{}", "a.h", "none", "extern NSString *kFoo;\n");
+  Style = getStyle("{}", "a.h", "none", "extern NSString *kFoo;");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "extern NSInteger Foo();\n");
+  Style = getStyle("{}", "a.h", "none", "extern NSInteger Foo();");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "NSObject *Foo();\n");
+  Style = getStyle("{}", "a.h", "none", "NSObject *Foo();");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
-  Style = getStyle("{}", "a.h", "none", "NSSet *Foo();\n");
+  Style = getStyle("{}", "a.h", "none", "NSSet *Foo();");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 }
@@ -187,7 +191,7 @@ TEST_F(FormatTestObjC, FormatObjCTryCatch) {
                "  @try {\n"
                "  } @finally {\n"
                "  }\n"
-               "});\n");
+               "});");
 }
 
 TEST_F(FormatTestObjC, FormatObjCAutoreleasepool) {
@@ -196,7 +200,7 @@ TEST_F(FormatTestObjC, FormatObjCAutoreleasepool) {
                "}\n"
                "@autoreleasepool {\n"
                "  f();\n"
-               "}\n");
+               "}");
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   verifyFormat("@autoreleasepool\n"
@@ -206,18 +210,18 @@ TEST_F(FormatTestObjC, FormatObjCAutoreleasepool) {
                "@autoreleasepool\n"
                "{\n"
                "  f();\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestObjC, FormatObjCGenerics) {
   Style.ColumnLimit = 40;
   verifyFormat("int aaaaaaaaaaaaaaaa(\n"
                "    NSArray<aaaaaaaaaaaaaaaaaa *>\n"
-               "        aaaaaaaaaaaaaaaaa);\n");
+               "        aaaaaaaaaaaaaaaaa);");
   verifyFormat("int aaaaaaaaaaaaaaaa(\n"
                "    NSArray<aaaaaaaaaaaaaaaaaaa<\n"
                "        aaaaaaaaaaaaaaaa *> *>\n"
-               "        aaaaaaaaaaaaaaaaa);\n");
+               "        aaaaaaaaaaaaaaaaa);");
 }
 
 TEST_F(FormatTestObjC, FormatObjCSynchronized) {
@@ -226,7 +230,7 @@ TEST_F(FormatTestObjC, FormatObjCSynchronized) {
                "}\n"
                "@synchronized(self) {\n"
                "  f();\n"
-               "}\n");
+               "}");
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
   verifyFormat("@synchronized(self)\n"
@@ -236,7 +240,7 @@ TEST_F(FormatTestObjC, FormatObjCSynchronized) {
                "@synchronized(self)\n"
                "{\n"
                "  f();\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestObjC, FormatObjCInterface) {
@@ -409,7 +413,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
   Style.ColumnLimit = 40;
   // BinPackParameters should be true by default.
   verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
-               "              int eeeee, int eeeee);\n");
+               "              int eeeee, int eeeee);");
   // ObjCBinPackProtocolList should be BPS_Never by default.
   verifyFormat("@interface fffffffffffff () <\n"
                "    fffffffffffff,\n"
@@ -511,7 +515,7 @@ TEST_F(FormatTestObjC, FormatObjCProtocol) {
                "@end");
 
   verifyFormat("@protocol Foo;\n"
-               "@protocol Bar;\n");
+               "@protocol Bar;");
 
   verifyFormat("@protocol Foo\n"
                "@end\n"
@@ -530,7 +534,7 @@ TEST_F(FormatTestObjC, FormatObjCProtocol) {
                "- (void)required;\n"
                "@optional\n"
                "@property(assign) int madProp;\n"
-               "@end\n");
+               "@end");
 
   verifyFormat("@property(nonatomic, assign, readonly)\n"
                "    int *looooooooooooooooooooooooooooongNumber;\n"
@@ -562,7 +566,7 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "    evenLongerKeyword:(float)theInterval\n"
                "                error:(NSError **)theError {\n"
                "}");
-  verifyFormat("+ (instancetype)new;\n");
+  verifyFormat("+ (instancetype)new;");
   Style.ColumnLimit = 60;
   verifyFormat("- (instancetype)initXxxxxx:(id<x>)x\n"
                "                         y:(id<yyyyyyyyyyyyyyyyyyyy>)y\n"
@@ -573,18 +577,18 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
   Style.ColumnLimit = 40;
   // Make sure selectors with 0, 1, or more arguments are indented when wrapped.
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa;\n");
+               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa;");
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
+               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;");
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
+               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;");
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
                "     aaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
-               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
+               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;");
   verifyFormat("- (aaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a\n"
-               "     aaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;\n");
+               "     aaaaaaaaaaaaaaaaaaaaaaaaaaa:(int)a;");
 
   // Continuation indent width should win over aligning colons if the function
   // name is long.
@@ -618,7 +622,7 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "- (void)foo:(id)bar\n"
                "{\n"
                "}\n"
-               "@end\n");
+               "@end");
 }
 
 TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
@@ -1109,30 +1113,30 @@ TEST_F(FormatTestObjC, ObjCForIn) {
 TEST_F(FormatTestObjC, ObjCCxxKeywords) {
   verifyFormat("+ (instancetype)new {\n"
                "  return nil;\n"
-               "}\n");
+               "}");
   verifyFormat("+ (instancetype)myNew {\n"
                "  return [self new];\n"
-               "}\n");
-  verifyFormat("SEL NewSelector(void) { return @selector(new); }\n");
-  verifyFormat("SEL MacroSelector(void) { return MACRO(new); }\n");
+               "}");
+  verifyFormat("SEL NewSelector(void) { return @selector(new); }");
+  verifyFormat("SEL MacroSelector(void) { return MACRO(new); }");
   verifyFormat("+ (instancetype)delete {\n"
                "  return nil;\n"
-               "}\n");
+               "}");
   verifyFormat("+ (instancetype)myDelete {\n"
                "  return [self delete];\n"
-               "}\n");
-  verifyFormat("SEL DeleteSelector(void) { return @selector(delete); }\n");
-  verifyFormat("SEL MacroSelector(void) { return MACRO(delete); }\n");
-  verifyFormat("MACRO(new:)\n");
-  verifyFormat("MACRO(delete:)\n");
-  verifyFormat("foo = @{MACRO(new:) : MACRO(delete:)}\n");
+               "}");
+  verifyFormat("SEL DeleteSelector(void) { return @selector(delete); }");
+  verifyFormat("SEL MacroSelector(void) { return MACRO(delete); }");
+  verifyFormat("MACRO(new:)");
+  verifyFormat("MACRO(delete:)");
+  verifyFormat("foo = @{MACRO(new:) : MACRO(delete:)}");
   verifyFormat("@implementation Foo\n"
                "// Testing\n"
                "- (Class)class {\n"
                "}\n"
                "- (void)foo {\n"
                "}\n"
-               "@end\n");
+               "@end");
   verifyFormat("@implementation Foo\n"
                "- (Class)class {\n"
                "}\n"
@@ -1162,7 +1166,7 @@ TEST_F(FormatTestObjC, ObjCCxxKeywords) {
                "// Testing\n"
                "- (Class)class;\n"
                "- (void)foo;\n"
-               "@end\n");
+               "@end");
   verifyFormat("@interface Foo\n"
                "- (Class)class;\n"
                "- (void)foo;\n"
@@ -1354,7 +1358,7 @@ TEST_F(FormatTestObjC, ObjCArrayLiterals) {
   // (that raises -Wobjc-string-concatenation).
   verifyFormat("NSArray *foo = @[\n"
                "  @\"aaaaaaaaaaaaaaaaaaaaaaaaaa\"\n"
-               "];\n");
+               "];");
 }
 
 TEST_F(FormatTestObjC, BreaksCallStatementWhereSemiJustOverTheLimit) {

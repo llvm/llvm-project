@@ -22,6 +22,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -84,7 +87,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
 }
 
 // This overload doesn't get a customization point because it's trivial to detect (through e.g.
-// __is_trivial_plus_operation) when specializing the more general variant, which should always be preferred
+// __desugars_to) when specializing the more general variant, which should always be preferred
 template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
@@ -147,5 +150,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___NUMERIC_PSTL_TRANSFORM_REDUCE_H

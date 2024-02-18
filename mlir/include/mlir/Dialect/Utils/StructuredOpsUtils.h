@@ -55,6 +55,12 @@ bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
 /// performed within the reduction.
 bool isVecmat(ArrayAttr indexingMaps);
 
+/// Tests whether the given maps describe a batch vector matrix multiplication.
+/// The test is permutation-invariant. Note that this only checks the affine
+/// maps from an operation, so does not perform any checks on the math being
+/// performed within the reduction.
+bool isBatchVecmat(ArrayAttr indexingMaps);
+
 /// Tests whether the given maps describe a matrix vector multiplication. The
 /// test is permutation-invariant. Note that this only checks the affine maps
 /// from an operation, so does not perform any checks on the math being
@@ -115,7 +121,9 @@ public:
   }
 
   bool layout(MapList l) {
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, ctx);
+    };
     return maps == infer(l);
   }
 

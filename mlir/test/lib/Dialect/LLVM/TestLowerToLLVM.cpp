@@ -48,11 +48,6 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // unrealized casts, but there needs to be the final module-wise cleanup in
   // the end. Keep module-level for now.
 
-  auto enableOpaquePointers = [](auto options) {
-    options.useOpaquePointers = true;
-    return options;
-  };
-
   // Blanket-convert any remaining high-level vector ops to loops if any remain.
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
   // Blanket-convert any remaining linalg ops to loops if any remain.
@@ -67,8 +62,7 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Convert vector to LLVM (always needed).
   pm.addPass(createConvertVectorToLLVMPass(
       // TODO: add more options on a per-need basis.
-      enableOpaquePointers(
-          ConvertVectorToLLVMPassOptions{options.reassociateFPReductions})));
+      ConvertVectorToLLVMPassOptions{options.reassociateFPReductions}));
   // Convert Math to LLVM (always needed).
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   // Expand complicated MemRef operations before lowering them.
@@ -76,11 +70,9 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // The expansion may create affine expressions. Get rid of them.
   pm.addPass(createLowerAffinePass());
   // Convert MemRef to LLVM (always needed).
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass(
-      enableOpaquePointers(FinalizeMemRefToLLVMConversionPassOptions{})));
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   // Convert Func to LLVM (always needed).
-  pm.addPass(createConvertFuncToLLVMPass(
-      enableOpaquePointers(ConvertFuncToLLVMPassOptions{})));
+  pm.addPass(createConvertFuncToLLVMPass());
   // Convert Index to LLVM (always needed).
   pm.addPass(createConvertIndexToLLVMPass());
   // Convert remaining unrealized_casts (always needed).

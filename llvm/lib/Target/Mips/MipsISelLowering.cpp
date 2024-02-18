@@ -40,7 +40,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -48,6 +47,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -2042,8 +2042,7 @@ SDValue MipsTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   SDValue CCNode  = CondRes.getOperand(2);
-  Mips::CondCode CC =
-    (Mips::CondCode)cast<ConstantSDNode>(CCNode)->getZExtValue();
+  Mips::CondCode CC = (Mips::CondCode)CCNode->getAsZExtVal();
   unsigned Opc = invertFPCondCodeUser(CC) ? Mips::BRANCH_F : Mips::BRANCH_T;
   SDValue BrCode = DAG.getConstant(Opc, DL, MVT::i32);
   SDValue FCC0 = DAG.getRegister(Mips::FCC0, MVT::i32);
@@ -2508,7 +2507,7 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsTargetLowering::
 lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // check the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+  if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
         "return address can be determined only for current frame");
     return SDValue();
@@ -2529,7 +2528,7 @@ SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   // check the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+  if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
         "return address can be determined only for current frame");
     return SDValue();
@@ -2593,12 +2592,13 @@ SDValue MipsTargetLowering::lowerShiftLeftParts(SDValue Op,
   SDValue Shamt = Op.getOperand(2);
   // if shamt < (VT.bits):
   //  lo = (shl lo, shamt)
-  //  hi = (or (shl hi, shamt) (srl (srl lo, 1), ~shamt))
+  //  hi = (or (shl hi, shamt) (srl (srl lo, 1), (xor shamt, (VT.bits-1))))
   // else:
   //  lo = 0
   //  hi = (shl lo, shamt[4:0])
-  SDValue Not = DAG.getNode(ISD::XOR, DL, MVT::i32, Shamt,
-                            DAG.getConstant(-1, DL, MVT::i32));
+  SDValue Not =
+      DAG.getNode(ISD::XOR, DL, MVT::i32, Shamt,
+                  DAG.getConstant(VT.getSizeInBits() - 1, DL, MVT::i32));
   SDValue ShiftRight1Lo = DAG.getNode(ISD::SRL, DL, VT, Lo,
                                       DAG.getConstant(1, DL, VT));
   SDValue ShiftRightLo = DAG.getNode(ISD::SRL, DL, VT, ShiftRight1Lo, Not);
@@ -2623,7 +2623,7 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   MVT VT = Subtarget.isGP64bit() ? MVT::i64 : MVT::i32;
 
   // if shamt < (VT.bits):
-  //  lo = (or (shl (shl hi, 1), ~shamt) (srl lo, shamt))
+  //  lo = (or (shl (shl hi, 1), (xor shamt, (VT.bits-1))) (srl lo, shamt))
   //  if isSRA:
   //    hi = (sra hi, shamt)
   //  else:
@@ -2635,8 +2635,9 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   //  else:
   //   lo = (srl hi, shamt[4:0])
   //   hi = 0
-  SDValue Not = DAG.getNode(ISD::XOR, DL, MVT::i32, Shamt,
-                            DAG.getConstant(-1, DL, MVT::i32));
+  SDValue Not =
+      DAG.getNode(ISD::XOR, DL, MVT::i32, Shamt,
+                  DAG.getConstant(VT.getSizeInBits() - 1, DL, MVT::i32));
   SDValue ShiftLeft1Hi = DAG.getNode(ISD::SHL, DL, VT, Hi,
                                      DAG.getConstant(1, DL, VT));
   SDValue ShiftLeftHi = DAG.getNode(ISD::SHL, DL, VT, ShiftLeft1Hi, Not);
@@ -2948,8 +2949,6 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
       Reg = State.AllocateReg(IntRegs);
     LocVT = MVT::i32;
   } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
-    LocVT = MVT::i32;
-
     // Allocate int register and shadow next int register. If first
     // available register is Mips::A1 or Mips::A3, shadow it too.
     Reg = State.AllocateReg(IntRegs);
@@ -2957,6 +2956,8 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
       Reg = State.AllocateReg(IntRegs);
 
     if (Reg) {
+      LocVT = MVT::i32;
+
       State.addLoc(
           CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       MCRegister HiReg = State.AllocateReg(IntRegs);
@@ -3723,15 +3724,6 @@ SDValue MipsTargetLowering::LowerFormalArguments(
 
       assert(!VA.needsCustom() && "unexpected custom memory argument");
 
-      if (ABI.IsO32()) {
-        // We ought to be able to use LocVT directly but O32 sets it to i32
-        // when allocating floating point values to integer registers.
-        // This shouldn't influence how we load the value into registers unless
-        // we are targeting softfloat.
-        if (VA.getValVT().isFloatingPoint() && !Subtarget.useSoftFloat())
-          LocVT = VA.getValVT();
-      }
-
       // Only arguments pased on the stack should make it here. 
       assert(VA.isMemLoc());
 
@@ -4071,7 +4063,7 @@ parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
     RC = TRI->getRegClass(Prefix == "hi" ?
                           Mips::HI32RegClassID : Mips::LO32RegClassID);
     return std::make_pair(*(RC->begin()), RC);
-  } else if (Prefix.startswith("$msa")) {
+  } else if (Prefix.starts_with("$msa")) {
     // Parse $msa(ir|csr|access|save|modify|request|map|unmap)
 
     // No numeric characters follow the name.

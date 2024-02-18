@@ -35,10 +35,18 @@ private:
   friend IntegralAP<!Signed>;
   APInt V;
 
-  template <typename T> static T truncateCast(const APInt &V) {
+  template <typename T, bool InputSigned>
+  static T truncateCast(const APInt &V) {
     constexpr unsigned BitSize = sizeof(T) * 8;
-    if (BitSize >= V.getBitWidth())
-      return std::is_signed_v<T> ? V.getSExtValue() : V.getZExtValue();
+    if (BitSize >= V.getBitWidth()) {
+      APInt Extended;
+      if constexpr (InputSigned)
+        Extended = V.sext(BitSize);
+      else
+        Extended = V.zext(BitSize);
+      return std::is_signed_v<T> ? Extended.getSExtValue()
+                                 : Extended.getZExtValue();
+    }
 
     return std::is_signed_v<T> ? V.trunc(BitSize).getSExtValue()
                                : V.trunc(BitSize).getZExtValue();
@@ -80,15 +88,10 @@ public:
     return V.ult(RHS.V);
   }
 
-  explicit operator bool() const { return !V.isZero(); }
-  explicit operator int8_t() const { return truncateCast<int8_t>(V); }
-  explicit operator uint8_t() const { return truncateCast<uint8_t>(V); }
-  explicit operator int16_t() const { return truncateCast<int16_t>(V); }
-  explicit operator uint16_t() const { return truncateCast<uint16_t>(V); }
-  explicit operator int32_t() const { return truncateCast<int32_t>(V); }
-  explicit operator uint32_t() const { return truncateCast<uint32_t>(V); }
-  explicit operator int64_t() const { return truncateCast<int64_t>(V); }
-  explicit operator uint64_t() const { return truncateCast<uint64_t>(V); }
+  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
+  explicit operator Ty() const {
+    return truncateCast<Ty, Signed>(V);
+  }
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
     assert(NumBits > 0);
@@ -99,7 +102,12 @@ public:
 
   template <bool InputSigned>
   static IntegralAP from(IntegralAP<InputSigned> V, unsigned NumBits = 0) {
-    return IntegralAP<Signed>(V.V);
+    if (NumBits == 0)
+      NumBits = V.bitWidth();
+
+    if constexpr (InputSigned)
+      return IntegralAP<Signed>(V.V.sextOrTrunc(NumBits));
+    return IntegralAP<Signed>(V.V.zextOrTrunc(NumBits));
   }
 
   template <unsigned Bits, bool InputSigned>
@@ -116,15 +124,23 @@ public:
 
   constexpr unsigned bitWidth() const { return V.getBitWidth(); }
 
-  APSInt toAPSInt(unsigned Bits = 0) const { return APSInt(V, Signed); }
-  APValue toAPValue() const { return APValue(APSInt(V, Signed)); }
+  APSInt toAPSInt(unsigned Bits = 0) const {
+    if (Bits == 0)
+      Bits = bitWidth();
+
+    if constexpr (Signed)
+      return APSInt(V.sext(Bits), !Signed);
+    else
+      return APSInt(V.zext(Bits), !Signed);
+  }
+  APValue toAPValue() const { return APValue(toAPSInt()); }
 
   bool isZero() const { return V.isZero(); }
   bool isPositive() const { return V.isNonNegative(); }
   bool isNegative() const { return !V.isNonNegative(); }
   bool isMin() const { return V.isMinValue(); }
   bool isMax() const { return V.isMaxValue(); }
-  static bool isSigned() { return Signed; }
+  static constexpr bool isSigned() { return Signed; }
   bool isMinusOne() const { return Signed && V == -1; }
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
@@ -137,9 +153,8 @@ public:
     return NameStr;
   }
 
-  IntegralAP truncate(unsigned bitWidth) const {
-    assert(false);
-    return V;
+  IntegralAP truncate(unsigned BitWidth) const {
+    return IntegralAP(V.trunc(BitWidth));
   }
 
   IntegralAP<false> toUnsigned() const {
@@ -167,63 +182,58 @@ public:
   }
 
   static bool increment(IntegralAP A, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
-    *R = IntegralAP(A.V - 1);
-    return false;
+    IntegralAP<Signed> One(1, A.bitWidth());
+    return add(A, One, A.bitWidth() + 1, R);
   }
 
   static bool decrement(IntegralAP A, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
-    *R = IntegralAP(A.V - 1);
-    return false;
+    IntegralAP<Signed> One(1, A.bitWidth());
+    return sub(A, One, A.bitWidth() + 1, R);
   }
 
   static bool add(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    return CheckAddUB(A, B, OpBits, R);
+    return CheckAddSubMulUB<std::plus>(A, B, OpBits, R);
   }
 
   static bool sub(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    /// FIXME: Gotta check if the result fits into OpBits bits.
-    return CheckSubUB(A, B, R);
+    return CheckAddSubMulUB<std::minus>(A, B, OpBits, R);
   }
 
   static bool mul(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
-    return false;
+    return CheckAddSubMulUB<std::multiplies>(A, B, OpBits, R);
   }
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.srem(B.V));
+    else
+      *R = IntegralAP(A.V.urem(B.V));
     return false;
   }
 
   static bool div(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.sdiv(B.V));
+    else
+      *R = IntegralAP(A.V.udiv(B.V));
     return false;
   }
 
   static bool bitAnd(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    *R = IntegralAP(A.V & B.V);
     return false;
   }
 
   static bool bitOr(IntegralAP A, IntegralAP B, unsigned OpBits,
                     IntegralAP *R) {
-    assert(false);
+    *R = IntegralAP(A.V | B.V);
     return false;
   }
 
   static bool bitXor(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    *R = IntegralAP(A.V ^ B.V);
     return false;
   }
 
@@ -246,32 +256,54 @@ public:
 
   static void shiftRight(const IntegralAP A, const IntegralAP B,
                          unsigned OpBits, IntegralAP *R) {
-    *R = IntegralAP(A.V.ashr(B.V.getZExtValue()));
+    unsigned ShiftAmount = B.V.getZExtValue();
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.ashr(ShiftAmount));
+    else
+      *R = IntegralAP(A.V.lshr(ShiftAmount));
+  }
+
+  // === Serialization support ===
+  size_t bytesToSerialize() const {
+    // 4 bytes for the BitWidth followed by N bytes for the actual APInt.
+    return sizeof(uint32_t) + (V.getBitWidth() / CHAR_BIT);
+  }
+
+  void serialize(std::byte *Buff) const {
+    assert(V.getBitWidth() < std::numeric_limits<uint8_t>::max());
+    uint32_t BitWidth = V.getBitWidth();
+
+    std::memcpy(Buff, &BitWidth, sizeof(uint32_t));
+    llvm::StoreIntToMemory(V, (uint8_t *)(Buff + sizeof(uint32_t)),
+                           BitWidth / CHAR_BIT);
+  }
+
+  static IntegralAP<Signed> deserialize(const std::byte *Buff) {
+    uint32_t BitWidth;
+    std::memcpy(&BitWidth, Buff, sizeof(uint32_t));
+    IntegralAP<Signed> Val(APInt(BitWidth, 0ull, !Signed));
+
+    llvm::LoadIntFromMemory(Val.V, (const uint8_t *)Buff + sizeof(uint32_t),
+                            BitWidth / CHAR_BIT);
+    return Val;
   }
 
 private:
-  static bool CheckAddUB(const IntegralAP &A, const IntegralAP &B,
-                         unsigned BitWidth, IntegralAP *R) {
-    if (!A.isSigned()) {
-      R->V = A.V + B.V;
+  template <template <typename T> class Op>
+  static bool CheckAddSubMulUB(const IntegralAP &A, const IntegralAP &B,
+                               unsigned BitWidth, IntegralAP *R) {
+    if constexpr (!Signed) {
+      R->V = Op<APInt>{}(A.V, B.V);
       return false;
     }
 
-    const APSInt &LHS = APSInt(A.V, A.isSigned());
-    const APSInt &RHS = APSInt(B.V, B.isSigned());
-
-    APSInt Value(LHS.extend(BitWidth) + RHS.extend(BitWidth), false);
+    const APSInt &LHS = A.toAPSInt();
+    const APSInt &RHS = B.toAPSInt();
+    APSInt Value = Op<APSInt>{}(LHS.extend(BitWidth), RHS.extend(BitWidth));
     APSInt Result = Value.trunc(LHS.getBitWidth());
-    if (Result.extend(BitWidth) != Value)
-      return true;
-
     R->V = Result;
-    return false;
-  }
-  static bool CheckSubUB(const IntegralAP &A, const IntegralAP &B,
-                         IntegralAP *R) {
-    R->V = A.V - B.V;
-    return false; // Success!
+
+    return Result.extend(BitWidth) != Value;
   }
 };
 
@@ -280,6 +312,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      IntegralAP<Signed> I) {
   I.print(OS);
   return OS;
+}
+
+template <bool Signed>
+IntegralAP<Signed> getSwappedBytes(IntegralAP<Signed> F) {
+  return F;
 }
 
 } // namespace interp

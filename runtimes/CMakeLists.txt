@@ -155,6 +155,9 @@ set(LLVM_COMPILER_CHECKED ON)
 include(AddLLVM)
 include(HandleLLVMOptions)
 
+# Loot at the PATH first to avoid a version mismatch between the command-line
+# python and the CMake-found version
+set(Python3_FIND_REGISTRY LAST)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Host triple is used by tests to check if they are running natively.
@@ -224,12 +227,14 @@ foreach(entry ${runtimes})
   add_subdirectory(${entry} ${projName})
 endforeach()
 
+# Define runtimes-test-depends so the parent build can use it unconditionally.
+add_custom_target(runtimes-test-depends)
+
 if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
   get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
-  add_custom_target(runtimes-test-depends)
   if(LLVM_RUNTIMES_LIT_DEPENDS)
     # add_dependencies complains if called with no dependencies
     add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})

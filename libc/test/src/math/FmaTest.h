@@ -22,16 +22,28 @@ class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  UIntType get_random_bit_pattern() {
-    UIntType bits{0};
-    for (UIntType i = 0; i < sizeof(UIntType) / 2; ++i) {
+  const T min_subnormal = FPBits::min_subnormal(Sign::POS).get_val();
+  const T min_normal = FPBits::min_normal(Sign::POS).get_val();
+  const T max_normal = FPBits::max_normal(Sign::POS).get_val();
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+
+  StorageType get_random_bit_pattern() {
+    StorageType bits{0};
+    for (StorageType i = 0; i < sizeof(StorageType) / 2; ++i) {
       bits = (bits << 2) +
              static_cast<uint16_t>(LIBC_NAMESPACE::testutils::rand());
     }
@@ -50,16 +62,13 @@ public:
     EXPECT_FP_EQ(func(inf, neg_inf, nan), nan);
 
     // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), T(FPBits(FPBits::MIN_SUBNORMAL)),
-                      T(FPBits(FPBits::MIN_SUBNORMAL))),
-                 T(FPBits(UIntType(2))));
+    EXPECT_FP_EQ(func(T(0.5), min_subnormal, min_subnormal),
+                 FPBits(StorageType(2)).get_val());
     // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + UIntType(1)));
-    EXPECT_FP_EQ(func(T(1) / T(FPBits::MIN_NORMAL << 1), v,
-                      T(FPBits(FPBits::MIN_NORMAL))),
-                 v);
+    T v = FPBits(MIN_NORMAL + StorageType(1)).get_val();
+    EXPECT_FP_EQ(func(T(1) / T(MIN_NORMAL << 1), v, min_normal), v);
     // Test overflow.
-    T z = T(FPBits(FPBits::MAX_NORMAL));
+    T z = max_normal;
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
     // Exact cancellation.
     EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));
@@ -67,15 +76,12 @@ public:
   }
 
   void test_subnormal_range(Func func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
-         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(get_random_bit_pattern())), y = T(FPBits(v)),
-        z = T(FPBits(w));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
+         v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(get_random_bit_pattern()).get_val(), y = FPBits(v).get_val(),
+        z = FPBits(w).get_val();
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
                                      0.5);
@@ -83,14 +89,12 @@ public:
   }
 
   void test_normal_range(Func func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
-         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w)),
-        z = T(FPBits(get_random_bit_pattern()));
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+         v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val(),
+        z = FPBits(get_random_bit_pattern()).get_val();
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
                                      0.5);

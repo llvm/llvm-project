@@ -15,7 +15,7 @@ func.func @bufferization_alloc_tensor() -> tensor<20x40xf32, #DCSR> {
   return %1 : tensor<20x40xf32, #DCSR>
 }
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 // CHECK-LABEL: func @sparse_tensor_new
 // CHECK-FUNC-LABEL: func @sparse_tensor_new
 func.func @sparse_tensor_new(%file: !Filename) -> tensor<20x40xf32, #DCSR> {

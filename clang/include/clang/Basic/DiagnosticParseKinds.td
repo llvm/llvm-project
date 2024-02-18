@@ -165,6 +165,9 @@ def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
   "'%0' is a C11 extension">, InGroup<C11>;
+def warn_c11_compat_keyword : Warning<
+  "'%0' is incompatible with C standards before C11">,
+  InGroup<CPre11Compat>, DefaultIgnore;
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;
@@ -299,6 +302,12 @@ def note_missing_selector_name : Note<
 def note_force_empty_selector_name : Note<
   "or insert whitespace before ':' to use %0 as parameter name "
   "and have an empty entry in the selector">;
+def ext_c_label_followed_by_declaration : ExtWarn<
+  "label followed by a declaration is a C23 extension">,
+  InGroup<C23>;
+def warn_c23_compat_label_followed_by_declaration : Warning<
+  "label followed by a declaration is incompatible with C standards before "
+  "C23">, InGroup<CPre23Compat>, DefaultIgnore;
 def ext_c_label_end_of_compound_statement : ExtWarn<
   "label at end of compound statement is a C23 extension">,
    InGroup<C23>;
@@ -1029,7 +1038,7 @@ def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
   "%select{an attribute specifier sequence|%0}1 in this position "
-  "is a C++23 extension">, InGroup<CXX23>;
+  "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
   InGroup<CXX23>;
@@ -1342,12 +1351,41 @@ def err_opencl_logical_exclusive_or : Error<
 def err_openclcxx_virtual_function : Error<
   "virtual functions are not supported in C++ for OpenCL">;
 
+// OpenACC Support.
+def warn_pragma_acc_ignored
+    : Warning<"unexpected '#pragma acc ...' in program">,
+      InGroup<SourceUsesOpenACC>,
+      DefaultIgnore;
+def err_acc_unexpected_directive
+    : Error<"unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
+def err_acc_invalid_directive
+    : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
+def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
+def err_acc_missing_directive : Error<"expected OpenACC directive">;
+def err_acc_invalid_open_paren
+    : Error<"expected clause-list or newline in OpenACC directive">;
+def err_acc_invalid_default_clause_kind
+    : Error<"invalid value for 'default' clause; expected 'present' or 'none'">;
+def err_acc_invalid_tag_kind
+    : Error<"invalid tag %0 on '%1' %select{directive|clause}2">;
+def err_acc_expected_reduction_operator
+    : Error<"missing reduction operator, expected '+', '*', 'max', 'min', '&', "
+            "'|', '^', '&&', or '||', follwed by a ':'">;
+def err_acc_invalid_reduction_operator
+    : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
+            "'&', '|', '^', '&&', or '||'">;
+def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
   "unexpected '#pragma omp ...' in program">, InGroup<SourceUsesOpenMP>, DefaultIgnore;
 def warn_omp_extra_tokens_at_eol : Warning<
   "extra tokens at the end of '#pragma omp %0' are ignored">,
   InGroup<ExtraTokens>;
+def err_omp_multiple_step_or_linear_modifier : Error<
+  "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
+def err_omp_deprecate_old_syntax: Error<
+  "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<
@@ -1534,6 +1572,7 @@ def warn_omp51_compat_attributes : Warning<
   "standards before OpenMP 5.1">,
   InGroup<OpenMPPre51Compat>, DefaultIgnore;
 def err_omp_expected_colon : Error<"missing ':' in %0">;
+def err_omp_missing_comma : Error< "missing ',' after %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
 def err_omp_requires_out_inout_depend_type : Error<
@@ -1564,11 +1603,12 @@ def note_pragma_loop_invalid_vectorize_option : Note<
   "vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')">;
 
 def err_pragma_fp_invalid_option : Error<
-  "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract', 'reassociate' or 'exceptions'">;
+  "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract', 'reassociate', 'reciprocal', or 'exceptions'">;
 def err_pragma_fp_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma clang fp %1'; expected "
   "%select{"
   "'fast' or 'on' or 'off'|"
+  "'on' or 'off'|"
   "'on' or 'off'|"
   "'ignore', 'maytrap' or 'strict'|"
   "'source', 'double' or 'extended'}2">;
@@ -1577,6 +1617,9 @@ def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
 def err_pragma_pipeline_invalid_keyword : Error<
     "invalid argument; expected 'disable'">;
+
+// API notes.
+def err_type_unparsed : Error<"unparsed tokens following type">;
 
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<

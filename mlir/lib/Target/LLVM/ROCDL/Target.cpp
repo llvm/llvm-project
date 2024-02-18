@@ -44,6 +44,7 @@
 #include "llvm/TargetParser/TargetParser.h"
 
 #include <cstdlib>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::ROCDL;
@@ -158,18 +159,15 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
 }
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
-SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module,
-                                         llvm::TargetMachine &targetMachine) {
+SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), targetMachine,
-                                      fileList, bcFiles, true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
+                                      true)))
     return std::nullopt;
   return std::move(bcFiles);
 }
 
-LogicalResult
-SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module,
-                                          llvm::TargetMachine &targetMachine) {
+LogicalResult SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module) {
   // Some ROCM builds don't strip this like they should
   if (auto *openclVersion = module.getNamedMetadata("opencl.ocl.version"))
     module.eraseNamedMetadata(openclVersion);
@@ -179,8 +177,10 @@ SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module,
   return success();
 }
 
-void SerializeGPUModuleBase::handleModulePreLink(
-    llvm::Module &module, llvm::TargetMachine &targetMachine) {
+void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
+  [[maybe_unused]] std::optional<llvm::TargetMachine *> targetMachine =
+      getOrCreateTargetMachine();
+  assert(targetMachine && "expect a TargetMachine");
   addControlVariables(module, target.hasWave64(), target.hasDaz(),
                       target.hasFiniteOnly(), target.hasUnsafeMath(),
                       target.hasFastMath(), target.hasCorrectSqrt(),
@@ -238,7 +238,7 @@ void SerializeGPUModuleBase::addControlVariables(
   addControlVariable("__oclc_wavefrontsize64", wave64);
 
   llvm::Type *i32Ty = llvm::Type::getInt32Ty(module.getContext());
-  int abi = 400;
+  int abi = 500;
   abiVer.getAsInteger(0, abi);
   llvm::GlobalVariable *abiVersion = new llvm::GlobalVariable(
       module, i32Ty, true, llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage,
@@ -332,8 +332,7 @@ public:
   compileToBinary(const std::string &serializedISA);
 
   std::optional<SmallVector<char, 0>>
-  moduleToObject(llvm::Module &llvmModule,
-                 llvm::TargetMachine &targetMachine) override;
+  moduleToObject(llvm::Module &llvmModule) override;
 
 private:
   // Target options.
@@ -411,8 +410,7 @@ AMDGPUSerializer::compileToBinary(const std::string &serializedISA) {
 }
 
 std::optional<SmallVector<char, 0>>
-AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule,
-                                 llvm::TargetMachine &targetMachine) {
+AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {
   // Return LLVM IR if the compilation target is offload.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
@@ -422,11 +420,19 @@ AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule,
   });
 #undef DEBUG_TYPE
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
-    return SerializeGPUModuleBase::moduleToObject(llvmModule, targetMachine);
+    return SerializeGPUModuleBase::moduleToObject(llvmModule);
+
+  std::optional<llvm::TargetMachine *> targetMachine =
+      getOrCreateTargetMachine();
+  if (!targetMachine) {
+    getOperation().emitError() << "Target Machine unavailable for triple "
+                               << triple << ", can't compile with LLVM\n";
+    return std::nullopt;
+  }
 
   // Translate the Module to ISA.
   std::optional<std::string> serializedISA =
-      translateToISA(llvmModule, targetMachine);
+      translateToISA(llvmModule, **targetMachine);
   if (!serializedISA) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;

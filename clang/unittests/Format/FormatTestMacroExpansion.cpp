@@ -55,11 +55,11 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
   verifyFormat("ID(CALL(CALL(return a * b;)));", Style);
 
   verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
-               "                 MySomewhatLongFunction(SomethingElse()));\n",
+               "                 MySomewhatLongFunction(SomethingElse()));",
                Style);
   verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
                "                 MySomewhatLongFunction(SomethingElse()), "
-               "ReturnMe());\n",
+               "ReturnMe());",
                Style);
 
   verifyFormat(R"(
@@ -253,6 +253,38 @@ TEST_F(FormatTestMacroExpansion,
   verifyIncompleteFormat("O(auto x = [](){\n"
                          "    f();}",
                          Style);
+}
+
+TEST_F(FormatTestMacroExpansion, CommaAsOperator) {
+  FormatStyle Style = getGoogleStyleWithColumns(42);
+  Style.Macros.push_back("MACRO(a, b, c)=a=(b); if(x) c");
+  verifyFormat("MACRO(auto a,\n"
+               "      looooongfunction(first, second,\n"
+               "                       third),\n"
+               "      fourth);",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, ForcedBreakDiffers) {
+  FormatStyle Style = getGoogleStyleWithColumns(40);
+  Style.Macros.push_back("MACRO(a, b)=a=(b)");
+  verifyFormat("//\n"
+               "MACRO(const type variable,\n"
+               "      functtioncall(\n"
+               "          first, longsecondarg, third));",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion,
+       PreferNotBreakingBetweenReturnTypeAndFunction) {
+  FormatStyle Style = getGoogleStyleWithColumns(22);
+  Style.Macros.push_back("MOCK_METHOD(r, n, a)=r n a");
+  // In the expanded code, we parse a full function signature, and afterwards
+  // know that we prefer not to break before the function name.
+  verifyFormat("MOCK_METHOD(\n"
+               "    type, variable,\n"
+               "    (type));",
+               Style);
 }
 
 } // namespace

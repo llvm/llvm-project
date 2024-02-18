@@ -369,7 +369,7 @@ static void skipBlockComment(const char *&First, const char *const End) {
     }
 }
 
-/// \returns True if the current single quotation mark character is a C++ 14
+/// \returns True if the current single quotation mark character is a C++14
 /// digit separator.
 static bool isQuoteCppDigitSeparator(const char *const Start,
                                      const char *const Cur,
@@ -565,9 +565,8 @@ Scanner::cleanStringIfNeeded(const dependency_directives_scan::Token &Tok) {
   const char *BufPtr = Input.begin() + Tok.Offset;
   const char *AfterIdent = Input.begin() + Tok.getEnd();
   while (BufPtr < AfterIdent) {
-    unsigned Size;
-    Spelling[SpellingLength++] =
-        Lexer::getCharAndSizeNoWarn(BufPtr, Size, LangOpts);
+    auto [Char, Size] = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
+    Spelling[SpellingLength++] = Char;
     BufPtr += Size;
   }
 

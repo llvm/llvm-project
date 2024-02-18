@@ -74,6 +74,51 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
 }
 
+/// Determine whether the token kind starts a simple-type-specifier.
+bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
+  switch (getKind()) {
+  case tok::annot_typename:
+  case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
+    return true;
+
+  case tok::kw_short:
+  case tok::kw_long:
+  case tok::kw___int64:
+  case tok::kw___int128:
+  case tok::kw_signed:
+  case tok::kw_unsigned:
+  case tok::kw_void:
+  case tok::kw_char:
+  case tok::kw_int:
+  case tok::kw_half:
+  case tok::kw_float:
+  case tok::kw_double:
+  case tok::kw___bf16:
+  case tok::kw__Float16:
+  case tok::kw___float128:
+  case tok::kw___ibm128:
+  case tok::kw_wchar_t:
+  case tok::kw_bool:
+  case tok::kw__Bool:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+  case tok::kw___auto_type:
+  case tok::kw_char16_t:
+  case tok::kw_char32_t:
+  case tok::kw_typeof:
+  case tok::kw_decltype:
+  case tok::kw_char8_t:
+    return getIdentifierInfo()->isKeyword(LangOpts);
+
+  default:
+    return false;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Lexer Class Implementation
 //===----------------------------------------------------------------------===//
@@ -287,9 +332,9 @@ static size_t getSpellingSlow(const Token &Tok, const char *BufPtr,
   if (tok::isStringLiteral(Tok.getKind())) {
     // Munch the encoding-prefix and opening double-quote.
     while (BufPtr < BufEnd) {
-      unsigned Size;
-      Spelling[Length++] = Lexer::getCharAndSizeNoWarn(BufPtr, Size, LangOpts);
-      BufPtr += Size;
+      auto CharAndSize = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
+      Spelling[Length++] = CharAndSize.Char;
+      BufPtr += CharAndSize.Size;
 
       if (Spelling[Length - 1] == '"')
         break;
@@ -316,9 +361,9 @@ static size_t getSpellingSlow(const Token &Tok, const char *BufPtr,
   }
 
   while (BufPtr < BufEnd) {
-    unsigned Size;
-    Spelling[Length++] = Lexer::getCharAndSizeNoWarn(BufPtr, Size, LangOpts);
-    BufPtr += Size;
+    auto CharAndSize = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
+    Spelling[Length++] = CharAndSize.Char;
+    BufPtr += CharAndSize.Size;
   }
 
   assert(Length < Tok.getLength() &&
@@ -772,10 +817,9 @@ unsigned Lexer::getTokenPrefixLength(SourceLocation TokStart, unsigned CharNo,
   // If we have a character that may be a trigraph or escaped newline, use a
   // lexer to parse it correctly.
   for (; CharNo; --CharNo) {
-    unsigned Size;
-    Lexer::getCharAndSizeNoWarn(TokPtr, Size, LangOpts);
-    TokPtr += Size;
-    PhysOffset += Size;
+    auto CharAndSize = Lexer::getCharAndSizeNoWarn(TokPtr, LangOpts);
+    TokPtr += CharAndSize.Size;
+    PhysOffset += CharAndSize.Size;
   }
 
   // Final detail: if we end up on an escaped newline, we want to return the
@@ -1357,15 +1401,16 @@ SourceLocation Lexer::findLocationAfterToken(
 ///
 /// NOTE: When this method is updated, getCharAndSizeSlowNoWarn (below) should
 /// be updated to match.
-char Lexer::getCharAndSizeSlow(const char *Ptr, unsigned &Size,
-                               Token *Tok) {
+Lexer::SizedChar Lexer::getCharAndSizeSlow(const char *Ptr, Token *Tok) {
+  unsigned Size = 0;
   // If we have a slash, look for an escaped newline.
   if (Ptr[0] == '\\') {
     ++Size;
     ++Ptr;
 Slash:
     // Common case, backslash-char where the char is not whitespace.
-    if (!isWhitespace(Ptr[0])) return '\\';
+    if (!isWhitespace(Ptr[0]))
+      return {'\\', Size};
 
     // See if we have optional whitespace characters between the slash and
     // newline.
@@ -1382,11 +1427,13 @@ Slash:
       Ptr  += EscapedNewLineSize;
 
       // Use slow version to accumulate a correct size field.
-      return getCharAndSizeSlow(Ptr, Size, Tok);
+      auto CharAndSize = getCharAndSizeSlow(Ptr, Tok);
+      CharAndSize.Size += Size;
+      return CharAndSize;
     }
 
     // Otherwise, this is not an escaped newline, just return the slash.
-    return '\\';
+    return {'\\', Size};
   }
 
   // If this is a trigraph, process it.
@@ -1401,13 +1448,12 @@ Slash:
       Ptr += 3;
       Size += 3;
       if (C == '\\') goto Slash;
-      return C;
+      return {C, Size};
     }
   }
 
   // If this is neither, return a single character.
-  ++Size;
-  return *Ptr;
+  return {*Ptr, Size + 1u};
 }
 
 /// getCharAndSizeSlowNoWarn - Handle the slow/uncommon case of the
@@ -1416,15 +1462,18 @@ Slash:
 ///
 /// NOTE: When this method is updated, getCharAndSizeSlow (above) should
 /// be updated to match.
-char Lexer::getCharAndSizeSlowNoWarn(const char *Ptr, unsigned &Size,
-                                     const LangOptions &LangOpts) {
+Lexer::SizedChar Lexer::getCharAndSizeSlowNoWarn(const char *Ptr,
+                                                 const LangOptions &LangOpts) {
+
+  unsigned Size = 0;
   // If we have a slash, look for an escaped newline.
   if (Ptr[0] == '\\') {
     ++Size;
     ++Ptr;
 Slash:
     // Common case, backslash-char where the char is not whitespace.
-    if (!isWhitespace(Ptr[0])) return '\\';
+    if (!isWhitespace(Ptr[0]))
+      return {'\\', Size};
 
     // See if we have optional whitespace characters followed by a newline.
     if (unsigned EscapedNewLineSize = getEscapedNewLineSize(Ptr)) {
@@ -1433,11 +1482,13 @@ Slash:
       Ptr  += EscapedNewLineSize;
 
       // Use slow version to accumulate a correct size field.
-      return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
+      auto CharAndSize = getCharAndSizeSlowNoWarn(Ptr, LangOpts);
+      CharAndSize.Size += Size;
+      return CharAndSize;
     }
 
     // Otherwise, this is not an escaped newline, just return the slash.
-    return '\\';
+    return {'\\', Size};
   }
 
   // If this is a trigraph, process it.
@@ -1448,13 +1499,12 @@ Slash:
       Ptr += 3;
       Size += 3;
       if (C == '\\') goto Slash;
-      return C;
+      return {C, Size};
     }
   }
 
   // If this is neither, return a single character.
-  ++Size;
-  return *Ptr;
+  return {*Ptr, Size + 1u};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1964,11 +2014,14 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
 /// isHexaLiteral - Return true if Start points to a hex constant.
 /// in microsoft mode (where this is supposed to be several different tokens).
 bool Lexer::isHexaLiteral(const char *Start, const LangOptions &LangOpts) {
-  unsigned Size;
-  char C1 = Lexer::getCharAndSizeNoWarn(Start, Size, LangOpts);
+  auto CharAndSize1 = Lexer::getCharAndSizeNoWarn(Start, LangOpts);
+  char C1 = CharAndSize1.Char;
   if (C1 != '0')
     return false;
-  char C2 = Lexer::getCharAndSizeNoWarn(Start + Size, Size, LangOpts);
+
+  auto CharAndSize2 =
+      Lexer::getCharAndSizeNoWarn(Start + CharAndSize1.Size, LangOpts);
+  char C2 = CharAndSize2.Char;
   return (C2 == 'x' || C2 == 'X');
 }
 
@@ -1982,6 +2035,10 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   while (isPreprocessingNumberBody(C)) {
     CurPtr = ConsumeChar(CurPtr, Size, Result);
     PrevCh = C;
+    if (LangOpts.HLSL && C == '.' && (*CurPtr == 'x' || *CurPtr == 'r')) {
+      CurPtr -= Size;
+      break;
+    }
     C = getCharAndSize(CurPtr, Size);
   }
 
@@ -2012,8 +2069,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
 
   // If we have a digit separator, continue.
   if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
-    unsigned NextSize;
-    char Next = getCharAndSizeNoWarn(CurPtr + Size, NextSize, LangOpts);
+    auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
@@ -2085,8 +2141,8 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
       unsigned Consumed = Size;
       unsigned Chars = 1;
       while (true) {
-        unsigned NextSize;
-        char Next = getCharAndSizeNoWarn(CurPtr + Consumed, NextSize, LangOpts);
+        auto [Next, NextSize] =
+            getCharAndSizeNoWarn(CurPtr + Consumed, LangOpts);
         if (!isAsciiIdentifierContinue(Next)) {
           // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
@@ -2214,6 +2270,8 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
       const char *PrefixEnd = &CurPtr[PrefixLen];
       if (PrefixLen == 16) {
         Diag(PrefixEnd, diag::err_raw_delim_too_long);
+      } else if (*PrefixEnd == '\n') {
+        Diag(PrefixEnd, diag::err_invalid_newline_raw_delim);
       } else {
         Diag(PrefixEnd, diag::err_invalid_char_raw_delim)
           << StringRef(PrefixEnd, 1);
@@ -3201,8 +3259,8 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
     return false;
 
   // Check to see if we have <<<<<<< or >>>>.
-  if (!StringRef(CurPtr, BufferEnd - CurPtr).startswith("<<<<<<<") &&
-      !StringRef(CurPtr, BufferEnd - CurPtr).startswith(">>>> "))
+  if (!StringRef(CurPtr, BufferEnd - CurPtr).starts_with("<<<<<<<") &&
+      !StringRef(CurPtr, BufferEnd - CurPtr).starts_with(">>>> "))
     return false;
 
   // If we have a situation where we don't care about conflict markers, ignore

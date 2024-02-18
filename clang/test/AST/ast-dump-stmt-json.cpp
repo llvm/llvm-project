@@ -2265,7 +2265,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isReferenced": true,
 // CHECK-NEXT:          "name": "obj",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:           "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -2331,7 +2330,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:             "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -2340,7 +2338,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "obj",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:              "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -2429,7 +2426,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:             "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -2438,7 +2434,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "obj",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:              "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -2593,7 +2588,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:                 "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "lvalue",
@@ -2602,7 +2596,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 "kind": "VarDecl",
 // CHECK-NEXT:                 "name": "obj",
 // CHECK-NEXT:                 "type": {
-// CHECK-NEXT:                  "desugaredQualType": "DependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:                  "qualType": "DependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                }
@@ -2779,7 +2772,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isReferenced": true,
 // CHECK-NEXT:          "name": "obj",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "OtherDependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:           "qualType": "OtherDependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -2867,7 +2859,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "OtherDependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:             "qualType": "OtherDependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -2876,7 +2867,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "obj",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "OtherDependentScopeMemberExprWrapper<T>",
 // CHECK-NEXT:              "qualType": "OtherDependentScopeMemberExprWrapper<T>"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -3037,7 +3027,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "U",
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
@@ -3066,7 +3055,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "U",
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
@@ -4563,7 +4551,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isUsed": true,
 // CHECK-NEXT:          "name": "__begin1",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
@@ -4663,7 +4650,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isUsed": true,
 // CHECK-NEXT:          "name": "__end1",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
@@ -4804,7 +4790,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -4826,7 +4811,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "int *",
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -4835,7 +4819,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "__begin1",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "int *",
 // CHECK-NEXT:              "qualType": "int *"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -4858,7 +4841,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -4880,7 +4862,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "int *",
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -4889,7 +4870,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "__end1",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "int *",
 // CHECK-NEXT:              "qualType": "int *"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -4914,7 +4894,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "int *",
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
@@ -4937,7 +4916,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -4946,7 +4924,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "kind": "VarDecl",
 // CHECK-NEXT:           "name": "__begin1",
 // CHECK-NEXT:           "type": {
-// CHECK-NEXT:            "desugaredQualType": "int *",
 // CHECK-NEXT:            "qualType": "int *"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
@@ -5055,7 +5032,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "desugaredQualType": "int *",
 // CHECK-NEXT:                 "qualType": "int *"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "prvalue",
@@ -5077,7 +5053,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "desugaredQualType": "int *",
 // CHECK-NEXT:                   "qualType": "int *"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "valueCategory": "lvalue",
@@ -5086,7 +5061,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   "kind": "VarDecl",
 // CHECK-NEXT:                   "name": "__begin1",
 // CHECK-NEXT:                   "type": {
-// CHECK-NEXT:                    "desugaredQualType": "int *",
 // CHECK-NEXT:                    "qualType": "int *"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  }
@@ -5160,7 +5134,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "C",
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "Container",
 // CHECK-NEXT:         "qualType": "Container"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "init": "call",
@@ -5181,7 +5154,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "Container",
 // CHECK-NEXT:           "qualType": "Container"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -5275,7 +5247,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "Container",
 // CHECK-NEXT:             "qualType": "Container"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -5284,7 +5255,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "C",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "Container",
 // CHECK-NEXT:              "qualType": "Container"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -5333,7 +5303,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isUsed": true,
 // CHECK-NEXT:          "name": "__begin1",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
@@ -5418,7 +5387,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "desugaredQualType": "Container",
 // CHECK-NEXT:                   "qualType": "Container"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "valueCategory": "lvalue",
@@ -5481,7 +5449,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isUsed": true,
 // CHECK-NEXT:          "name": "__end1",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
@@ -5566,7 +5533,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "desugaredQualType": "Container",
 // CHECK-NEXT:                   "qualType": "Container"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "valueCategory": "lvalue",
@@ -5626,7 +5592,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -5648,7 +5613,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "int *",
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -5657,7 +5621,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "__begin1",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "int *",
 // CHECK-NEXT:              "qualType": "int *"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -5680,7 +5643,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -5702,7 +5664,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "int *",
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -5711,7 +5672,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "__end1",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "int *",
 // CHECK-NEXT:              "qualType": "int *"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -5736,7 +5696,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "int *",
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
@@ -5759,7 +5718,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -5768,7 +5726,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "kind": "VarDecl",
 // CHECK-NEXT:           "name": "__begin1",
 // CHECK-NEXT:           "type": {
-// CHECK-NEXT:            "desugaredQualType": "int *",
 // CHECK-NEXT:            "qualType": "int *"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
@@ -5877,7 +5834,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "desugaredQualType": "int *",
 // CHECK-NEXT:                 "qualType": "int *"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "prvalue",
@@ -5899,7 +5855,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "desugaredQualType": "int *",
 // CHECK-NEXT:                   "qualType": "int *"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "valueCategory": "lvalue",
@@ -5908,7 +5863,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   "kind": "VarDecl",
 // CHECK-NEXT:                   "name": "__begin1",
 // CHECK-NEXT:                   "type": {
-// CHECK-NEXT:                    "desugaredQualType": "int *",
 // CHECK-NEXT:                    "qualType": "int *"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  }
@@ -6120,7 +6074,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isUsed": true,
 // CHECK-NEXT:          "name": "__begin1",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
@@ -6220,7 +6173,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "isUsed": true,
 // CHECK-NEXT:          "name": "__end1",
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "init": "c",
@@ -6361,7 +6313,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -6383,7 +6334,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "int *",
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -6392,7 +6342,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "__begin1",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "int *",
 // CHECK-NEXT:              "qualType": "int *"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -6415,7 +6364,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -6437,7 +6385,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "int *",
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -6446,7 +6393,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "__end1",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "int *",
 // CHECK-NEXT:              "qualType": "int *"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
@@ -6471,7 +6417,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "int *",
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "lvalue",
@@ -6494,7 +6439,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -6503,7 +6447,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "kind": "VarDecl",
 // CHECK-NEXT:           "name": "__begin1",
 // CHECK-NEXT:           "type": {
-// CHECK-NEXT:            "desugaredQualType": "int *",
 // CHECK-NEXT:            "qualType": "int *"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
@@ -6612,7 +6555,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
-// CHECK-NEXT:                 "desugaredQualType": "int *",
 // CHECK-NEXT:                 "qualType": "int *"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "prvalue",
@@ -6634,7 +6576,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
-// CHECK-NEXT:                   "desugaredQualType": "int *",
 // CHECK-NEXT:                   "qualType": "int *"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "valueCategory": "lvalue",
@@ -6643,7 +6584,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                   "kind": "VarDecl",
 // CHECK-NEXT:                   "name": "__begin1",
 // CHECK-NEXT:                   "type": {
-// CHECK-NEXT:                    "desugaredQualType": "int *",
 // CHECK-NEXT:                    "qualType": "int *"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  }

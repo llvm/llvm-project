@@ -948,15 +948,15 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 static bool isArmMapSymbol(const Symbol *b) {
-  return b->getName() == "$a" || b->getName().startswith("$a.");
+  return b->getName() == "$a" || b->getName().starts_with("$a.");
 }
 
 static bool isThumbMapSymbol(const Symbol *s) {
-  return s->getName() == "$t" || s->getName().startswith("$t.");
+  return s->getName() == "$t" || s->getName().starts_with("$t.");
 }
 
 static bool isDataMapSymbol(const Symbol *b) {
-  return b->getName() == "$d" || b->getName().startswith("$d.");
+  return b->getName() == "$d" || b->getName().starts_with("$d.");
 }
 
 void elf::sortArmMappingSymbols() {
@@ -1189,7 +1189,7 @@ void elf::processArmCmseSymbols() {
   // Only symbols with external linkage end up in symtab, so no need to do
   // linkage checks. Only check symbol type.
   for (Symbol *acleSeSym : symtab.getSymbols()) {
-    if (!acleSeSym->getName().startswith(ACLESESYM_PREFIX))
+    if (!acleSeSym->getName().starts_with(ACLESESYM_PREFIX))
       continue;
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
@@ -1381,9 +1381,9 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   // Copy the secure gateway entry symbols to the import library symbol table.
   for (auto &p : symtab.cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
-    impSymTab->addSymbol(makeDefined(nullptr, d->getName(), d->computeBinding(),
-                                     /*stOther=*/0, STT_FUNC, d->getVA(),
-                                     d->getSize(), nullptr));
+    impSymTab->addSymbol(makeDefined(
+        ctx.internalFile, d->getName(), d->computeBinding(),
+        /*stOther=*/0, STT_FUNC, d->getVA(), d->getSize(), nullptr));
   }
 
   size_t idx = 0;

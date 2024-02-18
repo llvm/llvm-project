@@ -80,6 +80,7 @@ def remark_fe_backend_optimization_remark_analysis_aliasing : Remark<"%0; "
     "the '__restrict__' qualifier with the independent array arguments. "
     "Erroneous results will occur if these options are incorrectly applied!">,
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
+
 def warn_fe_backend_optimization_failure : Warning<"%0">, BackendInfo,
     InGroup<BackendOptimizationFailure>, DefaultWarn;
 def note_fe_backend_invalid_loc : Note<"could "
@@ -166,7 +167,7 @@ def err_verify_no_such_marker : Error<
 def err_verify_missing_start : Error<
     "cannot find start ('{{') of expected %0">;
 def err_verify_missing_end : Error<
-    "cannot find end ('}}') of expected %0">;
+    "cannot find end ('%1') of expected %0">;
 def err_verify_invalid_content : Error<
     "invalid expected %0: %1">;
 def err_verify_missing_regex : Error<
@@ -175,10 +176,10 @@ def err_verify_inconsistent_diags : Error<
     "'%0' diagnostics %select{expected|seen}1 but not %select{seen|expected}1: "
     "%2">;
 def err_verify_invalid_no_diags : Error<
-    "%select{expected|'expected-no-diagnostics'}0 directive cannot follow "
-    "%select{'expected-no-diagnostics' directive|other expected directives}0">;
+    "%select{expected|'%0-no-diagnostics'}1 directive cannot follow "
+    "%select{'%0-no-diagnostics' directive|other expected directives}1">;
 def err_verify_no_directives : Error<
-    "no expected directives found: consider use of 'expected-no-diagnostics'">;
+    "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 

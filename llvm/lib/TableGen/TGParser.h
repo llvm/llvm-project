@@ -85,7 +85,7 @@ struct MultiClass {
   void dump() const;
 
   MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records)
-      : Rec(Name, Loc, Records) {}
+      : Rec(Name, Loc, Records, Record::RK_MultiClass) {}
 };
 
 class TGVarScope {
@@ -143,6 +143,7 @@ class TGParser {
   TGLexer Lex;
   std::vector<SmallVector<LetRecord, 4>> LetStack;
   std::map<std::string, std::unique_ptr<MultiClass>> MultiClasses;
+  std::map<std::string, RecTy *> TypeAliases;
 
   /// Loops - Keep track of any foreach loops we are within.
   ///
@@ -264,6 +265,7 @@ private:  // Parser methods.
   bool ParseDefm(MultiClass *CurMultiClass);
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseDefset();
+  bool ParseDeftype();
   bool ParseDefvar(Record *CurRec = nullptr);
   bool ParseDump(MultiClass *CurMultiClass, Record *CurRec = nullptr);
   bool ParseForeach(MultiClass *CurMultiClass);
@@ -293,8 +295,7 @@ private:  // Parser methods.
   void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
                       Record *CurRec, RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<llvm::ArgumentInit *> &Result,
-                                 Record *CurRec, Record *ArgsRec,
-                                 bool IsDefm = false);
+                                 Record *CurRec, Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
       Record *CurRec);

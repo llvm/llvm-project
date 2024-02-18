@@ -19,7 +19,7 @@ namespace tools {
 
 /// Directly call GNU Binutils assembler and linker
 namespace dragonfly {
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC)
       : Tool("dragonfly::Assembler", "assembler", TC) {}
@@ -32,7 +32,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("dragonfly::Linker", "linker", TC) {}
 

@@ -39,6 +39,8 @@
 // RUN: | FileCheck %s --check-prefix=LTO_EMUTLS
 // RUN: %clang -### -flto --target=riscv64-linux-android10000 -fno-emulated-tls %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=LTO_NOEMUTLS
+// RUN: %clang -### -flto --target=amd64-unknown-openbsd %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LTO_EMUTLS
 
 // Default without -f[no-]emulated-tls, will be decided by the target triple.
 // DEFAULT-NOT: "-cc1" {{.*}}"-femulated-tls"

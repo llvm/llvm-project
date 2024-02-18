@@ -221,7 +221,11 @@ public:
     DCHECK_EQ(BlocksInUse, BatchClassUsedInFreeLists);
   }
 
-  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray) {
+  // Note that the `MaxBlockCount` will be used when we support arbitrary blocks
+  // count. Now it's the same as the number of blocks stored in the
+  // `TransferBatch`.
+  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray,
+                UNUSED const u16 MaxBlockCount) {
     TransferBatchT *B = popBatch(C, ClassId);
     if (!B)
       return 0;
@@ -1126,10 +1130,14 @@ private:
         AllocatedPagesCount - Recorder.getReleasedPagesCount();
     const uptr InUseBytes = InUsePages * PageSize;
 
+    uptr Integral;
+    uptr Fractional;
+    computePercentage(BlockSize * InUseBlocks, InUsePages * PageSize, &Integral,
+                      &Fractional);
     Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
-                "pages: %6zu/%6zu inuse bytes: %6zuK\n",
+                "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",
                 ClassId, BlockSize, InUseBlocks, TotalBlocks, InUsePages,
-                AllocatedPagesCount, InUseBytes >> 10);
+                AllocatedPagesCount, InUseBytes >> 10, Integral, Fractional);
   }
 
   NOINLINE uptr releaseToOSMaybe(RegionInfo *Region, uptr ClassId,

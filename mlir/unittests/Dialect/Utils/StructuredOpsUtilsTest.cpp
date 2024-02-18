@@ -370,4 +370,56 @@ TEST(isBatchMatvec, WrongDimOrderMatrix) {
   EXPECT_THAT(maps, Not(Truly(isBatchMatvec)));
 }
 
+TEST(isBatchVecmat, Simple) {
+  MLIRContext context;
+
+  AffineExpr batch, k, n;
+  bindDims(&context, batch, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k, n}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isBatchVecmat));
+}
+
+TEST(isBatchVecmat, BindingSwapped) {
+  MLIRContext context;
+
+  AffineExpr batch, k, n;
+  bindDims(&context, batch, n, k); // bind in different order
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k, n}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isBatchVecmat));
+}
+
+TEST(isBatchVecmat, Matmul) {
+  MLIRContext context;
+
+  AffineExpr m, n, k;
+  bindDims(&context, m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Not(Truly(isBatchVecmat)));
+}
+
+TEST(isBatchVecmat, WrongDimOrderMatrix) {
+  MLIRContext context;
+
+  AffineExpr batch, k, n;
+  bindDims(&context, batch, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n, k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Not(Truly(isBatchVecmat)));
+}
+
 } // namespace

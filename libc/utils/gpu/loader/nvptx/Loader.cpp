@@ -83,7 +83,6 @@ Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
   // for destructors.
   llvm::sort(ctors, [](auto x, auto y) { return x.second < y.second; });
   llvm::sort(dtors, [](auto x, auto y) { return x.second < y.second; });
-  llvm::reverse(dtors);
 
   // Allocate host pinned memory to make these arrays visible to the GPU.
   CUdeviceptr *dev_memory = reinterpret_cast<CUdeviceptr *>(allocator(

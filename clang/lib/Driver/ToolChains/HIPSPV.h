@@ -20,7 +20,7 @@ namespace HIPSPV {
 
 // Runs llvm-link/opt/llc/lld, which links multiple LLVM bitcode, together with
 // device library, then compiles it to SPIR-V in a shared object.
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("HIPSPV::Linker", "hipspv-link", TC) {}
 

@@ -1177,12 +1177,12 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
        "<4 x i32> <i32 0, i32 1, i32 2, i32 3>"},
-      {{false, true},
+      {{true, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
-       "<4 x i32> <i32 0, i32 1, i32 2, i32 undef>"},
-      {{false, true},
+       "<4 x i32> <i32 0, i32 1, i32 2, i32 poison>"},
+      {{true, false},
        "shufflevector <vscale x 4 x i32> %svx, "
-       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> undef"},
+       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> poison"},
       {{true, false}, "call i32 @g(i32 %x)"},
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
@@ -1830,6 +1830,8 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
                 "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
                 "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
                 "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
+                "  %A5 = fcmp oge double %arg, 0xFFF0000000000000"
+                "  %A6 = fcmp ult double %arg, 0xFFF0000000000000"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -1847,14 +1849,77 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
   auto [OgtVal, OgtClass] =
       fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OgtVal);
-  EXPECT_EQ(fcAllFlags, OgtClass);
+  EXPECT_EQ(A3->getOperand(0), OgtVal);
+  EXPECT_EQ(~(fcNegInf | fcNan), OgtClass);
 
   auto [UleVal, UleClass] =
       fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UleVal);
-  EXPECT_EQ(fcAllFlags, UleClass);
+  EXPECT_EQ(A4->getOperand(0), UleVal);
+  EXPECT_EQ(fcNegInf | fcNan, UleClass);
+
+  auto [OgeVal, OgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGE, *A5->getFunction(), A5->getOperand(0),
+                      A5->getOperand(1));
+  EXPECT_EQ(A5->getOperand(0), OgeVal);
+  EXPECT_EQ(~fcNan, OgeClass);
+
+  auto [UltVal, UltClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULT, *A6->getFunction(), A6->getOperand(0),
+                      A6->getOperand(1));
+  EXPECT_EQ(A6->getOperand(0), UltVal);
+  EXPECT_EQ(fcNan, UltClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
+  parseAssembly("declare double @llvm.fabs.f64(double)\n"
+                "define i1 @test(double %arg) {\n"
+                "  %fabs.arg = call double @llvm.fabs.f64(double %arg)\n"
+                "  %A = fcmp olt double %fabs.arg, 0xFFF0000000000000"
+                "  %A2 = fcmp uge double %fabs.arg, 0xFFF0000000000000"
+                "  %A3 = fcmp ogt double %fabs.arg, 0xFFF0000000000000"
+                "  %A4 = fcmp ule double %fabs.arg, 0xFFF0000000000000"
+                "  %A5 = fcmp oge double %fabs.arg, 0xFFF0000000000000"
+                "  %A6 = fcmp ult double %fabs.arg, 0xFFF0000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  Value *ArgVal = F->getArg(0);
+
+  auto [OltVal, OltClass] = fcmpToClassTest(
+      CmpInst::FCMP_OLT, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(ArgVal, OltVal);
+  EXPECT_EQ(fcNone, OltClass);
+
+  auto [UgeVal, UgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_UGE, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(ArgVal, UgeVal);
+  EXPECT_EQ(fcAllFlags, UgeClass);
+
+  auto [OgtVal, OgtClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(ArgVal, OgtVal);
+  EXPECT_EQ(~fcNan, OgtClass);
+
+  auto [UleVal, UleClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
+                      A4->getOperand(1));
+  EXPECT_EQ(ArgVal, UleVal);
+  EXPECT_EQ(fcNan, UleClass);
+
+  auto [OgeVal, OgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGE, *A5->getFunction(), A5->getOperand(0),
+                      A5->getOperand(1));
+  EXPECT_EQ(ArgVal, OgeVal);
+  EXPECT_EQ(~fcNan, OgeClass);
+
+  auto [UltVal, UltClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULT, *A6->getFunction(), A6->getOperand(0),
+                      A6->getOperand(1));
+  EXPECT_EQ(ArgVal, UltVal);
+  EXPECT_EQ(fcNan, UltClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
@@ -1880,14 +1945,14 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   auto [OleVal, OleClass] =
       fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OleVal);
-  EXPECT_EQ(fcAllFlags, OleClass);
+  EXPECT_EQ(A->getOperand(0), OleVal);
+  EXPECT_EQ(~fcNan, OleClass);
 
   auto [UgtVal, UgtClass] =
       fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UgtVal);
-  EXPECT_EQ(fcAllFlags, UgtClass);
+  EXPECT_EQ(A4->getOperand(0), UgtVal);
+  EXPECT_EQ(fcNan, UgtClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
@@ -2539,7 +2604,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
     auto M = parseModule(R"(
-  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+  define i32 @test(i32 %X, i32 %Y, i32 noundef %M) {
     %1 = xor i32 %M, -1
     %LHS = and i32 %1, %X
     %RHS = and i32 %Y, %M
@@ -2558,7 +2623,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B)
     auto M = parseModule(R"(
-  define void @test(i32 %A, i32 %B) {
+  define void @test(i32 noundef %A, i32 noundef %B) {
     %LHS = and i32 %A, %B
     %or = or i32 %A, %B
     %RHS = xor i32 %or, -1
@@ -2586,7 +2651,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B) in vector version
     auto M = parseModule(R"(
-  define void @test(<2 x i32> %A, <2 x i32> %B) {
+  define void @test(<2 x i32> noundef %A, <2 x i32> noundef %B) {
     %LHS = and <2 x i32> %A, %B
     %or = or <2 x i32> %A, %B
     %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>

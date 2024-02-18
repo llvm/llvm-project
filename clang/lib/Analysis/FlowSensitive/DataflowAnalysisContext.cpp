@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
+#include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
@@ -67,9 +68,36 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
       else
         FieldLocs.insert({Field, &createStorageLocation(
                                      Field->getType().getNonReferenceType())});
-    return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
+
+    RecordStorageLocation::SyntheticFieldMap SyntheticFields;
+    for (const auto &Entry : getSyntheticFields(Type))
+      SyntheticFields.insert(
+          {Entry.getKey(),
+           &createStorageLocation(Entry.getValue().getNonReferenceType())});
+
+    return createRecordStorageLocation(Type, std::move(FieldLocs),
+                                       std::move(SyntheticFields));
   }
   return arena().create<ScalarStorageLocation>(Type);
+}
+
+// Returns the keys for a given `StringMap`.
+// Can't use `StringSet` as the return type as it doesn't support `operator==`.
+template <typename T>
+static llvm::DenseSet<llvm::StringRef> getKeys(const llvm::StringMap<T> &Map) {
+  return llvm::DenseSet<llvm::StringRef>(Map.keys().begin(), Map.keys().end());
+}
+
+RecordStorageLocation &DataflowAnalysisContext::createRecordStorageLocation(
+    QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+    RecordStorageLocation::SyntheticFieldMap SyntheticFields) {
+  assert(Type->isRecordType());
+  assert(containsSameFields(getModeledFields(Type), FieldLocs));
+  assert(getKeys(getSyntheticFields(Type)) == getKeys(SyntheticFields));
+
+  RecordStorageLocationCreated = true;
+  return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs),
+                                               std::move(SyntheticFields));
 }
 
 StorageLocation &
@@ -145,26 +173,32 @@ Solver::Result DataflowAnalysisContext::querySolver(
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
-                                                   const Formula &Val) {
+                                                   const Formula &F) {
+  if (F.isLiteral(true))
+    return true;
+
   // Returns true if and only if truth assignment of the flow condition implies
-  // that `Val` is also true. We prove whether or not this property holds by
+  // that `F` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
-  // to show that assuming `Val` is false makes the constraints induced by the
+  // to show that assuming `F` is false makes the constraints induced by the
   // flow condition unsatisfiable.
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
-  Constraints.insert(&arena().makeNot(Val));
+  Constraints.insert(&arena().makeNot(F));
   addTransitiveFlowConditionConstraints(Token, Constraints);
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
-  // Returns true if and only if we cannot prove that the flow condition can
-  // ever be false.
+bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
+                                                  const Formula &F) {
+  if (F.isLiteral(false))
+    return false;
+
   llvm::SetVector<const Formula *> Constraints;
-  Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
+  Constraints.insert(&arena().makeAtomRef(Token));
+  Constraints.insert(&F);
   addTransitiveFlowConditionConstraints(Token, Constraints);
-  return isUnsatisfiable(std::move(Constraints));
+  return isSatisfiable(std::move(Constraints));
 }
 
 bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
@@ -205,13 +239,50 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   }
 }
 
+static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
+                          llvm::raw_ostream &OS) {
+  OS << "(";
+  for (size_t i = 0; i < Atoms.size(); ++i) {
+    OS << Atoms[i];
+    if (i + 1 < Atoms.size())
+      OS << ", ";
+  }
+  OS << ")\n";
+}
+
 void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
                                                 llvm::raw_ostream &OS) {
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   addTransitiveFlowConditionConstraints(Token, Constraints);
 
-  for (const auto *Constraint : Constraints) {
+  OS << "Flow condition token: " << Token << "\n";
+  SimplifyConstraintsInfo Info;
+  llvm::SetVector<const Formula *> OriginalConstraints = Constraints;
+  simplifyConstraints(Constraints, arena(), &Info);
+  if (!Constraints.empty()) {
+    OS << "Constraints:\n";
+    for (const auto *Constraint : Constraints) {
+      Constraint->print(OS);
+      OS << "\n";
+    }
+  }
+  if (!Info.TrueAtoms.empty()) {
+    OS << "True atoms: ";
+    printAtomList(Info.TrueAtoms, OS);
+  }
+  if (!Info.FalseAtoms.empty()) {
+    OS << "False atoms: ";
+    printAtomList(Info.FalseAtoms, OS);
+  }
+  if (!Info.EquivalentAtoms.empty()) {
+    OS << "Equivalent atoms:\n";
+    for (const llvm::SmallVector<Atom> &Class : Info.EquivalentAtoms)
+      printAtomList(Class, OS);
+  }
+
+  OS << "\nFlow condition constraints before simplification:\n";
+  for (const auto *Constraint : OriginalConstraints) {
     Constraint->print(OS);
     OS << "\n";
   }
@@ -227,7 +298,7 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
+  if (F->doesThisDeclarationHaveABody()) {
     auto CFCtx = ControlFlowContext::build(*F);
     // FIXME: Handle errors.
     assert(CFCtx);
@@ -328,4 +399,15 @@ clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
   FieldSet Fields;
   getFieldsFromClassHierarchy(Type, Fields);
   return Fields;
+}
+
+bool clang::dataflow::containsSameFields(
+    const clang::dataflow::FieldSet &Fields,
+    const clang::dataflow::RecordStorageLocation::FieldToLoc &FieldLocs) {
+  if (Fields.size() != FieldLocs.size())
+    return false;
+  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
+    if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
+      return false;
+  return true;
 }

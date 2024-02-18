@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.5.2 Serial
@@ -163,6 +163,19 @@ program openacc_serial_validity
   !$acc serial device_type(*) if(.TRUE.)
   do i = 1, N
     a(i) = 3.14
+  end do
+  !$acc end serial
+
+  do i = 1, 100
+    !$acc serial
+    !ERROR: CYCLE to construct outside of SERIAL construct is not allowed
+    if (i == 10) cycle
+    !$acc end serial
+  end do
+
+  !$acc serial
+  do i = 1, 100
+    if (i == 10) cycle
   end do
   !$acc end serial
 

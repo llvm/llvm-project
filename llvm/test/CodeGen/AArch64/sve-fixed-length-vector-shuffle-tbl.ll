@@ -242,9 +242,9 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI6_0
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; CHECK-NEXT:    tbl z0.b, { z1.b }, z0.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a

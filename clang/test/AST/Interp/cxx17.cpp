@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify %s
 // RUN: %clang_cc1 -std=c++17 -verify=ref %s
 
-// ref-no-diagnostics
-// expected-no-diagnostics
-
 struct F { int a; int b;};
 constexpr F getF() {
   return {12, 3};
@@ -83,3 +80,23 @@ constexpr int b() {
   return a[0] + a[1];
 }
 static_assert(b() == 11);
+
+/// The diagnostics between the two interpreters are different here.
+struct S { int a; };
+constexpr S getS() { // expected-error {{constexpr function never produces a constant expression}} \\
+                     // ref-error {{constexpr function never produces a constant expression}}
+  (void)(1/0); // expected-note 2{{division by zero}} \
+               // expected-warning {{division by zero}} \
+               // ref-note 2{{division by zero}} \
+               // ref-warning {{division by zero}}
+  return S{12};
+}
+constexpr S s = getS(); // expected-error {{must be initialized by a constant expression}} \
+                        // expected-note {{in call to 'getS()'}} \
+                        // ref-error {{must be initialized by a constant expression}} \\
+                        // ref-note {{in call to 'getS()'}} \
+                        // ref-note {{declared here}}
+static_assert(s.a == 12, ""); // expected-error {{not an integral constant expression}} \
+                              // expected-note {{read of uninitialized object}} \
+                              // ref-error {{not an integral constant expression}} \
+                              // ref-note {{initializer of 's' is not a constant expression}}

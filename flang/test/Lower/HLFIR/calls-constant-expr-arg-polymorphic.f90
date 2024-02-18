@@ -22,7 +22,7 @@ end
 ! CHECK-LABEL:   func.func @_QQmain() {
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_2:.*]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1x_QFTt2.0"}
 ! CHECK:           %[[VAL_4:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>) -> !hlfir.expr<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>
-! CHECK:           %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]](%[[VAL_2]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>, !fir.ref<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>, i1)
+! CHECK:           %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>, !fir.ref<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>, i1)
 ! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]]#0(%[[VAL_2]]) : (!fir.ref<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.array<1x!fir.type<_QFTt2{t1:!fir.type<_QFTt1{i:i32}>,j:i32}>>>) -> !fir.class<!fir.array<?x!fir.type<_QFTt1{i:i32}>>>
 ! CHECK:           fir.call @_QPfoo(%[[VAL_7]]) {{.*}}: (!fir.class<!fir.array<?x!fir.type<_QFTt1{i:i32}>>>) -> ()

@@ -1,9 +1,11 @@
-!REQUIRES: amdgpu-registered-target
+!REQUIRES: amdgpu-registered-target, nvptx-registered-target
 
 !RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -triple nvptx64-nvidia-cuda -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
 !RUN: bbc -fopenmp -fopenmp-is-target-device -fopenmp-is-gpu -emit-hlfir -o - %s | FileCheck %s
 
 !RUN: not %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s --check-prefix=FLANG-ERROR
+!RUN: not %flang_fc1 -triple nvptx64-nvidia-cuda -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s --check-prefix=FLANG-ERROR
 !RUN: not bbc -fopenmp -fopenmp-is-gpu -emit-hlfir %s -o - 2>&1 | FileCheck %s --check-prefix=BBC-ERROR
 
 !CHECK: module attributes {{{.*}}omp.is_gpu = true

@@ -49,10 +49,14 @@ program reshaper
   integer, parameter :: array21(I64_MAX - 2 : I64_MAX) = [1, 2, 3]
   integer, parameter :: array22(2) = RESHAPE(array21, [2])
 
+  integer(8), parameter :: huge_shape(2) = [I64_MAX, I64_MAX]
+  !ERROR: 'shape=' argument has too many elements
+  integer :: array23(I64_MAX, I64_MAX) = RESHAPE([1, 2, 3], huge_shape)
+
   !ERROR: Size of 'shape=' argument must not be greater than 15
   CALL ext_sub(RESHAPE([(n, n=1,20)], &
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
-  !WARNING: Reference to the procedure 'ext_sub' has an implicit interface that is distinct from another reference: incompatible dummy argument #1: incompatible dummy data object shapes
+  !ERROR: Reference to the procedure 'ext_sub' has an implicit interface that is distinct from another reference: incompatible dummy argument #1: incompatible dummy data object shapes
   !ERROR: 'shape=' argument must not have a negative extent
   CALL ext_sub(RESHAPE([(n, n=1,20)], [1, -5, 3]))
   !ERROR: 'order=' argument has unacceptable rank 2

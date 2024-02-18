@@ -20,19 +20,17 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
 #include <functional>
 
 namespace llvm {
 
 class GISelChangeObserver;
-class APFloat;
 class APInt;
 class ConstantFP;
 class GPtrAdd;
-class GStore;
 class GZExtLoad;
 class MachineIRBuilder;
 class MachineInstrBuilder;
@@ -58,6 +56,8 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
+  bool RematOffset; // True if Offset is a constant that needs to be
+                    // rematerialized before the new load/store.
   bool IsPre;
 };
 
@@ -194,6 +194,10 @@ public:
   /// Match (and (load x), mask) -> zextload x
   bool matchCombineLoadWithAndMask(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Combine a G_EXTRACT_VECTOR_ELT of a load into a narrowed
+  /// load.
+  bool matchCombineExtractedVectorLoad(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
@@ -220,22 +224,18 @@ public:
   /// - concat_vector(undef, undef) => undef
   /// - concat_vector(build_vector(A, B), build_vector(C, D)) =>
   ///   build_vector(A, B, C, D)
-  ///
-  /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool tryCombineConcatVectors(MachineInstr &MI);
+  /// ==========================================================
   /// Check if the G_CONCAT_VECTORS \p MI is undef or if it
   /// can be flattened into a build_vector.
-  /// In the first case \p IsUndef will be true.
-  /// In the second case \p Ops will contain the operands needed
-  /// to produce the flattened build_vector.
+  /// In the first case \p Ops will be empty
+  /// In the second case \p Ops will contain the operands
+  /// needed to produce the flattened build_vector.
   ///
   /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                 SmallVectorImpl<Register> &Ops);
-  /// Replace \p MI with a flattened build_vector with \p Ops or an
-  /// implicit_def if IsUndef is true.
-  void applyCombineConcatVectors(MachineInstr &MI, bool IsUndef,
-                                 const ArrayRef<Register> Ops);
+  bool matchCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
@@ -402,9 +402,6 @@ public:
                                 std::pair<MachineInstr *, LLT> &MatchInfo);
   void applyCombineTruncOfShift(MachineInstr &MI,
                                 std::pair<MachineInstr *, LLT> &MatchInfo);
-
-  /// Transform G_MUL(x, -1) to G_SUB(0, x)
-  void applyCombineMulByNegativeOne(MachineInstr &MI);
 
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
@@ -768,9 +765,6 @@ public:
   bool matchCombineFSubFpExtFNegFMulToFMadOrFMA(MachineInstr &MI,
                                                 BuildFnTy &MatchInfo);
 
-  /// Fold boolean selects to logical operations.
-  bool matchSelectToLogical(MachineInstr &MI, BuildFnTy &MatchInfo);
-
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info);
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
@@ -813,13 +807,24 @@ public:
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
+  /// Combine selects.
+  bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine ands,
+  bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine ors,
+  bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
+  /// Checks for legality of an indexed variant of \p LdSt.
+  bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///
   /// \returns true if a candidate is found.
   bool findPostIndexCandidate(GLoadStore &MI, Register &Addr, Register &Base,
-                              Register &Offset);
+                              Register &Offset, bool &RematOffset);
 
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a pre-indexing operation.
@@ -901,6 +906,27 @@ private:
   /// select (fcmp uge x, 1.0) 1.0, x -> fminnm x, 1.0
   bool matchFPSelectToMinMax(Register Dst, Register Cond, Register TrueVal,
                              Register FalseVal, BuildFnTy &MatchInfo);
+
+  /// Try to fold selects to logical operations.
+  bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
+
+  bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
+
+  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
+  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
+
+  bool isOneOrOneSplat(Register Src, bool AllowUndefs);
+  bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
+  bool isConstantSplatVector(Register Src, int64_t SplatValue,
+                             bool AllowUndefs);
+
+  std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
+
+  /// Fold (icmp Pred1 V1, C1) && (icmp Pred2 V2, C2)
+  /// or   (icmp Pred1 V1, C1) || (icmp Pred2 V2, C2)
+  /// into a single comparison using range-based reasoning.
+  bool tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
+                                      BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

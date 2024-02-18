@@ -8,6 +8,11 @@
 
 #include "Error.h"
 
+#ifdef LLVM_ON_UNIX
+#include "llvm/Support/SystemZ/zOSSupport.h"
+#include <string.h>
+#endif // LLVM_ON_UNIX
+
 namespace llvm {
 namespace exegesis {
 
@@ -19,12 +24,28 @@ std::error_code ClusteringError::convertToErrorCode() const {
   return inconvertibleErrorCode();
 }
 
-char SnippetCrash::ID;
+char SnippetExecutionFailure::ID;
 
-void SnippetCrash::log(raw_ostream &OS) const { OS << Msg; }
-
-std::error_code SnippetCrash::convertToErrorCode() const {
+std::error_code SnippetExecutionFailure::convertToErrorCode() const {
   return inconvertibleErrorCode();
+}
+
+char SnippetSegmentationFault::ID;
+
+void SnippetSegmentationFault::log(raw_ostream &OS) const {
+  OS << "The snippet encountered a segmentation fault at address "
+     << Twine::utohexstr(Address);
+}
+
+char SnippetSignal::ID;
+
+void SnippetSignal::log(raw_ostream &OS) const {
+  OS << "snippet crashed while running";
+#ifdef LLVM_ON_UNIX
+  OS << ": " << strsignal(SignalNumber);
+#else
+  (void)SignalNumber;
+#endif // LLVM_ON_UNIX
 }
 
 } // namespace exegesis

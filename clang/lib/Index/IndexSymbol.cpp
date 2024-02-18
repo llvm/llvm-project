@@ -36,7 +36,7 @@ static bool isUnitTest(const ObjCMethodDecl *D) {
     return false;
   if (!D->getReturnType()->isVoidType())
     return false;
-  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+  if (!D->getSelector().getNameForSlot(0).starts_with("test"))
     return false;
   return isUnitTestCase(D->getClassInterface());
 }
@@ -66,15 +66,17 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
-      case NoLinkage:
-      case InternalLinkage:
-        return true;
-      case VisibleNoLinkage:
-      case UniqueExternalLinkage:
-        llvm_unreachable("Not a sema linkage");
-      case ModuleLinkage:
-      case ExternalLinkage:
-        return false;
+    case Linkage::Invalid:
+      llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::None:
+    case Linkage::Internal:
+      return true;
+    case Linkage::VisibleNone:
+    case Linkage::UniqueExternal:
+      llvm_unreachable("Not a sema linkage");
+    case Linkage::Module:
+    case Linkage::External:
+      return false;
     }
   }
 
@@ -105,19 +107,19 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
-    case TTK_Struct:
+    case TagTypeKind::Struct:
       Info.Kind = SymbolKind::Struct; break;
-    case TTK_Union:
+    case TagTypeKind::Union:
       Info.Kind = SymbolKind::Union; break;
-    case TTK_Class:
+    case TagTypeKind::Class:
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Interface:
+    case TagTypeKind::Interface:
       Info.Kind = SymbolKind::Protocol;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Enum:
+    case TagTypeKind::Enum:
       Info.Kind = SymbolKind::Enum; break;
     }
 

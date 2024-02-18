@@ -36,9 +36,10 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override;
+                        const CCValAssign &VA) override;
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override;
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override;
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override;
@@ -48,7 +49,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 } // namespace
 
 void OutgoingArgHandler::assignValueToReg(Register ValVReg, Register PhysReg,
-                                          CCValAssign VA) {
+                                          const CCValAssign &VA) {
   MIB.addUse(PhysReg, RegState::Implicit);
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -56,8 +57,8 @@ void OutgoingArgHandler::assignValueToReg(Register ValVReg, Register PhysReg,
 
 void OutgoingArgHandler::assignValueToAddress(Register ValVReg, Register Addr,
                                               LLT MemTy,
-                                              MachinePointerInfo &MPO,
-                                              CCValAssign &VA) {
+                                              const MachinePointerInfo &MPO,
+                                              const CCValAssign &VA) {
   llvm_unreachable("unimplemented");
 }
 
@@ -143,18 +144,18 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 void PPCIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                Register PhysReg,
-                                               CCValAssign VA) {
+                                               const CCValAssign &VA) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
 
-void PPCIncomingValueHandler::assignValueToAddress(Register ValVReg,
-                                                   Register Addr, LLT MemTy,
-                                                   MachinePointerInfo &MPO,
-                                                   CCValAssign &VA) {
+void PPCIncomingValueHandler::assignValueToAddress(
+    Register ValVReg, Register Addr, LLT MemTy, const MachinePointerInfo &MPO,
+    const CCValAssign &VA) {
   // define a lambda expression to load value
-  auto BuildLoad = [](MachineIRBuilder &MIRBuilder, MachinePointerInfo &MPO,
-                      LLT MemTy, const DstOp &Res, Register Addr) {
+  auto BuildLoad = [](MachineIRBuilder &MIRBuilder,
+                      const MachinePointerInfo &MPO, LLT MemTy,
+                      const DstOp &Res, Register Addr) {
     MachineFunction &MF = MIRBuilder.getMF();
     auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
                                         inferAlignFromPtrInfo(MF, MPO));

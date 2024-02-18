@@ -9,9 +9,11 @@
 #ifndef FORTRAN_OPTIMIZER_ANALYSIS_TBAA_FOREST_H
 #define FORTRAN_OPTIMIZER_ANALYSIS_TBAA_FOREST_H
 
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/DenseMap.h"
 #include <string>
@@ -55,6 +57,7 @@ struct TBAATree {
   SubtreeState globalDataTree;
   SubtreeState allocatedDataTree;
   SubtreeState dummyArgDataTree;
+  SubtreeState directDataTree;
   mlir::LLVM::TBAATypeDescriptorAttr anyAccessDesc;
   mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc;
   mlir::LLVM::TBAATypeDescriptorAttr anyDataTypeDesc;
@@ -81,6 +84,12 @@ public:
     return getFuncTree(func.getSymNameAttr());
   }
   inline const TBAATree &operator[](mlir::LLVM::LLVMFuncOp func) {
+    // the external name conversion pass may rename some functions. Their old
+    // name must be used so that we add to the tbaa tree added in the FIR pass
+    mlir::Attribute attr = func->getAttr(getInternalFuncNameAttrName());
+    if (attr) {
+      return getFuncTree(attr.cast<mlir::StringAttr>());
+    }
     return getFuncTree(func.getSymNameAttr());
   }
 

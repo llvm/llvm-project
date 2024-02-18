@@ -26,6 +26,7 @@
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private.h"
 
 class PDBASTParser;
@@ -42,23 +43,6 @@ class DWARFASTParser;
 namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
-
-/// A SmallBitVector that represents a set of source languages (\p
-/// lldb::LanguageType).  Each lldb::LanguageType is represented by
-/// the bit with the position of its enumerator. The largest
-/// LanguageType is < 64, so this is space-efficient and on 64-bit
-/// architectures a LanguageSet can be completely stack-allocated.
-struct LanguageSet {
-  llvm::SmallBitVector bitvector;
-  LanguageSet();
-
-  /// If the set contains a single language only, return it.
-  std::optional<lldb::LanguageType> GetSingularLanguage();
-  void Insert(lldb::LanguageType language);
-  bool Empty() const;
-  size_t Size() const;
-  bool operator[](unsigned i) const;
-};
 
 /// Interface for representing a type system.
 ///
@@ -122,6 +106,9 @@ public:
   virtual CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                                    size_t arg_idx);
 
+  virtual std::vector<lldb_private::CompilerContext>
+  DeclGetCompilerContext(void *opaque_decl);
+
   virtual CompilerType GetTypeForDecl(void *opaque_decl) = 0;
 
   // CompilerDeclContext functions
@@ -145,6 +132,9 @@ public:
   /// Returns the direct parent context of specified type
   virtual CompilerDeclContext
   GetCompilerDeclContextForType(const CompilerType &type);
+
+  virtual std::vector<lldb_private::CompilerContext>
+  DeclContextGetCompilerContext(void *opaque_decl_ctx);
 
   // Tests
 #ifndef NDEBUG
@@ -436,6 +426,10 @@ public:
                   ExecutionContextScope *exe_scope) = 0;
 
   virtual CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) = 0;
+
+  virtual CompilerType CreateGenericFunctionPrototype() {
+    return CompilerType();
+  }
 
   virtual CompilerType
   GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,

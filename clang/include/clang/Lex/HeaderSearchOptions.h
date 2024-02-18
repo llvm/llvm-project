@@ -70,11 +70,13 @@ public:
   struct Entry {
     std::string Path;
     frontend::IncludeDirGroup Group;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsFramework : 1;
 
     /// IgnoreSysRoot - This is false if an absolute path should be treated
     /// relative to the sysroot, or true if it should always be the absolute
     /// path.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreSysRoot : 1;
 
     Entry(StringRef path, frontend::IncludeDirGroup group, bool isFramework,
@@ -128,10 +130,12 @@ public:
   /// module cache.
   ///
   /// Note: Only used for testing!
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DisableModuleHash : 1;
 
   /// Implicit module maps.  This option is enabld by default when
   /// modules is enabled.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ImplicitModuleMaps : 1;
 
   /// Set the 'home directory' of a module map file to the current
@@ -141,16 +145,19 @@ public:
   //
   /// The home directory is where we look for files named in the module map
   /// file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModuleMapFileHomeIsCwd : 1;
 
   /// Set the base path of a built module file to be the current working
   /// directory. This is useful for sharing module files across machines
   /// that build with different paths without having to rewrite all
   /// modulemap files to have working directory relative paths.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModuleFileHomeIsCwd : 1;
 
   /// Also search for prebuilt implicit modules in the prebuilt module cache
   /// path.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned EnablePrebuiltImplicitModules : 1;
 
   /// The interval (in seconds) between pruning operations.
@@ -185,40 +192,67 @@ public:
   std::vector<std::string> VFSOverlayFiles;
 
   /// Include the compiler builtin includes.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseBuiltinIncludes : 1;
 
   /// Include the system standard include search directories.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseStandardSystemIncludes : 1;
 
   /// Include the system standard C++ library include search directories.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseStandardCXXIncludes : 1;
 
   /// Use libc++ instead of the default libstdc++.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseLibcxx : 1;
 
   /// Whether header search information should be output as for -v.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Verbose : 1;
 
   /// If true, skip verifying input files used by modules if the
   /// module was already verified during this build session (see
   /// \c BuildSessionTimestamp).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesValidateOncePerBuildSession : 1;
 
   /// Whether to validate system input files when a module is loaded.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesValidateSystemHeaders : 1;
 
   // Whether the content of input files should be hashed and used to
   // validate consistency.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ValidateASTInputFilesContent : 1;
 
   // Whether the input files from C++20 Modules should be checked.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ForceCheckCXX20ModulesInputFiles : 1;
 
   /// Whether the module includes debug information (-gmodules).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseDebugInfo : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesValidateDiagnosticOptions : 1;
 
+  /// Whether to entirely skip writing diagnostic options.
+  /// Primarily used to speed up deserialization during dependency scanning.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesSkipDiagnosticOptions : 1;
+
+  /// Whether to entirely skip writing header search paths.
+  /// Primarily used to speed up deserialization during dependency scanning.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesSkipHeaderSearchPaths : 1;
+
+  /// Whether to entirely skip writing pragma diagnostic mappings.
+  /// Primarily used to speed up deserialization during dependency scanning.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesSkipPragmaDiagnosticMappings : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesHashContent : 1;
 
   /// Whether we should include all things that could impact the module in the
@@ -226,7 +260,12 @@ public:
   ///
   /// This includes things like the full header search path, and enabled
   /// diagnostics.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesStrictContextHash : 1;
+
+  /// Whether to include ivfsoverlay usage information in written AST files.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesIncludeVFSUsage : 1;
 
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
@@ -238,8 +277,11 @@ public:
         ModulesValidateSystemHeaders(false),
         ValidateASTInputFilesContent(false),
         ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
-        ModulesValidateDiagnosticOptions(true), ModulesHashContent(false),
-        ModulesStrictContextHash(false) {}
+        ModulesValidateDiagnosticOptions(true),
+        ModulesSkipDiagnosticOptions(false),
+        ModulesSkipHeaderSearchPaths(false),
+        ModulesSkipPragmaDiagnosticMappings(false), ModulesHashContent(false),
+        ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

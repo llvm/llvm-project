@@ -91,8 +91,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 4
+          "character": 8,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -127,8 +127,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 16,
-          "line": 4
+          "character": 15,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -190,8 +190,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 1
+          "character": 8,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -247,8 +247,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 18,
-          "line": 2
+          "character": 17,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -311,8 +311,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 24,
-          "line": 3
+          "character": 23,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -375,8 +375,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 16,
-          "line": 5
+          "character": 15,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -439,8 +439,8 @@ typedef MyEnumEnum MyEnumEnumEnum;
       },
       "location": {
         "position": {
-          "character": 20,
-          "line": 6
+          "character": 19,
+          "line": 5
         },
         "uri": "file://INPUT_DIR/input.h"
       },

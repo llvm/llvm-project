@@ -38,7 +38,7 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[__BEGIN1_SROA_0_03:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_COND_PREHEADER_SPLIT]] ]
 ; CHECK-NEXT:    tail call void @use(ptr noundef nonnull align 4 dereferenceable(4) [[__BEGIN1_SROA_0_03]])
-; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i32, ptr [[__BEGIN1_SROA_0_03]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__BEGIN1_SROA_0_03]], i64 4
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR_I]], [[ADD_PTR_I]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[COMMON_RET]], label [[FOR_BODY]]
 ;
@@ -133,9 +133,9 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK-LABEL: define void @foo
 ; CHECK-SAME: (ptr noalias nocapture noundef nonnull readonly align 8 dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds [[VECTOR_IMPL_DATA:%.*]], ptr [[VEC]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VEC]], align 8
+; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds i8, ptr [[VEC]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VEC]], align 8, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB_I_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I_I]], [[SUB_PTR_RHS_CAST_I_I]]
@@ -237,8 +237,8 @@ do.cond:
 do.end:
   %_M_impl = getelementptr inbounds %Vector_base, ptr %this1, i32 0, i32 0
   %_M_start = getelementptr inbounds %Vector_impl_data, ptr %_M_impl, i32 0, i32 0
-  %1 = load ptr, ptr %_M_start, align 8
-  %2 = load i64, ptr %__n.addr, align 8
+  %1 = load ptr, ptr %_M_start, align 8, !tbaa !0
+  %2 = load i64, ptr %__n.addr, align 8, !tbaa !5
   %add.ptr = getelementptr inbounds double, ptr %1, i64 %2
   ret ptr %add.ptr
 }
@@ -250,10 +250,10 @@ entry:
   %this1 = load ptr, ptr %this.addr, align 8
   %_M_impl = getelementptr inbounds %Vector_base, ptr %this1, i32 0, i32 0
   %_M_finish = getelementptr inbounds %Vector_impl_data, ptr %_M_impl, i32 0, i32 1
-  %0 = load ptr, ptr %_M_finish, align 8
+  %0 = load ptr, ptr %_M_finish, align 8, !tbaa !7
   %_M_impl2 = getelementptr inbounds %Vector_base, ptr %this1, i32 0, i32 0
   %_M_start = getelementptr inbounds %Vector_impl_data, ptr %_M_impl2, i32 0, i32 0
-  %1 = load ptr, ptr %_M_start, align 8
+  %1 = load ptr, ptr %_M_start, align 8, !tbaa !0
   %sub.ptr.lhs.cast = ptrtoint ptr %0 to i64
   %sub.ptr.rhs.cast = ptrtoint ptr %1 to i64
   %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
@@ -262,6 +262,79 @@ entry:
 }
 
 declare void @abort()
+
+; -------------------------------------------------------------------------
+; Test case for runtime check removal when accessing vector elements with
+; hardened glibc++ and a signed induction variable.
+; https://github.com/llvm/llvm-project/issues/63126
+
+define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferenceable(24) %vec) {
+; CHECK-LABEL: define void @loop_with_signed_induction
+; CHECK-SAME: (ptr nocapture noundef nonnull readonly align 8 dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds i8, ptr [[VEC]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VEC]], align 8, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB_I_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I_I]], [[SUB_PTR_RHS_CAST_I_I]]
+; CHECK-NEXT:    [[SUB_PTR_DIV_I_I:%.*]] = ashr exact i64 [[SUB_PTR_SUB_I_I]], 3
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[SUB_PTR_DIV_I_I]], 0
+; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 [[I_010]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8, !tbaa [[TBAA6:![0-9]+]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
+; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8, !tbaa [[TBAA6]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_010]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[SUB_PTR_DIV_I_I]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
+;
+entry:
+  %vec.addr = alloca ptr, align 8
+  %count = alloca i64, align 8
+  %i = alloca i64, align 8
+  store ptr %vec, ptr %vec.addr, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr %count)
+  %0 = load ptr, ptr %vec.addr, align 8
+  %call = call noundef i64 @alloc(ptr noundef nonnull align 8 dereferenceable(24) %0)
+  store i64 %call, ptr %count, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr %i)
+  store i64 0, ptr %i, align 8
+  br label %for.cond
+
+for.cond:
+  %1 = load i64, ptr %i, align 8
+  %2 = load i64, ptr %count, align 8
+  %cmp = icmp slt i64 %1, %2
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  call void @llvm.lifetime.end.p0(i64 8, ptr %i)
+  br label %for.end
+
+for.body:
+  %3 = load ptr, ptr %vec.addr, align 8
+  %4 = load i64, ptr %i, align 8
+  %call1 = call noundef nonnull align 8 dereferenceable(8) ptr @operator_acc(ptr noundef nonnull align 8 dereferenceable(24) %3, i64 noundef %4)
+  %5 = load double, ptr %call1, align 8, !tbaa !8
+  %add = fadd double %5, 1.000000e+00
+  store double %add, ptr %call1, align 8, !tbaa !8
+  br label %for.inc
+
+for.inc:
+  %6 = load i64, ptr %i, align 8
+  %inc = add nsw i64 %6, 1
+  store i64 %inc, ptr %i, align 8
+  br label %for.cond
+
+for.end:
+  call void @llvm.lifetime.end.p0(i64 8, ptr %count)
+  ret void
+}
 
 ; -------------------------------------------------------------------------
 ; Test case for runtime check removal when accessing elements in a nested loop
@@ -386,3 +459,15 @@ if.end:                                           ; preds = %entry
   %add.ptr = getelementptr inbounds i32, ptr %2, i64 %idx.ext
   ret ptr %add.ptr
 }
+
+
+!0 = !{!1, !2, i64 0}
+!1 = !{!"_ZTSNSt12_Vector_baseIdSaIdEE17_Vector_impl_dataE", !2, i64 0, !2, i64 8, !2, i64 16}
+!2 = !{!"any pointer", !3, i64 0}
+!3 = !{!"omnipotent char", !4, i64 0}
+!4 = !{!"Simple C++ TBAA"}
+!5 = !{!6, !6, i64 0}
+!6 = !{!"long", !3, i64 0}
+!7 = !{!1, !2, i64 8}
+!8 = !{!9, !9, i64 0}
+!9 = !{!"double", !3, i64 0}

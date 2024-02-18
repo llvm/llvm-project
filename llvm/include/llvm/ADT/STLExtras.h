@@ -1290,18 +1290,6 @@ public:
     return (*this)[size() - 1];
   }
 
-  /// Compare this range with another.
-  template <typename OtherT>
-  friend bool operator==(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-  }
-  template <typename OtherT>
-  friend bool operator!=(const indexed_accessor_range_base &lhs,
-                         const OtherT &rhs) {
-    return !(lhs == rhs);
-  }
-
   /// Return the size of this range.
   size_t size() const { return count; }
 
@@ -1364,6 +1352,23 @@ protected:
   /// The size from the owning range.
   ptrdiff_t count;
 };
+/// Compare this range with another.
+/// FIXME: Make me a member function instead of friend when it works in C++20.
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return !(lhs == rhs);
+}
 } // end namespace detail
 
 /// This class provides an implementation of a range of
@@ -2025,16 +2030,30 @@ void erase_if(Container &C, UnaryPredicate P) {
 ///
 /// C.erase(remove(C.begin(), C.end(), V), C.end());
 template <typename Container, typename ValueType>
-void erase_value(Container &C, ValueType V) {
+void erase(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
-/// Wrapper function to append a range to a container.
+template <typename Container, typename ValueType>
+LLVM_DEPRECATED("Use erase instead", "erase")
+void erase_value(Container &C, ValueType V) {
+  erase(C, V);
+}
+
+/// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
-inline void append_range(Container &C, Range &&R) {
+void append_range(Container &C, Range &&R) {
   C.insert(C.end(), adl_begin(R), adl_end(R));
+}
+
+/// Appends all `Values` to container `C`.
+template <typename Container, typename... Args>
+void append_values(Container &C, Args &&...Values) {
+  C.reserve(range_size(C) + sizeof...(Args));
+  // Append all values one by one.
+  ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with

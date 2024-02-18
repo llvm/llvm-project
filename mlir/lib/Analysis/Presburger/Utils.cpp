@@ -13,8 +13,17 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <numeric>
 
 #include <numeric>
@@ -519,4 +528,44 @@ SmallVector<int64_t, 8> presburger::getInt64Vec(ArrayRef<MPInt> range) {
   SmallVector<int64_t, 8> result(range.size());
   std::transform(range.begin(), range.end(), result.begin(), int64FromMPInt);
   return result;
+}
+
+Fraction presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b) {
+  assert(a.size() == b.size() &&
+         "dot product is only valid for vectors of equal sizes!");
+  Fraction sum = 0;
+  for (unsigned i = 0, e = a.size(); i < e; i++)
+    sum += a[i] * b[i];
+  return sum;
+}
+
+/// Find the product of two polynomials, each given by an array of
+/// coefficients, by taking the convolution.
+std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
+                                                      ArrayRef<Fraction> b) {
+  // The length of the convolution is the sum of the lengths
+  // of the two sequences. We pad the shorter one with zeroes.
+  unsigned len = a.size() + b.size() - 1;
+
+  // We define accessors to avoid out-of-bounds errors.
+  auto getCoeff = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
+    if (i < arr.size())
+      return arr[i];
+    else
+      return 0;
+  };
+
+  std::vector<Fraction> convolution;
+  convolution.reserve(len);
+  for (unsigned k = 0; k < len; ++k) {
+    Fraction sum(0, 1);
+    for (unsigned l = 0; l <= k; ++l)
+      sum += getCoeff(a, l) * getCoeff(b, k - l);
+    convolution.push_back(sum);
+  }
+  return convolution;
+}
+
+bool presburger::isRangeZero(ArrayRef<Fraction> arr) {
+  return llvm::all_of(arr, [&](Fraction f) { return f == 0; });
 }

@@ -99,7 +99,7 @@ using Overloads = Overload<Types...>;
 namespace variant_impl {
   template <class ...Types>
   using Overloads = std::__variant_detail::_MakeOverloads<Types...>;
-} // naamespace variant_impl
+  } // namespace variant_impl
 
 #ifndef TEST_NS
 #error TEST_NS must be defined

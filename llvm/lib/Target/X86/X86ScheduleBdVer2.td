@@ -933,7 +933,7 @@ def PdWriteVBROADCASTF128 : SchedWriteRes<[PdFPU01, PdFPFMA]> {
   let ReleaseAtCycles = [1, 3];
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteVBROADCASTF128], (instrs VBROADCASTF128)>;
+def : InstRW<[PdWriteVBROADCASTF128], (instrs VBROADCASTF128rm)>;
 
 defm : PdWriteResXMMPair<WriteFVarShuffle,  [PdFPU1, PdFPXBR],  3>;
 defm : PdWriteResYMMPair<WriteFVarShuffleY, [PdFPU1, PdFPXBR],  3, [2, 2], 2>;

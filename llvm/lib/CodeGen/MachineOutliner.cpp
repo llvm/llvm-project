@@ -525,7 +525,7 @@ void MachineOutliner::emitNotOutliningCheaperRemark(
   MachineOptimizationRemarkEmitter MORE(*(C.getMF()), nullptr);
   MORE.emit([&]() {
     MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
-                                      C.front()->getDebugLoc(), C.getMBB());
+                                      C.front().getDebugLoc(), C.getMBB());
     R << "Did not outline " << NV("Length", StringLen) << " instructions"
       << " from " << NV("NumOccurrences", CandidatesForRepeatedSeq.size())
       << " locations."
@@ -538,7 +538,7 @@ void MachineOutliner::emitNotOutliningCheaperRemark(
     // Tell the user the other places the candidate was found.
     for (unsigned i = 1, e = CandidatesForRepeatedSeq.size(); i < e; i++) {
       R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
-              CandidatesForRepeatedSeq[i].front()->getDebugLoc());
+              CandidatesForRepeatedSeq[i].front().getDebugLoc());
       if (i != e - 1)
         R << ", ";
     }
@@ -563,7 +563,7 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   for (size_t i = 0, e = OF.Candidates.size(); i < e; i++) {
 
     R << NV((Twine("StartLoc") + Twine(i)).str(),
-            OF.Candidates[i].front()->getDebugLoc());
+            OF.Candidates[i].front().getDebugLoc());
     if (i != e - 1)
       R << ", ";
   }
@@ -732,23 +732,22 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
-  MachineFunction *OriginalMF = FirstCand.front()->getMF();
+  MachineFunction *OriginalMF = FirstCand.front().getMF();
   const std::vector<MCCFIInstruction> &Instrs =
       OriginalMF->getFrameInstructions();
-  for (auto I = FirstCand.front(), E = std::next(FirstCand.back()); I != E;
-       ++I) {
-    if (I->isDebugInstr())
+  for (auto &MI : FirstCand) {
+    if (MI.isDebugInstr())
       continue;
 
     // Don't keep debug information for outlined instructions.
     auto DL = DebugLoc();
-    if (I->isCFIInstruction()) {
-      unsigned CFIIndex = I->getOperand(0).getCFIIndex();
+    if (MI.isCFIInstruction()) {
+      unsigned CFIIndex = MI.getOperand(0).getCFIIndex();
       MCCFIInstruction CFI = Instrs[CFIIndex];
       BuildMI(MBB, MBB.end(), DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(MF.addFrameInst(CFI));
     } else {
-      MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+      MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
       NewMI->dropMemRefs(MF);
       NewMI->setDebugLoc(DL);
       MBB.insert(MBB.end(), NewMI);
@@ -768,11 +767,11 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   LivePhysRegs LiveIns(TRI);
   for (auto &Cand : OF.Candidates) {
     // Figure out live-ins at the first instruction.
-    MachineBasicBlock &OutlineBB = *Cand.front()->getParent();
+    MachineBasicBlock &OutlineBB = *Cand.front().getParent();
     LivePhysRegs CandLiveIns(TRI);
     CandLiveIns.addLiveOuts(OutlineBB);
     for (const MachineInstr &MI :
-         reverse(make_range(Cand.front(), OutlineBB.end())))
+         reverse(make_range(Cand.begin(), OutlineBB.end())))
       CandLiveIns.stepBackward(MI);
 
     // The live-in set for the outlined function is the union of the live-ins
@@ -884,8 +883,8 @@ bool MachineOutliner::outline(Module &M,
     LLVM_DEBUG(dbgs() << "CREATE OUTLINED CALLS\n");
     for (Candidate &C : OF.Candidates) {
       MachineBasicBlock &MBB = *C.getMBB();
-      MachineBasicBlock::iterator StartIt = C.front();
-      MachineBasicBlock::iterator EndIt = C.back();
+      MachineBasicBlock::iterator StartIt = C.begin();
+      MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
       // Insert the call.
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);

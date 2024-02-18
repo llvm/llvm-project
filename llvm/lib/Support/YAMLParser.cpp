@@ -1968,7 +1968,7 @@ std::string Node::getVerbatimTag() const {
       Ret = std::string(Doc->getTagMap().find("!")->second);
       Ret += Raw.substr(1);
       return Ret;
-    } else if (Raw.startswith("!!")) {
+    } else if (Raw.starts_with("!!")) {
       Ret = std::string(Doc->getTagMap().find("!!")->second);
       Ret += Raw.substr(2);
       return Ret;
@@ -2030,185 +2030,229 @@ bool Node::failed() const {
 }
 
 StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
-  // TODO: Handle newlines properly. We need to remove leading whitespace.
-  if (Value[0] == '"') { // Double quoted.
-    // Pull off the leading and trailing "s.
-    StringRef UnquotedValue = Value.substr(1, Value.size() - 2);
-    // Search for characters that would require unescaping the value.
-    StringRef::size_type i = UnquotedValue.find_first_of("\\\r\n");
-    if (i != StringRef::npos)
-      return unescapeDoubleQuoted(UnquotedValue, i, Storage);
-    return UnquotedValue;
-  } else if (Value[0] == '\'') { // Single quoted.
-    // Pull off the leading and trailing 's.
-    StringRef UnquotedValue = Value.substr(1, Value.size() - 2);
-    StringRef::size_type i = UnquotedValue.find('\'');
-    if (i != StringRef::npos) {
-      // We're going to need Storage.
-      Storage.clear();
-      Storage.reserve(UnquotedValue.size());
-      for (; i != StringRef::npos; i = UnquotedValue.find('\'')) {
-        StringRef Valid(UnquotedValue.begin(), i);
-        llvm::append_range(Storage, Valid);
-        Storage.push_back('\'');
-        UnquotedValue = UnquotedValue.substr(i + 2);
-      }
-      llvm::append_range(Storage, UnquotedValue);
-      return StringRef(Storage.begin(), Storage.size());
-    }
-    return UnquotedValue;
-  }
-  // Plain.
-  // Trim whitespace ('b-char' and 's-white').
-  // NOTE: Alternatively we could change the scanner to not include whitespace
-  //       here in the first place.
-  return Value.rtrim("\x0A\x0D\x20\x09");
+  if (Value[0] == '"')
+    return getDoubleQuotedValue(Value, Storage);
+  if (Value[0] == '\'')
+    return getSingleQuotedValue(Value, Storage);
+  return getPlainValue(Value, Storage);
 }
 
-StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
-                                          , StringRef::size_type i
-                                          , SmallVectorImpl<char> &Storage)
-                                          const {
-  // Use Storage to build proper value.
+/// parseScalarValue - A common parsing routine for all flow scalar styles.
+/// It handles line break characters by itself, adds regular content characters
+/// to the result, and forwards escaped sequences to the provided routine for
+/// the style-specific processing.
+///
+/// \param UnquotedValue - An input value without quotation marks.
+/// \param Storage - A storage for the result if the input value is multiline or
+/// contains escaped characters.
+/// \param LookupChars - A set of special characters to search in the input
+/// string. Should include line break characters and the escape character
+/// specific for the processing scalar style, if any.
+/// \param UnescapeCallback - This is called when the escape character is found
+/// in the input.
+/// \returns - The unfolded and unescaped value.
+static StringRef
+parseScalarValue(StringRef UnquotedValue, SmallVectorImpl<char> &Storage,
+                 StringRef LookupChars,
+                 std::function<StringRef(StringRef, SmallVectorImpl<char> &)>
+                     UnescapeCallback) {
+  size_t I = UnquotedValue.find_first_of(LookupChars);
+  if (I == StringRef::npos)
+    return UnquotedValue;
+
   Storage.clear();
   Storage.reserve(UnquotedValue.size());
-  for (; i != StringRef::npos; i = UnquotedValue.find_first_of("\\\r\n")) {
-    // Insert all previous chars into Storage.
-    StringRef Valid(UnquotedValue.begin(), i);
-    llvm::append_range(Storage, Valid);
-    // Chop off inserted chars.
-    UnquotedValue = UnquotedValue.substr(i);
-
-    assert(!UnquotedValue.empty() && "Can't be empty!");
-
-    // Parse escape or line break.
-    switch (UnquotedValue[0]) {
-    case '\r':
-    case '\n':
-      Storage.push_back('\n');
-      if (   UnquotedValue.size() > 1
-          && (UnquotedValue[1] == '\r' || UnquotedValue[1] == '\n'))
-        UnquotedValue = UnquotedValue.substr(1);
-      UnquotedValue = UnquotedValue.substr(1);
-      break;
-    default:
-      if (UnquotedValue.size() == 1) {
-        Token T;
-        T.Range = StringRef(UnquotedValue.begin(), 1);
-        setError("Unrecognized escape code", T);
-        return "";
-      }
-      UnquotedValue = UnquotedValue.substr(1);
-      switch (UnquotedValue[0]) {
-      default: {
-          Token T;
-          T.Range = StringRef(UnquotedValue.begin(), 1);
-          setError("Unrecognized escape code", T);
-          return "";
-        }
-      case '\r':
-      case '\n':
-        // Remove the new line.
-        if (   UnquotedValue.size() > 1
-            && (UnquotedValue[1] == '\r' || UnquotedValue[1] == '\n'))
-          UnquotedValue = UnquotedValue.substr(1);
-        // If this was just a single byte newline, it will get skipped
-        // below.
-        break;
-      case '0':
-        Storage.push_back(0x00);
-        break;
-      case 'a':
-        Storage.push_back(0x07);
-        break;
-      case 'b':
-        Storage.push_back(0x08);
-        break;
-      case 't':
-      case 0x09:
-        Storage.push_back(0x09);
-        break;
-      case 'n':
-        Storage.push_back(0x0A);
-        break;
-      case 'v':
-        Storage.push_back(0x0B);
-        break;
-      case 'f':
-        Storage.push_back(0x0C);
-        break;
-      case 'r':
-        Storage.push_back(0x0D);
-        break;
-      case 'e':
-        Storage.push_back(0x1B);
-        break;
-      case ' ':
-        Storage.push_back(0x20);
-        break;
-      case '"':
-        Storage.push_back(0x22);
-        break;
-      case '/':
-        Storage.push_back(0x2F);
-        break;
-      case '\\':
-        Storage.push_back(0x5C);
-        break;
-      case 'N':
-        encodeUTF8(0x85, Storage);
-        break;
-      case '_':
-        encodeUTF8(0xA0, Storage);
-        break;
-      case 'L':
-        encodeUTF8(0x2028, Storage);
-        break;
-      case 'P':
-        encodeUTF8(0x2029, Storage);
-        break;
-      case 'x': {
-          if (UnquotedValue.size() < 3)
-            // TODO: Report error.
-            break;
-          unsigned int UnicodeScalarValue;
-          if (UnquotedValue.substr(1, 2).getAsInteger(16, UnicodeScalarValue))
-            // TODO: Report error.
-            UnicodeScalarValue = 0xFFFD;
-          encodeUTF8(UnicodeScalarValue, Storage);
-          UnquotedValue = UnquotedValue.substr(2);
-          break;
-        }
-      case 'u': {
-          if (UnquotedValue.size() < 5)
-            // TODO: Report error.
-            break;
-          unsigned int UnicodeScalarValue;
-          if (UnquotedValue.substr(1, 4).getAsInteger(16, UnicodeScalarValue))
-            // TODO: Report error.
-            UnicodeScalarValue = 0xFFFD;
-          encodeUTF8(UnicodeScalarValue, Storage);
-          UnquotedValue = UnquotedValue.substr(4);
-          break;
-        }
-      case 'U': {
-          if (UnquotedValue.size() < 9)
-            // TODO: Report error.
-            break;
-          unsigned int UnicodeScalarValue;
-          if (UnquotedValue.substr(1, 8).getAsInteger(16, UnicodeScalarValue))
-            // TODO: Report error.
-            UnicodeScalarValue = 0xFFFD;
-          encodeUTF8(UnicodeScalarValue, Storage);
-          UnquotedValue = UnquotedValue.substr(8);
-          break;
-        }
-      }
-      UnquotedValue = UnquotedValue.substr(1);
+  char LastNewLineAddedAs = '\0';
+  for (; I != StringRef::npos; I = UnquotedValue.find_first_of(LookupChars)) {
+    if (UnquotedValue[I] != '\r' && UnquotedValue[I] != '\n') {
+      llvm::append_range(Storage, UnquotedValue.take_front(I));
+      UnquotedValue = UnescapeCallback(UnquotedValue.drop_front(I), Storage);
+      LastNewLineAddedAs = '\0';
+      continue;
     }
+    if (size_t LastNonSWhite = UnquotedValue.find_last_not_of(" \t", I);
+        LastNonSWhite != StringRef::npos) {
+      llvm::append_range(Storage, UnquotedValue.take_front(LastNonSWhite + 1));
+      Storage.push_back(' ');
+      LastNewLineAddedAs = ' ';
+    } else {
+      // Note: we can't just check if the last character in Storage is ' ',
+      // '\n', or something else; that would give a wrong result for double
+      // quoted values containing an escaped space character before a new-line
+      // character.
+      switch (LastNewLineAddedAs) {
+      case ' ':
+        assert(!Storage.empty() && Storage.back() == ' ');
+        Storage.back() = '\n';
+        LastNewLineAddedAs = '\n';
+        break;
+      case '\n':
+        assert(!Storage.empty() && Storage.back() == '\n');
+        Storage.push_back('\n');
+        break;
+      default:
+        Storage.push_back(' ');
+        LastNewLineAddedAs = ' ';
+        break;
+      }
+    }
+    // Handle Windows-style EOL
+    if (UnquotedValue.substr(I, 2) == "\r\n")
+      I++;
+    UnquotedValue = UnquotedValue.drop_front(I + 1).ltrim(" \t");
   }
   llvm::append_range(Storage, UnquotedValue);
   return StringRef(Storage.begin(), Storage.size());
+}
+
+StringRef
+ScalarNode::getDoubleQuotedValue(StringRef RawValue,
+                                 SmallVectorImpl<char> &Storage) const {
+  assert(RawValue.size() >= 2 && RawValue.front() == '"' &&
+         RawValue.back() == '"');
+  StringRef UnquotedValue = RawValue.substr(1, RawValue.size() - 2);
+
+  auto UnescapeFunc = [this](StringRef UnquotedValue,
+                             SmallVectorImpl<char> &Storage) {
+    assert(UnquotedValue.take_front(1) == "\\");
+    if (UnquotedValue.size() == 1) {
+      Token T;
+      T.Range = UnquotedValue;
+      setError("Unrecognized escape code", T);
+      Storage.clear();
+      return StringRef();
+    }
+    UnquotedValue = UnquotedValue.drop_front(1);
+    switch (UnquotedValue[0]) {
+    default: {
+      Token T;
+      T.Range = UnquotedValue.take_front(1);
+      setError("Unrecognized escape code", T);
+      Storage.clear();
+      return StringRef();
+    }
+    case '\r':
+      // Shrink the Windows-style EOL.
+      if (UnquotedValue.size() >= 2 && UnquotedValue[1] == '\n')
+        UnquotedValue = UnquotedValue.drop_front(1);
+      [[fallthrough]];
+    case '\n':
+      return UnquotedValue.drop_front(1).ltrim(" \t");
+    case '0':
+      Storage.push_back(0x00);
+      break;
+    case 'a':
+      Storage.push_back(0x07);
+      break;
+    case 'b':
+      Storage.push_back(0x08);
+      break;
+    case 't':
+    case 0x09:
+      Storage.push_back(0x09);
+      break;
+    case 'n':
+      Storage.push_back(0x0A);
+      break;
+    case 'v':
+      Storage.push_back(0x0B);
+      break;
+    case 'f':
+      Storage.push_back(0x0C);
+      break;
+    case 'r':
+      Storage.push_back(0x0D);
+      break;
+    case 'e':
+      Storage.push_back(0x1B);
+      break;
+    case ' ':
+      Storage.push_back(0x20);
+      break;
+    case '"':
+      Storage.push_back(0x22);
+      break;
+    case '/':
+      Storage.push_back(0x2F);
+      break;
+    case '\\':
+      Storage.push_back(0x5C);
+      break;
+    case 'N':
+      encodeUTF8(0x85, Storage);
+      break;
+    case '_':
+      encodeUTF8(0xA0, Storage);
+      break;
+    case 'L':
+      encodeUTF8(0x2028, Storage);
+      break;
+    case 'P':
+      encodeUTF8(0x2029, Storage);
+      break;
+    case 'x': {
+      if (UnquotedValue.size() < 3)
+        // TODO: Report error.
+        break;
+      unsigned int UnicodeScalarValue;
+      if (UnquotedValue.substr(1, 2).getAsInteger(16, UnicodeScalarValue))
+        // TODO: Report error.
+        UnicodeScalarValue = 0xFFFD;
+      encodeUTF8(UnicodeScalarValue, Storage);
+      return UnquotedValue.drop_front(3);
+    }
+    case 'u': {
+      if (UnquotedValue.size() < 5)
+        // TODO: Report error.
+        break;
+      unsigned int UnicodeScalarValue;
+      if (UnquotedValue.substr(1, 4).getAsInteger(16, UnicodeScalarValue))
+        // TODO: Report error.
+        UnicodeScalarValue = 0xFFFD;
+      encodeUTF8(UnicodeScalarValue, Storage);
+      return UnquotedValue.drop_front(5);
+    }
+    case 'U': {
+      if (UnquotedValue.size() < 9)
+        // TODO: Report error.
+        break;
+      unsigned int UnicodeScalarValue;
+      if (UnquotedValue.substr(1, 8).getAsInteger(16, UnicodeScalarValue))
+        // TODO: Report error.
+        UnicodeScalarValue = 0xFFFD;
+      encodeUTF8(UnicodeScalarValue, Storage);
+      return UnquotedValue.drop_front(9);
+    }
+    }
+    return UnquotedValue.drop_front(1);
+  };
+
+  return parseScalarValue(UnquotedValue, Storage, "\\\r\n", UnescapeFunc);
+}
+
+StringRef ScalarNode::getSingleQuotedValue(StringRef RawValue,
+                                           SmallVectorImpl<char> &Storage) {
+  assert(RawValue.size() >= 2 && RawValue.front() == '\'' &&
+         RawValue.back() == '\'');
+  StringRef UnquotedValue = RawValue.substr(1, RawValue.size() - 2);
+
+  auto UnescapeFunc = [](StringRef UnquotedValue,
+                         SmallVectorImpl<char> &Storage) {
+    assert(UnquotedValue.take_front(2) == "''");
+    Storage.push_back('\'');
+    return UnquotedValue.drop_front(2);
+  };
+
+  return parseScalarValue(UnquotedValue, Storage, "'\r\n", UnescapeFunc);
+}
+
+StringRef ScalarNode::getPlainValue(StringRef RawValue,
+                                    SmallVectorImpl<char> &Storage) {
+  // Trim trailing whitespace ('b-char' and 's-white').
+  // NOTE: Alternatively we could change the scanner to not include whitespace
+  //       here in the first place.
+  RawValue = RawValue.rtrim("\r\n \t");
+  return parseScalarValue(RawValue, Storage, "\r\n", nullptr);
 }
 
 Node *KeyValueNode::getKey() {

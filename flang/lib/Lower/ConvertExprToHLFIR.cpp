@@ -166,6 +166,13 @@ public:
     return builder.genShape(loc, lbounds, extents);
   }
 
+  fir::FortranVariableOpInterface
+  gen(const Fortran::evaluate::DataRef &dataRef) {
+    return std::visit(
+        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
+        dataRef.u);
+  }
+
 private:
   /// Struct that is filled while visiting a part-ref (in the "visit" member
   /// function) before the top level "gen" generates an hlfir.declare for the
@@ -312,13 +319,6 @@ private:
   }
 
   fir::FortranVariableOpInterface
-  gen(const Fortran::evaluate::DataRef &dataRef) {
-    return std::visit(
-        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
-        dataRef.u);
-  }
-
-  fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::ArrayRef &arrayRef) {
     PartInfo partInfo;
     mlir::Type resultType = visit(arrayRef, partInfo);
@@ -405,8 +405,8 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-              fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+              fir::ClassType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
@@ -1219,8 +1219,11 @@ struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity string,
                                          hlfir::Entity length) {
+    // The input length may be a user input and needs to be sanitized as per
+    // Fortran 2018 7.4.4.2 point 5.
+    mlir::Value safeLength = fir::factory::genMaxWithZero(builder, loc, length);
     return hlfir::EntityWithAttributes{
-        builder.create<hlfir::SetLengthOp>(loc, string, length)};
+        builder.create<hlfir::SetLengthOp>(loc, string, safeLength)};
   }
   static void
   genResultTypeParams(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
@@ -1367,37 +1370,7 @@ struct UnaryOp<
                                          hlfir::Entity lhs) {
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
-      auto kindMap = builder.getKindMap();
-      mlir::Type fromTy = lhs.getFortranElementType();
-      mlir::Value origBufferSize = genCharLength(loc, builder, lhs);
-      mlir::Value bufferSize{origBufferSize};
-      auto fromBits = kindMap.getCharacterBitsize(
-          fir::unwrapRefType(fromTy).cast<fir::CharacterType>().getFKind());
-      mlir::Type toTy = Fortran::lower::getFIRType(
-          builder.getContext(), TC1, KIND, /*params=*/std::nullopt);
-      auto toBits = kindMap.getCharacterBitsize(
-          toTy.cast<fir::CharacterType>().getFKind());
-      if (toBits < fromBits) {
-        // Scale by relative ratio to give a buffer of the same length.
-        auto ratio = builder.createIntegerConstant(loc, bufferSize.getType(),
-                                                   fromBits / toBits);
-        bufferSize =
-            builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
-      }
-      // allocate space on the stack for toBuffer
-      auto dest = builder.create<fir::AllocaOp>(loc, toTy,
-                                                mlir::ValueRange{bufferSize});
-      auto src = hlfir::convertToAddress(loc, builder, lhs,
-                                         lhs.getFortranElementType());
-      builder.create<fir::CharConvertOp>(loc, src.first.getCharBox()->getAddr(),
-                                         origBufferSize, dest);
-      if (src.second.has_value())
-        src.second.value()();
-
-      return hlfir::EntityWithAttributes{builder.create<hlfir::DeclareOp>(
-          loc, dest, "ctor.temp", /*shape=*/nullptr,
-          /*typeparams=*/mlir::ValueRange{origBufferSize},
-          fir::FortranVariableFlagsAttr{})};
+      return hlfir::convertCharacterKind(loc, builder, lhs, KIND);
     }
     mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
                                                  KIND, /*params=*/std::nullopt);
@@ -1413,6 +1386,14 @@ struct UnaryOp<
   }
 };
 
+static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
+  return type &&
+         type->category() ==
+             Fortran::semantics::DeclTypeSpec::Category::Character &&
+         type->characterTypeSpec().length().isDeferred();
+}
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1423,6 +1404,17 @@ public:
 
   template <typename T>
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::Expr<T> &expr) {
+    if (const Fortran::lower::ExprToValueMap *map =
+            getConverter().getExprOverrides()) {
+      if constexpr (std::is_same_v<T, Fortran::evaluate::SomeType>) {
+        if (auto match = map->find(&expr); match != map->end())
+          return hlfir::EntityWithAttributes{match->second};
+      } else {
+        Fortran::lower::SomeExpr someExpr = toEvExpr(expr);
+        if (auto match = map->find(&someExpr); match != map->end())
+          return hlfir::EntityWithAttributes{match->second};
+      }
+    }
     return std::visit([&](const auto &x) { return gen(x); }, expr.u);
   }
 
@@ -1444,7 +1436,13 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(getLoc(), "lowering ProcRef to HLFIR");
+    Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
+    auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
+    auto result = Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(),
+                                                     expr, procTy.getResult(0),
+                                                     getSymMap(), getStmtCtx());
+    assert(result.has_value());
+    return *result;
   }
 
   template <typename T>
@@ -1736,8 +1734,12 @@ private:
           mlir::Type idxType = builder.getIndexType();
           typeParams.push_back(
               builder.createIntegerConstant(loc, idxType, charType.getLen()));
-        } else {
-          TODO(loc, "dynamic character length in structure constructor");
+        } else if (!hasDeferredCharacterLength(sym)) {
+          // If the length is not deferred, this is a parametrized derived type
+          // where the character length depends on the derived type length
+          // parameters. Otherwise, this is a pointer/allocatable component and
+          // the length will be set during the assignment.
+          TODO(loc, "automatic character component in structure constructor");
         }
       }
 
@@ -1755,6 +1757,8 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
+        if (Fortran::semantics::IsProcedure(sym))
+          TODO(loc, "procedure pointer component in structure constructor");
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);
@@ -1778,7 +1782,7 @@ private:
       // If it is allocatable, then using AssignOp for unallocated RHS
       // will cause illegal dereference. When an unallocated allocatable
       // value is used to construct an allocatable component, the component
-      // must just stay unallocated.
+      // must just stay unallocated (see Fortran 2018 7.5.10 point 7).
 
       // If the component is allocatable and RHS is NULL() expression, then
       // we can just skip it: the LHS must remain unallocated with its
@@ -1787,56 +1791,44 @@ private:
           Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr))
         continue;
 
+      bool keepLhsLength = false;
+      if (allowRealloc)
+        if (const Fortran::semantics::DeclTypeSpec *declType = sym.GetType())
+          keepLhsLength =
+              declType->category() ==
+                  Fortran::semantics::DeclTypeSpec::Category::Character &&
+              !declType->characterTypeSpec().length().isDeferred();
       // Handle special case when the initializer expression is
       // '{%SET_LENGTH(x,const_kind)}'. In structure constructor,
-      // SET_LENGTH is used for initializers of character allocatable
-      // components with *explicit* length, because they have to keep
-      // their length regardless of the initializer expression's length.
-      // We cannot just lower SET_LENGTH into hlfir.set_length in case
-      // when 'x' is allocatable: if 'x' is unallocated, it is not clear
-      // what hlfir.expr should be produced by hlfir.set_length.
-      // So whenever the initializer expression is SET_LENGTH we
-      // recognize it as the directive to keep the explicit length
-      // of the LHS component, and we completely ignore 'const_kind'
-      // operand assuming that it matches the LHS component's explicit
-      // length. Note that in case when LHS component has deferred length,
-      // the FE does not produce SET_LENGTH expression.
-      //
-      // When SET_LENGTH is recognized, we use 'x' as the initializer
-      // for the LHS component. If 'x' is allocatable, the dynamic
-      // isAllocated check will guard the assign operation as usual.
-      bool keepLhsLength = false;
-      hlfir::Entity rhs = std::visit(
-          [&](const auto &x) -> hlfir::Entity {
-            using T = std::decay_t<decltype(x)>;
-            if constexpr (Fortran::common::HasMember<
-                              T, Fortran::lower::CategoryExpression>) {
-              if constexpr (T::Result::category ==
-                            Fortran::common::TypeCategory::Character) {
-                return std::visit(
-                    [&](const auto &someKind) -> hlfir::Entity {
-                      using T = std::decay_t<decltype(someKind)>;
-                      if (const auto *setLength = std::get_if<
-                              Fortran::evaluate::SetLength<T::Result::kind>>(
-                              &someKind.u)) {
-                        keepLhsLength = true;
-                        return gen(setLength->left());
-                      }
+      // SET_LENGTH is used for initializers of non-allocatable character
+      // components so that the front-end can better
+      // fold and work with these structure constructors.
+      // Here, they are just noise since the assignment semantics will deal
+      // with any length mismatch, and creating an extra temp with the lhs
+      // length is useless.
+      // TODO: should this be moved into an hlfir.assign + hlfir.set_length
+      // pattern rewrite?
+      hlfir::Entity rhs = gen(expr);
+      if (auto set_length = rhs.getDefiningOp<hlfir::SetLengthOp>())
+        rhs = hlfir::Entity{set_length.getString()};
 
-                      return gen(someKind);
-                    },
-                    x.u);
-              }
-            }
-            return gen(x);
-          },
-          expr.u);
-
-      if (!allowRealloc || !rhs.isMutableBox()) {
+      // lambda to generate `lhs = rhs` and deal with potential rhs implicit
+      // cast
+      auto genAssign = [&] {
         rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
-        builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc,
+        auto rhsCastAndCleanup =
+            hlfir::genTypeAndKindConvert(loc, builder, rhs, lhs.getType(),
+                                         /*preserveLowerBounds=*/allowRealloc);
+        builder.create<hlfir::AssignOp>(loc, rhsCastAndCleanup.first, lhs,
+                                        allowRealloc,
                                         allowRealloc ? keepLhsLength : false,
                                         /*temporary_lhs=*/true);
+        if (rhsCastAndCleanup.second)
+          (*rhsCastAndCleanup.second)();
+      };
+
+      if (!allowRealloc || !rhs.isMutableBox()) {
+        genAssign();
         continue;
       }
 
@@ -1849,14 +1841,7 @@ private:
                                  "to mutable box");
       mlir::Value isAlloc =
           fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, *fromBox);
-      builder.genIfThen(loc, isAlloc)
-          .genThen([&]() {
-            rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
-            builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc,
-                                            keepLhsLength,
-                                            /*temporary_lhs=*/true);
-          })
-          .end();
+      builder.genIfThen(loc, isAlloc).genThen(genAssign).end();
     }
 
     return varOp;
@@ -1959,6 +1944,15 @@ fir::ExtendedValue Fortran::lower::convertExprToValue(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  return convertToValue(loc, converter, loweredExpr, stmtCtx);
+}
+
+fir::ExtendedValue Fortran::lower::convertDataRefToValue(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::DataRef &dataRef, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FortranVariableOpInterface loweredExpr =
+      HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx).gen(dataRef);
   return convertToValue(loc, converter, loweredExpr, stmtCtx);
 }
 

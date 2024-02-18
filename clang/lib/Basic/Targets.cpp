@@ -247,12 +247,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     switch (os) {
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
-    case llvm::Triple::FreeBSD:
-      return std::make_unique<FreeBSDTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
-    case llvm::Triple::OpenBSD:
-      return std::make_unique<OpenBSDTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return std::make_unique<RTEMSTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
     case llvm::Triple::NaCl:
@@ -487,15 +483,11 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<SparcV8TargetInfo>(Triple, Opts);
     }
 
-  // The 'sparcel' architecture copies all the above cases except for Solaris.
   case llvm::Triple::sparcel:
     switch (os) {
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<SparcV8elTargetInfo>>(Triple,
                                                                     Opts);
-    case llvm::Triple::NetBSD:
-      return std::make_unique<NetBSDTargetInfo<SparcV8elTargetInfo>>(Triple,
-                                                                     Opts);
     case llvm::Triple::RTEMS:
       return std::make_unique<RTEMSTargetInfo<SparcV8elTargetInfo>>(Triple,
                                                                     Opts);
@@ -652,6 +644,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<PS4OSTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     case llvm::Triple::PS5:
       return std::make_unique<PS5OSTargetInfo<X86_64TargetInfo>>(Triple, Opts);
+    case llvm::Triple::Hurd:
+      return std::make_unique<HurdTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     default:
       return std::make_unique<X86_64TargetInfo>(Triple, Opts);
     }

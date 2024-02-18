@@ -80,8 +80,18 @@ ConstantSubscript ConstantBounds::SubscriptsToOffset(
   return offset;
 }
 
-std::size_t TotalElementCount(const ConstantSubscripts &shape) {
-  return static_cast<std::size_t>(GetSize(shape));
+std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape) {
+  uint64_t size{1};
+  for (auto dim : shape) {
+    CHECK(dim >= 0);
+    uint64_t osize{size};
+    size = osize * dim;
+    if (size > std::numeric_limits<decltype(dim)>::max() ||
+        (dim != 0 && size / dim != osize)) {
+      return std::nullopt;
+    }
+  }
+  return static_cast<uint64_t>(GetSize(shape));
 }
 
 bool ConstantBounds::IncrementSubscripts(
@@ -135,7 +145,7 @@ template <typename RESULT, typename ELEMENT>
 ConstantBase<RESULT, ELEMENT>::ConstantBase(
     std::vector<Element> &&x, ConstantSubscripts &&sh, Result res)
     : ConstantBounds(std::move(sh)), result_{res}, values_(std::move(x)) {
-  CHECK(size() == TotalElementCount(shape()));
+  CHECK(TotalElementCount(shape()) && size() == *TotalElementCount(shape()));
 }
 
 template <typename RESULT, typename ELEMENT>
@@ -149,7 +159,9 @@ bool ConstantBase<RESULT, ELEMENT>::operator==(const ConstantBase &that) const {
 template <typename RESULT, typename ELEMENT>
 auto ConstantBase<RESULT, ELEMENT>::Reshape(
     const ConstantSubscripts &dims) const -> std::vector<Element> {
-  std::size_t n{TotalElementCount(dims)};
+  std::optional<uint64_t> optN{TotalElementCount(dims)};
+  CHECK(optN);
+  uint64_t n{*optN};
   CHECK(!empty() || n == 0);
   std::vector<Element> elements;
   auto iter{values().cbegin()};
@@ -209,7 +221,8 @@ template <int KIND>
 Constant<Type<TypeCategory::Character, KIND>>::Constant(ConstantSubscript len,
     std::vector<Scalar<Result>> &&strings, ConstantSubscripts &&sh)
     : ConstantBounds(std::move(sh)), length_{len} {
-  CHECK(strings.size() == TotalElementCount(shape()));
+  CHECK(TotalElementCount(shape()) &&
+      strings.size() == *TotalElementCount(shape()));
   values_.assign(strings.size() * length_,
       static_cast<typename Scalar<Result>::value_type>(' '));
   ConstantSubscript at{0};
@@ -236,7 +249,9 @@ bool Constant<Type<TypeCategory::Character, KIND>>::empty() const {
 template <int KIND>
 std::size_t Constant<Type<TypeCategory::Character, KIND>>::size() const {
   if (length_ == 0) {
-    return TotalElementCount(shape());
+    std::optional<uint64_t> n{TotalElementCount(shape())};
+    CHECK(n);
+    return *n;
   } else {
     return static_cast<ConstantSubscript>(values_.size()) / length_;
   }
@@ -274,7 +289,9 @@ auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
 template <int KIND>
 auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
     ConstantSubscripts &&dims) const -> Constant<Result> {
-  std::size_t n{TotalElementCount(dims)};
+  std::optional<uint64_t> optN{TotalElementCount(dims)};
+  CHECK(optN);
+  uint64_t n{*optN};
   CHECK(!empty() || n == 0);
   std::vector<Element> elements;
   ConstantSubscript at{0},

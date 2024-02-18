@@ -11,7 +11,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 if (NOT LLVM_USE_SANITIZER)
@@ -28,7 +28,7 @@ if (NOT LLVM_USE_SANITIZER)
       libc.src.sys.mman.mmap
       libc.src.sys.mman.munmap
       libc.src.sys.mman.mprotect
-      libc.test.errno_setter_matcher
+      libc.test.UnitTest.ErrnoSetterMatcher
   )
 endif()
 
@@ -44,7 +44,7 @@ add_libc_unittest(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 
@@ -60,5 +60,50 @@ add_libc_unittest(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  mincore_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    mincore_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.munlock
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  mlock_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    mlock_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
+    libc.src.sys.resource.getrlimit
+    libc.src.__support.OSUtil.osutil
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

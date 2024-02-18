@@ -3,22 +3,12 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "int_types.h"
+
 #ifdef COMPILER_RT_HAS_FLOAT16
 #define TYPE_FP16 _Float16
 #else
 #define TYPE_FP16 uint16_t
-#endif
-
-// TODO: Switch to using fp_lib.h once QUAD_PRECISION is available on x86_64.
-#if __LDBL_MANT_DIG__ == 113 ||                                                \
-    ((__LDBL_MANT_DIG__ == 64) && defined(__x86_64__) &&                       \
-     (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)))
-#if __LDBL_MANT_DIG__ == 113
-#define TYPE_FP128 long double
-#else
-#define TYPE_FP128 __float128
-#endif
-#define TEST_COMPILER_RT_HAS_FLOAT128
 #endif
 
 enum EXPECTED_RESULT {
@@ -50,10 +40,10 @@ static inline double fromRep64(uint64_t x)
     return ret;
 }
 
-#ifdef TEST_COMPILER_RT_HAS_FLOAT128
-static inline TYPE_FP128 fromRep128(uint64_t hi, uint64_t lo) {
+#if defined(CRT_HAS_TF_MODE)
+static inline tf_float fromRep128(uint64_t hi, uint64_t lo) {
     __uint128_t x = ((__uint128_t)hi << 64) + lo;
-    TYPE_FP128 ret;
+    tf_float ret;
     memcpy(&ret, &x, 16);
     return ret;
 }
@@ -84,8 +74,8 @@ static inline uint64_t toRep64(double x)
     return ret;
 }
 
-#ifdef TEST_COMPILER_RT_HAS_FLOAT128
-static inline __uint128_t toRep128(TYPE_FP128 x) {
+#if defined(CRT_HAS_TF_MODE)
+static inline __uint128_t toRep128(tf_float x) {
     __uint128_t ret;
     memcpy(&ret, &x, 16);
     return ret;
@@ -146,11 +136,11 @@ static inline int compareResultD(double result,
     return 1;
 }
 
-#ifdef TEST_COMPILER_RT_HAS_FLOAT128
+#if defined(CRT_HAS_TF_MODE)
 // return 0 if equal
 // use two 64-bit integers instead of one 128-bit integer
 // because 128-bit integer constant can't be assigned directly
-static inline int compareResultF128(TYPE_FP128 result, uint64_t expectedHi,
+static inline int compareResultF128(tf_float result, uint64_t expectedHi,
                                     uint64_t expectedLo) {
     __uint128_t rep = toRep128(result);
     uint64_t hi = rep >> 64;
@@ -277,8 +267,8 @@ static inline long double makeInf80(void) {
 }
 #endif
 
-#ifdef TEST_COMPILER_RT_HAS_FLOAT128
-static inline TYPE_FP128 makeQNaN128(void) {
+#if defined(CRT_HAS_TF_MODE)
+static inline tf_float makeQNaN128(void) {
     return fromRep128(0x7fff800000000000UL, 0x0UL);
 }
 #endif
@@ -298,8 +288,8 @@ static inline double makeNaN64(uint64_t rand)
     return fromRep64(0x7ff0000000000000UL | (rand & 0xfffffffffffffUL));
 }
 
-#ifdef TEST_COMPILER_RT_HAS_FLOAT128
-static inline TYPE_FP128 makeNaN128(uint64_t rand) {
+#if defined(CRT_HAS_TF_MODE)
+static inline tf_float makeNaN128(uint64_t rand) {
     return fromRep128(0x7fff000000000000UL | (rand & 0xffffffffffffUL), 0x0UL);
 }
 #endif
@@ -329,12 +319,12 @@ static inline double makeNegativeInf64(void)
     return fromRep64(0xfff0000000000000UL);
 }
 
-#ifdef TEST_COMPILER_RT_HAS_FLOAT128
-static inline TYPE_FP128 makeInf128(void) {
+#if defined(CRT_HAS_TF_MODE)
+static inline tf_float makeInf128(void) {
     return fromRep128(0x7fff000000000000UL, 0x0UL);
 }
 
-static inline TYPE_FP128 makeNegativeInf128(void) {
+static inline tf_float makeNegativeInf128(void) {
     return fromRep128(0xffff000000000000UL, 0x0UL);
 }
 #endif

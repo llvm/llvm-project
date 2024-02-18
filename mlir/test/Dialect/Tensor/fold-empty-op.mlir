@@ -1,10 +1,12 @@
-// RUN: mlir-opt -split-input-file -test-transform-dialect-interpreter %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -transform-interpreter %s | FileCheck %s
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.tensor.fold_tensor_empty
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.tensor.fold_tensor_empty
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
@@ -64,12 +66,14 @@ func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tens
 
 // -----
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.tensor.fold_tensor_empty
-        {fold_single_use_only = true}
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.tensor.fold_tensor_empty
+          {fold_single_use_only = true}
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 func.func @double_use_of_tensor_empty(%arg0: index, %arg1: index)

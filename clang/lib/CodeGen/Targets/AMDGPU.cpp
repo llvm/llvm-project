@@ -362,9 +362,13 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 /// AMDGPU ROCm device libraries.
 void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     CodeGen::CodeGenModule &CGM) const {
-  StringRef Name = "llvm.amdgcn.abi.version";
+  StringRef Name = "__oclc_ABI_version";
   llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
   if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
+    return;
+
+  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
+      llvm::CodeObjectVersionKind::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
@@ -467,20 +471,25 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   std::string Name;
   switch (Scope) {
   case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
     Name = "singlethread";
     break;
   case SyncScope::HIPWavefront:
   case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
     Name = "wavefront";
     break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
     Name = "workgroup";
     break;
   case SyncScope::HIPAgent:
   case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
     Name = "agent";
     break;
+  case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
@@ -594,7 +603,8 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     llvm::Function *F, const AMDGPUFlatWorkGroupSizeAttr *FlatWGS,
-    const ReqdWorkGroupSizeAttr *ReqdWGS) {
+    const ReqdWorkGroupSizeAttr *ReqdWGS, int32_t *MinThreadsVal,
+    int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
   if (FlatWGS) {
@@ -607,8 +617,13 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
+    if (MinThreadsVal)
+      *MinThreadsVal = Min;
+    if (MaxThreadsVal)
+      *MaxThreadsVal = Max;
     std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
-    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
+    if (F)
+      F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   } else
     assert(Max == 0 && "Max must be zero");
 }

@@ -22,6 +22,9 @@ set(LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
 set(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY ON CACHE BOOL "")
 set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
 
+# Android uses its own unwinder library
+set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
+
 # Clang links libc++ by default, but it doesn't exist yet. The libc++ CMake
 # files specify -nostdlib++ to avoid this problem, but CMake's default "compiler
 # works" testing doesn't pass that flag, so force those tests to pass.

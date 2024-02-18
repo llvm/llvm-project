@@ -197,7 +197,7 @@ std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
       : GV->getParent()->getDataLayout();
 
   Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 void ExecutionEngine::addGlobalMapping(const GlobalValue *GV, void *Addr) {
@@ -340,7 +340,7 @@ void *ArgvArray::reset(LLVMContext &C, ExecutionEngine *EE,
   Array = std::make_unique<char[]>((InputArgv.size()+1)*PtrSize);
 
   LLVM_DEBUG(dbgs() << "JIT: ARGV = " << (void *)Array.get() << "\n");
-  Type *SBytePtr = Type::getInt8PtrTy(C);
+  Type *SBytePtr = PointerType::getUnqual(C);
 
   for (unsigned i = 0; i != InputArgv.size(); ++i) {
     unsigned Size = InputArgv[i].size()+1;
@@ -386,7 +386,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
 
     Constant *FP = CS->getOperand(1);
     if (FP->isNullValue())
-      continue;  // Found a sentinal value, ignore.
+      continue;  // Found a sentinel value, ignore.
 
     // Strip off constant expression casts.
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(FP))

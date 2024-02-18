@@ -15,8 +15,10 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -189,6 +191,8 @@ int64_t decodeRegMovtA1MovwA2(uint64_t Value) {
   return Rd4;
 }
 
+namespace {
+
 /// 32-bit Thumb instructions are stored as two little-endian halfwords.
 /// An instruction at address A encodes bytes A+1, A in the first halfword (Hi),
 /// followed by bytes A+3, A+2 in the second halfword (Lo).
@@ -224,7 +228,6 @@ struct WritableArmRelocation {
 };
 
 struct ArmRelocation {
-
   ArmRelocation(const char *FixupPtr)
       : Wd{*reinterpret_cast<const support::ulittle32_t *>(FixupPtr)} {}
 
@@ -248,15 +251,95 @@ Error makeUnexpectedOpcodeError(const LinkGraph &G, const ArmRelocation &R,
               static_cast<uint32_t>(R.Wd), G.getEdgeKindName(Kind)));
 }
 
-template <EdgeKind_aarch32 Kind> bool checkOpcode(const ThumbRelocation &R) {
-  uint16_t Hi = R.Hi & FixupInfo<Kind>::OpcodeMask.Hi;
-  uint16_t Lo = R.Lo & FixupInfo<Kind>::OpcodeMask.Lo;
-  return Hi == FixupInfo<Kind>::Opcode.Hi && Lo == FixupInfo<Kind>::Opcode.Lo;
+template <EdgeKind_aarch32 K> constexpr bool isArm() {
+  return FirstArmRelocation <= K && K <= LastArmRelocation;
+}
+template <EdgeKind_aarch32 K> constexpr bool isThumb() {
+  return FirstThumbRelocation <= K && K <= LastThumbRelocation;
 }
 
-template <EdgeKind_aarch32 Kind> bool checkOpcode(const ArmRelocation &R) {
-  uint32_t Wd = R.Wd & FixupInfo<Kind>::OpcodeMask;
-  return Wd == FixupInfo<Kind>::Opcode;
+template <EdgeKind_aarch32 K> static bool checkOpcodeArm(uint32_t Wd) {
+  return (Wd & FixupInfo<K>::OpcodeMask) == FixupInfo<K>::Opcode;
+}
+
+template <EdgeKind_aarch32 K>
+static bool checkOpcodeThumb(uint16_t Hi, uint16_t Lo) {
+  return (Hi & FixupInfo<K>::OpcodeMask.Hi) == FixupInfo<K>::Opcode.Hi &&
+         (Lo & FixupInfo<K>::OpcodeMask.Lo) == FixupInfo<K>::Opcode.Lo;
+}
+
+class FixupInfoTable {
+  static constexpr size_t Items = LastRelocation + 1;
+
+public:
+  FixupInfoTable() {
+    populateEntries<FirstArmRelocation, LastArmRelocation>();
+    populateEntries<FirstThumbRelocation, LastThumbRelocation>();
+  }
+
+  const FixupInfoBase *getEntry(Edge::Kind K) {
+    assert(K < Data.size() && "Index out of bounds");
+    return Data.at(K).get();
+  }
+
+private:
+  template <EdgeKind_aarch32 K, EdgeKind_aarch32 LastK> void populateEntries() {
+    assert(K < Data.size() && "Index out of range");
+    assert(Data.at(K) == nullptr && "Initialized entries are immutable");
+    Data[K] = initEntry<K>();
+    if constexpr (K < LastK) {
+      constexpr auto Next = static_cast<EdgeKind_aarch32>(K + 1);
+      populateEntries<Next, LastK>();
+    }
+  }
+
+  template <EdgeKind_aarch32 K>
+  static std::unique_ptr<FixupInfoBase> initEntry() {
+    auto Entry = std::make_unique<FixupInfo<K>>();
+    static_assert(isArm<K>() != isThumb<K>(), "Classes are mutually exclusive");
+    if constexpr (isArm<K>())
+      Entry->checkOpcode = checkOpcodeArm<K>;
+    if constexpr (isThumb<K>())
+      Entry->checkOpcode = checkOpcodeThumb<K>;
+    return Entry;
+  }
+
+private:
+  std::array<std::unique_ptr<FixupInfoBase>, Items> Data;
+};
+
+ManagedStatic<FixupInfoTable> DynFixupInfos;
+
+} // namespace
+
+static Error checkOpcode(LinkGraph &G, const ArmRelocation &R,
+                         Edge::Kind Kind) {
+  assert(Kind >= FirstArmRelocation && Kind <= LastArmRelocation &&
+         "Edge kind must be Arm relocation");
+  const FixupInfoBase *Entry = DynFixupInfos->getEntry(Kind);
+  const FixupInfoArm &Info = *static_cast<const FixupInfoArm *>(Entry);
+  assert(Info.checkOpcode && "Opcode check is mandatory for Arm edges");
+  if (!Info.checkOpcode(R.Wd))
+    return makeUnexpectedOpcodeError(G, R, Kind);
+
+  return Error::success();
+}
+
+static Error checkOpcode(LinkGraph &G, const ThumbRelocation &R,
+                         Edge::Kind Kind) {
+  assert(Kind >= FirstThumbRelocation && Kind <= LastThumbRelocation &&
+         "Edge kind must be Thumb relocation");
+  const FixupInfoBase *Entry = DynFixupInfos->getEntry(Kind);
+  const FixupInfoThumb &Info = *static_cast<const FixupInfoThumb *>(Entry);
+  assert(Info.checkOpcode && "Opcode check is mandatory for Thumb edges");
+  if (!Info.checkOpcode(R.Hi, R.Lo))
+    return makeUnexpectedOpcodeError(G, R, Kind);
+
+  return Error::success();
+}
+
+const FixupInfoBase *FixupInfoBase::getDynFixupInfo(Edge::Kind K) {
+  return DynFixupInfos->getEntry(K);
 }
 
 template <EdgeKind_aarch32 Kind>
@@ -304,87 +387,70 @@ void writeImmediate(WritableArmRelocation &R, uint32_t Imm) {
   R.Wd = (R.Wd & ~Mask) | Imm;
 }
 
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
-  llvm::endianness Endian = G.getEndianness();
-
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                 Edge::Kind Kind) {
+  endianness Endian = G.getEndianness();
   const char *BlockWorkingMem = B.getContent().data();
-  const char *FixupPtr = BlockWorkingMem + E.getOffset();
+  const char *FixupPtr = BlockWorkingMem + Offset;
 
   switch (Kind) {
   case Data_Delta32:
   case Data_Pointer32:
+  case Data_RequestGOTAndTransformToDelta32:
     return SignExtend64<32>(support::endian::read32(FixupPtr, Endian));
+  case Data_PRel31:
+    return SignExtend64<31>(support::endian::read32(FixupPtr, Endian));
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E) {
-  ArmRelocation R(B.getContent().data() + E.getOffset());
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                Edge::Kind Kind) {
+  ArmRelocation R(B.getContent().data() + Offset);
+  if (Error Err = checkOpcode(G, R, Kind))
+    return std::move(Err);
 
   switch (Kind) {
   case Arm_Call:
-    if (!checkOpcode<Arm_Call>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
-    return decodeImmBA1BlA1BlxA2(R.Wd);
-
   case Arm_Jump24:
-    if (!checkOpcode<Arm_Jump24>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     return decodeImmBA1BlA1BlxA2(R.Wd);
-
-  case Arm_MovwAbsNC:
-    if (!checkOpcode<Arm_MovwAbsNC>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
-    return decodeImmMovtA1MovwA2(R.Wd);
 
   case Arm_MovtAbs:
-    if (!checkOpcode<Arm_MovtAbs>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
+  case Arm_MovwAbsNC:
     return decodeImmMovtA1MovwA2(R.Wd);
 
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
-                                  const ArmConfig &ArmCfg) {
-  ThumbRelocation R(B.getContent().data() + E.getOffset());
-  Edge::Kind Kind = E.getKind();
+Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                  Edge::Kind Kind, const ArmConfig &ArmCfg) {
+  ThumbRelocation R(B.getContent().data() + Offset);
+  if (Error Err = checkOpcode(G, R, Kind))
+    return std::move(Err);
 
   switch (Kind) {
   case Thumb_Call:
-    if (!checkOpcode<Thumb_Call>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
+  case Thumb_Jump24:
     return LLVM_LIKELY(ArmCfg.J1J2BranchEncoding)
                ? decodeImmBT4BlT1BlxT2_J1J2(R.Hi, R.Lo)
                : decodeImmBT4BlT1BlxT2(R.Hi, R.Lo);
 
-  case Thumb_Jump24:
-    if (!checkOpcode<Thumb_Jump24>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
-    return LLVM_LIKELY(ArmCfg.J1J2BranchEncoding)
-                  ? decodeImmBT4BlT1BlxT2_J1J2(R.Hi, R.Lo)
-                  : decodeImmBT4BlT1BlxT2(R.Hi, R.Lo);
-
   case Thumb_MovwAbsNC:
-    if (!checkOpcode<Thumb_MovwAbsNC>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
+  case Thumb_MovwPrelNC:
     // Initial addend is interpreted as a signed value
     return SignExtend64<16>(decodeImmMovtT1MovwT3(R.Hi, R.Lo));
 
   case Thumb_MovtAbs:
-    if (!checkOpcode<Thumb_MovtAbs>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
+  case Thumb_MovtPrel:
     // Initial addend is interpreted as a signed value
     return SignExtend64<16>(decodeImmMovtT1MovwT3(R.Hi, R.Lo));
 
@@ -392,7 +458,7 @@ Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         " can not read implicit addend for aarch32 edge kind " +
-        G.getEdgeKindName(E.getKind()));
+        G.getEdgeKindName(Kind));
   }
 }
 
@@ -402,39 +468,50 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();
   char *FixupPtr = BlockWorkingMem + E.getOffset();
 
-  auto Write32 = [FixupPtr, Endian = G.getEndianness()](int64_t Value) {
-    assert(isInt<32>(Value) && "Must be in signed 32-bit range");
-    uint32_t Imm = static_cast<int32_t>(Value);
-    if (LLVM_LIKELY(Endian == llvm::endianness::little))
-      endian::write32<llvm::endianness::little>(FixupPtr, Imm);
-    else
-      endian::write32<llvm::endianness::big>(FixupPtr, Imm);
-  };
-
   Edge::Kind Kind = E.getKind();
   uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
 
-  // Regular data relocations have size 4, alignment 1 and write the full 32-bit
-  // result to the place; no need for overflow checking. There are three
-  // exceptions: R_ARM_ABS8, R_ARM_ABS16, R_ARM_PREL31
+  // Data relocations have alignment 1, size 4 (except R_ARM_ABS8 and
+  // R_ARM_ABS16) and write the full 32-bit result (except R_ARM_PREL31).
   switch (Kind) {
   case Data_Delta32: {
     int64_t Value = TargetAddress - FixupAddress + Addend;
     if (!isInt<32>(Value))
       return makeTargetOutOfRangeError(G, B, E);
-    Write32(Value);
+    if (LLVM_LIKELY(G.getEndianness() == endianness::little))
+      endian::write32le(FixupPtr, Value);
+    else
+      endian::write32be(FixupPtr, Value);
     return Error::success();
   }
   case Data_Pointer32: {
     int64_t Value = TargetAddress + Addend;
-    if (!isInt<32>(Value))
+    if (!isUInt<32>(Value))
       return makeTargetOutOfRangeError(G, B, E);
-    Write32(Value);
+    if (LLVM_LIKELY(G.getEndianness() == endianness::little))
+      endian::write32le(FixupPtr, Value);
+    else
+      endian::write32be(FixupPtr, Value);
     return Error::success();
   }
+  case Data_PRel31: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+    if (!isInt<31>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+    if (LLVM_LIKELY(G.getEndianness() == endianness::little)) {
+      uint32_t MSB = endian::read32le(FixupPtr) & 0x80000000;
+      endian::write32le(FixupPtr, MSB | (Value & ~0x80000000));
+    } else {
+      uint32_t MSB = endian::read32be(FixupPtr) & 0x80000000;
+      endian::write32be(FixupPtr, MSB | (Value & ~0x80000000));
+    }
+    return Error::success();
+  }
+  case Data_RequestGOTAndTransformToDelta32:
+    llvm_unreachable("Should be transformed");
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -446,6 +523,9 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
 Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
   WritableArmRelocation R(B.getAlreadyMutableContent().data() + E.getOffset());
   Edge::Kind Kind = E.getKind();
+  if (Error Err = checkOpcode(G, R, Kind))
+    return Err;
+
   uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
@@ -453,8 +533,6 @@ Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
 
   switch (Kind) {
   case Arm_Jump24: {
-    if (!checkOpcode<Arm_Jump24>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     if (hasTargetFlags(TargetSymbol, ThumbSymbol))
       return make_error<JITLinkError>("Branch relocation needs interworking "
                                       "stub when bridging to Thumb: " +
@@ -469,8 +547,6 @@ Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
     return Error::success();
   }
   case Arm_Call: {
-    if (!checkOpcode<Arm_Call>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     if ((R.Wd & FixupInfo<Arm_Call>::CondMask) !=
         FixupInfo<Arm_Call>::Unconditional)
       return make_error<JITLinkError>("Relocation expects an unconditional "
@@ -501,15 +577,11 @@ Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
     return Error::success();
   }
   case Arm_MovwAbsNC: {
-    if (!checkOpcode<Arm_MovwAbsNC>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     uint16_t Value = (TargetAddress + Addend) & 0xffff;
     writeImmediate<Arm_MovwAbsNC>(R, encodeImmMovtA1MovwA2(Value));
     return Error::success();
   }
   case Arm_MovtAbs: {
-    if (!checkOpcode<Arm_MovtAbs>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     uint16_t Value = ((TargetAddress + Addend) >> 16) & 0xffff;
     writeImmediate<Arm_MovtAbs>(R, encodeImmMovtA1MovwA2(Value));
     return Error::success();
@@ -526,8 +598,10 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
                       const ArmConfig &ArmCfg) {
   WritableThumbRelocation R(B.getAlreadyMutableContent().data() +
                             E.getOffset());
-
   Edge::Kind Kind = E.getKind();
+  if (Error Err = checkOpcode(G, R, Kind))
+    return Err;
+
   uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
@@ -535,8 +609,6 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
 
   switch (Kind) {
   case Thumb_Jump24: {
-    if (!checkOpcode<Thumb_Jump24>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     if (!hasTargetFlags(TargetSymbol, ThumbSymbol))
       return make_error<JITLinkError>("Branch relocation needs interworking "
                                       "stub when bridging to ARM: " +
@@ -557,9 +629,6 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   }
 
   case Thumb_Call: {
-    if (!checkOpcode<Thumb_Call>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
-
     int64_t Value = TargetAddress - FixupAddress + Addend;
 
     // The call instruction itself is Thumb. The call destination can either be
@@ -596,18 +665,23 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   }
 
   case Thumb_MovwAbsNC: {
-    if (!checkOpcode<Thumb_MovwAbsNC>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     uint16_t Value = (TargetAddress + Addend) & 0xffff;
     writeImmediate<Thumb_MovwAbsNC>(R, encodeImmMovtT1MovwT3(Value));
     return Error::success();
   }
-
   case Thumb_MovtAbs: {
-    if (!checkOpcode<Thumb_MovtAbs>(R))
-      return makeUnexpectedOpcodeError(G, R, Kind);
     uint16_t Value = ((TargetAddress + Addend) >> 16) & 0xffff;
     writeImmediate<Thumb_MovtAbs>(R, encodeImmMovtT1MovwT3(Value));
+    return Error::success();
+  }
+  case Thumb_MovwPrelNC: {
+    uint16_t Value = ((TargetAddress + Addend - FixupAddress) & 0xffff);
+    writeImmediate<Thumb_MovwPrelNC>(R, encodeImmMovtT1MovwT3(Value));
+    return Error::success();
+  }
+  case Thumb_MovtPrel: {
+    uint16_t Value = (((TargetAddress + Addend - FixupAddress) >> 16) & 0xffff);
+    writeImmediate<Thumb_MovtPrel>(R, encodeImmMovtT1MovwT3(Value));
     return Error::success();
   }
 
@@ -619,28 +693,240 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   }
 }
 
+const uint8_t GOTEntryInit[] = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+};
+
+/// Create a new node in the link-graph for the given pointer value.
+template <size_t Size>
+static Block &allocPointer(LinkGraph &G, Section &S,
+                           const uint8_t (&Content)[Size]) {
+  static_assert(Size == 4, "Pointers are 32-bit");
+  constexpr uint64_t Alignment = 4;
+  ArrayRef<char> Init(reinterpret_cast<const char *>(Content), Size);
+  return G.createContentBlock(S, Init, orc::ExecutorAddr(), Alignment, 0);
+}
+
+Symbol &GOTBuilder::createEntry(LinkGraph &G, Symbol &Target) {
+  if (!GOTSection)
+    GOTSection = &G.createSection(getSectionName(), orc::MemProt::Read);
+  Block &B = allocPointer(G, *GOTSection, GOTEntryInit);
+  constexpr int64_t GOTEntryAddend = 0;
+  B.addEdge(Data_Pointer32, 0, Target, GOTEntryAddend);
+  return G.addAnonymousSymbol(B, 0, B.getSize(), false, false);
+}
+
+bool GOTBuilder::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  Edge::Kind KindToSet = Edge::Invalid;
+  switch (E.getKind()) {
+  case aarch32::Data_RequestGOTAndTransformToDelta32: {
+    KindToSet = aarch32::Data_Delta32;
+    break;
+  }
+  default:
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "  Transforming " << G.getEdgeKindName(E.getKind())
+                    << " edge at " << B->getFixupAddress(E) << " ("
+                    << B->getAddress() << " + "
+                    << formatv("{0:x}", E.getOffset()) << ") into "
+                    << G.getEdgeKindName(KindToSet) << "\n");
+  E.setKind(KindToSet);
+  E.setTarget(getEntryForTarget(G, E.getTarget()));
+  return true;
+}
+
+const uint8_t ArmThumbv5LdrPc[] = {
+    0x78, 0x47,             // bx pc
+    0xfd, 0xe7,             // b #-6 ; Arm recommended sequence to follow bx pc
+    0x04, 0xf0, 0x1f, 0xe5, // ldr pc, [pc,#-4] ; L1
+    0x00, 0x00, 0x00, 0x00, // L1: .word S
+};
+
+const uint8_t Armv7ABS[] = {
+    0x00, 0xc0, 0x00, 0xe3, // movw r12, #0x0000     ; lower 16-bit
+    0x00, 0xc0, 0x40, 0xe3, // movt r12, #0x0000     ; upper 16-bit
+    0x1c, 0xff, 0x2f, 0xe1  // bx   r12
+};
+
 const uint8_t Thumbv7ABS[] = {
     0x40, 0xf2, 0x00, 0x0c, // movw r12, #0x0000    ; lower 16-bit
     0xc0, 0xf2, 0x00, 0x0c, // movt r12, #0x0000    ; upper 16-bit
     0x60, 0x47              // bx   r12
 };
 
-template <>
-Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target) {
+/// Create a new node in the link-graph for the given stub template.
+template <size_t Size>
+static Block &allocStub(LinkGraph &G, Section &S, const uint8_t (&Code)[Size]) {
   constexpr uint64_t Alignment = 4;
-  Block &B = addStub(G, Thumbv7ABS, Alignment);
-  LLVM_DEBUG({
-    const char *StubPtr = B.getContent().data();
-    HalfWords Reg12 = encodeRegMovtT1MovwT3(12);
-    assert(checkRegister<Thumb_MovwAbsNC>(StubPtr, Reg12) &&
-           checkRegister<Thumb_MovtAbs>(StubPtr + 4, Reg12) &&
-           "Linker generated stubs may only corrupt register r12 (IP)");
-  });
+  ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
+  return G.createContentBlock(S, Template, orc::ExecutorAddr(), Alignment, 0);
+}
+
+static Block &createStubPrev7(LinkGraph &G, Section &S, Symbol &Target) {
+  Block &B = allocStub(G, S, ArmThumbv5LdrPc);
+  B.addEdge(Data_Pointer32, 8, Target, 0);
+  return B;
+}
+
+static Block &createStubThumbv7(LinkGraph &G, Section &S, Symbol &Target) {
+  Block &B = allocStub(G, S, Thumbv7ABS);
   B.addEdge(Thumb_MovwAbsNC, 0, Target, 0);
   B.addEdge(Thumb_MovtAbs, 4, Target, 0);
-  Symbol &Stub = G.addAnonymousSymbol(B, 0, B.getSize(), true, false);
-  Stub.setTargetFlags(ThumbSymbol);
-  return Stub;
+
+  [[maybe_unused]] const char *StubPtr = B.getContent().data();
+  [[maybe_unused]] HalfWords Reg12 = encodeRegMovtT1MovwT3(12);
+  assert(checkRegister<Thumb_MovwAbsNC>(StubPtr, Reg12) &&
+         checkRegister<Thumb_MovtAbs>(StubPtr + 4, Reg12) &&
+         "Linker generated stubs may only corrupt register r12 (IP)");
+  return B;
+}
+
+static Block &createStubArmv7(LinkGraph &G, Section &S, Symbol &Target) {
+  Block &B = allocStub(G, S, Armv7ABS);
+  B.addEdge(Arm_MovwAbsNC, 0, Target, 0);
+  B.addEdge(Arm_MovtAbs, 4, Target, 0);
+
+  [[maybe_unused]] const char *StubPtr = B.getContent().data();
+  [[maybe_unused]] uint32_t Reg12 = encodeRegMovtA1MovwA2(12);
+  assert(checkRegister<Arm_MovwAbsNC>(StubPtr, Reg12) &&
+         checkRegister<Arm_MovtAbs>(StubPtr + 4, Reg12) &&
+         "Linker generated stubs may only corrupt register r12 (IP)");
+  return B;
+}
+
+static bool needsStub(const Edge &E) {
+  Symbol &Target = E.getTarget();
+
+  // Create stubs for external branch targets.
+  if (!Target.isDefined()) {
+    switch (E.getKind()) {
+    case Arm_Call:
+    case Arm_Jump24:
+    case Thumb_Call:
+    case Thumb_Jump24:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  // For local targets, create interworking stubs if we switch Arm/Thumb with an
+  // instruction that cannot switch the instruction set state natively.
+  bool TargetIsThumb = Target.getTargetFlags() & ThumbSymbol;
+  switch (E.getKind()) {
+  case Arm_Jump24:
+    return TargetIsThumb; // Branch to Thumb needs interworking stub
+  case Thumb_Jump24:
+    return !TargetIsThumb; // Branch to Arm needs interworking stub
+  default:
+    break;
+  }
+
+  return false;
+}
+
+// The ArmThumbv5LdrPc stub has 2 entrypoints: Thumb at offset 0 is taken only
+// for Thumb B instructions. Thumb BL is rewritten to BLX and takes the Arm
+// entrypoint at offset 4. Arm branches always use that one.
+Symbol *StubsManager_prev7::getOrCreateSlotEntrypoint(LinkGraph &G,
+                                                      StubMapEntry &Slot,
+                                                      bool Thumb) {
+  constexpr orc::ExecutorAddrDiff ThumbEntrypointOffset = 0;
+  constexpr orc::ExecutorAddrDiff ArmEntrypointOffset = 4;
+  if (Thumb && !Slot.ThumbEntry) {
+    Slot.ThumbEntry =
+        &G.addAnonymousSymbol(*Slot.B, ThumbEntrypointOffset, 4, true, false);
+    Slot.ThumbEntry->setTargetFlags(ThumbSymbol);
+  }
+  if (!Thumb && !Slot.ArmEntry)
+    Slot.ArmEntry =
+        &G.addAnonymousSymbol(*Slot.B, ArmEntrypointOffset, 8, true, false);
+  return Thumb ? Slot.ThumbEntry : Slot.ArmEntry;
+}
+
+bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  if (!needsStub(E))
+    return false;
+
+  Symbol &Target = E.getTarget();
+  assert(Target.hasName() && "Edge cannot point to anonymous target");
+  auto [Slot, NewStub] = getStubMapSlot(Target.getName());
+
+  if (NewStub) {
+    if (!StubsSection)
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
+    LLVM_DEBUG({
+      dbgs() << "    Created stub entry for " << Target.getName() << " in "
+             << StubsSection->getName() << "\n";
+    });
+    Slot->B = &createStubPrev7(G, *StubsSection, Target);
+  }
+
+  // The ArmThumbv5LdrPc stub has 2 entrypoints: Thumb at offset 0 is taken only
+  // for Thumb B instructions. Thumb BL is rewritten to BLX and takes the Arm
+  // entrypoint at offset 4. Arm branches always use that one.
+  bool UseThumb = E.getKind() == Thumb_Jump24;
+  Symbol *StubEntrypoint = getOrCreateSlotEntrypoint(G, *Slot, UseThumb);
+
+  LLVM_DEBUG({
+    dbgs() << "    Using " << (UseThumb ? "Thumb" : "Arm") << " entrypoint "
+           << *StubEntrypoint << " in "
+           << StubEntrypoint->getBlock().getSection().getName() << "\n";
+  });
+
+  E.setTarget(*StubEntrypoint);
+  return true;
+}
+
+bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  if (!needsStub(E))
+    return false;
+
+  // Stub Arm/Thumb follows instruction set state at relocation site.
+  // TODO: We may reduce them at relaxation time and reuse freed slots.
+  bool MakeThumb = (E.getKind() > LastArmRelocation);
+  LLVM_DEBUG(dbgs() << "  Preparing " << (MakeThumb ? "Thumb" : "Arm")
+                    << " stub for " << G.getEdgeKindName(E.getKind())
+                    << " edge at " << B->getFixupAddress(E) << " ("
+                    << B->getAddress() << " + "
+                    << formatv("{0:x}", E.getOffset()) << ")\n");
+
+  Symbol &Target = E.getTarget();
+  assert(Target.hasName() && "Edge cannot point to anonymous target");
+  Symbol *&StubSymbol = getStubSymbolSlot(Target.getName(), MakeThumb);
+
+  if (!StubSymbol) {
+    if (!StubsSection)
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
+    Block &B = MakeThumb ? createStubThumbv7(G, *StubsSection, Target)
+                         : createStubArmv7(G, *StubsSection, Target);
+    StubSymbol = &G.addAnonymousSymbol(B, 0, B.getSize(), true, false);
+    if (MakeThumb)
+      StubSymbol->setTargetFlags(ThumbSymbol);
+
+    LLVM_DEBUG({
+      dbgs() << "    Created " << (MakeThumb ? "Thumb" : "Arm") << " entry for "
+             << Target.getName() << " in " << StubsSection->getName() << ": "
+             << *StubSymbol << "\n";
+    });
+  }
+
+  assert(MakeThumb == (StubSymbol->getTargetFlags() & ThumbSymbol) &&
+         "Instruction set states of stub and relocation site should be equal");
+  LLVM_DEBUG({
+    dbgs() << "    Using " << (MakeThumb ? "Thumb" : "Arm") << " entry "
+           << *StubSymbol << " in "
+           << StubSymbol->getBlock().getSection().getName() << "\n";
+  });
+
+  E.setTarget(*StubSymbol);
+  return true;
 }
 
 const char *getEdgeKindName(Edge::Kind K) {
@@ -651,6 +937,8 @@ const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
     KIND_NAME_CASE(Data_Delta32)
     KIND_NAME_CASE(Data_Pointer32)
+    KIND_NAME_CASE(Data_PRel31)
+    KIND_NAME_CASE(Data_RequestGOTAndTransformToDelta32)
     KIND_NAME_CASE(Arm_Call)
     KIND_NAME_CASE(Arm_Jump24)
     KIND_NAME_CASE(Arm_MovwAbsNC)
@@ -659,6 +947,9 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(Thumb_Jump24)
     KIND_NAME_CASE(Thumb_MovwAbsNC)
     KIND_NAME_CASE(Thumb_MovtAbs)
+    KIND_NAME_CASE(Thumb_MovwPrelNC)
+    KIND_NAME_CASE(Thumb_MovtPrel)
+    KIND_NAME_CASE(None)
   default:
     return getGenericEdgeKindName(K);
   }

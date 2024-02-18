@@ -74,7 +74,7 @@ public:
                              llvm::function_ref<bool(Module &)>) override;
 
   bool ParseSupportFiles(CompileUnit &comp_unit,
-                         FileSpecList &support_files) override;
+                         SupportFileList &support_files) override;
 
   bool ParseIsOptimized(CompileUnit &comp_unit) override;
 
@@ -93,6 +93,8 @@ public:
 
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
+  std::vector<CompilerContext>
+  GetCompilerContextForUID(lldb::user_id_t uid) override;
   void ParseDeclsForContext(CompilerDeclContext decl_ctx) override;
 
   bool CompleteType(CompilerType &compiler_type) override;
@@ -116,13 +118,8 @@ public:
                      bool include_inlines, SymbolContextList &sc_list) override;
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
-  void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
-                 uint32_t max_matches,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeMap &types) override;
-  void FindTypes(llvm::ArrayRef<CompilerContext> context, LanguageSet languages,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeMap &types) override;
+  void FindTypes(const lldb_private::TypeQuery &match,
+                 lldb_private::TypeResults &results) override;
   CompilerDeclContext FindNamespace(ConstString name,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     bool only_root_namespaces) override;
@@ -134,7 +131,8 @@ public:
   void DumpClangAST(Stream &s) override;
 
   /// List separate oso files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                            bool errors_only) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

@@ -76,7 +76,7 @@ PlatformType getPlatformFromName(StringRef Name) {
       .Case("osx", PLATFORM_MACOS)
 #define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
                  marketing)                                                    \
-  .Case(#tapi_target, PLATFORM_##platform)
+  .Case(#target, PLATFORM_##platform)
 #include "llvm/BinaryFormat/MachO.def"
       .Default(PLATFORM_UNKNOWN);
 }
@@ -106,6 +106,10 @@ std::string getOSAndEnvironmentName(PlatformType Platform,
     return "watchos" + Version + "-simulator";
   case PLATFORM_DRIVERKIT:
     return "driverkit" + Version;
+  case PLATFORM_XROS:
+    return "xros" + Version;
+  case PLATFORM_XROS_SIMULATOR:
+    return "xros" + Version + "-simulator";
   }
   llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
 }

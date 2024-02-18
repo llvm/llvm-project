@@ -278,12 +278,12 @@ are commonly used on Windows.
   crash, rather than having to reproduce a failure or use a crash dump.
 * ``PYTHON_HOME`` (Required): Path to the folder where the Python distribution
   is installed. For example, ``C:\Python35``.
-* ``LLDB_RELOCATABLE_PYTHON`` (Default=0): When this is 0, LLDB will bind
+* ``LLDB_EMBED_PYTHON_HOME`` (Default=1 on Windows): When this is 1, LLDB will bind
   statically to the location specified in the ``PYTHON_HOME`` CMake variable,
   ignoring any value of ``PYTHONHOME`` set in the environment. This is most
   useful for developers who simply want to run LLDB after they build it. If you
   wish to move a build of LLDB to a different machine where Python will be in a
-  different location, setting ``LLDB_RELOCATABLE_PYTHON`` to 1 will cause
+  different location, setting ``LLDB_EMBED_PYTHON_HOME`` to 0 will cause
   Python to use its default mechanism for finding the python installation at
   runtime (looking for installed Pythons, or using the ``PYTHONHOME``
   environment variable if it is specified).
@@ -403,13 +403,21 @@ dependencies are required:
 * Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
+* SWIG (for generating Python bindings)
 
-To install the prerequisites for building the documentation (on Debian/Ubuntu)
+To install the system prerequisites for building the documentation (on Debian/Ubuntu)
 do:
 
 ::
 
-  $ sudo apt-get install doxygen graphviz python3-sphinx
+  $ sudo apt-get install doxygen graphviz swig
+
+To install Sphinx and its dependencies, use the ``requirements.txt`` available within LLVM
+to ensure you get a working configuration:
+
+::
+
+  $ pip3 install -r /path/to/llvm-project/llvm/docs/requirements.txt
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 

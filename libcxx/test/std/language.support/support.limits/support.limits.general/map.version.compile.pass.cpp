@@ -25,6 +25,8 @@
     __cpp_lib_node_extract                           201606L [C++17]
     __cpp_lib_nonmember_container_access             201411L [C++17]
     __cpp_lib_ranges_to_container                    202202L [C++23]
+    __cpp_lib_tuple_like                             202207L [C++23]
+                                                     202311L [C++26]
 */
 
 #include <map>
@@ -68,6 +70,10 @@
 #   error "__cpp_lib_ranges_to_container should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_allocator_traits_is_always_equal
@@ -107,6 +113,10 @@
 
 # ifdef __cpp_lib_ranges_to_container
 #   error "__cpp_lib_ranges_to_container should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -160,6 +170,10 @@
 
 # ifdef __cpp_lib_ranges_to_container
 #   error "__cpp_lib_ranges_to_container should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -216,6 +230,10 @@
 
 # ifdef __cpp_lib_ranges_to_container
 #   error "__cpp_lib_ranges_to_container should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_tuple_like
+#   error "__cpp_lib_tuple_like should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -284,6 +302,19 @@
 # endif
 # if __cpp_lib_ranges_to_container != 202202L
 #   error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++23"
+#   endif
+#   if __cpp_lib_tuple_like != 202207L
+#     error "__cpp_lib_tuple_like should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 #elif TEST_STD_VER > 23
@@ -361,6 +392,19 @@
 # endif
 # if __cpp_lib_ranges_to_container != 202202L
 #   error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should be defined in c++26"
+#   endif
+#   if __cpp_lib_tuple_like != 202311L
+#     error "__cpp_lib_tuple_like should have the value 202311L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_tuple_like
+#     error "__cpp_lib_tuple_like should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

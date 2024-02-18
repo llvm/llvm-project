@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter -canonicalize -cse -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter -canonicalize -cse -split-input-file -verify-diagnostics | FileCheck %s
 
 // Offset per thread:
 // CHECK-DAG: affine_map<(d0)[s0] -> (d0 * (s0 ceildiv 10))>
@@ -30,11 +30,13 @@ module {
     return %0 : tensor<?x?xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+     transform.yield
+    }
   }
 }
 
@@ -54,11 +56,13 @@ module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -77,11 +81,13 @@ module {
     return
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -120,12 +126,14 @@ func.func @matmul_tile_size_dynamic_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?x
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_op)
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_op)
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -160,11 +168,13 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
   return %0 : tensor<100x300xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 21]
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_forall %0 num_threads [10, 21]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 
@@ -202,11 +212,13 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_using_forall %0 tile_sizes [10, 20]
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [10, 20]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -239,11 +251,13 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
   return %0 : tensor<100x300xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_using_forall %0 tile_sizes [10, 21]
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [10, 21]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -262,11 +276,13 @@ module {
     return %result : tensor<4xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_using_forall %0 num_threads [2] ( mapping = [#gpu.thread<x>])
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1:2 = transform.structured.tile_using_forall %0 num_threads [2] ( mapping = [#gpu.thread<x>])
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
   }
 }
 // CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (d0 * 2)>
@@ -313,12 +329,14 @@ func.func @matmul_tile_size_dynamic_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?x
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.any_op, 20]
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.any_op, 20]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -368,11 +386,13 @@ transform.sequence failures(propagate) {
     return %res1, %res2 : tensor<100xf32>, tensor<100xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [7]
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %tiled_generic, %forall = transform.structured.tile_using_forall %0 num_threads [7]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
   }
 
 // -----
@@ -422,10 +442,147 @@ transform.sequence failures(propagate) {
     return %res2, %res3 : tensor<300x100xf32>, tensor<300xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%IN_MAT2: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2 : (!transform.any_op) -> !transform.any_op
-    %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [4]
-         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%IN_MAT2: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2 : (!transform.any_op) -> !transform.any_op
+      %tiled_generic, %forall = transform.structured.tile_using_forall %0 num_threads [4]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
   }
 
+// -----
+
+// CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
+// CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
+// CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0] -> (d0 * -10 + s0, 10)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
+// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0) -> (d0 * 10)>
+// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
+
+// CHECK-LABEL: matmul_tile_size_dynamic(
+//  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor<?x?xf32>
+func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  //      CHECK: %[[c1:.*]] = arith.constant 1 : index
+  //      CHECK: %[[c0:.*]] = arith.constant 0 : index
+  //      CHECK: %[[M:.+]] = tensor.dim %[[A]], %[[c0]] :
+  //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %[[c1]] :
+  //      CHECK: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
+  //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
+  //      CHECK: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
+  //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
+  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //      CHECK:   %[[TS1:.+]] = affine.min #[[$map3]](%[[IV1]])[%[[N]]]
+  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map4]](%[[IV0]])
+  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map5]](%[[IV1]])
+  //      CHECK:   tensor.extract_slice %[[A]][%[[LB0]], 0] [%[[TS0]], %[[K]]] [1, 1] :
+  //      CHECK:   tensor.extract_slice %[[B]][0, %[[LB1]]] [%[[K]], %[[TS1]]] [1, 1] :
+  //      CHECK:   tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [%[[TS0]], %[[TS1]]] [1, 1] :
+  //      CHECK:   linalg.matmul
+  //      CHECK:   scf.forall.in_parallel
+  // CHECK-NEXT:    tensor.parallel_insert_slice
+  %0 = linalg.matmul ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
+                    outs(%C : tensor<?x?xf32>) -> (tensor<?x?xf32>)
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %sz = transform.param.constant 10 : i64 -> !transform.param<i64>
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.param<i64>, 20]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.matmul ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
+                    outs(%C : tensor<?x?xf32>) -> (tensor<?x?xf32>)
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul_transpose_b"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c10 = transform.param.constant 10 : i64 -> !transform.param<i64>
+    %c20 = transform.param.constant 20 : i64 -> !transform.param<i64>
+    %sz = transform.merge_handles %c10, %c20 : !transform.param<i64>
+    // expected-error @below {{requires exactly one parameter associated}}
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.param<i64>, 20]
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
+// CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
+// CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0] -> (d0 * -10 + s0, 10)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
+// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0) -> (d0 * 10)>
+// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
+
+// CHECK-LABEL: matmul_tile_size_dynamic(
+//  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor<?x?xf32>
+func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  //      CHECK: %[[c1:.*]] = arith.constant 1 : index
+  //      CHECK: %[[c0:.*]] = arith.constant 0 : index
+  //      CHECK: %[[M:.+]] = tensor.dim %[[A]], %[[c0]] :
+  //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %[[c1]] :
+  //      CHECK: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
+  //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
+  //      CHECK: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
+  //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
+  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //      CHECK:   %[[TS1:.+]] = affine.min #[[$map3]](%[[IV1]])[%[[N]]]
+  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map4]](%[[IV0]])
+  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map5]](%[[IV1]])
+  //      CHECK:   tensor.extract_slice %[[A]][%[[LB0]], 0] [%[[TS0]], %[[K]]] [1, 1] :
+  //      CHECK:   tensor.extract_slice %[[B]][0, %[[LB1]]] [%[[K]], %[[TS1]]] [1, 1] :
+  //      CHECK:   tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [%[[TS0]], %[[TS1]]] [1, 1] :
+  //      CHECK:   linalg.matmul
+  //      CHECK:   scf.forall.in_parallel
+  // CHECK-NEXT:    tensor.parallel_insert_slice
+  %0 = linalg.matmul ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
+                    outs(%C : tensor<?x?xf32>) -> (tensor<?x?xf32>)
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %c10 = transform.param.constant 10 : i64 -> !transform.any_param
+    %c20 = transform.param.constant 20 : i64 -> !transform.any_param
+    %sz = transform.merge_handles %c10, %c20 : !transform.any_param
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_param)
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.matmul ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
+                    outs(%C : tensor<?x?xf32>) -> (tensor<?x?xf32>)
+  return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %sz = transform.param.constant "[10 : i64, 20 : i64]" -> !transform.any_param
+    // expected-error @below {{expected the parameter to be associated with an integer attribute}}
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_param)
+           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

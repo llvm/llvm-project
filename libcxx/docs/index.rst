@@ -34,8 +34,7 @@ Getting Started with libc++
 .. toctree::
    :maxdepth: 1
 
-   ReleaseNotes/17
-   ReleaseNotes/18
+   ReleaseNotes
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
@@ -119,20 +118,22 @@ Compiler     Versions        Restrictions               Support policy
 Clang        16, 17, 18-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
 AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
 Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
-GCC          12              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
+GCC          13              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =============== ========================== =====================
 
 Libc++ also supports common platforms and architectures:
 
-=============== ========================= ============================
-Target platform Target architecture       Notes
-=============== ========================= ============================
-macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
-FreeBSD 12+     i386, x86_64, arm
-Linux           i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
-Windows         i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
-AIX 7.2TL5+     powerpc, powerpc64
-=============== ========================= ============================
+===================== ========================= ============================
+Target platform       Target architecture       Notes
+===================== ========================= ============================
+macOS 10.13+          i386, x86_64, arm64
+FreeBSD 12+           i386, x86_64, arm
+Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
+Android 5.0+          i386, x86_64, arm, arm64
+Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
+AIX 7.2TL5+           powerpc, powerpc64
+Embedded (picolibc)   arm
+===================== ========================= ============================
 
 Generally speaking, libc++ should work on any platform that provides a fairly complete
 C Standard Library. It is also possible to turn off parts of the library for use on
@@ -200,6 +201,7 @@ Design Documents
 Build Bots and Test Coverage
 ============================
 
+* `Github Actions CI pipeline <https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml>`_
 * `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
 * `LLVM Buildbot Builders <https://lab.llvm.org/buildbot>`_
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`
@@ -219,9 +221,8 @@ can ask for support on the `libcxx forum`_ or on IRC.
 
 **Patches**
 
-If you want to contribute a patch to libc++, the best place for that is
-`Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please add `libcxx-commits` as a subscriber.
-Also make sure you are subscribed to the `libcxx-commits mailing list`_.
+If you want to contribute a patch to libc++, please start by reviewing our
+:ref:`documentation about contributing <ContributingToLibcxx>`.
 
 **Discussion and Questions**
 

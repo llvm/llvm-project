@@ -19,6 +19,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace fir {
 #define GEN_PASS_DEF_BOXEDPROCEDUREPASS
@@ -81,7 +82,7 @@ public:
       visitedTypes.pop_back();
       return result;
     }
-    if (auto boxTy = ty.dyn_cast<BoxType>())
+    if (auto boxTy = ty.dyn_cast<BaseBoxType>())
       return needsConversion(boxTy.getEleTy());
     if (isa_ref_type(ty))
       return needsConversion(unwrapRefType(ty));
@@ -117,8 +118,14 @@ public:
     });
     addConversion(
         [&](HeapType ty) { return HeapType::get(convertType(ty.getEleTy())); });
+    addConversion([&](fir::LLVMPointerType ty) {
+      return fir::LLVMPointerType::get(convertType(ty.getEleTy()));
+    });
     addConversion(
         [&](BoxType ty) { return BoxType::get(convertType(ty.getEleTy())); });
+    addConversion([&](ClassType ty) {
+      return ClassType::get(convertType(ty.getEleTy()));
+    });
     addConversion([&](SequenceType ty) {
       // TODO: add ty.getLayoutMap() as needed.
       return SequenceType::get(ty.getShape(), convertType(ty.getEleTy()));
@@ -126,10 +133,16 @@ public:
     addConversion([&](RecordType ty) -> mlir::Type {
       if (!needsConversion(ty))
         return ty;
+      if (auto converted = convertedTypes.lookup(ty))
+        return converted;
       auto rec = RecordType::get(ty.getContext(),
                                  ty.getName().str() + boxprocSuffix.str());
       if (rec.isFinalized())
         return rec;
+      auto it = convertedTypes.try_emplace(ty, rec);
+      if (!it.second) {
+        llvm::errs() << "failed\n" << ty << "\n";
+      }
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
       for (auto t : ty.getTypeList()) {
@@ -159,6 +172,11 @@ public:
 
 private:
   llvm::SmallVector<mlir::Type> visitedTypes;
+  // Map to deal with recursive derived types (avoid infinite loops).
+  // Caching is also beneficial for apps with big types (dozens of
+  // components and or parent types), so the lifetime of the cache
+  // is the whole pass.
+  llvm::DenseMap<mlir::Type, mlir::Type> convertedTypes;
   mlir::Location loc;
 };
 
@@ -193,19 +211,24 @@ public:
       getModule().walk([&](mlir::Operation *op) {
         typeConverter.setLocation(op->getLoc());
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
-          auto ty = addr.getVal().getType();
-          if (typeConverter.needsConversion(ty) ||
-              ty.isa<mlir::FunctionType>()) {
+          mlir::Type ty = addr.getVal().getType();
+          mlir::Type resTy = addr.getResult().getType();
+          if (llvm::isa<mlir::FunctionType>(ty) ||
+              llvm::isa<fir::BoxProcType>(ty)) {
             // Rewrite all `fir.box_addr` ops on values of type `!fir.boxproc`
             // or function type to be `fir.convert` ops.
             rewriter.setInsertionPoint(addr);
             rewriter.replaceOpWithNewOp<ConvertOp>(
                 addr, typeConverter.convertType(addr.getType()), addr.getVal());
+          } else if (typeConverter.needsConversion(resTy)) {
+            rewriter.startOpModification(op);
+            op->getResult(0).setType(typeConverter.convertType(resTy));
+            rewriter.finalizeOpModification(op);
           }
         } else if (auto func = mlir::dyn_cast<mlir::func::FuncOp>(op)) {
           mlir::FunctionType ty = func.getFunctionType();
           if (typeConverter.needsConversion(ty)) {
-            rewriter.startRootUpdate(func);
+            rewriter.startOpModification(func);
             auto toTy =
                 typeConverter.convertType(ty).cast<mlir::FunctionType>();
             if (!func.empty())
@@ -218,12 +241,13 @@ public:
                 block.eraseArgument(i + 1);
               }
             func.setType(toTy);
-            rewriter.finalizeRootUpdate(func);
+            rewriter.finalizeOpModification(func);
           }
         } else if (auto embox = mlir::dyn_cast<EmboxProcOp>(op)) {
           // Rewrite all `fir.emboxproc` ops to either `fir.convert` or a thunk
           // as required.
-          mlir::Type toTy = embox.getType().cast<BoxProcType>().getEleTy();
+          mlir::Type toTy = typeConverter.convertType(
+              embox.getType().cast<BoxProcType>().getEleTy());
           rewriter.setInsertionPoint(embox);
           if (embox.getHost()) {
             // Create the thunk.
@@ -255,10 +279,10 @@ public:
         } else if (auto global = mlir::dyn_cast<GlobalOp>(op)) {
           auto ty = global.getType();
           if (typeConverter.needsConversion(ty)) {
-            rewriter.startRootUpdate(global);
+            rewriter.startOpModification(global);
             auto toTy = typeConverter.convertType(ty);
             global.setType(toTy);
-            rewriter.finalizeRootUpdate(global);
+            rewriter.finalizeOpModification(global);
           }
         } else if (auto mem = mlir::dyn_cast<AllocaOp>(op)) {
           auto ty = mem.getType();
@@ -321,13 +345,26 @@ public:
                 mem, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
           }
         } else if (op->getDialect() == firDialect) {
-          rewriter.startRootUpdate(op);
+          rewriter.startOpModification(op);
           for (auto i : llvm::enumerate(op->getResultTypes()))
             if (typeConverter.needsConversion(i.value())) {
               auto toTy = typeConverter.convertType(i.value());
               op->getResult(i.index()).setType(toTy);
             }
-          rewriter.finalizeRootUpdate(op);
+          rewriter.finalizeOpModification(op);
+        }
+        // Ensure block arguments are updated if needed.
+        if (op->getNumRegions() != 0) {
+          rewriter.startOpModification(op);
+          for (mlir::Region &region : op->getRegions())
+            for (mlir::Block &block : region.getBlocks())
+              for (mlir::BlockArgument blockArg : block.getArguments())
+                if (typeConverter.needsConversion(blockArg.getType())) {
+                  mlir::Type toTy =
+                      typeConverter.convertType(blockArg.getType());
+                  blockArg.setType(toTy);
+                }
+          rewriter.finalizeOpModification(op);
         }
       });
     }

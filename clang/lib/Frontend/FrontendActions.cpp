@@ -258,6 +258,16 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(
   return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
+std::unique_ptr<ASTConsumer>
+GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) {
+  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
+
+  return GenerateModuleAction::CreateASTConsumer(CI, InFile);
+}
+
 std::unique_ptr<raw_pwrite_stream>
 GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
                                                 StringRef InFile) {
@@ -661,6 +671,21 @@ namespace {
       return false;
     }
 
+    bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+                               bool Complain) override {
+      Out.indent(2) << "Header search paths:\n";
+      Out.indent(4) << "User entries:\n";
+      for (const auto &Entry : HSOpts.UserEntries)
+        Out.indent(6) << Entry.Path << "\n";
+      Out.indent(4) << "System header prefixes:\n";
+      for (const auto &Prefix : HSOpts.SystemHeaderPrefixes)
+        Out.indent(6) << Prefix.Prefix << "\n";
+      Out.indent(4) << "VFS overlay files:\n";
+      for (const auto &Overlay : HSOpts.VFSOverlayFiles)
+        Out.indent(6) << Overlay << "\n";
+      return false;
+    }
+
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                  bool ReadMacros, bool Complain,
                                  std::string &SuggestedPredefines) override {
@@ -801,8 +826,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   auto &FileMgr = CI.getFileManager();
   auto Buffer = FileMgr.getBufferForFile(getCurrentFile());
   StringRef Magic = (*Buffer)->getMemBufferRef().getBuffer();
-  bool IsRaw = (Magic.size() >= 4 && Magic[0] == 'C' && Magic[1] == 'P' &&
-                Magic[2] == 'C' && Magic[3] == 'H');
+  bool IsRaw = Magic.starts_with("CPCH");
   Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
 
   Preprocessor &PP = CI.getPreprocessor();

@@ -34,7 +34,8 @@ uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
 
 template <typename Ty>
 Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_add(Address, Val, Ordering);
+  return __scoped_atomic_fetch_add(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
@@ -56,25 +57,28 @@ template <typename Ty> Ty atomicLoad(Ty *Address, atomic::OrderingTy Ordering) {
 
 template <typename Ty>
 void atomicStore(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  __atomic_store_n(Address, Val, Ordering);
+  __scoped_atomic_store_n(Address, Val, Ordering, __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 bool atomicCAS(Ty *Address, Ty ExpectedV, Ty DesiredV,
                atomic::OrderingTy OrderingSucc,
                atomic::OrderingTy OrderingFail) {
-  return __atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
-                                   OrderingSucc, OrderingFail);
+  return __scoped_atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
+                                          OrderingSucc, OrderingFail,
+                                          __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicMin(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_min(Address, Val, Ordering);
+  return __scoped_atomic_fetch_min(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicMax(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_max(Address, Val, Ordering);
+  return __scoped_atomic_fetch_max(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
@@ -94,23 +98,26 @@ Ty atomicMaxFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
 
 template <typename Ty>
 Ty atomicOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_or(Address, Val, Ordering);
+  return __scoped_atomic_fetch_or(Address, Val, Ordering,
+                                  __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicAnd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_and(Address, Val, Ordering);
+  return __scoped_atomic_fetch_and(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicXOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_xor(Address, Val, Ordering);
+  return __scoped_atomic_fetch_xor(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
                         atomic::OrderingTy Ordering) {
   uint32_t R;
-  __atomic_exchange(Address, &Val, &R, Ordering);
+  __scoped_atomic_exchange(Address, &Val, &R, Ordering, __MEMORY_SCOPE_DEVICE);
   return R;
 }
 ///}
@@ -272,7 +279,9 @@ void fenceSystem(atomic::OrderingTy Ordering) {
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {
-  // AMDGCN doesn't need to sync threads in a warp
+  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
+  // to enforce convergent behaviour between control flow graphs.
+  __builtin_amdgcn_wave_barrier();
 }
 
 void syncThreads(atomic::OrderingTy Ordering) {
@@ -336,10 +345,7 @@ void namedBarrier() {
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.
   constexpr int BarrierNo = 7;
-  asm volatile("barrier.sync %0, %1;"
-               :
-               : "r"(BarrierNo), "r"(NumThreads)
-               : "memory");
+  __nvvm_barrier_sync_cnt(BarrierNo, NumThreads);
 }
 
 void fenceTeam(atomic::OrderingTy) { __nvvm_membar_cta(); }
@@ -352,7 +358,7 @@ void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
 
 void syncThreads(atomic::OrderingTy Ordering) {
   constexpr int BarrierNo = 8;
-  asm volatile("barrier.sync %0;" : : "r"(BarrierNo) : "memory");
+  __nvvm_barrier_sync(BarrierNo);
 }
 
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }

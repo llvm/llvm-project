@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
@@ -1862,7 +1863,7 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                          const Edge &E);
 
 /// Creates a new pointer block in the given section and returns an
-/// Anonymous symobl pointing to it.
+/// Anonymous symbol pointing to it.
 ///
 /// The pointer block will have the following default values:
 ///   alignment: PointerSize
@@ -1922,6 +1923,10 @@ void visitExistingEdges(LinkGraph &G, VisitorTs &&...Vs) {
 /// outlives the graph.
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromObject(MemoryBufferRef ObjectBuffer);
+
+/// Create a \c LinkGraph defining the given absolute symbols.
+std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
+                                                    orc::SymbolMap Symbols);
 
 /// Link the given graph.
 void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx);

@@ -1,0 +1,232 @@
+## This test checks how llvm-readobj prints the PGO Analysis Map with the
+## --bb-addr-map option.
+
+## Check 64-bit:
+# RUN: yaml2obj %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
+# RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x64.o --bb-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check 32-bit:
+# RUN: yaml2obj %s -DBITS=32 -o %t1.x32.o
+# RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x32.o --bb-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check that a malformed section can be handled.
+# RUN: yaml2obj %s -DBITS=32 -DSIZE=24 -o %t2.o
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000018 -DFILE=%t2.o --check-prefix=TRUNCATED
+
+## Check that missing features can be handled.
+# RUN: yaml2obj %s -DBITS=32 -DFEATURE=0x2 -o %t3.o
+# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDFT
+
+# CHECK:      BBAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: [[ADDR]]
+# CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_BB_ADDR_MAP section with index 3
+# CHECK-NEXT:     Name: <?>
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: [[ADDR]]
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x1
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: Yes
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 2
+# CHECK-NEXT:             Offset: 0x4
+# CHECK-NEXT:             Size: 0x4
+# CHECK-NEXT:             HasReturn: Yes
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: Yes
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: Yes
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     PGO analyses {
+# CHECK-NEXT:       FuncEntryCount: 100
+# CHECK-NEXT:       PGO BB entries [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           Frequency: 100
+# CHECK-NEXT:           Successors [
+# CHECK-NEXT:             {
+# CHECK-NEXT:               ID: 2
+# CHECK-NEXT:               Probability: 0xFFFFFFFF
+# CHECK-NEXT:             }
+# CHECK-NEXT:           ]
+# CHECK-NEXT:         }
+# CHECK-NEXT:         {
+# CHECK-NEXT:           Frequency: 100
+# CHECK-NEXT:           Successors [
+# CHECK-NEXT:           ]
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x22222
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x22222
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 4
+# CHECK-NEXT:             Offset: 0x6
+# CHECK-NEXT:             Size: 0x7
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: Yes
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     PGO analyses {
+# CHECK-NEXT:       FuncEntryCount: 8888
+# CHECK-NEXT:       PGO BB entries [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           Frequency: 9000
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+# GNU: GNUStyle::printBBAddrMaps not implemented
+
+# TRUNCATED:      BBAddrMap [
+# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
+# TRUNCATED-NEXT: ]
+## Check that the other valid section is properly dumped.
+# TRUNCATED-NEXT: BBAddrMap [
+# TRUNCATED-NEXT:   Function {
+# TRUNCATED-NEXT:     At: 0x33333
+# TRUNCATED-NEXT:     Name: bar
+# TRUNCATED-NEXT:     BB Ranges [
+# TRUNCATED-NEXT:       {
+# TRUNCATED-NEXT:         Base Address: 0x33333
+# TRUNCATED-NEXT:         BB Entries [
+# TRUNCATED-NEXT:           {
+# TRUNCATED-NEXT:             ID: 6
+# TRUNCATED-NEXT:             Offset: 0x9
+# TRUNCATED-NEXT:             Size: 0xA
+# TRUNCATED-NEXT:             HasReturn: Yes
+# TRUNCATED-NEXT:             HasTailCall: Yes
+# TRUNCATED-NEXT:             IsEHPad: No
+# TRUNCATED-NEXT:             CanFallThrough: Yes
+# TRUNCATED-NEXT:             HasIndirectBranch: Yes
+# TRUNCATED-NEXT:           }
+# TRUNCATED-NEXT:           {
+# TRUNCATED-NEXT:             ID: 7
+# TRUNCATED-NEXT:             Offset: 0x1F
+# TRUNCATED-NEXT:             Size: 0xD
+# TRUNCATED-NEXT:             HasReturn: No
+# TRUNCATED-NEXT:             HasTailCall: Yes
+# TRUNCATED-NEXT:             IsEHPad: Yes
+# TRUNCATED-NEXT:             CanFallThrough: Yes
+# TRUNCATED-NEXT:             HasIndirectBranch: No
+# TRUNCATED-NEXT:           }
+# TRUNCATED-NEXT:         ]
+# TRUNCATED-NEXT:       }
+# TRUNCATED-NEXT:     ]
+# TRUNCATED-NEXT:     PGO analyses {
+# TRUNCATED-NEXT:       FuncEntryCount: 89
+# TRUNCATED-NEXT:     }
+# TRUNCATED-NEXT:   }
+# TRUNCATED-NEXT: ]
+
+# INVALIDFT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 5: unable to decode LEB128 at offset 0x00000010: malformed uleb128, extends past end
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Link:   .text
+    Entries:
+      - Version: 2
+        Feature: 0x7
+        BBRanges:
+          - BaseAddress: [[ADDR=0x11111]]
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
+              - ID:            2
+                AddressOffset: 0x3
+                Size:          0x4
+                Metadata:      0x15
+      - Version: 2
+        Feature: 0x3
+        BBRanges:
+          - BaseAddress: 0x22222
+            BBEntries:
+              - ID:            4
+                AddressOffset: 0x6
+                Size:          0x7
+                Metadata:      0x8
+    PGOAnalyses:
+      - FuncEntryCount: 100
+        PGOBBEntries:
+          - BBFreq:        100
+            Successors:
+              - ID:        2
+                BrProb:    0xFFFFFFFF
+          - BBFreq:        100
+            Successors:    []
+      - FuncEntryCount: 8888
+        PGOBBEntries:
+          - BBFreq:        9000
+  - Name: dummy_section
+    Type: SHT_PROGBITS
+    Size: 16
+  - Name: '.llvm_bb_addr_map (1)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: .text.bar
+    Entries:
+      - Version: 2
+        Feature: [[FEATURE=0x1]]
+        BBRanges:
+          - BaseAddress: 0x33333
+            BBEntries:
+              - ID:            6
+                AddressOffset: 0x9
+                Size:          0xa
+                Metadata:      0x1b
+              - ID:            7
+                AddressOffset: 0xc
+                Size:          0xd
+                Metadata:      0xe
+    PGOAnalyses:
+      - FuncEntryCount: 89
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x22222
+  - Name:    bar
+    Section: .text.bar
+    Type:    STT_FUNC
+    Value:   0x33333
+

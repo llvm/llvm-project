@@ -25,6 +25,10 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
+#include <bitset>
+
+#define GET_RISCV_MACRO_FUSION_PRED_DECL
+#include "RISCVGenMacroFusion.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"
@@ -38,6 +42,14 @@ struct RISCVTuneInfo {
   const char *Name;
   uint8_t PrefFunctionAlignment;
   uint8_t PrefLoopAlignment;
+
+  // Information needed by LoopDataPrefetch.
+  uint16_t CacheLineSize;
+  uint16_t PrefetchDistance;
+  uint16_t MinPrefetchStride;
+  unsigned MaxPrefetchIterationsAhead;
+
+  unsigned MinimumJumpTableEntries;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -46,11 +58,13 @@ struct RISCVTuneInfo {
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
+  // clang-format off
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
+    VentanaVeyron,
   };
-
+  // clang-format on
 private:
   virtual void anchor();
 
@@ -132,17 +146,20 @@ public:
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
-  bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
   bool hasStdExtZfhOrZhinx() const { return HasStdExtZfh || HasStdExtZhinx; }
-  bool hasStdExtZhinxOrZhinxmin() const {
-    return HasStdExtZhinx || HasStdExtZhinxmin;
-  }
-  bool hasStdExtZfhOrZfhminOrZhinxOrZhinxmin() const {
-    return hasStdExtZfhOrZfhmin() || hasStdExtZhinxOrZhinxmin();
+  bool hasStdExtZfhminOrZhinxmin() const {
+    return HasStdExtZfhmin || HasStdExtZhinxmin;
   }
   bool hasHalfFPLoadStoreMove() const {
-    return hasStdExtZfhOrZfhmin() || HasStdExtZfbfmin;
+    return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
+
+  bool hasConditionalMoveFusion() const {
+    // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
+    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+           hasShortForwardBranchOpt();
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
@@ -182,14 +199,10 @@ public:
     return UserReservedRegister[i];
   }
 
-  bool hasMacroFusion() const { return hasLUIADDIFusion(); }
-
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
-  bool hasVInstructionsF16Minimal() const {
-    return HasStdExtZvfhmin || HasStdExtZvfh;
-  }
+  bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
   bool hasVInstructionsBF16() const { return HasStdExtZvfbfmin; }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
@@ -246,6 +259,24 @@ public:
                               &Mutations) const override;
 
   bool useAA() const override;
+
+  unsigned getCacheLineSize() const override {
+    return TuneInfo->CacheLineSize;
+  };
+  unsigned getPrefetchDistance() const override {
+    return TuneInfo->PrefetchDistance;
+  };
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return TuneInfo->MinPrefetchStride;
+  };
+  unsigned getMaxPrefetchIterationsAhead() const override {
+    return TuneInfo->MaxPrefetchIterationsAhead;
+  };
+
+  unsigned getMinimumJumpTableEntries() const;
 };
 } // End llvm namespace
 

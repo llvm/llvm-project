@@ -134,7 +134,7 @@ void Generator::emitParse(StringRef kind, Record &x) {
       R"(static {0} read{1}(MLIRContext* context, DialectBytecodeReader &reader) )";
   mlir::raw_indented_ostream os(output);
   std::string returnType = getCType(&x);
-  os << formatv(head, returnType, x.getName());
+  os << formatv(head, kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type", x.getName());
   DagInit *members = x.getValueAsDag("members");
   SmallVector<std::string> argNames =
       llvm::to_vector(map_range(members->getArgNames(), [](StringInit *init) {

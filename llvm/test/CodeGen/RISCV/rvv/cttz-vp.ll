@@ -3,9 +3,9 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
-; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb,+m -target-abi=ilp32d \
+; RUN: llc -mtriple=riscv32 -mattr=+v,+zvbb,+m -target-abi=ilp32d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
-; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb,+m -target-abi=lp64d \
+; RUN: llc -mtriple=riscv64 -mattr=+v,+zvbb,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
 
 declare <vscale x 1 x i8> @llvm.vp.cttz.nxv1i8(<vscale x 1 x i8>, i1 immarg, <vscale x 1 x i1>, i32)
@@ -2439,13 +2439,13 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; RV32-NEXT:    vsrl.vi v16, v8, 1, v0.t
+; RV32-NEXT:    vsrl.vi v8, v8, 1, v0.t
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 40
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1

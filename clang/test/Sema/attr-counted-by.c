@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fstrict-flex-arrays=3 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
@@ -7,6 +7,15 @@ struct bar;
 struct not_found {
   int count;
   struct bar *fam[] __counted_by(bork); // expected-error {{use of undeclared identifier 'bork'}}
+};
+
+struct no_found_count_not_in_substruct {
+  unsigned long flags;
+  unsigned char count; // expected-note {{field 'count' declared here}}
+  struct A {
+    int dummy;
+    int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
+  } a;
 };
 
 struct not_found_suggest {
@@ -38,7 +47,12 @@ struct array_of_ints_count {
 
 struct not_a_fam {
   int count;
-  struct bar *non_fam __counted_by(count); // expected-error {{'counted_by' only applies to flexible array members}}
+  struct bar *non_fam __counted_by(count); // expected-error {{'counted_by' only applies to C99 flexible array members}}
+};
+
+struct not_a_c99_fam {
+  int count;
+  struct bar *non_c99_fam[0] __counted_by(count); // expected-error {{'counted_by' only applies to C99 flexible array members}}
 };
 
 struct annotated_with_anon_struct {

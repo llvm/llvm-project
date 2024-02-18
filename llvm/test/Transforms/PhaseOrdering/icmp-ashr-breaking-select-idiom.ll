@@ -5,8 +5,7 @@ define i32 @testa(i32 %mul) {
 ; CHECK-LABEL: define i32 @testa(
 ; CHECK-SAME: i32 [[MUL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 15
-; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp slt i32 [[MUL]], 1073741824
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CMP4_I]], i32 [[SHR]], i32 32767
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = tail call i32 @llvm.smin.i32(i32 [[SHR]], i32 32767)
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT_I]]
 ;
   %shr = ashr i32 %mul, 15
@@ -20,11 +19,8 @@ define i32 @testb(i32 %mul) {
 ; CHECK-LABEL: define i32 @testb(
 ; CHECK-SAME: i32 [[MUL:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[SHR102:%.*]] = ashr i32 [[MUL]], 7
-; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp sgt i32 [[MUL]], 16383
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = select i1 [[CMP4_I]], i32 127, i32 -128
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[MUL]], 16384
-; CHECK-NEXT:    [[CLEANUP_DEST_SLOT_0_I:%.*]] = icmp ult i32 [[TMP1]], 32768
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[CLEANUP_DEST_SLOT_0_I]], i32 [[SHR102]], i32 [[RETVAL_0_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smax.i32(i32 [[SHR102]], i32 -128)
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = tail call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT_I]]
 ;
   %shr102 = ashr i32 %mul, 7

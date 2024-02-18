@@ -242,15 +242,22 @@ bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   unsigned NumElts = Ty.getNumElements();
 
-  // Try to produce G_REV64
-  if (isREVMask(ShuffleMask, EltSize, NumElts, 64)) {
-    MatchInfo = ShuffleVectorPseudo(AArch64::G_REV64, Dst, {Src});
-    return true;
+  // Try to produce a G_REV instruction
+  for (unsigned LaneSize : {64U, 32U, 16U}) {
+    if (isREVMask(ShuffleMask, EltSize, NumElts, LaneSize)) {
+      unsigned Opcode;
+      if (LaneSize == 64U)
+        Opcode = AArch64::G_REV64;
+      else if (LaneSize == 32U)
+        Opcode = AArch64::G_REV32;
+      else
+        Opcode = AArch64::G_REV16;
+
+      MatchInfo = ShuffleVectorPseudo(Opcode, Dst, {Src});
+      return true;
+    }
   }
 
-  // TODO: Produce G_REV32 and G_REV16 once we have proper legalization support.
-  // This should be identical to above, but with a constant 32 and constant
-  // 16.
   return false;
 }
 
@@ -766,6 +773,27 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
                  .getReg(0);
   }
   B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
+  MI.eraseFromParent();
+}
+
+bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  return SrcTy.isVector() && !SrcTy.isScalable() &&
+         Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1;
+}
+
+void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  assert((SrcTy.isVector() && !SrcTy.isScalable()) &&
+         "Expected a fixed length vector");
+
+  for (int I = 0; I < SrcTy.getNumElements(); ++I)
+    B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
   MI.eraseFromParent();
 }
 

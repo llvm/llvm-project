@@ -77,8 +77,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel: {
+  case llvm::Triple::sparc: {
     CmdArgs.push_back("-32");
     std::string CPU = getCPUName(D, Args, Triple);
     CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, Triple));
@@ -270,6 +269,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_s, options::OPT_t, options::OPT_r});
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
@@ -315,6 +315,20 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
+
+    // Silence warnings when linking C code with a C++ '-stdlib' argument.
+    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
+
+    // Additional linker set-up and flags for Fortran. This is required in order
+    // to generate executables. As Fortran runtime depends on the C runtime,
+    // these dependencies need to be listed before the C runtime below (i.e.
+    // AddRunTimeLibs).
+    if (D.IsFlangMode()) {
+      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
+
     if (NeedsSanitizerDeps)
       linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     if (NeedsXRayDeps)

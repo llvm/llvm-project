@@ -32,9 +32,9 @@ using namespace lldb_private;
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
                                        bool hardware, bool check_for_resolver)
-    : m_being_created(true), m_should_resolve_indirect_functions(false),
-      m_is_reexported(false), m_is_indirect(false), m_address(addr),
-      m_owner(owner), m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
+      m_is_indirect(false), m_address(addr), m_owner(owner),
+      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
   if (check_for_resolver) {
     Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
@@ -42,8 +42,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
     }
   }
 
-  SetThreadID(tid);
-  m_being_created = false;
+  SetThreadIDInternal(tid);
 }
 
 BreakpointLocation::~BreakpointLocation() { ClearBreakpointSite(); }
@@ -100,14 +99,7 @@ void BreakpointLocation::SetAutoContinue(bool auto_continue) {
 }
 
 void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
-  if (thread_id != LLDB_INVALID_THREAD_ID)
-    GetLocationOptions().SetThreadID(thread_id);
-  else {
-    // If we're resetting this to an invalid thread id, then don't make an
-    // options pointer just to do that.
-    if (m_options_up != nullptr)
-      m_options_up->SetThreadID(thread_id);
-  }
+  SetThreadIDInternal(thread_id);
   SendBreakpointLocationChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
@@ -250,6 +242,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   DiagnosticManager diagnostics;
 
   if (condition_hash != m_condition_hash || !m_user_expression_sp ||
+      !m_user_expression_sp->IsParseCacheable() ||
       !m_user_expression_sp->MatchesContext(exe_ctx)) {
     LanguageType language = eLanguageTypeUnknown;
     // See if we can figure out the language from the frame, otherwise use the
@@ -472,10 +465,10 @@ bool BreakpointLocation::ClearBreakpointSite() {
     // physical implementation of the breakpoint as well if there are no more
     // owners.  Otherwise just remove this owner.
     if (process_sp)
-      process_sp->RemoveOwnerFromBreakpointSite(GetBreakpoint().GetID(),
-                                                GetID(), m_bp_site_sp);
+      process_sp->RemoveConstituentFromBreakpointSite(GetBreakpoint().GetID(),
+                                                      GetID(), m_bp_site_sp);
     else
-      m_bp_site_sp->RemoveOwner(GetBreakpoint().GetID(), GetID());
+      m_bp_site_sp->RemoveConstituent(GetBreakpoint().GetID(), GetID());
 
     m_bp_site_sp.reset();
     return true;
@@ -626,36 +619,32 @@ void BreakpointLocation::Dump(Stream *s) const {
 
   bool is_resolved = IsResolved();
   bool is_hardware = is_resolved && m_bp_site_sp->IsHardware();
-  auto hardware_index = is_resolved ?
-      m_bp_site_sp->GetHardwareIndex() : LLDB_INVALID_INDEX32;
 
   lldb::tid_t tid = GetOptionsSpecifyingKind(BreakpointOptions::eThreadSpec)
                         .GetThreadSpecNoCreate()
                         ->GetTID();
   s->Printf("BreakpointLocation %u: tid = %4.4" PRIx64
             "  load addr = 0x%8.8" PRIx64 "  state = %s  type = %s breakpoint  "
-            "hw_index = %i  hit_count = %-4u  ignore_count = %-4u",
+            "hit_count = %-4u  ignore_count = %-4u",
             GetID(), tid,
             (uint64_t)m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
             (m_options_up ? m_options_up->IsEnabled() : m_owner.IsEnabled())
                 ? "enabled "
                 : "disabled",
-            is_hardware ? "hardware" : "software", hardware_index,
-            GetHitCount(),
+            is_hardware ? "hardware" : "software", GetHitCount(),
             GetOptionsSpecifyingKind(BreakpointOptions::eIgnoreCount)
                 .GetIgnoreCount());
 }
 
 void BreakpointLocation::SendBreakpointLocationChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!m_being_created && !m_owner.IsInternal() &&
-      m_owner.GetTarget().EventTypeHasListeners(
-          Target::eBroadcastBitBreakpointChanged)) {
-    Breakpoint::BreakpointEventData *data = new Breakpoint::BreakpointEventData(
+  if (!m_owner.IsInternal() && m_owner.GetTarget().EventTypeHasListeners(
+                                   Target::eBroadcastBitBreakpointChanged)) {
+    auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
-    data->GetBreakpointLocationCollection().Add(shared_from_this());
+    data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
     m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data);
+                                       data_sp);
   }
 }
 
@@ -666,4 +655,15 @@ void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {
   m_is_reexported = swap_from->m_is_reexported;
   m_is_indirect = swap_from->m_is_indirect;
   m_user_expression_sp.reset();
+}
+
+void BreakpointLocation::SetThreadIDInternal(lldb::tid_t thread_id) {
+  if (thread_id != LLDB_INVALID_THREAD_ID)
+    GetLocationOptions().SetThreadID(thread_id);
+  else {
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
+    if (m_options_up != nullptr)
+      m_options_up->SetThreadID(thread_id);
+  }
 }

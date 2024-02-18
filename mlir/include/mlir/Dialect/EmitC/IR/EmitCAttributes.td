@@ -57,8 +57,7 @@ def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
-
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def EmitC_OpaqueOrTypedAttr : AnyAttrOf<[EmitC_OpaqueAttr, TypedAttrInterface]>;

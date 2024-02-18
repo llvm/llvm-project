@@ -766,7 +766,7 @@ protected:
     result.AppendWarning(stream.GetString());
   }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // First off, set the global sticky state of enable/disable based on this
     // command execution.
     s_is_explicitly_enabled = m_enable;
@@ -790,14 +790,14 @@ protected:
     if (!process_sp) {
       // No active process, so there is nothing more to do right now.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;
+      return;
     }
 
     // If the process is no longer alive, we can't do this now. We'll catch it
     // the next time the process is started up.
     if (!process_sp->IsAlive()) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;
+      return;
     }
 
     // Get the plugin for the process.
@@ -838,7 +838,6 @@ protected:
       // one this command is setup to do.
       plugin.SetEnabled(m_enable);
     }
-    return result.Succeeded();
   }
 
   Options *GetOptions() override {
@@ -861,7 +860,7 @@ public:
                             "plugin structured-data darwin-log status") {}
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     auto &stream = result.GetOutputStream();
 
     // Figure out if we've got a process.  If so, we can tell if DarwinLog is
@@ -891,7 +890,7 @@ protected:
     if (!options_sp) {
       // Nothing more to do.
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
 
     // Print filter rules
@@ -924,7 +923,6 @@ protected:
                   options_sp->GetFallthroughAccepts() ? "accept" : "reject");
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 

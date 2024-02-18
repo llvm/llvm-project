@@ -312,9 +312,6 @@ public:
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
-
-private:
-  void Error(const char *Msg);
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -553,6 +550,10 @@ private:
   /// declaration and the value is the deduced return type.
   llvm::SmallMapVector<FunctionDecl *, QualType, 4> PendingDeducedTypeUpdates;
 
+  /// Functions has undededuced return type and we wish we can find the deduced
+  /// return type by iterating the redecls in other modules.
+  llvm::SmallVector<FunctionDecl *, 4> PendingUndeducedFunctionDecls;
+
   /// Declarations that have been imported and have typedef names for
   /// linkage purposes.
   llvm::DenseMap<std::pair<DeclContext *, IdentifierInfo *>, NamedDecl *>
@@ -720,6 +721,7 @@ private:
     unsigned ID;
 
     /// Whether this is a wildcard export.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsWildcard : 1;
 
     /// String data.
@@ -1427,7 +1429,7 @@ private:
   RecordLocation TypeCursorForIndex(unsigned Index);
   void LoadedDecl(unsigned Index, Decl *D);
   Decl *ReadDeclRecord(serialization::DeclID ID);
-  void markIncompleteDeclChain(Decl *Canon);
+  void markIncompleteDeclChain(Decl *D);
 
   /// Returns the most recent declaration of a declaration (which must be
   /// of a redeclarable kind) that is either local or has already been loaded
@@ -1779,12 +1781,13 @@ public:
   /// Read the control block for the named AST file.
   ///
   /// \returns true if an error occurred, false otherwise.
-  static bool readASTFileControlBlock(StringRef Filename, FileManager &FileMgr,
-                                      const InMemoryModuleCache &ModuleCache,
-                                      const PCHContainerReader &PCHContainerRdr,
-                                      bool FindModuleFileExtensions,
-                                      ASTReaderListener &Listener,
-                                      bool ValidateDiagnosticOptions);
+  static bool readASTFileControlBlock(
+      StringRef Filename, FileManager &FileMgr,
+      const InMemoryModuleCache &ModuleCache,
+      const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
+      ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
+      unsigned ClientLoadCapabilities = ARR_ConfigurationMismatch |
+                                        ARR_OutOfDate);
 
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
@@ -2096,7 +2099,7 @@ public:
            SmallVectorImpl<std::pair<Selector, SourceLocation>> &Sels) override;
 
   void ReadWeakUndeclaredIdentifiers(
-           SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WI) override;
+      SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
 
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 
@@ -2206,7 +2209,7 @@ public:
 
   /// Retrieve the global selector ID that corresponds to this
   /// the local selector ID in a given module.
-  serialization::SelectorID getGlobalSelectorID(ModuleFile &F,
+  serialization::SelectorID getGlobalSelectorID(ModuleFile &M,
                                                 unsigned LocalID) const;
 
   /// Read the contents of a CXXCtorInitializer array.
@@ -2268,6 +2271,9 @@ public:
   /// Read a source range.
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
                               unsigned &Idx, LocSeq *Seq = nullptr);
+
+  static llvm::BitVector ReadBitVector(const RecordData &Record,
+                                       const StringRef Blob);
 
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
@@ -2406,6 +2412,56 @@ public:
 
   bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
 };
+
+/// A simple helper class to unpack an integer to bits and consuming
+/// the bits in order.
+class BitsUnpacker {
+  constexpr static uint32_t BitsIndexUpbound = 32;
+
+public:
+  BitsUnpacker(uint32_t V) { updateValue(V); }
+  BitsUnpacker(const BitsUnpacker &) = delete;
+  BitsUnpacker(BitsUnpacker &&) = delete;
+  BitsUnpacker operator=(const BitsUnpacker &) = delete;
+  BitsUnpacker operator=(BitsUnpacker &&) = delete;
+  ~BitsUnpacker() = default;
+
+  void updateValue(uint32_t V) {
+    Value = V;
+    CurrentBitsIndex = 0;
+  }
+
+  void advance(uint32_t BitsWidth) { CurrentBitsIndex += BitsWidth; }
+
+  bool getNextBit() {
+    assert(isValid());
+    return Value & (1 << CurrentBitsIndex++);
+  }
+
+  uint32_t getNextBits(uint32_t Width) {
+    assert(isValid());
+    assert(Width < BitsIndexUpbound);
+    uint32_t Ret = (Value >> CurrentBitsIndex) & ((1 << Width) - 1);
+    CurrentBitsIndex += Width;
+    return Ret;
+  }
+
+  bool canGetNextNBits(uint32_t Width) const {
+    return CurrentBitsIndex + Width < BitsIndexUpbound;
+  }
+
+private:
+  bool isValid() const { return CurrentBitsIndex < BitsIndexUpbound; }
+
+  uint32_t Value;
+  uint32_t CurrentBitsIndex = ~0;
+};
+
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getOwningModule() &&
+         D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->getOwningModule()->isExplicitGlobalModule();
+}
 
 } // namespace clang
 

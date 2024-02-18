@@ -154,22 +154,26 @@ class CXXBaseSpecifier {
   SourceLocation EllipsisLoc;
 
   /// Whether this is a virtual base class or not.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Virtual : 1;
 
   /// Whether this is the base of a class (true) or of a struct (false).
   ///
   /// This determines the mapping from the access specifier as written in the
   /// source code to the access specifier used for semantic analysis.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned BaseOfClass : 1;
 
   /// Access specifier as written in the source code (may be AS_none).
   ///
   /// The actual type of data stored here is an AccessSpecifier, but we use
-  /// "unsigned" here to work around a VC++ bug.
+  /// "unsigned" here to work around Microsoft ABI.
+  LLVM_PREFERRED_TYPE(AccessSpecifier)
   unsigned Access : 2;
 
   /// Whether the class contains a using declaration
   /// to inherit the named class's constructors.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InheritConstructors : 1;
 
   /// The type of the base class.
@@ -262,7 +266,7 @@ class CXXRecordDecl : public RecordDecl {
   friend class LambdaExpr;
   friend class ODRDiagsEmitter;
 
-  friend void FunctionDecl::setPure(bool);
+  friend void FunctionDecl::setIsPureVirtual(bool);
   friend void TagDecl::startDefinition();
 
   /// Values used in DefinitionData fields to represent special members.
@@ -290,15 +294,19 @@ private:
     #include "CXXRecordDeclDefinitionBits.def"
 
     /// Whether this class describes a C++ lambda.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsLambda : 1;
 
     /// Whether we are currently parsing base specifiers.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsParsingBaseSpecifiers : 1;
 
     /// True when visible conversion functions are already computed
     /// and are available.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ComputedVisibleConversions : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -383,12 +391,15 @@ private:
     /// lambda will have been created with the enclosing context as its
     /// declaration context, rather than function. This is an unfortunate
     /// artifact of having to parse the default arguments before.
+    LLVM_PREFERRED_TYPE(LambdaDependencyKind)
     unsigned DependencyKind : 2;
 
     /// Whether this lambda is a generic lambda.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsGenericLambda : 1;
 
     /// The Default Capture.
+    LLVM_PREFERRED_TYPE(LambdaCaptureDefault)
     unsigned CaptureDefault : 2;
 
     /// The number of captures in this lambda is limited 2^NumCaptures.
@@ -398,6 +409,7 @@ private:
     unsigned NumExplicitCaptures : 12;
 
     /// Has known `internal` linkage.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasKnownInternalLinkage : 1;
 
     /// The number used to indicate this lambda expression for name
@@ -1413,6 +1425,9 @@ public:
   /// (C++11 [class]p6).
   bool isTriviallyCopyable() const;
 
+  /// Determine whether this class is considered trivially copyable per
+  bool isTriviallyCopyConstructible() const;
+
   /// Determine whether this class is considered trivial.
   ///
   /// C++11 [class]p6:
@@ -1424,31 +1439,20 @@ public:
 
   /// Determine whether this class is a literal type.
   ///
-  /// C++11 [basic.types]p10:
+  /// C++20 [basic.types]p10:
   ///   A class type that has all the following properties:
-  ///     - it has a trivial destructor
-  ///     - every constructor call and full-expression in the
-  ///       brace-or-equal-intializers for non-static data members (if any) is
-  ///       a constant expression.
-  ///     - it is an aggregate type or has at least one constexpr constructor
-  ///       or constructor template that is not a copy or move constructor, and
-  ///     - all of its non-static data members and base classes are of literal
-  ///       types
-  ///
-  /// We resolve DR1361 by ignoring the second bullet. We resolve DR1452 by
-  /// treating types with trivial default constructors as literal types.
-  ///
-  /// Only in C++17 and beyond, are lambdas literal types.
-  bool isLiteral() const {
-    const LangOptions &LangOpts = getLangOpts();
-    return (LangOpts.CPlusPlus20 ? hasConstexprDestructor()
-                                          : hasTrivialDestructor()) &&
-           (!isLambda() || LangOpts.CPlusPlus17) &&
-           !hasNonLiteralTypeFieldsOrBases() &&
-           (isAggregate() || isLambda() ||
-            hasConstexprNonCopyMoveConstructor() ||
-            hasTrivialDefaultConstructor());
-  }
+  ///     - it has a constexpr destructor
+  ///     - all of its non-static non-variant data members and base classes
+  ///       are of non-volatile literal types, and it:
+  ///        - is a closure type
+  ///        - is an aggregate union type that has either no variant members
+  ///          or at least one variant member of non-volatile literal type
+  ///        - is a non-union aggregate type for which each of its anonymous
+  ///          union members satisfies the above requirements for an aggregate
+  ///          union type, or
+  ///        - has at least one constexpr constructor or constructor template
+  ///          that is not a copy or move constructor.
+  bool isLiteral() const;
 
   /// Determine whether this is a structural type.
   bool isStructural() const {
@@ -2032,6 +2036,14 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == RequiresExprBody; }
+
+  static DeclContext *castToDeclContext(const RequiresExprBodyDecl *D) {
+    return static_cast<DeclContext *>(const_cast<RequiresExprBodyDecl *>(D));
+  }
+
+  static RequiresExprBodyDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<RequiresExprBodyDecl *>(const_cast<DeclContext *>(DC));
+  }
 };
 
 /// Represents a static or instance method of a struct/union/class.
@@ -2098,7 +2110,7 @@ public:
 
     // Member function is virtual if it is marked explicitly so, or if it is
     // declared in __interface -- then it is automatically pure virtual.
-    if (CD->isVirtualAsWritten() || CD->isPure())
+    if (CD->isVirtualAsWritten() || CD->isPureVirtual())
       return true;
 
     return CD->size_overridden_methods() != 0;
@@ -2305,14 +2317,17 @@ class CXXCtorInitializer final {
 
   /// If the initializee is a type, whether that type makes this
   /// a delegating initialization.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDelegating : 1;
 
   /// If the initializer is a base initializer, this keeps track
   /// of whether the base is virtual or not.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVirtual : 1;
 
   /// Whether or not the initializer is explicitly written
   /// in the sources.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsWritten : 1;
 
   /// If IsWritten is true, then this number keeps track of the textual order
@@ -2897,6 +2912,12 @@ public:
   static bool classofKind(Kind K) { return K == CXXConversion; }
 };
 
+/// Represents the language in a linkage specification.
+///
+/// The values are part of the serialization ABI for
+/// ASTs and cannot be changed without altering that ABI.
+enum class LinkageSpecLanguageIDs { C = 1, CXX = 2 };
+
 /// Represents a linkage specification.
 ///
 /// For example:
@@ -2907,14 +2928,7 @@ class LinkageSpecDecl : public Decl, public DeclContext {
   virtual void anchor();
   // This class stores some data in DeclContext::LinkageSpecDeclBits to save
   // some space. Use the provided accessors to access it.
-public:
-  /// Represents the language in a linkage specification.
-  ///
-  /// The values are part of the serialization ABI for
-  /// ASTs and cannot be changed without altering that ABI.
-  enum LanguageIDs { lang_c = 1, lang_cxx = 2 };
 
-private:
   /// The source location for the extern keyword.
   SourceLocation ExternLoc;
 
@@ -2922,22 +2936,25 @@ private:
   SourceLocation RBraceLoc;
 
   LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
-                  SourceLocation LangLoc, LanguageIDs lang, bool HasBraces);
+                  SourceLocation LangLoc, LinkageSpecLanguageIDs lang,
+                  bool HasBraces);
 
 public:
   static LinkageSpecDecl *Create(ASTContext &C, DeclContext *DC,
                                  SourceLocation ExternLoc,
-                                 SourceLocation LangLoc, LanguageIDs Lang,
-                                 bool HasBraces);
+                                 SourceLocation LangLoc,
+                                 LinkageSpecLanguageIDs Lang, bool HasBraces);
   static LinkageSpecDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   /// Return the language specified by this linkage specification.
-  LanguageIDs getLanguage() const {
-    return static_cast<LanguageIDs>(LinkageSpecDeclBits.Language);
+  LinkageSpecLanguageIDs getLanguage() const {
+    return static_cast<LinkageSpecLanguageIDs>(LinkageSpecDeclBits.Language);
   }
 
   /// Set the language specified by this linkage specification.
-  void setLanguage(LanguageIDs L) { LinkageSpecDeclBits.Language = L; }
+  void setLanguage(LinkageSpecLanguageIDs L) {
+    LinkageSpecDeclBits.Language = llvm::to_underlying(L);
+  }
 
   /// Determines whether this linkage specification had braces in
   /// its syntactic form.
@@ -3586,6 +3603,7 @@ class ConstructorUsingShadowDecl final : public UsingShadowDecl {
   /// \c true if the constructor ultimately named by this using shadow
   /// declaration is within a virtual base class subobject of the class that
   /// contains this declaration.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVirtual : 1;
 
   ConstructorUsingShadowDecl(ASTContext &C, DeclContext *DC, SourceLocation Loc,

@@ -65,7 +65,12 @@ check_include_file(fenv.h HAVE_FENV_H)
 check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
-        void *foo() {
+        #if __has_attribute(used)
+        #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
+        #else
+        #define LLVM_ATTRIBUTE_USED
+        #endif
+        LLVM_ATTRIBUTE_USED void *foo() {
           return __builtin_thread_pointer();
         }
         int main(void) { return 0; }"
@@ -426,15 +431,13 @@ set(USE_NO_UNINITIALIZED 0)
 # Disable gcc's potentially uninitialized use analysis as it presents lots of
 # false positives.
 if (CMAKE_COMPILER_IS_GNUCXX)
-  check_cxx_compiler_flag("-Wmaybe-uninitialized" HAS_MAYBE_UNINITIALIZED)
-  if (HAS_MAYBE_UNINITIALIZED)
-    set(USE_NO_MAYBE_UNINITIALIZED 1)
-  else()
-    # Only recent versions of gcc make the distinction between -Wuninitialized
-    # and -Wmaybe-uninitialized. If -Wmaybe-uninitialized isn't supported, just
-    # turn off all uninitialized use warnings.
+  # Disable all -Wuninitialized warning for old GCC versions.
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
     check_cxx_compiler_flag("-Wuninitialized" HAS_UNINITIALIZED)
     set(USE_NO_UNINITIALIZED ${HAS_UNINITIALIZED})
+  else()
+    check_cxx_compiler_flag("-Wmaybe-uninitialized" HAS_MAYBE_UNINITIALIZED)
+    set(USE_NO_MAYBE_UNINITIALIZED ${HAS_MAYBE_UNINITIALIZED})
   endif()
 endif()
 
@@ -636,12 +639,25 @@ if(CMAKE_HOST_APPLE AND APPLE)
     if(NOT CMAKE_XCRUN)
       find_program(CMAKE_XCRUN NAMES xcrun)
     endif()
+
+    # First, check if there's ld-classic, which is ld64 in newer SDKs.
     if(CMAKE_XCRUN)
-      execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+      execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
-      find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+      find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")
+    endif()
+
+    # Otherwise look for ld directly.
+    if(NOT LD64_EXECUTABLE)
+        if(CMAKE_XCRUN)
+          execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+            OUTPUT_VARIABLE LD64_EXECUTABLE
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        else()
+          find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+        endif()
     endif()
   endif()
 

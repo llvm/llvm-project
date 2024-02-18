@@ -394,6 +394,8 @@ def : InstRW<[CortexA510WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA510WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA510WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
 
+def : InstRW<[CortexA510WriteFPALU_F3], (instrs FCSELHrrr, FCSELSrrr, FCSELDrrr)>;
+
 // 4.15. Advanced SIMD integer instructions
 // ASIMD absolute diff
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]ABDv(2i32|4i16|8i8)")>;
@@ -1168,10 +1170,10 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instrs LDR_ZXI)>;
 def : InstRW<[CortexA510Write<3, CortexA510UnitLdSt>], (instrs LDR_PXI)>;
 
 // Contiguous load, scalar + imm
-def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LD1[BHWD]_IMM_REAL$",
-                                           "^LD1S?B_[HSD]_IMM_REAL$",
-                                           "^LD1S?H_[SD]_IMM_REAL$",
-                                           "^LD1S?W_D_IMM_REAL$" )>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LD1[BHWD]_IMM$",
+                                           "^LD1S?B_[HSD]_IMM$",
+                                           "^LD1S?H_[SD]_IMM$",
+                                           "^LD1S?W_D_IMM$" )>;
 // Contiguous load, scalar + scalar
 def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LD1[BHWD]$",
                                              "^LD1S?B_[HSD]$",

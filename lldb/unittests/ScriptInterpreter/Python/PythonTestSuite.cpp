@@ -218,6 +218,14 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
   return false;
 }
 
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger, 
+    StructuredDataImpl &args_impl,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+  return false;
+}
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger) {
@@ -228,14 +236,6 @@ python::PythonObject
 lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process_sp) {
-  return python::PythonObject();
-}
-
-python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedObject(
-    const char *python_class_name, const char *session_dictionary_name,
-    lldb::ExecutionContextRefSP exe_ctx_sp, const StructuredDataImpl &args_impl,
-    std::string &error_string) {
   return python::PythonObject();
 }
 
@@ -319,5 +319,20 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessLaunchInfoSP) {
 
 python::PythonObject
 lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::DataExtractorSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ExecutionContextRefSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject lldb_private::python::SWIGBridge::ToSWIGWrapper(
+    const lldb_private::StructuredDataImpl &) {
   return python::PythonObject();
 }

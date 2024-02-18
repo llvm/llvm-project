@@ -18,6 +18,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -185,9 +186,7 @@ void SampleProfileProber::computeCFGHash() {
   std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : *F) {
-    auto *TI = BB.getTerminator();
-    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
-      auto *Succ = TI->getSuccessor(I);
+    for (BasicBlock *Succ : successors(&BB)) {
       auto Index = getBlockId(Succ);
       for (int J = 0; J < 4; J++)
         Indexes.push_back((uint8_t)(Index >> (J * 8)));
@@ -221,12 +220,26 @@ void SampleProfileProber::computeProbeIdForBlocks() {
 }
 
 void SampleProfileProber::computeProbeIdForCallsites() {
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
   for (auto &BB : *F) {
     for (auto &I : BB) {
       if (!isa<CallBase>(I))
         continue;
       if (isa<IntrinsicInst>(&I))
         continue;
+
+      // The current implementation uses the lower 16 bits of the discriminator
+      // so anything larger than 0xFFFF will be ignored.
+      if (LastProbeId >= 0xFFFF) {
+        std::string Msg = "Pseudo instrumentation incomplete for " +
+                          std::string(F->getName()) + " because it's too large";
+        Ctx.diagnose(
+            DiagnosticInfoSampleProfile(M->getName().data(), Msg, DS_Warning));
+        return;
+      }
+
       CallProbeIds[&I] = ++LastProbeId;
     }
   }

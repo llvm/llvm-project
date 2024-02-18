@@ -334,8 +334,7 @@ void instantiate_a_class_template() {
   withObjRef.never_moves(o);
 }
 
-namespace gh68209
-{
+namespace gh68209 {
   void f1([[maybe_unused]] int&& x) {}
 
   void f2(__attribute__((unused)) int&& x) {}
@@ -358,3 +357,13 @@ namespace gh68209
   void f8(__attribute__((unused)) int&& x) { x += 1; }
   // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: rvalue reference parameter 'x' is never moved from inside the function body [cppcoreguidelines-rvalue-reference-param-not-moved]
 } // namespace gh68209
+
+namespace gh69412 {
+  struct S
+  {
+      S(const int&);
+      S(int&&) = delete;
+
+      void foo(int&&) = delete;
+  };
+} // namespace gh69412

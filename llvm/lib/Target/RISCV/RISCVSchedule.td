@@ -30,6 +30,8 @@ def WriteSTB        : SchedWrite;    // Store byte
 def WriteSTH        : SchedWrite;    // Store half-word
 def WriteSTW        : SchedWrite;    // Store word
 def WriteSTD        : SchedWrite;    // Store double-word
+def WriteAtomicB    : SchedWrite;    //Atomic memory operation byte size
+def WriteAtomicH    : SchedWrite;    //Atomic memory operation halfword size
 def WriteAtomicW    : SchedWrite;    //Atomic memory operation word size
 def WriteAtomicD    : SchedWrite;    //Atomic memory operation double word size
 def WriteAtomicLDW  : SchedWrite;    // Atomic load word
@@ -135,6 +137,10 @@ def ReadIDiv        : SchedRead;
 def ReadIDiv32      : SchedRead;
 def ReadIMul        : SchedRead;
 def ReadIMul32      : SchedRead;
+def ReadAtomicBA    : SchedRead;
+def ReadAtomicBD    : SchedRead;
+def ReadAtomicHA    : SchedRead;
+def ReadAtomicHD    : SchedRead;
 def ReadAtomicWA    : SchedRead;
 def ReadAtomicWD    : SchedRead;
 def ReadAtomicDA    : SchedRead;
@@ -150,8 +156,11 @@ def ReadFMul16      : SchedRead;    // 16-bit floating point multiply
 def ReadFMul32      : SchedRead;    // 32-bit floating point multiply
 def ReadFMul64      : SchedRead;    // 64-bit floating point multiply
 def ReadFMA16       : SchedRead;    // 16-bit floating point fused multiply-add
+def ReadFMA16Addend : SchedRead;    // 16-bit floating point fused multiply-add (addend)
 def ReadFMA32       : SchedRead;    // 32-bit floating point fused multiply-add
+def ReadFMA32Addend : SchedRead;    // 32-bit floating point fused multiply-add (addend)
 def ReadFMA64       : SchedRead;    // 64-bit floating point fused multiply-add
+def ReadFMA64Addend : SchedRead;    // 64-bit floating point fused multiply-add (addend)
 def ReadFDiv16      : SchedRead;    // 16-bit floating point divide
 def ReadFDiv32      : SchedRead;    // 32-bit floating point divide
 def ReadFDiv64      : SchedRead;    // 64-bit floating point divide
@@ -265,6 +274,18 @@ def : WriteRes<WriteFLI64, []>;
 def : ReadAdvance<ReadFRoundF32, 0>;
 def : ReadAdvance<ReadFRoundF64, 0>;
 def : ReadAdvance<ReadFRoundF16, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedZabha {
+let Unsupported = true in {
+def : WriteRes<WriteAtomicB, []>;
+def : WriteRes<WriteAtomicH, []>;
+
+def : ReadAdvance<ReadAtomicBA, 0>;
+def : ReadAdvance<ReadAtomicBD, 0>;
+def : ReadAdvance<ReadAtomicHA, 0>;
+def : ReadAdvance<ReadAtomicHD, 0>;
 } // Unsupported = true
 }
 

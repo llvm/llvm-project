@@ -52,7 +52,7 @@ extern "C" {
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<LevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr);
@@ -165,13 +165,6 @@ MLIR_CRUNNERUTILS_EXPORT void endForwardingInsert(void *tensor);
 
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endLexInsert(void *tensor);
-
-/// Coordinate-scheme method to write to file in extended FROSTT format.
-#define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
-  MLIR_CRUNNERUTILS_EXPORT void outSparseTensor##VNAME(void *coo, void *dest,  \
-                                                       bool sort);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_OUTSPARSETENSOR)
-#undef DECL_OUTSPARSETENSOR
 
 /// Releases the memory for the tensor-storage object.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);

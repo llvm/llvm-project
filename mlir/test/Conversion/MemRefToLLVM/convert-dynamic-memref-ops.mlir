@@ -1,6 +1,6 @@
-// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-opaque-pointers=1' %s | FileCheck %s
-// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-aligned-alloc=1 use-opaque-pointers=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
-// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='index-bitwidth=32 use-opaque-pointers=1' %s | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='index-bitwidth=32' %s | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @mixed_alloc(
 //       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
@@ -261,8 +261,8 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 // to set address spaces, so the constants below don't reflect the layout
 // Update this test once that data layout attribute works how we'd expect it to.
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi32>>> }  {
+  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi64>>,
+  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi64>>> }  {
   // CHECK-LABEL: @memref_memory_space_cast
   func.func @memref_memory_space_cast(%input : memref<*xf32>) -> memref<*xf32, 1> {
     %cast = memref.memory_space_cast %input : memref<*xf32> to memref<*xf32, 1>

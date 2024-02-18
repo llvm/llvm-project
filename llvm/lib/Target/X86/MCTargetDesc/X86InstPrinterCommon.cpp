@@ -30,7 +30,9 @@ void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
   bool Flavor = MI->getOpcode() == X86::CMPCCXADDmr32 ||
-                MI->getOpcode() == X86::CMPCCXADDmr64;
+                MI->getOpcode() == X86::CMPCCXADDmr64 ||
+                MI->getOpcode() == X86::CMPCCXADDmr32_EVEX ||
+                MI->getOpcode() == X86::CMPCCXADDmr64_EVEX;
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;
@@ -369,14 +371,19 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 
+  if (TSFlags & X86II::EVEX_NF)
+    O << "\t{nf}";
+
   // These all require a pseudo prefix
-  if ((Flags & X86::IP_USE_VEX) || (TSFlags & X86II::ExplicitVEXPrefix))
+  if ((Flags & X86::IP_USE_VEX) ||
+      (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix)
     O << "\t{vex}";
   else if (Flags & X86::IP_USE_VEX2)
     O << "\t{vex2}";
   else if (Flags & X86::IP_USE_VEX3)
     O << "\t{vex3}";
-  else if (Flags & X86::IP_USE_EVEX)
+  else if ((Flags & X86::IP_USE_EVEX) ||
+           (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitEVEXPrefix)
     O << "\t{evex}";
 
   if (Flags & X86::IP_USE_DISP8)

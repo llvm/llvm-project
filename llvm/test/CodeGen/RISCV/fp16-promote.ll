@@ -19,7 +19,7 @@ define float @test_fpextend_float(ptr %p) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lhu a0, 0(a0)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -35,7 +35,7 @@ define double @test_fpextend_double(ptr %p) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lhu a0, 0(a0)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fcvt.d.s fa0, fa0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -52,7 +52,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    call __truncsfhf2@plt
+; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -71,7 +71,7 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    call __truncdfhf2@plt
+; CHECK-NEXT:    call __truncdfhf2
 ; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -96,12 +96,12 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; CHECK-NEXT:    lhu a1, 0(a1)
 ; CHECK-NEXT:    fmv.w.x fs0, a0
 ; CHECK-NEXT:    fmv.w.x fa0, a1
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fmv.s fs1, fa0
 ; CHECK-NEXT:    fmv.s fa0, fs0
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fadd.s fa0, fa0, fs1
-; CHECK-NEXT:    call __truncsfhf2@plt
+; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -130,12 +130,12 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; CHECK-NEXT:    lhu a1, 0(a1)
 ; CHECK-NEXT:    fmv.w.x fs0, a0
 ; CHECK-NEXT:    fmv.w.x fa0, a1
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fmv.s fs1, fa0
 ; CHECK-NEXT:    fmv.s fa0, fs0
-; CHECK-NEXT:    call __extendhfsf2@plt
+; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fmul.s fa0, fa0, fs1
-; CHECK-NEXT:    call __truncsfhf2@plt
+; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload

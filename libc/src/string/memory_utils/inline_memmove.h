@@ -13,28 +13,58 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memmove.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_x86
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
+  inline_memmove_small_size_x86
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP                         \
+  inline_memmove_follow_up_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memmove.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_aarch64
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
+  inline_memmove_no_small_size
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP inline_memmove_aarch64
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memmove.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_riscv
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
+  inline_memmove_no_small_size
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP inline_memmove_riscv
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_byte_per_byte
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
+  inline_memmove_no_small_size
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP                         \
+  inline_memmove_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/builtin.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_builtin
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
+  inline_memmove_no_small_size
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP inline_memmove_builtin
 #else
 #error "Unsupported architecture"
 #endif
 
 namespace LIBC_NAMESPACE {
 
+LIBC_INLINE constexpr bool inline_memmove_no_small_size(void *, const void *,
+                                                        size_t) {
+  return false;
+}
+
+[[gnu::flatten]] LIBC_INLINE bool
+inline_memmove_small_size(void *dst, const void *src, size_t count) {
+  return LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE(
+      reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
+}
+
+[[gnu::flatten]] LIBC_INLINE void
+inline_memmove_follow_up(void *dst, const void *src, size_t count) {
+  LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP(
+      reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
+}
+
 LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
-  LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE(reinterpret_cast<Ptr>(dst),
-                                       reinterpret_cast<CPtr>(src), count);
+  if (inline_memmove_small_size(dst, src, count))
+    return;
+  inline_memmove_follow_up(dst, src, count);
 }
 
 } // namespace LIBC_NAMESPACE

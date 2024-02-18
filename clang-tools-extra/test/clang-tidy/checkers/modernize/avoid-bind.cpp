@@ -43,6 +43,7 @@ struct Foo {
 struct D {
   D() = default;
   void operator()(int x, int y) const {}
+  operator bool() const { return true; }
 
   void MemberFunction(int x) {}
   int MemberFunctionWithReturn(int x) {}
@@ -342,6 +343,7 @@ void testCapturedSubexpressions() {
 struct E {
   void MemberFunction(int x) {}
   int MemberFunctionWithReturn(int x) {}
+  int operator()(int x, int y) const { return x + y; }
 
   void testMemberFunctions() {
     D *d;
@@ -379,6 +381,26 @@ struct E {
     auto HHH = std::bind(&D::MemberFunctionWithReturn, _1, 1);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
     // CHECK-FIXES: auto HHH = [](auto && PH1) { return PH1->MemberFunctionWithReturn(1); };
+
+    auto III = std::bind(&D::operator(), d, 1, 2);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto III = [d] { (*d)(1, 2); }
+
+    auto JJJ = std::bind(&D::operator(), &dd, 1, 2);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto JJJ = [ObjectPtr = &dd] { (*ObjectPtr)(1, 2); }
+
+    auto KKK = std::bind(&D::operator(), _1, 1, 2);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto KKK = [](auto && PH1) { (*PH1)(1, 2); };
+
+    auto LLL = std::bind(&D::operator bool, d);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto LLL = [d] { return d->operator bool(); }
+
+    auto MMM = std::bind(&E::operator(), this, 1, 2);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
+    // CHECK-FIXES: auto MMM = [this] { return (*this)(1, 2); }
   }
 };
 

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
+#include "Utils/CodegenUtils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -56,7 +56,7 @@ static void getMangledSortHelperFuncName(llvm::raw_svector_ostream &nameOstream,
                                          uint64_t ny, ValueRange operands) {
   nameOstream << namePrefix;
   for (auto res : xPerm.getResults())
-    nameOstream << res.cast<AffineDimExpr>().getPosition() << "_";
+    nameOstream << cast<AffineDimExpr>(res).getPosition() << "_";
 
   nameOstream << getMemRefType(operands[xStartIdx]).getElementType();
   nameOstream << "_coo_" << ny;
@@ -114,7 +114,7 @@ static void forEachIJPairInXs(
   Value iOffset = builder.create<arith::MulIOp>(loc, args[0], cstep);
   Value jOffset = builder.create<arith::MulIOp>(loc, args[1], cstep);
   for (unsigned k = 0, e = xPerm.getNumResults(); k < e; k++) {
-    unsigned actualK = xPerm.getResult(k).cast<AffineDimExpr>().getPosition();
+    unsigned actualK = cast<AffineDimExpr>(xPerm.getResult(k)).getPosition();
     Value ak = constantIndex(builder, loc, actualK);
     Value i = builder.create<arith::AddIOp>(loc, ak, iOffset);
     Value j = builder.create<arith::AddIOp>(loc, ak, jOffset);
@@ -952,9 +952,9 @@ createQuickSort(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   Value cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule,
                                              lenLow, lenHigh);
 
+  Value c0 = constantIndex(builder, loc, 0);
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
 
-  Value c0 = constantIndex(builder, loc, 0);
   auto mayRecursion = [&](Value low, Value high, Value len) {
     Value cond =
         builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, len, c0);

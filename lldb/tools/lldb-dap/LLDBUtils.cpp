@@ -11,38 +11,79 @@
 
 namespace lldb_dap {
 
-void RunLLDBCommands(llvm::StringRef prefix,
+bool RunLLDBCommands(llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm) {
+                     llvm::raw_ostream &strm, bool parse_command_directives) {
   if (commands.empty())
-    return;
+    return true;
+
+  bool did_print_prefix = false;
+
   lldb::SBCommandInterpreter interp = g_dap.debugger.GetCommandInterpreter();
-  if (!prefix.empty())
-    strm << prefix << "\n";
-  for (const auto &command : commands) {
+  for (llvm::StringRef command : commands) {
     lldb::SBCommandReturnObject result;
-    strm << "(lldb) " << command << "\n";
-    interp.HandleCommand(command.c_str(), result);
-    auto output_len = result.GetOutputSize();
-    if (output_len) {
-      const char *output = result.GetOutput();
-      strm << output;
+    bool quiet_on_success = false;
+    bool check_error = false;
+
+    while (parse_command_directives) {
+      if (command.starts_with("?")) {
+        command = command.drop_front();
+        quiet_on_success = true;
+      } else if (command.starts_with("!")) {
+        command = command.drop_front();
+        check_error = true;
+      } else {
+        break;
+      }
     }
-    auto error_len = result.GetErrorSize();
-    if (error_len) {
-      const char *error = result.GetError();
-      strm << error;
+
+    interp.HandleCommand(command.str().c_str(), result);
+    const bool got_error = !result.Succeeded();
+    // The if statement below is assuming we always print out `!` prefixed
+    // lines. The only time we don't print is when we have `quiet_on_success ==
+    // true` and we don't have an error.
+    if (quiet_on_success ? got_error : true) {
+      if (!did_print_prefix && !prefix.empty()) {
+        strm << prefix << "\n";
+        did_print_prefix = true;
+      }
+      strm << "(lldb) " << command << "\n";
+      auto output_len = result.GetOutputSize();
+      if (output_len) {
+        const char *output = result.GetOutput();
+        strm << output;
+      }
+      auto error_len = result.GetErrorSize();
+      if (error_len) {
+        const char *error = result.GetError();
+        strm << error;
+      }
     }
+    if (check_error && got_error)
+      return false; // Stop running commands.
   }
+  return true;
 }
 
 std::string RunLLDBCommands(llvm::StringRef prefix,
-                            const llvm::ArrayRef<std::string> &commands) {
+                            const llvm::ArrayRef<std::string> &commands,
+                            bool &required_command_failed,
+                            bool parse_command_directives) {
+  required_command_failed = false;
   std::string s;
   llvm::raw_string_ostream strm(s);
-  RunLLDBCommands(prefix, commands, strm);
+  required_command_failed =
+      !RunLLDBCommands(prefix, commands, strm, parse_command_directives);
   strm.flush();
   return s;
+}
+
+std::string
+RunLLDBCommandsVerbatim(llvm::StringRef prefix,
+                        const llvm::ArrayRef<std::string> &commands) {
+  bool required_command_failed = false;
+  return RunLLDBCommands(prefix, commands, required_command_failed,
+                         /*parse_command_directives=*/false);
 }
 
 bool ThreadHasStopReason(lldb::SBThread &thread) {

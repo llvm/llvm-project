@@ -837,7 +837,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                     DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
-        llvm::erase_value(UnrolledLoopBlocks, Dest);
+        llvm::erase(UnrolledLoopBlocks, Dest);
       }
     }
   }

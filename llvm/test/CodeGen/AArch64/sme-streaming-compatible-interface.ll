@@ -129,30 +129,37 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl normal_callee_vec_arg
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
@@ -436,3 +443,60 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
   tail call void @normal_callee();
   ret void;
 }
+
+define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2) "aarch64_pstate_sm_compatible" {
+; CHECK-LABEL: call_to_non_streaming_pass_args:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #112
+; CHECK-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    stp d2, d3, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    ldp s4, s0, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    stp s4, s0, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    ldp d4, d0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    stp d4, d0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    tbz w19, #0, .LBB10_2
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB10_2: // %entry
+; CHECK-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    mov x0, x9
+; CHECK-NEXT:    ldp d2, d3, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    bl bar
+; CHECK-NEXT:    tbz w19, #0, .LBB10_4
+; CHECK-NEXT:  // %bb.3: // %entry
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:  .LBB10_4: // %entry
+; CHECK-NEXT:    ldp x30, x19, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ret
+entry:
+  call void @bar(ptr noundef nonnull %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2)
+  ret void
+}
+
+declare void @bar(ptr noundef, i64 noundef, i64 noundef, i32 noundef, i32 noundef, float noundef, float noundef, double noundef, double noundef)

@@ -154,8 +154,7 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBeforePreserving(TargetBB, TargetBB.end());
+  TargetBB.splice(TargetBB.end(), &SourceBB);
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -198,7 +197,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHI();
+  Instruction *FirstNonPHI = BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)

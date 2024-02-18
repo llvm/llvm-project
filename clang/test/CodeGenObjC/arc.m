@@ -7,8 +7,8 @@
 // RUN: %clang_cc1 -fobjc-runtime=macosx-10.7.0 -triple x86_64-apple-darwin11 -Wno-objc-root-class -Wno-incompatible-pointer-types -Wno-arc-unsafe-retained-assign -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=ARC-NATIVE %s
 
 // ARC-ALIEN: declare extern_weak void @llvm.objc.storeStrong(ptr, ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retain(ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.autoreleaseReturnValue(ptr)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retain(ptr returned)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-ALIEN: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-ALIEN: declare extern_weak void @llvm.objc.release(ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
@@ -16,12 +16,12 @@
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.loadWeakRetained(ptr)
 // ARC-ALIEN: declare extern_weak void @llvm.objc.destroyWeak(ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.autorelease(ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutorelease(ptr)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.autorelease(ptr returned)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutorelease(ptr returned)
 
 // ARC-NATIVE: declare void @llvm.objc.storeStrong(ptr, ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.retain(ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
+// ARC-NATIVE: declare ptr @llvm.objc.retain(ptr returned)
+// ARC-NATIVE: declare ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-NATIVE: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-NATIVE: declare void @llvm.objc.release(ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
@@ -29,8 +29,8 @@
 // ARC-NATIVE: declare ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.loadWeakRetained(ptr)
 // ARC-NATIVE: declare void @llvm.objc.destroyWeak(ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.autorelease(ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.retainAutorelease(ptr)
+// ARC-NATIVE: declare ptr @llvm.objc.autorelease(ptr returned)
+// ARC-NATIVE: declare ptr @llvm.objc.retainAutorelease(ptr returned)
 
 // CHECK-LABEL: define{{.*}} void @test0
 void test0(id x) {
@@ -1358,11 +1358,11 @@ struct AggDtor getAggDtor(void);
 // CHECK-LABEL: define{{.*}} void @test71
 void test71(void) {
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T]])
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T2:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T2]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T2]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T2]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T2]])
   getAggDtor();

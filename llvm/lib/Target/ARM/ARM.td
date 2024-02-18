@@ -704,6 +704,12 @@ def HasV9_4aOps   : SubtargetFeature<"v9.4a", "HasV9_4aOps", "true",
                                    "Support ARM v9.4a instructions",
                                    [HasV8_9aOps, HasV9_3aOps]>;
 
+// Armv9.5-A is a v9-only architecture. From v9.5-A onwards there's no mapping
+// to an equivalent v8.x version.
+def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
+                                   "Support ARM v9.5a instructions",
+                                   [HasV9_4aOps]>;
+
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",
@@ -1139,6 +1145,18 @@ def ARMv94a   : Architecture<"armv9.4-a", "ARMv94a",  [HasV9_4aOps,
                                                        FeatureCRC,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
+def ARMv95a   : Architecture<"armv9.5-a", "ARMv95a",  [HasV9_5aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
 
 def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureRClass,
@@ -1519,6 +1537,17 @@ def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureUseMISched,
                                                          HasMVEFloatOps]>;
 
+def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureMVEVectorCostFactor1,
+                                                         HasMVEFloatOps]>;
+
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
@@ -1651,7 +1680,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureCRC,
                                                          FeatureDotProd]>;
 
-def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
+def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
                                                          FeatureMatMulInt8]>;
 

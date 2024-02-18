@@ -6,18 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <optional>
-#include <utility>
+#include "mlir/Pass/PassRegistry.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+
+#include <optional>
+#include <utility>
 
 using namespace mlir;
 using namespace detail;
@@ -99,7 +100,10 @@ void mlir::registerPassPipeline(
   PassPipelineInfo pipelineInfo(arg, description, function,
                                 std::move(optHandler));
   bool inserted = passPipelineRegistry->try_emplace(arg, pipelineInfo).second;
-  assert(inserted && "Pass pipeline registered multiple times");
+#ifndef NDEBUG
+  if (!inserted)
+    report_fatal_error("Pass pipeline " + arg + " registered multiple times");
+#endif
   (void)inserted;
 }
 

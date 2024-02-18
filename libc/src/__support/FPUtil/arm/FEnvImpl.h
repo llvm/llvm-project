@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_FENVIMPL_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/config.h" // For LIBC_INLINE
+#include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
 #include <fenv.h>
 #include <stdint.h>
@@ -135,8 +135,8 @@ LIBC_INLINE int set_except(int excepts) {
 LIBC_INLINE int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
-  float large_value = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
-  float small_value = float(FPBits<float>(FPBits<float>::MIN_NORMAL));
+  float large_value = FPBits<float>::max_normal().get_val();
+  float small_value = FPBits<float>::min_normal().get_val();
   auto divfunc = [](float a, float b) {
     __asm__ __volatile__("flds  s0, %0\n\t"
                          "flds  s1, %1\n\t"

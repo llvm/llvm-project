@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Zvk',
-// Vector Cryptography Instructions extension, version 1.0.0-rc1.
+// Vector Cryptography Instructions extension, version Release 1.0.0.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,17 +15,7 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def tuimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<5>;
-  let EncoderMethod = "getUImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let MCOperandPredicate = [{
-    int64_t UImm;
-    if (MCOp.evaluateAsConstantImm(UImm))
-      return isUInt<5>(UImm);
-    return MCOp.isBareSymbolRef();
-  }];
-}
+def tuimm5 : RISCVOp, TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -136,11 +126,11 @@ let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
   def VGMUL_VV : PALUVs2NoVm<0b101000, 0b10001, OPMVV, "vgmul.vv">;
 } // Predicates = [HasStdExtZvkg]
 
-let Predicates = [HasStdExtZvknha], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = NoConstraint in {
   def VSHA2CH_VV : PALUVVNoVm<0b101110, OPMVV, "vsha2ch.vv">;
   def VSHA2CL_VV : PALUVVNoVm<0b101111, OPMVV, "vsha2cl.vv">;
   def VSHA2MS_VV : PALUVVNoVm<0b101101, OPMVV, "vsha2ms.vv">;
-} // Predicates = [HasStdExtZvknha]
+} // Predicates = [HasStdExtZvknhaOrZvknhb]
 
 let Predicates = [HasStdExtZvkned], RVVConstraint = NoConstraint in {
   defm VAESDF     : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
@@ -390,11 +380,11 @@ let Predicates = [HasStdExtZvkned] in {
   defm PseudoVAESZ   : VPseudoVALU_S_NoMask_Zvk;
 } // Predicates = [HasStdExtZvkned]
 
-let Predicates = [HasStdExtZvknha] in {
+let Predicates = [HasStdExtZvknhaOrZvknhb] in {
   defm PseudoVSHA2CH : VPseudoVALU_VV_NoMask_Zvk;
   defm PseudoVSHA2CL : VPseudoVALU_VV_NoMask_Zvk;
   defm PseudoVSHA2MS : VPseudoVALU_VV_NoMask_Zvk;
-} // Predicates = [HasStdExtZvknha]
+} // Predicates = [HasStdExtZvknhaOrZvknhb]
 
 let Predicates = [HasStdExtZvksed] in {
   defm PseudoVSM4K : VPseudoVALU_VI_NoMaskTU_Zvk;
@@ -903,10 +893,16 @@ let Predicates = [HasStdExtZvkned] in {
 } // Predicates = [HasStdExtZvkned]
 
 let Predicates = [HasStdExtZvknha] in {
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors>;
+} // Predicates = [HasStdExtZvknha]
+
+let Predicates = [HasStdExtZvknhb] in {
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32I64IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32I64IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32I64IntegerVectors>;
-} // Predicates = [HasStdExtZvknha]
+} // Predicates = [HasStdExtZvknhb]
 
 let Predicates = [HasStdExtZvksed] in {
   defm : VPatBinaryV_VI_NoMaskTU<"int_riscv_vsm4k", "PseudoVSM4K", I32IntegerVectors>;

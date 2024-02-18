@@ -123,9 +123,12 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
   if (isa<VPReductionIntrinsic>(VPI))
     return false;
   // Fallback to whether the intrinsic is speculatable.
-  std::optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
-  unsigned FunctionalOpc = OpcOpt.value_or((unsigned)Instruction::Call);
-  return isSafeToSpeculativelyExecuteWithOpcode(FunctionalOpc, &VPI);
+  if (auto IntrID = VPI.getFunctionalIntrinsicID())
+    return Intrinsic::getAttributes(VPI.getContext(), *IntrID)
+        .hasFnAttr(Attribute::AttrKind::Speculatable);
+  if (auto Opc = VPI.getFunctionalOpcode())
+    return isSafeToSpeculativelyExecuteWithOpcode(*Opc, &VPI);
+  return false;
 }
 
 //// } Helpers
@@ -726,6 +729,8 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:
   case Intrinsic::vp_minnum:
+  case Intrinsic::vp_maximum:
+  case Intrinsic::vp_minimum:
     return expandPredicationToFPCall(Builder, VPI,
                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:

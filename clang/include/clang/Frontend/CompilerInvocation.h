@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 
+#include "clang/APINotes/APINotesOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -17,11 +18,12 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/InstallAPIOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <memory>
 #include <string>
 
@@ -92,6 +94,9 @@ protected:
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
 
+  /// Options controlling API notes.
+  std::shared_ptr<APINotesOptions> APINotesOpts;
+
   /// Options controlling IRgen and the backend.
   std::shared_ptr<CodeGenOptions> CodeGenOpts;
 
@@ -106,6 +111,9 @@ protected:
 
   /// Options controlling preprocessed output.
   std::shared_ptr<PreprocessorOutputOptions> PreprocessorOutputOpts;
+
+  /// Options controlling InstallAPI operations and output.
+  std::shared_ptr<InstallAPIOptions> InstallAPIOpts;
 
   /// Dummy tag type whose instance can be passed into the constructor to
   /// prevent creation of the reference-counted option objects.
@@ -131,6 +139,7 @@ public:
   const PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
   const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
   const MigratorOptions &getMigratorOpts() const { return *MigratorOpts; }
+  const APINotesOptions &getAPINotesOpts() const { return *APINotesOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return *CodeGenOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return *FSOpts; }
   const FrontendOptions &getFrontendOpts() const { return *FrontendOpts; }
@@ -140,6 +149,7 @@ public:
   const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
     return *PreprocessorOutputOpts;
   }
+  const InstallAPIOptions &getInstallAPIOpts() const { return *InstallAPIOpts; }
   /// @}
 
   /// Command line generation.
@@ -226,11 +236,13 @@ public:
   using CompilerInvocationBase::getPreprocessorOpts;
   using CompilerInvocationBase::getAnalyzerOpts;
   using CompilerInvocationBase::getMigratorOpts;
+  using CompilerInvocationBase::getAPINotesOpts;
   using CompilerInvocationBase::getCodeGenOpts;
   using CompilerInvocationBase::getFileSystemOpts;
   using CompilerInvocationBase::getFrontendOpts;
   using CompilerInvocationBase::getDependencyOutputOpts;
   using CompilerInvocationBase::getPreprocessorOutputOpts;
+  using CompilerInvocationBase::getInstallAPIOpts;
   /// @}
 
   /// Mutable getters.
@@ -242,6 +254,7 @@ public:
   PreprocessorOptions &getPreprocessorOpts() { return *PPOpts; }
   AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
   MigratorOptions &getMigratorOpts() { return *MigratorOpts; }
+  APINotesOptions &getAPINotesOpts() { return *APINotesOpts; }
   CodeGenOptions &getCodeGenOpts() { return *CodeGenOpts; }
   FileSystemOptions &getFileSystemOpts() { return *FSOpts; }
   FrontendOptions &getFrontendOpts() { return *FrontendOpts; }
@@ -251,6 +264,7 @@ public:
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return *PreprocessorOutputOpts;
   }
+  InstallAPIOptions &getInstallAPIOpts() { return *InstallAPIOpts; }
   /// @}
 
   /// Base class internals.
@@ -368,6 +382,7 @@ public:
   PreprocessorOptions &getMutPreprocessorOpts();
   AnalyzerOptions &getMutAnalyzerOpts();
   MigratorOptions &getMutMigratorOpts();
+  APINotesOptions &getMutAPINotesOpts();
   CodeGenOptions &getMutCodeGenOpts();
   FileSystemOptions &getMutFileSystemOpts();
   FrontendOptions &getMutFrontendOpts();

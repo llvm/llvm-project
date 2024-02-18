@@ -22,8 +22,9 @@ define void @test1(ptr %ptr) {
 
 define i64 @OpenFilter(i64 %x) {
 ; CHECK-LABEL: @OpenFilter(
-; CHECK-NEXT:    [[T:%.*]] = sub i64 [[X:%.*]], zext (i8 ptrtoint (ptr @channel_wg4idx to i8) to i64)
-; CHECK-NEXT:    [[R:%.*]] = and i64 [[T]], 255
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i8
+; CHECK-NEXT:    [[T:%.*]] = sub i8 [[TMP1]], ptrtoint (ptr @channel_wg4idx to i8)
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %sub = sub i64 %x, ptrtoint (ptr @channel_wg4idx to i64)

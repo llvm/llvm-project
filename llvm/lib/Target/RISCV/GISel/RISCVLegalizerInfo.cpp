@@ -11,202 +11,517 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "MCTargetDesc/RISCVMatInt.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace LegalityPredicates;
+using namespace LegalizeMutations;
 
-RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
-  const unsigned XLen = ST.getXLen();
-  const LLT XLenLLT = LLT::scalar(XLen);
-  const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
+// Is this type supported by scalar FP arithmetic operations given the current
+// subtarget.
+static LegalityPredicate typeIsScalarFPArith(unsigned TypeIdx,
+                                             const RISCVSubtarget &ST) {
+  return [=, &ST](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isScalar() &&
+           ((ST.hasStdExtF() && Query.Types[TypeIdx].getSizeInBits() == 32) ||
+            (ST.hasStdExtD() && Query.Types[TypeIdx].getSizeInBits() == 64));
+  };
+}
+
+RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
+    : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
+  const LLT sDoubleXLen = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
+  const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
+  const LLT nxv1s8 = LLT::scalable_vector(1, s8);
+  const LLT nxv2s8 = LLT::scalable_vector(2, s8);
+  const LLT nxv4s8 = LLT::scalable_vector(4, s8);
+  const LLT nxv8s8 = LLT::scalable_vector(8, s8);
+  const LLT nxv16s8 = LLT::scalable_vector(16, s8);
+  const LLT nxv32s8 = LLT::scalable_vector(32, s8);
+  const LLT nxv64s8 = LLT::scalable_vector(64, s8);
+
+  const LLT nxv1s16 = LLT::scalable_vector(1, s16);
+  const LLT nxv2s16 = LLT::scalable_vector(2, s16);
+  const LLT nxv4s16 = LLT::scalable_vector(4, s16);
+  const LLT nxv8s16 = LLT::scalable_vector(8, s16);
+  const LLT nxv16s16 = LLT::scalable_vector(16, s16);
+  const LLT nxv32s16 = LLT::scalable_vector(32, s16);
+
+  const LLT nxv1s32 = LLT::scalable_vector(1, s32);
+  const LLT nxv2s32 = LLT::scalable_vector(2, s32);
+  const LLT nxv4s32 = LLT::scalable_vector(4, s32);
+  const LLT nxv8s32 = LLT::scalable_vector(8, s32);
+  const LLT nxv16s32 = LLT::scalable_vector(16, s32);
+
+  const LLT nxv1s64 = LLT::scalable_vector(1, s64);
+  const LLT nxv2s64 = LLT::scalable_vector(2, s64);
+  const LLT nxv4s64 = LLT::scalable_vector(4, s64);
+  const LLT nxv8s64 = LLT::scalable_vector(8, s64);
 
   using namespace TargetOpcode;
 
-  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-      .legalFor({XLenLLT})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, XLenLLT, XLenLLT);
+  auto AllVecTys = {nxv1s8,   nxv2s8,  nxv4s8,  nxv8s8,  nxv16s8, nxv32s8,
+                    nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
+                    nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
+                    nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB})
-      .legalFor({s32, XLenLLT})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+      .legalFor({s32, sXLen})
+      .legalIf(all(
+          typeInSet(0, AllVecTys),
+          LegalityPredicate([=, &ST](const LegalityQuery &Query) {
+            return ST.hasVInstructions() &&
+                   (Query.Types[0].getScalarSizeInBits() != 64 ||
+                    ST.hasVInstructionsI64()) &&
+                   (Query.Types[0].getElementCount().getKnownMinValue() != 1 ||
+                    ST.getELen() == 64);
+          })))
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, XLenLLT);
+      .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, XLenLLT).lower();
+  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .legalFor({{s32, s32}, {XLenLLT, XLenLLT}})
+  auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
+  if (ST.is64Bit())
+    ShiftActions.customFor({{s32, s32}});
+  ShiftActions.legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
-      .clampScalar(1, s32, XLenLLT)
-      .clampScalar(0, s32, XLenLLT);
+      .clampScalar(1, s32, sXLen)
+      .clampScalar(0, s32, sXLen)
+      .minScalarSameAs(1, 0);
 
   if (ST.is64Bit()) {
     getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-        .legalFor({{XLenLLT, s32}})
-        .maxScalar(0, XLenLLT);
+        .legalFor({{sXLen, s32}})
+        .maxScalar(0, sXLen);
 
     getActionDefinitionsBuilder(G_SEXT_INREG)
-        .customFor({XLenLLT})
-        .maxScalar(0, XLenLLT)
+        .customFor({sXLen})
+        .maxScalar(0, sXLen)
         .lower();
   } else {
-    getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
-        .maxScalar(0, XLenLLT);
+    getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT}).maxScalar(0, sXLen);
 
-    getActionDefinitionsBuilder(G_SEXT_INREG)
-        .maxScalar(0, XLenLLT)
-        .lower();
+    getActionDefinitionsBuilder(G_SEXT_INREG).maxScalar(0, sXLen).lower();
   }
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
+    auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    getActionDefinitionsBuilder(Op)
-        .widenScalarToNextPow2(LitTyIdx, XLen)
+    if (XLen == 32 && ST.hasStdExtD()) {
+      MergeUnmergeActions.legalIf(
+          all(typeIs(BigTyIdx, s64), typeIs(LitTyIdx, s32)));
+    }
+    MergeUnmergeActions.widenScalarToNextPow2(LitTyIdx, XLen)
         .widenScalarToNextPow2(BigTyIdx, XLen)
-        .clampScalar(LitTyIdx, XLenLLT, XLenLLT)
-        .clampScalar(BigTyIdx, XLenLLT, XLenLLT);
+        .clampScalar(LitTyIdx, sXLen, sXLen)
+        .clampScalar(BigTyIdx, sXLen, sXLen);
   }
 
-  getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
-      .legalFor({s32, XLenLLT, p0})
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
+  auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
+    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
+    // Widen s32 rotate amount to s64 so SDAG patterns will match.
+    if (ST.is64Bit())
+      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
+                                  changeTo(1, sXLen));
+  }
+  RotateActions.lower();
+
+  getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
+
+  auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
+    BSWAPActions.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
+  else
+    BSWAPActions.maxScalar(0, sXLen).lower();
+
+  auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
+  auto &CountZerosUndefActions =
+      getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
+  if (ST.hasStdExtZbb()) {
+    CountZerosActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    CountZerosUndefActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+  }
+  CountZerosUndefActions.lower();
+
+  auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
+  if (ST.hasStdExtZbb()) {
+    CTPOPActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+  }
+
+  auto &ConstantActions = getActionDefinitionsBuilder(G_CONSTANT);
+  ConstantActions.legalFor({s32, p0});
+  if (ST.is64Bit())
+    ConstantActions.customFor({s64});
+  ConstantActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen);
+
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+      .legalFor({s32, sXLen, p0})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, XLenLLT);
+      .clampScalar(0, s32, sXLen);
 
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{XLenLLT, XLenLLT}, {XLenLLT, p0}})
+      .legalFor({{sXLen, sXLen}, {sXLen, p0}})
       .widenScalarToNextPow2(1)
-      .clampScalar(1, XLenLLT, XLenLLT)
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .clampScalar(1, sXLen, sXLen)
+      .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{XLenLLT, XLenLLT}, {p0, XLenLLT}})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, XLenLLT, XLenLLT)
-      .clampScalar(1, XLenLLT, XLenLLT);
+  auto &SelectActions = getActionDefinitionsBuilder(G_SELECT).legalFor(
+      {{s32, sXLen}, {p0, sXLen}});
+  if (XLen == 64 || ST.hasStdExtD())
+    SelectActions.legalFor({{s64, sXLen}});
+  SelectActions.widenScalarToNextPow2(0)
+      .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
+      .clampScalar(1, sXLen, sXLen);
 
-  getActionDefinitionsBuilder({G_LOAD, G_STORE})
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                 {s32, p0, s16, 16},
-                                 {s32, p0, s32, 32},
-                                 {XLenLLT, p0, s8, 8},
-                                 {XLenLLT, p0, s16, 16},
-                                 {XLenLLT, p0, s32, 32},
-                                 {XLenLLT, p0, XLenLLT, XLen},
-                                 {p0, p0, XLenLLT, XLen}})
-      .clampScalar(0, s32, XLenLLT)
-      .lower();
+  auto &LoadStoreActions =
+      getActionDefinitionsBuilder({G_LOAD, G_STORE})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                     {s32, p0, s16, 16},
+                                     {s32, p0, s32, 32},
+                                     {p0, p0, sXLen, XLen}});
+  auto &ExtLoadActions =
+      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
+  if (XLen == 64) {
+    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
+                                               {s64, p0, s16, 16},
+                                               {s64, p0, s32, 32},
+                                               {s64, p0, s64, 64}});
+    ExtLoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+  } else if (ST.hasStdExtD()) {
+    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
+  }
+  LoadStoreActions.clampScalar(0, s32, sXLen).lower();
+  ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
-  auto &ZExtLoadActions = getActionDefinitionsBuilder(G_ZEXTLOAD)
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                 {s32, p0, s16, 16},
-                                 {XLenLLT, p0, s8, 8},
-                                 {XLenLLT, p0, s16, 16}});
-  if (XLen == 64)
-    ZExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
-  ZExtLoadActions.lower();
-
-  getActionDefinitionsBuilder(G_PTR_ADD)
-      .legalFor({{p0, XLenLLT}});
+  getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalFor({{XLenLLT, p0}})
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .legalFor({{sXLen, p0}})
+      .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(G_INTTOPTR)
-      .legalFor({{p0, XLenLLT}})
-      .clampScalar(1, XLenLLT, XLenLLT);
+      .legalFor({{p0, sXLen}})
+      .clampScalar(1, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_BRCOND)
-      .legalFor({XLenLLT})
-      .minScalar(0, XLenLLT);
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
+
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, sXLen}});
+
+  getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, XLenLLT})
+      .legalFor({p0, sXLen})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, XLenLLT, XLenLLT);
+      .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_GLOBAL_VALUE)
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
       .legalFor({p0});
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
-        .legalFor({s32, XLenLLT})
+        .legalFor({s32, sXLen})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, s32, XLenLLT);
+        .clampScalar(0, s32, sXLen);
 
     // clang-format off
     getActionDefinitionsBuilder({G_SMULH, G_UMULH})
-        .legalFor({XLenLLT})
+        .legalFor({sXLen})
         .lower();
     // clang-format on
 
-    getActionDefinitionsBuilder({G_SMULO, G_UMULO})
-        .minScalar(0, XLenLLT)
-        .lower();
+    getActionDefinitionsBuilder({G_SMULO, G_UMULO}).minScalar(0, sXLen).lower();
   } else {
     getActionDefinitionsBuilder(G_MUL)
-        .libcallFor({XLenLLT, DoubleXLenLLT})
+        .libcallFor({sXLen, sDoubleXLen})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, XLenLLT, DoubleXLenLLT);
+        .clampScalar(0, sXLen, sDoubleXLen);
 
-    getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({XLenLLT});
+    getActionDefinitionsBuilder({G_SMULH, G_UMULH}).lowerFor({sXLen});
 
     getActionDefinitionsBuilder({G_SMULO, G_UMULO})
-        .minScalar(0, XLenLLT)
-        // Widen XLenLLT to DoubleXLenLLT so we can use a single libcall to get
+        .minScalar(0, sXLen)
+        // Widen sXLen to sDoubleXLen so we can use a single libcall to get
         // the low bits for the mul result and high bits to do the overflow
         // check.
-        .widenScalarIf(
-            [=](const LegalityQuery &Query) {
-              return Query.Types[0] == XLenLLT;
-            },
-            [=](const LegalityQuery &Query) {
-              return std::make_pair(0, DoubleXLenLLT);
-            })
+        .widenScalarIf(typeIs(0, sXLen),
+                       LegalizeMutations::changeTo(0, sDoubleXLen))
         .lower();
   }
 
   if (ST.hasStdExtM()) {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
-        .legalFor({s32, XLenLLT})
-        .libcallFor({DoubleXLenLLT})
-        .clampScalar(0, s32, DoubleXLenLLT)
+        .legalFor({s32, sXLen})
+        .libcallFor({sDoubleXLen})
+        .clampScalar(0, s32, sDoubleXLen)
         .widenScalarToNextPow2(0);
   } else {
     getActionDefinitionsBuilder({G_UDIV, G_SDIV, G_UREM, G_SREM})
-        .libcallFor({XLenLLT, DoubleXLenLLT})
-        .clampScalar(0, XLenLLT, DoubleXLenLLT)
+        .libcallFor({sXLen, sDoubleXLen})
+        .clampScalar(0, sXLen, sDoubleXLen)
         .widenScalarToNextPow2(0);
   }
 
-  getActionDefinitionsBuilder(G_ABS).lower();
-  getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN}).lower();
+  auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
+  if (ST.hasStdExtZbb())
+    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
+  AbsActions.lower();
+
+  auto &MinMaxActions =
+      getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
+  if (ST.hasStdExtZbb())
+    MinMaxActions.legalFor({sXLen}).minScalar(0, sXLen);
+  MinMaxActions.lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
+
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+
+  // FP Operations
+
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
+                               G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+      .legalIf(typeIsScalarFPArith(0, ST));
+
+  getActionDefinitionsBuilder(G_FCOPYSIGN)
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
+
+  getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
+      [=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtD() && typeIs(0, s32)(Query) &&
+                typeIs(1, s64)(Query));
+      });
+  getActionDefinitionsBuilder(G_FPEXT).legalIf(
+      [=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtD() && typeIs(0, s64)(Query) &&
+                typeIs(1, s32)(Query));
+      });
+
+  getActionDefinitionsBuilder(G_FCMP)
+      .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
+      .clampScalar(0, sXLen, sXLen);
+
+  // TODO: Support vector version of G_IS_FPCLASS.
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
+
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf(typeIsScalarFPArith(0, ST))
+      .lowerFor({s32, s64});
+
+  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, sXLen);
+
+  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
+      .widenScalarToNextPow2(1)
+      .clampScalar(1, s32, sXLen);
+
+  // FIXME: We can do custom inline expansion like SelectionDAG.
+  // FIXME: Legal with Zfa.
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
+      .libcallFor({s32, s64});
+
+  getActionDefinitionsBuilder(G_VASTART).customFor({p0});
+
+  // va_list must be a pointer, but most sized types are pretty easy to handle
+  // as the destination.
+  getActionDefinitionsBuilder(G_VAARG)
+      // TODO: Implement narrowScalar and widenScalar for G_VAARG for types
+      // outside the [s32, sXLen] range.
+      .clampScalar(0, s32, sXLen)
+      .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
 
   getLegacyLegalizerInfo().computeTables();
 }
 
-bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                        MachineInstr &MI) const {
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
+  return IntegerType::get(C, Ty.getSizeInBits());
+}
+
+bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                           MachineInstr &MI) const {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  switch (IntrinsicID) {
+  default:
+    return false;
+  case Intrinsic::vacopy: {
+    // vacopy arguments must be legal because of the intrinsic signature.
+    // No need to check here.
+
+    MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+    MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+    MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    LLVMContext &Ctx = MF.getFunction().getContext();
+
+    Register DstLst = MI.getOperand(1).getReg();
+    LLT PtrTy = MRI.getType(DstLst);
+
+    // Load the source va_list
+    Align Alignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, Alignment);
+    auto Tmp = MIRBuilder.buildLoad(PtrTy, MI.getOperand(2), *LoadMMO);
+
+    // Store the result in the destination va_list
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, Alignment);
+    MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  }
+}
+
+bool RISCVLegalizerInfo::legalizeShlAshrLshr(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR ||
+         MI.getOpcode() == TargetOpcode::G_SHL);
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
+  // imported patterns can select it later. Either way, it will be legal.
+  Register AmtReg = MI.getOperand(2).getReg();
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
+  if (!VRegAndVal)
+    return true;
+  // Check the shift amount is in range for an immediate form.
+  uint64_t Amount = VRegAndVal->Value.getZExtValue();
+  if (Amount > 31)
+    return true; // This will have to remain a register variant.
+  auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(ExtCst.getReg(0));
+  Observer.changedInstr(MI);
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
+                                         MachineIRBuilder &MIRBuilder) const {
+  // Stores the address of the VarArgsFrameIndex slot into the memory location
+  assert(MI.getOpcode() == TargetOpcode::G_VASTART);
+  MachineFunction *MF = MI.getParent()->getParent();
+  RISCVMachineFunctionInfo *FuncInfo = MF->getInfo<RISCVMachineFunctionInfo>();
+  int FI = FuncInfo->getVarArgsFrameIndex();
+  LLT AddrTy = MIRBuilder.getMRI()->getType(MI.getOperand(0).getReg());
+  auto FINAddr = MIRBuilder.buildFrameIndex(AddrTy, FI);
+  assert(MI.hasOneMemOperand());
+  MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
+                        *MI.memoperands()[0]);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
+                                                bool ShouldOptForSize) const {
+  assert(APImm.getBitWidth() == 32 || APImm.getBitWidth() == 64);
+  int64_t Imm = APImm.getSExtValue();
+  // All simm32 constants should be handled by isel.
+  // NOTE: The getMaxBuildIntsCost call below should return a value >= 2 making
+  // this check redundant, but small immediates are common so this check
+  // should have better compile time.
+  if (isInt<32>(Imm))
+    return false;
+
+  // We only need to cost the immediate, if constant pool lowering is enabled.
+  if (!STI.useConstantPoolForLargeInts())
+    return false;
+
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
+  if (Seq.size() <= STI.getMaxBuildIntsCost())
+    return false;
+
+  // Optimizations below are disabled for opt size. If we're optimizing for
+  // size, use a constant pool.
+  if (ShouldOptForSize)
+    return true;
+  //
+  // Special case. See if we can build the constant as (ADD (SLLI X, C), X) do
+  // that if it will avoid a constant pool.
+  // It will require an extra temporary register though.
+  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
+  // low and high 32 bits are the same and bit 31 and 63 are set.
+  unsigned ShiftAmt, AddOpc;
+  RISCVMatInt::InstSeq SeqLo =
+      RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
+  return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
+}
+
+bool RISCVLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
+  MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.
     return false;
+  case TargetOpcode::G_ABS:
+    return Helper.lowerAbsToMaxNeg(MI);
+  // TODO: G_FCONSTANT
+  case TargetOpcode::G_CONSTANT: {
+    const Function &F = MF.getFunction();
+    // TODO: if PSI and BFI are present, add " ||
+    // llvm::shouldOptForSize(*CurMBB, PSI, BFI)".
+    bool ShouldOptForSize = F.hasOptSize() || F.hasMinSize();
+    const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
+    if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
+      return true;
+    return Helper.lowerConstant(MI);
+  }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+    return legalizeShlAshrLshr(MI, MIRBuilder, Observer);
   case TargetOpcode::G_SEXT_INREG: {
     // Source size of 32 is sext.w.
     int64_t SizeInBits = MI.getOperand(2).getImm();
@@ -216,6 +531,27 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
   }
+  case TargetOpcode::G_IS_FPCLASS: {
+    Register GISFPCLASS = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    const MachineOperand &ImmOp = MI.getOperand(2);
+    MachineIRBuilder MIB(MI);
+
+    // Turn LLVM IR's floating point classes to that in RISC-V,
+    // by simply rotating the 10-bit immediate right by two bits.
+    APInt GFpClassImm(10, static_cast<uint64_t>(ImmOp.getImm()));
+    auto FClassMask = MIB.buildConstant(sXLen, GFpClassImm.rotr(2).zext(XLen));
+    auto ConstZero = MIB.buildConstant(sXLen, 0);
+
+    auto GFClass = MIB.buildInstr(RISCV::G_FCLASS, {sXLen}, {Src});
+    auto And = MIB.buildAnd(sXLen, GFClass, FClassMask);
+    MIB.buildICmp(CmpInst::ICMP_NE, GISFPCLASS, And, ConstZero);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_VASTART:
+    return legalizeVAStart(MI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

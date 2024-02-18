@@ -21,6 +21,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array;
 
+template <size_t _Ip, class _Tp, size_t _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp& get(array<_Tp, _Size>&) _NOEXCEPT;
+
+template <size_t _Ip, class _Tp, size_t _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp& get(const array<_Tp, _Size>&) _NOEXCEPT;
+
+#ifndef _LIBCPP_CXX03_LANG
+template <size_t _Ip, class _Tp, size_t _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp&& get(array<_Tp, _Size>&&) _NOEXCEPT;
+
+template <size_t _Ip, class _Tp, size_t _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&& get(const array<_Tp, _Size>&&) _NOEXCEPT;
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___FWD_ARRAY_H

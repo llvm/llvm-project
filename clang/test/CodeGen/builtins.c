@@ -64,6 +64,9 @@ int main(void) {
   P(isinf_sign, (1.));
   P(isnan, (1.));
   P(isfinite, (1.));
+  P(iszero, (1.));
+  P(issubnormal, (1.));
+  P(issignaling, (1.));
   P(isfpclass, (1., 1));
 
   // Bitwise & Numeric Functions
@@ -199,6 +202,21 @@ void test_conditional_bzero(void) {
   // CHECK-NOT: phi
 }
 
+// CHECK-LABEL: define{{.*}} void @test_conditional_bcopy
+void test_conditional_bcopy(void) {
+  char dst[20];
+  char src[20];
+  int _sz = 20, len = 20;
+  return (_sz
+          ? ((_sz >= len)
+              ? __builtin_bcopy(src, dst, len)
+              : foo())
+          : __builtin_bcopy(src, dst, len));
+  // CHECK: call void @llvm.memmove
+  // CHECK: call void @llvm.memmove
+  // CHECK-NOT: phi
+}
+
 // CHECK-LABEL: define{{.*}} void @test_float_builtins
 void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   volatile int res;
@@ -268,6 +286,18 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 
   res = __builtin_isnormal(F);
   // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 264)
+  // CHECK: zext i1 [[TMP]] to i32
+
+  res = __builtin_issubnormal(F);
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 144)
+  // CHECK: zext i1 [[TMP]] to i32
+
+  res = __builtin_iszero(F);
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 96)
+  // CHECK: zext i1 [[TMP]] to i32
+
+  res = __builtin_issignaling(F);
+  // CHECK: [[TMP:%.*]] = call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 1)
   // CHECK: zext i1 [[TMP]] to i32
 
   res = __builtin_flt_rounds();
@@ -464,6 +494,12 @@ void test_memory_builtins(int n) {
 long long test_builtin_readcyclecounter(void) {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_readcyclecounter();
+}
+
+// CHECK-LABEL: define{{.*}} i64 @test_builtin_readsteadycounter
+long long test_builtin_readsteadycounter(void) {
+  // CHECK: call i64 @llvm.readsteadycounter()
+  return __builtin_readsteadycounter();
 }
 
 /// __builtin_launder should be a NOP in C since there are no vtables.

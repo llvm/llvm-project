@@ -384,7 +384,7 @@ private:
 
   Type *VoidTy = Type::getVoidTy(M.getContext());
   Type *IntptrTy;
-  Type *Int8PtrTy;
+  PointerType *PtrTy;
   Type *Int8Ty;
   Type *Int32Ty;
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
@@ -587,7 +587,7 @@ void HWAddressSanitizer::initializeModule() {
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
   IntptrTy = IRB.getIntPtrTy(DL);
-  Int8PtrTy = IRB.getInt8PtrTy();
+  PtrTy = IRB.getPtrTy();
   Int8Ty = IRB.getInt8Ty();
   Int32Ty = IRB.getInt32Ty();
 
@@ -667,19 +667,19 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
         FunctionType::get(VoidTy, {IntptrTy, IntptrTy, Int8Ty}, false);
     HwasanMemoryAccessCallbackFnTy =
         FunctionType::get(VoidTy, {IntptrTy, Int8Ty}, false);
-    HwasanMemTransferFnTy = FunctionType::get(
-        Int8PtrTy, {Int8PtrTy, Int8PtrTy, IntptrTy, Int8Ty}, false);
-    HwasanMemsetFnTy = FunctionType::get(
-        Int8PtrTy, {Int8PtrTy, Int32Ty, IntptrTy, Int8Ty}, false);
+    HwasanMemTransferFnTy =
+        FunctionType::get(PtrTy, {PtrTy, PtrTy, IntptrTy, Int8Ty}, false);
+    HwasanMemsetFnTy =
+        FunctionType::get(PtrTy, {PtrTy, Int32Ty, IntptrTy, Int8Ty}, false);
   } else {
     HwasanMemoryAccessCallbackSizedFnTy =
         FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false);
     HwasanMemoryAccessCallbackFnTy =
         FunctionType::get(VoidTy, {IntptrTy}, false);
     HwasanMemTransferFnTy =
-        FunctionType::get(Int8PtrTy, {Int8PtrTy, Int8PtrTy, IntptrTy}, false);
+        FunctionType::get(PtrTy, {PtrTy, PtrTy, IntptrTy}, false);
     HwasanMemsetFnTy =
-        FunctionType::get(Int8PtrTy, {Int8PtrTy, Int32Ty, IntptrTy}, false);
+        FunctionType::get(PtrTy, {PtrTy, Int32Ty, IntptrTy}, false);
   }
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
@@ -713,7 +713,7 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
       MemIntrinCallbackPrefix + "memset" + MatchAllStr, HwasanMemsetFnTy);
 
   HwasanTagMemoryFunc = M.getOrInsertFunction("__hwasan_tag_memory", VoidTy,
-                                              Int8PtrTy, Int8Ty, IntptrTy);
+                                              PtrTy, Int8Ty, IntptrTy);
   HwasanGenerateTagFunc =
       M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty);
 
@@ -733,7 +733,7 @@ Value *HWAddressSanitizer::getOpaqueNoopCast(IRBuilder<> &IRB, Value *Val) {
   // This prevents code bloat as a result of rematerializing trivial definitions
   // such as constants or global addresses at every load and store.
   InlineAsm *Asm =
-      InlineAsm::get(FunctionType::get(Int8PtrTy, {Val->getType()}, false),
+      InlineAsm::get(FunctionType::get(PtrTy, {Val->getType()}, false),
                      StringRef(""), StringRef("=r,0"),
                      /*hasSideEffects=*/false);
   return IRB.CreateCall(Asm, {Val}, ".hwasan.shadow");
@@ -747,15 +747,15 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
   if (Mapping.Offset != kDynamicShadowSentinel)
     return getOpaqueNoopCast(
         IRB, ConstantExpr::getIntToPtr(
-                 ConstantInt::get(IntptrTy, Mapping.Offset), Int8PtrTy));
+                 ConstantInt::get(IntptrTy, Mapping.Offset), PtrTy));
 
   if (Mapping.InGlobal)
     return getDynamicShadowIfunc(IRB);
 
   Value *GlobalDynamicAddress =
       IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
-          kHwasanShadowMemoryDynamicAddress, Int8PtrTy);
-  return IRB.CreateLoad(Int8PtrTy, GlobalDynamicAddress);
+          kHwasanShadowMemoryDynamicAddress, PtrTy);
+  return IRB.CreateLoad(PtrTy, GlobalDynamicAddress);
 }
 
 bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
@@ -860,9 +860,9 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   // Mem >> Scale
   Value *Shadow = IRB.CreateLShr(Mem, Mapping.Scale);
   if (Mapping.Offset == 0)
-    return IRB.CreateIntToPtr(Shadow, Int8PtrTy);
+    return IRB.CreateIntToPtr(Shadow, PtrTy);
   // (Mem >> Scale) + Offset
-  return IRB.CreateGEP(Int8Ty, ShadowBase, Shadow);
+  return IRB.CreatePtrAdd(ShadowBase, Shadow);
 }
 
 int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
@@ -917,7 +917,6 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
   IRB.CreateCall(Intrinsic::getDeclaration(
                      M, UseShortGranules
                             ? Intrinsic::hwasan_check_memaccess_shortgranules
@@ -953,7 +952,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *InlineTagAddr = IRB.CreateOr(TCI.AddrLong, 15);
-  InlineTagAddr = IRB.CreateIntToPtr(InlineTagAddr, Int8PtrTy);
+  InlineTagAddr = IRB.CreateIntToPtr(InlineTagAddr, PtrTy);
   Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
   Value *InlineTagMismatch = IRB.CreateICmpNE(TCI.PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, TCI.TagMismatchTerm, false,
@@ -1014,8 +1013,7 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
     SmallVector<Value *, 4> Args{
-        IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-        IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
+        MI->getOperand(0), MI->getOperand(1),
         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)};
 
     if (UseMatchAllCallback)
@@ -1023,7 +1021,7 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
     IRB.CreateCall(isa<MemMoveInst>(MI) ? HwasanMemmove : HwasanMemcpy, Args);
   } else if (isa<MemSetInst>(MI)) {
     SmallVector<Value *, 4> Args{
-        IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        MI->getOperand(0),
         IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)};
     if (UseMatchAllCallback)
@@ -1085,7 +1083,7 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
   Tag = IRB.CreateTrunc(Tag, Int8Ty);
   if (InstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
-                   {IRB.CreatePointerCast(AI, Int8PtrTy), Tag,
+                   {IRB.CreatePointerCast(AI, PtrTy), Tag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
   } else {
     size_t ShadowSize = Size >> Mapping.Scale;
@@ -1103,9 +1101,9 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
       const uint8_t SizeRemainder = Size % Mapping.getObjectAlignment().value();
       IRB.CreateStore(ConstantInt::get(Int8Ty, SizeRemainder),
                       IRB.CreateConstGEP1_32(Int8Ty, ShadowPtr, ShadowSize));
-      IRB.CreateStore(Tag, IRB.CreateConstGEP1_32(
-                               Int8Ty, IRB.CreatePointerCast(AI, Int8PtrTy),
-                               AlignedSize - 1));
+      IRB.CreateStore(
+          Tag, IRB.CreateConstGEP1_32(Int8Ty, IRB.CreatePointerCast(AI, PtrTy),
+                                      AlignedSize - 1));
     }
   }
 }
@@ -1219,10 +1217,8 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
     // in Bionic's libc/private/bionic_tls.h.
     Function *ThreadPointerFunc =
         Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
-    Value *SlotPtr = IRB.CreatePointerCast(
-        IRB.CreateConstGEP1_32(Int8Ty, IRB.CreateCall(ThreadPointerFunc), 0x30),
-        Ty->getPointerTo(0));
-    return SlotPtr;
+    return IRB.CreateConstGEP1_32(Int8Ty, IRB.CreateCall(ThreadPointerFunc),
+                                  0x30);
   }
   if (ThreadPtrGlobal)
     return ThreadPtrGlobal;
@@ -1244,7 +1240,7 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
     Module *M = F->getParent();
     auto *GetStackPointerFn = Intrinsic::getDeclaration(
         M, Intrinsic::frameaddress,
-        IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
+        IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
     CachedSP = IRB.CreatePtrToInt(
         IRB.CreateCall(GetStackPointerFn, {Constant::getNullValue(Int32Ty)}),
         IntptrTy);
@@ -1307,8 +1303,8 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
 
       // Store data to ring buffer.
       Value *FrameRecordInfo = getFrameRecordInfo(IRB);
-      Value *RecordPtr = IRB.CreateIntToPtr(ThreadLongMaybeUntagged,
-                                            IntptrTy->getPointerTo(0));
+      Value *RecordPtr =
+          IRB.CreateIntToPtr(ThreadLongMaybeUntagged, IRB.getPtrTy(0));
       IRB.CreateStore(FrameRecordInfo, RecordPtr);
 
       // Update the ring buffer. Top byte of ThreadLong defines the size of the
@@ -1345,7 +1341,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
             ThreadLongMaybeUntagged,
             ConstantInt::get(IntptrTy, (1ULL << kShadowBaseAlignment) - 1)),
         ConstantInt::get(IntptrTy, 1), "hwasan.shadow");
-    ShadowBase = IRB.CreateIntToPtr(ShadowBase, Int8PtrTy);
+    ShadowBase = IRB.CreateIntToPtr(ShadowBase, PtrTy);
   }
 }
 
@@ -1361,7 +1357,7 @@ Value *HWAddressSanitizer::readRegister(IRBuilder<> &IRB, StringRef Name) {
 bool HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
-    IRBuilder<> IRB(LP->getNextNode());
+    IRBuilder<> IRB(LP->getNextNonDebugInstruction());
     IRB.CreateCall(
         HwasanHandleVfork,
         {readRegister(IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp"
@@ -1373,6 +1369,14 @@ bool HWAddressSanitizer::instrumentLandingPads(
 static bool isLifetimeIntrinsic(Value *V) {
   auto *II = dyn_cast<IntrinsicInst>(V);
   return II && II->isLifetimeStartOrEnd();
+}
+
+static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+
+static DPValue *DynCastToDbgAssign(DPValue *DPV) {
+  return DPV->isDbgAssign() ? DPV : nullptr;
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
@@ -1391,7 +1395,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     auto N = I++;
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
-    IRBuilder<> IRB(AI->getNextNode());
+    IRBuilder<> IRB(AI->getNextNonDebugInstruction());
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1405,7 +1409,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    Value *AICast = IRB.CreatePointerCast(AI, Int8PtrTy);
+    Value *AICast = IRB.CreatePointerCast(AI, PtrTy);
 
     auto HandleLifetime = [&](IntrinsicInst *II) {
       // Set the lifetime intrinsic to cover the whole alloca. This reduces the
@@ -1429,17 +1433,27 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       return User != AILong && User != AICast && !isLifetimeIntrinsic(User);
     });
 
-    for (auto *DDI : Info.DbgVariableIntrinsics) {
+    // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
+    // abstracted over whether they're intrinsic-stored or DPValue stored.
+    auto AnnotateDbgRecord = [&](auto *DPtr) {
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense
       // to put it at the beginning of the expression.
       SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
                                          retagMask(N)};
-      for (size_t LocNo = 0; LocNo < DDI->getNumVariableLocationOps(); ++LocNo)
-        if (DDI->getVariableLocationOp(LocNo) == AI)
-          DDI->setExpression(DIExpression::appendOpsToArg(DDI->getExpression(),
-                                                          NewOps, LocNo));
-    }
+      for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
+        if (DPtr->getVariableLocationOp(LocNo) == AI)
+          DPtr->setExpression(DIExpression::appendOpsToArg(
+              DPtr->getExpression(), NewOps, LocNo));
+      if (auto *DAI = DynCastToDbgAssign(DPtr)) {
+        if (DAI->getAddress() == AI)
+          DAI->setAddressExpression(DIExpression::prependOpcodes(
+              DAI->getAddressExpression(), NewOps));
+      }
+    };
+
+    llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
+    llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
@@ -1454,10 +1468,10 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
+        !SInfo.CallsReturnTwice &&
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   &LI, ClMaxLifetimes) &&
-        !SInfo.CallsReturnTwice;
+                                   &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
@@ -1536,8 +1550,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   assert(!ShadowBase);
 
-  Instruction *InsertPt = &*F.getEntryBlock().begin();
-  IRBuilder<> EntryIRB(InsertPt);
+  BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
+  IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
                    Mapping.WithFrameRecord &&
@@ -1556,12 +1570,12 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   // entry block back into the entry block so that they aren't treated as
   // dynamic allocas.
   if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
-    InsertPt = &*F.getEntryBlock().begin();
+    InsertPt = F.getEntryBlock().begin();
     for (Instruction &I :
          llvm::make_early_inc_range(*EntryIRB.GetInsertBlock())) {
       if (auto *AI = dyn_cast<AllocaInst>(&I))
         if (isa<ConstantInt>(AI->getArraySize()))
-          I.moveBefore(InsertPt);
+          I.moveBefore(F.getEntryBlock(), InsertPt);
     }
   }
 
@@ -1666,7 +1680,7 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (GV.hasSanitizerMetadata() && GV.getSanitizerMetadata().NoHWAddress)
       continue;
 
-    if (GV.isDeclarationForLinker() || GV.getName().startswith("llvm.") ||
+    if (GV.isDeclarationForLinker() || GV.getName().starts_with("llvm.") ||
         GV.isThreadLocal())
       continue;
 
@@ -1724,8 +1738,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
     return;
 
   FunctionCallee HwasanPersonalityWrapper = M.getOrInsertFunction(
-      "__hwasan_personality_wrapper", Int32Ty, Int32Ty, Int32Ty, Int64Ty,
-      Int8PtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy);
+      "__hwasan_personality_wrapper", Int32Ty, Int32Ty, Int32Ty, Int64Ty, PtrTy,
+      PtrTy, PtrTy, PtrTy, PtrTy);
   FunctionCallee UnwindGetGR = M.getOrInsertFunction("_Unwind_GetGR", VoidTy);
   FunctionCallee UnwindGetCFA = M.getOrInsertFunction("_Unwind_GetCFA", VoidTy);
 
@@ -1734,7 +1748,7 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
     if (P.first)
       ThunkName += ("." + P.first->getName()).str();
     FunctionType *ThunkFnTy = FunctionType::get(
-        Int32Ty, {Int32Ty, Int32Ty, Int64Ty, Int8PtrTy, Int8PtrTy}, false);
+        Int32Ty, {Int32Ty, Int32Ty, Int64Ty, PtrTy, PtrTy}, false);
     bool IsLocal = P.first && (!isa<GlobalValue>(P.first) ||
                                cast<GlobalValue>(P.first)->hasLocalLinkage());
     auto *ThunkFn = Function::Create(ThunkFnTy,
@@ -1752,10 +1766,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
         HwasanPersonalityWrapper,
         {ThunkFn->getArg(0), ThunkFn->getArg(1), ThunkFn->getArg(2),
          ThunkFn->getArg(3), ThunkFn->getArg(4),
-         P.first ? IRB.CreateBitCast(P.first, Int8PtrTy)
-                 : Constant::getNullValue(Int8PtrTy),
-         IRB.CreateBitCast(UnwindGetGR.getCallee(), Int8PtrTy),
-         IRB.CreateBitCast(UnwindGetCFA.getCallee(), Int8PtrTy)});
+         P.first ? P.first : Constant::getNullValue(PtrTy),
+         UnwindGetGR.getCallee(), UnwindGetCFA.getCallee()});
     WrapperCall->setTailCall();
     IRB.CreateRet(WrapperCall);
 

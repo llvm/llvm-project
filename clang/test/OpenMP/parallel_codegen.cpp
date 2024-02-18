@@ -812,7 +812,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_..omp_par
-// CHECK3-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR2:[0-9]+]]
 // CHECK3-NEXT:  omp.par.entry:
 // CHECK3-NEXT:    [[GEP__RELOADED:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK3-NEXT:    [[LOADGEP__RELOADED:%.*]] = load ptr, ptr [[GEP__RELOADED]], align 8
@@ -956,7 +956,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_..omp_par
-// CHECK4-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG57:![0-9]+]] {
+// CHECK4-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] !dbg [[DBG57:![0-9]+]] {
 // CHECK4-NEXT:  omp.par.entry:
 // CHECK4-NEXT:    [[GEP__RELOADED:%.*]] = getelementptr { ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK4-NEXT:    [[LOADGEP__RELOADED:%.*]] = load ptr, ptr [[GEP__RELOADED]], align 8

@@ -923,15 +923,16 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
 
   case GETDAGOP:
     if (DagInit *Dag = dyn_cast<DagInit>(LHS)) {
-      DefInit *DI = DefInit::get(Dag->getOperatorAsDef({}));
-      if (!DI->getType()->typeIsA(getType())) {
+      // TI is not necessarily a def due to the late resolution in multiclasses,
+      // but has to be a TypedInit.
+      auto *TI = cast<TypedInit>(Dag->getOperator());
+      if (!TI->getType()->typeIsA(getType())) {
         PrintFatalError(CurRec->getLoc(),
-                        Twine("Expected type '") +
-                        getType()->getAsString() + "', got '" +
-                        DI->getType()->getAsString() + "' in: " +
-                        getAsString() + "\n");
+                        Twine("Expected type '") + getType()->getAsString() +
+                            "', got '" + TI->getType()->getAsString() +
+                            "' in: " + getAsString() + "\n");
       } else {
-        return DI;
+        return Dag->getOperator();
       }
     }
     break;
@@ -2263,9 +2264,9 @@ void VarDefInit::Profile(FoldingSetNodeID &ID) const {
 DefInit *VarDefInit::instantiate() {
   if (!Def) {
     RecordKeeper &Records = Class->getRecords();
-    auto NewRecOwner = std::make_unique<Record>(Records.getNewAnonymousName(),
-                                           Class->getLoc(), Records,
-                                           /*IsAnonymous=*/true);
+    auto NewRecOwner =
+        std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
+                                 Records, Record::RK_AnonymousDef);
     Record *NewRec = NewRecOwner.get();
 
     // Copy values from class to instance

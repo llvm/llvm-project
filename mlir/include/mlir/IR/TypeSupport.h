@@ -39,13 +39,19 @@ public:
   /// reference to it.
   static const AbstractType &lookup(TypeID typeID, MLIRContext *context);
 
+  /// Look up the specified abstract type in the MLIRContext and return a
+  /// reference to it if it exists.
+  static std::optional<std::reference_wrapper<const AbstractType>>
+  lookup(StringRef name, MLIRContext *context);
+
   /// This method is used by Dialect objects when they register the list of
   /// types they contain.
   template <typename T>
   static AbstractType get(Dialect &dialect) {
     return AbstractType(dialect, T::getInterfaceMap(), T::getHasTraitFn(),
                         T::getWalkImmediateSubElementsFn(),
-                        T::getReplaceImmediateSubElementsFn(), T::getTypeID());
+                        T::getReplaceImmediateSubElementsFn(), T::getTypeID(),
+                        T::name);
   }
 
   /// This method is used by Dialect objects to register types with
@@ -57,10 +63,10 @@ public:
       HasTraitFn &&hasTrait,
       WalkImmediateSubElementsFn walkImmediateSubElementsFn,
       ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
-      TypeID typeID) {
+      TypeID typeID, StringRef name) {
     return AbstractType(dialect, std::move(interfaceMap), std::move(hasTrait),
                         walkImmediateSubElementsFn,
-                        replaceImmediateSubElementsFn, typeID);
+                        replaceImmediateSubElementsFn, typeID, name);
   }
 
   /// Return the dialect this type was registered to.
@@ -100,17 +106,20 @@ public:
   /// Return the unique identifier representing the concrete type class.
   TypeID getTypeID() const { return typeID; }
 
+  /// Return the unique name representing the type.
+  StringRef getName() const { return name; }
+
 private:
   AbstractType(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
                HasTraitFn &&hasTrait,
                WalkImmediateSubElementsFn walkImmediateSubElementsFn,
                ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
-               TypeID typeID)
+               TypeID typeID, StringRef name)
       : dialect(dialect), interfaceMap(std::move(interfaceMap)),
         hasTraitFn(std::move(hasTrait)),
         walkImmediateSubElementsFn(walkImmediateSubElementsFn),
         replaceImmediateSubElementsFn(replaceImmediateSubElementsFn),
-        typeID(typeID) {}
+        typeID(typeID), name(name) {}
 
   /// Give StorageUserBase access to the mutable lookup.
   template <typename ConcreteT, typename BaseT, typename StorageT,
@@ -139,6 +148,10 @@ private:
 
   /// The unique identifier of the derived Type class.
   const TypeID typeID;
+
+  /// The unique name of this type. The string is not owned by the context, so
+  /// The lifetime of this string should outlive the MLIR context.
+  const StringRef name;
 };
 
 //===----------------------------------------------------------------------===//

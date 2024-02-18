@@ -96,22 +96,25 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     ${lldb_python_target_dir}
     "utils"
     FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
-          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
+          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py"
+  )
 
   create_python_package(
     ${swig_target}
     ${lldb_python_target_dir}
     "plugins"
     FILES
-    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_process.py"
-    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_platform.py")
+    "${LLDB_SOURCE_DIR}/examples/python/templates/parsed_cmd.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_process.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py")
 
   if(APPLE)
     create_python_package(
       ${swig_target}
       ${lldb_python_target_dir} "macosx"
       FILES "${LLDB_SOURCE_DIR}/examples/python/crashlog.py"
-            "${LLDB_SOURCE_DIR}/examples/python/scripted_process/crashlog_scripted_process.py"
+            "${LLDB_SOURCE_DIR}/examples/python/crashlog_scripted_process.py"
             "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap.py")
 
     create_python_package(

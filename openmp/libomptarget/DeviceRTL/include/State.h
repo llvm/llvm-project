@@ -12,6 +12,8 @@
 #ifndef OMPTARGET_STATE_H
 #define OMPTARGET_STATE_H
 
+#include "Shared/Environment.h"
+
 #include "Debug.h"
 #include "Mapping.h"
 #include "Types.h"
@@ -117,10 +119,15 @@ extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
+void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+          KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
 
-/// Return the kernel environment associated with the current kernel.
+/// Return the kernel and kernel launch environment associated with the current
+/// kernel. The former is static and contains compile time information that
+/// holds for all instances of the kernel. The latter is dynamic and provides
+/// per-launch information.
 KernelEnvironmentTy &getKernelEnvironment();
+KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
 
 /// TODO
 enum ValueKind {
@@ -233,29 +240,29 @@ lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
 /// update ICV values we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct Value {
   [[gnu::flatten, gnu::always_inline]] operator Ty() {
-    return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr,
-                  /* ForceTeamState */ false);
+    return lookup(/*IsReadonly=*/true, /*IdentTy=*/nullptr,
+                  /*ForceTeamState=*/false);
   }
 
   [[gnu::flatten, gnu::always_inline]] Value &operator=(const Ty &Other) {
-    set(Other, /* IdentTy */ nullptr);
+    set(Other, /*IdentTy=*/nullptr);
     return *this;
   }
 
   [[gnu::flatten, gnu::always_inline]] Value &operator++() {
-    inc(1, /* IdentTy */ nullptr);
+    inc(1, /*IdentTy=*/nullptr);
     return *this;
   }
 
   [[gnu::flatten, gnu::always_inline]] Value &operator--() {
-    inc(-1, /* IdentTy */ nullptr);
+    inc(-1, /*IdentTy=*/nullptr);
     return *this;
   }
 
   [[gnu::flatten, gnu::always_inline]] void
   assert_eq(const Ty &V, IdentTy *Ident = nullptr,
             bool ForceTeamState = false) {
-    ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V, nullptr);
+    ASSERT(lookup(/*IsReadonly=*/true, Ident, ForceTeamState) == V, nullptr);
   }
 
 private:
@@ -266,12 +273,12 @@ private:
   }
 
   [[gnu::flatten, gnu::always_inline]] Ty &inc(int UpdateVal, IdentTy *Ident) {
-    return (lookup(/* IsReadonly */ false, Ident, /* ForceTeamState */ false) +=
+    return (lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false) +=
             UpdateVal);
   }
 
   [[gnu::flatten, gnu::always_inline]] Ty &set(Ty UpdateVal, IdentTy *Ident) {
-    return (lookup(/* IsReadonly */ false, Ident, /* ForceTeamState */ false) =
+    return (lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false) =
                 UpdateVal);
   }
 
@@ -283,8 +290,8 @@ private:
 /// we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct PtrValue {
   [[gnu::flatten, gnu::always_inline]] operator Ty() {
-    return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr,
-                  /* ForceTeamState */ false);
+    return lookup(/*IsReadonly=*/true, /*IdentTy=*/nullptr,
+                  /*ForceTeamState=*/false);
   }
 
   [[gnu::flatten, gnu::always_inline]] PtrValue &operator=(const Ty Other) {
@@ -298,8 +305,8 @@ private:
   }
 
   Ty &set(Ty UpdateVal) {
-    return (lookup(/* IsReadonly */ false, /* IdentTy */ nullptr,
-                   /* ForceTeamState */ false) = UpdateVal);
+    return (lookup(/*IsReadonly=*/false, /*IdentTy=*/nullptr,
+                   /*ForceTeamState=*/false) = UpdateVal);
   }
 
   template <typename VTy, typename Ty2> friend struct ValueRAII;
@@ -308,7 +315,7 @@ private:
 template <typename VTy, typename Ty> struct ValueRAII {
   ValueRAII(VTy &V, Ty NewValue, Ty OldValue, bool Active, IdentTy *Ident,
             bool ForceTeamState = false)
-      : Ptr(Active ? &V.lookup(/* IsReadonly */ false, Ident, ForceTeamState)
+      : Ptr(Active ? &V.lookup(/*IsReadonly=*/false, Ident, ForceTeamState)
                    : (Ty *)utils::UndefPtr),
         Val(OldValue), Active(Active) {
     if (!Active)
