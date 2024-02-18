@@ -552,11 +552,10 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
   return Abbrev(Code, dwarf::Tag(Tag), AbbrevOffset, std::move(*AttrEncOr));
 }
 
-uint64_t llvm::FindDebugNamesOffsets(
-    DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
-    uint64_t HdrSize,
-    dwarf::DwarfFormat Format,
-    const DWARFDebugNames::Header &Hdr) {
+uint64_t
+llvm::FindDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
+                            uint64_t HdrSize, dwarf::DwarfFormat Format,
+                            const DWARFDebugNames::Header &Hdr) {
   uint32_t DwarfSize = (Format == llvm::dwarf::DwarfFormat::DWARF32) ? 4 : 8;
   uint64_t Offset = HdrSize;
   Offsets.CUsBase = Offset;
@@ -736,7 +735,8 @@ uint64_t DWARFDebugNames::NameIndex::getCUOffset(uint32_t CU) const {
 uint64_t DWARFDebugNames::NameIndex::getLocalTUOffset(uint32_t TU) const {
   assert(TU < Hdr.LocalTypeUnitCount);
   const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
-  uint64_t Offset = Offsets.CUsBase + SectionOffsetSize * (Hdr.CompUnitCount + TU);
+  uint64_t Offset =
+      Offsets.CUsBase + SectionOffsetSize * (Hdr.CompUnitCount + TU);
   return Section.AccelSection.getRelocatedValue(SectionOffsetSize, &Offset);
 }
 
