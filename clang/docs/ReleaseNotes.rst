@@ -275,15 +275,6 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-* ``-Woverriding-t-option`` is renamed to ``-Woverriding-option``.
-* ``-Winterrupt-service-routine`` is renamed to ``-Wexcessive-regsave`` as a generalization
-* ``-frewrite-includes`` now guards the original #include directives with
-  ``__CLANG_REWRITTEN_INCLUDES``, and ``__CLANG_REWRITTEN_SYSTEM_INCLUDES`` as
-  appropriate.
-* Introducing a new default calling convention for ``-fdefault-calling-conv``:
-  ``rtdcall``. This new default CC only works for M68k and will use the new
-  ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
-  driver/frontend flag has the same effect when targeting M68k.
 * ``-Wextra`` group flag now contains an additional flag i.e, ``-Wcast-function-type``.
 
 Removed Compiler Flags
