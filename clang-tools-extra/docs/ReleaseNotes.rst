@@ -112,6 +112,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
+  <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
+  eliminating false positives resulting from direct usage of bitwise operators
+  within parentheses.
+
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
@@ -121,13 +126,18 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
   better support for ``const`` loop boundaries.
 
+- Improved :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
+  ignoring local variable with ``[maybe_unused]`` attribute.
+
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
   by removing enforcement of rule `C.48
   <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
   which was deprecated since :program:`clang-tidy` 17. This rule is now covered
   by :doc:`cppcoreguidelines-use-default-member-init
-  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`.
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` and fixes
+  incorrect hints when using list-initialization.
 
 - Improved :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check by replacing the local
@@ -159,6 +169,19 @@ Changes in existing checks
   <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
   `AllowStringArrays` option, enabling the exclusion of array types with deduced
   length initialized from string literals.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
+  whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
+  valid fix suggestions for ``static_cast`` without a preceding space and
+  fixed problem with duplicate parentheses in double implicit casts.
+
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
+  emit warnings for static data member with an in-class initializer.
 
 Removed checks
 ^^^^^^^^^^^^^^

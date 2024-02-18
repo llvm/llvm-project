@@ -24,8 +24,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace amdgpu {
@@ -83,8 +81,8 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
   Value srcBits = b.create<arith::ConstantIndexOp>(loc, mask);
   srcBits = b.create<arith::AndIOp>(loc, src, srcBits);
 
-  // Use the src bits to permute the target bits b[N:M] containing the
-  // vector offset.
+  /// Use the src bits to permute the target bits b[N:M] containing the
+  /// vector offset.
   if (permuteEveryN > 1) {
     int64_t shlBits = n - llvm::Log2_64(permuteEveryN);
     if (shlBits > 0) {
@@ -112,8 +110,8 @@ static void transformIndices(OpBuilder &builder, Location loc,
       permuteVectorOffset(builder, loc, indices, memrefTy, srcDim, tgtDim);
 }
 
-/// Return all operations within `parentOp` that read from or write to
-/// `shmMemRef`.
+// Return all operations within `parentOp` that read from or write to
+// `shmMemRef`.
 static LogicalResult
 getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
                       SmallVector<Operation *, 16> &readOps,
@@ -151,9 +149,8 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
   return success();
 }
 
-mlir::LogicalResult
-mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
-                                                 Value memrefValue) {
+LogicalResult amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
+                                                         Value memrefValue) {
   auto memRefType = dyn_cast<MemRefType>(memrefValue.getType());
   if (!memRefType ||
       !amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(memRefType))
@@ -217,6 +214,22 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
     amdgpu::setIndices(shmReadOp, transformedIndices);
   }
 
+  return success();
+}
+
+std::optional<LogicalResult>
+amdgpu::optimizeSharedMemoryReadsAndWritesOp(func::FuncOp funcOp) {
+  SmallVector<memref::AllocOp> shmAllocOps;
+  funcOp.walk([&](memref::AllocOp allocOp) {
+    if (!amdgpu::AMDGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
+      return;
+    shmAllocOps.push_back(allocOp);
+  });
+  for (auto allocOp : shmAllocOps) {
+    if (failed(amdgpu::optimizeSharedMemoryReadsAndWrites(funcOp,
+                                                          allocOp.getMemref())))
+      return failure();
+  }
   return success();
 }
 

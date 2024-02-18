@@ -93,7 +93,7 @@ enum class CastKind {
   // cast becomes a target materialization.)
   Target
 };
-}
+} // namespace
 
 /// Mapping of enum values to string values.
 StringRef getCastKindName(CastKind kind) {
