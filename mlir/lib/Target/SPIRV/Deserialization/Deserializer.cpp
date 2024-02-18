@@ -215,14 +215,12 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
-  StringAttr addressing_model = module->getAddressingModelAttrName();
   (*module)->setAttr(
-      addressing_model,
+      module->getAddressingModelAttrName(),
       opBuilder.getAttr<spirv::AddressingModelAttr>(
           static_cast<spirv::AddressingModel>(operands.front())));
 
-  StringAttr memory_model = module->getMemoryModelAttrName();
-  (*module)->setAttr(memory_model,
+  (*module)->setAttr(module->getMemoryModelAttrName(),
                      opBuilder.getAttr<spirv::MemoryModelAttr>(
                          static_cast<spirv::MemoryModel>(operands.back())));
 
