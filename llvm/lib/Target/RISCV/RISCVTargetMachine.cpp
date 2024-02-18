@@ -450,15 +450,15 @@ void RISCVPassConfig::addIRPasses() {
     if (EnableLoopDataPrefetch)
       addPass(createLoopDataPrefetchPass());
 
-    if (EnableSelectOpt && getOptLevel() == CodeGenOptLevel::Aggressive)
-      addPass(createSelectOptimizePass());
-
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
   }
 
   TargetPassConfig::addIRPasses();
+
+  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
+    addPass(createSelectOptimizePass());
 }
 
 bool RISCVPassConfig::addPreISel() {
