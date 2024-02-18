@@ -2617,21 +2617,24 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
   // Construct the match list.
   std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
+  std::string Namespace =
+      Regs.front().TheDef->getValueAsString("Namespace").str();
   for (const CodeGenRegister &Reg : Regs) {
-    if (Reg.TheDef->getValueAsString("AsmName").empty())
+    StringRef AsmName = Reg.TheDef->getValueAsString("AsmName");
+    if (AsmName.empty())
       continue;
 
-    Matches.emplace_back(std::string(Reg.TheDef->getValueAsString("AsmName")),
-                         "return " + utostr(Reg.EnumValue) + ";");
+    Matches.emplace_back(AsmName.str(), "return " + Namespace +
+                                            "::" + Reg.getName().str() + ';');
   }
 
-  OS << "static unsigned MatchRegisterName(StringRef Name) {\n";
+  OS << "static MCRegister MatchRegisterName(StringRef Name) {\n";
 
   bool IgnoreDuplicates =
       AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
   StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
-  OS << "  return 0;\n";
+  OS << "  return " << Namespace << "::NoRegister;\n";
   OS << "}\n\n";
 }
 
@@ -2642,6 +2645,8 @@ static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
   // Construct the match list.
   std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
+  std::string Namespace =
+      Regs.front().TheDef->getValueAsString("Namespace").str();
   for (const CodeGenRegister &Reg : Regs) {
 
     auto AltNames = Reg.TheDef->getValueAsListOfStrings("AltNames");
@@ -2653,18 +2658,18 @@ static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
       if (AltName.empty())
         continue;
 
-      Matches.emplace_back(std::string(AltName),
-                           "return " + utostr(Reg.EnumValue) + ";");
+      Matches.emplace_back(AltName.str(), "return " + Namespace +
+                                              "::" + Reg.getName().str() + ';');
     }
   }
 
-  OS << "static unsigned MatchRegisterAltName(StringRef Name) {\n";
+  OS << "static MCRegister MatchRegisterAltName(StringRef Name) {\n";
 
   bool IgnoreDuplicates =
       AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
   StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
-  OS << "  return 0;\n";
+  OS << "  return " << Namespace << "::NoRegister;\n";
   OS << "}\n\n";
 }
 
