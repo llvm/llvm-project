@@ -1205,86 +1205,102 @@ TEST(TripleTest, MutateName) {
   EXPECT_EQ("i386-pc-darwin", T.getTriple());
 }
 
-TEST(TripleTest, BitWidthPredicates) {
+TEST(TripleTest, BitWidthChecks) {
   Triple T;
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 0U);
 
   T.setArch(Triple::arm);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::hexagon);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::mips);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::mips64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
 
   T.setArch(Triple::msp430);
   EXPECT_TRUE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 16U);
 
   T.setArch(Triple::ppc);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::ppc64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
 
   T.setArch(Triple::x86);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::x86_64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
 
   T.setArch(Triple::amdil);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::amdil64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
 
   T.setArch(Triple::hsail);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::hsail64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
 
   T.setArch(Triple::spir);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::spir64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
 
   T.setArch(Triple::spirv);
   EXPECT_FALSE(T.isArch16Bit());
