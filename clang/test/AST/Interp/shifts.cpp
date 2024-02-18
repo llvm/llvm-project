@@ -188,3 +188,12 @@ namespace shifts {
                           // ref-cxx17-error {{not an integral constant expression}} \
                           // ref-cxx17-note {{in call to 'foo(2)'}}
 };
+
+namespace LongInt {
+  constexpr int f() {
+    int a = 1;
+    a <<= (long)0;
+    return 1;
+  }
+  static_assert(f() == 1, "");
+};

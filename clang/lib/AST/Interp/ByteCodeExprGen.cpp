@@ -1468,7 +1468,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   std::optional<PrimType> LHSComputationT =
       classify(E->getComputationLHSType());
   std::optional<PrimType> LT = classify(LHS->getType());
-  std::optional<PrimType> RT = classify(E->getComputationResultType());
+  std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> ResultT = classify(E->getType());
 
   if (!LT || !RT || !ResultT || !LHSComputationT)
