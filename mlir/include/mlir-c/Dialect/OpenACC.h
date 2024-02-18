@@ -1,4 +1,5 @@
-//===-- mlir-c/Dialect/OpenACC.h - C API for OpenACC Dialect --------*- C -*-===//
+//===-- mlir-c/Dialect/OpenACC.h - C API for OpenACC Dialect --------*- C
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.

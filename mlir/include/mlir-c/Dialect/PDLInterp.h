@@ -1,4 +1,5 @@
-//===-- mlir-c/Dialect/PDLInterp.h - C API for PDLInterp Dialect --------*- C -*-===//
+//===-- mlir-c/Dialect/PDLInterp.h - C API for PDLInterp Dialect --------*- C
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.

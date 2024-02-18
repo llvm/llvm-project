@@ -1,4 +1,5 @@
-//===-- mlir-c/Dialect/Bufferization.h - C API for Bufferization Dialect --------*- C -*-===//
+//===-- mlir-c/Dialect/Bufferization.h - C API for Bufferization Dialect
+//--------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
