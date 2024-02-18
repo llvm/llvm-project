@@ -706,13 +706,13 @@ void LoopConvertCheck::doConversion(
         ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
                           ? VarNameOrStructuredBinding + "."
                           : VarNameOrStructuredBinding;
-        auto Parents = Context->getParents(*Usage.Expression);
+        const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
             // Usage.Expression will be replaced with the new index variable,
             // and parenthesis around a simple DeclRefExpr can always be
             // removed except in case of a `sizeof` operator call.
-            auto GrandParents = Context->getParents(*Paren);
+            const DynTypedNodeList GrandParents = Context->getParents(*Paren);
             if (GrandParents.size() != 1 ||
                 !GrandParents[0].get<UnaryExprOrTypeTraitExpr>()) {
               Range = Paren->getSourceRange();
