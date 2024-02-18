@@ -711,8 +711,12 @@ void LoopConvertCheck::doConversion(
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
             // Usage.Expression will be replaced with the new index variable,
             // and parenthesis around a simple DeclRefExpr can always be
-            // removed.
-            Range = Paren->getSourceRange();
+            // removed except in case of a `sizeof` operator call.
+            auto GrandParents = Context->getParents(*Paren);
+            if (GrandParents.size() != 1 ||
+                !GrandParents[0].get<UnaryExprOrTypeTraitExpr>()) {
+              Range = Paren->getSourceRange();
+            }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
             // If we are taking the address of the loop variable, then we must
             // not use a copy, as it would mean taking the address of the loop's

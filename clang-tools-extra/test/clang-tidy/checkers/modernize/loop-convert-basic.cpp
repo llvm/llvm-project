@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
+// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert -isystem %clang_tidy_headers
+
+#include <cstddef>
 
 #include "structures.h"
 
@@ -87,6 +89,15 @@ void f() {
   // CHECK-FIXES: for (int & I : Arr)
   // CHECK-FIXES-NEXT: printf("Fibonacci number %d has address %p\n", I, &I);
   // CHECK-FIXES-NEXT: Sum += I + 2;
+
+  int Matrix[N][12];
+  size_t size = 0;
+  for (int I = 0; I < N; ++I) {
+      size += sizeof(Matrix[I]) + sizeof Matrix[I];
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (auto & I : Matrix)
+  // CHECK-FIXES-NEXT: size += sizeof(I) + sizeof I;
 
   Val Teas[N];
   for (int I = 0; I < N; ++I) {
