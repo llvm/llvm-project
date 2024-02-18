@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnsafeCrtpCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -80,48 +78,40 @@ void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
-
-  const auto *MatchedCRTP =
+  const auto *CRTPInstantiation =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("crtp");
-  const auto *MatchedDerived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
+  const auto *Derived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
 
-  const auto *CRTPTemplate =
-      MatchedCRTP->getSpecializedTemplate()->getTemplatedDecl();
+  const CXXRecordDecl *CRTPDeclaration =
+      CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
-  if (!CRTPTemplate->hasUserDeclaredConstructor()) {
-    diag(CRTPTemplate->getLocation(),
+  if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
+    diag(CRTPDeclaration->getLocation(),
          "the implicit default constructor of the CRTP is publicly accessible")
-        << CRTPTemplate
+        << CRTPDeclaration
         << FixItHint::CreateInsertion(
-               CRTPTemplate->getBraceRange().getBegin().getLocWithOffset(1),
-               "private: " + CRTPTemplate->getNameAsString() + "() = default;");
-
-    diag(CRTPTemplate->getLocation(), "consider making it private",
+               CRTPDeclaration->getBraceRange().getBegin().getLocWithOffset(1),
+               "private: " + CRTPDeclaration->getNameAsString() +
+                   "() = default;");
+    diag(CRTPDeclaration->getLocation(), "consider making it private",
          DiagnosticIDs::Note);
   }
 
   const auto *DerivedTemplateParameter =
-      *getDerivedParameter(MatchedCRTP, MatchedDerived);
+      *getDerivedParameter(CRTPInstantiation, Derived);
 
-  if (hasPrivateConstructor(CRTPTemplate) &&
-      !isDerivedParameterBefriended(CRTPTemplate, DerivedTemplateParameter)) {
-    diag(CRTPTemplate->getLocation(),
+  if (hasPrivateConstructor(CRTPDeclaration) &&
+      !isDerivedParameterBefriended(CRTPDeclaration,
+                                    DerivedTemplateParameter)) {
+    diag(CRTPDeclaration->getLocation(),
          "the CRTP cannot be constructed from the derived class")
-        << CRTPTemplate
+        << CRTPDeclaration
         << FixItHint::CreateInsertion(
-               CRTPTemplate->getBraceRange().getEnd().getLocWithOffset(-1),
+               CRTPDeclaration->getBraceRange().getEnd().getLocWithOffset(-1),
                "friend " + DerivedTemplateParameter->getNameAsString() + ';');
-    diag(CRTPTemplate->getLocation(),
+    diag(CRTPDeclaration->getLocation(),
          "consider declaring the derived class as friend", DiagnosticIDs::Note);
   }
-
-  // if (!MatchedDecl->getIdentifier() ||
-  //     MatchedDecl->getName().startswith("awesome_"))
-  //   return;
-  // diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
-  //     << MatchedDecl
-  //     << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
-  // diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::bugprone
