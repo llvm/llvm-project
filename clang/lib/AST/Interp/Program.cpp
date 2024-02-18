@@ -247,7 +247,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   unsigned VirtSize = 0;
 
   // Helper to get a base descriptor.
-  auto GetBaseDesc = [this](const RecordDecl *BD, Record *BR) -> Descriptor * {
+  auto GetBaseDesc = [this](const RecordDecl *BD,
+                            const Record *BR) -> Descriptor * {
     if (!BR)
       return nullptr;
     return allocateDescriptor(BD, BR, std::nullopt, /*isConst=*/false,
@@ -258,31 +259,39 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Reserve space for base classes.
   Record::BaseList Bases;
   Record::VirtualBaseList VirtBases;
-  if (auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+  if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
 
-      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
-      Record *BR = getOrCreateRecord(BD);
-      if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
-        BaseSize += align(sizeof(InlineDescriptor));
-        Bases.push_back({BD, BaseSize, Desc, BR});
-        BaseSize += align(BR->getSize());
-        continue;
+      // In error cases, the base might not be a RecordType.
+      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
+        const RecordDecl *BD = RT->getDecl();
+
+        Record *BR = getOrCreateRecord(BD);
+        if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
+          BaseSize += align(sizeof(InlineDescriptor));
+          Bases.push_back({BD, BaseSize, Desc, BR});
+          BaseSize += align(BR->getSize());
+          continue;
+        }
       }
       return nullptr;
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
-      const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
-      Record *BR = getOrCreateRecord(BD);
 
-      if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
-        VirtSize += align(sizeof(InlineDescriptor));
-        VirtBases.push_back({BD, VirtSize, Desc, BR});
-        VirtSize += align(BR->getSize());
-        continue;
+      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
+        const RecordDecl *BD = RT->getDecl();
+        Record *BR = getOrCreateRecord(BD);
+
+        if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
+          VirtSize += align(sizeof(InlineDescriptor));
+          VirtBases.push_back({BD, VirtSize, Desc, BR});
+          VirtSize += align(BR->getSize());
+          continue;
+        }
       }
       return nullptr;
     }
