@@ -2672,7 +2672,7 @@ static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
   return any_context_updated;
 }
 
-uint64_t SymbolFileDWARF::GetDebugInfoSize(bool load_all_debug_info) {
+uint64_t SymbolFileDWARF::GetDebugInfoSize() {
   DWARFDebugInfo &info = DebugInfo();
   uint32_t num_comp_units = info.GetNumUnits();
 
@@ -2687,7 +2687,7 @@ uint64_t SymbolFileDWARF::GetDebugInfoSize(bool load_all_debug_info) {
     if (cu == nullptr)
       continue;
 
-    SymbolFileDWARFDwo *dwo = cu->GetDwoSymbolFile(load_all_debug_info);
+    SymbolFileDWARFDwo *dwo = cu->GetDwoSymbolFile();
     if (dwo)
       debug_info_size += dwo->GetDebugInfoSize();
   }
