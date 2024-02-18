@@ -22,4 +22,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Tosa, tosa);
 }
 #endif
 
+#include "mlir/Dialect/Tosa/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_TOSA_H

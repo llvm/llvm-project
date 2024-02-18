@@ -22,4 +22,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(ArmSME, arm_sme);
 }
 #endif
 
+#include "mlir/Dialect/ArmSME/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_ARMSME_H

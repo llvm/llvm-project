@@ -23,4 +23,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(OpenACC, acc);
 }
 #endif
 
+#include "mlir/Dialect/OpenACC/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_OPENACC_H
