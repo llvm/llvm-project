@@ -79,3 +79,5 @@
 // RUN:   | FileCheck -check-prefix=CHECK-M-PROFILE %s
 // CHECK-M-PROFILE: "-triple" "thumbv7m-{{.*}}"
 
+// RUN: %clang --target=arm-unknown-linuxfdpiceabi -Wa,--fdpic -c %s -### 2>&1 | FileCheck --check-prefix=FDPIC %s
+// FDPIC: "--fdpic"
