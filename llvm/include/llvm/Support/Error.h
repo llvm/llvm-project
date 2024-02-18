@@ -22,7 +22,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -1260,15 +1259,6 @@ template <typename... Ts>
 inline Error createStringError(std::errc EC, char const *Fmt,
                                const Ts &... Vals) {
   return createStringError(std::make_error_code(EC), Fmt, Vals...);
-}
-
-template <typename... Ts>
-inline Error createStringErrorV(std::error_code EC, const char *Fmt,
-                                const Ts &...Vals) {
-  std::string Buffer;
-  raw_string_ostream Stream(Buffer);
-  Stream << formatv(Fmt, Vals...);
-  return make_error<StringError>(Stream.str(), EC);
 }
 
 /// This class wraps a filename and another Error.
