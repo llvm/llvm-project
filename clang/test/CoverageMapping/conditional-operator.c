@@ -12,7 +12,7 @@ int binary_conditional(int x) {
 }
 
 // CHECK-LABEL:       ternary_conditional:
-// CHECK-NEXT:          File 0, [[@LINE+6]]:31 -> {{[0-9]+}}:2 = #0
+// CHECK-NEXT:          File 0, [[@LINE+6]]:32 -> {{[0-9]+}}:2 = #0
 // CHECK-NEXT:          File 0, [[@LINE+6]]:7 -> [[@LINE+6]]:8 = #0
 // CHECK-NEXT:          Branch,File 0, [[@LINE+5]]:7 -> [[@LINE+5]]:8 = #1, (#0 - #1)
 // CHECK-NEXT:          Gap,File 0, [[@LINE+4]]:10 -> [[@LINE+4]]:11 = #1
