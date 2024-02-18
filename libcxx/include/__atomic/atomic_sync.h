@@ -105,12 +105,12 @@ struct __libcpp_atomic_wait_backoff_impl {
 // predicate (is the loaded value unequal to `old`?), the predicate function is
 // specified as an argument. The loaded value is given as an in-out argument to
 // the predicate. If the predicate function returns `true`,
-// `_cxx_atomic_wait_fn` will return. If the predicate function returns
+// `_cxx_atomic_wait_unless` will return. If the predicate function returns
 // `false`, it must set the argument to its current understanding of the atomic
 // value. The predicate function must not return `false` spuriously.
 template <class _Atp, class _Poll>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_wait_fn(_Atp* __a, _Poll&& __poll, memory_order __order) {
+__cxx_atomic_wait_unless(_Atp* __a, _Poll&& __poll, memory_order __order) {
   __libcpp_atomic_wait_poll_impl<_Atp, __decay_t<_Poll> > __poll_fn       = {__a, __poll, __order};
   __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Poll> > __backoff_fn = {__a, __poll, __order};
   (void)std::__libcpp_thread_poll_with_backoff(__poll_fn, __backoff_fn);
@@ -123,7 +123,7 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const volatile*) {}
 template <class _Atp, class _Poll>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_wait_fn(_Atp* __a, _Poll&& __poll, memory_order __order) {
+_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_wait_unless(_Atp* __a, _Poll&& __poll, memory_order __order) {
   __libcpp_atomic_wait_poll_impl<_Atp, __decay_t<_Poll> > __poll_fn = {__a, __poll, __order};
   (void)std::__libcpp_thread_poll_with_backoff(__poll_fn, __spinning_backoff_policy());
 }
@@ -147,7 +147,7 @@ template <class _Atp, class _Tp>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order) {
   __cxx_atomic_wait_poll_fn_impl<_Tp> __poll_fn = {__val};
-  std::__cxx_atomic_wait_fn(__a, __poll_fn, __order);
+  std::__cxx_atomic_wait_unless(__a, __poll_fn, __order);
 }
 
 _LIBCPP_END_NAMESPACE_STD

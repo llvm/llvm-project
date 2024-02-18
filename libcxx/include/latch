@@ -102,7 +102,7 @@ public:
     return try_wait_impl(__value);
   }
   inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait() const {
-    __cxx_atomic_wait_fn(
+    __cxx_atomic_wait_unless(
         &__a_.__a_, [this](ptrdiff_t& __value) -> bool { return try_wait_impl(__value); }, memory_order_acquire);
   }
   inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_wait(ptrdiff_t __update = 1) {
