@@ -241,7 +241,7 @@ public:
   FileSpec GetFile(size_t file_idx);
   FileSpec::Style GetPathStyle();
 
-  SymbolFileDWARFDwo *GetDwoSymbolFile(bool load_all_debug_info = false);
+  SymbolFileDWARFDwo *GetDwoSymbolFile();
 
   die_iterator_range dies() {
     ExtractDIEsIfNeeded();
