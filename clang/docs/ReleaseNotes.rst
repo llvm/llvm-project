@@ -284,6 +284,7 @@ Modified Compiler Flags
   ``rtdcall``. This new default CC only works for M68k and will use the new
   ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
   driver/frontend flag has the same effect when targeting M68k.
+* ``-Wextra`` group flag now contains an adittional flag i.e, ``-Wcast-function-type``.
 
 Removed Compiler Flags
 -------------------------
