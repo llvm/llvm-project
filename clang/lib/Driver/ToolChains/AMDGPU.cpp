@@ -829,6 +829,12 @@ void AMDGPUToolChain::addClangTargetOptions(
   }
 }
 
+void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  // AMDGPU does not support atomic lib call. Treat atomic alignment
+  // warnings as errors.
+  CC1Args.push_back("-Werror=atomic-alignment");
+}
+
 StringRef
 AMDGPUToolChain::getGPUArch(const llvm::opt::ArgList &DriverArgs) const {
   return getProcessorFromTargetID(

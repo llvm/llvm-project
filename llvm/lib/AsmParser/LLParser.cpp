@@ -306,9 +306,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     auto GetCommonFunctionType = [](Value *V) -> FunctionType * {
       FunctionType *FTy = nullptr;
-      for (User *U : V->users()) {
-        auto *CB = dyn_cast<CallBase>(U);
-        if (!CB || (FTy && FTy != CB->getFunctionType()))
+      for (Use &U : V->uses()) {
+        auto *CB = dyn_cast<CallBase>(U.getUser());
+        if (!CB || !CB->isCallee(&U) || (FTy && FTy != CB->getFunctionType()))
           return nullptr;
         FTy = CB->getFunctionType();
       }
@@ -2109,6 +2109,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'anyregcc'
 ///   ::= 'preserve_mostcc'
 ///   ::= 'preserve_allcc'
+///   ::= 'preserve_nonecc'
 ///   ::= 'ghccc'
 ///   ::= 'swiftcc'
 ///   ::= 'swifttailcc'
@@ -2169,6 +2170,7 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_anyregcc:       CC = CallingConv::AnyReg; break;
   case lltok::kw_preserve_mostcc:CC = CallingConv::PreserveMost; break;
   case lltok::kw_preserve_allcc: CC = CallingConv::PreserveAll; break;
+  case lltok::kw_preserve_nonecc:CC = CallingConv::PreserveNone; break;
   case lltok::kw_ghccc:          CC = CallingConv::GHC; break;
   case lltok::kw_swiftcc:        CC = CallingConv::Swift; break;
   case lltok::kw_swifttailcc:    CC = CallingConv::SwiftTail; break;

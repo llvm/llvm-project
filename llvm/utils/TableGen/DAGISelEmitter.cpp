@@ -27,6 +27,7 @@ namespace {
 class DAGISelEmitter {
   RecordKeeper &Records; // Just so we can get at the timing functions.
   CodeGenDAGPatterns CGP;
+
 public:
   explicit DAGISelEmitter(RecordKeeper &R) : Records(R), CGP(R) {}
   void run(raw_ostream &OS);
@@ -37,39 +38,41 @@ public:
 // DAGISelEmitter Helper methods
 //
 
-/// getResultPatternCost - Compute the number of instructions for this pattern.
+/// Compute the number of instructions for this pattern.
 /// This is a temporary hack.  We should really include the instruction
 /// latencies in this calculation.
-static unsigned getResultPatternCost(TreePatternNode *P,
-                                     CodeGenDAGPatterns &CGP) {
-  if (P->isLeaf()) return 0;
+static unsigned getResultPatternCost(TreePatternNode &P,
+                                     const CodeGenDAGPatterns &CGP) {
+  if (P.isLeaf())
+    return 0;
 
   unsigned Cost = 0;
-  Record *Op = P->getOperator();
+  Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost++;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
     if (II.usesCustomInserter)
       Cost += 10;
   }
-  for (unsigned i = 0, e = P->getNumChildren(); i != e; ++i)
-    Cost += getResultPatternCost(P->getChild(i), CGP);
+  for (unsigned i = 0, e = P.getNumChildren(); i != e; ++i)
+    Cost += getResultPatternCost(P.getChild(i), CGP);
   return Cost;
 }
 
 /// getResultPatternCodeSize - Compute the code size of instructions for this
 /// pattern.
-static unsigned getResultPatternSize(TreePatternNode *P,
-                                     CodeGenDAGPatterns &CGP) {
-  if (P->isLeaf()) return 0;
+static unsigned getResultPatternSize(TreePatternNode &P,
+                                     const CodeGenDAGPatterns &CGP) {
+  if (P.isLeaf())
+    return 0;
 
   unsigned Cost = 0;
-  Record *Op = P->getOperator();
+  Record *Op = P.getOperator();
   if (Op->isSubClassOf("Instruction")) {
     Cost += Op->getValueAsInt("CodeSize");
   }
-  for (unsigned i = 0, e = P->getNumChildren(); i != e; ++i)
-    Cost += getResultPatternSize(P->getChild(i), CGP);
+  for (unsigned i = 0, e = P.getNumChildren(); i != e; ++i)
+    Cost += getResultPatternSize(P.getChild(i), CGP);
   return Cost;
 }
 
@@ -82,11 +85,11 @@ struct PatternSortingPredicate {
   CodeGenDAGPatterns &CGP;
 
   bool operator()(const PatternToMatch *LHS, const PatternToMatch *RHS) {
-    const TreePatternNode *LT = LHS->getSrcPattern();
-    const TreePatternNode *RT = RHS->getSrcPattern();
+    const TreePatternNode &LT = LHS->getSrcPattern();
+    const TreePatternNode &RT = RHS->getSrcPattern();
 
-    MVT LHSVT = LT->getNumTypes() != 0 ? LT->getSimpleType(0) : MVT::Other;
-    MVT RHSVT = RT->getNumTypes() != 0 ? RT->getSimpleType(0) : MVT::Other;
+    MVT LHSVT = LT.getNumTypes() != 0 ? LT.getSimpleType(0) : MVT::Other;
+    MVT RHSVT = RT.getNumTypes() != 0 ? RT.getSimpleType(0) : MVT::Other;
     if (LHSVT.isVector() != RHSVT.isVector())
       return RHSVT.isVector();
 
@@ -98,19 +101,25 @@ struct PatternSortingPredicate {
     // input over nodes that cover fewer.
     int LHSSize = LHS->getPatternComplexity(CGP);
     int RHSSize = RHS->getPatternComplexity(CGP);
-    if (LHSSize > RHSSize) return true;   // LHS -> bigger -> less cost
-    if (LHSSize < RHSSize) return false;
+    if (LHSSize > RHSSize)
+      return true; // LHS -> bigger -> less cost
+    if (LHSSize < RHSSize)
+      return false;
 
     // If the patterns have equal complexity, compare generated instruction cost
     unsigned LHSCost = getResultPatternCost(LHS->getDstPattern(), CGP);
     unsigned RHSCost = getResultPatternCost(RHS->getDstPattern(), CGP);
-    if (LHSCost < RHSCost) return true;
-    if (LHSCost > RHSCost) return false;
+    if (LHSCost < RHSCost)
+      return true;
+    if (LHSCost > RHSCost)
+      return false;
 
     unsigned LHSPatSize = getResultPatternSize(LHS->getDstPattern(), CGP);
     unsigned RHSPatSize = getResultPatternSize(RHS->getDstPattern(), CGP);
-    if (LHSPatSize < RHSPatSize) return true;
-    if (LHSPatSize > RHSPatSize) return false;
+    if (LHSPatSize < RHSPatSize)
+      return true;
+    if (LHSPatSize > RHSPatSize)
+      return false;
 
     // Sort based on the UID of the pattern, to reflect source order.
     // Note that this is not guaranteed to be unique, since a single source
@@ -122,11 +131,11 @@ struct PatternSortingPredicate {
 };
 } // End anonymous namespace
 
-
 void DAGISelEmitter::run(raw_ostream &OS) {
   Records.startTimer("Parse patterns");
   emitSourceFileHeader("DAG Instruction Selector for the " +
-                       CGP.getTargetInfo().getName().str() + " target", OS);
+                           CGP.getTargetInfo().getName().str() + " target",
+                       OS);
 
   OS << "// *** NOTE: This file is #included into the middle of the target\n"
      << "// *** instruction selector class.  These functions are really "
@@ -147,15 +156,15 @@ void DAGISelEmitter::run(raw_ostream &OS) {
                   E = CGP.ptm_end();
                   I != E; ++I) {
                errs() << "PATTERN: ";
-               I->getSrcPattern()->dump();
+               I->getSrcPattern().dump();
                errs() << "\nRESULT:  ";
-               I->getDstPattern()->dump();
+               I->getDstPattern().dump();
                errs() << "\n";
              });
 
   // Add all the patterns to a temporary list so we can sort them.
   Records.startTimer("Sort patterns");
-  std::vector<const PatternToMatch*> Patterns;
+  std::vector<const PatternToMatch *> Patterns;
   for (const PatternToMatch &PTM : CGP.ptms())
     Patterns.push_back(&PTM);
 
@@ -167,7 +176,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   Records.startTimer("Convert to matchers");
   SmallVector<Matcher *, 0> PatternMatchers;
   for (const PatternToMatch *PTM : Patterns) {
-    for (unsigned Variant = 0; ; ++Variant) {
+    for (unsigned Variant = 0;; ++Variant) {
       if (Matcher *M = ConvertPatternToMatcher(*PTM, Variant, CGP))
         PatternMatchers.push_back(M);
       else
@@ -181,7 +190,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   Records.startTimer("Optimize matchers");
   OptimizeMatcher(TheMatcher, CGP);
 
-  //Matcher->dump();
+  // Matcher->dump();
 
   Records.startTimer("Emit matcher table");
   EmitMatcherTable(TheMatcher.get(), CGP, OS);

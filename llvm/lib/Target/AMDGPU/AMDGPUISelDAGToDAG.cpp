@@ -327,7 +327,7 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
     return TII->isInlineConstant(C->getAPIntValue());
 
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+    return TII->isInlineConstant(C->getValueAPF());
 
   return false;
 }
@@ -2391,7 +2391,7 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
         isNullConstant(Cond->getOperand(1)) &&
-        // TODO: make condition below an assert after fixing ballot bitwidth.
+        // We may encounter ballot.i64 in wave32 mode on -O0.
         VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
       // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq

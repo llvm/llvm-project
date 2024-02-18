@@ -6,6 +6,7 @@ include "spec/linux.td"
 include "spec/gnu_ext.td"
 include "spec/bsd_ext.td"
 include "spec/llvm_libc_ext.td"
+include "spec/stdc_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{
@@ -55,7 +56,7 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
 }
 
 def MathAPI : PublicAPI<"math.h"> {
-  let Types = ["double_t", "float_t"];
+  let Types = ["double_t", "float_t", "float128"];
 }
 
 def FenvAPI: PublicAPI<"fenv.h"> {

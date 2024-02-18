@@ -132,9 +132,10 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   return Result;
 }
 
-bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
+bool EvaluationResult::checkFullyInitialized(InterpState &S,
+                                             const Pointer &Ptr) const {
   assert(Source);
-  assert(isLValue());
+  assert(empty());
 
   // Our Source must be a VarDecl.
   const Decl *SourceDecl = Source.dyn_cast<const Decl *>();
@@ -143,7 +144,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
   assert(VD->getType()->isRecordType() || VD->getType()->isArrayType());
   SourceLocation InitLoc = VD->getAnyInitializer()->getExprLoc();
 
-  const Pointer &Ptr = *std::get_if<Pointer>(&Value);
   assert(!Ptr.isZero());
 
   if (const Record *R = Ptr.getRecord())
@@ -151,8 +151,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
   const auto *CAT =
       cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
   return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
-
-  return true;
 }
 
 void EvaluationResult::dump() const {
@@ -186,9 +184,12 @@ void EvaluationResult::dump() const {
     OS << "\n";
     break;
   }
-
-  default:
-    llvm_unreachable("Can't print that.");
+  case Invalid:
+    OS << "Invalid\n";
+  break;
+  case Valid:
+    OS << "Valid\n";
+  break;
   }
 }
 

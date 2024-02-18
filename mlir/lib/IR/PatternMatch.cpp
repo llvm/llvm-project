@@ -384,24 +384,6 @@ void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
 }
 
-/// Clone the blocks that belong to "region" before the given position in
-/// another region "parent". The two regions must be different. The caller is
-/// responsible for creating or updating the operation transferring flow of
-/// control to the region and passing it the correct block arguments.
-void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
-                                     Region::iterator before,
-                                     IRMapping &mapping) {
-  region.cloneInto(&parent, before, mapping);
-}
-void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
-                                     Region::iterator before) {
-  IRMapping mapping;
-  cloneRegionBefore(region, parent, before, mapping);
-}
-void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
-  cloneRegionBefore(region, *before->getParent(), before->getIterator());
-}
-
 void RewriterBase::moveBlockBefore(Block *block, Block *anotherBlock) {
   moveBlockBefore(block, anotherBlock->getParent(),
                   anotherBlock->getIterator());

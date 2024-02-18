@@ -226,7 +226,8 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numLoops,
       syntheticTensor(numInputOutputTensors),
       numTensors(numInputOutputTensors + 1), numLoops(numLoops),
       hasSparseOut(false),
-      lvlTypes(numTensors, std::vector<LevelType>(numLoops, LevelType::Undef)),
+      lvlTypes(numTensors,
+               std::vector<LevelType>(numLoops, LevelFormat::Undef)),
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
@@ -489,7 +490,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
     if (simple[b] && !isSparseLvlWithNonTrivialIdxExp(b)) {
       const auto lt = getLvlType(b);
       if (!isCompressedLT(lt) && !isSingletonLT(lt) &&
-          !isLooseCompressedLT(lt) && !is2OutOf4LT(lt)) {
+          !isLooseCompressedLT(lt) && !isNOutOfMLT(lt)) {
         if (reset)
           simple.reset(b);
         reset = true;
@@ -670,7 +671,7 @@ bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
     const auto lt = getLvlType(b);
     if (isCompressedLT(lt) || isSingletonLT(lt) || isLooseCompressedLT(lt) ||
-        is2OutOf4LT(lt))
+        isNOutOfMLT(lt))
       return true;
   }
   return hasSparseIdxReduction(bits);

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fsyntax-only -verify=expected-cpp -x c++ %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -fsyntax-only -verify=expected-cpp -x c++ %s
 
 // Valid attributes
 
@@ -445,3 +445,52 @@ void conflicting_state_attrs_preserves_out_zt0(void) __arm_preserves("zt0") __ar
 // expected-cpp-error@+2 {{conflicting attributes for state 'zt0'}}
 // expected-error@+1 {{conflicting attributes for state 'zt0'}}
 void conflicting_state_attrs_preserves_inout_zt0(void) __arm_preserves("zt0") __arm_inout("zt0");
+
+// Test that we get a diagnostic for unimplemented case.
+void unimplemented_spill_fill_za(void (*share_zt0_only)(void) __arm_inout("zt0")) __arm_inout("za", "zt0") {
+  // expected-cpp-error@+4 {{call to a function that shares state other than 'za' from a function that has live 'za' state requires a spill/fill of ZA, which is not yet implemented}}
+  // expected-cpp-note@+3 {{add '__arm_preserves("za")' to the callee if it preserves ZA}}
+  // expected-error@+2 {{call to a function that shares state other than 'za' from a function that has live 'za' state requires a spill/fill of ZA, which is not yet implemented}}
+  // expected-note@+1 {{add '__arm_preserves("za")' to the callee if it preserves ZA}}
+  share_zt0_only();
+}
+
+// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
+// expected-error@+1 {{streaming function cannot be multi-versioned}}
+__attribute__((target_version("sme2")))
+void cannot_work_version(void) __arm_streaming {}
+// expected-cpp-error@+5 {{function declared 'void ()' was previously declared 'void () __arm_streaming', which has different SME function attributes}}
+// expected-cpp-note@-2 {{previous declaration is here}}
+// expected-error@+3 {{function declared 'void (void)' was previously declared 'void (void) __arm_streaming', which has different SME function attributes}}
+// expected-note@-4 {{previous declaration is here}}
+__attribute__((target_version("default")))
+void cannot_work_version(void) {}
+
+
+// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
+// expected-error@+1 {{streaming function cannot be multi-versioned}}
+__attribute__((target_clones("sme2")))
+void cannot_work_clones(void) __arm_streaming {}
+
+
+__attribute__((target("sme2")))
+void just_fine_streaming(void) __arm_streaming {}
+__attribute__((target_version("sme2")))
+void just_fine(void) { just_fine_streaming(); }
+__attribute__((target_version("default")))
+void just_fine(void) {}
+
+
+__arm_locally_streaming
+__attribute__((target_version("sme2")))
+void just_fine_locally_streaming(void) {}
+__attribute__((target_version("default")))
+void just_fine_locally_streaming(void) {}
+
+
+void fmv_caller() {
+    cannot_work_version();
+    cannot_work_clones();
+    just_fine();
+    just_fine_locally_streaming();
+}

@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
@@ -68,12 +69,12 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 
 /// Return the precedence of a operator as an integer, higher values
 /// imply higher precedence.
-static int getOperatorPrecedence(Operation *operation) {
-  return llvm::TypeSwitch<Operation *, int>(operation)
+static FailureOr<int> getOperatorPrecedence(Operation *operation) {
+  return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
       .Case<emitc::AddOp>([&](auto op) { return 11; })
       .Case<emitc::ApplyOp>([&](auto op) { return 13; })
       .Case<emitc::CastOp>([&](auto op) { return 13; })
-      .Case<emitc::CmpOp>([&](auto op) {
+      .Case<emitc::CmpOp>([&](auto op) -> FailureOr<int> {
         switch (op.getPredicate()) {
         case emitc::CmpPredicate::eq:
         case emitc::CmpPredicate::ne:
@@ -86,13 +87,14 @@ static int getOperatorPrecedence(Operation *operation) {
         case emitc::CmpPredicate::three_way:
           return 10;
         }
+        return op->emitError("unsupported cmp predicate");
       })
       .Case<emitc::DivOp>([&](auto op) { return 12; })
       .Case<emitc::MulOp>([&](auto op) { return 12; })
       .Case<emitc::RemOp>([&](auto op) { return 12; })
       .Case<emitc::SubOp>([&](auto op) { return 11; })
-      .Case<emitc::CallOpaqueOp>([&](auto op) { return 14; });
-  llvm_unreachable("Unsupported operator");
+      .Case<emitc::CallOpaqueOp>([&](auto op) { return 14; })
+      .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
 
 namespace {
@@ -773,19 +775,27 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
 
 static LogicalResult printFunctionArgs(CppEmitter &emitter,
                                        Operation *functionOp,
+                                       ArrayRef<Type> arguments) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  return (
+      interleaveCommaWithError(arguments, os, [&](Type arg) -> LogicalResult {
+        return emitter.emitType(functionOp->getLoc(), arg);
+      }));
+}
+
+static LogicalResult printFunctionArgs(CppEmitter &emitter,
+                                       Operation *functionOp,
                                        Region::BlockArgListType arguments) {
   raw_indented_ostream &os = emitter.ostream();
 
-  if (failed(interleaveCommaWithError(
-          arguments, os, [&](BlockArgument arg) -> LogicalResult {
-            if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
-              return failure();
-            os << " " << emitter.getOrCreateName(arg);
-            return success();
-          })))
-    return failure();
-
-  return success();
+  return (interleaveCommaWithError(
+      arguments, os, [&](BlockArgument arg) -> LogicalResult {
+        if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
+          return failure();
+        os << " " << emitter.getOrCreateName(arg);
+        return success();
+      }));
 }
 
 static LogicalResult printFunctionBody(CppEmitter &emitter,
@@ -847,8 +857,9 @@ static LogicalResult printFunctionBody(CppEmitter &emitter,
       // needs to be printed after the closing brace.
       // When generating code for an emitc.for and emitc.verbatim op, printing a
       // trailing semicolon is handled within the printOperation function.
-      bool trailingSemicolon = !isa<cf::CondBranchOp, emitc::ForOp, emitc::IfOp,
-                                    emitc::LiteralOp, emitc::VerbatimOp>(op);
+      bool trailingSemicolon =
+          !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::ForOp,
+               emitc::IfOp, emitc::LiteralOp, emitc::VerbatimOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -913,12 +924,50 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   os << "(";
   Operation *operation = functionOp.getOperation();
+  if (functionOp.isExternal()) {
+    if (failed(printFunctionArgs(emitter, operation,
+                                 functionOp.getArgumentTypes())))
+      return failure();
+    os << ");";
+    return success();
+  }
   if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
     return failure();
   os << ") {\n";
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
   os << "}\n";
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    DeclareFuncOp declareFuncOp) {
+  CppEmitter::Scope scope(emitter);
+  raw_indented_ostream &os = emitter.ostream();
+
+  auto functionOp = SymbolTable::lookupNearestSymbolFrom<emitc::FuncOp>(
+      declareFuncOp, declareFuncOp.getSymNameAttr());
+
+  if (!functionOp)
+    return failure();
+
+  if (functionOp.getSpecifiers()) {
+    for (Attribute specifier : functionOp.getSpecifiersAttr()) {
+      os << cast<StringAttr>(specifier).str() << " ";
+    }
+  }
+
+  if (failed(emitter.emitTypes(functionOp.getLoc(),
+                               functionOp.getFunctionType().getResults())))
+    return failure();
+  os << " " << functionOp.getName();
+
+  os << "(";
+  Operation *operation = functionOp.getOperation();
+  if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+    return failure();
+  os << ");";
 
   return success();
 }
@@ -1072,7 +1121,10 @@ LogicalResult CppEmitter::emitExpression(ExpressionOp expressionOp) {
   Operation *rootOp = expressionOp.getRootOp();
 
   emittedExpression = expressionOp;
-  pushExpressionPrecedence(getOperatorPrecedence(rootOp));
+  FailureOr<int> precedence = getOperatorPrecedence(rootOp);
+  if (failed(precedence))
+    return failure();
+  pushExpressionPrecedence(precedence.value());
 
   if (failed(emitOperation(*rootOp, /*trailingSemicolon=*/false)))
     return failure();
@@ -1089,13 +1141,15 @@ LogicalResult CppEmitter::emitOperand(Value value) {
   if (isPartOfCurrentExpression(value)) {
     Operation *def = value.getDefiningOp();
     assert(def && "Expected operand to be defined by an operation");
-    int precedence = getOperatorPrecedence(def);
-    bool encloseInParenthesis = precedence < getExpressionPrecedence();
+    FailureOr<int> precedence = getOperatorPrecedence(def);
+    if (failed(precedence))
+      return failure();
+    bool encloseInParenthesis = precedence.value() < getExpressionPrecedence();
     if (encloseInParenthesis) {
       os << "(";
       pushExpressionPrecedence(lowestPrecedence());
     } else
-      pushExpressionPrecedence(precedence);
+      pushExpressionPrecedence(precedence.value());
 
     if (failed(emitOperation(*def, /*trailingSemicolon=*/false)))
       return failure();
@@ -1236,10 +1290,10 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // EmitC ops.
           .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
-                emitc::ConstantOp, emitc::DivOp, emitc::ExpressionOp,
-                emitc::ForOp, emitc::FuncOp, emitc::IfOp, emitc::IncludeOp,
-                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
-                emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::ConstantOp, emitc::DeclareFuncOp, emitc::DivOp,
+                emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubOp, emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

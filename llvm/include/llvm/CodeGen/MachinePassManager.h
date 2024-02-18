@@ -183,9 +183,8 @@ private:
   template <typename PassT>
   std::enable_if_t<is_detected<has_init_t, PassT>::value>
   addDoInitialization(PassConceptT *Pass) {
-    using PassModelT =
-        detail::PassModel<MachineFunction, PassT, PreservedAnalyses,
-                          MachineFunctionAnalysisManager>;
+    using PassModelT = detail::PassModel<MachineFunction, PassT,
+                                         MachineFunctionAnalysisManager>;
     auto *P = static_cast<PassModelT *>(Pass);
     InitializationFuncs.emplace_back(
         [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
@@ -205,9 +204,8 @@ private:
   template <typename PassT>
   std::enable_if_t<is_detected<has_fini_t, PassT>::value>
   addDoFinalization(PassConceptT *Pass) {
-    using PassModelT =
-        detail::PassModel<MachineFunction, PassT, PreservedAnalyses,
-                          MachineFunctionAnalysisManager>;
+    using PassModelT = detail::PassModel<MachineFunction, PassT,
+                                         MachineFunctionAnalysisManager>;
     auto *P = static_cast<PassModelT *>(Pass);
     FinalizationFuncs.emplace_back(
         [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
@@ -236,9 +234,8 @@ private:
                   "machine module pass needs to define machine function pass "
                   "api. sorry.");
 
-    using PassModelT =
-        detail::PassModel<MachineFunction, PassT, PreservedAnalyses,
-                          MachineFunctionAnalysisManager>;
+    using PassModelT = detail::PassModel<MachineFunction, PassT,
+                                         MachineFunctionAnalysisManager>;
     auto *P = static_cast<PassModelT *>(Pass);
     MachineModulePasses.emplace(
         Passes.size() - 1,

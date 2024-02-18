@@ -1,165 +1,17 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
-function(_get_compile_options_from_flags output_var)
-  set(compile_options "")
-
-  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
-    check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${flags})
-  endif()
-  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${flags})
-  check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${flags})
-  
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    if(ADD_FMA_FLAG)
-      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
-        list(APPEND compile_options "-mavx2")
-        list(APPEND compile_options "-mfma")
-      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
-        list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
-      endif()
-    endif()
-    if(ADD_SSE4_2_FLAG)
-      list(APPEND compile_options "-msse4.2")
-    endif()
-    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
-      list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
-    endif()
-  elseif(MSVC)
-    if(ADD_FMA_FLAG)
-      list(APPEND compile_options "/arch:AVX2")
-    endif()
-    if(ADD_EXPLICIT_SIMD_OPT_FLAG)
-      list(APPEND compile_options "/D__LIBC_EXPLICIT_SIMD_OPT")
-    endif()
-  endif()
-
-  set(${output_var} ${compile_options} PARENT_SCOPE)
-endfunction(_get_compile_options_from_flags)
-
-function(_get_common_compile_options output_var flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
-
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    list(APPEND compile_options "-fpie")
-
-    if(LLVM_LIBC_FULL_BUILD)
-      # Only add -ffreestanding flag in full build mode.
-      list(APPEND compile_options "-ffreestanding")
-    endif()
-
-    list(APPEND compile_options "-fno-builtin")
-    list(APPEND compile_options "-fno-exceptions")
-    list(APPEND compile_options "-fno-lax-vector-conversions")
-    list(APPEND compile_options "-fno-unwind-tables")
-    list(APPEND compile_options "-fno-asynchronous-unwind-tables")
-    list(APPEND compile_options "-fno-rtti")
-    if (LIBC_CC_SUPPORTS_PATTERN_INIT)
-      list(APPEND compile_options "-ftrivial-auto-var-init=pattern")
-    endif()
-    list(APPEND compile_options "-Wall")
-    list(APPEND compile_options "-Wextra")
-    # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
-    if(NOT LIBC_WNO_ERROR)
-      list(APPEND compile_options "-Werror")
-    endif()
-    list(APPEND compile_options "-Wconversion")
-    list(APPEND compile_options "-Wno-sign-conversion")
-    list(APPEND compile_options "-Wimplicit-fallthrough")
-    list(APPEND compile_options "-Wwrite-strings")
-    list(APPEND compile_options "-Wextra-semi")
-    if(NOT CMAKE_COMPILER_IS_GNUCXX)
-      list(APPEND compile_options "-Wnewline-eof")
-      list(APPEND compile_options "-Wnonportable-system-include-path")
-      list(APPEND compile_options "-Wstrict-prototypes")
-      list(APPEND compile_options "-Wthread-safety")
-      list(APPEND compile_options "-Wglobal-constructors")
-    endif()
-  elseif(MSVC)
-    list(APPEND compile_options "/EHs-c-")
-    list(APPEND compile_options "/GR-")
-  endif()
-  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    list(APPEND compile_options "-nogpulib")
-    list(APPEND compile_options "-fvisibility=hidden")
-    list(APPEND compile_options "-fconvergent-functions")
-
-    # Manually disable all standard include paths and include the resource
-    # directory to prevent system headers from being included.
-    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    list(APPEND compile_options "-nostdinc")
-  endif()
-  set(${output_var} ${compile_options} PARENT_SCOPE)
-endfunction()
-
-# Obtains NVPTX specific arguments for compilation.
-# The PTX feature is primarily based on the CUDA toolchain version. We want to
-# be able to target NVPTX without an existing CUDA installation, so we need to
-# set this manually. This simply sets the PTX feature to the minimum required
-# for the features we wish to use on that target. The minimum PTX features used
-# here roughly corresponds to the CUDA 9.0 release.
-# Adjust as needed for desired PTX features.
-function(get_nvptx_compile_options output_var gpu_arch)
-  set(nvptx_options "")
-  list(APPEND nvptx_options "-march=${gpu_arch}")
-  list(APPEND nvptx_options "-Wno-unknown-cuda-version")
-  list(APPEND nvptx_options "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false")
-  if(${gpu_arch} STREQUAL "sm_35")
-    list(APPEND nvptx_options "--cuda-feature=+ptx60")
-  elseif(${gpu_arch} STREQUAL "sm_37")
-    list(APPEND nvptx_options "--cuda-feature=+ptx60")
-  elseif(${gpu_arch} STREQUAL "sm_50")
-    list(APPEND nvptx_options "--cuda-feature=+ptx60")
-  elseif(${gpu_arch} STREQUAL "sm_52")
-    list(APPEND nvptx_options "--cuda-feature=+ptx60")
-  elseif(${gpu_arch} STREQUAL "sm_53")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_60")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_61")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_62")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_70")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_72")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_75")
-    list(APPEND nvptx_options "--cuda-feature=+ptx63")
-  elseif(${gpu_arch} STREQUAL "sm_80")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  elseif(${gpu_arch} STREQUAL "sm_86")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  elseif(${gpu_arch} STREQUAL "sm_89")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  elseif(${gpu_arch} STREQUAL "sm_90")
-    list(APPEND nvptx_options "--cuda-feature=+ptx72")
-  else()
-    message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
-  endif()
-
-  if(LIBC_CUDA_ROOT)
-    list(APPEND nvptx_options "--cuda-path=${LIBC_CUDA_ROOT}")
-  endif()
-  set(${output_var} ${nvptx_options} PARENT_SCOPE)
-endfunction()
-
-# Builds the object target for the GPU.
-# This compiles the target for all supported architectures and embeds it into
-# host binary for installing. The internal target contains the GPU code directly
-# compiled for a single architecture used internally.
+# Build the object target for a single GPU arch.
 # Usage:
-#     _build_gpu_objects(
+#     _build_gpu_object_for_single_arch(
 #       <target_name>
-#       <internal_target_name>
+#       <gpu_arch>
 #       SRCS <list of .cpp files>
 #       HDRS <list of .h files>
 #       DEPENDS <list of dependencies>
 #       COMPILE_OPTIONS <optional list of special compile options for this target>
 #       FLAGS <optional list of flags>
 #     )
-function(_build_gpu_objects fq_target_name internal_target_name)
+function(_build_gpu_object_for_single_arch fq_target_name gpu_arch)
   cmake_parse_arguments(
     "ADD_GPU_OBJ"
     "" # No optional arguments
@@ -168,7 +20,66 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
-  set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
+  if(NOT ADD_GPU_OBJ_CXX_STANDARD)
+    set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
+
+  set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
+  # Derive the triple from the specified architecture.
+  if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
+    set(gpu_target_triple ${AMDGPU_TARGET_TRIPLE})
+    list(APPEND compile_options "-mcpu=${gpu_arch}")
+    list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
+    list(APPEND compile_options "-emit-llvm")
+  elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
+    set(gpu_target_triple ${NVPTX_TARGET_TRIPLE})
+    get_nvptx_compile_options(nvptx_options ${gpu_arch})
+    list(APPEND compile_options "${nvptx_options}")
+  else()
+    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
+  endif()
+  list(APPEND compile_options "--target=${gpu_target_triple}")
+
+  # Build the library for this target architecture. We always emit LLVM-IR for
+  # packaged GPU binaries.
+  add_library(${fq_target_name}
+    EXCLUDE_FROM_ALL
+    OBJECT
+    ${ADD_GPU_OBJ_SRCS}
+    ${ADD_GPU_OBJ_HDRS}
+  )
+
+  target_compile_options(${fq_target_name} PRIVATE ${compile_options})
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  set_target_properties(${fq_target_name} PROPERTIES CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD})
+  if(ADD_GPU_OBJ_DEPENDS)
+    add_dependencies(${fq_target_name} ${ADD_GPU_OBJ_DEPENDS})
+    set_target_properties(${fq_target_name} PROPERTIES DEPS "${ADD_GPU_OBJ_DEPENDS}")
+  endif()
+endfunction(_build_gpu_object_for_single_arch)
+
+# Build the object target for the GPU.
+# This compiles the target for all supported architectures and embeds it into
+# host binary for installing.
+# Usage:
+#     _build_gpu_object_bundle(
+#       <target_name>
+#       SRCS <list of .cpp files>
+#       HDRS <list of .h files>
+#       DEPENDS <list of dependencies>
+#       COMPILE_OPTIONS <optional list of special compile options for this target>
+#       FLAGS <optional list of flags>
+#     )
+function(_build_gpu_object_bundle fq_target_name)
+  cmake_parse_arguments(
+    "ADD_GPU_OBJ"
+    "" # No optional arguments
+    "NAME;CXX_STANDARD" # Single value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;FLAGS"  # Multi value arguments
+    ${ARGN}
+  )
+
   if(NOT ADD_GPU_OBJ_CXX_STANDARD)
     set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
@@ -179,49 +90,28 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
       get_filename_component(src_name ${add_gpu_obj_src} NAME)
       set(gpu_target_name ${fq_target_name}.${src_name}.${gpu_arch})
-      set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
-      # Derive the triple from the specified architecture.
-      if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-        set(gpu_target_triple "amdgcn-amd-amdhsa")
-        list(APPEND compile_options "-mcpu=${gpu_arch}")
-        list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
-      elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-        set(gpu_target_triple "nvptx64-nvidia-cuda")
-        get_nvptx_compile_options(nvptx_options ${gpu_arch})
-        list(APPEND compile_options "${nvptx_options}")
-      else()
-        message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
-      endif()
-      list(APPEND compile_options "--target=${gpu_target_triple}")
-      list(APPEND compile_options "-emit-llvm")
 
-      # Build the library for this target architecture. We always emit LLVM-IR for
-      # packaged GPU binaries.
-      add_library(${gpu_target_name}
-        EXCLUDE_FROM_ALL
-        OBJECT
-        ${add_gpu_obj_src}
-        ${ADD_GPU_OBJ_HDRS}
+      _build_gpu_object_for_single_arch(
+        ${gpu_target_name}
+        ${gpu_arch}
+        CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
+        HDRS ${ADD_GPU_OBJ_HDRS}
+        SRCS ${add_gpu_obj_src}
+        COMPILE_OPTIONS
+          ${ADD_GPU_OBJ_COMPILE_OPTIONS}
+          "-emit-llvm"
+        DEPENDS ${ADD_GPU_OBJ_DEPENDS}
       )
-
-      target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
-      target_include_directories(${gpu_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-      target_include_directories(${gpu_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-      target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
-      set_target_properties(${gpu_target_name} PROPERTIES CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD})
-      if(ADD_GPU_OBJ_DEPENDS)
-        add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
-      endif()
-
       # Append this target to a list of images to package into a single binary.
       set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
       if("${gpu_arch}" IN_LIST all_nvptx_architectures)
+        get_nvptx_compile_options(nvptx_options ${gpu_arch})
         string(REGEX MATCH "\\+ptx[0-9]+" nvptx_ptx_feature ${nvptx_options})
         list(APPEND packager_images
-             --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple},feature=${nvptx_ptx_feature})
+             --image=file=${input_file},arch=${gpu_arch},triple=${NVPTX_TARGET_TRIPLE},feature=${nvptx_ptx_feature})
       else()
         list(APPEND packager_images
-             --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
+             --image=file=${input_file},arch=${gpu_arch},triple=${AMDGPU_TARGET_TRIPLE})
        endif()
       list(APPEND gpu_target_objects ${input_file})
     endforeach()
@@ -269,7 +159,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
   )
   target_compile_options(${fq_target_name} BEFORE PRIVATE
-                         ${common_compile_options} -nostdlib)
+                         ${ADD_GPU_OBJ_COMPILE_OPTIONS} -nostdlib)
   foreach(packaged_gpu_binary ${packaged_gpu_binaries})
     target_compile_options(${fq_target_name} PRIVATE
                            "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
@@ -278,33 +168,6 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name}
                    ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
-
-  # We only build the internal target for a single supported architecture.
-  if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU OR
-     LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-    add_library(
-      ${internal_target_name}
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_GPU_OBJ_SRCS}
-      ${ADD_GPU_OBJ_HDRS}
-    )
-    target_compile_options(${internal_target_name} BEFORE PRIVATE
-                           ${common_compile_options} --target=${LIBC_GPU_TARGET_TRIPLE})
-    if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-      target_compile_options(${internal_target_name} PRIVATE
-                             "SHELL:-Xclang -mcode-object-version=none"
-                             -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
-    elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-      get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
-      target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
-    endif()
-    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    if(full_deps_list)
-      add_dependencies(${internal_target_name} ${full_deps_list})
-    endif()
-  endif()
 endfunction()
 
 # Rule which is essentially a wrapper over add_library to compile a set of
@@ -354,8 +217,10 @@ function(create_object_library fq_target_name)
   # The GPU build uses a separate internal file.
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT ${ADD_OBJECT_NO_GPU_BUNDLE})
     set(internal_target_name ${fq_target_name}.__internal__)
+    set(public_packaging_for_internal "")
   else()
     set(internal_target_name ${fq_target_name})
+    set(public_packaging_for_internal "-DLIBC_COPT_PUBLIC_PACKAGING")
   endif()
 
   _get_common_compile_options(compile_options "${ADD_OBJECT_FLAGS}")
@@ -363,15 +228,27 @@ function(create_object_library fq_target_name)
 
   # GPU builds require special handling for the objects because we want to
   # export several different targets at once, e.g. for both Nvidia and AMD.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT ${ADD_OBJECT_NO_GPU_BUNDLE})
-    _build_gpu_objects(
-      ${fq_target_name}
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    if(NOT ${ADD_OBJECT_NO_GPU_BUNDLE})
+      _build_gpu_object_bundle(
+        ${fq_target_name}
+        SRCS ${ADD_OBJECT_SRCS}
+        HDRS ${ADD_OBJECT_HDRS}
+        CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
+        COMPILE_OPTIONS ${compile_options} "-DLIBC_COPT_PUBLIC_PACKAGING"
+        DEPENDS ${fq_deps_list}
+      )
+    endif()
+    # When the target for GPU is not bundled, internal_target_name is the same
+    # as fq_targetname
+    _build_gpu_object_for_single_arch(
       ${internal_target_name}
+      ${LIBC_GPU_TARGET_ARCHITECTURE}
       SRCS ${ADD_OBJECT_SRCS}
       HDRS ${ADD_OBJECT_HDRS}
-      DEPENDS ${fq_deps_list}
       CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
-      COMPILE_OPTIONS ${compile_options}
+      COMPILE_OPTIONS ${compile_options} ${public_packaging_for_internal}
+      DEPENDS ${fq_deps_list}
     )
   else()
     add_library(
@@ -567,9 +444,18 @@ function(create_entrypoint_object fq_target_name)
   # GPU builds require special handling for the objects because we want to
   # export several different targets at once, e.g. for both Nvidia and AMD.
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    _build_gpu_objects(
+    _build_gpu_object_bundle(
       ${fq_target_name}
+      SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
+      HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
+      COMPILE_OPTIONS ${common_compile_options} "-DLIBC_COPT_PUBLIC_PACKAGING"
+      CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
+      DEPENDS ${full_deps_list}
+      FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
+    )
+    _build_gpu_object_for_single_arch(
       ${internal_target_name}
+      ${LIBC_GPU_TARGET_ARCHITECTURE}
       SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
       HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
       COMPILE_OPTIONS ${common_compile_options}

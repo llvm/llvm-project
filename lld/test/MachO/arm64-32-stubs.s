@@ -10,7 +10,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/test.s -o %t/test.o
 # RUN: %lld-watchos -dylib -install_name @executable_path/libfoo.dylib %t/foo.o -o %t/libfoo.dylib
 # RUN: %lld-watchos -dylib -install_name @executable_path/libbar.dylib %t/bar.o -o %t/libbar.dylib
-# RUN: %lld-watchos -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test -no_fixup_chains
+# RUN: %lld-watchos -lSystem %t/libfoo.dylib %t/libbar.dylib %t/test.o -o %t/test
 
 # RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section="__TEXT,__stubs" --section="__TEXT,__stub_helper" %t/test | FileCheck %s
 

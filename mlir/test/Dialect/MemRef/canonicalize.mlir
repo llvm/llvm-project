@@ -62,13 +62,13 @@ func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
 // -----
 
 func.func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-  %arg2 : index) -> memref<?x?xf32, strided<[?, 1], offset: ?>>
+  %arg2 : index) -> memref<?x?xf32, strided<[?, ?], offset: ?>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-  return %0 : memref<?x?xf32, strided<[?, 1], offset: ?>>
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
 }
 // CHECK-LABEL: func @rank_reducing_subview_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>

@@ -24,26 +24,31 @@
 # CHECK-NEXT:     At: [[ADDR]]
 # CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_BB_ADDR_MAP section with index 3
 # CHECK-NEXT:     Name: <?>
-# CHECK-NEXT:     BB entries [
+# CHECK-NEXT:     BB Ranges [
 # CHECK-NEXT:       {
-# CHECK-NEXT:         ID: 0
-# CHECK-NEXT:         Offset: 0x0
-# CHECK-NEXT:         Size: 0x1
-# CHECK-NEXT:         HasReturn: No
-# CHECK-NEXT:         HasTailCall: Yes
-# CHECK-NEXT:         IsEHPad: No
-# CHECK-NEXT:         CanFallThrough: No
-# CHECK-NEXT:         HasIndirectBranch: No
-# CHECK-NEXT:       }
-# CHECK-NEXT:       {
-# CHECK-NEXT:         ID: 2
-# CHECK-NEXT:         Offset: 0x4
-# CHECK-NEXT:         Size: 0x4
-# CHECK-NEXT:         HasReturn: Yes
-# CHECK-NEXT:         HasTailCall: No
-# CHECK-NEXT:         IsEHPad: Yes
-# CHECK-NEXT:         CanFallThrough: No
-# CHECK-NEXT:         HasIndirectBranch: Yes
+# CHECK-NEXT:         Base Address: [[ADDR]]
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x1
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: Yes
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 2
+# CHECK-NEXT:             Offset: 0x4
+# CHECK-NEXT:             Size: 0x4
+# CHECK-NEXT:             HasReturn: Yes
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: Yes
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: Yes
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     PGO analyses {
@@ -69,16 +74,21 @@
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: 0x22222
 # CHECK-NEXT:     Name: foo
-# CHECK-NEXT:     BB entries [
+# CHECK-NEXT:     BB Ranges [
 # CHECK-NEXT:       {
-# CHECK-NEXT:         ID: 4
-# CHECK-NEXT:         Offset: 0x6
-# CHECK-NEXT:         Size: 0x7
-# CHECK-NEXT:         HasReturn: No
-# CHECK-NEXT:         HasTailCall: No
-# CHECK-NEXT:         IsEHPad: No
-# CHECK-NEXT:         CanFallThrough: Yes
-# CHECK-NEXT:         HasIndirectBranch: No
+# CHECK-NEXT:         Base Address: 0x22222
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 4
+# CHECK-NEXT:             Offset: 0x6
+# CHECK-NEXT:             Size: 0x7
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: Yes
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     PGO analyses {
@@ -102,26 +112,31 @@
 # TRUNCATED-NEXT:   Function {
 # TRUNCATED-NEXT:     At: 0x33333
 # TRUNCATED-NEXT:     Name: bar
-# TRUNCATED-NEXT:     BB entries [
+# TRUNCATED-NEXT:     BB Ranges [
 # TRUNCATED-NEXT:       {
-# TRUNCATED-NEXT:         ID: 6
-# TRUNCATED-NEXT:         Offset: 0x9
-# TRUNCATED-NEXT:         Size: 0xA
-# TRUNCATED-NEXT:         HasReturn: Yes
-# TRUNCATED-NEXT:         HasTailCall: Yes
-# TRUNCATED-NEXT:         IsEHPad: No
-# TRUNCATED-NEXT:         CanFallThrough: Yes
-# TRUNCATED-NEXT:         HasIndirectBranch: Yes
-# TRUNCATED-NEXT:       }
-# TRUNCATED-NEXT:       {
-# TRUNCATED-NEXT:         ID: 7
-# TRUNCATED-NEXT:         Offset: 0x1F
-# TRUNCATED-NEXT:         Size: 0xD
-# TRUNCATED-NEXT:         HasReturn: No
-# TRUNCATED-NEXT:         HasTailCall: Yes
-# TRUNCATED-NEXT:         IsEHPad: Yes
-# TRUNCATED-NEXT:         CanFallThrough: Yes
-# TRUNCATED-NEXT:         HasIndirectBranch: No
+# TRUNCATED-NEXT:         Base Address: 0x33333
+# TRUNCATED-NEXT:         BB Entries [
+# TRUNCATED-NEXT:           {
+# TRUNCATED-NEXT:             ID: 6
+# TRUNCATED-NEXT:             Offset: 0x9
+# TRUNCATED-NEXT:             Size: 0xA
+# TRUNCATED-NEXT:             HasReturn: Yes
+# TRUNCATED-NEXT:             HasTailCall: Yes
+# TRUNCATED-NEXT:             IsEHPad: No
+# TRUNCATED-NEXT:             CanFallThrough: Yes
+# TRUNCATED-NEXT:             HasIndirectBranch: Yes
+# TRUNCATED-NEXT:           }
+# TRUNCATED-NEXT:           {
+# TRUNCATED-NEXT:             ID: 7
+# TRUNCATED-NEXT:             Offset: 0x1F
+# TRUNCATED-NEXT:             Size: 0xD
+# TRUNCATED-NEXT:             HasReturn: No
+# TRUNCATED-NEXT:             HasTailCall: Yes
+# TRUNCATED-NEXT:             IsEHPad: Yes
+# TRUNCATED-NEXT:             CanFallThrough: Yes
+# TRUNCATED-NEXT:             HasIndirectBranch: No
+# TRUNCATED-NEXT:           }
+# TRUNCATED-NEXT:         ]
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:     ]
 # TRUNCATED-NEXT:     PGO analyses {
@@ -151,24 +166,26 @@ Sections:
     Entries:
       - Version: 2
         Feature: 0x7
-        Address: [[ADDR=0x11111]]
-        BBEntries:
-          - ID:            0
-            AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x2
-          - ID:            2
-            AddressOffset: 0x3
-            Size:          0x4
-            Metadata:      0x15
+        BBRanges:
+          - BaseAddress: [[ADDR=0x11111]]
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
+              - ID:            2
+                AddressOffset: 0x3
+                Size:          0x4
+                Metadata:      0x15
       - Version: 2
         Feature: 0x3
-        Address: 0x22222
-        BBEntries:
-          - ID:            4
-            AddressOffset: 0x6
-            Size:          0x7
-            Metadata:      0x8
+        BBRanges:
+          - BaseAddress: 0x22222
+            BBEntries:
+              - ID:            4
+                AddressOffset: 0x6
+                Size:          0x7
+                Metadata:      0x8
     PGOAnalyses:
       - FuncEntryCount: 100
         PGOBBEntries:
@@ -190,16 +207,17 @@ Sections:
     Entries:
       - Version: 2
         Feature: [[FEATURE=0x1]]
-        Address: 0x33333
-        BBEntries:
-          - ID:            6
-            AddressOffset: 0x9
-            Size:          0xa
-            Metadata:      0x1b
-          - ID:            7
-            AddressOffset: 0xc
-            Size:          0xd
-            Metadata:      0xe
+        BBRanges:
+          - BaseAddress: 0x33333
+            BBEntries:
+              - ID:            6
+                AddressOffset: 0x9
+                Size:          0xa
+                Metadata:      0x1b
+              - ID:            7
+                AddressOffset: 0xc
+                Size:          0xd
+                Metadata:      0xe
     PGOAnalyses:
       - FuncEntryCount: 89
 Symbols:

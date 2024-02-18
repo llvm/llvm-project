@@ -1323,6 +1323,21 @@ def POSIX : StandardSpec<"POSIX"> {
                 ArgSpec<ActionType>
             ]
         >,
+        FunctionSpec<
+            "insque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>,
+                ArgSpec<VoidPtr>
+            ]
+        >,
+        FunctionSpec<
+            "remque",
+            RetValSpec<VoidType>,
+            [
+                ArgSpec<VoidPtr>
+            ]
+        >,
     ]
   >; 
 

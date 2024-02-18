@@ -11,7 +11,7 @@
   target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
   target triple = "riscv64"
 
-  declare void @extern(<vscale x 4 x i32>*)
+  declare void @extern(ptr)
 
   define void @rvv_stack_align8() #0 {
   ; RV32-LABEL: rvv_stack_align8:
@@ -52,7 +52,7 @@
     %a = alloca <vscale x 4 x i32>, align 8
     %b = alloca i64
     %c = alloca i64
-    call void @extern(<vscale x 4 x i32>* %a)
+    call void @extern(ptr %a)
     ret void
   }
 
@@ -95,7 +95,7 @@
     %a = alloca <vscale x 4 x i32>, align 16
     %b = alloca i64
     %c = alloca i64
-    call void @extern(<vscale x 4 x i32>* %a)
+    call void @extern(ptr %a)
     ret void
   }
 
@@ -142,7 +142,7 @@
     %a = alloca <vscale x 4 x i32>, align 32
     %b = alloca i64
     %c = alloca i64
-    call void @extern(<vscale x 4 x i32>* %a)
+    call void @extern(ptr %a)
     ret void
   }
 
