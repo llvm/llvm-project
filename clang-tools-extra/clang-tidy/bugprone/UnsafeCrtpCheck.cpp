@@ -111,7 +111,8 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
         << FixItHint::CreateInsertion(
                CRTPDeclaration->getBraceRange().getBegin().getLocWithOffset(1),
                "private: " + CRTPDeclaration->getNameAsString() +
-                   "() = default;");
+                   "() = default;" +
+                   (CRTPDeclaration->isStruct() ? "\npublic:\n" : ""));
     diag(CRTPDeclaration->getLocation(), "consider making it private",
          DiagnosticIDs::Note);
   }
