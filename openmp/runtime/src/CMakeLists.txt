@@ -152,6 +152,10 @@ if(UNIX)
   set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
 endif()
 
+# Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
+# avoid an unwanted dependency on libstdc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
+
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 

@@ -65,8 +65,8 @@ Symbols:
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 2
 # CHECK-NEXT:     Name: .data
-# CHECK-NEXT:     PhysicalAddress: 0x8
-# CHECK-NEXT:     VirtualAddress: 0x8
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
 # CHECK-NEXT:     Size: 0x8
 # CHECK-NEXT:     RawDataOffset: 0xE4
 # CHECK-NEXT:     RelocationPointer: 0xF0

@@ -387,7 +387,7 @@ private:
   void notifyBlockRemoved(Block *block) override;
 
   /// For debugging only: Notify the driver of a pattern match failure.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -726,7 +726,7 @@ void GreedyPatternRewriteDriver::notifyOperationReplaced(
     config.listener->notifyOperationReplaced(op, replacement);
 }
 
-LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
+void GreedyPatternRewriteDriver::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
@@ -734,8 +734,7 @@ LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
     logger.startLine() << "** Failure : " << diag.str() << "\n";
   });
   if (config.listener)
-    return config.listener->notifyMatchFailure(loc, reasonCallback);
-  return failure();
+    config.listener->notifyMatchFailure(loc, reasonCallback);
 }
 
 //===----------------------------------------------------------------------===//

@@ -127,6 +127,17 @@ void ScalarEnumerationTraits<XCOFF::StorageMappingClass>::enumeration(
 #undef ECase
 }
 
+void ScalarEnumerationTraits<XCOFF::SymbolType>::enumeration(
+    IO &IO, XCOFF::SymbolType &Value) {
+#define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
+  ECase(XTY_ER);
+  ECase(XTY_SD);
+  ECase(XTY_LD);
+  ECase(XTY_CM);
+#undef ECase
+  IO.enumFallback<Hex8>(Value);
+}
+
 void ScalarEnumerationTraits<XCOFFYAML::AuxSymbolType>::enumeration(
     IO &IO, XCOFFYAML::AuxSymbolType &Type) {
 #define ECase(X) IO.enumCase(Type, #X, XCOFFYAML::X)
@@ -229,6 +240,8 @@ static void auxSymMapping(IO &IO, XCOFFYAML::CsectAuxEnt &AuxSym, bool Is64) {
   IO.mapOptional("ParameterHashIndex", AuxSym.ParameterHashIndex);
   IO.mapOptional("TypeChkSectNum", AuxSym.TypeChkSectNum);
   IO.mapOptional("SymbolAlignmentAndType", AuxSym.SymbolAlignmentAndType);
+  IO.mapOptional("SymbolType", AuxSym.SymbolType);
+  IO.mapOptional("SymbolAlignment", AuxSym.SymbolAlignment);
   IO.mapOptional("StorageMappingClass", AuxSym.StorageMappingClass);
   if (Is64) {
     IO.mapOptional("SectionOrLengthLo", AuxSym.SectionOrLengthLo);
@@ -350,7 +363,8 @@ void MappingTraits<XCOFFYAML::Symbol>::mapping(IO &IO, XCOFFYAML::Symbol &S) {
   IO.mapOptional("AuxEntries", S.AuxEntries);
 }
 
-void MappingTraits<XCOFFYAML::StringTable>::mapping(IO &IO, XCOFFYAML::StringTable &Str) {
+void MappingTraits<XCOFFYAML::StringTable>::mapping(
+    IO &IO, XCOFFYAML::StringTable &Str) {
   IO.mapOptional("ContentSize", Str.ContentSize);
   IO.mapOptional("Length", Str.Length);
   IO.mapOptional("Strings", Str.Strings);

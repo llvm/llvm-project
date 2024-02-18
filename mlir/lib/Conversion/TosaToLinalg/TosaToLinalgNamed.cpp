@@ -890,6 +890,10 @@ public:
             auto countF = rewriter.create<arith::SIToFPOp>(loc, accETy, count);
             poolVal = rewriter.create<arith::DivFOp>(loc, poolVal, countF)
                           ->getResult(0);
+            if (accETy.getIntOrFloatBitWidth() >
+                resultETy.getIntOrFloatBitWidth())
+              poolVal =
+                  rewriter.create<arith::TruncFOp>(loc, resultETy, poolVal);
           } else {
 
             // If we have quantization information we need to apply an offset

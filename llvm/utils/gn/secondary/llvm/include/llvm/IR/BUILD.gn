@@ -85,6 +85,10 @@ gen_arch_intrinsics("IntrinsicsS390") {
   intrinsic_prefix = "s390"
 }
 
+gen_arch_intrinsics("IntrinsicsSPIRV") {
+  intrinsic_prefix = "spv"
+}
+
 gen_arch_intrinsics("IntrinsicsVE") {
   intrinsic_prefix = "ve"
 }
@@ -128,6 +132,7 @@ group("public_tablegen") {
     ":IntrinsicsR600",
     ":IntrinsicsRISCV",
     ":IntrinsicsS390",
+    ":IntrinsicsSPIRV",
     ":IntrinsicsVE",
     ":IntrinsicsWebAssembly",
     ":IntrinsicsX86",
