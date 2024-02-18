@@ -633,7 +633,7 @@ public:
     return AA.alias(LocA, LocB, AAQI);
   }
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
-    return AA.pointsToConstantMemory(Loc, OrLocal);
+    return isNoModRef(AA.getModRefInfoMask(Loc, AAQI, OrLocal));
   }
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                bool IgnoreLocals = false) {
