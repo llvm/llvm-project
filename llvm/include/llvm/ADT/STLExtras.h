@@ -354,7 +354,7 @@ class mapped_iterator
 public:
   mapped_iterator() = default;
   mapped_iterator(ItTy U, FuncTy F)
-    : mapped_iterator::iterator_adaptor_base(std::move(U)), F(std::move(F)) {}
+      : mapped_iterator::iterator_adaptor_base(std::move(U)), F(std::move(F)) {}
 
   ItTy getCurrent() { return this->I; }
 
@@ -411,10 +411,9 @@ template <typename Ty> class has_rbegin_impl {
   using no = char[2];
 
   template <typename Inner>
-  static yes& test(Inner *I, decltype(I->rbegin()) * = nullptr);
+  static yes &test(Inner *I, decltype(I->rbegin()) * = nullptr);
 
-  template <typename>
-  static no& test(...);
+  template <typename> static no &test(...);
 
 public:
   static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
@@ -686,7 +685,7 @@ using std::declval;
 
 // We have to alias this since inlining the actual type at the usage site
 // in the parameter list of iterator_facade_base<> below ICEs MSVC 2017.
-template<typename... Iters> struct ZipTupleType {
+template <typename... Iters> struct ZipTupleType {
   using type = std::tuple<decltype(*declval<Iters>())...>;
 };
 
@@ -735,7 +734,7 @@ protected:
   }
 
 public:
-  zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
+  zip_common(Iters &&...ts) : iterators(std::forward<Iters>(ts)...) {}
 
   value_type operator*() const { return deref(IndexSequence{}); }
 
@@ -892,16 +891,16 @@ detail::zippy<detail::zip_first, T, U, Args...> zip_first(T &&t, U &&u,
 }
 
 namespace detail {
-template <typename Iter>
-Iter next_or_end(const Iter &I, const Iter &End) {
+template <typename Iter> Iter next_or_end(const Iter &I, const Iter &End) {
   if (I == End)
     return End;
   return std::next(I);
 }
 
 template <typename Iter>
-auto deref_or_none(const Iter &I, const Iter &End) -> std::optional<
-    std::remove_const_t<std::remove_reference_t<decltype(*I)>>> {
+auto deref_or_none(const Iter &I, const Iter &End)
+    -> std::optional<
+        std::remove_const_t<std::remove_reference_t<decltype(*I)>>> {
   if (I == End)
     return std::nullopt;
   return *I;
@@ -997,7 +996,7 @@ private:
   }
 
 public:
-  zip_longest_range(Args &&... ts_) : ts(std::forward<Args>(ts_)...) {}
+  zip_longest_range(Args &&...ts_) : ts(std::forward<Args>(ts_)...) {}
 
   iterator begin() const {
     return begin_impl(std::index_sequence_for<Args...>{});
@@ -1011,7 +1010,7 @@ public:
 /// if the iterator has not reached the end.
 template <typename T, typename U, typename... Args>
 detail::zip_longest_range<T, U, Args...> zip_longest(T &&t, U &&u,
-                                                     Args &&... args) {
+                                                     Args &&...args) {
   return detail::zip_longest_range<T, U, Args...>(
       std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
 }
@@ -1089,8 +1088,8 @@ class concat_iterator
   /// It is an error to call this with all iterators at the end.
   template <size_t... Ns> ValueT &get(std::index_sequence<Ns...>) const {
     // Build a sequence of functions to get from iterator if possible.
-    ValueT *(concat_iterator::*GetHelperFns[])() const = {
-        &concat_iterator::getHelper<Ns>...};
+    ValueT *(concat_iterator::*GetHelperFns[])()
+        const = {&concat_iterator::getHelper<Ns>...};
 
     // Loop over them, and return the first result we find.
     for (auto &GetHelperFn : GetHelperFns)
@@ -1106,7 +1105,7 @@ public:
   /// We need the full range to know how to switch between each of the
   /// iterators.
   template <typename... RangeTs>
-  explicit concat_iterator(RangeTs &&... Ranges)
+  explicit concat_iterator(RangeTs &&...Ranges)
       : Begins(std::begin(Ranges)...), Ends(std::end(Ranges)...) {}
 
   using BaseT::operator++;
@@ -1141,8 +1140,7 @@ public:
 private:
   std::tuple<RangeTs...> Ranges;
 
-  template <size_t... Ns>
-  iterator begin_impl(std::index_sequence<Ns...>) {
+  template <size_t... Ns> iterator begin_impl(std::index_sequence<Ns...>) {
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns>
@@ -1159,18 +1157,14 @@ private:
   }
 
 public:
-  concat_range(RangeTs &&... Ranges)
+  concat_range(RangeTs &&...Ranges)
       : Ranges(std::forward<RangeTs>(Ranges)...) {}
 
-  iterator begin() {
-    return begin_impl(std::index_sequence_for<RangeTs...>{});
-  }
+  iterator begin() { return begin_impl(std::index_sequence_for<RangeTs...>{}); }
   iterator begin() const {
     return begin_impl(std::index_sequence_for<RangeTs...>{});
   }
-  iterator end() {
-    return end_impl(std::index_sequence_for<RangeTs...>{});
-  }
+  iterator end() { return end_impl(std::index_sequence_for<RangeTs...>{}); }
   iterator end() const {
     return end_impl(std::index_sequence_for<RangeTs...>{});
   }
@@ -1182,7 +1176,7 @@ public:
 ///
 /// The desired value type must be explicitly specified.
 template <typename ValueT, typename... RangeTs>
-detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&... Ranges) {
+detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&...Ranges) {
   static_assert(sizeof...(RangeTs) > 1,
                 "Need more than one range to concatenate!");
   return detail::concat_range<ValueT, RangeTs...>(
@@ -1473,8 +1467,7 @@ struct less_second {
 
 /// \brief Function object to apply a binary function to the first component of
 /// a std::pair.
-template<typename FuncTy>
-struct on_first {
+template <typename FuncTy> struct on_first {
   FuncTy func;
 
   template <typename T>
@@ -1562,22 +1555,22 @@ void shuffle(Iterator first, Iterator last, RNG &&g) {
 }
 
 /// Adapt std::less<T> for array_pod_sort.
-template<typename T>
+template <typename T>
 inline int array_pod_sort_comparator(const void *P1, const void *P2) {
-  if (std::less<T>()(*reinterpret_cast<const T*>(P1),
-                     *reinterpret_cast<const T*>(P2)))
+  if (std::less<T>()(*reinterpret_cast<const T *>(P1),
+                     *reinterpret_cast<const T *>(P2)))
     return -1;
-  if (std::less<T>()(*reinterpret_cast<const T*>(P2),
-                     *reinterpret_cast<const T*>(P1)))
+  if (std::less<T>()(*reinterpret_cast<const T *>(P2),
+                     *reinterpret_cast<const T *>(P1)))
     return 1;
   return 0;
 }
 
 /// get_array_pod_sort_comparator - This is an internal helper function used to
 /// get type deduction of T right.
-template<typename T>
-inline int (*get_array_pod_sort_comparator(const T &))
-             (const void*, const void*) {
+template <typename T>
+inline int (*get_array_pod_sort_comparator(const T &))(const void *,
+                                                       const void *) {
   return array_pod_sort_comparator<T>;
 }
 
@@ -1612,12 +1605,13 @@ inline void presortShuffle(IteratorTy Start, IteratorTy End) {
 ///
 /// NOTE: If qsort_r were portable, we could allow a custom comparator and
 /// default to std::less.
-template<class IteratorTy>
+template <class IteratorTy>
 inline void array_pod_sort(IteratorTy Start, IteratorTy End) {
   // Don't inefficiently call qsort with one element or trigger undefined
   // behavior with an empty sequence.
   auto NElts = End - Start;
-  if (NElts <= 1) return;
+  if (NElts <= 1)
+    return;
 #ifdef EXPENSIVE_CHECKS
   detail::presortShuffle<IteratorTy>(Start, End);
 #endif
@@ -1633,7 +1627,8 @@ inline void array_pod_sort(
   // Don't inefficiently call qsort with one element or trigger undefined
   // behavior with an empty sequence.
   auto NElts = End - Start;
-  if (NElts <= 1) return;
+  if (NElts <= 1)
+    return;
 #ifdef EXPENSIVE_CHECKS
   detail::presortShuffle<IteratorTy>(Start, End);
 #endif
@@ -1686,12 +1681,13 @@ inline void sort(Container &&C, Compare Comp) {
 /// Get the size of a range. This is a wrapper function around std::distance
 /// which is only enabled when the operation is O(1).
 template <typename R>
-auto size(R &&Range,
-          std::enable_if_t<
-              std::is_base_of<std::random_access_iterator_tag,
-                              typename std::iterator_traits<decltype(
-                                  Range.begin())>::iterator_category>::value,
-              void> * = nullptr) {
+auto size(
+    R &&Range,
+    std::enable_if_t<
+        std::is_base_of<std::random_access_iterator_tag,
+                        typename std::iterator_traits<
+                            decltype(Range.begin())>::iterator_category>::value,
+        void> * = nullptr) {
   return std::distance(Range.begin(), Range.end());
 }
 
@@ -1971,13 +1967,11 @@ auto upper_bound(R &&Range, T &&Value, Compare C) {
                           std::forward<T>(Value), C);
 }
 
-template <typename R>
-void stable_sort(R &&Range) {
+template <typename R> void stable_sort(R &&Range) {
   std::stable_sort(adl_begin(Range), adl_end(Range));
 }
 
-template <typename R, typename Compare>
-void stable_sort(R &&Range, Compare C) {
+template <typename R, typename Compare> void stable_sort(R &&Range, Compare C) {
   std::stable_sort(adl_begin(Range), adl_end(Range), C);
 }
 
@@ -1989,7 +1983,7 @@ auto partition_point(R &&Range, Predicate P) {
   return std::partition_point(adl_begin(Range), adl_end(Range), P);
 }
 
-template<typename Range, typename Predicate>
+template <typename Range, typename Predicate>
 auto unique(Range &&R, Predicate P) {
   return std::unique(adl_begin(R), adl_end(R), P);
 }
@@ -2058,7 +2052,7 @@ void append_values(Container &C, Args &&...Values) {
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range [ValIt, ValEnd) (which is not from the same container).
-template<typename Container, typename RandomAccessIterator>
+template <typename Container, typename RandomAccessIterator>
 void replace(Container &Cont, typename Container::iterator ContIt,
              typename Container::iterator ContEnd, RandomAccessIterator ValIt,
              RandomAccessIterator ValEnd) {
@@ -2076,8 +2070,8 @@ void replace(Container &Cont, typename Container::iterator ContIt,
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range R.
-template<typename Container, typename Range = std::initializer_list<
-                                 typename Container::value_type>>
+template <typename Container, typename Range = std::initializer_list<
+                                  typename Container::value_type>>
 void replace(Container &Cont, typename Container::iterator ContIt,
              typename Container::iterator ContEnd, Range R) {
   replace(Cont, ContIt, ContEnd, R.begin(), R.end());
@@ -2130,8 +2124,7 @@ template <typename Container, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
 inline void interleave(const Container &c, StreamT &os,
                        const StringRef &separator) {
-  interleave(
-      c, os, [&](const T &a) { os << a; }, separator);
+  interleave(c, os, [&](const T &a) { os << a; }, separator);
 }
 
 template <typename Container, typename UnaryFunctor, typename StreamT,
@@ -2151,13 +2144,10 @@ inline void interleaveComma(const Container &c, StreamT &os) {
 //===----------------------------------------------------------------------===//
 
 struct FreeDeleter {
-  void operator()(void* v) {
-    ::free(v);
-  }
+  void operator()(void *v) { ::free(v); }
 };
 
-template<typename First, typename Second>
-struct pair_hash {
+template <typename First, typename Second> struct pair_hash {
   size_t operator()(const std::pair<First, Second> &P) const {
     return std::hash<First>()(P.first) * 31 + std::hash<Second>()(P.second);
   }
@@ -2415,8 +2405,9 @@ bool all_of_zip_predicate_last(
     std::index_sequence<InputIndexes...>) {
   auto constexpr OutputIndex =
       std::tuple_size<decltype(argsThenPredicate)>::value - 1;
-  return all_of_zip_predicate_first(std::get<OutputIndex>(argsThenPredicate),
-                             std::get<InputIndexes>(argsThenPredicate)...);
+  return all_of_zip_predicate_first(
+      std::get<OutputIndex>(argsThenPredicate),
+      std::get<InputIndexes>(argsThenPredicate)...);
 }
 
 } // end namespace detail

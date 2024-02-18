@@ -845,7 +845,7 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeCycleExitDivergence(
 
   for (auto *BB : DefCycle.blocks()) {
     if (!llvm::any_of(Exits,
-                     [&](BlockT *Exit) { return DT.dominates(BB, Exit); }))
+                      [&](BlockT *Exit) { return DT.dominates(BB, Exit); }))
       continue;
     for (auto &II : *BB) {
       propagateTemporalDivergence(II, DefCycle);

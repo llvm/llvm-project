@@ -1031,18 +1031,18 @@ TEST(STLExtrasTest, MakeVisitorCallableMultipleOperands) {
 
 TEST(STLExtrasTest, MakeVisitorDefaultCase) {
   {
-    auto Visitor = makeVisitor([](int I) { return I + 100; },
-                               [](float F) { return F * 2; },
-                               [](auto) { return -1; });
+    auto Visitor =
+        makeVisitor([](int I) { return I + 100; },
+                    [](float F) { return F * 2; }, [](auto) { return -1; });
     EXPECT_EQ(Visitor(24), 124);
     EXPECT_EQ(Visitor(2.f), 4.f);
     EXPECT_EQ(Visitor(2.), -1);
     EXPECT_EQ(Visitor(Visitor), -1);
   }
   {
-    auto Visitor = makeVisitor([](auto) { return -1; },
-                               [](int I) { return I + 100; },
-                               [](float F) { return F * 2; });
+    auto Visitor =
+        makeVisitor([](auto) { return -1; }, [](int I) { return I + 100; },
+                    [](float F) { return F * 2; });
     EXPECT_EQ(Visitor(24), 124);
     EXPECT_EQ(Visitor(2.f), 4.f);
     EXPECT_EQ(Visitor(2.), -1);
