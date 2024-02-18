@@ -6306,7 +6306,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
-      VT == MVT::v16f16)
+      VT == MVT::v32f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -14571,7 +14571,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     EVT VT = N->getValueType(0);
 
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
-    if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2f16) {
+    if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
       SDLoc SL(N);
       SDValue Src = N->getOperand(0);
       EVT EltVT = Src.getValueType();
