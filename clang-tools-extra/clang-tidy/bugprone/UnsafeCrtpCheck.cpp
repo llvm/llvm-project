@@ -110,9 +110,9 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
         << CRTPDeclaration
         << FixItHint::CreateInsertion(
                CRTPDeclaration->getBraceRange().getBegin().getLocWithOffset(1),
-               "private: " + CRTPDeclaration->getNameAsString() +
-                   "() = default;" +
-                   (CRTPDeclaration->isStruct() ? "\npublic:\n" : ""));
+               (CRTPDeclaration->isStruct() ? "\nprivate:\n" : "\n") +
+                   CRTPDeclaration->getNameAsString() + "() = default;" +
+                   (CRTPDeclaration->isStruct() ? "\npublic:\n" : "\n"));
     diag(CRTPDeclaration->getLocation(), "consider making it private",
          DiagnosticIDs::Note);
   }
@@ -127,8 +127,9 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
          "the CRTP cannot be constructed from the derived class")
         << CRTPDeclaration
         << FixItHint::CreateInsertion(
-               CRTPDeclaration->getBraceRange().getEnd().getLocWithOffset(-1),
-               "friend " + DerivedTemplateParameter->getNameAsString() + ';');
+               CRTPDeclaration->getBraceRange().getEnd(),
+               "friend " + DerivedTemplateParameter->getNameAsString() + ';' +
+                   '\n');
     diag(CRTPDeclaration->getLocation(),
          "consider declaring the derived class as friend", DiagnosticIDs::Note);
   }
