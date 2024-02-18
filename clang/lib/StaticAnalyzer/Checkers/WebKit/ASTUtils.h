@@ -53,6 +53,11 @@ class Expr;
 std::pair<const clang::Expr *, bool>
 tryToFindPtrOrigin(const clang::Expr *E, bool StopAtFirstRefCountedObj);
 
+// Returns true if \P V is a variable declaration and \p E is its
+// initialization expression, and there is a "guardian" RefPtr or RefPtr
+// protecting the same value.
+bool isVarDeclGuardedInit(const VarDecl *V, const clang::Expr *InitE);
+
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
 /// whether it's a safe call argument. Examples: function parameter or
 /// this-pointer. The logic relies on the set of recursive rules we enforce for

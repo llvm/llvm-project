@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ParentMapContext.h"
 #include <optional>
 
 namespace clang {
@@ -100,6 +101,131 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
   }
   // Some other expression.
   return {E, false};
+}
+
+bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
+                                           const VarDecl *MaybeGuardian) {
+  assert(Guarded);
+  assert(MaybeGuardian);
+
+  if (!MaybeGuardian->isLocalVarDecl())
+    return false;
+
+  const CompoundStmt *guardiansClosestCompStmtAncestor = nullptr;
+
+  ASTContext &ctx = MaybeGuardian->getASTContext();
+
+  for (DynTypedNodeList guardianAncestors = ctx.getParents(*MaybeGuardian);
+       !guardianAncestors.empty();
+       guardianAncestors = ctx.getParents(
+           *guardianAncestors
+                .begin()) // FIXME - should we handle all of the parents?
+  ) {
+    for (auto &guardianAncestor : guardianAncestors) {
+      if (auto *CStmtParentAncestor = guardianAncestor.get<CompoundStmt>()) {
+        guardiansClosestCompStmtAncestor = CStmtParentAncestor;
+        break;
+      }
+    }
+    if (guardiansClosestCompStmtAncestor)
+      break;
+  }
+
+  if (!guardiansClosestCompStmtAncestor)
+    return false;
+
+  // We need to skip the first CompoundStmt to avoid situation when guardian is
+  // defined in the same scope as guarded variable.
+  bool HaveSkippedFirstCompoundStmt = false;
+  for (DynTypedNodeList guardedVarAncestors = ctx.getParents(*Guarded);
+       !guardedVarAncestors.empty();
+       guardedVarAncestors = ctx.getParents(
+           *guardedVarAncestors
+                .begin()) // FIXME - should we handle all of the parents?
+  ) {
+    for (auto &guardedVarAncestor : guardedVarAncestors) {
+      if (guardedVarAncestor.get<ForStmt>()) {
+        if (!HaveSkippedFirstCompoundStmt)
+          HaveSkippedFirstCompoundStmt = true;
+        continue;
+      }
+      if (guardedVarAncestor.get<IfStmt>()) {
+        if (!HaveSkippedFirstCompoundStmt)
+          HaveSkippedFirstCompoundStmt = true;
+        continue;
+      }
+      if (guardedVarAncestor.get<WhileStmt>()) {
+        if (!HaveSkippedFirstCompoundStmt)
+          HaveSkippedFirstCompoundStmt = true;
+        continue;
+      }
+      if (auto *CStmtAncestor = guardedVarAncestor.get<CompoundStmt>()) {
+        if (!HaveSkippedFirstCompoundStmt) {
+          HaveSkippedFirstCompoundStmt = true;
+          continue;
+        }
+        if (CStmtAncestor == guardiansClosestCompStmtAncestor)
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// FIXME: should be defined by annotations in the future
+bool isRefcountedStringsHack(const VarDecl *V) {
+  assert(V);
+  auto safeClass = [](const std::string &className) {
+    return className == "String" || className == "AtomString" ||
+           className == "UniquedString" || className == "Identifier";
+  };
+  QualType QT = V->getType();
+  auto *T = QT.getTypePtr();
+  if (auto *CXXRD = T->getAsCXXRecordDecl()) {
+    if (safeClass(safeGetName(CXXRD)))
+      return true;
+  }
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
+      if (safeClass(safeGetName(CXXRD)))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool isVarDeclGuardedInit(const VarDecl *V, const Expr *InitE) {
+  // "this" parameter like any other argument is considered safe.
+  if (isa<CXXThisExpr>(InitE))
+    return true;
+
+  if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitE)) {
+    if (auto *MaybeGuardian = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+      // Parameters are guaranteed to be safe for the duration of the call.
+      if (isa<ParmVarDecl>(MaybeGuardian))
+        return true;
+
+      const auto *MaybeGuardianArgType = MaybeGuardian->getType().getTypePtr();
+      if (!MaybeGuardianArgType)
+        return false;
+
+      const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
+          MaybeGuardianArgType->getAsCXXRecordDecl();
+
+      if (!MaybeGuardianArgCXXRecord)
+        return false;
+
+      if (MaybeGuardian->isLocalVarDecl() &&
+          (isRefCounted(MaybeGuardianArgCXXRecord) ||
+           isRefcountedStringsHack(MaybeGuardian)) &&
+          isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 bool isASafeCallArg(const Expr *E) {

@@ -48,83 +48,6 @@ bool isDeclaredInForOrIf(const VarDecl *Var) {
   return false;
 }
 
-// FIXME: should be defined by anotations in the future
-bool isRefcountedStringsHack(const VarDecl *V) {
-  assert(V);
-  auto safeClass = [](const std::string &className) {
-    return className == "String" || className == "AtomString" ||
-           className == "UniquedString" || className == "Identifier";
-  };
-  QualType QT = V->getType();
-  auto *T = QT.getTypePtr();
-  if (auto *CXXRD = T->getAsCXXRecordDecl()) {
-    if (safeClass(safeGetName(CXXRD)))
-      return true;
-  }
-  if (T->isPointerType() || T->isReferenceType()) {
-    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
-      if (safeClass(safeGetName(CXXRD)))
-        return true;
-    }
-  }
-  return false;
-}
-
-bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
-                                           const VarDecl *MaybeGuardian) {
-  assert(Guarded);
-  assert(MaybeGuardian);
-
-  if (!MaybeGuardian->isLocalVarDecl())
-    return false;
-
-  const CompoundStmt *guardiansClosestCompStmtAncestor = nullptr;
-
-  ASTContext &ctx = MaybeGuardian->getASTContext();
-
-  for (DynTypedNodeList guardianAncestors = ctx.getParents(*MaybeGuardian);
-       !guardianAncestors.empty();
-       guardianAncestors = ctx.getParents(
-           *guardianAncestors
-                .begin()) // FIXME - should we handle all of the parents?
-  ) {
-    for (auto &guardianAncestor : guardianAncestors) {
-      if (auto *CStmtParentAncestor = guardianAncestor.get<CompoundStmt>()) {
-        guardiansClosestCompStmtAncestor = CStmtParentAncestor;
-        break;
-      }
-    }
-    if (guardiansClosestCompStmtAncestor)
-      break;
-  }
-
-  if (!guardiansClosestCompStmtAncestor)
-    return false;
-
-  // We need to skip the first CompoundStmt to avoid situation when guardian is
-  // defined in the same scope as guarded variable.
-  bool HaveSkippedFirstCompoundStmt = false;
-  for (DynTypedNodeList guardedVarAncestors = ctx.getParents(*Guarded);
-       !guardedVarAncestors.empty();
-       guardedVarAncestors = ctx.getParents(
-           *guardedVarAncestors
-                .begin()) // FIXME - should we handle all of the parents?
-  ) {
-    for (auto &guardedVarAncestor : guardedVarAncestors) {
-      if (auto *CStmtAncestor = guardedVarAncestor.get<CompoundStmt>()) {
-        if (!HaveSkippedFirstCompoundStmt) {
-          HaveSkippedFirstCompoundStmt = true;
-          continue;
-        }
-        if (CStmtAncestor == guardiansClosestCompStmtAncestor)
-          return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 class UncountedLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug{this,
@@ -181,34 +104,8 @@ public:
       if (!InitArgOrigin)
         return;
 
-      if (isa<CXXThisExpr>(InitArgOrigin))
+      if (isVarDeclGuardedInit(V, InitArgOrigin))
         return;
-
-      if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
-        if (auto *MaybeGuardian =
-                dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-          const auto *MaybeGuardianArgType =
-              MaybeGuardian->getType().getTypePtr();
-          if (!MaybeGuardianArgType)
-            return;
-          const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-              MaybeGuardianArgType->getAsCXXRecordDecl();
-          if (!MaybeGuardianArgCXXRecord)
-            return;
-
-          if (MaybeGuardian->isLocalVarDecl() &&
-              (isRefCounted(MaybeGuardianArgCXXRecord) ||
-               isRefcountedStringsHack(MaybeGuardian)) &&
-              isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian)) {
-            return;
-          }
-
-          // Parameters are guaranteed to be safe for the duration of the call
-          // by another checker.
-          if (isa<ParmVarDecl>(MaybeGuardian))
-            return;
-        }
-      }
 
       reportBug(V);
     }

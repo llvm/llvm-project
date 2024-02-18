@@ -63,6 +63,28 @@ struct RefCountable {
   void deref() {}
 };
 
-template <typename T> T *downcast(T *t) { return t; }
+template <typename T, typename S>
+struct TypeCastTraits {
+  static bool isOfType(S&);
+};
+
+// Type checking function, to use before casting with downcast<>().
+template <typename T, typename S>
+inline bool is(const S &source) {
+    return TypeCastTraits<const T, const S>::isOfType(source);
+}
+
+template <typename T, typename S>
+inline bool is(S *source) {
+    return source && TypeCastTraits<const T, const S>::isOfType(*source);
+}
+
+template <typename T, typename S> T *downcast(S *t) { return static_cast<T*>(t); }
+template <typename T, typename S> T *dynamicDowncast(S &t) {
+  return is<T>(t) ? &static_cast<T&>(t) : nullptr;
+}
+template <typename T, typename S> T *dynamicDowncast(S *t) {
+  return is<T>(t) ? static_cast<T*>(t) : nullptr;
+}
 
 #endif

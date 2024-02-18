@@ -126,7 +126,6 @@ bool isReturnValueRefCounted(const clang::FunctionDecl *F) {
 }
 
 bool isTypeRefCounted(QualType type) {
-  assert(F);
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
       type = elaboratedT->desugar();

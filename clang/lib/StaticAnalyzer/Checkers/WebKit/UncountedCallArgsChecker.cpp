@@ -137,6 +137,16 @@ public:
       return true;
     }
 
+    if (auto *DRE = dyn_cast<DeclRefExpr>(ArgOrigin.first)) {
+      auto *Decl = DRE->getFoundDecl();
+      if (auto *VD = dyn_cast<VarDecl>(Decl)) {
+        std::pair<const clang::Expr *, bool> ArgOrigin =
+            tryToFindPtrOrigin(VD->getInit(), false);
+        if (ArgOrigin.first && isVarDeclGuardedInit(VD, ArgOrigin.first))
+          return true;
+      }
+    }
+
     return isASafeCallArg(ArgOrigin.first);
   }
 
