@@ -3365,45 +3365,8 @@ bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
   return true;
 }
 
-/// When calling this, we have a pointer of the local-to-destroy
-/// on the stack.
-/// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
-  assert(Desc);
-  assert(!Desc->isPrimitive());
-  assert(!Desc->isPrimitiveArray());
-
-  // Arrays.
-  if (Desc->isArray()) {
-    const Descriptor *ElemDesc = Desc->ElemDesc;
-    assert(ElemDesc);
-
-    // Don't need to do anything for these.
-    if (ElemDesc->isPrimitiveArray())
-      return this->emitPopPtr(SourceInfo{});
-
-    // If this is an array of record types, check if we need
-    // to call the element destructors at all. If not, try
-    // to save the work.
-    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
-      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-          !Dtor || Dtor->isTrivial())
-        return this->emitPopPtr(SourceInfo{});
-    }
-
-    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-      if (!this->emitConstUint64(I, SourceInfo{}))
-        return false;
-      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
-        return false;
-      if (!this->emitRecordDestruction(ElemDesc))
-        return false;
-    }
-    return this->emitPopPtr(SourceInfo{});
-  }
-
-  const Record *R = Desc->ElemRecord;
+bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);
   // First, destroy all fields.
   for (const Record::Field &Field : llvm::reverse(R->fields())) {
@@ -3413,7 +3376,9 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
         return false;
       if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
         return false;
-      if (!this->emitRecordDestruction(D))
+      if (!this->emitDestruction(D))
+        return false;
+      if (!this->emitPopPtr(SourceInfo{}))
         return false;
     }
   }
@@ -3437,13 +3402,57 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
-    if (!this->emitRecordDestruction(Base.Desc))
+    if (!this->emitRecordDestruction(Base.R))
+      return false;
+    if (!this->emitPopPtr(SourceInfo{}))
       return false;
   }
-  // FIXME: Virtual bases.
 
-  // Remove the instance pointer.
-  return this->emitPopPtr(SourceInfo{});
+  // FIXME: Virtual bases.
+  return true;
+}
+/// When calling this, we have a pointer of the local-to-destroy
+/// on the stack.
+/// Emit destruction of record types (or arrays of record types).
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitDestruction(const Descriptor *Desc) {
+  assert(Desc);
+  assert(!Desc->isPrimitive());
+  assert(!Desc->isPrimitiveArray());
+
+  // Arrays.
+  if (Desc->isArray()) {
+    const Descriptor *ElemDesc = Desc->ElemDesc;
+    assert(ElemDesc);
+
+    // Don't need to do anything for these.
+    if (ElemDesc->isPrimitiveArray())
+      return true;
+
+    // If this is an array of record types, check if we need
+    // to call the element destructors at all. If not, try
+    // to save the work.
+    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
+      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+          !Dtor || Dtor->isTrivial())
+        return true;
+    }
+
+    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
+      if (!this->emitConstUint64(I, SourceInfo{}))
+        return false;
+      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+        return false;
+      if (!this->emitDestruction(ElemDesc))
+        return false;
+      if (!this->emitPopPtr(SourceInfo{}))
+        return false;
+    }
+    return true;
+  }
+
+  assert(Desc->ElemRecord);
+  return this->emitRecordDestruction(Desc->ElemRecord);
 }
 
 namespace clang {
