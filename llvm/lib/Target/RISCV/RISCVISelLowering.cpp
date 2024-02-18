@@ -13316,8 +13316,7 @@ namespace {
 // apply a combine.
 struct CombineResult;
 
-enum class ExtKind { ZExt, SExt, FPExt };
-
+enum ExtKind : uint8_t { ZExt = 1 << 0, SExt = 1 << 1, FPExt = 1 << 2 };
 /// Helper class for folding sign/zero extensions.
 /// In particular, this class is used for the following combines:
 /// add | add_vl -> vwadd(u) | vwadd(u)_w
@@ -13448,13 +13447,11 @@ struct NodeExtensionHelper {
     // Determine the narrow size.
     unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
 
-    unsigned NarrowMinSize = SupportsExt == ExtKind::FPExt ? 16 : 8;
-
     MVT EltVT = SupportsExt == ExtKind::FPExt
                     ? MVT::getFloatingPointVT(NarrowSize)
                     : MVT::getIntegerVT(NarrowSize);
 
-    assert(NarrowSize >= NarrowMinSize &&
+    assert(NarrowSize >= (SupportsExt == ExtKind::FPExt ? 16 : 8) &&
            "Trying to extend something we can't represent");
     MVT NarrowVT = MVT::getVectorVT(EltVT, VT.getVectorElementCount());
     return NarrowVT;
@@ -13823,33 +13820,32 @@ struct CombineResult {
 /// Check if \p Root follows a pattern Root(ext(LHS), ext(RHS))
 /// where `ext` is the same for both LHS and RHS (i.e., both are sext or both
 /// are zext) and LHS and RHS can be folded into Root.
-/// AllowSExt and AllozZExt define which form `ext` can take in this pattern.
+/// AllowExtMask define which form `ext` can take in this pattern.
 ///
 /// \note If the pattern can match with both zext and sext, the returned
 /// CombineResult will feature the zext result.
 ///
 /// \returns std::nullopt if the pattern doesn't match or a CombineResult that
 /// can be used to apply the pattern.
-static std::optional<CombineResult> canFoldToVWWithSameExtensionImpl(
-    SDNode *Root, const NodeExtensionHelper &LHS,
-    const NodeExtensionHelper &RHS, bool AllowSExt, bool AllowZExt,
-    bool AllowFPExt, SelectionDAG &DAG, const RISCVSubtarget &Subtarget) {
-  assert((AllowSExt || AllowZExt || AllowFPExt) &&
-         "Forgot to set what you want?");
+static std::optional<CombineResult>
+canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
+                                 const NodeExtensionHelper &RHS,
+                                 uint8_t AllowExtMask, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
       !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
     return std::nullopt;
-  if (AllowZExt && LHS.SupportsZExt && RHS.SupportsZExt)
+  if (AllowExtMask & ExtKind::ZExt && LHS.SupportsZExt && RHS.SupportsZExt)
     return CombineResult(NodeExtensionHelper::getSameExtensionOpcode(
                              Root->getOpcode(), ExtKind::ZExt),
                          Root, LHS, /*LHSExt=*/{ExtKind::ZExt}, RHS,
                          /*RHSExt=*/{ExtKind::ZExt});
-  if (AllowSExt && LHS.SupportsSExt && RHS.SupportsSExt)
+  if (AllowExtMask & ExtKind::SExt && LHS.SupportsSExt && RHS.SupportsSExt)
     return CombineResult(NodeExtensionHelper::getSameExtensionOpcode(
                              Root->getOpcode(), ExtKind::SExt),
                          Root, LHS, /*LHSExt=*/{ExtKind::SExt}, RHS,
                          /*RHSExt=*/{ExtKind::SExt});
-  if (AllowFPExt && LHS.SupportsFPExt && RHS.SupportsFPExt)
+  if (AllowExtMask & ExtKind::FPExt && RHS.SupportsFPExt)
     return CombineResult(NodeExtensionHelper::getSameExtensionOpcode(
                              Root->getOpcode(), ExtKind::FPExt),
                          Root, LHS, /*LHSExt=*/{ExtKind::FPExt}, RHS,
@@ -13867,9 +13863,9 @@ static std::optional<CombineResult>
 canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
                              const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                              const RISCVSubtarget &Subtarget) {
-  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/true,
-                                          /*AllowZExt=*/true,
-                                          /*AllowFPExt=*/true, DAG, Subtarget);
+  return canFoldToVWWithSameExtensionImpl(
+      Root, LHS, RHS, ExtKind::ZExt | ExtKind::SExt | ExtKind::FPExt, DAG,
+      Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(LHS, ext(RHS))
@@ -13911,9 +13907,8 @@ static std::optional<CombineResult>
 canFoldToVWWithSEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                     const RISCVSubtarget &Subtarget) {
-  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/true,
-                                          /*AllowZExt=*/false,
-                                          /*AllowFPExt=*/false, DAG, Subtarget);
+  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, ExtKind::SExt, DAG,
+                                          Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(zext(LHS), zext(RHS))
@@ -13924,9 +13919,8 @@ static std::optional<CombineResult>
 canFoldToVWWithZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                     const RISCVSubtarget &Subtarget) {
-  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/false,
-                                          /*AllowZExt=*/true,
-                                          /*AllowFPExt=*/false, DAG, Subtarget);
+  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, ExtKind::ZExt, DAG,
+                                          Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(fpext(LHS), fpext(RHS))
@@ -13937,9 +13931,8 @@ static std::optional<CombineResult>
 canFoldToVWWithFPEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                      const NodeExtensionHelper &RHS, SelectionDAG &DAG,
                      const RISCVSubtarget &Subtarget) {
-  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/false,
-                                          /*AllowZExt=*/false,
-                                          /*AllowFPExt=*/true, DAG, Subtarget);
+  return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, ExtKind::FPExt, DAG,
+                                          Subtarget);
 }
 
 /// Check if \p Root follows a pattern Root(sext(LHS), zext(RHS))
