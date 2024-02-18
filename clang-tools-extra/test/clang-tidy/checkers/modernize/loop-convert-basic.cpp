@@ -93,11 +93,15 @@ void f() {
   int Matrix[N][12];
   size_t size = 0;
   for (int I = 0; I < N; ++I) {
-      size += sizeof(Matrix[I]) + sizeof Matrix[I];
+      size += sizeof(Matrix[I]);
+      size += sizeof Matrix[I];
+      size += sizeof((Matrix[I]));
   }
-  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
+  // CHECK-MESSAGES: :[[@LINE-5]]:3: warning: use range-based for loop instead
   // CHECK-FIXES: for (auto & I : Matrix)
-  // CHECK-FIXES-NEXT: size += sizeof(I) + sizeof I;
+  // CHECK-FIXES-NEXT: size += sizeof(I);
+  // CHECK-FIXES-NEXT: size += sizeof I;
+  // CHECK-FIXES-NEXT: size += sizeof(I);
 
   Val Teas[N];
   for (int I = 0; I < N; ++I) {
