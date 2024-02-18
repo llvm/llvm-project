@@ -13,7 +13,7 @@
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 5)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -26,15 +26,15 @@
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 5)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 4
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 2
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -47,7 +47,7 @@ size_t test_vsetvl_e8mf8(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 6)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -60,15 +60,15 @@ size_t test_vsetvl_e8mf8(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 6)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 8
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 4
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -81,7 +81,7 @@ size_t test_vsetvl_e8mf4(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 7)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -94,15 +94,15 @@ size_t test_vsetvl_e8mf4(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 7)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 8
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -149,7 +149,7 @@ size_t test_vsetvl_e8m1(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 1)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 32
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -162,15 +162,15 @@ size_t test_vsetvl_e8m1(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 1)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 32
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 64
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 32
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -183,7 +183,7 @@ size_t test_vsetvl_e8m2(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 2)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 64
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -196,15 +196,15 @@ size_t test_vsetvl_e8m2(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 2)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 64
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 128
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 64
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -217,7 +217,7 @@ size_t test_vsetvl_e8m4(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 3)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 128
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -230,15 +230,15 @@ size_t test_vsetvl_e8m4(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 0, i64 3)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 128
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 256
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 128
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -251,7 +251,7 @@ size_t test_vsetvl_e8m8(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 6)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -264,15 +264,15 @@ size_t test_vsetvl_e8m8(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 6)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 4
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 2
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -285,7 +285,7 @@ size_t test_vsetvl_e16mf4(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 7)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -298,15 +298,15 @@ size_t test_vsetvl_e16mf4(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 7)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 8
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 4
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -319,7 +319,7 @@ size_t test_vsetvl_e16mf2(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 0)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -332,15 +332,15 @@ size_t test_vsetvl_e16mf2(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 0)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 8
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -387,7 +387,7 @@ size_t test_vsetvl_e16m2(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 2)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 32
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -400,15 +400,15 @@ size_t test_vsetvl_e16m2(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 2)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 32
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 64
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 32
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -421,7 +421,7 @@ size_t test_vsetvl_e16m4(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 3)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 64
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -434,15 +434,15 @@ size_t test_vsetvl_e16m4(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 1, i64 3)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 64
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 128
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 64
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -455,7 +455,7 @@ size_t test_vsetvl_e16m8(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 7)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -468,15 +468,15 @@ size_t test_vsetvl_e16m8(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 7)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 4
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 2
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -489,7 +489,7 @@ size_t test_vsetvl_e32mf2(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 0)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -502,15 +502,15 @@ size_t test_vsetvl_e32mf2(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 0)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 8
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 4
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -523,7 +523,7 @@ size_t test_vsetvl_e32m1(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 1)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -536,15 +536,15 @@ size_t test_vsetvl_e32m1(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 1)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 8
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -591,7 +591,7 @@ size_t test_vsetvl_e32m4(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 3)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 32
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -604,15 +604,15 @@ size_t test_vsetvl_e32m4(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 2, i64 3)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 32
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 64
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 32
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -625,7 +625,7 @@ size_t test_vsetvl_e32m8(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 0)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -638,15 +638,15 @@ size_t test_vsetvl_e32m8(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 0)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 2
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 4
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 2
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -659,7 +659,7 @@ size_t test_vsetvl_e64m1(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 1)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -672,15 +672,15 @@ size_t test_vsetvl_e64m1(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 1)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 4
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 8
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 4
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]
@@ -693,7 +693,7 @@ size_t test_vsetvl_e64m2(size_t avl) {
 // CHECK-RV64-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 2)
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64:       assumption:
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
@@ -706,15 +706,15 @@ size_t test_vsetvl_e64m2(size_t avl) {
 // CHECK-RV64-FIXED-SAME: (i64 noundef [[AVL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-FIXED-NEXT:  entry:
 // CHECK-RV64-FIXED-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 [[AVL]], i64 3, i64 2)
-// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[AVL]], 8
 // CHECK-RV64-FIXED-NEXT:    br i1 [[TMP0]], label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
 // CHECK-RV64-FIXED:       assumption:
 // CHECK-RV64-FIXED-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[VL]], [[AVL]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 // CHECK-RV64-FIXED-NEXT:    br label [[ASSUMPTION_END]]
 // CHECK-RV64-FIXED:       assumption_end:
-// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 32
-// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[AVL]], 16
+// CHECK-RV64-FIXED-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[VL]], 8
 // CHECK-RV64-FIXED-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i1 true, i1 [[TMP3]]
 // CHECK-RV64-FIXED-NEXT:    call void @llvm.assume(i1 [[TMP4]])
 // CHECK-RV64-FIXED-NEXT:    ret i64 [[VL]]

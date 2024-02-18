@@ -680,20 +680,25 @@ let HasBuiltinAlias = false,
 
       const TargetInfo &TI = getContext().getTargetInfo();
       auto VScale = TI.getVScaleRange(getContext().getLangOpts());
+      uint64_t SEW = 1 << (cast<ConstantInt>(Ops[1])->getZExtValue() + 3);
+      uint64_t LMUL = cast<ConstantInt>(Ops[2])->getZExtValue();
+      bool Fractional = LMUL > 4;
+      uint64_t VLMAX = Fractional ? VScale->first * 64 / (1 << (8 - LMUL)) / SEW
+                                  : VScale->first * 64 * (1 << LMUL) / SEW;
 
-      if (VScale && VScale->first && VScale->first == VScale->second) {
+      if (VScale->first && VScale->first == VScale->second) {
         // Assumptions:
         //   Let:
-        //     fixed_vl = __riscv_v_fixed_vlen / 8;
+        //     fixed_vl = __riscv_v_fixed_vlen * LMUL / SEW;
         //   We have:
         //     (avl > fixed_vl || vl == avl)
         //     and
         //     (avl < fixed_vl * 2 || vl == fixed_vl)
-        Value *FixedVL = llvm::ConstantInt::get(ResultType, VScale->first * 8);
+        Value *FixedVL = llvm::ConstantInt::get(ResultType, VLMAX);
         Value *FixedVLx2 =
-            llvm::ConstantInt::get(ResultType, VScale->first * 8 * 2);
+            llvm::ConstantInt::get(ResultType, VLMAX * 2);
         Value *Cond0 = Builder.CreateICmpULE(
-            Ops[0], ConstantInt::get(ResultType, VScale->first * 8));
+            Ops[0], ConstantInt::get(ResultType, VLMAX));
 
         BasicBlock *AssumptionBlock =
             createBasicBlock("assumption", this->CurFn);
@@ -713,11 +718,11 @@ let HasBuiltinAlias = false,
       } else {
         // Assumptions:
         //   Let:
-        //     min_vl = __riscv_v_min_vlen / 8
+        //     min_vl = __riscv_v_min_vlen * LMUL / SEW
         //   We have:
         //     (avl > min_vl || vl == avl)
         Value *Cond0 = Builder.CreateICmpULE(
-            Ops[0], ConstantInt::get(ResultType, VScale->first * 8));
+            Ops[0], ConstantInt::get(ResultType, VLMAX));
 
         BasicBlock *AssumptionBlock = createBasicBlock("assumption", this->CurFn);
         BasicBlock *AssumptionEndBlock = createBasicBlock("assumption_end", this->CurFn);
@@ -744,24 +749,29 @@ let HasBuiltinAlias = false,
 
       const TargetInfo &TI = getContext().getTargetInfo();
       auto VScale = TI.getVScaleRange(getContext().getLangOpts());
+      uint64_t SEW = 1 << (cast<ConstantInt>(Ops[0])->getZExtValue() + 3);
+      uint64_t LMUL = cast<ConstantInt>(Ops[1])->getZExtValue();
+      bool Fractional = LMUL > 4;
+      uint64_t VLMAX = Fractional ? VScale->first * 64 / (1 << (8 - LMUL)) / SEW
+                                  : VScale->first * 64 * (1 << LMUL) / SEW;
 
       Value *Assumption;
-      if (VScale && VScale->first && VScale->first == VScale->second)
+      if (VScale->first && VScale->first == VScale->second)
         // Assumptions:
         //   Let:
-        //     fixed_vl = __riscv_v_fixed_vlen / 8;
+        //     fixed_vl = __riscv_v_fixed_vlen * LMUL / SEW
         //   We have:
         //     vlmax == fixed_vl
         Assumption = Builder.CreateICmpEQ(
-            VSetVL, llvm::ConstantInt::get(ResultType, VScale->first * 8));
+            VSetVL, llvm::ConstantInt::get(ResultType, VLMAX));
       else
         // Assumptions:
         //   Let:
-        //     min_vl = __riscv_v_min_vlen / 8
+        //     min_vl = __riscv_v_min_vlen * LMUL / SEW
         //   We have:
         //     vlmax >= min_vl
         Assumption = Builder.CreateICmpUGE(
-            VSetVL, ConstantInt::get(ResultType, VScale->first * 8));
+            VSetVL, ConstantInt::get(ResultType, VLMAX));
 
       Builder.CreateAssumption(Assumption);
       return VSetVL;
