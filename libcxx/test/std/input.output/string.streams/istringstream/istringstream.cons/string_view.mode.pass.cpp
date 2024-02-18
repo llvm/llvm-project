@@ -113,18 +113,15 @@ void test_sfinae() {
   using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
   static_assert(std::constructible_from<NSSTREAM, nasty_char*, test_allocator<nasty_char>>);
-  static_assert(test_convertible<NSSTREAM, nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
+  static_assert(!test_convertible<NSSTREAM, nasty_char*, std::ios_base::openmode>());
 
   // const nasty_char*
   using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
   static_assert(std::constructible_from<NSSTREAM, const nasty_char*, test_allocator<nasty_char>>);
-  static_assert(
-      test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
+  static_assert(!test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode>());
 
-  // String-view-like
-  static_assert(!std::constructible_from<SSTREAM, const int, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, const int, std::ios_base::openmode>());
+  // Non-`string-view-like`
   static_assert(!std::constructible_from<SSTREAM, const SomeObject, std::ios_base::openmode>);
   static_assert(!test_convertible<SSTREAM, const SomeObject, std::ios_base::openmode>());
 

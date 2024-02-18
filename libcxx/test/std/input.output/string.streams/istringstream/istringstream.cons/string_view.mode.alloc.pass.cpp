@@ -156,12 +156,12 @@ void test_sfinae() {
       test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
 
   // Non-`string-view-like`
-  static_assert(!std::constructible_from<SSTREAM, const int, std::ios_base::openmode, const test_allocator<CharT>>);
-  static_assert(!test_convertible<SSTREAM, const int, std::ios_base::openmode, const test_allocator<CharT>>());
-
   static_assert(
       !std::constructible_from<SSTREAM, const SomeObject, std::ios_base::openmode, const test_allocator<CharT>>);
   static_assert(!test_convertible<SSTREAM, const SomeObject, std::ios_base::openmode, const test_allocator<CharT>>());
+
+  static_assert(!std::constructible_from<SSTREAM, const int, std::ios_base::openmode, const test_allocator<CharT>>);
+  static_assert(!test_convertible<SSTREAM, const int, std::ios_base::openmode, const test_allocator<CharT>>());
 
   // Non-mode
   static_assert(!std::constructible_from<SSTREAM, const std::basic_string_view<CharT>, NonMode, const NonAllocator>);
