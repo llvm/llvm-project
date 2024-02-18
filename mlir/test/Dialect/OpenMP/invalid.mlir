@@ -1255,7 +1255,63 @@ func.func @omp_single(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.single" (%data_var) ({
     omp.barrier
-  }) {operandSegmentSizes = array<i32: 1,0>} : (memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0,0>} : (memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
+  // expected-error @below {{inconsistent number of copyPrivate vars (= 1) and functions (= 0), both must be equal}}
+  "omp.single" (%data_var) ({
+    omp.barrier
+  }) {operandSegmentSizes = array<i32: 0,0,1>} : (memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected symbol reference @copy_func to point to a copy function}}
+  omp.single copyprivate(%data_var -> @copy_func : memref<i32>) {
+    omp.barrier
+  }
+  return
+}
+
+// -----
+
+func.func private @copy_func(memref<i32>)
+
+func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected copy function @copy_func to have 2 operands}}
+  omp.single copyprivate(%data_var -> @copy_func : memref<i32>) {
+    omp.barrier
+  }
+  return
+}
+
+// -----
+
+func.func private @copy_func(memref<i32>, memref<f32>)
+
+func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected copy function @copy_func arguments to have the same type}}
+  omp.single copyprivate(%data_var -> @copy_func : memref<i32>) {
+    omp.barrier
+  }
+  return
+}
+
+// -----
+
+func.func private @copy_func(memref<f32>, memref<f32>)
+
+func.func @omp_single_copyprivate(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected copy function arguments' type ('memref<f32>') to be the same as copyprivate variable's type ('memref<i32>')}}
+  omp.single copyprivate(%data_var -> @copy_func : memref<i32>) {
+    omp.barrier
+  }
   return
 }
 

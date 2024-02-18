@@ -40,8 +40,8 @@ public:
     Line = LineAndColumn.first;
   }
   int operator<(const Tag &B) const {
-    return std::make_tuple(Id, BufferIdentifier, Line) <
-           std::make_tuple(B.Id, B.BufferIdentifier, B.Line);
+    return std::tuple(Id, BufferIdentifier, Line) <
+           std::tuple(B.Id, B.BufferIdentifier, B.Line);
   }
   void emit(raw_ostream &OS) const {
     OS << Id << "\t" << BufferIdentifier << "\t" << Line << "\n";

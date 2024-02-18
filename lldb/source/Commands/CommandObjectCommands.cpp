@@ -1419,9 +1419,9 @@ private:
       m_options_definition_up.reset(new OptionDefinition[m_num_options]);
       // We need to hand out pointers to contents of these vectors; we reserve
       // as much as we'll need up front so they don't get freed on resize...
-      m_usage_container.reserve(m_num_options);
-      m_enum_storage.reserve(m_num_options);
-      m_enum_vector.reserve(m_num_options);
+      m_usage_container.resize(m_num_options);
+      m_enum_storage.resize(m_num_options);
+      m_enum_vector.resize(m_num_options);
       
       size_t counter = 0;
       size_t short_opt_counter = 0;

@@ -153,6 +153,10 @@ module {
     // Release the resources.
     bufferization.dealloc_tensor %sparse_input_i32 : tensor<32xi32, #SV>
     bufferization.dealloc_tensor %sparse_input_f32 : tensor<32xf32, #SV>
+    bufferization.dealloc_tensor %0 : tensor<i32>
+    bufferization.dealloc_tensor %1 : tensor<f32>
+    bufferization.dealloc_tensor %2 : tensor<i32>
+    bufferization.dealloc_tensor %3 : tensor<i32>
 
     return
   }

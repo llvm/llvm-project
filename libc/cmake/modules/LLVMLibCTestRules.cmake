@@ -130,6 +130,9 @@ function(create_libc_unittest fq_target_name)
                            libc.test.UnitTest.ErrnoSetterMatcher)
   list(REMOVE_DUPLICATES fq_deps_list)
 
+  _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_FLAGS}")
+  list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
+
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding unit test ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
@@ -181,22 +184,8 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_compile_options(
-    ${fq_build_target_name}
-    PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
-  )
-  if(LLVM_LIBC_FULL_BUILD)
-    target_compile_options(
-      ${fq_build_target_name}
-      PRIVATE -ffreestanding -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
-    )
-  endif()
-  if(LIBC_UNITTEST_COMPILE_OPTIONS)
-    target_compile_options(
-      ${fq_build_target_name}
-      PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
-    )
-  endif()
+  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
@@ -529,20 +518,6 @@ function(add_integration_test test_name)
   )
   add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
 endfunction(add_integration_test)
-
-set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
-    -fpie -ffreestanding -fno-exceptions -fno-rtti)
-# The GPU build requires overriding the default CMake triple and architecture.
-if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-  list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-       --target=${LIBC_GPU_TARGET_TRIPLE}
-       -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
-elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
-  list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
-endif()
 
 # Rule to add a hermetic test. A hermetic test is one whose executable is fully
 # statically linked and consists of pieces drawn only from LLVM's libc. Nothing,
