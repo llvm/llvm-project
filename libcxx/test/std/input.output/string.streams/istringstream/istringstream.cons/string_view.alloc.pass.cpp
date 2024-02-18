@@ -54,25 +54,27 @@ void test_sfinae() {
   static_assert(std::constructible_from<SSTREAM, const std::basic_string_view<CharT>, const test_allocator<CharT>>);
   static_assert(test_convertible<SSTREAM, std::basic_string_view<CharT>, test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM, const std::basic_string_view<CharT, constexpr_char_traits<CharT>>, const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM, std::basic_string_view<CharT, constexpr_char_traits<CharT>>, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<CSSTREAM,
+                                        const std::basic_string_view<CharT, constexpr_char_traits<CharT>>,
+                                        const test_allocator<CharT>>);
+  static_assert(test_convertible<CSSTREAM,
+                                 std::basic_string_view<CharT, constexpr_char_traits<CharT>>,
+                                 const test_allocator<CharT>>());
 
   // `std::basic_string<CharT>`
   static_assert(std::constructible_from<SSTREAM, const std::basic_string<CharT>, const test_allocator<CharT>>);
   static_assert(test_convertible<SSTREAM, const std::basic_string<CharT>, const test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM, const std::basic_string<CharT, constexpr_char_traits<CharT>>, const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM, const std::basic_string<CharT, constexpr_char_traits<CharT>>, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<CSSTREAM,
+                                        const std::basic_string<CharT, constexpr_char_traits<CharT>>,
+                                        const test_allocator<CharT>>);
+  static_assert(test_convertible<CSSTREAM,
+                                 const std::basic_string<CharT, constexpr_char_traits<CharT>>,
+                                 const test_allocator<CharT>>());
 
   // ConstConvertibleStringView<CharT>
-  static_assert(std::constructible_from<SSTREAM,
-                                        const ConstConvertibleStringView<CharT>,
-
-                                        const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM,
-                                 const ConstConvertibleStringView<CharT>,
-
-                                 const test_allocator<CharT>>());
+  static_assert(std::constructible_from<SSTREAM, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
+  static_assert(test_convertible<SSTREAM, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
 
   static_assert(std::constructible_from<CSSTREAM,
                                         const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
