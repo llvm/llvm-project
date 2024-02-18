@@ -1848,6 +1848,8 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
 
     // Immediately call the destructor if we have to.
     if (DiscardResult) {
+      if (!this->emitRecordDestruction(getRecord(E->getType())))
+        return false;
       if (!this->emitPopPtr(E))
         return false;
     }
