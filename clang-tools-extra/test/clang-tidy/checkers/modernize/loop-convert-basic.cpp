@@ -1,6 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert -isystem %clang_tidy_headers
-
-#include <cstddef>
+// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
 
 #include "structures.h"
 
@@ -91,7 +89,7 @@ void f() {
   // CHECK-FIXES-NEXT: Sum += I + 2;
 
   int Matrix[N][12];
-  size_t size = 0;
+  unsigned size = 0;
   for (int I = 0; I < N; ++I) {
       size += sizeof(Matrix[I]);
       size += sizeof Matrix[I];
