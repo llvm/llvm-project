@@ -136,7 +136,7 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp c
 }
 
 template <class _Tp>
-struct __cxx_atomic_wait_poll_fn_impl {
+struct __atomic_compare_unequal_to {
   _Tp __val;
   _LIBCPP_HIDE_FROM_ABI bool operator()(_Tp& __current_val) const {
     return !std::__cxx_nonatomic_compare_equal(__current_val, __val);
@@ -146,7 +146,7 @@ struct __cxx_atomic_wait_poll_fn_impl {
 template <class _Atp, class _Tp>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order) {
-  __cxx_atomic_wait_poll_fn_impl<_Tp> __poll_fn = {__val};
+  __atomic_compare_unequal_to<_Tp> __poll_fn = {__val};
   std::__cxx_atomic_wait_unless(__a, __poll_fn, __order);
 }
 
