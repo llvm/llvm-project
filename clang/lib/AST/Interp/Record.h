@@ -28,7 +28,7 @@ public:
   struct Field {
     const FieldDecl *Decl;
     unsigned Offset;
-    Descriptor *Desc;
+    const Descriptor *Desc;
     bool isBitField() const { return Decl->isBitField(); }
   };
 
@@ -36,8 +36,8 @@ public:
   struct Base {
     const RecordDecl *Decl;
     unsigned Offset;
-    Descriptor *Desc;
-    Record *R;
+    const Descriptor *Desc;
+    const Record *R;
   };
 
   /// Mapping from identifiers to field descriptors.
