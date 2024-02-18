@@ -52,7 +52,7 @@ void test_sfinae() {
 
   // `std::basic_string_view<CharT>`
   static_assert(std::constructible_from<SSTREAM, const std::basic_string_view<CharT>, const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM, std::basic_string_view<CharT>, test_allocator<CharT>>());
+  static_assert(test_convertible<SSTREAM, std::basic_string_view<CharT>, const test_allocator<CharT>>());
 
   static_assert(std::constructible_from<CSSTREAM,
                                         const std::basic_string_view<CharT, constexpr_char_traits<CharT>>,

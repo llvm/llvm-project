@@ -27,12 +27,8 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
+#include "../../concepts.h"
 #include "../../types.h"
-
-template <typename S, typename T>
-concept HasStr = requires(S s, const T& sv) {
-  { s.str(sv) };
-};
 
 template <typename CharT>
 void test_sfinae() {
@@ -51,13 +47,13 @@ void test_sfinae() {
   static_assert(HasStr<std::basic_istringstream<CharT>, std::basic_string<CharT>>);
   static_assert(HasStr<CSSTREAM, std::basic_string<CharT, constexpr_char_traits<CharT>>>);
 
+  static_assert(HasStr<std::basic_istringstream<CharT>, ConstConvertibleStringView<CharT>>);
+  static_assert(HasStr<CSSTREAM, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
+
   using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
   static_assert(HasStr<NSSTREAM, nasty_char*>);
   static_assert(HasStr<NSSTREAM, const nasty_char*>);
-
-  static_assert(HasStr<std::basic_istringstream<CharT>, ConstConvertibleStringView<CharT>>);
-  static_assert(HasStr<CSSTREAM, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 
   static_assert(!HasStr<std::basic_istringstream<CharT>, CharT>);
   static_assert(!HasStr<std::basic_istringstream<CharT>, int>);

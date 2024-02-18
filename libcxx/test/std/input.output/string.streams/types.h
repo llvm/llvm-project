@@ -20,12 +20,6 @@ public:
   explicit ConstConvertibleStringView(const CharT* cs) : cs_{cs} {}
 
   operator std::basic_string_view<CharT, Traits>() = delete;
-
-  // template <std::same_as<std::basic_string_view<CharT, Traits>> T>
-  // operator T() const {
-  //   return std::basic_string_view<CharT, Traits>(cs_);
-  // }
-
   operator std::basic_string_view<CharT, Traits>() const { return std::basic_string_view<CharT, Traits>(cs_); }
 
 private:
@@ -51,13 +45,7 @@ class NonConstConvertibleStringView {
 public:
   explicit NonConstConvertibleStringView(const CharT* cs) : cs_{cs} {}
 
-  // template <std::same_as<std::basic_string_view<CharT, Traits>> T>
-  // operator T() {
-  //   return std::basic_string_view<CharT, Traits>(cs_);
-  // }
-
   operator std::basic_string_view<CharT, Traits>() { return std::basic_string_view<CharT, Traits>(cs_); }
-
   operator std::basic_string_view<CharT, Traits>() const = delete;
 
 private:
