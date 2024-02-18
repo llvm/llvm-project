@@ -400,13 +400,17 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("struct");
     Kind["displayName"] = "Structure";
     break;
-  case APIRecord::RK_CXXField:
+  case APIRecord::RK_UnionField:
     Kind["identifier"] = AddLangPrefix("property");
     Kind["displayName"] = "Instance Property";
     break;
   case APIRecord::RK_Union:
     Kind["identifier"] = AddLangPrefix("union");
     Kind["displayName"] = "Union";
+    break;
+  case APIRecord::RK_CXXField:
+    Kind["identifier"] = AddLangPrefix("property");
+    Kind["displayName"] = "Instance Property";
     break;
   case APIRecord::RK_StaticField:
     Kind["identifier"] = AddLangPrefix("type.property");
@@ -871,12 +875,12 @@ void SymbolGraphSerializer::visitEnumRecord(const EnumRecord &Record) {
   serializeMembers(Record, Record.Constants);
 }
 
-void SymbolGraphSerializer::visitStructRecord(const StructRecord &Record) {
-  auto Struct = serializeAPIRecord(Record);
-  if (!Struct)
+void SymbolGraphSerializer::visitRecordRecord(const RecordRecord &Record) {
+  auto SerializedRecord = serializeAPIRecord(Record);
+  if (!SerializedRecord)
     return;
 
-  Symbols.emplace_back(std::move(*Struct));
+  Symbols.emplace_back(std::move(*SerializedRecord));
   serializeMembers(Record, Record.Fields);
 }
 
@@ -1167,7 +1171,9 @@ void SymbolGraphSerializer::serializeSingleRecord(const APIRecord *Record) {
     visitEnumRecord(*cast<EnumRecord>(Record));
     break;
   case APIRecord::RK_Struct:
-    visitStructRecord(*cast<StructRecord>(Record));
+    LLVM_FALLTHROUGH;
+  case APIRecord::RK_Union:
+    visitRecordRecord(*cast<RecordRecord>(Record));
     break;
   case APIRecord::RK_StaticField:
     visitStaticFieldRecord(*cast<StaticFieldRecord>(Record));

@@ -199,4 +199,141 @@ static_assert(!std::is_trivially_move_constructible_v<TailClobbererNonTrivialMov
 static_assert(std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0, true>>);
 static_assert(!std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0, false>>);
 
+// The `CheckForInvalidWrites` class recreates situations where other objects
+// may be placed into a `std::expected`'s tail padding (see
+// https://github.com/llvm/llvm-project/issues/70494). With a template
+// parameter `WithPaddedExpected` two cases can be tested:
+//
+// 1. The `std::expected<T, E>` itself has padding, because `T`/`E` _don't_
+//    have tail padding. This is modelled by `CheckForInvalidWrites<true>`
+//    which has a (potential) data layout like this:
+//
+//                +- `expected`'s "has value" flag
+//                |
+//                |             +- `please_dont_overwrite_me`
+//                |             |
+//    /---int---\ |  /----------^-------\                                    //
+//    00 00 00 00 01 01 01 01 01 01 01 01
+//                   \--v---/
+//                      |
+//                      |
+//                      +- `expected`'s tail padding which
+//                         gets repurposed by `please_dont_overwrite_me`
+//
+// 2. There is tail padding in the union of `T` and `E` which means the
+//    "has value" flag can be put into this tail padding. In this case, the
+//    `std::expected` itself _must not_ have any tail padding as it may get
+//    overwritten on mutating operations such as `emplace()`. This case is
+//    modelled by `CheckForInvalidWrites<false>` with a (potential) data
+//    layout like this:
+//
+//    +- bool
+//    |                                +- please_dont_overwrite_me
+//    |  +- "has value" flag           |
+//    |  |                    /--------^---------\                           //
+//    00 00 00 00 00 00 00 00 01 01 01 01 01 01 01 00
+//          \---padding-----/                      |
+//                                                 +- `CheckForInvalidWrites`
+//                                                    padding
+//
+// Note that other implementation strategies are viable, including one that
+// doesn't make use of `[[no_unique_address]]`. But if an implementation uses
+// the strategy above, it must make sure that those tail padding bytes are not
+// overwritten improperly on operations such as `emplace()`.
+
+struct BoolWithPadding {
+  constexpr explicit BoolWithPadding() noexcept : BoolWithPadding(false) {}
+  constexpr BoolWithPadding(bool val) noexcept {
+    if (!std::is_constant_evaluated()) {
+      std::memset(this, 0, sizeof(*this));
+    }
+    val_ = val;
+  }
+  constexpr BoolWithPadding(const BoolWithPadding& other) noexcept : BoolWithPadding(other.val_) {}
+  constexpr BoolWithPadding& operator=(const BoolWithPadding& other) noexcept {
+    val_ = other.val_;
+    return *this;
+  }
+  // The previous data layout of libc++'s `expected` required `T` to be
+  // trivially move constructible to employ the `[[no_unique_address]]`
+  // optimization. To trigger bugs with the old implementation, make
+  // `BoolWithPadding` trivially move constructible.
+  constexpr BoolWithPadding(BoolWithPadding&&) = default;
+
+private:
+  alignas(8) bool val_;
+};
+
+struct IntWithoutPadding {
+  constexpr explicit IntWithoutPadding() noexcept : IntWithoutPadding(0) {}
+  constexpr IntWithoutPadding(int val) noexcept {
+    if (!std::is_constant_evaluated()) {
+      std::memset(this, 0, sizeof(*this));
+    }
+    val_ = val;
+  }
+  constexpr IntWithoutPadding(const IntWithoutPadding& other) noexcept : IntWithoutPadding(other.val_) {}
+  constexpr IntWithoutPadding& operator=(const IntWithoutPadding& other) noexcept {
+    val_ = other.val_;
+    return *this;
+  }
+  // See comment on `BoolWithPadding`.
+  constexpr IntWithoutPadding(IntWithoutPadding&&) = default;
+
+private:
+  int val_;
+};
+
+template <bool WithPaddedExpected, bool ExpectedVoid>
+struct CheckForInvalidWritesBaseImpl;
+template <>
+struct CheckForInvalidWritesBaseImpl<true, false> {
+  using type = std::expected<IntWithoutPadding, bool>;
+};
+template <>
+struct CheckForInvalidWritesBaseImpl<false, false> {
+  using type = std::expected<BoolWithPadding, bool>;
+};
+template <>
+struct CheckForInvalidWritesBaseImpl<true, true> {
+  using type = std::expected<void, IntWithoutPadding>;
+};
+template <>
+struct CheckForInvalidWritesBaseImpl<false, true> {
+  using type = std::expected<void, BoolWithPadding>;
+};
+
+template <bool WithPaddedExpected, bool ExpectedVoid>
+using CheckForInvalidWritesBase = typename CheckForInvalidWritesBaseImpl<WithPaddedExpected, ExpectedVoid>::type;
+
+template <bool WithPaddedExpected, bool ExpectedVoid = false>
+struct CheckForInvalidWrites : public CheckForInvalidWritesBase<WithPaddedExpected, ExpectedVoid> {
+  constexpr CheckForInvalidWrites() = default;
+  constexpr CheckForInvalidWrites(std::unexpect_t)
+      : CheckForInvalidWritesBase<WithPaddedExpected, ExpectedVoid>(std::unexpect) {}
+
+  constexpr CheckForInvalidWrites& operator=(const CheckForInvalidWrites& other) {
+    CheckForInvalidWritesBase<WithPaddedExpected, ExpectedVoid>::operator=(other);
+    return *this;
+  }
+
+  constexpr CheckForInvalidWrites& operator=(CheckForInvalidWrites&& other) {
+    CheckForInvalidWritesBase<WithPaddedExpected, ExpectedVoid>::operator=(std::move(other));
+    return *this;
+  }
+
+  using CheckForInvalidWritesBase<WithPaddedExpected, ExpectedVoid>::operator=;
+
+  const bool please_dont_overwrite_me[7] = {true, true, true, true, true, true, true};
+
+  constexpr bool check() {
+    for (bool i : please_dont_overwrite_me) {
+      if (!i) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
 #endif // TEST_STD_UTILITIES_EXPECTED_TYPES_H

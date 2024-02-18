@@ -8,12 +8,6 @@
 # CHECK-ASM-AND-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
 zext.h t0, t1
-# CHECK-ASM-AND-OBJ: rori t0, t1, 31
-# CHECK-ASM: encoding: [0x93,0x52,0xf3,0x61]
-rori t0, t1, 31
-# CHECK-ASM-AND-OBJ: rori t0, t1, 0
-# CHECK-ASM: encoding: [0x93,0x52,0x03,0x60]
-rori t0, t1, 0
 # CHECK-ASM-AND-OBJ: rev8 t0, t1
 # CHECK-ASM: encoding: [0x93,0x52,0x83,0x69]
 rev8 t0, t1

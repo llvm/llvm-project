@@ -117,6 +117,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
+  case VPScalarCastSC:
     return false;
   case VPInstructionSC:
     switch (cast<VPInstruction>(this)->getOpcode()) {
@@ -514,6 +515,26 @@ void VPInstruction::execute(VPTransformState &State) {
     State.set(this, GeneratedValue, Part);
   }
 }
+bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstLaneUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+    // TODO: Cover additional opcodes.
+    return vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::ActiveLaneMask:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::BranchOnCount:
+    // TODO: Cover additional operands.
+    return getOperand(0) == Op;
+  };
+  llvm_unreachable("switch should return");
+}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstruction::dump() const {
@@ -597,13 +618,15 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
-      // Some vectorized function variants may also take a scalar argument,
-      // e.g. linear parameters for pointers.
       Value *Arg;
-      if ((VFTy && !VFTy->getParamType(I.index())->isVectorTy()) ||
-          (UseIntrinsic &&
-           isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index())))
+      if (UseIntrinsic &&
+          isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
         Arg = State.get(I.value(), VPIteration(0, 0));
+      // Some vectorized function variants may also take a scalar argument,
+      // e.g. linear parameters for pointers. This needs to be the scalar value
+      // from the start of the respective part when interleaving.
+      else if (VFTy && !VFTy->getParamType(I.index())->isVectorTy())
+        Arg = State.get(I.value(), VPIteration(Part, 0));
       else
         Arg = State.get(I.value(), Part);
       if (UseIntrinsic &&
@@ -1096,9 +1119,6 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   getCanonicalIV()->printAsOperand(O, SlotTracker);
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
-
-  if (TruncResultTy)
-    O << " (truncated to " << *TruncResultTy << ")";
 }
 #endif
 
@@ -1117,13 +1137,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
 
   // Ensure step has the same type as that of scalar IV.
   Type *BaseIVTy = BaseIV->getType()->getScalarType();
-  if (BaseIVTy != Step->getType()) {
-    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
-    // avoid separate truncate here.
-    assert(Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    Step = State.Builder.CreateTrunc(Step, BaseIVTy);
-  }
+  assert(BaseIVTy == Step->getType() && "Types of BaseIV and Step must match!");
 
   // We build scalar steps for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -1469,6 +1483,58 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+/// Checks if \p C is uniform across all VFs and UFs. It is considered as such
+/// if it is either defined outside the vector region or its operand is known to
+/// be uniform across all VFs and UFs (e.g. VPDerivedIV or VPCanonicalIVPHI).
+/// TODO: Uniformity should be associated with a VPValue and there should be a
+/// generic way to check.
+static bool isUniformAcrossVFsAndUFs(VPScalarCastRecipe *C) {
+  return C->isDefinedOutsideVectorRegions() ||
+         isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
+         isa<VPCanonicalIVPHIRecipe>(C->getOperand(0));
+}
+
+Value *VPScalarCastRecipe ::generate(VPTransformState &State, unsigned Part) {
+  assert(vputils::onlyFirstLaneUsed(this) &&
+         "Codegen only implemented for first lane.");
+  switch (Opcode) {
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::Trunc: {
+    // Note: SExt/ZExt not used yet.
+    Value *Op = State.get(getOperand(0), VPIteration(Part, 0));
+    return State.Builder.CreateCast(Instruction::CastOps(Opcode), Op, ResultTy);
+  }
+  default:
+    llvm_unreachable("opcode not implemented yet");
+  }
+}
+
+void VPScalarCastRecipe ::execute(VPTransformState &State) {
+  bool IsUniformAcrossVFsAndUFs = isUniformAcrossVFsAndUFs(this);
+  for (unsigned Part = 0; Part != State.UF; ++Part) {
+    Value *Res;
+    // Only generate a single instance, if the recipe is uniform across UFs and
+    // VFs.
+    if (Part > 0 && IsUniformAcrossVFsAndUFs)
+      Res = State.get(this, VPIteration(0, 0));
+    else
+      Res = generate(State, Part);
+    State.set(this, Res, VPIteration(Part, 0));
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
+  O << Indent << "SCALAR-CAST ";
+  printAsOperand(O, SlotTracker);
+  O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  printOperands(O, SlotTracker);
+  O << " to " << *ResultTy;
+}
+#endif
+
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Instance && "Branch on Mask works only on single instance.");
 
@@ -1587,10 +1653,10 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 bool VPCanonicalIVPHIRecipe::isCanonical(
-    InductionDescriptor::InductionKind Kind, VPValue *Start, VPValue *Step,
-    Type *Ty) const {
-  // The types must match and it must be an integer induction.
-  if (Ty != getScalarType() || Kind != InductionDescriptor::IK_IntInduction)
+    InductionDescriptor::InductionKind Kind, VPValue *Start,
+    VPValue *Step) const {
+  // Must be an integer induction.
+  if (Kind != InductionDescriptor::IK_IntInduction)
     return false;
   // Start must match the start value of this canonical induction.
   if (Start != getStartValue())
@@ -1604,9 +1670,9 @@ bool VPCanonicalIVPHIRecipe::isCanonical(
   return StepC && StepC->isOne();
 }
 
-bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
+bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return IsScalarAfterVectorization &&
-         (!VF.isScalable() || vputils::onlyFirstLaneUsed(this));
+         (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -30,7 +30,7 @@ bool TestDeathTest(
   };
 
   DeathTest test_case;
-  DeathTestResult test_result = test_case.Run(expected_cause, func, get_matcher());
+  DeathTestResult test_result = test_case.Run(std::array<DeathCause, 1>{expected_cause}, func, get_matcher());
   std::string maybe_failure_description;
 
   Outcome outcome = test_result.outcome();
@@ -109,16 +109,21 @@ int main(int, char**) {
 
   // Test the `EXPECT_DEATH` macros themselves. Since they assert success, we can only test successful cases.
   {
-    auto invoke_abort = [] { _LIBCPP_VERBOSE_ABORT("contains some message"); };
+    auto invoke_verbose_abort = [] { _LIBCPP_VERBOSE_ABORT("contains some message"); };
+    auto invoke_abort         = [] { std::abort(); };
 
     auto simple_matcher = [](const std::string& text) {
       bool success = text.find("some") != std::string::npos;
       return MatchResult(success, "");
     };
 
-    EXPECT_DEATH(invoke_abort());
-    EXPECT_DEATH_MATCHES(MakeAnyMatcher(), invoke_abort());
-    EXPECT_DEATH_MATCHES(simple_matcher, invoke_abort());
+    EXPECT_ANY_DEATH(_LIBCPP_VERBOSE_ABORT(""));
+    EXPECT_ANY_DEATH(std::abort());
+    EXPECT_ANY_DEATH(std::terminate());
+    EXPECT_DEATH(invoke_verbose_abort());
+    EXPECT_DEATH_MATCHES(MakeAnyMatcher(), invoke_verbose_abort());
+    EXPECT_DEATH_MATCHES(simple_matcher, invoke_verbose_abort());
+    EXPECT_STD_ABORT(invoke_abort());
     EXPECT_STD_TERMINATE([] { std::terminate(); });
     TEST_LIBCPP_ASSERT_FAILURE(fail_assert(), "Some message");
   }

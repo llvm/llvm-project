@@ -364,7 +364,7 @@ public:
       Seg.vmaddr = SegVMAddr;
       Seg.fileoff = Offset;
       for (auto &Sec : Seg.Sections) {
-        Offset = alignTo(Offset, size_t{1} << Sec->align);
+        Offset = alignTo(Offset, 1ULL << Sec->align);
         if (Sec->Content.Size)
           Sec->offset = Offset;
         Sec->size = Sec->Content.Size;

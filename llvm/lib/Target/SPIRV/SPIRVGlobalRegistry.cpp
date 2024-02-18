@@ -443,8 +443,9 @@ Register SPIRVGlobalRegistry::buildConstantSampler(
   SPIRVType *SampTy;
   if (SpvType)
     SampTy = getOrCreateSPIRVType(getTypeForSPIRVType(SpvType), MIRBuilder);
-  else
-    SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t", MIRBuilder);
+  else if ((SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t",
+                                                MIRBuilder)) == nullptr)
+    report_fatal_error("Unable to recognize SPIRV type name: opencl.sampler_t");
 
   auto Sampler =
       ResReg.isValid()
@@ -716,13 +717,14 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
         ForwardPointerTypes[PType] = getOpTypeForwardPointer(SC, MIRBuilder);
       return ForwardPointerTypes[PType];
     }
-    Register Reg(0);
     // If we have forward pointer associated with this type, use its register
     // operand to create OpTypePointer.
-    if (ForwardPointerTypes.contains(PType))
-      Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
+    if (ForwardPointerTypes.contains(PType)) {
+      Register Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
+      return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+    }
 
-    return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+    return getOrCreateSPIRVPointerType(SpvElementType, MIRBuilder, SC);
   }
   llvm_unreachable("Unable to convert LLVM type to SPIRVType");
 }
@@ -941,6 +943,7 @@ SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
   return nullptr;
 }
 
+// Returns nullptr if unable to recognize SPIRV type name
 // TODO: maybe use tablegen to implement this.
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
     StringRef TypeStr, MachineIRBuilder &MIRBuilder,
@@ -992,8 +995,10 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   } else if (TypeStr.starts_with("double")) {
     Ty = Type::getDoubleTy(Ctx);
     TypeStr = TypeStr.substr(strlen("double"));
-  } else
-    llvm_unreachable("Unable to recognize SPIRV type name.");
+  } else {
+    // Unable to recognize SPIRV type name
+    return nullptr;
+  }
 
   auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ);
 

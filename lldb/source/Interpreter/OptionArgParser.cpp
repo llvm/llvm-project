@@ -93,8 +93,7 @@ Status OptionArgParser::ToFormat(const char *s, lldb::Format &format,
         *byte_size_ptr = 0;
     }
 
-    const bool partial_match_ok = true;
-    if (!FormatManager::GetFormatFromCString(s, partial_match_ok, format)) {
+    if (!FormatManager::GetFormatFromCString(s, format)) {
       StreamString error_strm;
       error_strm.Printf(
           "Invalid format character or name '%s'. Valid values are:\n", s);

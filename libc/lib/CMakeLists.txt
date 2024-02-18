@@ -71,7 +71,7 @@ add_custom_target(install-libc
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_COMPONENT=libc
-                          -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+                          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
                   DEPENDS ${added_archive_targets}
                           ${startup_target}
@@ -79,4 +79,4 @@ add_custom_target(install-libc-stripped
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_COMPONENT=libc
                           -DCMAKE_INSTALL_DO_STRIP=1
-                          -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+                          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")

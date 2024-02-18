@@ -209,7 +209,9 @@ void XCOFFDumper::dumpCsectAuxSym(XCOFFYAML::Symbol &Sym,
   XCOFFYAML::CsectAuxEnt CsectAuxSym;
   CsectAuxSym.ParameterHashIndex = AuxEntPtr.getParameterHashIndex();
   CsectAuxSym.TypeChkSectNum = AuxEntPtr.getTypeChkSectNum();
-  CsectAuxSym.SymbolAlignmentAndType = AuxEntPtr.getSymbolAlignmentAndType();
+  CsectAuxSym.SymbolAlignment = AuxEntPtr.getAlignmentLog2();
+  CsectAuxSym.SymbolType =
+      static_cast<XCOFF::SymbolType>(AuxEntPtr.getSymbolType());
   CsectAuxSym.StorageMappingClass = AuxEntPtr.getStorageMappingClass();
 
   if (Obj.is64Bit()) {

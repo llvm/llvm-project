@@ -29,10 +29,14 @@ extern uintptr_t __init_array_start[];
 extern uintptr_t __init_array_end[];
 extern uintptr_t __fini_array_start[];
 extern uintptr_t __fini_array_end[];
+// https://refspecs.linuxbase.org/elf/gabi4+/ch5.dynamic.html#dynamic_section
+// This symbol is provided by the dynamic linker. It can be undefined depending
+// on how the program is loaded exactly.
+[[gnu::weak,
+  gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
 }
 
 namespace LIBC_NAMESPACE {
-// TODO: this symbol will be moved to config.linux.app
 AppProperties app;
 
 using InitCallback = void(int, char **, char **);
@@ -94,17 +98,25 @@ static ThreadAttributes main_thread_attrib;
     }
   }
 
+  ptrdiff_t base = 0;
   app.tls.size = 0;
+  Elf64_Phdr *tls_phdr = nullptr;
+
   for (uintptr_t i = 0; i < program_hdr_count; ++i) {
-    Elf64_Phdr *phdr = program_hdr_table + i;
-    if (phdr->p_type != PT_TLS)
-      continue;
-    // TODO: p_vaddr value has to be adjusted for static-pie executables.
-    app.tls.address = phdr->p_vaddr;
-    app.tls.size = phdr->p_memsz;
-    app.tls.init_size = phdr->p_filesz;
-    app.tls.align = phdr->p_align;
+    Elf64_Phdr &phdr = program_hdr_table[i];
+    if (phdr.p_type == PT_PHDR)
+      base = reinterpret_cast<ptrdiff_t>(program_hdr_table) - phdr.p_vaddr;
+    if (phdr.p_type == PT_DYNAMIC && _DYNAMIC)
+      base = reinterpret_cast<ptrdiff_t>(_DYNAMIC) - phdr.p_vaddr;
+    if (phdr.p_type == PT_TLS)
+      tls_phdr = &phdr;
+    // TODO: adjust PT_GNU_STACK
   }
+
+  app.tls.address = tls_phdr->p_vaddr + base;
+  app.tls.size = tls_phdr->p_memsz;
+  app.tls.init_size = tls_phdr->p_filesz;
+  app.tls.align = tls_phdr->p_align;
 
   // This descriptor has to be static since its cleanup function cannot
   // capture the context.

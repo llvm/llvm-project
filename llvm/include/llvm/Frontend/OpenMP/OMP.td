@@ -215,6 +215,7 @@ def OMPC_AcqRel : Clause<"acq_rel"> { let clangClass = "OMPAcqRelClause"; }
 def OMPC_Acquire : Clause<"acquire"> { let clangClass = "OMPAcquireClause"; }
 def OMPC_Release : Clause<"release"> { let clangClass = "OMPReleaseClause"; }
 def OMPC_Relaxed : Clause<"relaxed"> { let clangClass = "OMPRelaxedClause"; }
+def OMPC_Weak : Clause<"weak"> { let clangClass = "OMPWeakClause"; }
 def OMPC_Depend : Clause<"depend"> {
   let clangClass = "OMPDependClause";
   let flangClass = "OmpDependClause";
@@ -642,7 +643,8 @@ def OMP_Atomic : Directive<"atomic"> {
     VersionedClause<OMPC_Release, 50>,
     VersionedClause<OMPC_Relaxed, 50>,
     VersionedClause<OMPC_Hint, 50>,
-    VersionedClause<OMPC_Fail, 51>
+    VersionedClause<OMPC_Fail, 51>,
+    VersionedClause<OMPC_Weak, 51>
   ];
 }
 def OMP_Target : Directive<"target"> {

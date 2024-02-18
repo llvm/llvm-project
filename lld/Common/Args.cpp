@@ -60,17 +60,16 @@ SmallVector<StringRef, 0> lld::args::getStrings(opt::InputArgList &args,
 }
 
 uint64_t lld::args::getZOptionValue(opt::InputArgList &args, int id,
-                                    StringRef key, uint64_t Default) {
-  for (auto *arg : args.filtered_reverse(id)) {
+                                    StringRef key, uint64_t defaultValue) {
+  for (auto *arg : args.filtered(id)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first == key) {
-      uint64_t result = Default;
-      if (!to_integer(kv.second, result))
+      if (!to_integer(kv.second, defaultValue))
         error("invalid " + key + ": " + kv.second);
-      return result;
+      arg->claim();
     }
   }
-  return Default;
+  return defaultValue;
 }
 
 std::vector<StringRef> lld::args::getLines(MemoryBufferRef mb) {

@@ -985,12 +985,12 @@ bool Darwin::hasBlocksRuntime() const {
 
 void Darwin::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args) const {
-  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+  CudaInstallation->AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void Darwin::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                ArgStringList &CC1Args) const {
-  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+  RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 // This is just a MachO name translation routine and there's no
@@ -1902,6 +1902,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
       "TVOS_DEPLOYMENT_TARGET",
       "WATCHOS_DEPLOYMENT_TARGET",
       "DRIVERKIT_DEPLOYMENT_TARGET",
+      "XROS_DEPLOYMENT_TARGET"
   };
   static_assert(std::size(EnvVars) == Darwin::LastDarwinPlatform + 1,
                 "Missing platform");
@@ -1914,14 +1915,15 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   // default platform.
   if (!Targets[Darwin::MacOS].empty() &&
       (!Targets[Darwin::IPhoneOS].empty() ||
-       !Targets[Darwin::WatchOS].empty() || !Targets[Darwin::TvOS].empty())) {
+       !Targets[Darwin::WatchOS].empty() || !Targets[Darwin::TvOS].empty() ||
+       !Targets[Darwin::XROS].empty())) {
     if (Triple.getArch() == llvm::Triple::arm ||
         Triple.getArch() == llvm::Triple::aarch64 ||
         Triple.getArch() == llvm::Triple::thumb)
       Targets[Darwin::MacOS] = "";
     else
       Targets[Darwin::IPhoneOS] = Targets[Darwin::WatchOS] =
-          Targets[Darwin::TvOS] = "";
+          Targets[Darwin::TvOS] = Targets[Darwin::XROS] = "";
   } else {
     // Don't allow conflicts in any other platform.
     unsigned FirstTarget = std::size(Targets);
@@ -3436,6 +3438,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
 }
 
 void Darwin::printVerboseInfo(raw_ostream &OS) const {
-  CudaInstallation.print(OS);
-  RocmInstallation.print(OS);
+  CudaInstallation->print(OS);
+  RocmInstallation->print(OS);
 }

@@ -75,6 +75,8 @@ void EmitClangAttrNodeTraverse(llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrDocTable(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
+void EmitClangBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
 void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
                         const std::string &Component);
 void EmitClangDiagGroups(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

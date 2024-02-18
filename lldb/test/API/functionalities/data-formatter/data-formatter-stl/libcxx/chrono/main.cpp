@@ -15,6 +15,58 @@ int main() {
   std::chrono::months m{4321};
   std::chrono::years y{321};
 
+  // sys_seconds aliasses
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
+      ss_tp{std::chrono::seconds{0}};
+  std::chrono::time_point<std::chrono::system_clock,
+                          std::chrono::duration<long long>>
+      ss_tp_d{std::chrono::seconds{0}};
+  std::chrono::time_point<std::chrono::system_clock,
+                          std::chrono::duration<long long, std::ratio<1>>>
+      ss_tp_d_r{std::chrono::seconds{0}};
+  std::chrono::time_point<std::chrono::system_clock,
+                          std::chrono::duration<long long, std::ratio<1>>>
+      ss_tp_d_r2{std::chrono::seconds{0}};
+
+  // sys_seconds
+  std::chrono::sys_seconds ss_0{std::chrono::seconds{0}};
+  std::chrono::sys_seconds ss_neg_date_time{
+      std::chrono::seconds{-1'096'193'779'200}};
+  std::chrono::sys_seconds ss_neg_seconds{
+      std::chrono::seconds{-1'096'193'779'201}};
+  std::chrono::sys_seconds ss_pos_date_time{
+      std::chrono::seconds{971'890'963'199}};
+  std::chrono::sys_seconds ss_pos_seconds{
+      std::chrono::seconds{971'890'963'200}};
+  std::chrono::sys_seconds ss_min{
+      std::chrono::seconds{std::numeric_limits<long long>::min()}};
+  std::chrono::sys_seconds ss_max{
+      std::chrono::seconds{std::numeric_limits<long long>::max()}};
+
+  // sys_days aliasses
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::days> sd_tp{
+      std::chrono::days{0}};
+  std::chrono::time_point<std::chrono::system_clock,
+                          std::chrono::duration<int, std::ratio<86400>>>
+      sd_tp_d_r{std::chrono::days{0}};
+  std::chrono::time_point<std::chrono::system_clock,
+                          std::chrono::duration<int, std::ratio<86400, 1>>>
+      sd_tp_d_r2{std::chrono::days{0}};
+
+  // sys_days
+  std::chrono::sys_days sd_0{std::chrono::days{0}};
+
+  std::chrono::sys_days sd_neg_date{std::chrono::days{-12'687'428}};
+  std::chrono::sys_days sd_neg_days{std::chrono::days{-12'687'429}};
+
+  std::chrono::sys_days sd_pos_date{std::chrono::days{11'248'737}};
+  std::chrono::sys_days sd_pos_days{std::chrono::days{11'248'738}};
+
+  std::chrono::sys_days sd_min{
+      std::chrono::days{std::numeric_limits<int>::min()}};
+  std::chrono::sys_days sd_max{
+      std::chrono::days{std::numeric_limits<int>::max()}};
+
   std::chrono::day d_0{0};
   std::chrono::day d_1{1};
   std::chrono::day d_31{31};

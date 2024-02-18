@@ -53,7 +53,7 @@ static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
 // Upgrade the declarations of the SSE4.1 ptest intrinsics whose arguments have
 // changed their type from v4f32 to v2i64.
-static bool UpgradePTESTIntrinsic(Function* F, Intrinsic::ID IID,
+static bool upgradePTESTIntrinsic(Function *F, Intrinsic::ID IID,
                                   Function *&NewFn) {
   // Check whether this is an old version of the function, which received
   // v4f32 arguments.
@@ -69,7 +69,7 @@ static bool UpgradePTESTIntrinsic(Function* F, Intrinsic::ID IID,
 
 // Upgrade the declarations of intrinsic functions whose 8-bit immediate mask
 // arguments have changed their type from i32 to i8.
-static bool UpgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
+static bool upgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
                                              Function *&NewFn) {
   // Check that the last argument is an i32.
   Type *LastArgType = F->getFunctionType()->getParamType(
@@ -85,7 +85,7 @@ static bool UpgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
 
 // Upgrade the declaration of fp compare intrinsics that change return type
 // from scalar to vXi1 mask.
-static bool UpgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
+static bool upgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
                                       Function *&NewFn) {
   // Check if the return type is a vector.
   if (F->getReturnType()->isVectorTy())
@@ -96,7 +96,7 @@ static bool UpgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
   return true;
 }
 
-static bool UpgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
+static bool upgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
                                     Function *&NewFn) {
   if (F->getReturnType()->getScalarType()->isBFloatTy())
     return false;
@@ -106,7 +106,7 @@ static bool UpgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
   return true;
 }
 
-static bool UpgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
+static bool upgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
                                       Function *&NewFn) {
   if (F->getFunctionType()->getParamType(1)->getScalarType()->isBFloatTy())
     return false;
@@ -116,7 +116,7 @@ static bool UpgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
   return true;
 }
 
-static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
+static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // All of the intrinsics matches below should be marked with which llvm
   // version started autoupgrading them. At some point in the future we would
   // like to use this information to remove upgrade code for some older
@@ -483,13 +483,13 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
           Name.starts_with("vcvtph2ps.")); // Added in 11.0
 }
 
-static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
+static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
                                         Function *&NewFn) {
   // Only handle intrinsics that start with "x86.".
   if (!Name.consume_front("x86."))
     return false;
 
-  if (ShouldUpgradeX86Intrinsic(F, Name)) {
+  if (shouldUpgradeX86Intrinsic(F, Name)) {
     NewFn = nullptr;
     return true;
   }
@@ -515,7 +515,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
              .Case("nzc", Intrinsic::x86_sse41_ptestnzc)
              .Default(Intrinsic::not_intrinsic);
     if (ID != Intrinsic::not_intrinsic)
-      return UpgradePTESTIntrinsic(F, ID, NewFn);
+      return upgradePTESTIntrinsic(F, ID, NewFn);
 
     return false;
   }
@@ -533,7 +533,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
            .Case("avx2.mpsadbw", Intrinsic::x86_avx2_mpsadbw)
            .Default(Intrinsic::not_intrinsic);
   if (ID != Intrinsic::not_intrinsic)
-    return UpgradeX86IntrinsicsWith8BitMask(F, ID, NewFn);
+    return upgradeX86IntrinsicsWith8BitMask(F, ID, NewFn);
 
   if (Name.consume_front("avx512.mask.cmp.")) {
     // Added in 7.0
@@ -546,7 +546,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
              .Case("ps.512", Intrinsic::x86_avx512_mask_cmp_ps_512)
              .Default(Intrinsic::not_intrinsic);
     if (ID != Intrinsic::not_intrinsic)
-      return UpgradeX86MaskedFPCompare(F, ID, NewFn);
+      return upgradeX86MaskedFPCompare(F, ID, NewFn);
     return false; // No other 'x86.avx523.mask.cmp.*'.
   }
 
@@ -567,7 +567,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
                    Intrinsic::x86_avx512bf16_cvtneps2bf16_512)
              .Default(Intrinsic::not_intrinsic);
     if (ID != Intrinsic::not_intrinsic)
-      return UpgradeX86BF16Intrinsic(F, ID, NewFn);
+      return upgradeX86BF16Intrinsic(F, ID, NewFn);
 
     // Added in 9.0
     ID = StringSwitch<Intrinsic::ID>(Name)
@@ -576,7 +576,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
              .Case("dpbf16ps.512", Intrinsic::x86_avx512bf16_dpbf16ps_512)
              .Default(Intrinsic::not_intrinsic);
     if (ID != Intrinsic::not_intrinsic)
-      return UpgradeX86BF16DPIntrinsic(F, ID, NewFn);
+      return upgradeX86BF16DPIntrinsic(F, ID, NewFn);
     return false; // No other 'x86.avx512bf16.*'.
   }
 
@@ -623,7 +623,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 
 // Upgrade ARM (IsArm) or Aarch64 (!IsArm) intrinsic fns. Return true iff so.
 // IsArm: 'arm.*', !IsArm: 'aarch64.*'.
-static bool UpgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
+static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                                                  StringRef Name,
                                                  Function *&NewFn) {
   if (Name.starts_with("rbit")) {
@@ -899,7 +899,7 @@ static bool UpgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
-static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
+static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("abs."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_abs_bf16)
@@ -979,7 +979,7 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
-static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
+static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
   StringRef Name = F->getName();
@@ -993,7 +993,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   case 'a': {
     bool IsArm = Name.consume_front("arm.");
     if (IsArm || Name.consume_front("aarch64.")) {
-      if (UpgradeArmOrAarch64IntrinsicFunction(IsArm, F, Name, NewFn))
+      if (upgradeArmOrAarch64IntrinsicFunction(IsArm, F, Name, NewFn))
         return true;
       break;
     }
@@ -1190,7 +1190,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
       // Check for nvvm intrinsics that need a return type adjustment.
       if (!F->getReturnType()->getScalarType()->isBFloatTy()) {
-        Intrinsic::ID IID = ShouldUpgradeNVPTXBF16Intrinsic(Name);
+        Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
         if (IID != Intrinsic::not_intrinsic) {
           NewFn = nullptr;
           return true;
@@ -1354,7 +1354,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
 
   case 'x':
-    if (UpgradeX86IntrinsicFunction(F, Name, NewFn))
+    if (upgradeX86IntrinsicFunction(F, Name, NewFn))
       return true;
   }
 
@@ -1399,7 +1399,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
 bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn) {
   NewFn = nullptr;
-  bool Upgraded = UpgradeIntrinsicFunction1(F, NewFn);
+  bool Upgraded = upgradeIntrinsicFunction1(F, NewFn);
   assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
@@ -1443,8 +1443,8 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
 
 // Handles upgrading SSE2/AVX2/AVX512BW PSLLDQ intrinsics by converting them
 // to byte shuffles.
-static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder,
-                                         Value *Op, unsigned Shift) {
+static Value *upgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
+                                         unsigned Shift) {
   auto *ResultTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
@@ -1477,7 +1477,7 @@ static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder,
 
 // Handles upgrading SSE2/AVX2/AVX512BW PSRLDQ intrinsics by converting them
 // to byte shuffles.
-static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
+static Value *upgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
                                          unsigned Shift) {
   auto *ResultTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = ResultTy->getNumElements() * 8;
@@ -1529,8 +1529,8 @@ static Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask,
   return Mask;
 }
 
-static Value *EmitX86Select(IRBuilder<> &Builder, Value *Mask,
-                            Value *Op0, Value *Op1) {
+static Value *emitX86Select(IRBuilder<> &Builder, Value *Mask, Value *Op0,
+                            Value *Op1) {
   // If the mask is all ones just emit the first operation.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
@@ -1541,8 +1541,8 @@ static Value *EmitX86Select(IRBuilder<> &Builder, Value *Mask,
   return Builder.CreateSelect(Mask, Op0, Op1);
 }
 
-static Value *EmitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask,
-                                  Value *Op0, Value *Op1) {
+static Value *emitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask, Value *Op0,
+                                  Value *Op1) {
   // If the mask is all ones just emit the first operation.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
@@ -1558,7 +1558,7 @@ static Value *EmitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask,
 // Handle autoupgrade for masked PALIGNR and VALIGND/Q intrinsics.
 // PALIGNR handles large immediates by shifting while VALIGN masks the immediate
 // so we need to handle both cases. VALIGN also doesn't have 128-bit lanes.
-static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
+static Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
                                         Value *Op1, Value *Shift,
                                         Value *Passthru, Value *Mask,
                                         bool IsVALIGN) {
@@ -1600,10 +1600,10 @@ static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
   Value *Align = Builder.CreateShuffleVector(
       Op1, Op0, ArrayRef(Indices, NumElts), "palignr");
 
-  return EmitX86Select(Builder, Mask, Align, Passthru);
+  return emitX86Select(Builder, Mask, Align, Passthru);
 }
 
-static Value *UpgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
+static Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
                                           bool ZeroMask, bool IndexForm) {
   Type *Ty = CI.getType();
   unsigned VecWidth = Ty->getPrimitiveSizeInBits();
@@ -1661,10 +1661,10 @@ static Value *UpgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
   Value *PassThru = ZeroMask ? ConstantAggregateZero::get(Ty)
                              : Builder.CreateBitCast(CI.getArgOperand(1),
                                                      Ty);
-  return EmitX86Select(Builder, CI.getArgOperand(3), V, PassThru);
+  return emitX86Select(Builder, CI.getArgOperand(3), V, PassThru);
 }
 
-static Value *UpgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
+static Value *upgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
                                          Intrinsic::ID IID) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
@@ -1675,7 +1675,7 @@ static Value *UpgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
   if (CI.arg_size() == 4) { // For masked intrinsics.
     Value *VecSrc = CI.getOperand(2);
     Value *Mask = CI.getOperand(3);
-    Res = EmitX86Select(Builder, Mask, Res, VecSrc);
+    Res = emitX86Select(Builder, Mask, Res, VecSrc);
   }
   return Res;
 }
@@ -1702,7 +1702,7 @@ static Value *upgradeX86Rotate(IRBuilder<> &Builder, CallBase &CI,
   if (CI.arg_size() == 4) { // For masked intrinsics.
     Value *VecSrc = CI.getOperand(2);
     Value *Mask = CI.getOperand(3);
-    Res = EmitX86Select(Builder, Mask, Res, VecSrc);
+    Res = emitX86Select(Builder, Mask, Res, VecSrc);
   }
   return Res;
 }
@@ -1775,14 +1775,13 @@ static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
                     ZeroMask     ? ConstantAggregateZero::get(CI.getType()) :
                                    CI.getArgOperand(0);
     Value *Mask = CI.getOperand(NumArgs - 1);
-    Res = EmitX86Select(Builder, Mask, Res, VecSrc);
+    Res = emitX86Select(Builder, Mask, Res, VecSrc);
   }
   return Res;
 }
 
-static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
-                                 Value *Ptr, Value *Data, Value *Mask,
-                                 bool Aligned) {
+static Value *upgradeMaskedStore(IRBuilder<> &Builder, Value *Ptr, Value *Data,
+                                 Value *Mask, bool Aligned) {
   // Cast the pointer to the right type.
   Ptr = Builder.CreateBitCast(Ptr,
                               llvm::PointerType::getUnqual(Data->getType()));
@@ -1802,9 +1801,8 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
   return Builder.CreateMaskedStore(Data, Ptr, Alignment, Mask);
 }
 
-static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
-                                Value *Ptr, Value *Passthru, Value *Mask,
-                                bool Aligned) {
+static Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr,
+                                Value *Passthru, Value *Mask, bool Aligned) {
   Type *ValTy = Passthru->getType();
   // Cast the pointer to the right type.
   Ptr = Builder.CreateBitCast(Ptr, llvm::PointerType::getUnqual(ValTy));
@@ -1832,7 +1830,7 @@ static Value *upgradeAbs(IRBuilder<> &Builder, CallBase &CI) {
   Function *F = Intrinsic::getDeclaration(CI.getModule(), Intrinsic::abs, Ty);
   Value *Res = Builder.CreateCall(F, {Op0, Builder.getInt1(false)});
   if (CI.arg_size() == 3)
-    Res = EmitX86Select(Builder, CI.getArgOperand(2), Res, CI.getArgOperand(1));
+    Res = emitX86Select(Builder, CI.getArgOperand(2), Res, CI.getArgOperand(1));
   return Res;
 }
 
@@ -1860,13 +1858,13 @@ static Value *upgradePMULDQ(IRBuilder<> &Builder, CallBase &CI, bool IsSigned) {
   Value *Res = Builder.CreateMul(LHS, RHS);
 
   if (CI.arg_size() == 4)
-    Res = EmitX86Select(Builder, CI.getArgOperand(3), Res, CI.getArgOperand(2));
+    Res = emitX86Select(Builder, CI.getArgOperand(3), Res, CI.getArgOperand(2));
 
   return Res;
 }
 
 // Applying mask on vector of i1's and make sure result is at least 8 bits wide.
-static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
+static Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
                                      Value *Mask) {
   unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   if (Mask) {
@@ -1916,19 +1914,19 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
 
   Value *Mask = CI.getArgOperand(CI.arg_size() - 1);
 
-  return ApplyX86MaskOn1BitsVec(Builder, Cmp, Mask);
+  return applyX86MaskOn1BitsVec(Builder, Cmp, Mask);
 }
 
 // Replace a masked intrinsic with an older unmasked intrinsic.
-static Value *UpgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
+static Value *upgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
                                     Intrinsic::ID IID) {
   Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID);
   Value *Rep = Builder.CreateCall(Intrin,
                                  { CI.getArgOperand(0), CI.getArgOperand(1) });
-  return EmitX86Select(Builder, CI.getArgOperand(3), Rep, CI.getArgOperand(2));
+  return emitX86Select(Builder, CI.getArgOperand(3), Rep, CI.getArgOperand(2));
 }
 
-static Value* upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
+static Value *upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
   Value* A = CI.getArgOperand(0);
   Value* B = CI.getArgOperand(1);
   Value* Src = CI.getArgOperand(2);
@@ -1942,8 +1940,7 @@ static Value* upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
   return Builder.CreateInsertElement(A, Select, (uint64_t)0);
 }
 
-
-static Value* UpgradeMaskToInt(IRBuilder<> &Builder, CallBase &CI) {
+static Value *upgradeMaskToInt(IRBuilder<> &Builder, CallBase &CI) {
   Value* Op = CI.getArgOperand(0);
   Type* ReturnOp = CI.getType();
   unsigned NumElts = cast<FixedVectorType>(CI.getType())->getNumElements();
@@ -2185,7 +2182,7 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
   Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI.getModule(), IID),
                            Args);
   unsigned NumArgs = CI.arg_size();
-  Rep = EmitX86Select(Builder, CI.getArgOperand(NumArgs - 1), Rep,
+  Rep = emitX86Select(Builder, CI.getArgOperand(NumArgs - 1), Rep,
                       CI.getArgOperand(NumArgs - 2));
   return true;
 }
@@ -2201,7 +2198,7 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
   }
 }
 
-static Value *UpgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
+static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                                       IRBuilder<> &Builder) {
   if (Name == "mve.vctp64.old") {
     // Replace the old v4i1 vctp64 with a v2i1 vctp and predicate-casts to the
@@ -2295,7 +2292,7 @@ static Value *UpgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
 
-static Value *UpgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
+static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
   const bool IsInc = Name.starts_with("atomic.inc.");
   if (IsInc || Name.starts_with("atomic.dec.")) {
@@ -2441,7 +2438,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     if (IsX86 && Name == "avx512.mask.store.ss") {
       Value *Mask = Builder.CreateAnd(CI->getArgOperand(2), Builder.getInt8(1));
-      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+      upgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
                          Mask, false);
 
       // Remove intrinsic.
@@ -2449,10 +2446,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
 
-    if (IsX86 && (Name.starts_with("avx512.mask.store"))) {
+    if (IsX86 && Name.starts_with("avx512.mask.store")) {
       // "avx512.mask.storeu." or "avx512.mask.store."
       bool Aligned = Name[17] != 'u'; // "avx512.mask.storeu".
-      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+      upgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
                          CI->getArgOperand(2), Aligned);
 
       // Remove intrinsic.
@@ -2508,7 +2505,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                                            CI->getType()),
                                  {CI->getArgOperand(0)});
       }
-      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("avx512.ptestm") ||
                          Name.starts_with("avx512.ptestnm"))) {
@@ -2521,12 +2518,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       ICmpInst::Predicate Pred =
         Name.starts_with("avx512.ptestm") ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
       Rep = Builder.CreateICmp(Pred, Rep, Zero);
-      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, Mask);
+      Rep = applyX86MaskOn1BitsVec(Builder, Rep, Mask);
     } else if (IsX86 && (Name.starts_with("avx512.mask.pbroadcast"))){
       unsigned NumElts = cast<FixedVectorType>(CI->getArgOperand(1)->getType())
                              ->getNumElements();
       Rep = Builder.CreateVectorSplat(NumElts, CI->getArgOperand(0));
-      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("avx512.kunpck"))) {
       unsigned NumElts = CI->getType()->getScalarSizeInBits();
@@ -2627,7 +2624,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
                                { CI->getOperand(0), CI->getArgOperand(1) });
-      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
+      Rep = applyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.fpclass.p")) {
       Type *OpTy = CI->getArgOperand(0)->getType();
       unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
@@ -2650,7 +2647,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
                                { CI->getOperand(0), CI->getArgOperand(1) });
-      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
+      Rep = applyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.cmp.p")) {
       SmallVector<Value *, 4> Args(CI->args());
       Type *OpTy = Args[0]->getType();
@@ -2693,7 +2690,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Op = CI->getArgOperand(0);
       Value *Zero = llvm::Constant::getNullValue(Op->getType());
       Rep = Builder.CreateICmp(ICmpInst::ICMP_SLT, Op, Zero);
-      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, nullptr);
+      Rep = applyX86MaskOn1BitsVec(Builder, Rep, nullptr);
     } else if(IsX86 && (Name == "ssse3.pabs.b.128" ||
                         Name == "ssse3.pabs.w.128" ||
                         Name == "ssse3.pabs.d.128" ||
@@ -2705,25 +2702,25 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                          Name == "sse41.pmaxsd" ||
                          Name.starts_with("avx2.pmaxs") ||
                          Name.starts_with("avx512.mask.pmaxs"))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smax);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smax);
     } else if (IsX86 && (Name == "sse2.pmaxu.b" ||
                          Name == "sse41.pmaxuw" ||
                          Name == "sse41.pmaxud" ||
                          Name.starts_with("avx2.pmaxu") ||
                          Name.starts_with("avx512.mask.pmaxu"))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umax);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umax);
     } else if (IsX86 && (Name == "sse41.pminsb" ||
                          Name == "sse2.pmins.w" ||
                          Name == "sse41.pminsd" ||
                          Name.starts_with("avx2.pmins") ||
                          Name.starts_with("avx512.mask.pmins"))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smin);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smin);
     } else if (IsX86 && (Name == "sse2.pminu.b" ||
                          Name == "sse41.pminuw" ||
                          Name == "sse41.pminud" ||
                          Name.starts_with("avx2.pminu") ||
                          Name.starts_with("avx512.mask.pminu"))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
     } else if (IsX86 && (Name == "sse2.pmulu.dq" ||
                          Name == "avx2.pmulu.dq" ||
                          Name == "avx512.pmulu.dq.512" ||
@@ -2798,7 +2795,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       }
 
       if (CI->arg_size() >= 3)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("avx512.mask.vcvtph2ps.") ||
                          Name.starts_with("vcvtph2ps."))) {
@@ -2814,13 +2811,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           Rep, FixedVectorType::get(Type::getHalfTy(C), NumDstElts));
       Rep = Builder.CreateFPExt(Rep, DstTy, "cvtph2ps");
       if (CI->arg_size() >= 3)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
     } else if (IsX86 && Name.starts_with("avx512.mask.load")) {
       // "avx512.mask.loadu." or "avx512.mask.load."
       bool Aligned = Name[16] != 'u'; // "avx512.mask.loadu".
       Rep =
-          UpgradeMaskedLoad(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+          upgradeMaskedLoad(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
                             CI->getArgOperand(2), Aligned);
     } else if (IsX86 && Name.starts_with("avx512.mask.expand.load.")) {
       auto *ResultTy = cast<FixedVectorType>(CI->getType());
@@ -2966,7 +2963,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                    : Builder.CreateZExt(SV, DstTy);
       // If there are 3 arguments, it's a masked intrinsic so we need a select.
       if (CI->arg_size() == 3)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
     } else if (Name == "avx512.mask.pmov.qd.256" ||
                Name == "avx512.mask.pmov.qd.512" ||
@@ -2974,7 +2971,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                Name == "avx512.mask.pmov.wb.512") {
       Type *Ty = CI->getArgOperand(1)->getType();
       Rep = Builder.CreateTrunc(CI->getArgOperand(0), Ty);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("avx.vbroadcastf128") ||
                          Name == "avx2.vbroadcasti128")) {
@@ -3010,7 +3007,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       }
       Rep = Builder.CreateShuffleVector(CI->getArgOperand(0),
                                         CI->getArgOperand(1), ShuffleMask);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(4), Rep,
                           CI->getArgOperand(3));
     }else if (IsX86 && (Name.starts_with("avx512.mask.broadcastf") ||
                          Name.starts_with("avx512.mask.broadcasti"))) {
@@ -3027,7 +3024,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(CI->getArgOperand(0),
                                         CI->getArgOperand(0),
                                         ShuffleMask);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("avx2.pbroadcast") ||
                          Name.starts_with("avx2.vbroadcast") ||
@@ -3042,64 +3039,60 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(Op, M);
 
       if (CI->arg_size() == 3)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("sse2.padds.") ||
                          Name.starts_with("avx2.padds.") ||
                          Name.starts_with("avx512.padds.") ||
                          Name.starts_with("avx512.mask.padds."))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::sadd_sat);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::sadd_sat);
     } else if (IsX86 && (Name.starts_with("sse2.psubs.") ||
                          Name.starts_with("avx2.psubs.") ||
                          Name.starts_with("avx512.psubs.") ||
                          Name.starts_with("avx512.mask.psubs."))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::ssub_sat);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::ssub_sat);
     } else if (IsX86 && (Name.starts_with("sse2.paddus.") ||
                          Name.starts_with("avx2.paddus.") ||
                          Name.starts_with("avx512.mask.paddus."))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::uadd_sat);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::uadd_sat);
     } else if (IsX86 && (Name.starts_with("sse2.psubus.") ||
                          Name.starts_with("avx2.psubus.") ||
                          Name.starts_with("avx512.mask.psubus."))) {
-      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::usub_sat);
+      Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::usub_sat);
     } else if (IsX86 && Name.starts_with("avx512.mask.palignr.")) {
-      Rep = UpgradeX86ALIGNIntrinsics(Builder, CI->getArgOperand(0),
-                                      CI->getArgOperand(1),
-                                      CI->getArgOperand(2),
-                                      CI->getArgOperand(3),
-                                      CI->getArgOperand(4),
-                                      false);
+      Rep = upgradeX86ALIGNIntrinsics(
+          Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), CI->getArgOperand(3), CI->getArgOperand(4),
+          false);
     } else if (IsX86 && Name.starts_with("avx512.mask.valign.")) {
-      Rep = UpgradeX86ALIGNIntrinsics(Builder, CI->getArgOperand(0),
-                                      CI->getArgOperand(1),
-                                      CI->getArgOperand(2),
-                                      CI->getArgOperand(3),
-                                      CI->getArgOperand(4),
-                                      true);
+      Rep = upgradeX86ALIGNIntrinsics(
+          Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+          CI->getArgOperand(2), CI->getArgOperand(3), CI->getArgOperand(4),
+          true);
     } else if (IsX86 && (Name == "sse2.psll.dq" ||
                          Name == "avx2.psll.dq")) {
       // 128/256-bit shift left specified in bits.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSLLDQIntrinsics(Builder, CI->getArgOperand(0),
+      Rep = upgradeX86PSLLDQIntrinsics(Builder, CI->getArgOperand(0),
                                        Shift / 8); // Shift is in bits.
     } else if (IsX86 && (Name == "sse2.psrl.dq" ||
                          Name == "avx2.psrl.dq")) {
       // 128/256-bit shift right specified in bits.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSRLDQIntrinsics(Builder, CI->getArgOperand(0),
+      Rep = upgradeX86PSRLDQIntrinsics(Builder, CI->getArgOperand(0),
                                        Shift / 8); // Shift is in bits.
     } else if (IsX86 && (Name == "sse2.psll.dq.bs" ||
                          Name == "avx2.psll.dq.bs" ||
                          Name == "avx512.psll.dq.512")) {
       // 128/256/512-bit shift left specified in bytes.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSLLDQIntrinsics(Builder, CI->getArgOperand(0), Shift);
+      Rep = upgradeX86PSLLDQIntrinsics(Builder, CI->getArgOperand(0), Shift);
     } else if (IsX86 && (Name == "sse2.psrl.dq.bs" ||
                          Name == "avx2.psrl.dq.bs" ||
                          Name == "avx512.psrl.dq.512")) {
       // 128/256/512-bit shift right specified in bytes.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSRLDQIntrinsics(Builder, CI->getArgOperand(0), Shift);
+      Rep = upgradeX86PSRLDQIntrinsics(Builder, CI->getArgOperand(0), Shift);
     } else if (IsX86 && (Name == "sse41.pblendw" ||
                          Name.starts_with("sse41.blendp") ||
                          Name.starts_with("avx.blend.p") ||
@@ -3160,7 +3153,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       // If the intrinsic has a mask operand, handle that.
       if (CI->arg_size() == 5)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(4), Rep,
                             CI->getArgOperand(3));
     } else if (IsX86 && (Name.starts_with("avx.vextractf128.") ||
                          Name == "avx2.vextracti128" ||
@@ -3185,7 +3178,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       // If the intrinsic has a mask operand, handle that.
       if (CI->arg_size() == 4)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
     } else if (!IsX86 && Name == "stackprotectorcheck") {
       Rep = nullptr;
@@ -3203,7 +3196,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
 
       if (CI->arg_size() == 4)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx.vperm2f128.") ||
                          Name == "avx2.vperm2i128")) {
@@ -3263,7 +3256,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
 
       if (CI->arg_size() == 4)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
     } else if (IsX86 && (Name == "sse2.pshufl.w" ||
                          Name.starts_with("avx512.mask.pshufl.w."))) {
@@ -3282,7 +3275,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
 
       if (CI->arg_size() == 4)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
     } else if (IsX86 && (Name == "sse2.pshufh.w" ||
                          Name.starts_with("avx512.mask.pshufh.w."))) {
@@ -3301,7 +3294,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
 
       if (CI->arg_size() == 4)
-        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+        Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.shuf.p")) {
       Value *Op0 = CI->getArgOperand(0);
@@ -3326,7 +3319,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
 
-      Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(4), Rep,
                           CI->getArgOperand(3));
     } else if (IsX86 && (Name.starts_with("avx512.mask.movddup") ||
                          Name.starts_with("avx512.mask.movshdup") ||
@@ -3348,7 +3341,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
 
-      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.starts_with("avx512.mask.punpckl") ||
                          Name.starts_with("avx512.mask.unpckl."))) {
@@ -3364,7 +3357,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
 
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx512.mask.punpckh") ||
                          Name.starts_with("avx512.mask.unpckh."))) {
@@ -3380,7 +3373,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
       Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
 
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx512.mask.and.") ||
                          Name.starts_with("avx512.mask.pand."))) {
@@ -3389,7 +3382,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateAnd(Builder.CreateBitCast(CI->getArgOperand(0), ITy),
                               Builder.CreateBitCast(CI->getArgOperand(1), ITy));
       Rep = Builder.CreateBitCast(Rep, FTy);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx512.mask.andn.") ||
                          Name.starts_with("avx512.mask.pandn."))) {
@@ -3399,7 +3392,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateAnd(Rep,
                               Builder.CreateBitCast(CI->getArgOperand(1), ITy));
       Rep = Builder.CreateBitCast(Rep, FTy);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx512.mask.or.") ||
                          Name.starts_with("avx512.mask.por."))) {
@@ -3408,7 +3401,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateOr(Builder.CreateBitCast(CI->getArgOperand(0), ITy),
                              Builder.CreateBitCast(CI->getArgOperand(1), ITy));
       Rep = Builder.CreateBitCast(Rep, FTy);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx512.mask.xor.") ||
                          Name.starts_with("avx512.mask.pxor."))) {
@@ -3417,19 +3410,19 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateXor(Builder.CreateBitCast(CI->getArgOperand(0), ITy),
                               Builder.CreateBitCast(CI->getArgOperand(1), ITy));
       Rep = Builder.CreateBitCast(Rep, FTy);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.padd.")) {
       Rep = Builder.CreateAdd(CI->getArgOperand(0), CI->getArgOperand(1));
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.psub.")) {
       Rep = Builder.CreateSub(CI->getArgOperand(0), CI->getArgOperand(1));
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.pmull.")) {
       Rep = Builder.CreateMul(CI->getArgOperand(0), CI->getArgOperand(1));
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.add.p")) {
       if (Name.ends_with(".512")) {
@@ -3445,7 +3438,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       } else {
         Rep = Builder.CreateFAdd(CI->getArgOperand(0), CI->getArgOperand(1));
       }
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.div.p")) {
       if (Name.ends_with(".512")) {
@@ -3461,7 +3454,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       } else {
         Rep = Builder.CreateFDiv(CI->getArgOperand(0), CI->getArgOperand(1));
       }
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.mul.p")) {
       if (Name.ends_with(".512")) {
@@ -3477,7 +3470,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       } else {
         Rep = Builder.CreateFMul(CI->getArgOperand(0), CI->getArgOperand(1));
       }
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.sub.p")) {
       if (Name.ends_with(".512")) {
@@ -3493,7 +3486,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       } else {
         Rep = Builder.CreateFSub(CI->getArgOperand(0), CI->getArgOperand(1));
       }
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && (Name.starts_with("avx512.mask.max.p") ||
                          Name.starts_with("avx512.mask.min.p")) &&
@@ -3509,14 +3502,14 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
                                { CI->getArgOperand(0), CI->getArgOperand(1),
                                  CI->getArgOperand(4) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.starts_with("avx512.mask.lzcnt.")) {
       Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(),
                                                          Intrinsic::ctlz,
                                                          CI->getType()),
                                { CI->getArgOperand(0), Builder.getInt1(false) });
-      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+      Rep = emitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && Name.starts_with("avx512.mask.psll")) {
       bool IsImmediate = Name[16] == 'i' ||
@@ -3585,7 +3578,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           llvm_unreachable("Unexpected size");
       }
 
-      Rep = UpgradeX86MaskedShift(Builder, *CI, IID);
+      Rep = upgradeX86MaskedShift(Builder, *CI, IID);
     } else if (IsX86 && Name.starts_with("avx512.mask.psrl")) {
       bool IsImmediate = Name[16] == 'i' ||
                          (Name.size() > 18 && Name[18] == 'i');
@@ -3653,7 +3646,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           llvm_unreachable("Unexpected size");
       }
 
-      Rep = UpgradeX86MaskedShift(Builder, *CI, IID);
+      Rep = upgradeX86MaskedShift(Builder, *CI, IID);
     } else if (IsX86 && Name.starts_with("avx512.mask.psra")) {
       bool IsImmediate = Name[16] == 'i' ||
                          (Name.size() > 18 && Name[18] == 'i');
@@ -3719,11 +3712,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           llvm_unreachable("Unexpected size");
       }
 
-      Rep = UpgradeX86MaskedShift(Builder, *CI, IID);
+      Rep = upgradeX86MaskedShift(Builder, *CI, IID);
     } else if (IsX86 && Name.starts_with("avx512.mask.move.s")) {
       Rep = upgradeMaskedMove(Builder, *CI);
     } else if (IsX86 && Name.starts_with("avx512.cvtmask2")) {
-      Rep = UpgradeMaskToInt(Builder, *CI);
+      Rep = upgradeMaskToInt(Builder, *CI);
     } else if (IsX86 && Name.ends_with(".movntdqa")) {
       MDNode *Node = MDNode::get(
           C, ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
@@ -3839,8 +3832,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         PassThru = Builder.CreateExtractElement(CI->getArgOperand(2),
                                                 (uint64_t)0);
 
-      Rep = EmitX86ScalarSelect(Builder, CI->getArgOperand(3),
-                                Rep, PassThru);
+      Rep = emitX86ScalarSelect(Builder, CI->getArgOperand(3), Rep, PassThru);
       Rep = Builder.CreateInsertElement(CI->getArgOperand(IsMask3 ? 2 : 0),
                                         Rep, (uint64_t)0);
     } else if (IsX86 && (Name.starts_with("avx512.mask.vfmadd.p") ||
@@ -3891,7 +3883,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                         IsMask3 ? CI->getArgOperand(2) :
                                   CI->getArgOperand(0);
 
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 &&  Name.starts_with("fma.vfmsubadd.p")) {
       unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
       unsigned EltWidth = CI->getType()->getScalarSizeInBits();
@@ -3962,7 +3954,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                         IsMask3 ? CI->getArgOperand(2) :
                                   CI->getArgOperand(0);
 
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 && (Name.starts_with("avx512.mask.pternlog.") ||
                          Name.starts_with("avx512.maskz.pternlog."))) {
       bool ZeroMask = Name[11] == 'z';
@@ -3990,7 +3982,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                Args);
       Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                  : CI->getArgOperand(0);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep, PassThru);
+      Rep = emitX86Select(Builder, CI->getArgOperand(4), Rep, PassThru);
     } else if (IsX86 && (Name.starts_with("avx512.mask.vpmadd52") ||
                          Name.starts_with("avx512.maskz.vpmadd52"))) {
       bool ZeroMask = Name[11] == 'z';
@@ -4018,13 +4010,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                Args);
       Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                  : CI->getArgOperand(0);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 && (Name.starts_with("avx512.mask.vpermi2var.") ||
                          Name.starts_with("avx512.mask.vpermt2var.") ||
                          Name.starts_with("avx512.maskz.vpermt2var."))) {
       bool ZeroMask = Name[11] == 'z';
       bool IndexForm = Name[17] == 'i';
-      Rep = UpgradeX86VPERMT2Intrinsics(Builder, *CI, ZeroMask, IndexForm);
+      Rep = upgradeX86VPERMT2Intrinsics(Builder, *CI, ZeroMask, IndexForm);
     } else if (IsX86 && (Name.starts_with("avx512.mask.vpdpbusd.") ||
                          Name.starts_with("avx512.maskz.vpdpbusd.") ||
                          Name.starts_with("avx512.mask.vpdpbusds.") ||
@@ -4054,7 +4046,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                Args);
       Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                  : CI->getArgOperand(0);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 && (Name.starts_with("avx512.mask.vpdpwssd.") ||
                          Name.starts_with("avx512.maskz.vpdpwssd.") ||
                          Name.starts_with("avx512.mask.vpdpwssds.") ||
@@ -4084,7 +4076,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                Args);
       Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                  : CI->getArgOperand(0);
-      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+      Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 && (Name == "addcarryx.u32" || Name == "addcarryx.u64" ||
                          Name == "addcarry.u32" || Name == "addcarry.u64" ||
                          Name == "subborrow.u32" || Name == "subborrow.u64")) {
@@ -4152,7 +4144,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                        : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
       Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
     } else if (IsNVVM && Name == "clz.ll") {
-      // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 and returns an i64.
+      // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
       Value *Arg = CI->getArgOperand(0);
       Value *Ctlz = Builder.CreateCall(
           Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
@@ -4160,7 +4152,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           {Arg, Builder.getFalse()}, "ctlz");
       Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
     } else if (IsNVVM && Name == "popc.ll") {
-      // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 and returns an
+      // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 returns an
       // i64.
       Value *Arg = CI->getArgOperand(0);
       Value *Popc = Builder.CreateCall(
@@ -4176,7 +4168,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                    {Builder.getFloatTy()}),
                                CI->getArgOperand(0), "h2f");
       } else {
-        Intrinsic::ID IID = ShouldUpgradeNVPTXBF16Intrinsic(Name);
+        Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
         if (IID != Intrinsic::not_intrinsic &&
             !F->getReturnType()->getScalarType()->isBFloatTy()) {
           rename(F);
@@ -4197,9 +4189,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         }
       }
     } else if (IsARM) {
-      Rep = UpgradeARMIntrinsicCall(Name, CI, F, Builder);
+      Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
-      Rep = UpgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
+      Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -4618,7 +4610,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Args[3] = getX86MaskVec(Builder, Args[3], NumElts);
 
     NewCall = Builder.CreateCall(NewFn, Args);
-    Value *Res = ApplyX86MaskOn1BitsVec(Builder, NewCall, nullptr);
+    Value *Res = applyX86MaskOn1BitsVec(Builder, NewCall, nullptr);
 
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(Res);
@@ -4827,7 +4819,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
 
 /// This checks for objc retain release marker which should be upgraded. It
 /// returns true if module is modified.
-static bool UpgradeRetainReleaseMarker(Module &M) {
+static bool upgradeRetainReleaseMarker(Module &M) {
   bool Changed = false;
   const char *MarkerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
   NamedMDNode *ModRetainReleaseMarker = M.getNamedMetadata(MarkerKey);
@@ -4926,7 +4918,7 @@ void llvm::UpgradeARCRuntime(Module &M) {
   // Upgrade the retain release marker. If there is no need to upgrade
   // the marker, that means either the module is already new enough to contain
   // new intrinsics or it is not ARC. There is no need to upgrade runtime call.
-  if (!UpgradeRetainReleaseMarker(M))
+  if (!upgradeRetainReleaseMarker(M))
     return;
 
   std::pair<const char *, llvm::Intrinsic::ID> RuntimeFuncs[] = {

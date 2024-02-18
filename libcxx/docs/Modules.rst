@@ -69,7 +69,6 @@ Some of the current limitations
  * The path to the compiler may not be a symlink, ``clang-scan-deps`` does
    not handle that case properly
  * Libc++ is not tested with modules instead of headers
- * The module ``.cppm`` files are not installed
  * Clang supports modules using GNU extensions, but libc++ does not work using
    GNU extensions.
  * Clang:
@@ -115,7 +114,7 @@ directory. First libc++ needs to be build with module support enabled.
   $ git clone https://github.com/llvm/llvm-project.git
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S runtimes -B build -DLIBCXX_ENABLE_STD_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+  $ cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
   $ ninja -C build
 
 The above ``build`` directory will be referred to as ``<build>`` in the
@@ -183,8 +182,8 @@ This is a small sample program that uses the module ``std``. It consists of a
   # Adjust project compiler flags
   #
 
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${CMAKE_BINARY_DIR}/_deps/std-build/CMakeFiles/std.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${CMAKE_BINARY_DIR}/_deps/std-build/CMakeFiles/std.compat.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.dir/>)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${std_BINARY_DIR}/CMakeFiles/std.compat.dir/>)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
   # The include path needs to be set to be able to use macros from headers.
   # For example from, the headers <cassert> and <version>.
@@ -219,8 +218,12 @@ Building this project is done with the following steps, assuming the files
 
   $ mkdir build
   $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DLIBCXX_BUILD=<build>
+  $ ninja -j1 std -C build
   $ ninja -C build
   $ build/main
+
+.. note:: The ``std`` dependencies of ``std.compat`` is not always resolved when
+          building the ``std`` target using multiple jobs.
 
 .. warning:: ``<path-to-compiler>`` should point point to the real binary and
              not to a symlink.

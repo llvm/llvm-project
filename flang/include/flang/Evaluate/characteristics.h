@@ -45,11 +45,12 @@ namespace Fortran::evaluate::characteristics {
 using common::CopyableIndirection;
 
 // Are these procedures distinguishable for a generic name or FINAL?
-bool Distinguishable(const common::LanguageFeatureControl &, const Procedure &,
-    const Procedure &);
-// Are these procedures distinguishable for a generic operator or assignment?
-bool DistinguishableOpOrAssign(const common::LanguageFeatureControl &,
+std::optional<bool> Distinguishable(const common::LanguageFeatureControl &,
     const Procedure &, const Procedure &);
+// Are these procedures distinguishable for a generic operator or assignment?
+std::optional<bool> DistinguishableOpOrAssign(
+    const common::LanguageFeatureControl &, const Procedure &,
+    const Procedure &);
 
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
@@ -228,6 +229,7 @@ struct DummyDataObject {
   static std::optional<DummyDataObject> Characterize(
       const semantics::Symbol &, FoldingContext &);
   bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
+  bool IsPassedByDescriptor(bool isBindC) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   TypeAndShape type;

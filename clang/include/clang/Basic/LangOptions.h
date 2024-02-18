@@ -30,27 +30,6 @@
 
 namespace clang {
 
-/// Bitfields of LangOptions, split out from LangOptions in order to ensure that
-/// this large collection of bitfields is a trivial class type.
-class LangOptionsBase {
-  friend class CompilerInvocation;
-  friend class CompilerInvocationBase;
-
-public:
-  // Define simple language options (with no accessors).
-#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
-#include "clang/Basic/LangOptions.def"
-
-protected:
-  // Define language options of enumeration type. These are private, and will
-  // have accessors (below).
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  unsigned Name : Bits;
-#include "clang/Basic/LangOptions.def"
-};
-
 /// In the Microsoft ABI, this controls the placement of virtual displacement
 /// members used to implement virtual inheritance.
 enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
@@ -78,9 +57,12 @@ enum class ShaderStage {
   Invalid,
 };
 
-/// Keeps track of the various options that can be
-/// enabled, which controls the dialect of C or C++ that is accepted.
-class LangOptions : public LangOptionsBase {
+/// Bitfields of LangOptions, split out from LangOptions in order to ensure that
+/// this large collection of bitfields is a trivial class type.
+class LangOptionsBase {
+  friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
+
 public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
@@ -381,6 +363,17 @@ public:
     All,
   };
 
+  enum class VisibilityForcedKinds {
+    /// Force hidden visibility
+    ForceHidden,
+    /// Force protected visibility
+    ForceProtected,
+    /// Force default visibility
+    ForceDefault,
+    /// Don't alter the visibility
+    Source,
+  };
+
   enum class VisibilityFromDLLStorageClassKinds {
     /// Keep the IR-gen assigned visibility.
     Keep,
@@ -403,8 +396,26 @@ public:
     IncompleteOnly = 3,
   };
 
-  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran };
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
 
+  // Define simple language options (with no accessors).
+#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#include "clang/Basic/LangOptions.def"
+
+protected:
+  // Define language options of enumeration type. These are private, and will
+  // have accessors (below).
+#define LANGOPT(Name, Bits, Default, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+  LLVM_PREFERRED_TYPE(Type) \
+  unsigned Name : Bits;
+#include "clang/Basic/LangOptions.def"
+};
+
+/// Keeps track of the various options that can be
+/// enabled, which controls the dialect of C or C++ that is accepted.
+class LangOptions : public LangOptionsBase {
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -671,6 +682,26 @@ public:
   bool isAllDefaultVisibilityExportMapping() const {
     return getDefaultVisibilityExportMapping() ==
            DefaultVisiblityExportMapping::All;
+  }
+
+  bool hasGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() !=
+           VisibilityForcedKinds::Source;
+  }
+
+  bool hasDefaultGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceDefault;
+  }
+
+  bool hasProtectedGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceProtected;
+  }
+
+  bool hasHiddenGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceHidden;
   }
 
   /// Remap path prefix according to -fmacro-prefix-path option.

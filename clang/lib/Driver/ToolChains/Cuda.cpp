@@ -389,7 +389,11 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     GPUArchName = JA.getOffloadingArch();
   } else {
     GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
-    assert(!GPUArchName.empty() && "Must have an architecture passed in.");
+    if (GPUArchName.empty()) {
+      C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
+          << getToolChain().getArchName() << getShortName();
+      return;
+    }
   }
 
   // Obtain architecture from the action.
@@ -593,7 +597,11 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  assert(!GPUArch.empty() && "At least one GPU Arch required for nvlink.");
+  if (GPUArch.empty()) {
+    C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
+        << getToolChain().getArchName() << getShortName();
+    return;
+  }
 
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Args.MakeArgString(GPUArch));
@@ -726,9 +734,8 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                               StringRef BoundArch,
-                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      ToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+                              Action::OffloadKind OffloadKind) const {
+  DerivedArgList *DAL = ToolChain::TranslateArgs(Args, BoundArch, OffloadKind);
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
@@ -738,9 +745,23 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  if (!DAL->hasArg(options::OPT_march_EQ))
+  // TODO: We should accept 'generic' as a valid architecture.
+  if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
+  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
+    auto GPUsOrErr = getSystemGPUArchs(Args);
+    if (!GPUsOrErr) {
+      getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+          << getArchName() << llvm::toString(GPUsOrErr.takeError()) << "-march";
+    } else {
+      if (GPUsOrErr->size() > 1)
+        getDriver().Diag(diag::warn_drv_multi_gpu_arch)
+            << getArchName() << llvm::join(*GPUsOrErr, ", ") << "-march";
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
+                        Args.MakeArgString(GPUsOrErr->front()));
+    }
+  }
 
   return DAL;
 }
@@ -781,6 +802,31 @@ void NVPTXToolChain::adjustDebugInfoKind(
     // Use same debug info level as the host.
     break;
   }
+}
+
+Expected<SmallVector<std::string>>
+NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
+  // Detect NVIDIA GPUs availible on the system.
+  std::string Program;
+  if (Arg *A = Args.getLastArg(options::OPT_nvptx_arch_tool_EQ))
+    Program = A->getValue();
+  else
+    Program = GetProgramPath("nvptx-arch");
+
+  auto StdoutOrErr = executeToolChainProgram(Program);
+  if (!StdoutOrErr)
+    return StdoutOrErr.takeError();
+
+  SmallVector<std::string, 1> GPUArchs;
+  for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
+    if (!Arch.empty())
+      GPUArchs.push_back(Arch.str());
+
+  if (GPUArchs.empty())
+    return llvm::createStringError(std::error_code(),
+                                   "No NVIDIA GPU detected in the system");
+
+  return std::move(GPUArchs);
 }
 
 /// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,
@@ -946,31 +992,6 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                       BoundArch);
   }
   return DAL;
-}
-
-Expected<SmallVector<std::string>>
-CudaToolChain::getSystemGPUArchs(const ArgList &Args) const {
-  // Detect NVIDIA GPUs availible on the system.
-  std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_nvptx_arch_tool_EQ))
-    Program = A->getValue();
-  else
-    Program = GetProgramPath("nvptx-arch");
-
-  auto StdoutOrErr = executeToolChainProgram(Program);
-  if (!StdoutOrErr)
-    return StdoutOrErr.takeError();
-
-  SmallVector<std::string, 1> GPUArchs;
-  for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
-    if (!Arch.empty())
-      GPUArchs.push_back(Arch.str());
-
-  if (GPUArchs.empty())
-    return llvm::createStringError(std::error_code(),
-                                   "No NVIDIA GPU detected in the system");
-
-  return std::move(GPUArchs);
 }
 
 Tool *NVPTXToolChain::buildAssembler() const {

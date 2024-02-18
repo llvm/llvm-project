@@ -121,44 +121,6 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
   return false;
 }
 
-static bool checkVEXInstPredicate(unsigned OldOpc, const X86Subtarget &ST) {
-  switch (OldOpc) {
-  default:
-    return true;
-  case X86::VCVTNEPS2BF16Z128rm:
-  case X86::VCVTNEPS2BF16Z128rr:
-  case X86::VCVTNEPS2BF16Z256rm:
-  case X86::VCVTNEPS2BF16Z256rr:
-    return ST.hasAVXNECONVERT();
-  case X86::VPDPBUSDSZ128m:
-  case X86::VPDPBUSDSZ128r:
-  case X86::VPDPBUSDSZ256m:
-  case X86::VPDPBUSDSZ256r:
-  case X86::VPDPBUSDZ128m:
-  case X86::VPDPBUSDZ128r:
-  case X86::VPDPBUSDZ256m:
-  case X86::VPDPBUSDZ256r:
-  case X86::VPDPWSSDSZ128m:
-  case X86::VPDPWSSDSZ128r:
-  case X86::VPDPWSSDSZ256m:
-  case X86::VPDPWSSDSZ256r:
-  case X86::VPDPWSSDZ128m:
-  case X86::VPDPWSSDZ128r:
-  case X86::VPDPWSSDZ256m:
-  case X86::VPDPWSSDZ256r:
-    return ST.hasAVXVNNI();
-  case X86::VPMADD52HUQZ128m:
-  case X86::VPMADD52HUQZ128r:
-  case X86::VPMADD52HUQZ256m:
-  case X86::VPMADD52HUQZ256r:
-  case X86::VPMADD52LUQZ128m:
-  case X86::VPMADD52LUQZ128r:
-  case X86::VPMADD52LUQZ256m:
-  case X86::VPMADD52LUQZ256r:
-    return ST.hasAVXIFMA();
-  }
-}
-
 // Do any custom cleanup needed to finalize the conversion.
 static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   (void)NewOpc;
@@ -238,7 +200,6 @@ static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
       !MI.getOperand(2).isReg() || MI.getOperand(2).getReg() != Reg0)
     return false;
   // Opcode may change after commute, e.g. SHRD -> SHLD
-  // TODO: Add test for this after ND SHRD/SHLD is supported
   ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
   return true;
 }
@@ -264,22 +225,26 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   //
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
+  unsigned Opc = MI.getOpcode();
   bool IsND = X86II::hasNewDataDest(TSFlags);
-  if (TSFlags & X86II::EVEX_B)
-    if (!IsND || !isRedundantNewDataDest(MI, ST))
-      return false;
+  if (TSFlags & X86II::EVEX_B && !IsND)
+    return false;
+  // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
+  bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
+  if (IsNDLike && !isRedundantNewDataDest(MI, ST))
+    return false;
 
   ArrayRef<X86CompressEVEXTableEntry> Table = ArrayRef(X86CompressEVEXTable);
 
-  unsigned Opc = MI.getOpcode();
+  Opc = MI.getOpcode();
   const auto *I = llvm::lower_bound(Table, Opc);
   if (I == Table.end() || I->OldOpc != Opc) {
-    assert(!IsND && "Missing entry for ND instruction");
+    assert(!IsNDLike && "Missing entry for ND-like instruction");
     return false;
   }
 
-  if (!IsND) {
-    if (usesExtendedRegister(MI) || !checkVEXInstPredicate(Opc, ST) ||
+  if (!IsNDLike) {
+    if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
         !performCustomAdjustments(MI, I->NewOpc))
       return false;
   }
@@ -303,7 +268,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     llvm_unreachable("Unknown EVEX compression");
   }
   MI.setAsmPrinterFlag(AsmComment);
-  if (IsND)
+  if (IsNDLike)
     MI.tieOperands(0, 1);
 
   return true;

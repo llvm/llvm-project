@@ -89,6 +89,7 @@ class DPValue : public ilist_node<DPValue>, private DebugValueUser {
 public:
   void deleteInstr();
 
+  const Instruction *getInstruction() const;
   const BasicBlock *getParent() const;
   BasicBlock *getParent();
   void dump() const;
@@ -451,6 +452,17 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
 inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
   Value.print(OS);
   return OS;
+}
+
+/// Inline helper to return a range of DPValues attached to a marker. It needs
+/// to be inlined as it's frequently called, but also come after the declaration
+/// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
+/// inlineable body defined here.
+inline iterator_range<simple_ilist<DPValue>::iterator>
+getDbgValueRange(DPMarker *DbgMarker) {
+  if (!DbgMarker)
+    return DPMarker::getEmptyDPValueRange();
+  return DbgMarker->getDbgValueRange();
 }
 
 } // namespace llvm

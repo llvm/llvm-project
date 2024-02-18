@@ -67,9 +67,8 @@ public:
   void markLive() { live = true; }
   bool isLive() const { return live; }
 
-  // True if this file is exists as in an archive file and has not yet been
-  // extracted.
-  // TODO(sbc): Use this to implement --start-lib/--end-lib.
+  // True if this is a relocatable object file/bitcode file in an ar archive
+  // or between --start-lib and --end-lib.
   bool lazy = false;
 
 protected:

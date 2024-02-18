@@ -24,7 +24,6 @@ unittest("CodeGenTests") {
     "AllocationOrderTest.cpp",
     "AsmPrinterDwarfTest.cpp",
     "CCStateTest.cpp",
-    "CodeGenPassBuilderTest.cpp",
     "DIEHashTest.cpp",
     "DIETest.cpp",
     "DwarfStringPoolEntryRefTest.cpp",

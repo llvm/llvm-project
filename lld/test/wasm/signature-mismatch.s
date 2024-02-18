@@ -9,7 +9,7 @@
 # RUN: obj2yaml %t.reloc.o | FileCheck %s -check-prefix=RELOC
 
 # RUN: rm -f %t.a
-# RUN: ar crS %t.a %t.ret32.o %t.call.o
+# RUN: llvm-ar crS %t.a %t.ret32.o %t.call.o
 # RUN: wasm-ld --export=call_ret32 --export=ret32 -o %t2.wasm %t.main.o %t.a 2>&1 | FileCheck %s -check-prefix=ARCHIVE
 # RUN: obj2yaml %t2.wasm | FileCheck %s -check-prefix=YAML
 
