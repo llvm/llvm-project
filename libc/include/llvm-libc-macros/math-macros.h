@@ -9,6 +9,8 @@
 #ifndef __LLVM_LIBC_MACROS_MATH_MACROS_H
 #define __LLVM_LIBC_MACROS_MATH_MACROS_H
 
+#include "limits-macros.h"
+
 #define MATH_ERRNO 1
 #define MATH_ERREXCEPT 2
 
@@ -18,6 +20,9 @@
 
 #define FP_ILOGB0 (-__INT_MAX__ - 1)
 #define FP_ILOGBNAN __INT_MAX__
+
+#define FP_LLOGB0 (-__LONG_MAX__ - 1)
+#define FP_LLOGBNAN __LONG_MAX__
 
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
