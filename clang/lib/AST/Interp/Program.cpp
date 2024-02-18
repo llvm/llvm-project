@@ -248,7 +248,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
 
   // Helper to get a base descriptor.
   auto GetBaseDesc = [this](const RecordDecl *BD,
-                            const Record *BR) -> Descriptor * {
+                            const Record *BR) -> const Descriptor * {
     if (!BR)
       return nullptr;
     return allocateDescriptor(BD, BR, std::nullopt, /*isConst=*/false,
@@ -268,9 +268,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       // In error cases, the base might not be a RecordType.
       if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
         const RecordDecl *BD = RT->getDecl();
+        const Record *BR = getOrCreateRecord(BD);
 
-        Record *BR = getOrCreateRecord(BD);
-        if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
+        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
           BaseSize += align(sizeof(InlineDescriptor));
           Bases.push_back({BD, BaseSize, Desc, BR});
           BaseSize += align(BR->getSize());
@@ -284,9 +284,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
 
       if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
         const RecordDecl *BD = RT->getDecl();
-        Record *BR = getOrCreateRecord(BD);
+        const Record *BR = getOrCreateRecord(BD);
 
-        if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
+        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
           VirtSize += align(sizeof(InlineDescriptor));
           VirtBases.push_back({BD, VirtSize, Desc, BR});
           VirtSize += align(BR->getSize());
@@ -307,7 +307,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     QualType FT = FD->getType();
     const bool IsConst = FT.isConstQualified();
     const bool IsMutable = FD->isMutable();
-    Descriptor *Desc;
+    const Descriptor *Desc;
     if (std::optional<PrimType> T = Ctx.classify(FT)) {
       Desc = createDescriptor(FD, *T, std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable);
