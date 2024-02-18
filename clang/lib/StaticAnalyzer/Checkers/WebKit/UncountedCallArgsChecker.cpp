@@ -25,6 +25,11 @@ using namespace ento;
 
 namespace {
 
+bool stringEndsWith(const std::string &str, const std::string &suffix) {
+  auto index = str.rfind(suffix);
+  return index != std::string::npos && str.size() - suffix.size() == index;
+}
+
 class UncountedCallArgsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug{this,
@@ -170,6 +175,9 @@ public:
     if (!Callee)
       return false;
 
+    if (isMethodOnWTFContainerType(Callee))
+      return true;
+
     auto overloadedOperatorType = Callee->getOverloadedOperator();
     if (overloadedOperatorType == OO_EqualEqual ||
         overloadedOperatorType == OO_ExclaimEqual ||
@@ -196,6 +204,30 @@ public:
       return true;
 
     return false;
+  }
+
+  bool isMethodOnWTFContainerType(const FunctionDecl *Decl) const {
+    if (!isa<CXXMethodDecl>(Decl))
+      return false;
+    auto *ClassDecl = Decl->getParent();
+    if (!ClassDecl || !isa<CXXRecordDecl>(ClassDecl))
+      return false;
+
+    auto *NsDecl = ClassDecl->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+
+    auto methodName = safeGetName(Decl);
+    auto clsName = safeGetName(ClassDecl);
+    auto nsName = safeGetName(NsDecl);
+    // FIXME: These should be implemented via attributes.
+    return nsName == "WTF" &&
+           (methodName == "find" || methodName == "findIf" ||
+            methodName == "reverseFind" || methodName == "reverseFindIf" ||
+            methodName == "get" || methodName == "inlineGet" ||
+            methodName == "contains" || methodName == "containsIf") &&
+           (stringEndsWith(clsName, "Vector") ||
+            stringEndsWith(clsName, "Set") || stringEndsWith(clsName, "Map"));
   }
 
   void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {
