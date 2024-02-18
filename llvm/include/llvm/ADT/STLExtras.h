@@ -1994,6 +1994,10 @@ auto unique(Range &&R, Predicate P) {
   return std::unique(adl_begin(R), adl_end(R), P);
 }
 
+template <typename Range> auto unique(Range &&R) {
+  return std::unique(adl_begin(R), adl_end(R));
+}
+
 /// Wrapper function around std::equal to detect if pair-wise elements between
 /// two ranges are the same.
 template <typename L, typename R> bool equal(L &&LRange, R &&RRange) {
