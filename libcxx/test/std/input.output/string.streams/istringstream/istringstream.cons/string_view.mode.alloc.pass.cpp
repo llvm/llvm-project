@@ -209,7 +209,7 @@ static void test() {
   // ConstConvertibleStringView<CharT>
   {
     const ConstConvertibleStringView<CharT> sv{CS("zmt")};
-    std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>> ss(sv, std::ios_base::binary, ca);
+    SSTREAM ss(sv, std::ios_base::binary, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
