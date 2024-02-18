@@ -35,19 +35,19 @@ void test_sfinae() {
   using SSTREAM  = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
   using CSSTREAM = std::basic_istringstream<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>;
 
-  static_assert(HasStr<std::basic_istringstream<CharT>, CharT*>);
+  static_assert(HasStr<SSTREAM, CharT*>);
   static_assert(HasStr<CSSTREAM, CharT*>);
 
-  static_assert(HasStr<std::basic_istringstream<CharT>, const CharT*>);
+  static_assert(HasStr<SSTREAM, const CharT*>);
   static_assert(HasStr<CSSTREAM, const CharT*>);
 
-  static_assert(HasStr<std::basic_istringstream<CharT>, std::basic_string_view<CharT>>);
+  static_assert(HasStr<SSTREAM, std::basic_string_view<CharT>>);
   static_assert(HasStr<CSSTREAM, std::basic_string_view<CharT, constexpr_char_traits<CharT>>>);
 
-  static_assert(HasStr<std::basic_istringstream<CharT>, std::basic_string<CharT>>);
+  static_assert(HasStr<SSTREAM, std::basic_string<CharT>>);
   static_assert(HasStr<CSSTREAM, std::basic_string<CharT, constexpr_char_traits<CharT>>>);
 
-  static_assert(HasStr<std::basic_istringstream<CharT>, ConstConvertibleStringView<CharT>>);
+  static_assert(HasStr<SSTREAM, ConstConvertibleStringView<CharT>>);
   static_assert(HasStr<CSSTREAM, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 
   using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
@@ -55,11 +55,12 @@ void test_sfinae() {
   static_assert(HasStr<NSSTREAM, nasty_char*>);
   static_assert(HasStr<NSSTREAM, const nasty_char*>);
 
-  static_assert(!HasStr<std::basic_istringstream<CharT>, CharT>);
-  static_assert(!HasStr<std::basic_istringstream<CharT>, int>);
-  static_assert(!HasStr<std::basic_istringstream<CharT>, SomeObject>);
-  static_assert(!HasStr<std::basic_istringstream<CharT>, std::nullptr_t>);
-  static_assert(!HasStr<std::basic_istringstream<CharT>, NonConstConvertibleStringView<CharT>>);
+  static_assert(!HasStr<SSTREAM, CharT>);
+  static_assert(!HasStr<SSTREAM, int>);
+  static_assert(!HasStr<SSTREAM, SomeObject>);
+  static_assert(!HasStr<SSTREAM, std::nullptr_t>);
+  static_assert(!HasStr<SSTREAM, NonConstConvertibleStringView<CharT>>);
+  static_assert(!HasStr<CSSTREAM, NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 }
 
 #define CS(S) MAKE_CSTRING(CharT, S)
