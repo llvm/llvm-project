@@ -163,8 +163,8 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
-* ``-Wextra`` group flag now contains an adittional flag i.e, ``-Wcast-function-type``.
 
+* ``-Wextra`` group flag now contains an adittional flag i.e, ``-Wcast-function-type``.
 Removed Compiler Flags
 -------------------------
 
