@@ -55,7 +55,7 @@ void test_sfinae() {
 
   static_assert(HasStr<NSSTREAM, nasty_char*>);
   static_assert(HasStr<NSSTREAM, const nasty_char*>);
-  
+
   static_assert(HasStr<std::basic_istringstream<CharT>, ConstConvertibleStringView<CharT>>);
   static_assert(HasStr<CSSTREAM, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 
