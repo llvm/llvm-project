@@ -14,7 +14,7 @@
 // class basic_stringstream
 
 // template<class T>
-//   basic_ostringstream(const T& t, ios_base::openmode which);
+//   explicit basic_ostringstream(const T& t, ios_base::openmode which);
 
 #include <cassert>
 #include <concepts>

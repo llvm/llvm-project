@@ -88,17 +88,6 @@ void test_sfinae() {
                                  std::ios_base::openmode,
                                  const test_allocator<CharT>>());
 
-  // nasty_char*
-  using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
-
-  static_assert(std::constructible_from<NSSTREAM, nasty_char*, test_allocator<nasty_char>>);
-  static_assert(test_convertible<NSSTREAM, nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
-
-  // const nasty_char*
-  static_assert(std::constructible_from<NSSTREAM, const nasty_char*, test_allocator<nasty_char>>);
-  static_assert(
-      test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
-
   // ConstConvertibleStringView<CharT>
   static_assert(std::constructible_from<SSTREAM,
                                         const ConstConvertibleStringView<CharT>,
@@ -154,6 +143,17 @@ void test_sfinae() {
                                   const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                   std::ios_base::openmode,
                                   const test_allocator<CharT>>());
+
+  // nasty_char*
+  using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
+
+  static_assert(std::constructible_from<NSSTREAM, nasty_char*, test_allocator<nasty_char>>);
+  static_assert(test_convertible<NSSTREAM, nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
+
+  // const nasty_char*
+  static_assert(std::constructible_from<NSSTREAM, const nasty_char*, test_allocator<nasty_char>>);
+  static_assert(
+      test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode, const test_allocator<nasty_char>>());
 
   // Non-`string-view-like`
   static_assert(!std::constructible_from<SSTREAM, const int, std::ios_base::openmode, const test_allocator<CharT>>);
