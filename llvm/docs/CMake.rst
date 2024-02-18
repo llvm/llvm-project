@@ -582,16 +582,17 @@ enabled sub-projects. Nearly all of these variable names begin with
   ``clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
 
 **LLVM_ENABLE_RUNTIMES**:STRING
-  Build libc++, libc++abi, libunwind or compiler-rt using the just-built compiler.
+  Build llvm runtime sub-projects using the just-built compiler.
   This is the correct way to build runtimes when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
   compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
   Note: the list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
   The full list is:
-  ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp``
-  To enable all of them, use:
-  ``LLVM_ENABLE_RUNTIMES=all``
+  ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp;pstl;llvm-libgcc``
+  To enable the default recommended set of runtimes for usage
+  with ``LLVM_ENABLE_PROJECTS=all`` of them, use: ``LLVM_ENABLE_RUNTIMES=all``.
+  Note: ``all`` does not enable all runtimes from the full list.
 
 
 **LLVM_ENABLE_RTTI**:BOOL
