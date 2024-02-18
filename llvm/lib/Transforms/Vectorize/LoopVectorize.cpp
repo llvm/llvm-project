@@ -9125,7 +9125,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
          "Unexpected type.");
 
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
-  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0));
+  PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, VPIteration(0, 0)));
 
   if (onlyScalarsGenerated(State.VF.isScalable())) {
     // This is the normalized GEP that starts counting at zero.
@@ -9402,7 +9402,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
           // We don't want to update the value in the map as it might be used in
           // another expression. So don't call resetVectorValue(StoredVal).
         }
-        auto *VecPtr = State.get(getAddr(), Part);
+        auto *VecPtr = State.get(getAddr(), VPIteration(Part, 0));
         if (isMaskRequired)
           NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                             BlockInMaskParts[Part]);
@@ -9426,7 +9426,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
                                          nullptr, "wide.masked.gather");
       State.addMetadata(NewLI, LI);
     } else {
-      auto *VecPtr = State.get(getAddr(), Part);
+      auto *VecPtr = State.get(getAddr(), VPIteration(Part, 0));
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
             DataTy, VecPtr, Alignment, BlockInMaskParts[Part],

@@ -1355,7 +1355,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
       PartPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
     }
 
-    State.set(this, PartPtr, Part);
+    State.set(this, PartPtr, VPIteration(Part, 0));
   }
 }
 
@@ -1651,7 +1651,7 @@ void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
   EntryPart->addIncoming(Start, VectorPH);
   EntryPart->setDebugLoc(getDebugLoc());
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(this, EntryPart, Part);
+    State.set(this, EntryPart, VPIteration(Part, 0));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1722,7 +1722,7 @@ void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getOperand(0), 0);
+  Value *CanonicalIV = State.get(getOperand(0), VPIteration(0, 0));
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
@@ -1844,7 +1844,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   }
 
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *EntryPart = State.get(this, Part);
+    Value *EntryPart = IsInLoop ? State.get(this, VPIteration(Part, 0))
+                                : State.get(this, Part);
     // Make sure to add the reduction start value only to the
     // first unroll part.
     Value *StartVal = (Part == 0) ? StartV : Iden;

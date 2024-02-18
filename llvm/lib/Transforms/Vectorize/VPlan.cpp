@@ -793,7 +793,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   }
 
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(&VectorTripCount, VectorTripCountV, Part);
+    State.set(&VectorTripCount, VectorTripCountV, VPIteration(Part, 0));
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
@@ -887,7 +887,9 @@ void VPlan::execute(VPTransformState *State) {
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *Phi = State->get(PhiR, Part);
+      Value *Phi = isa<VPCanonicalIVPHIRecipe>(PhiR)
+                       ? State->get(PhiR, VPIteration(Part, 0))
+                       : State->get(PhiR, Part);
       Value *Val =
           isa<VPCanonicalIVPHIRecipe>(PhiR)
               ? State->get(PhiR->getBackedgeValue(), VPIteration(Part, 0))
