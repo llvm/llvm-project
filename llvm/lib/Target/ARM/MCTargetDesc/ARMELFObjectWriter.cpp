@@ -84,6 +84,11 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+  auto CheckFDPIC = [&]() {
+    if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
+      Ctx.reportError(Fixup.getLoc(),
+                      "relocation only supported in FDPIC mode");
+  };
 
   if (IsPCRel) {
     switch (Fixup.getTargetKind()) {
@@ -240,6 +245,24 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_TLS_LDM32;
     case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
       return ELF::R_ARM_TLS_DESCSEQ;
+    case MCSymbolRefExpr::VK_FUNCDESC:
+      CheckFDPIC();
+      return ELF::R_ARM_FUNCDESC;
+    case MCSymbolRefExpr::VK_GOTFUNCDESC:
+      CheckFDPIC();
+      return ELF::R_ARM_GOTFUNCDESC;
+    case MCSymbolRefExpr::VK_GOTOFFFUNCDESC:
+      CheckFDPIC();
+      return ELF::R_ARM_GOTOFFFUNCDESC;
+    case MCSymbolRefExpr::VK_TLSGD_FDPIC:
+      CheckFDPIC();
+      return ELF::R_ARM_TLS_GD32_FDPIC;
+    case MCSymbolRefExpr::VK_TLSLDM_FDPIC:
+      CheckFDPIC();
+      return ELF::R_ARM_TLS_LDM32_FDPIC;
+    case MCSymbolRefExpr::VK_GOTTPOFF_FDPIC:
+      CheckFDPIC();
+      return ELF::R_ARM_TLS_IE32_FDPIC;
     }
   case ARM::fixup_arm_condbranch:
   case ARM::fixup_arm_uncondbranch:
