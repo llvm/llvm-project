@@ -110,8 +110,7 @@ class SparcAsmParser : public MCTargetAsmParser {
                                          const MCExpr *subExpr);
 
   // returns true if Tok is matched to a register and returns register in RegNo.
-  bool matchRegisterName(const AsmToken &Tok, MCRegister &Reg,
-                         unsigned &RegKind);
+  MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
 
   bool matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
 
@@ -787,8 +786,9 @@ ParseStatus SparcAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   if (getLexer().getKind() != AsmToken::Percent)
     return ParseStatus::NoMatch;
   Parser.Lex();
-  unsigned regKind = SparcOperand::rk_None;
-  if (matchRegisterName(Tok, Reg, regKind)) {
+  unsigned RegKind = SparcOperand::rk_None;
+  Reg = matchRegisterName(Tok, RegKind);
+  if (Reg) {
     Parser.Lex();
     return ParseStatus::Success;
   }
@@ -1139,14 +1139,14 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
         return ParseStatus::NoMatch;
       Parser.Lex(); // eat %
 
-      MCRegister RegNo;
       unsigned RegKind;
-      if (!matchRegisterName(Parser.getTok(), RegNo, RegKind))
+      MCRegister Reg = matchRegisterName(Parser.getTok(), RegKind);
+      if (!Reg)
         return ParseStatus::NoMatch;
 
       Parser.Lex(); // Eat the identifier token.
       SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer()-1);
-      Operands.push_back(SparcOperand::CreateReg(RegNo, RegKind, S, E));
+      Operands.push_back(SparcOperand::CreateReg(Reg, RegKind, S, E));
       Res = ParseStatus::Success;
     } else {
       Res = parseMEMOperand(Operands);
@@ -1232,9 +1232,8 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
 
   case AsmToken::Percent: {
     Parser.Lex(); // Eat the '%'.
-    MCRegister Reg;
     unsigned RegKind;
-    if (matchRegisterName(Parser.getTok(), Reg, RegKind)) {
+    if (MCRegister Reg = matchRegisterName(Parser.getTok(), RegKind)) {
       StringRef Name = Parser.getTok().getString();
       Parser.Lex(); // Eat the identifier token.
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
@@ -1299,15 +1298,14 @@ ParseStatus SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
 #define GET_REGISTER_MATCHER
 #include "SparcGenAsmMatcher.inc"
 
-bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &Reg,
-                                       unsigned &RegKind) {
-  Reg = SP::NoRegister;
+MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
+                                             unsigned &RegKind) {
   RegKind = SparcOperand::rk_None;
   if (!Tok.is(AsmToken::Identifier))
-    return false;
+    return SP::NoRegister;
 
   StringRef Name = Tok.getString();
-  Reg = MatchRegisterName(Name.lower());
+  MCRegister Reg = MatchRegisterName(Name.lower());
   if (!Reg)
     Reg = MatchRegisterAltName(Name.lower());
 
@@ -1319,41 +1317,38 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &Reg,
 
     // See the note in SparcRegisterInfo.td near ASRRegs register class.
     if (Reg == SP::ASR4 && Name == "tick") {
-      Reg = SP::TICK;
       RegKind = SparcOperand::rk_Special;
-      return true;
+      return SP::TICK;
     }
 
     if (MRI.getRegClass(SP::IntRegsRegClassID).contains(Reg)) {
       RegKind = SparcOperand::rk_IntReg;
-      return true;
+      return Reg;
     }
     if (MRI.getRegClass(SP::FPRegsRegClassID).contains(Reg)) {
       RegKind = SparcOperand::rk_FloatReg;
-      return true;
+      return Reg;
     }
     if (MRI.getRegClass(SP::CoprocRegsRegClassID).contains(Reg)) {
       RegKind = SparcOperand::rk_CoprocReg;
-      return true;
+      return Reg;
     }
 
     // Canonicalize G0_G1 ... G30_G31 etc. to G0 ... G30.
     if (MRI.getRegClass(SP::IntPairRegClassID).contains(Reg)) {
-      Reg = MRI.getSubReg(Reg, SP::sub_even);
       RegKind = SparcOperand::rk_IntReg;
-      return true;
+      return MRI.getSubReg(Reg, SP::sub_even);
     }
 
     // Canonicalize D0 ... D15 to F0 ... F30.
     if (MRI.getRegClass(SP::DFPRegsRegClassID).contains(Reg)) {
       // D16 ... D31 do not have sub-registers.
       if (MCRegister SubReg = MRI.getSubReg(Reg, SP::sub_even)) {
-        Reg = SubReg;
         RegKind = SparcOperand::rk_FloatReg;
-        return true;
+        return SubReg;
       }
       RegKind = SparcOperand::rk_DoubleReg;
-      return true;
+      return Reg;
     }
 
     // The generated matcher does not currently return QFP registers.
@@ -1362,15 +1357,13 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &Reg,
 
     // Canonicalize C0_C1 ... C30_C31 to C0 ... C30.
     if (MRI.getRegClass(SP::CoprocPairRegClassID).contains(Reg)) {
-      Reg = MRI.getSubReg(Reg, SP::sub_even);
       RegKind = SparcOperand::rk_CoprocReg;
-      return true;
+      return MRI.getSubReg(Reg, SP::sub_even);
     }
 
     // Other registers do not need special handling.
-    assert(Reg && "Register lost during canonicalization");
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return Reg;
   }
 
   // If we still have no match, try custom parsing.
@@ -1380,63 +1373,53 @@ bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, MCRegister &Reg,
   int64_t RegNo = 0;
   if (Name.starts_with_insensitive("r") &&
       !Name.substr(1, 2).getAsInteger(10, RegNo) && RegNo < 31) {
-    Reg = IntRegs[RegNo];
     RegKind = SparcOperand::rk_IntReg;
-    return true;
+    return IntRegs[RegNo];
   }
 
   if (Name.equals("xcc")) {
     // FIXME:: check 64bit.
-    Reg = SP::ICC;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ICC;
   }
 
   // JPS1 extension - aliases for ASRs
   // Section A.51 - Read State Register
   if (Name.equals("pcr")) {
-    Reg = SP::ASR16;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR16;
   }
 
   if (Name.equals("pic")) {
-    Reg = SP::ASR17;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR17;
   }
   if (Name.equals("dcr")) {
-    Reg = SP::ASR18;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR18;
   }
   if (Name.equals("gsr")) {
-    Reg = SP::ASR19;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR19;
   }
   if (Name.equals("softint")) {
-    Reg = SP::ASR22;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR22;
   }
   if (Name.equals("tick_cmpr")) {
-    Reg = SP::ASR23;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR23;
   }
   if (Name.equals("stick") || Name.equals("sys_tick")) {
-    Reg = SP::ASR24;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR24;
   }
   if (Name.equals("stick_cmpr") || Name.equals("sys_tick_cmpr")) {
-    Reg = SP::ASR25;
     RegKind = SparcOperand::rk_Special;
-    return true;
+    return SP::ASR25;
   }
 
-  return false;
+  return SP::NoRegister;
 }
 
 // Determine if an expression contains a reference to the symbol
