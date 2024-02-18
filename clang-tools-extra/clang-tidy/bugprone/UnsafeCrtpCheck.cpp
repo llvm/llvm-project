@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnsafeCrtpCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -65,6 +66,24 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
   return CRTP->getSpecializedTemplate()->getTemplateParameters()->getParam(Idx);
 }
 
+std::vector<FixItHint> hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
+                                           std::string OriginalAccess,
+                                           const SourceManager &SM,
+                                           const LangOptions &LangOpts) {
+  std::vector<FixItHint> Hints;
+
+  Hints.emplace_back(FixItHint::CreateInsertion(
+      Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
+
+  Hints.emplace_back(FixItHint::CreateInsertion(
+      Ctor->isExplicitlyDefaulted()
+          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
+                .getLocWithOffset(1)
+          : Ctor->getEndLoc().getLocWithOffset(1),
+      '\n' + OriginalAccess + ':' + '\n'));
+
+  return Hints;
+}
 } // namespace
 
 void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
@@ -111,6 +130,23 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
                "friend " + DerivedTemplateParameter->getNameAsString() + ';');
     diag(CRTPDeclaration->getLocation(),
          "consider declaring the derived class as friend", DiagnosticIDs::Note);
+  }
+
+  for (auto &&Ctor : CRTPDeclaration->ctors()) {
+    if (Ctor->getAccess() == AS_private)
+      continue;
+
+    bool IsPublic = Ctor->getAccess() == AS_public;
+    std::string Access = IsPublic ? "public" : "protected";
+
+    diag(Ctor->getLocation(),
+         "%0 contructor allows the CRTP to be %select{inherited "
+         "from|constructed}1 as a regular template class")
+        << Access << IsPublic << Ctor
+        << hintMakeCtorPrivate(Ctor, Access, *Result.SourceManager,
+                               getLangOpts());
+    diag(Ctor->getLocation(), "consider making it private",
+         DiagnosticIDs::Note);
   }
 }
 
