@@ -28,8 +28,17 @@ def main(token, filter_gha_runners):
     for workflow in workflows:
         for job in workflow.jobs():
             if job.status == "in_progress":
-                if filter_gha_runners and job.runner_group_name != "GitHub Actions":
-                    continue
+                # TODO(boomanaiden154): Remove the try/except block once we are able
+                # to pull in a PyGithub release that has the runner_group_name property
+                # for workflow jobs.
+                try:
+                    if filter_gha_runners and job.runner_group_name != "GitHub Actions":
+                        continue
+                except:
+                    print(
+                        "Failed to filter runners. Your PyGithub version is "
+                        "most likely too old."
+                    )
                 print(f"{workflow.name}/{job.name}")
                 in_progress_jobs += 1
 
@@ -58,7 +67,7 @@ if __name__ == "__main__":
         action="store_false",
         help="Consider all running jobs",
     )
-    parser.set_defaults(filter_gha_runners=True)
+    parser.set_defaults(filter_gha_runners=False)
 
     args = parser.parse_args()
     main(args.token, args.filter_gha_runners)
