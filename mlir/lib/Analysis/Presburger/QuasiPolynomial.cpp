@@ -98,6 +98,10 @@ QuasiPolynomial QuasiPolynomial::operator/(const Fraction x) const {
   return qp;
 }
 
+void QuasiPolynomial::operator+=(const QuasiPolynomial &x) {
+  *this = *this + x;
+}
+
 // Removes terms which evaluate to zero from the expression and
 // integrate affine functions which are constants into the
 // coefficients.

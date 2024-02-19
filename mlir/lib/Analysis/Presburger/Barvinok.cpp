@@ -777,10 +777,9 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
       denominatorCoefficients =
           multiplyPolynomials(denominatorCoefficients, eachTermDenCoefficient);
 
-    totalTerm =
-        totalTerm + getCoefficientInRationalFunction(r, numeratorCoefficients,
-                                                     denominatorCoefficients) *
-                        QuasiPolynomial(numParams, sign);
+    totalTerm += getCoefficientInRationalFunction(r, numeratorCoefficients,
+                                                  denominatorCoefficients) *
+                 QuasiPolynomial(numParams, sign);
   }
 
   return totalTerm.simplify();
