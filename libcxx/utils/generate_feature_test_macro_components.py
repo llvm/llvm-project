@@ -1228,7 +1228,7 @@ feature_test_macros = [
             "name": "__cpp_lib_tuple_like",
             "values": {
                 "c++23": 202207,  # P2165R4 Compatibility between tuple, pair and tuple-like objects
-                "c++26": 202311,  # P2819R2 Add tuple protocol to complex
+                "c++26": 202311,  # P2819R2 Add tuple protocol to complex (implemented)
             },
             "headers": ["map", "tuple", "unordered_map", "utility"],
             "unimplemented": True,
