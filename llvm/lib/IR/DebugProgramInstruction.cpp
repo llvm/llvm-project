@@ -15,8 +15,9 @@ namespace llvm {
 
 DPValue::DPValue(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
-      DebugValueUser(DVI->getRawLocation(), nullptr, nullptr), Variable(DVI->getVariable()),
-      Expression(DVI->getExpression()) {
+      DebugValueUser({DVI->getRawLocation(), nullptr, nullptr}),
+      Variable(DVI->getVariable()), Expression(DVI->getExpression()),
+      AddressExpression(nullptr) {
   switch (DVI->getIntrinsicID()) {
   case Intrinsic::dbg_value:
     Type = LocationType::Value;
@@ -40,14 +41,15 @@ DPValue::DPValue(const DbgVariableIntrinsic *DVI)
 }
 
 DPValue::DPValue(const DPValue &DPV)
-    : DbgRecord(ValueKind, DPV.getDebugLoc()),
-      DebugValueUser({DPV.DebugValues, nullptr, nullptr}), Type(DPV.getType()),
-      Variable(DPV.getVariable()), Expression(DPV.getExpression()), AddressExpression(DPV.AddressExpression) {}
+    : DbgRecord(ValueKind, DPV.getDebugLoc()), DebugValueUser(DPV.DebugValues),
+      Type(DPV.getType()), Variable(DPV.getVariable()),
+      Expression(DPV.getExpression()),
+      AddressExpression(DPV.AddressExpression) {}
 
 DPValue::DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
                  const DILocation *DI, LocationType Type)
-    : DbgRecord(ValueKind, DI), DebugValueUser(Location), Type(Type),
-      Variable(DV), Expression(Expr) {}
+    : DbgRecord(ValueKind, DI), DebugValueUser({Location, nullptr, nullptr}),
+      Type(Type), Variable(DV), Expression(Expr) {}
 
 void DbgRecord::deleteRecord() {
   switch (RecordKind) {
@@ -65,7 +67,7 @@ void DbgRecord::print(raw_ostream &O, bool IsForDebug) const {
     cast<DPValue>(this)->print(O, IsForDebug);
     break;
   default:
-    llvm_unreachable("unsupported record kind");
+    llvm_unreachable("unsupported DbgRecord kind");
   };
 }
 
@@ -76,7 +78,31 @@ void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
     cast<DPValue>(this)->print(O, MST, IsForDebug);
     break;
   default:
-    llvm_unreachable("unsupported record kind");
+    llvm_unreachable("unsupported DbgRecord kind");
+  };
+}
+
+bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
+  if (RecordKind != R.RecordKind)
+    return false;
+  switch (RecordKind) {
+  case ValueKind:
+    cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
+    break;
+  default:
+    llvm_unreachable("unsupported DbgRecord kind");
+  };
+}
+
+bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
+  if (RecordKind != R.RecordKind)
+    return false;
+  switch (RecordKind) {
+  case ValueKind:
+    cast<DPValue>(this)->isEquivalentTo(*cast<DPValue>(&R));
+    break;
+  default:
+    llvm_unreachable("unsupported DbgRecord kind");
   };
 }
 
@@ -368,7 +394,7 @@ bool DPValue::isKillAddress() const {
   return !Addr || isa<UndefValue>(Addr);
 }
 
-const Instruction *DPValue::getInstruction() const {
+const Instruction *DbgRecord::getInstruction() const {
   return Marker->MarkedInstr;
 }
 
@@ -400,31 +426,31 @@ const LLVMContext &DbgRecord::getContext() const {
   return getBlock()->getContext();
 }
 
-void DPValue::insertBefore(DPValue *InsertBefore) {
+void DbgRecord::insertBefore(DbgRecord *InsertBefore) {
   assert(!getMarker() &&
-         "Cannot insert a DPValue that is already has a DPMarker!");
+         "Cannot insert a DbgRecord that is already has a DPMarker!");
   assert(InsertBefore->getMarker() &&
-         "Cannot insert a DPValue before a DPValue that does not have a "
+         "Cannot insert a DbgRecord before a DbgRecord that does not have a "
          "DPMarker!");
   InsertBefore->getMarker()->insertDPValue(this, InsertBefore);
 }
-void DPValue::insertAfter(DPValue *InsertAfter) {
+void DbgRecord::insertAfter(DbgRecord *InsertAfter) {
   assert(!getMarker() &&
-         "Cannot insert a DPValue that is already has a DPMarker!");
+         "Cannot insert a DbgRecord that is already has a DPMarker!");
   assert(InsertAfter->getMarker() &&
-         "Cannot insert a DPValue after a DPValue that does not have a "
+         "Cannot insert a DbgRecord after a DbgRecord that does not have a "
          "DPMarker!");
   InsertAfter->getMarker()->insertDPValueAfter(this, InsertAfter);
 }
-void DPValue::moveBefore(DPValue *MoveBefore) {
+void DbgRecord::moveBefore(DbgRecord *MoveBefore) {
   assert(getMarker() &&
-         "Canot move a DPValue that does not currently have a DPMarker!");
+         "Canot move a DbgRecord that does not currently have a DPMarker!");
   removeFromParent();
   insertBefore(MoveBefore);
 }
-void DPValue::moveAfter(DPValue *MoveAfter) {
+void DbgRecord::moveAfter(DbgRecord *MoveAfter) {
   assert(getMarker() &&
-         "Canot move a DPValue that does not currently have a DPMarker!");
+         "Canot move a DbgRecord that does not currently have a DPMarker!");
   removeFromParent();
   insertAfter(MoveAfter);
 }
@@ -503,11 +529,7 @@ void DPMarker::eraseFromParent() {
 iterator_range<DbgRecord::self_iterator> DPMarker::getDbgValueRange() {
   return make_range(StoredDPValues.begin(), StoredDPValues.end());
 }
-iterator_range<DPValue::const_self_iterator>
-DPMarker::getDbgValueRange() const {
-  return make_range(StoredDPValues.begin(), StoredDPValues.end());
-}
-iterator_range<DPValue::const_self_iterator>
+iterator_range<DbgRecord::const_self_iterator>
 DPMarker::getDbgValueRange() const {
   return make_range(StoredDPValues.begin(), StoredDPValues.end());
 }
@@ -527,13 +549,13 @@ void DPMarker::insertDPValue(DbgRecord *New, bool InsertAtHead) {
   StoredDPValues.insert(It, *New);
   New->setMarker(this);
 }
-void DPMarker::insertDPValue(DPValue *New, DPValue *InsertBefore) {
+void DPMarker::insertDPValue(DbgRecord *New, DbgRecord *InsertBefore) {
   assert(InsertBefore->getMarker() == this &&
          "DPValue 'InsertBefore' must be contained in this DPMarker!");
   StoredDPValues.insert(InsertBefore->getIterator(), *New);
   New->setMarker(this);
 }
-void DPMarker::insertDPValueAfter(DPValue *New, DPValue *InsertAfter) {
+void DPMarker::insertDPValueAfter(DbgRecord *New, DbgRecord *InsertAfter) {
   assert(InsertAfter->getMarker() == this &&
          "DPValue 'InsertAfter' must be contained in this DPMarker!");
   StoredDPValues.insert(++(InsertAfter->getIterator()), *New);

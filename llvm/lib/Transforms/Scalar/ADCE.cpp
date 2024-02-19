@@ -551,8 +551,8 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
     for (DbgRecord &DR : make_early_inc_range(I.getDbgValueRange())) {
       // Avoid removing a DPV that is linked to instructions because it holds
       // information about an existing store.
-      if (DR.isDbgAssign())
-        if (!at::getAssignmentInsts(&DR).empty())
+      if (DPValue *DPV = dyn_cast<DPValue>(&DR); DPV && DPV->isDbgAssign())
+        if (!at::getAssignmentInsts(DPV).empty())
           continue;
       if (AliveScopes.count(DR.getDebugLoc()->getScope()))
         continue;

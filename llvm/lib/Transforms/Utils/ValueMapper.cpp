@@ -146,7 +146,7 @@ public:
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
-  void remapDPValue(DPValue &DPV);
+  void remapDPValue(DbgRecord &DPV);
 
   Constant *mapConstant(const Constant *C) {
     return cast_or_null<Constant>(mapValue(C));
@@ -537,7 +537,8 @@ Value *Mapper::mapValue(const Value *V) {
   return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
 }
 
-void Mapper::remapDPValue(DPValue &V) {
+void Mapper::remapDPValue(DbgRecord &DR) {
+  DPValue &V = cast<DPValue>(DR);
   // Remap variables and DILocations.
   auto *MappedVar = mapMetadata(V.getVariable());
   auto *MappedDILoc = mapMetadata(V.getDebugLoc());
@@ -1060,8 +1061,8 @@ void Mapper::remapFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       remapInstruction(&I);
-      for (DPValue &DPV : I.getDbgValueRange())
-        remapDPValue(DPV);
+      for (DbgRecord &DR : I.getDbgValueRange())
+        remapDPValue(DR);
     }
   }
 }

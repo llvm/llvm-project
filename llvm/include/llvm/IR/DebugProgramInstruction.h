@@ -77,8 +77,10 @@ class raw_ostream;
 /// We need a discriminator for dyn/isa casts. In order to avoid paying for a
 /// vtable for "virtual" functions too, subclasses must add a new discriminator
 /// value (RecordKind) and cases to a few functions in the base class:
-///   deleteRecord()
-///   clone()
+///   deleteRecord
+///   clone
+///   isIdenticalToWhenDefined
+///   isEquivalentTo
 ///   both print methods
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
@@ -101,6 +103,8 @@ public:
   DbgRecord *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &O, ModuleSlotTracker &MST, bool IsForDebug) const;
+  bool isIdenticalToWhenDefined(const DbgRecord &R) const;
+  bool isEquivalentTo(const DbgRecord &R) const;
   ///@}
 
   Kind getRecordKind() const { return RecordKind; }
@@ -129,11 +133,12 @@ public:
   void removeFromParent();
   void eraseFromParent();
 
-  DPValue *getNextNode() { return &*std::next(getIterator()); }
-  DPValue *getPrevNode() { return &*std::prev(getIterator()); }
-
-  DPValue *getNextNode() { return &*std::next(getIterator()); }
-  DPValue *getPrevNode() { return &*std::prev(getIterator()); }
+  DbgRecord *getNextNode() { return &*std::next(getIterator()); }
+  DbgRecord *getPrevNode() { return &*std::prev(getIterator()); }
+  void insertBefore(DbgRecord *InsertBefore);
+  void insertAfter(DbgRecord *InsertAfter);
+  void moveBefore(DbgRecord *MoveBefore);
+  void moveAfter(DbgRecord *MoveAfter);
 
   DebugLoc getDebugLoc() const { return DbgLoc; }
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
@@ -180,6 +185,7 @@ public:
 
   DILocalVariable *Variable;
   DIExpression *Expression;
+  DIExpression *AddressExpression;
 
 public:
   /// Create a new DPValue representing the intrinsic \p DVI, for example the
@@ -331,12 +337,12 @@ public:
   /// is described.
   std::optional<uint64_t> getFragmentSizeInBits() const;
 
-  bool isEquivalentTo(const DPValue &Other) {
+  bool isEquivalentTo(const DPValue &Other) const {
     return DbgLoc == Other.DbgLoc && isIdenticalToWhenDefined(Other);
   }
   // Matches the definition of the Instruction version, equivalent to above but
   // without checking DbgLoc.
-  bool isIdenticalToWhenDefined(const DPValue &Other) {
+  bool isIdenticalToWhenDefined(const DPValue &Other) const {
     return std::tie(Type, DebugValues, Variable, Expression,
                     AddressExpression) ==
            std::tie(Other.Type, Other.DebugValues, Other.Variable,
@@ -464,9 +470,9 @@ public:
   /// \p InsertAtHead is true, at the start.
   void insertDPValue(DbgRecord *New, bool InsertAtHead);
   /// Insert a DPValue prior to a DPValue contained within this marker.
-  void insertDPValue(DbgRecord *New, DPValue *InsertBefore);
+  void insertDPValue(DbgRecord *New, DbgRecord *InsertBefore);
   /// Insert a DPValue after a DPValue contained within this marker.
-  void insertDPValueAfter(DbgRecord *New, DPValue *InsertAfter);
+  void insertDPValueAfter(DbgRecord *New, DbgRecord *InsertAfter);
   /// Clone all DPMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.
@@ -513,7 +519,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
 /// to be inlined as it's frequently called, but also come after the declaration
 /// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
 /// inlineable body defined here.
-inline iterator_range<simple_ilist<DPValue>::iterator>
+inline iterator_range<simple_ilist<DbgRecord>::iterator>
 getDbgValueRange(DPMarker *DbgMarker) {
   if (!DbgMarker)
     return DPMarker::getEmptyDPValueRange();

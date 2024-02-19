@@ -545,7 +545,7 @@ static bool DPValuesRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   // Remove undef dbg.assign intrinsics that are encountered before
   // any non-undef intrinsics from the entry block.
   for (auto &I : *BB) {
-    for (DPValue &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
       if (!DPV.isDbgValue() && !DPV.isDbgAssign())
         continue;
       bool IsDbgValueKind =

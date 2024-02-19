@@ -3274,7 +3274,7 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DPValue &DPV : Inst.getDbgValueRange()) {
+  for (DPValue &DPV : DPValue::filter(Inst.getDbgValueRange())) {
     const DILocalVariable *Variable = DPV.getVariable();
     const DIExpression *Expression = DPV.getExpression();
     Value *V = DPV.getVariableLocationOp(0);

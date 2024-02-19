@@ -41,7 +41,7 @@ template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
-iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange(DPMarker *);
+iterator_range<simple_ilist<DbgRecord>::iterator> getDbgValueRange(DPMarker *);
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,

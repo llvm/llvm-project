@@ -1131,19 +1131,19 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (const DbgRecord &DPV : I.getDbgValueRange())
-        processDbgRecordMetadata(DPV);
+      for (const DbgRecord &DR : I.getDbgValueRange())
+        processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
     }
   }
 }
 
-void SlotTracker::processDPValueMetadata(const DPValue &DPV) {
+void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
   if (const DPValue *DPV = dyn_cast<const DPValue>(&DR)) {
     CreateMetadataSlot(DPV->getVariable());
     CreateMetadataSlot(DPV->getDebugLoc());
-    if (DPV.isDbgAssign()) {
-      CreateMetadataSlot(DPV.getAssignID());
+    if (DPV->isDbgAssign())
+      CreateMetadataSlot(DPV->getAssignID());
   } else {
     llvm_unreachable("unsupported DbgRecord kind");
   }
