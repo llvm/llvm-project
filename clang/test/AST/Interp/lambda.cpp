@@ -222,3 +222,16 @@ namespace GH62611 {
     return 0;
   }
 }
+
+namespace LambdaToAPValue {
+  void wrapper() {
+    constexpr auto f = []() constexpr {
+      return 0;
+    };
+
+    constexpr auto g = [f]() constexpr {
+      return f();
+    };
+    static_assert(g() == f(), "");
+  }
+}
