@@ -257,6 +257,8 @@ class MCDCRecordProcessor {
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors ExecVectors;
+  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+  unsigned NumExecVectorsF;
 
 public:
   MCDCRecordProcessor(const BitVector &Bitmap,
@@ -291,11 +293,9 @@ private:
         continue;
 
       // Copy the completed test vector to the vector of testvectors.
-      ExecVectors.push_back(TV);
-
       // The final value (T,F) is equal to the last non-dontcare state on the
       // path (in a short-circuiting system).
-      ExecVectors.back().push_back(MCDCCond);
+      ExecVectorsByCond[MCDCCond].push_back({TV, MCDCCond});
     }
 
     // Reset back to DontCare.
@@ -310,6 +310,12 @@ private:
     // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
     buildTestVector(TV, 0, 0);
+
+    auto &[ExecVectorsF, ExecVectorsT] = ExecVectorsByCond;
+    NumExecVectorsF = ExecVectorsF.size();
+    ExecVectors = std::move(ExecVectorsF);
+    ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
+                       std::make_move_iterator(ExecVectorsT.end()));
   }
 
   // Find an independence pair for each condition:
@@ -318,13 +324,12 @@ private:
   // - All other conditions' values must be equal or marked as "don't care".
   void findIndependencePairs() {
     unsigned NumTVs = ExecVectors.size();
-    for (unsigned I = 1; I < NumTVs; ++I) {
-      const MCDCRecord::TestVector &A = ExecVectors[I];
-      for (unsigned J = 0; J < I; ++J) {
-        const MCDCRecord::TestVector &B = ExecVectors[J];
-        // Enumerate two execution vectors whose outcomes are different.
-        if (A[NumConditions] == B[NumConditions])
-          continue;
+    for (unsigned I = NumExecVectorsF; I < NumTVs; ++I) {
+      const auto &[A, ACond] = ExecVectors[I];
+      assert(ACond == MCDCRecord::MCDC_True);
+      for (unsigned J = 0; J < NumExecVectorsF; ++J) {
+        const auto &[B, BCond] = ExecVectors[J];
+        assert(BCond == MCDCRecord::MCDC_False);
         unsigned Flip = NumConditions, Idx;
         for (Idx = 0; Idx < NumConditions; ++Idx) {
           MCDCRecord::CondState ACond = A[Idx], BCond = B[Idx];
