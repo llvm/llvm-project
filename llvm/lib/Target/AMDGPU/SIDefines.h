@@ -270,7 +270,7 @@ enum OperandType : unsigned {
 
 };
 
-// Should be in sync with the OperandSematics defined in SIRegisterInfo.td
+// Should be in sync with the OperandSemantics defined in SIRegisterInfo.td
 enum OperandSemantics : unsigned {
   INT = 0,
   FP16 = 1,
