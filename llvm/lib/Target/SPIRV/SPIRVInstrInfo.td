@@ -643,6 +643,9 @@ def OpAtomicAnd: AtomicOpVal<"OpAtomicAnd", 240>;
 def OpAtomicOr: AtomicOpVal<"OpAtomicOr", 241>;
 def OpAtomicXor: AtomicOpVal<"OpAtomicXor", 242>;
 
+def OpAtomicFAddEXT: AtomicOpVal<"OpAtomicFAddEXT", 6035>;
+def OpAtomicFMinEXT: AtomicOpVal<"OpAtomicFMinEXT", 5614>;
+def OpAtomicFMaxEXT: AtomicOpVal<"OpAtomicFMaxEXT", 5615>;
 
 def OpAtomicFlagTestAndSet: AtomicOp<"OpAtomicFlagTestAndSet", 318>;
 def OpAtomicFlagClear: Op<319, (outs), (ins ID:$ptr, ID:$sc, ID:$sem),

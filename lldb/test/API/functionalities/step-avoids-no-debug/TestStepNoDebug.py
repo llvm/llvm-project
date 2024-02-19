@@ -109,7 +109,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
 
         # Now finish, and make sure the return value is correct.
         threads = lldbutil.get_threads_stopped_at_breakpoint(self.process, inner_bkpt)
-        self.assertEquals(len(threads), 1, "Stopped at inner breakpoint.")
+        self.assertEqual(len(threads), 1, "Stopped at inner breakpoint.")
         self.thread = threads[0]
 
     def do_step_out_past_nodebug(self):

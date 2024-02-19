@@ -7404,7 +7404,8 @@ static int getUnderlyingExtractedFromVec(SDValue &ExtractedFromVec,
   return Idx;
 }
 
-static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
+static SDValue buildFromShuffleMostly(SDValue Op, const SDLoc &DL,
+                                      SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
   // Skip if insert_vec_elt is not supported.
@@ -7412,9 +7413,7 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
   if (!TLI.isOperationLegalOrCustom(ISD::INSERT_VECTOR_ELT, VT))
     return SDValue();
 
-  SDLoc DL(Op);
   unsigned NumElems = Op.getNumOperands();
-
   SDValue VecIn1;
   SDValue VecIn2;
   SmallVector<unsigned, 4> InsertIndices;
@@ -9021,7 +9020,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   assert(Values.size() > 1 && "Expected non-undef and non-splat vector");
 
   // Check for a build vector from mostly shuffle plus few inserting.
-  if (SDValue Sh = buildFromShuffleMostly(Op, DAG))
+  if (SDValue Sh = buildFromShuffleMostly(Op, dl, DAG))
     return Sh;
 
   // For SSE 4.1, use insertps to put the high elements into the low element.
@@ -39519,12 +39518,12 @@ static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
 /// We walk up the chain and look for a combinable shuffle, skipping over
 /// shuffles that we could hoist this shuffle's transformation past without
 /// altering anything.
-static SDValue
-combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
-                             SelectionDAG &DAG) {
+static SDValue combineRedundantDWordShuffle(SDValue N,
+                                            MutableArrayRef<int> Mask,
+                                            const SDLoc &DL,
+                                            SelectionDAG &DAG) {
   assert(N.getOpcode() == X86ISD::PSHUFD &&
          "Called with something other than an x86 128-bit half shuffle!");
-  SDLoc DL(N);
 
   // Walk up a single-use chain looking for a combinable shuffle. Keep a stack
   // of the shuffles in the chain so that we can form a fresh chain to replace
@@ -39922,10 +39921,10 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
 }
 
 /// Try to combine x86 target specific shuffles.
-static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
+static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
+                                    SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
-  SDLoc DL(N);
   MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
@@ -40653,7 +40652,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     break;
 
   case X86ISD::PSHUFD:
-    if (SDValue NewN = combineRedundantDWordShuffle(N, Mask, DAG))
+    if (SDValue NewN = combineRedundantDWordShuffle(N, Mask, DL, DAG))
       return NewN;
 
     break;
@@ -40762,7 +40761,7 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
 }
 
 /// Combine shuffle of two fma nodes into FMAddSub or FMSubAdd.
-static SDValue combineShuffleToFMAddSub(SDNode *N,
+static SDValue combineShuffleToFMAddSub(SDNode *N, const SDLoc &DL,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   // We only handle target-independent shuffles.
@@ -40796,7 +40795,6 @@ static SDValue combineShuffleToFMAddSub(SDNode *N,
     return SDValue();
 
   // FMAddSub takes zeroth operand from FMSub node.
-  SDLoc DL(N);
   bool IsSubAdd = Op0Even ? Op0 == FMAdd : Op1 == FMAdd;
   unsigned Opcode = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
   return DAG.getNode(Opcode, DL, VT, FMAdd.getOperand(0), FMAdd.getOperand(1),
@@ -40805,10 +40803,10 @@ static SDValue combineShuffleToFMAddSub(SDNode *N,
 
 /// Try to combine a shuffle into a target-specific add-sub or
 /// mul-add-sub node.
-static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N,
+static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
                                                 const X86Subtarget &Subtarget,
                                                 SelectionDAG &DAG) {
-  if (SDValue V = combineShuffleToFMAddSub(N, Subtarget, DAG))
+  if (SDValue V = combineShuffleToFMAddSub(N, DL, Subtarget, DAG))
     return V;
 
   SDValue Opnd0, Opnd1;
@@ -40817,7 +40815,6 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N,
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
-  SDLoc DL(N);
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
@@ -40847,7 +40844,8 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N,
 // We are looking for a shuffle where both sources are concatenated with undef
 // and have a width that is half of the output's width. AVX2 has VPERMD/Q, so
 // if we can express this as a single-source shuffle, that's preferable.
-static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
+static SDValue combineShuffleOfConcatUndef(SDNode *N, const SDLoc &DL,
+                                           SelectionDAG &DAG,
                                            const X86Subtarget &Subtarget) {
   if (!Subtarget.hasAVX2() || !isa<ShuffleVectorSDNode>(N))
     return SDValue();
@@ -40879,11 +40877,10 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
   SmallVector<int, 8> Mask;
   int NumElts = VT.getVectorNumElements();
 
-  ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
+  auto *SVOp = cast<ShuffleVectorSDNode>(N);
   for (int Elt : SVOp->getMask())
     Mask.push_back(Elt < NumElts ? Elt : (Elt - NumElts / 2));
 
-  SDLoc DL(N);
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
                                N1.getOperand(0));
   return DAG.getVectorShuffle(VT, DL, Concat, DAG.getUNDEF(VT), Mask);
@@ -40935,7 +40932,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isTypeLegal(VT) && !isSoftF16(VT, Subtarget))
-    if (SDValue AddSub = combineShuffleToAddSubOrFMAddSub(N, Subtarget, DAG))
+    if (SDValue AddSub =
+            combineShuffleToAddSubOrFMAddSub(N, dl, Subtarget, DAG))
       return AddSub;
 
   // Attempt to combine into a vector load/broadcast.
@@ -40949,12 +40947,12 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   // Into:
   // (vector_shuffle <mask> (concat_vectors t1, t2), undef)
   // Since the latter can be efficiently lowered with VPERMD/VPERMQ
-  if (SDValue ShufConcat = combineShuffleOfConcatUndef(N, DAG, Subtarget))
+  if (SDValue ShufConcat = combineShuffleOfConcatUndef(N, dl, DAG, Subtarget))
     return ShufConcat;
 
   if (isTargetShuffle(N->getOpcode())) {
     SDValue Op(N, 0);
-    if (SDValue Shuffle = combineTargetShuffle(Op, DAG, DCI, Subtarget))
+    if (SDValue Shuffle = combineTargetShuffle(Op, dl, DAG, DCI, Subtarget))
       return Shuffle;
 
     // Try recursively combining arbitrary sequences of x86 shuffle
@@ -52816,7 +52814,7 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   SmallVector<SDValue, 8> Ops;
   EVT VT = V.getValueType();
   EVT EltVT = VT.getVectorElementType();
-  for (auto Op : V->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
       Ops.push_back(DAG.getConstantFP(-Cst->getValueAPF(), SDLoc(Op), EltVT));
     } else {
@@ -52838,8 +52836,8 @@ static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
   // prefer one of the values. We prefer a constant with a negative value on
   // the first place.
   // N.B. We need to skip undefs that may precede a value.
-  for (auto op : V->op_values()) {
-    if (auto *Cst = dyn_cast<ConstantFPSDNode>(op)) {
+  for (const SDValue &Op : V->op_values()) {
+    if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
       if (Cst->isNegative())
         return SDValue();
       break;
@@ -55228,6 +55226,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
         uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
         uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
+        // MVT::v16i16 has repeated blend mask.
+        if (Op0.getSimpleValueType() == MVT::v16i16) {
+          Mask0 = (Mask0 << 8) | Mask0;
+          Mask1 = (Mask1 << 8) | Mask1;
+        }
         uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
         MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
         MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
