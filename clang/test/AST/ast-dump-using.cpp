@@ -2,6 +2,7 @@
 
 namespace a {
 struct S;
+template <typename T> T x = {};
 }
 namespace b {
 using a::S;
@@ -15,4 +16,10 @@ typedef S f; // to dump the introduced type
 // CHECK-NEXT:   `-UsingType {{.*}} 'a::S' sugar
 // CHECK-NEXT:     |-UsingShadow {{.*}} 'S'
 // CHECK-NEXT:     `-RecordType {{.*}} 'a::S'
+using a::x;
+
+void foo() {
+  x<int> = 3;
+  // CHECK: DeclRefExpr {{.*}} 'x' {{.*}} (UsingShadow {{.*}} 'x')
+}
 }
