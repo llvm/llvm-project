@@ -236,6 +236,11 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       Mangler.getNameWithPrefix(OS, GV, false);
     }
     if (TT.isWindowsArm64EC()) {
+      // Use EXPORTAS for mangled ARM64EC symbols.
+      // FIXME: During LTO, we're invoked prior to the EC lowering pass,
+      // so symbols are not yet mangled. Emitting the unmangled name
+      // typically functions correctly; the linker can resolve the export
+      // with the demangled alias.
       if (std::optional<std::string> demangledName =
               object::getArm64ECDemangledFunctionName(GV->getName()))
         OS << ",EXPORTAS," << *demangledName;
