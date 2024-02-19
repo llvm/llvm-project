@@ -1716,6 +1716,9 @@ bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
+  if (DiscardResult)
+    return true;
+
   assert(Initializing);
   const Record *R = P.getOrCreateRecord(E->getLambdaClass());
 
@@ -2824,6 +2827,20 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
+  auto Args = E->arguments();
+  // Calling a static operator will still
+  // pass the instance, but we don't need it.
+  // Discard it here.
+  if (isa<CXXOperatorCallExpr>(E)) {
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(E->getDirectCallee());
+        MD && MD->isStatic()) {
+      if (!this->discard(E->getArg(0)))
+        return false;
+      Args = drop_begin(Args, 1);
+    }
+  }
+
   // Add the (optional, implicit) This pointer.
   if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
     if (!this->visit(MC->getImplicitObjectArgument()))
@@ -2831,7 +2848,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   // Put arguments on the stack.
-  for (const auto *Arg : E->arguments()) {
+  for (const auto *Arg : Args) {
     if (!this->visit(Arg))
       return false;
   }
