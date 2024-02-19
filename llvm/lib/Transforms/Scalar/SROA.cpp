@@ -2304,6 +2304,34 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       }
     }
   };
+  auto createAndCheckVectorTypesForPromotion =
+      [&](SetVector<Type *> OtherTys,
+          SmallVector<VectorType *, 4> CandidateTysCopy) {
+        // Consider additional vector types where the element type size is a
+        // multiple of load/store element size.
+        for (Type *Ty : OtherTys) {
+          if (!VectorType::isValidElementType(Ty))
+            continue;
+          unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
+          // Make a copy of CandidateTys and iterate through it, because we
+          // might append to CandidateTys in the loop.
+          for (VectorType *&VTy : CandidateTysCopy) {
+            unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
+            unsigned ElementSize =
+                DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
+            if (TypeSize != VectorSize && TypeSize != ElementSize &&
+                VectorSize % TypeSize == 0) {
+              VectorType *NewVTy =
+                  VectorType::get(Ty, VectorSize / TypeSize, false);
+              CheckCandidateType(NewVTy);
+            }
+          }
+        }
+
+        return checkVectorTypesForPromotion(
+            P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+            HaveCommonVecPtrTy, CommonVecPtrTy);
+      };
 
   // Put load and store types into a set for de-duplication.
   for (const Slice &S : P) {
@@ -2325,31 +2353,9 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
           HaveCommonVecPtrTy, CommonVecPtrTy))
     return VTy;
 
-  // Consider additional vector types where the element type size is a
-  // multiple of load/store element size.
-  for (Type *Ty : LoadStoreTys) {
-    if (!VectorType::isValidElementType(Ty))
-      continue;
-    unsigned TypeSize = DL.getTypeSizeInBits(Ty).getFixedValue();
-    // Make a copy of CandidateTys and iterate through it, because we might
-    // append to CandidateTys in the loop.
-    SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
-    CandidateTys.clear();
-    for (VectorType *&VTy : CandidateTysCopy) {
-      unsigned VectorSize = DL.getTypeSizeInBits(VTy).getFixedValue();
-      unsigned ElementSize =
-          DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-      if (TypeSize != VectorSize && TypeSize != ElementSize &&
-          VectorSize % TypeSize == 0) {
-        VectorType *NewVTy = VectorType::get(Ty, VectorSize / TypeSize, false);
-        CheckCandidateType(NewVTy);
-      }
-    }
-  }
-
-  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
-                                      CommonEltTy, HaveVecPtrTy,
-                                      HaveCommonVecPtrTy, CommonVecPtrTy);
+  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
+  CandidateTys.clear();
+  return createAndCheckVectorTypesForPromotion(LoadStoreTys, CandidateTysCopy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
