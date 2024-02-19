@@ -326,6 +326,13 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   return VectorValue;
 }
 
+Value *VPTransformState::get(VPValue *Def, unsigned Part,
+                             unsigned NeedsScalar) {
+  if (NeedsScalar)
+    return get(Def, VPIteration(Part, 0));
+  return get(Def, Part);
+}
+
 BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
   VPRegionBlock *LoopRegion = R->getParent()->getEnclosingLoopRegion();
   return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
@@ -873,17 +880,14 @@ void VPlan::execute(VPTransformState *State) {
                             isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
                             (isa<VPReductionPHIRecipe>(PhiR) &&
                              cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
+    bool NeedsScalar = isa<VPCanonicalIVPHIRecipe>(PhiR);
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *Phi = isa<VPCanonicalIVPHIRecipe>(PhiR)
-                       ? State->get(PhiR, VPIteration(Part, 0))
-                       : State->get(PhiR, Part);
+      Value *Phi = State->get(PhiR, Part, NeedsScalar);
       Value *Val =
-          isa<VPCanonicalIVPHIRecipe>(PhiR)
-              ? State->get(PhiR->getBackedgeValue(), VPIteration(Part, 0))
-              : State->get(PhiR->getBackedgeValue(),
-                           SinglePartNeeded ? State->UF - 1 : Part);
+          State->get(PhiR->getBackedgeValue(),
+                     SinglePartNeeded ? State->UF - 1 : Part, NeedsScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }

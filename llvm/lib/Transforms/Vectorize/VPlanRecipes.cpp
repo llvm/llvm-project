@@ -281,15 +281,10 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return OnlyFirstLaneUsed ? State.get(this, VPIteration(0, 0))
-                               : State.get(this, 0);
+      return State.get(this, 0, OnlyFirstLaneUsed);
 
-    Value *A = OnlyFirstLaneUsed
-                   ? State.get(getOperand(0), VPIteration(Part, 0))
-                   : State.get(getOperand(0), Part);
-    Value *B = OnlyFirstLaneUsed
-                   ? State.get(getOperand(1), VPIteration(Part, 0))
-                   : State.get(getOperand(1), Part);
+    Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
+    Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
@@ -391,8 +386,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     if (Part != 0)
       return nullptr;
     // First create the compare.
-    Value *IV = State.get(getOperand(0), VPIteration(0, 0));
-    Value *TC = State.get(getOperand(1), VPIteration(0, 0));
+    Value *IV = State.get(getOperand(0), VPIteration(Part, 0));
+    Value *TC = State.get(getOperand(1), VPIteration(Part, 0));
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
 
     // Now create the branch.
@@ -518,9 +513,11 @@ void VPInstruction::execute(VPTransformState &State) {
     if (!hasResult())
       continue;
     assert(GeneratedValue && "generateInstruction must produce a value");
-    if (GeneratedValue->getType()->isVectorTy())
+    if (GeneratedValue->getType()->isVectorTy()) {
       State.set(this, GeneratedValue, Part);
-    else {
+    } else {
+      // Note that ComputeReductionResult creates a scalar, but has its last
+      // lane accessed, via the generic  VPLiveOut.
       assert((getOpcode() == VPInstruction::ComputeReductionResult ||
               State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
              "scalar value but not only first lane used");

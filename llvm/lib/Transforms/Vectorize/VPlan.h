@@ -268,6 +268,10 @@ struct VPTransformState {
   /// \see set.
   Value *get(VPValue *Def, unsigned Part);
 
+  /// Get the generated Value for a given VPValue \p Def and a given \p Part or
+  /// lane 0 for the part if \p NeedsScalar is true. \see set.
+  Value *get(VPValue *Def, unsigned Part, unsigned NeedsScalar);
+
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(VPValue *Def, const VPIteration &Instance);
 
