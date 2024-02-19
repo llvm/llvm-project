@@ -5325,7 +5325,7 @@ def err_alias_template_extra_headers : Error<
 def err_template_spec_extra_headers : Error<
   "extraneous template parameter list in template specialization or "
   "out-of-line template definition">;
-def warn_template_spec_extra_headers : Warning<
+def ext_template_spec_extra_headers : ExtWarn<
   "extraneous template parameter list in template specialization">;
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
