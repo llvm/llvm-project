@@ -60,7 +60,7 @@ template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename A
 void test() {
   AllocT allocator;
 
-  std::basic_ostringstream<CharT, TraitsT, AllocT> ss(std::ios_base::out, allocator);
+  std::basic_ostringstream<CharT, TraitsT, AllocT> ss(std::ios_base::binary, allocator);
   assert(ss.str().empty());
 
   // const CharT*
