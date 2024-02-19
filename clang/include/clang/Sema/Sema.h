@@ -3967,7 +3967,7 @@ public:
                                 const ProcessDeclAttributeOptions &Options =
                                     ProcessDeclAttributeOptions());
   bool ProcessAccessDeclAttributeList(AccessSpecDecl *ASDecl,
-                                   const ParsedAttributesView &AttrList);
+                                      const ParsedAttributesView &AttrList);
 
   void checkUnusedDeclAttributes(Declarator &D);
 
