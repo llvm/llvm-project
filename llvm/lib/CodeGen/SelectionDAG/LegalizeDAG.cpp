@@ -259,6 +259,19 @@ public:
 
 } // end anonymous namespace
 
+// Helper function that generates an MMO that considers the alignment of the
+// stack, and the size of the stack object
+static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
+                                             MachineFunction &MF,
+                                             bool isObjectScalable) {
+  auto &MFI = MF.getFrameInfo();
+  int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
+  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
+  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                 ObjectSize, MFI.getObjectAlign(FI));
+}
+
 /// Return a vector shuffle operation which
 /// performs the same shuffle in terms of order or result bytes, but on a type
 /// whose vector element type is narrower than the original shuffle type.
@@ -1377,19 +1390,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STORE:
     return LegalizeStoreOps(Node);
   }
-}
-
-// Helper function that generates an MMO that considers the alignment of the
-// stack, and the size of the stack object
-static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
-                                             MachineFunction &MF,
-                                             bool isObjectScalable) {
-  auto &MFI = MF.getFrameInfo();
-  int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
-  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
-  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
-  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
-                                 ObjectSize, MFI.getObjectAlign(FI));
 }
 
 SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
