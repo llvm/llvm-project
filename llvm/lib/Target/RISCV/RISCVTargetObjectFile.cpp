@@ -139,16 +139,15 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   if (isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
       return SmallROData4Section;
-    else if (Kind.isMergeableConst8())
+    if (Kind.isMergeableConst8())
       return SmallROData8Section;
-    else if (Kind.isMergeableConst16())
+    if (Kind.isMergeableConst16())
       return SmallROData16Section;
-    else if (Kind.isMergeableConst32())
+    if (Kind.isMergeableConst32())
       return SmallROData32Section;
-    else
-      // LLVM only generate up to .rodata.cst32, and use .rodata section if more
-      // than 32 bytes, so just use .srodata here.
-      return SmallRODataSection;
+    // LLVM only generate up to .rodata.cst32, and use .rodata section if more
+    // than 32 bytes, so just use .srodata here.
+    return SmallRODataSection;
   }
 
   // Otherwise, we work the same as ELF.
