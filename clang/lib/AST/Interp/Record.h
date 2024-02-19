@@ -119,7 +119,7 @@ private:
   VirtualBaseList VirtualBases;
 
   /// Mapping from declarations to bases.
-  llvm::DenseMap<const RecordDecl *, Base *> BaseMap;
+  llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
   /// Mapping from field identifiers to descriptors.
   llvm::DenseMap<const FieldDecl *, const Field *> FieldMap;
   /// Mapping from declarations to virtual bases.
