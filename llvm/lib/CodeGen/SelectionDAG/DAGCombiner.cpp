@@ -13710,8 +13710,12 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
 
   // fold (zext (zext x)) -> (zext x)
   // fold (zext (aext x)) -> (zext x)
-  if (N0.getOpcode() == ISD::ZERO_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
+  if (N0.getOpcode() == ISD::ZERO_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND) {
+    SDNodeFlags Flags;
+    if (N0.getOpcode() == ISD::ZERO_EXTEND)
+      Flags.setNonNeg(N0->getFlags().hasNonNeg());
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0), Flags);
+  }
 
   // fold (zext (aext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
   // fold (zext (zext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
@@ -14011,10 +14015,13 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   // fold (aext (aext x)) -> (aext x)
   // fold (aext (zext x)) -> (zext x)
   // fold (aext (sext x)) -> (sext x)
-  if (N0.getOpcode() == ISD::ANY_EXTEND  ||
-      N0.getOpcode() == ISD::ZERO_EXTEND ||
-      N0.getOpcode() == ISD::SIGN_EXTEND)
-    return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0));
+  if (N0.getOpcode() == ISD::ANY_EXTEND || N0.getOpcode() == ISD::ZERO_EXTEND ||
+      N0.getOpcode() == ISD::SIGN_EXTEND) {
+    SDNodeFlags Flags;
+    if (N0.getOpcode() == ISD::ZERO_EXTEND)
+      Flags.setNonNeg(N0->getFlags().hasNonNeg());
+    return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Flags);
+  }
 
   // fold (aext (aext_extend_vector_inreg x)) -> (aext_extend_vector_inreg x)
   // fold (aext (zext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)

@@ -791,24 +791,13 @@ define void @zext_nneg_dominating_icmp_i32(i16 signext %0) {
 ; RV32I-NEXT:  .LBB47_2:
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: zext_nneg_dominating_icmp_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    bltz a0, .LBB47_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    tail bar_i32
-; RV64I-NEXT:  .LBB47_2:
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: zext_nneg_dominating_icmp_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    bltz a0, .LBB47_2
-; RV64ZBB-NEXT:  # %bb.1:
-; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    tail bar_i32
-; RV64ZBB-NEXT:  .LBB47_2:
-; RV64ZBB-NEXT:    ret
+; RV64-LABEL: zext_nneg_dominating_icmp_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB47_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB47_2:
+; RV64-NEXT:    ret
   %2 = icmp sgt i16 %0, -1
   br i1 %2, label %3, label %5
 
@@ -834,24 +823,13 @@ define void @zext_nneg_dominating_icmp_i32_signext(i16 signext %0) {
 ; RV32I-NEXT:  .LBB48_2:
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: zext_nneg_dominating_icmp_i32_signext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    bltz a0, .LBB48_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    tail bar_i32
-; RV64I-NEXT:  .LBB48_2:
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: zext_nneg_dominating_icmp_i32_signext:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    bltz a0, .LBB48_2
-; RV64ZBB-NEXT:  # %bb.1:
-; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    tail bar_i32
-; RV64ZBB-NEXT:  .LBB48_2:
-; RV64ZBB-NEXT:    ret
+; RV64-LABEL: zext_nneg_dominating_icmp_i32_signext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB48_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB48_2:
+; RV64-NEXT:    ret
   %2 = icmp sgt i16 %0, -1
   br i1 %2, label %3, label %5
 
@@ -875,24 +853,13 @@ define void @zext_nneg_dominating_icmp_i32_zeroext(i16 signext %0) {
 ; RV32I-NEXT:  .LBB49_2:
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: zext_nneg_dominating_icmp_i32_zeroext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    bltz a0, .LBB49_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    tail bar_i32
-; RV64I-NEXT:  .LBB49_2:
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: zext_nneg_dominating_icmp_i32_zeroext:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    bltz a0, .LBB49_2
-; RV64ZBB-NEXT:  # %bb.1:
-; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    tail bar_i32
-; RV64ZBB-NEXT:  .LBB49_2:
-; RV64ZBB-NEXT:    ret
+; RV64-LABEL: zext_nneg_dominating_icmp_i32_zeroext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB49_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB49_2:
+; RV64-NEXT:    ret
   %2 = icmp sgt i16 %0, -1
   br i1 %2, label %3, label %5
 
