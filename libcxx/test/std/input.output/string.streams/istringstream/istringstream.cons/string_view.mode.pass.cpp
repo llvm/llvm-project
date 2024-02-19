@@ -18,17 +18,18 @@
 
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 
 #include "constexpr_char_traits.h"
-#include "make_string.h"
 #include "nasty_string.h"
 #include "test_allocator.h"
 #include "test_convertible.h"
 #include "test_macros.h"
 
+#include "../../macros.h"
 #include "../../types.h"
 
 template <typename CharT>
@@ -37,7 +38,6 @@ void test_sfinae() {
   using CStrStream = std::basic_istringstream<CharT, constexpr_char_traits<CharT>>;
 
   // `CharT*`
-
   static_assert(std::constructible_from<StrStream, CharT*, std::ios_base::openmode>);
   static_assert(!test_convertible<StrStream, CharT*, std::ios_base::openmode>());
 
@@ -131,13 +131,11 @@ void test_sfinae() {
   static_assert(!test_convertible<StrStream, const std::basic_string_view<CharT>, const SomeObject>());
 }
 
-#define CS(S) MAKE_CSTRING(CharT, S)
-#define ST(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
+template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
+void test() {
+  using StrStream = std::basic_istringstream<CharT, TraitsT, AllocT>;
 
-template <class CharT>
-static void test() {
-  using StrStream = std::basic_istringstream<CharT, std::char_traits<CharT>>;
+  const AllocT allocator;
 
   // const CharT*
   {
@@ -146,19 +144,19 @@ static void test() {
   }
   // std::basic_string_view<CharT>
   {
-    const std::basic_string_view<CharT> csv = SV("zmt");
+    const std::basic_string_view<CharT, TraitsT> csv = SV("zmt");
     StrStream ss(csv, std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
   // std::basic_string<CharT>
   {
-    const std::basic_string<CharT> cs = ST("zmt");
+    const std::basic_string<CharT, TraitsT, AllocT> cs = ST("zmt", allocator);
     StrStream ss(cs, std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
   // ConstConvertibleStringView<CharT>
   {
-    const ConstConvertibleStringView<CharT> sv{CS("zmt")};
+    const ConstConvertibleStringView<CharT, TraitsT> sv{CS("zmt")};
     StrStream ss(sv, std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
@@ -167,9 +165,15 @@ static void test() {
 int main(int, char**) {
   test_sfinae<char>();
   test<char>();
+  test<char, constexpr_char_traits<char>, std::allocator<char>>();
+  test<char, std::char_traits<char>, test_allocator<char>>();
+  test<char, constexpr_char_traits<char>, test_allocator<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_sfinae<wchar_t>();
   test<wchar_t>();
+  test<wchar_t, constexpr_char_traits<wchar_t>, std::allocator<wchar_t>>();
+  test<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>();
+  test<wchar_t, constexpr_char_traits<wchar_t>, test_allocator<wchar_t>>();
 #endif
   return 0;
 }

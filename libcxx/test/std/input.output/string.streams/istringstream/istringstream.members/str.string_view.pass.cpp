@@ -17,17 +17,18 @@
 //   void str(const T& t);
 
 #include <cassert>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 
 #include "constexpr_char_traits.h"
-#include "make_string.h"
 #include "nasty_string.h"
 #include "test_allocator.h"
 #include "test_macros.h"
 
 #include "../../concepts.h"
+#include "../../macros.h"
 #include "../../types.h"
 
 template <typename CharT>
@@ -66,13 +67,11 @@ void test_sfinae() {
                                                   NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 }
 
-#define CS(S) MAKE_CSTRING(CharT, S)
-#define ST(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
-
-template <typename CharT>
+template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
 void test() {
-  std::basic_istringstream<CharT> ss;
+  AllocT allocator;
+
+  std::basic_istringstream<CharT, TraitsT, AllocT> ss( std::ios_base::in , allocator);
   assert(ss.str().empty());
 
   // const CharT*
@@ -84,14 +83,14 @@ void test() {
   assert(ss.str() == CS("ma"));
 
   // std::basic_string<CharT>
-  ss.str(ST("zmt"));
+  ss.str(ST("zmt", allocator));
   assert(ss.str() == CS("zmt"));
 
   // ConstConvertibleStringView<CharT>
-  ss.str(ConstConvertibleStringView<CharT>{CS("da")});
+  ss.str(ConstConvertibleStringView<CharT, TraitsT>{CS("da")});
   assert(ss.str() == CS("da"));
 
-  const std::basic_string<CharT> s;
+  const std::basic_string<CharT, TraitsT, AllocT> s(allocator);
   ss.str(s);
   assert(ss.str().empty());
 }
@@ -99,9 +98,15 @@ void test() {
 int main(int, char**) {
   test_sfinae<char>();
   test<char>();
+  test<char, constexpr_char_traits<char>, std::allocator<char>>();
+  test<char, std::char_traits<char>, test_allocator<char>>();
+  test<char, constexpr_char_traits<char>, test_allocator<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_sfinae<wchar_t>();
   test<wchar_t>();
+  test<wchar_t, constexpr_char_traits<wchar_t>, std::allocator<wchar_t>>();
+  test<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>();
+  test<wchar_t, constexpr_char_traits<wchar_t>, test_allocator<wchar_t>>();
 #endif
 
   return 0;

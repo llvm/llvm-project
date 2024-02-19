@@ -23,12 +23,12 @@
 #include <string_view>
 
 #include "constexpr_char_traits.h"
-#include "make_string.h"
 #include "nasty_string.h"
 #include "test_allocator.h"
 #include "test_convertible.h"
 #include "test_macros.h"
 
+#include "../../macros.h"
 #include "../../types.h"
 
 template <typename CharT>
@@ -176,51 +176,53 @@ void test_sfinae() {
       !test_convertible<StrStream, const std::basic_string_view<CharT>, std::ios_base::openmode, const NonAllocator>());
 }
 
-#define CS(S) MAKE_CSTRING(CharT, S)
-#define ST(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
+template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
+void test() {
+  using StrStream = std::basic_istringstream<CharT, TraitsT, AllocT>;
 
-template <class CharT>
-static void test() {
-  using StrStream = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
-
-  const test_allocator<CharT> ca;
+  const AllocT allocator;
 
   // const CharT*
   {
-    StrStream ss(CS("zmt"), std::ios_base::binary, ca);
+    StrStream ss(CS("zmt"), std::ios_base::binary, allocator);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.rdbuf()->get_allocator() == allocator);
   }
   // std::basic_string_view<CharT>
   {
-    const std::basic_string_view<CharT> csv = SV("zmt");
-    StrStream ss(csv, std::ios_base::binary, ca);
+    const std::basic_string_view<CharT, TraitsT> csv = SV("zmt");
+    StrStream ss(csv, std::ios_base::binary, allocator);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.rdbuf()->get_allocator() == allocator);
   }
   // std::basic_string<CharT>
   {
-    const std::basic_string<CharT> cs = ST("zmt");
-    StrStream ss(cs, std::ios_base::binary, ca);
+    const std::basic_string<CharT, TraitsT, AllocT> cs = ST("zmt", allocator);
+    StrStream ss(cs, std::ios_base::binary, allocator);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.rdbuf()->get_allocator() == allocator);
   }
   // ConstConvertibleStringView<CharT>
   {
-    const ConstConvertibleStringView<CharT> sv{CS("zmt")};
-    StrStream ss(sv, std::ios_base::binary, ca);
+    const ConstConvertibleStringView<CharT, TraitsT> sv{CS("zmt")};
+    StrStream ss(sv, std::ios_base::binary, allocator);
     assert(ss.str() == CS("zmt"));
-    assert(ss.rdbuf()->get_allocator() == ca);
+    assert(ss.rdbuf()->get_allocator() == allocator);
   }
 }
 
 int main(int, char**) {
   test_sfinae<char>();
   test<char>();
+  test<char, constexpr_char_traits<char>, std::allocator<char>>();
+  test<char, std::char_traits<char>, test_allocator<char>>();
+  test<char, constexpr_char_traits<char>, test_allocator<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_sfinae<wchar_t>();
   test<wchar_t>();
+  test<wchar_t, constexpr_char_traits<wchar_t>, std::allocator<wchar_t>>();
+  test<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>();
+  test<wchar_t, constexpr_char_traits<wchar_t>, test_allocator<wchar_t>>();
 #endif
   return 0;
 }
