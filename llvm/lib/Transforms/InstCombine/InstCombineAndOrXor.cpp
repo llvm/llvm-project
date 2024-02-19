@@ -2710,7 +2710,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   //       arm may not be reversible due to poison semantics. Is that a good
   //       canonicalization?
   Value *A, *B;
-  if (match(&I, m_c_And(m_OneUse(m_SExt(m_Value(A))), m_Value(B))) &&
+  if (match(&I, m_c_And(m_SExt(m_Value(A)), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, B, Constant::getNullValue(Ty));
 
@@ -2808,17 +2808,18 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
   return LastInst;
 }
 
-/// Match UB-safe variants of the funnel shift intrinsic.
-static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
-                                     const DominatorTree &DT) {
+std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
+InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
+  assert(Or.getOpcode() == BinaryOperator::Or && "Expecting or instruction");
+
   unsigned Width = Or.getType()->getScalarSizeInBits();
 
   Instruction *Or0, *Or1;
   if (!match(Or.getOperand(0), m_Instruction(Or0)) ||
       !match(Or.getOperand(1), m_Instruction(Or1)))
-    return nullptr;
+    return std::nullopt;
 
   bool IsFshl = true; // Sub on LSHR.
   SmallVector<Value *, 3> FShiftArgs;
@@ -2832,7 +2833,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
         !match(Or1,
                m_OneUse(m_LogicalShift(m_Value(ShVal1), m_Value(ShAmt1)))) ||
         Or0->getOpcode() == Or1->getOpcode())
-      return nullptr;
+      return std::nullopt;
 
     // Canonicalize to or(shl(ShVal0, ShAmt0), lshr(ShVal1, ShAmt1)).
     if (Or0->getOpcode() == BinaryOperator::LShr) {
@@ -2868,7 +2869,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       // might remove it after this fold). This still doesn't guarantee that the
       // final codegen will match this original pattern.
       if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L))))) {
-        KnownBits KnownL = IC.computeKnownBits(L, /*Depth*/ 0, &Or);
+        KnownBits KnownL = computeKnownBits(L, /*Depth*/ 0, &Or);
         return KnownL.getMaxValue().ult(Width) ? L : nullptr;
       }
 
@@ -2916,7 +2917,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
       IsFshl = false; // Sub on SHL.
     }
     if (!ShAmt)
-      return nullptr;
+      return std::nullopt;
 
     FShiftArgs = {ShVal0, ShVal1, ShAmt};
   } else if (isa<ZExtInst>(Or0) || isa<ZExtInst>(Or1)) {
@@ -2938,18 +2939,18 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
     const APInt *ZextHighShlAmt;
     if (!match(Or0,
                m_OneUse(m_Shl(m_Value(ZextHigh), m_APInt(ZextHighShlAmt)))))
-      return nullptr;
+      return std::nullopt;
 
     if (!match(Or1, m_ZExt(m_Value(Low))) ||
         !match(ZextHigh, m_ZExt(m_Value(High))))
-      return nullptr;
+      return std::nullopt;
 
     unsigned HighSize = High->getType()->getScalarSizeInBits();
     unsigned LowSize = Low->getType()->getScalarSizeInBits();
     // Make sure High does not overlap with Low and most significant bits of
     // High aren't shifted out.
     if (ZextHighShlAmt->ult(LowSize) || ZextHighShlAmt->ugt(Width - HighSize))
-      return nullptr;
+      return std::nullopt;
 
     for (User *U : ZextHigh->users()) {
       Value *X, *Y;
@@ -2980,11 +2981,21 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
   }
 
   if (FShiftArgs.empty())
-    return nullptr;
+    return std::nullopt;
 
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
-  Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
-  return CallInst::Create(F, FShiftArgs);
+  return std::make_pair(IID, FShiftArgs);
+}
+
+/// Match UB-safe variants of the funnel shift intrinsic.
+static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
+  if (auto Opt = IC.convertOrOfShiftsToFunnelShift(Or)) {
+    auto [IID, FShiftArgs] = *Opt;
+    Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
+    return CallInst::Create(F, FShiftArgs);
+  }
+
+  return nullptr;
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.
@@ -3475,7 +3486,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                                   /*MatchBitReversals*/ true))
     return BitOp;
 
-  if (Instruction *Funnel = matchFunnelShift(I, *this, DT))
+  if (Instruction *Funnel = matchFunnelShift(I, *this))
     return Funnel;
 
   if (Instruction *Concat = matchOrConcat(I, Builder))
@@ -4450,7 +4461,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     }
 
     // ~(X + C) --> ~C - X
-    if (match(NotVal, m_c_Add(m_Value(X), m_ImmConstant(C))))
+    if (match(NotVal, m_Add(m_Value(X), m_ImmConstant(C))))
       return BinaryOperator::CreateSub(ConstantExpr::getNot(C), X);
 
     // ~(X - Y) --> ~X + Y

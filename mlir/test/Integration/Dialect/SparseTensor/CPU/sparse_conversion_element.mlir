@@ -106,6 +106,9 @@ module {
     bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #Tensor1>
     bufferization.dealloc_tensor %s2 : tensor<2x3x4xf64, #Tensor2>
     bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #Tensor3>
+    bufferization.dealloc_tensor %d1 : tensor<2x3x4xf32>
+    bufferization.dealloc_tensor %d2 : tensor<2x3x4xf32>
+    bufferization.dealloc_tensor %d3 : tensor<2x3x4xf32>
 
     return
   }

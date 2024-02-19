@@ -2640,7 +2640,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                  reductionDeclSymbols),
-      procBindKindAttr);
+      procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
+      /*privatizers=*/nullptr);
 }
 
 static mlir::omp::SectionOp
@@ -2665,6 +2666,7 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
             const Fortran::parser::OmpClauseList &beginClauseList,
             const Fortran::parser::OmpClauseList &endClauseList) {
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
+  llvm::SmallVector<mlir::Value> copyPrivateVars;
   mlir::UnitAttr nowaitAttr;
 
   ClauseProcessor cp(converter, semaCtx, beginClauseList);
@@ -2678,7 +2680,8 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
       OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
           .setGenNested(genNested)
           .setClauses(&beginClauseList),
-      allocateOperands, allocatorOperands, nowaitAttr);
+      allocateOperands, allocatorOperands, copyPrivateVars,
+      /*copyPrivateFuncs=*/nullptr, nowaitAttr);
 }
 
 static mlir::omp::TaskOp
