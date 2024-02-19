@@ -454,7 +454,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return LT.first *
            getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI, LT.second, CostKind);
   case TTI::SK_InsertSubvector:
-    if (Index == 0 && any_of(Args, UndefValue::classof))
+    if (Index == 0 && !Args.empty() && any_of(Args, UndefValue::classof))
       return TTI::TCC_Free;
 
     // Example sequence:

@@ -686,6 +686,8 @@ constexpr hours make24(const hours& h, bool is_pm) noexcept;
 // [time.zone.db], time zone database
 struct tzdb {                                                                    // C++20
   string                 version;
+  vector<time_zone>      zones;
+  vector<time_zone_link> links;
 };
 
 class tzdb_list {                                                                // C++20
@@ -716,15 +718,34 @@ tzdb_list& get_tzdb_list();                                                     
 const tzdb& reload_tzdb();                                                       // C++20
 string remote_version();                                                         // C++20
 
-// 25.10.5, class time_zone    // C++20
+// 25.10.5, class time_zone                                                      // C++20
 enum class choose {earliest, latest};
-class time_zone;
-bool operator==(const time_zone& x, const time_zone& y) noexcept;
-bool operator!=(const time_zone& x, const time_zone& y) noexcept;
-bool operator<(const time_zone& x, const time_zone& y) noexcept;
-bool operator>(const time_zone& x, const time_zone& y) noexcept;
-bool operator<=(const time_zone& x, const time_zone& y) noexcept;
-bool operator>=(const time_zone& x, const time_zone& y) noexcept;
+class time_zone {
+  time_zone(time_zone&&) = default;
+  time_zone& operator=(time_zone&&) = default;
+
+  // unspecified additional constructors
+
+  string_view name() const noexcept;
+};
+bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
+strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
+
+// [time.zone.link], class time_zone_link
+class time_zone_link {                                                           // C++20
+public:
+  time_zone_link(time_zone_link&&)            = default;
+  time_zone_link& operator=(time_zone_link&&) = default;
+
+  // unspecified additional constructors
+
+  string_view name()   const noexcept;
+  string_view target() const noexcept;
+};
+
+bool operator==(const time_zone_link& x, const time_zone_link& y);               // C++20
+strong_ordering operator<=>(const time_zone_link& x, const time_zone_link& y);   // C++20
+
 }  // chrono
 
 namespace std {
@@ -842,6 +863,8 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 #if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                              \
     !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <__chrono/time_zone.h>
+#  include <__chrono/time_zone_link.h>
 #  include <__chrono/tzdb.h>
 #  include <__chrono/tzdb_list.h>
 #endif
