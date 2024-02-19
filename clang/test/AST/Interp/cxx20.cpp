@@ -763,3 +763,16 @@ namespace IgnoredConstantExpr {
     ReferenceToNestedMembers j{0};
   } test_reference_to_nested_members;
 }
+
+namespace RewrittenBinaryOperators {
+  template <class T, T Val>
+  struct Conv {
+    constexpr operator T() const { return Val; }
+    operator T() { return Val; }
+  };
+
+  struct X {
+    constexpr const Conv<int, -1> operator<=>(X) { return {}; }
+  };
+  static_assert(X() < X(), "");
+}
