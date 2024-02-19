@@ -54,7 +54,6 @@ using binary_semaphore = counting_semaphore<1>;
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__atomic/atomic_base.h>
 #include <__atomic/atomic_sync.h>
-#include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
 #include <__availability>
 #include <__chrono/time_point.h>
@@ -100,17 +99,8 @@ public:
     }
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() {
-    auto const __poll_fn = [this]() -> bool {
-      auto __old = __a_.load(memory_order_relaxed);
-      return (__old != 0) && __a_.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed);
-    };
-    auto const __backoff_test = [this](__cxx_contention_t& __monitor) -> bool {
-      ptrdiff_t __old = __monitor;
-      bool __r        = __try_acquire_impl(__old);
-      __monitor       = static_cast<__cxx_contention_t>(__old);
-      return __r;
-    };
-    __cxx_atomic_wait(&__a_.__a_, __poll_fn, __backoff_test);
+    __cxx_atomic_wait_unless(
+        &__a_.__a_, [this](ptrdiff_t& __old) { return __try_acquire_impl(__old); }, memory_order_relaxed);
   }
   template <class _Rep, class _Period>
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
@@ -121,7 +111,7 @@ public:
     return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
-    auto __old = __a_.load(memory_order_acquire);
+    auto __old = __a_.load(memory_order_relaxed);
     return __try_acquire_impl(__old);
   }
 
@@ -130,7 +120,7 @@ private:
     while (true) {
       if (__old == 0)
         return false;
-      if (__a_.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed))
+      if (__a_.compare_exchange_weak(__old, __old - 1, memory_order_acquire, memory_order_relaxed))
         return true;
     }
   }

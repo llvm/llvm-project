@@ -47,14 +47,14 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
             },
         ]
 
-        self.assertEquals(self.get_stackFrames(), expected_frames)
+        self.assertEqual(self.get_stackFrames(), expected_frames)
 
         # Resuming should have no effect and keep the process stopped
         self.continue_to_next_stop()
-        self.assertEquals(self.get_stackFrames(), expected_frames)
+        self.assertEqual(self.get_stackFrames(), expected_frames)
 
         self.dap_server.request_next(threadId=32259)
-        self.assertEquals(self.get_stackFrames(), expected_frames)
+        self.assertEqual(self.get_stackFrames(), expected_frames)
 
     @skipIfWindows
     @skipIfRemote

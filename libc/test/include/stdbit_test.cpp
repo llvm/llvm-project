@@ -50,6 +50,27 @@ unsigned stdc_first_leading_zero_ul(unsigned long) noexcept { return 0xEDU; }
 unsigned stdc_first_leading_zero_ull(unsigned long long) noexcept {
   return 0xEFU;
 }
+unsigned stdc_first_leading_one_uc(unsigned char) noexcept { return 0xFAU; }
+unsigned stdc_first_leading_one_us(unsigned short) noexcept { return 0xFBU; }
+unsigned stdc_first_leading_one_ui(unsigned) noexcept { return 0xFCU; }
+unsigned stdc_first_leading_one_ul(unsigned long) noexcept { return 0xFDU; }
+unsigned stdc_first_leading_one_ull(unsigned long long) noexcept {
+  return 0xFFU;
+}
+unsigned stdc_first_trailing_zero_uc(unsigned char) noexcept { return 0x0AU; }
+unsigned stdc_first_trailing_zero_us(unsigned short) noexcept { return 0x0BU; }
+unsigned stdc_first_trailing_zero_ui(unsigned) noexcept { return 0x0CU; }
+unsigned stdc_first_trailing_zero_ul(unsigned long) noexcept { return 0x0DU; }
+unsigned stdc_first_trailing_zero_ull(unsigned long long) noexcept {
+  return 0x0FU;
+}
+unsigned stdc_first_trailing_one_uc(unsigned char) noexcept { return 0x1AU; }
+unsigned stdc_first_trailing_one_us(unsigned short) noexcept { return 0x1BU; }
+unsigned stdc_first_trailing_one_ui(unsigned) noexcept { return 0x1CU; }
+unsigned stdc_first_trailing_one_ul(unsigned long) noexcept { return 0x1DU; }
+unsigned stdc_first_trailing_one_ull(unsigned long long) noexcept {
+  return 0x1FU;
+}
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -92,4 +113,28 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstLeadingZero) {
   EXPECT_EQ(stdc_first_leading_zero(0U), 0xECU);
   EXPECT_EQ(stdc_first_leading_zero(0UL), 0xEDU);
   EXPECT_EQ(stdc_first_leading_zero(0ULL), 0xEFU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstLeadingOne) {
+  EXPECT_EQ(stdc_first_leading_one(static_cast<unsigned char>(0U)), 0xFAU);
+  EXPECT_EQ(stdc_first_leading_one(static_cast<unsigned short>(0U)), 0xFBU);
+  EXPECT_EQ(stdc_first_leading_one(0U), 0xFCU);
+  EXPECT_EQ(stdc_first_leading_one(0UL), 0xFDU);
+  EXPECT_EQ(stdc_first_leading_one(0ULL), 0xFFU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstTrailingZero) {
+  EXPECT_EQ(stdc_first_trailing_zero(static_cast<unsigned char>(0U)), 0x0AU);
+  EXPECT_EQ(stdc_first_trailing_zero(static_cast<unsigned short>(0U)), 0x0BU);
+  EXPECT_EQ(stdc_first_trailing_zero(0U), 0x0CU);
+  EXPECT_EQ(stdc_first_trailing_zero(0UL), 0x0DU);
+  EXPECT_EQ(stdc_first_trailing_zero(0ULL), 0x0FU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroFirstTrailingOne) {
+  EXPECT_EQ(stdc_first_trailing_one(static_cast<unsigned char>(0U)), 0x1AU);
+  EXPECT_EQ(stdc_first_trailing_one(static_cast<unsigned short>(0U)), 0x1BU);
+  EXPECT_EQ(stdc_first_trailing_one(0U), 0x1CU);
+  EXPECT_EQ(stdc_first_trailing_one(0UL), 0x1DU);
+  EXPECT_EQ(stdc_first_trailing_one(0ULL), 0x1FU);
 }

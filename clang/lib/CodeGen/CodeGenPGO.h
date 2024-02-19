@@ -16,6 +16,7 @@
 #include "CGBuilder.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
+#include "MCDCState.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>
@@ -33,21 +34,20 @@ private:
 
   std::array <unsigned, llvm::IPVK_Last + 1> NumValueSites;
   unsigned NumRegionCounters;
-  unsigned MCDCBitmapBytes;
   uint64_t FunctionHash;
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionMCDCBitmapMap;
-  std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCondIDMap;
+  std::unique_ptr<llvm::DenseMap<const Stmt *, int16_t>> RegionCondIDMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
+  std::unique_ptr<MCDC::State> RegionMCDCState;
   std::vector<uint64_t> RegionCounts;
   uint64_t CurrentRegionCount;
 
 public:
   CodeGenPGO(CodeGenModule &CGModule)
       : CGM(CGModule), FuncNameVar(nullptr), NumValueSites({{0}}),
-        NumRegionCounters(0), MCDCBitmapBytes(0), FunctionHash(0),
-        CurrentRegionCount(0) {}
+        NumRegionCounters(0), FunctionHash(0), CurrentRegionCount(0) {}
 
   /// Whether or not we have PGO region data for the current function. This is
   /// false both when we have no data at all and when our data has been

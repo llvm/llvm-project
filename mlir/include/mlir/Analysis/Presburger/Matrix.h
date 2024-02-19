@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <bitset>
 #include <cassert>
 
 namespace mlir {
@@ -72,6 +73,8 @@ public:
   T &operator()(unsigned row, unsigned column) { return at(row, column); }
 
   T operator()(unsigned row, unsigned column) const { return at(row, column); }
+
+  bool operator==(const Matrix<T> &m) const;
 
   /// Swap the given columns.
   void swapColumns(unsigned column, unsigned otherColumn);
@@ -142,6 +145,9 @@ public:
   /// Add `scale` multiples of the rowVec row to the specified row.
   void addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale);
 
+  /// Multiply the specified row by a factor of `scale`.
+  void scaleRow(unsigned row, const T &scale);
+
   /// Add `scale` multiples of the source column to the target column.
   void addToColumn(unsigned sourceColumn, unsigned targetColumn,
                    const T &scale);
@@ -155,6 +161,9 @@ public:
 
   /// Negate the specified row.
   void negateRow(unsigned row);
+
+  /// Negate the entire matrix.
+  void negateMatrix();
 
   /// The given vector is interpreted as a row vector v. Post-multiply v with
   /// this matrix, say M, and return vM.
@@ -183,6 +192,19 @@ public:
 
   // Transpose the matrix without modifying it.
   Matrix<T> transpose() const;
+
+  // Copy the cells in the intersection of
+  // the rows between `fromRows` and `toRows` and
+  // the columns between `fromColumns` and `toColumns`, both inclusive.
+  Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
+                         unsigned toColumn) const;
+
+  /// Split the rows of a matrix into two matrices according to which bits are
+  /// 1 and which are 0 in a given bitset.
+  ///
+  /// The first matrix returned has the rows corresponding to 1 and the second
+  /// corresponding to 2.
+  std::pair<Matrix<T>, Matrix<T>> splitByBitset(ArrayRef<int> indicator);
 
   /// Print the matrix.
   void print(raw_ostream &os) const;
@@ -297,6 +319,10 @@ public:
   // paper](https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1129_LLL.pdf)
   // calls `y`, usually 3/4.
   void LLL(Fraction delta);
+
+  // Multiply each row of the matrix by the LCM of the denominators, thereby
+  // converting it to an integer matrix.
+  IntMatrix normalizeRows() const;
 };
 
 } // namespace presburger

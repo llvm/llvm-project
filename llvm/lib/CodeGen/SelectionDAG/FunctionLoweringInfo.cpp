@@ -249,7 +249,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
-      if (isa<FuncletPadInst>(PadInst))
+      if (isa<FuncletPadInst>(PadInst) &&
+          Personality != EHPersonality::Wasm_CXX)
         assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
