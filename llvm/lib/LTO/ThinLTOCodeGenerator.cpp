@@ -421,7 +421,7 @@ public:
     return MemoryBuffer::getFile(EntryPath);
   }
 
-  // Cache the Produced object file
+  // Cache the computed object file.
   void write(const MemoryBuffer &OutputBuffer) final {
     if (auto Err = llvm::writeToOutput(
             EntryPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
@@ -609,7 +609,7 @@ public:
 
   // Try loading the buffer for this cache entry.
   ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() final {
-    // Lookup the output value from KVDB.
+    // Use the KVDB to map the ThinLTO key onto the CAS ID.
     std::optional<cas::remote::KeyValueDBClient::ValueTy> GetResponse;
     {
       ScopedDurationTimer ScopedTime([&](double Seconds) {
@@ -637,8 +637,7 @@ public:
     if (Result == GetResponse->end())
       return std::make_error_code(std::errc::message_size);
 
-    if (DeterministicCheck)
-      PresumedOutput = Result->getValue();
+    LoadedCASID = Result->getValue();
 
     ScopedDurationTimer ScopedTime([&](double Seconds) {
       if (Logger) {
@@ -649,8 +648,10 @@ public:
       }
     });
 
+    std::string TmpPath = OutputPath + ".downloaded.tmp";
+
     // Request the output buffer.
-    auto LoadResponse = Service.CASDB->loadSync(Result->getValue(), OutputPath);
+    auto LoadResponse = Service.CASDB->loadSync(*LoadedCASID, TmpPath);
     if (!LoadResponse) {
       handleCASError(LoadResponse.takeError(), Logger);
       // If handleCASError didn't abort, treat as miss.
@@ -661,17 +662,18 @@ public:
     if (LoadResponse->KeyNotFound)
       return std::error_code();
 
-    ProducedOutput = true;
+    sys::fs::rename(TmpPath, OutputPath);
+    // Note: This might pick up the file created by rename in \c write().
     return MemoryBuffer::getFile(OutputPath);
   }
 
-  // Cache the Produced object file
+  // Cache the computed object file.
   void write(const MemoryBuffer &OutputBuffer) final {
-    if (!ProducedOutput)
-      cantFail(ModuleCacheEntry::writeObject(OutputBuffer, OutputPath));
+    std::string TmpPath = OutputPath + ".computed.tmp";
 
-    ProducedOutput = true;
-    std::optional<std::string> SaveResponse;
+    if (Error E = ModuleCacheEntry::writeObject(OutputBuffer, TmpPath))
+      report_fatal_error(std::move(E));
+
     {
       ScopedDurationTimer ScopedTime([&](double Seconds) {
         if (Logger) {
@@ -682,17 +684,8 @@ public:
         }
       });
 
-      if (Error E =
-              Service.CASDB->saveFileSync(OutputPath).moveInto(SaveResponse))
+      if (Error E = Service.CASDB->saveFileSync(TmpPath).moveInto(WrittenCASID))
         return handleCASError(std::move(E), Logger);
-    }
-
-    // Only check determinism when the cache lookup succeeded before.
-    if (DeterministicCheck && PresumedOutput) {
-      if (*PresumedOutput != *SaveResponse)
-        report_fatal_error(
-            (Twine) "ThinLTO deterministic check failed: " + *PresumedOutput +
-            " (expected) vs. " + *SaveResponse + " (actual)");
     }
 
     ScopedDurationTimer ScopedTime([&](double Seconds) {
@@ -705,21 +698,35 @@ public:
     });
 
     cas::remote::KeyValueDBClient::ValueTy CompResult;
-    CompResult["Output"] = *SaveResponse;
+    CompResult["Output"] = *WrittenCASID;
     if (auto Err = Service.KVDB->putValueSync(ID, CompResult))
       handleCASError(std::move(Err), Logger);
+
+    sys::fs::rename(TmpPath, OutputPath);
+  }
+
+  bool areLoadedAndWrittenResultsIdentical() const override {
+    if (LoadedCASID && WrittenCASID && *LoadedCASID != *WrittenCASID) {
+      Error E = createStringError(
+          inconvertibleErrorCode(),
+          "ThinLTO deterministic check failed: " + *LoadedCASID +
+              " (expected) vs. " + *WrittenCASID + " (actual)");
+      handleCASError(std::move(E), Logger);
+      return false;
+    }
+    return true;
   }
 
   Error writeObject(const MemoryBuffer &OutputBuffer,
                     StringRef OutputPath) final {
-    // There is nothing to do here.
+    // Our cache entry lives on the remote, so we already had to materialize the
+    // memory buffer on the file system to avoid using the heap.
+    // We used \c OutputPath for this, so this function is a no-op.
+    // We did not leave any other artifacts behind.
     return Error::success();
   }
 
   std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
-    if (!ProducedOutput)
-      return std::nullopt;
-
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
         MemoryBuffer::getFile(OutputPath);
     if (!MBOrErr)
@@ -732,8 +739,8 @@ private:
   cas::remote::ClientServices &Service;
   std::string ID;
   std::string OutputPath;
-  bool ProducedOutput = false;
-  std::optional<std::string> PresumedOutput;
+  std::optional<std::string> LoadedCASID;
+  std::optional<std::string> WrittenCASID;
   std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger;
 };
 
@@ -1657,6 +1664,9 @@ void ThinLTOCodeGenerator::run() {
 
         // Commit to the cache.
         CacheEntry->write(*OutputBuffer);
+
+        if (DeterministicCheck)
+          (void)CacheEntry->areLoadedAndWrittenResultsIdentical();
 
         if (UseBufferAPI) {
           // We need to generated a memory buffer for the linker.

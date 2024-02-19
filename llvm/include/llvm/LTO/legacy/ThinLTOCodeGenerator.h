@@ -61,6 +61,11 @@ public:
     return std::nullopt;
   }
 
+  /// Check whether the loaded and written results of this entry are identical.
+  /// This is only called when DeterministicCheck is enabled, and after both
+  /// \c tryLoadingBuffer() and \c write() have finished.
+  virtual bool areLoadedAndWrittenResultsIdentical() const { return true; }
+
   virtual ~ModuleCacheEntry() {}
 
   static std::optional<std::string> computeCacheKey(
