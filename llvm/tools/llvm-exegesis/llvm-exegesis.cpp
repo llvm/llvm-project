@@ -25,6 +25,7 @@
 #include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
 #include "lib/TargetSelect.h"
+#include "lib/ValidationEvent.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -278,24 +279,7 @@ static cl::list<ValidationEvent> ValidationCounters(
     cl::desc(
         "The name of a validation counter to run concurrently with the main "
         "counter to validate benchmarking assumptions"),
-    cl::CommaSeparated, cl::cat(BenchmarkOptions),
-    cl::values(
-        clEnumValN(ValidationEvent::InstructionRetired, "instructions-retired",
-                   "Count retired instructions"),
-        clEnumValN(ValidationEvent::L1DCacheLoadMiss, "l1d-cache-load-misses",
-                   "Count L1D load cache misses"),
-        clEnumValN(ValidationEvent::L1DCacheStoreMiss, "l1d-cache-store-misses",
-                   "Count L1D store cache misses"),
-        clEnumValN(ValidationEvent::L1ICacheLoadMiss, "l1i-cache-load-misses",
-                   "Count L1I load cache misses"),
-        clEnumValN(ValidationEvent::DataTLBLoadMiss, "data-tlb-load-misses",
-                   "Count DTLB load misses"),
-        clEnumValN(ValidationEvent::DataTLBStoreMiss, "data-tlb-store-misses",
-                   "Count DTLB store misses"),
-        clEnumValN(ValidationEvent::InstructionTLBLoadMiss,
-                   "instruction-tlb-load-misses", "Count ITLB load misses"),
-        clEnumValN(ValidationEvent::BranchPredictionMiss,
-                   "branch-prediction-misses", "Branch prediction misses")));
+    cl::CommaSeparated, cl::cat(BenchmarkOptions), ValidationEventOptions());
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
