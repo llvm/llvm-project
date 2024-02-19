@@ -810,8 +810,7 @@ define <8 x i16> @trunc_v4i64_to_v4i16_with_zext_return_v8i16(<4 x i64> %vec) no
 ;
 ; AVX2-FAST-ALL-LABEL: trunc_v4i64_to_v4i16_with_zext_return_v8i16:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,2,4,6,0,0,0,0]
 ; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-FAST-ALL-NEXT:    vzeroupper
@@ -882,8 +881,7 @@ define <8 x i16> @trunc_v4i64_to_v4i16_via_v4i32_return_v8i16(<4 x i64> %vec) no
 ;
 ; AVX2-FAST-ALL-LABEL: trunc_v4i64_to_v4i16_via_v4i32_return_v8i16:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,2,4,6,0,0,0,0]
 ; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-FAST-ALL-NEXT:    vzeroupper
@@ -1307,7 +1305,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u],zero,zero,zero,zero,zero,zero,zero,xmm0[0,2,4,6,8,10,12,14]
 ; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [18446744073709551360,18446744073709551615]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1315,8 +1313,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX2-LABEL: negative:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX2-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [18446744073709551360,18446744073709551615,18446744073709551360,18446744073709551615]
 ; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -1326,8 +1323,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512F-LABEL: negative:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
-; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512F-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512F-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [18446744073709551360,18446744073709551615,18446744073709551360,18446744073709551615]
 ; AVX512F-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -1346,8 +1342,7 @@ define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX512BW-LABEL: negative:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,16,18,20,22,24,26,28,30]
-; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512BW-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512BW-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [18446744073709551360,18446744073709551615,18446744073709551360,18446744073709551615]
 ; AVX512BW-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512BW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0

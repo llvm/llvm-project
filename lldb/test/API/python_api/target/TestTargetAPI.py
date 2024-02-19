@@ -526,3 +526,9 @@ class TargetAPITestCase(TestBase):
                 target.IsLoaded(module),
                 "Running the target should " "have loaded its modules.",
             )
+
+    @no_debug_info_test
+    def test_setting_selected_target_with_invalid_target(self):
+        """Make sure we don't crash when trying to select invalid target."""
+        target = lldb.SBTarget()
+        self.dbg.SetSelectedTarget(target)

@@ -3443,6 +3443,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::readcyclecounter);
     return RValue::get(Builder.CreateCall(F));
   }
+  case Builtin::BI__builtin_readsteadycounter: {
+    Function *F = CGM.getIntrinsic(Intrinsic::readsteadycounter);
+    return RValue::get(Builder.CreateCall(F));
+  }
   case Builtin::BI__builtin___clear_cache: {
     Value *Begin = EmitScalarExpr(E->getArg(0));
     Value *End = EmitScalarExpr(E->getArg(1));
@@ -5710,6 +5714,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *HalfVal = Builder.CreateLoad(Address);
     return RValue::get(Builder.CreateFPExt(HalfVal, Builder.getFloatTy()));
   }
+  case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN()) {
@@ -5907,8 +5912,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           }
         }
 
-        assert(PTy->canLosslesslyBitCastTo(FTy->getParamType(i)) &&
-               "Must be able to losslessly bit cast to param");
         // Cast vector type (e.g., v256i32) to x86_amx, this only happen
         // in amx intrinsics.
         if (PTy->isX86_AMXTy())
@@ -5938,8 +5941,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         }
       }
 
-      assert(V->getType()->canLosslesslyBitCastTo(RetTy) &&
-             "Must be able to losslessly bit cast result type");
       // Cast x86_amx to vector type (e.g., v256i32), this only happen
       // in amx intrinsics.
       if (V->getType()->isX86_AMXTy())
@@ -10676,10 +10677,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         llvm::FunctionType::get(StructType::get(CGM.Int64Ty, CGM.Int64Ty), {},
                                 false),
         "__arm_sme_state"));
-    auto Attrs =
-        AttributeList()
-            .addFnAttribute(getLLVMContext(), "aarch64_pstate_sm_compatible")
-            .addFnAttribute(getLLVMContext(), "aarch64_pstate_za_preserved");
+    auto Attrs = AttributeList().addFnAttribute(getLLVMContext(),
+                                                "aarch64_pstate_sm_compatible");
     CI->setAttributes(Attrs);
     CI->setCallingConv(
         llvm::CallingConv::
@@ -12044,7 +12043,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                         "vgetq_lane");
   }
 
-  case clang::AArch64::BI_InterlockedAdd: {
+  case clang::AArch64::BI_InterlockedAdd:
+  case clang::AArch64::BI_InterlockedAdd64: {
     Address DestAddr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
     AtomicRMWInst *RMWI =
@@ -17758,9 +17758,9 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
-/// COV_5    : Emit code to use implicitarg ptr
+/// COV_5+   : Emit code to use implicitarg ptr
 /// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
-///            and use its value for COV_4 or COV_5 approach. It is used for
+///            and use its value for COV_4 or COV_5+ approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 ///
 /// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
@@ -17803,7 +17803,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
   } else {
     Value *GEP = nullptr;
-    if (Cov == CodeObjectVersionKind::COV_5) {
+    if (Cov >= CodeObjectVersionKind::COV_5) {
       // Indexing the implicit kernarg segment.
       GEP = CGF.Builder.CreateConstGEP1_32(
           CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);

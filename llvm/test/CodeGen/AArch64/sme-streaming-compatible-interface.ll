@@ -129,30 +129,37 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl normal_callee_vec_arg
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4:
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
@@ -219,30 +226,30 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    ldr z1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
 ; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -311,30 +318,30 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    ldr p1, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -462,7 +469,11 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    ldp s4, s0, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    stp s4, s0, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    ldp d4, d0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    stp d4, d0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB10_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    smstop sm

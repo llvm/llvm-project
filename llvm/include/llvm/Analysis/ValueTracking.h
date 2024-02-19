@@ -197,6 +197,12 @@ unsigned ComputeMaxSignificantBits(const Value *Op, const DataLayout &DL,
 Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
                                       const TargetLibraryInfo *TLI);
 
+/// Given an exploded icmp instruction, return true if the comparison only
+/// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
+/// the result of the comparison is true when the input value is signed.
+bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
+                    bool &TrueIfSigned);
+
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
 /// same result as an fcmp with the given operands.
 ///
@@ -247,6 +253,10 @@ struct KnownFPClass {
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
+
+  bool operator==(KnownFPClass Other) const {
+    return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
+  }
 
   /// Return true if it's known this can never be one of the mask entries.
   bool isKnownNever(FPClassTest Mask) const {
@@ -358,6 +368,12 @@ struct KnownFPClass {
 
   void knownNot(FPClassTest RuleOut) {
     KnownFPClasses = KnownFPClasses & ~RuleOut;
+    if (isKnownNever(fcNan) && !SignBit) {
+      if (isKnownNever(fcNegative))
+        SignBit = false;
+      else if (isKnownNever(fcPositive))
+        SignBit = true;
+    }
   }
 
   void fneg() {
@@ -391,6 +407,12 @@ struct KnownFPClass {
   void signBitMustBeZero() {
     KnownFPClasses &= (fcPositive | fcNan);
     SignBit = false;
+  }
+
+  /// Assume the sign bit is one.
+  void signBitMustBeOne() {
+    KnownFPClasses &= (fcNegative | fcNan);
+    SignBit = true;
   }
 
   void copysign(const KnownFPClass &Sign) {
@@ -467,34 +489,35 @@ inline KnownFPClass operator|(const KnownFPClass &LHS, KnownFPClass &&RHS) {
 /// point classes should be queried. Queries not specified in \p
 /// InterestedClasses should be reliable if they are determined during the
 /// query.
-KnownFPClass computeKnownFPClass(
-    const Value *V, const APInt &DemandedElts, const DataLayout &DL,
-    FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
-    const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
-    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true);
+KnownFPClass computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                                 FPClassTest InterestedClasses, unsigned Depth,
+                                 const SimplifyQuery &SQ);
 
-KnownFPClass computeKnownFPClass(
+KnownFPClass computeKnownFPClass(const Value *V, FPClassTest InterestedClasses,
+                                 unsigned Depth, const SimplifyQuery &SQ);
+
+inline KnownFPClass computeKnownFPClass(
     const Value *V, const DataLayout &DL,
     FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
     const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
     const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true);
+    bool UseInstrInfo = true) {
+  return computeKnownFPClass(
+      V, InterestedClasses, Depth,
+      SimplifyQuery(DL, TLI, DT, AC, CxtI, UseInstrInfo));
+}
 
 /// Wrapper to account for known fast math flags at the use instruction.
-inline KnownFPClass computeKnownFPClass(
-    const Value *V, FastMathFlags FMF, const DataLayout &DL,
-    FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
-    const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
-    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true) {
+inline KnownFPClass computeKnownFPClass(const Value *V, FastMathFlags FMF,
+                                        FPClassTest InterestedClasses,
+                                        unsigned Depth,
+                                        const SimplifyQuery &SQ) {
   if (FMF.noNaNs())
     InterestedClasses &= ~fcNan;
   if (FMF.noInfs())
     InterestedClasses &= ~fcInf;
 
-  KnownFPClass Result = computeKnownFPClass(V, DL, InterestedClasses, Depth,
-                                            TLI, AC, CxtI, DT, UseInstrInfo);
+  KnownFPClass Result = computeKnownFPClass(V, InterestedClasses, Depth, SQ);
 
   if (FMF.noNaNs())
     Result.KnownFPClasses &= ~fcNan;
@@ -506,15 +529,9 @@ inline KnownFPClass computeKnownFPClass(
 /// Return true if we can prove that the specified FP value is never equal to
 /// -0.0. Users should use caution when considering PreserveSign
 /// denormal-fp-math.
-inline bool cannotBeNegativeZero(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI = nullptr,
-                                 unsigned Depth = 0,
-                                 AssumptionCache *AC = nullptr,
-                                 const Instruction *CtxI = nullptr,
-                                 const DominatorTree *DT = nullptr,
-                                 bool UseInstrInfo = true) {
-  KnownFPClass Known = computeKnownFPClass(V, DL, fcNegZero, Depth, TLI, AC,
-                                           CtxI, DT, UseInstrInfo);
+inline bool cannotBeNegativeZero(const Value *V, unsigned Depth,
+                                 const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcNegZero, Depth, SQ);
   return Known.isKnownNeverNegZero();
 }
 
@@ -526,68 +543,46 @@ inline bool cannotBeNegativeZero(const Value *V, const DataLayout &DL,
 ///       -0 --> true
 ///   x > +0 --> true
 ///   x < -0 --> false
-inline bool cannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
-                                        const TargetLibraryInfo *TLI = nullptr,
-                                        unsigned Depth = 0,
-                                        AssumptionCache *AC = nullptr,
-                                        const Instruction *CtxI = nullptr,
-                                        const DominatorTree *DT = nullptr,
-                                        bool UseInstrInfo = true) {
+inline bool cannotBeOrderedLessThanZero(const Value *V, unsigned Depth,
+                                        const SimplifyQuery &SQ) {
   KnownFPClass Known =
-      computeKnownFPClass(V, DL, KnownFPClass::OrderedLessThanZeroMask, Depth,
-                          TLI, AC, CtxI, DT, UseInstrInfo);
+      computeKnownFPClass(V, KnownFPClass::OrderedLessThanZeroMask, Depth, SQ);
   return Known.cannotBeOrderedLessThanZero();
 }
 
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
 /// could ever be infinity.
-inline bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI = nullptr,
-                                 unsigned Depth = 0,
-                                 AssumptionCache *AC = nullptr,
-                                 const Instruction *CtxI = nullptr,
-                                 const DominatorTree *DT = nullptr,
-                                 bool UseInstrInfo = true) {
-  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf, Depth, TLI, AC, CtxI,
-                                           DT, UseInstrInfo);
+inline bool isKnownNeverInfinity(const Value *V, unsigned Depth,
+                                 const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcInf, Depth, SQ);
   return Known.isKnownNeverInfinity();
 }
 
 /// Return true if the floating-point value can never contain a NaN or infinity.
-inline bool isKnownNeverInfOrNaN(
-    const Value *V, const DataLayout &DL, const TargetLibraryInfo *TLI,
-    unsigned Depth = 0, AssumptionCache *AC = nullptr,
-    const Instruction *CtxI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true) {
-  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf | fcNan, Depth, TLI, AC,
-                                           CtxI, DT, UseInstrInfo);
+inline bool isKnownNeverInfOrNaN(const Value *V, unsigned Depth,
+                                 const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcInf | fcNan, Depth, SQ);
   return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity();
 }
 
 /// Return true if the floating-point scalar value is not a NaN or if the
 /// floating-point vector value has no NaN elements. Return false if a value
 /// could ever be NaN.
-inline bool isKnownNeverNaN(const Value *V, const DataLayout &DL,
-                            const TargetLibraryInfo *TLI, unsigned Depth = 0,
-                            AssumptionCache *AC = nullptr,
-                            const Instruction *CtxI = nullptr,
-                            const DominatorTree *DT = nullptr,
-                            bool UseInstrInfo = true) {
-  KnownFPClass Known = computeKnownFPClass(V, DL, fcNan, Depth, TLI, AC, CtxI,
-                                           DT, UseInstrInfo);
+inline bool isKnownNeverNaN(const Value *V, unsigned Depth,
+                            const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcNan, Depth, SQ);
   return Known.isKnownNeverNaN();
 }
 
-/// Return true if we can prove that the specified FP value's sign bit is 0.
-///
-///      NaN --> true/false (depending on the NaN's sign bit)
-///       +0 --> true
-///       -0 --> false
-///   x > +0 --> true
-///   x < -0 --> false
-bool SignBitMustBeZero(const Value *V, const DataLayout &DL,
-                       const TargetLibraryInfo *TLI);
+/// Return false if we can prove that the specified FP value's sign bit is 0.
+/// Return true if we can prove that the specified FP value's sign bit is 1.
+/// Otherwise return std::nullopt.
+inline std::optional<bool> computeKnownFPSignBit(const Value *V, unsigned Depth,
+                                                 const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcAllFlags, Depth, SQ);
+  return Known.SignBit;
+}
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8

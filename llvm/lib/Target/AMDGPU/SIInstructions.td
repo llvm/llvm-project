@@ -895,7 +895,7 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
-  let UseNamedOperandTable = 1, SGPRSpill = 1, Uses = [EXEC] in {
+  let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
     def _SAVE : PseudoInstSI <
       (outs),
       (ins sgpr_class:$data, i32imm:$addr)> {
@@ -931,7 +931,7 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
-let SGPRSpill = 1, VALU = 1, isConvergent = 1 in {
+let Spill = 1, VALU = 1, isConvergent = 1 in {
 def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
   let Size = 4;
@@ -951,13 +951,13 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
   let mayLoad = 0;
   let mayStore = 0;
 }
-} // End SGPRSpill = 1, VALU = 1, isConvergent = 1
+} // End Spill = 1, VALU = 1, isConvergent = 1
 
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
-  let UseNamedOperandTable = 1, VGPRSpill = 1,
+  let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
@@ -983,7 +983,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
       // Size field is unsigned char and cannot fit more.
       let Size = !if(!le(MaxSize, 256), MaxSize, 252);
     }
-  } // End UseNamedOperandTable = 1, VGPRSpill = 1, SchedRW = [WriteVMEM]
+  } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
 }
 
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
@@ -1036,6 +1036,7 @@ let isConvergent = 1 in {
   defm SI_SPILL_WWM_AV32 : SI_SPILL_VGPR <AV_32, 1>;
 }
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr_lo, si_ga:$ptr_hi),

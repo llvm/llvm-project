@@ -899,7 +899,7 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
                          [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
    if (N->getOpcode() == ISD::ADD)
      return true;
-   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
+   return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
      // Only handle G_ADD for now. FIXME. build capability to compute whether
@@ -928,8 +928,25 @@ let RecomputePerFunction = 1 in {
   // Avoid generating STRQro if it is slow, unless we're optimizing for code size.
   def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || shouldOptForSize(MF)">;
 
-  def UseBTI : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() }]>;
-  def NotUseBTI : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() }]>;
+  // Register restrictions for indirect tail-calls:
+  // - If branch target enforcement is enabled, indirect calls must use x16 or
+  //   x17, because these are the only registers which can target the BTI C
+  //   instruction.
+  // - If PAuthLR is enabled, x16 is used in the epilogue to hold the address
+  //   of the signing instruction. This can't be changed because it is used by a
+  //   HINT instruction which only accepts x16. We can't load anything from the
+  //   stack after this because the authentication instruction checks that SP is
+  //   the same as it was at function entry, so we can't have anything on the
+  //   stack.
+
+  // BTI on, PAuthLR off: x16 or x17
+  def TailCallX16X17 : Predicate<[{  MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  // BTI on, PAuthLR on: x17 only
+  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  // BTI off, PAuthLR on: Any non-callee-saved register except x16
+  def TailCallNotX16 : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  // BTI off, PAuthLR off: Any non-callee-saved register
+  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
@@ -1580,6 +1597,9 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
+
+def PAUTH_BLEND : Pseudo<(outs GPR64:$disc),
+                         (ins GPR64:$addr_disc, i32imm:$int_disc), []>, Sched<[]>;
 
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
@@ -2672,7 +2692,7 @@ defm CCMP : CondComparison<1, "ccmp", AArch64ccmp>;
 //===----------------------------------------------------------------------===//
 defm CSEL  : CondSelect<0, 0b00, "csel">;
 
-def inc : PatFrag<(ops node:$in), (add node:$in, 1)>;
+def inc : PatFrag<(ops node:$in), (add_and_or_is_add node:$in, 1)>;
 defm CSINC : CondSelectOp<0, 0b01, "csinc", inc>;
 defm CSINV : CondSelectOp<1, 0b00, "csinv", not>;
 defm CSNEG : CondSelectOp<1, 0b01, "csneg", ineg>;
@@ -2715,9 +2735,9 @@ def : Pat<(AArch64csel (i32 -1), GPR32:$fval, (i32 imm:$cc), NZCV),
 def : Pat<(AArch64csel (i64 -1), GPR64:$fval, (i32 imm:$cc), NZCV),
           (CSINVXr GPR64:$fval, XZR, (i32 (inv_cond_XFORM imm:$cc)))>;
 
-def : Pat<(add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+def : Pat<(add_and_or_is_add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
           (CSINCWr GPR32:$val, GPR32:$val, (i32 imm:$cc))>;
-def : Pat<(add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+def : Pat<(add_and_or_is_add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
           (CSINCXr GPR64:$val, GPR64:$val, (i32 imm:$cc))>;
 
 def : Pat<(or (topbitsallzero32:$val), (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
@@ -3529,6 +3549,7 @@ def : InstAlias<"ldr $Rt, [$Rn, $offset]",
                 (LDURXi GPR64:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
 def : InstAlias<"ldr $Rt, [$Rn, $offset]",
                 (LDURWi GPR32:$Rt, GPR64sp:$Rn, simm9_offset_fb32:$offset), 0>;
+let Predicates = [HasFPARMv8] in {
 def : InstAlias<"ldr $Rt, [$Rn, $offset]",
                 (LDURBi FPR8Op:$Rt, GPR64sp:$Rn, simm9_offset_fb8:$offset), 0>;
 def : InstAlias<"ldr $Rt, [$Rn, $offset]",
@@ -3539,6 +3560,7 @@ def : InstAlias<"ldr $Rt, [$Rn, $offset]",
                 (LDURDi FPR64Op:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
 def : InstAlias<"ldr $Rt, [$Rn, $offset]",
                (LDURQi FPR128Op:$Rt, GPR64sp:$Rn, simm9_offset_fb128:$offset), 0>;
+}
 
 // zextload -> i64
 def : Pat<(i64 (zextloadi8 (am_unscaled8 GPR64sp:$Rn, simm9:$offset))),
@@ -4172,6 +4194,7 @@ def : InstAlias<"str $Rt, [$Rn, $offset]",
                 (STURXi GPR64:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
 def : InstAlias<"str $Rt, [$Rn, $offset]",
                 (STURWi GPR32:$Rt, GPR64sp:$Rn, simm9_offset_fb32:$offset), 0>;
+let Predicates = [HasFPARMv8] in {
 def : InstAlias<"str $Rt, [$Rn, $offset]",
                 (STURBi FPR8Op:$Rt, GPR64sp:$Rn, simm9_offset_fb8:$offset), 0>;
 def : InstAlias<"str $Rt, [$Rn, $offset]",
@@ -4182,6 +4205,7 @@ def : InstAlias<"str $Rt, [$Rn, $offset]",
                 (STURDi FPR64Op:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
 def : InstAlias<"str $Rt, [$Rn, $offset]",
                 (STURQi FPR128Op:$Rt, GPR64sp:$Rn, simm9_offset_fb128:$offset), 0>;
+}
 
 def : InstAlias<"strb $Rt, [$Rn, $offset]",
                 (STURBBi GPR32:$Rt, GPR64sp:$Rn, simm9_offset_fb8:$offset), 0>;
@@ -4592,8 +4616,10 @@ def FMOVD0 : Pseudo<(outs FPR64:$Rd), (ins), [(set f64:$Rd, (fpimm0))]>,
 // Similarly add aliases
 def : InstAlias<"fmov $Rd, #0.0", (FMOVWHr FPR16:$Rd, WZR), 0>,
     Requires<[HasFullFP16]>;
+let Predicates = [HasFPARMv8] in {
 def : InstAlias<"fmov $Rd, #0.0", (FMOVWSr FPR32:$Rd, WZR), 0>;
 def : InstAlias<"fmov $Rd, #0.0", (FMOVXDr FPR64:$Rd, XZR), 0>;
+}
 
 def : Pat<(bf16 fpimm0),
           (FMOVH0)>;
@@ -5037,10 +5063,12 @@ defm NEG    : SIMDTwoVectorBHSD<1, 0b01011, "neg",
                                UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm NOT    : SIMDTwoVectorB<1, 0b00, 0b00101, "not", vnot>;
 // Aliases for MVN -> NOT.
+let Predicates = [HasNEON] in {
 def : InstAlias<"mvn{ $Vd.8b, $Vn.8b|.8b $Vd, $Vn}",
                 (NOTv8i8 V64:$Vd, V64:$Vn)>;
 def : InstAlias<"mvn{ $Vd.16b, $Vn.16b|.16b $Vd, $Vn}",
                 (NOTv16i8 V128:$Vd, V128:$Vn)>;
+}
 
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v8i16 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
@@ -5162,6 +5190,18 @@ def : Pat<(v8i16 (concat_vectors
                  (v4i16 (trunc (smax (smin (v4i32 V128:$Vn), (v4i32 VImm7FFF)),
                                            (v4i32 VImm8000)))))),
           (SQXTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn)>;
+
+// Select BSWAP vector instructions into REV instructions
+def : Pat<(v4i16 (bswap (v4i16 V64:$Rn))), 
+          (v4i16 (REV16v8i8 (v4i16 V64:$Rn)))>;
+def : Pat<(v8i16 (bswap (v8i16 V128:$Rn))), 
+          (v8i16 (REV16v16i8 (v8i16 V128:$Rn)))>;
+def : Pat<(v2i32 (bswap (v2i32 V64:$Rn))), 
+          (v2i32 (REV32v8i8 (v2i32 V64:$Rn)))>;
+def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))), 
+          (v4i32 (REV32v16i8 (v4i32 V128:$Rn)))>;
+def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))), 
+          (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.
@@ -5303,6 +5343,7 @@ def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
 def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
+let Predicates = [HasNEON] in {
 def : InstAlias<"mov{\t$dst.16b, $src.16b|.16b\t$dst, $src}",
                 (ORRv16i8 V128:$dst, V128:$src, V128:$src), 1>;
 def : InstAlias<"mov{\t$dst.8h, $src.8h|.8h\t$dst, $src}",
@@ -5480,6 +5521,7 @@ def : InstAlias<"{faclt\t$dst.4s, $src1.4s, $src2.4s" #
 def : InstAlias<"{faclt\t$dst.2d, $src1.2d, $src2.2d" #
                 "|faclt.2d\t$dst, $src1, $src2}",
                 (FACGTv2f64 V128:$dst, V128:$src2, V128:$src1), 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three scalar instructions.
@@ -5542,6 +5584,7 @@ defm : FMULScalarFromIndexedLane0Patterns<"FMULX", "16", "32", "64",
                                           int_aarch64_neon_fmulx,
                                           [HasNEONorSME]>;
 
+let Predicates = [HasNEON] in {
 def : InstAlias<"cmls $dst, $src1, $src2",
                 (CMHSv1i64 FPR64:$dst, FPR64:$src2, FPR64:$src1), 0>;
 def : InstAlias<"cmle $dst, $src1, $src2",
@@ -5550,6 +5593,8 @@ def : InstAlias<"cmlo $dst, $src1, $src2",
                 (CMHIv1i64 FPR64:$dst, FPR64:$src2, FPR64:$src1), 0>;
 def : InstAlias<"cmlt $dst, $src1, $src2",
                 (CMGTv1i64 FPR64:$dst, FPR64:$src2, FPR64:$src1), 0>;
+}
+let Predicates = [HasFPARMv8] in {
 def : InstAlias<"fcmle $dst, $src1, $src2",
                 (FCMGE32 FPR32:$dst, FPR32:$src2, FPR32:$src1), 0>;
 def : InstAlias<"fcmle $dst, $src1, $src2",
@@ -5566,6 +5611,7 @@ def : InstAlias<"faclt $dst, $src1, $src2",
                 (FACGT32 FPR32:$dst, FPR32:$src2, FPR32:$src1), 0>;
 def : InstAlias<"faclt $dst, $src1, $src2",
                 (FACGT64 FPR64:$dst, FPR64:$src2, FPR64:$src1), 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three scalar instructions (mixed operands).
@@ -7012,6 +7058,7 @@ defm BIC : SIMDModifiedImmVectorShiftTied<1, 0b11, 0b01, "bic", AArch64bici>;
 // AdvSIMD ORR
 defm ORR : SIMDModifiedImmVectorShiftTied<0, 0b11, 0b01, "orr", AArch64orri>;
 
+let Predicates = [HasNEON] in {
 def : InstAlias<"bic $Vd.4h, $imm", (BICv4i16 V64:$Vd,  imm0_255:$imm, 0)>;
 def : InstAlias<"bic $Vd.8h, $imm", (BICv8i16 V128:$Vd, imm0_255:$imm, 0)>;
 def : InstAlias<"bic $Vd.2s, $imm", (BICv2i32 V64:$Vd,  imm0_255:$imm, 0)>;
@@ -7031,6 +7078,7 @@ def : InstAlias<"orr.4h $Vd, $imm", (ORRv4i16 V64:$Vd,  imm0_255:$imm, 0)>;
 def : InstAlias<"orr.8h $Vd, $imm", (ORRv8i16 V128:$Vd, imm0_255:$imm, 0)>;
 def : InstAlias<"orr.2s $Vd, $imm", (ORRv2i32 V64:$Vd,  imm0_255:$imm, 0)>;
 def : InstAlias<"orr.4s $Vd, $imm", (ORRv4i32 V128:$Vd, imm0_255:$imm, 0)>;
+}
 
 // AdvSIMD FMOV
 def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1111, V128, fpimm8,
@@ -7114,6 +7162,7 @@ let Predicates = [HasNEON] in {
                             ssub)>;
 }
 
+let Predicates = [HasNEON] in {
 def : InstAlias<"movi $Vd.4h, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.8h, $imm", (MOVIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.2s, $imm", (MOVIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
@@ -7123,6 +7172,7 @@ def : InstAlias<"movi.4h $Vd, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi.8h $Vd, $imm", (MOVIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi.2s $Vd, $imm", (MOVIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi.4s $Vd, $imm", (MOVIv4i32 V128:$Vd, imm0_255:$imm, 0), 0>;
+}
 
 def : Pat<(v2i32 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
           (MOVIv2i32 imm0_255:$imm8, imm:$shift)>;
@@ -7158,6 +7208,7 @@ def MOVIv16b_ns  : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1110, V128, imm0_255,
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm MVNI      : SIMDModifiedImmVectorShift<1, 0b10, 0b00, "mvni">;
 
+let Predicates = [HasNEON] in {
 def : InstAlias<"mvni $Vd.4h, $imm", (MVNIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"mvni $Vd.8h, $imm", (MVNIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;
 def : InstAlias<"mvni $Vd.2s, $imm", (MVNIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
@@ -7167,6 +7218,7 @@ def : InstAlias<"mvni.4h $Vd, $imm", (MVNIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"mvni.8h $Vd, $imm", (MVNIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;
 def : InstAlias<"mvni.2s $Vd, $imm", (MVNIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"mvni.4s $Vd, $imm", (MVNIv4i32 V128:$Vd, imm0_255:$imm, 0), 0>;
+}
 
 def : Pat<(v2i32 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
           (MVNIv2i32 imm0_255:$imm8, imm:$shift)>;
@@ -7543,13 +7595,17 @@ defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
                 TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
 
+def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
+def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
+def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64NvCast (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
+
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
-def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), (AArch64movi_shift (i32 128), (i32 0))), (i32 8)))),
+def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),
           (RADDHNv8i16_v8i8 V128:$Vn, (v8i16 (MOVIv2d_ns (i32 0))))>;
-def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), (AArch64movi_shift (i32 128), (i32 8))), (i32 16)))),
+def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))),
           (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
-def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), (AArch64dup (i64 2147483648))), (i32 32)))),
+def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
           (RADDHNv8i16_v8i8 V128:$Vn, (v8i16 (MOVIv2d_ns (i32 0))))>;
@@ -7561,20 +7617,20 @@ def : Pat<(v2i32 (int_aarch64_neon_rshrn (v2i64 V128:$Vn), (i32 32))),
 // RADDHN2 patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
-                 (v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), (AArch64movi_shift (i32 128), (i32 0))), (i32 8)))))),
+                 (v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))))),
           (RADDHNv8i16_v16i8
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v8i16 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i16 (concat_vectors
                  (v4i16 V64:$Vd),
-                 (v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), (AArch64movi_shift (i32 128), (i32 8))), (i32 16)))))),
+                 (v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))))),
           (RADDHNv4i32_v8i16
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
 def : Pat<(v4i32 (concat_vectors
                  (v2i32 V64:$Vd),
-                 (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), (AArch64dup (i64 2147483648))), (i32 32)))))),
+                 (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))))),
           (RADDHNv2i64_v4i32
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v2i64 (MOVIv2d_ns (i32 0))))>;
@@ -7654,6 +7710,7 @@ def : Pat<(v2i64 (zext   (v2i32 (extract_high_v4i32 (v4i32 V128:$Rn)) ))),
 def : Pat<(v2i64 (sext   (v2i32 (extract_high_v4i32 (v4i32 V128:$Rn)) ))),
           (SSHLLv4i32_shift V128:$Rn, (i32 0))>;
 
+let Predicates = [HasNEON] in {
 // Vector shift sxtl aliases
 def : InstAlias<"sxtl.8h $dst, $src1",
                 (SSHLLv8i8_shift V128:$dst, V64:$src1, 0)>;
@@ -7709,6 +7766,7 @@ def : InstAlias<"uxtl2.2d $dst, $src1",
                 (USHLLv4i32_shift V128:$dst, V128:$src1, 0)>;
 def : InstAlias<"uxtl2 $dst.2d, $src1.4s",
                 (USHLLv4i32_shift V128:$dst, V128:$src1, 0)>;
+}
 
 // If an integer is about to be converted to a floating point value,
 // just load it on the floating point unit.
@@ -8157,7 +8215,7 @@ def AESIMCrr : AESInst<    0b0111, "aesimc", int_aarch64_crypto_aesimc>;
 
 // Pseudo instructions for AESMCrr/AESIMCrr with a register constraint required
 // for AES fusion on some CPUs.
-let hasSideEffects = 0, mayStore = 0, mayLoad = 0 in {
+let hasSideEffects = 0, mayStore = 0, mayLoad = 0, Predicates = [HasAES] in {
 def AESMCrrTied: Pseudo<(outs V128:$Rd), (ins V128:$Rn), [], "$Rn = $Rd">,
                         Sched<[WriteVq]>;
 def AESIMCrrTied: Pseudo<(outs V128:$Rd), (ins V128:$Rn), [], "$Rn = $Rd">,
@@ -9084,18 +9142,30 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
   // some verifier checks for outlined functions.
   def TCRETURNriALL : Pseudo<(outs), (ins GPR64:$dst, i32imm:$FPDiff), []>,
                       Sched<[WriteBrReg]>;
-  // Indirect tail-call limited to only use registers (x16 and x17) which are
-  // allowed to tail-call a "BTI c" instruction.
-  def TCRETURNriBTI : Pseudo<(outs), (ins rtcGPR64:$dst, i32imm:$FPDiff), []>,
+
+  // Indirect tail-calls with reduced register classes, needed for BTI and
+  // PAuthLR.
+  def TCRETURNrix16x17 : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff), []>,
+                      Sched<[WriteBrReg]>;
+  def TCRETURNrix17 : Pseudo<(outs), (ins tcGPRx17:$dst, i32imm:$FPDiff), []>,
+                      Sched<[WriteBrReg]>;
+  def TCRETURNrinotx16 : Pseudo<(outs), (ins tcGPRnotx16:$dst, i32imm:$FPDiff), []>,
                       Sched<[WriteBrReg]>;
 }
 
 def : Pat<(AArch64tcret tcGPR64:$dst, (i32 timm:$FPDiff)),
           (TCRETURNri tcGPR64:$dst, imm:$FPDiff)>,
-      Requires<[NotUseBTI]>;
-def : Pat<(AArch64tcret rtcGPR64:$dst, (i32 timm:$FPDiff)),
-          (TCRETURNriBTI rtcGPR64:$dst, imm:$FPDiff)>,
-      Requires<[UseBTI]>;
+      Requires<[TailCallAny]>;
+def : Pat<(AArch64tcret tcGPRx16x17:$dst, (i32 timm:$FPDiff)),
+          (TCRETURNrix16x17 tcGPRx16x17:$dst, imm:$FPDiff)>,
+      Requires<[TailCallX16X17]>;
+def : Pat<(AArch64tcret tcGPRx17:$dst, (i32 timm:$FPDiff)),
+          (TCRETURNrix17 tcGPRx17:$dst, imm:$FPDiff)>,
+      Requires<[TailCallX17]>;
+def : Pat<(AArch64tcret tcGPRnotx16:$dst, (i32 timm:$FPDiff)),
+          (TCRETURNrinotx16 tcGPRnotx16:$dst, imm:$FPDiff)>,
+      Requires<[TailCallNotX16]>;
+
 def : Pat<(AArch64tcret tglobaladdr:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
 def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
@@ -9317,12 +9387,10 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
 //-----------------------------------------------------------------------------
 // v8.3 Pointer Authentication late patterns
 
-let Predicates = [HasPAuth] in {
 def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
-          (MOVKXi GPR64:$Rd, (trunc_imm imm64_0_65535:$imm), 48)>;
+          (PAUTH_BLEND GPR64:$Rd, (trunc_imm imm64_0_65535:$imm))>;
 def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
           (BFMXri GPR64:$Rd, GPR64:$Rn, 16, 15)>;
-}
 
 //-----------------------------------------------------------------------------
 

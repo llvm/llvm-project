@@ -7162,13 +7162,11 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
 
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
-  if (const RecordType *UT = Expr->getType()->getAsUnionType()) {
-    if (UT->getDecl()->hasAttr<TransparentUnionAttr>())
-      if (const CompoundLiteralExpr *CLE =
-          dyn_cast<CompoundLiteralExpr>(Expr))
-        if (const InitListExpr *ILE =
-            dyn_cast<InitListExpr>(CLE->getInitializer()))
-          Expr = ILE->getInit(0);
+  if (const RecordType *UT = Expr->getType()->getAsUnionType();
+      UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+    if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
+      if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
+        Expr = ILE->getInit(0);
   }
 
   bool Result;
@@ -7513,47 +7511,43 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
 
-    // If the callee uses AArch64 SME ZA state but the caller doesn't define
-    // any, then this is an error.
-    FunctionType::ArmStateValue ArmZAState =
+    FunctionType::ArmStateValue CalleeArmZAState =
         FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
-    if (ArmZAState != FunctionType::ARM_None) {
+    FunctionType::ArmStateValue CalleeArmZT0State =
+        FunctionType::getArmZT0State(ExtInfo.AArch64SMEAttributes);
+    if (CalleeArmZAState != FunctionType::ARM_None ||
+        CalleeArmZT0State != FunctionType::ARM_None) {
       bool CallerHasZAState = false;
+      bool CallerHasZT0State = false;
       if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
         auto *Attr = CallerFD->getAttr<ArmNewAttr>();
         if (Attr && Attr->isNewZA())
           CallerHasZAState = true;
-        else if (const auto *FPT =
-                     CallerFD->getType()->getAs<FunctionProtoType>())
-          CallerHasZAState = FunctionType::getArmZAState(
-                                 FPT->getExtProtoInfo().AArch64SMEAttributes) !=
-                             FunctionType::ARM_None;
-      }
-
-      if (!CallerHasZAState)
-        Diag(Loc, diag::err_sme_za_call_no_za_state);
-    }
-
-    // If the callee uses AArch64 SME ZT0 state but the caller doesn't define
-    // any, then this is an error.
-    FunctionType::ArmStateValue ArmZT0State =
-        FunctionType::getArmZT0State(ExtInfo.AArch64SMEAttributes);
-    if (ArmZT0State != FunctionType::ARM_None) {
-      bool CallerHasZT0State = false;
-      if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
-        auto *Attr = CallerFD->getAttr<ArmNewAttr>();
         if (Attr && Attr->isNewZT0())
           CallerHasZT0State = true;
-        else if (const auto *FPT =
-                     CallerFD->getType()->getAs<FunctionProtoType>())
-          CallerHasZT0State =
+        if (const auto *FPT = CallerFD->getType()->getAs<FunctionProtoType>()) {
+          CallerHasZAState |=
+              FunctionType::getArmZAState(
+                  FPT->getExtProtoInfo().AArch64SMEAttributes) !=
+              FunctionType::ARM_None;
+          CallerHasZT0State |=
               FunctionType::getArmZT0State(
                   FPT->getExtProtoInfo().AArch64SMEAttributes) !=
               FunctionType::ARM_None;
+        }
       }
 
-      if (!CallerHasZT0State)
+      if (CalleeArmZAState != FunctionType::ARM_None && !CallerHasZAState)
+        Diag(Loc, diag::err_sme_za_call_no_za_state);
+
+      if (CalleeArmZT0State != FunctionType::ARM_None && !CallerHasZT0State)
         Diag(Loc, diag::err_sme_zt0_call_no_zt0_state);
+
+      if (CallerHasZAState && CalleeArmZAState == FunctionType::ARM_None &&
+          CalleeArmZT0State != FunctionType::ARM_None) {
+        Diag(Loc, diag::err_sme_unimplemented_za_save_restore);
+        Diag(Loc, diag::note_sme_use_preserves_za);
+      }
     }
   }
 
@@ -7611,9 +7605,8 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   unsigned NumArgs = TheCall->getNumArgs();
 
   Expr *ImplicitThis = nullptr;
-  if (IsMemberOperatorCall && !FDecl->isStatic() &&
-      !FDecl->hasCXXExplicitFunctionObjectParameter()) {
-    // If this is a call to a non-static member operator, hide the first
+  if (IsMemberOperatorCall && !FDecl->hasCXXExplicitFunctionObjectParameter()) {
+    // If this is a call to a member operator, hide the first
     // argument from checkCall.
     // FIXME: Our choice of AST representation here is less than ideal.
     ImplicitThis = Args[0];
@@ -15683,11 +15676,18 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       if (S.SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_vector_scalar);
+    } else if (S.getLangOpts().HLSL &&
+               Target->castAs<VectorType>()->getNumElements() <
+                   Source->castAs<VectorType>()->getNumElements()) {
+      // Diagnose vector truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(S, E, T, CC, diag::warn_hlsl_impcast_vector_truncation);
     }
 
     // If the vector cast is cast between two vectors of the same size, it is
-    // a bitcast, not a conversion.
-    if (S.Context.getTypeSize(Source) == S.Context.getTypeSize(Target))
+    // a bitcast, not a conversion, except under HLSL where it is a conversion.
+    if (!S.getLangOpts().HLSL &&
+        S.Context.getTypeSize(Source) == S.Context.getTypeSize(Target))
       return;
 
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
@@ -16134,7 +16134,10 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 /// Check conversion of given expression to boolean.
 /// Input argument E is a logical expression.
 static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
-  if (S.getLangOpts().Bool)
+  // Run the bool-like conversion checks only for C since there bools are
+  // still not used as the return type from "boolean" operators or as the input
+  // type for conditional operators.
+  if (S.getLangOpts().CPlusPlus)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isAtomicType())
     return;
@@ -16654,6 +16657,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     struct Value {
       explicit Value(unsigned Parent) : Parent(Parent), Merged(false) {}
       unsigned Parent : 31;
+      LLVM_PREFERRED_TYPE(bool)
       unsigned Merged : 1;
     };
     SmallVector<Value, 8> Values;
@@ -17185,7 +17189,7 @@ public:
     //  evaluates to true.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitRHS = !EvalOK || !EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17217,7 +17221,7 @@ public:
     //  [...] the second operand is not evaluated if the first operand is false.
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(BO->getLHS(), EvalResult);
-    bool ShouldVisitRHS = !EvalOK || (EvalOK && EvalResult);
+    bool ShouldVisitRHS = !EvalOK || EvalResult;
     if (ShouldVisitRHS) {
       Region = RHSRegion;
       Visit(BO->getRHS());
@@ -17268,8 +17272,8 @@ public:
     // evaluated. [...]
     bool EvalResult = false;
     bool EvalOK = Eval.evaluate(CO->getCond(), EvalResult);
-    bool ShouldVisitTrueExpr = !EvalOK || (EvalOK && EvalResult);
-    bool ShouldVisitFalseExpr = !EvalOK || (EvalOK && !EvalResult);
+    bool ShouldVisitTrueExpr = !EvalOK || EvalResult;
+    bool ShouldVisitFalseExpr = !EvalOK || !EvalResult;
     if (ShouldVisitTrueExpr) {
       Region = TrueRegion;
       Visit(CO->getTrueExpr());

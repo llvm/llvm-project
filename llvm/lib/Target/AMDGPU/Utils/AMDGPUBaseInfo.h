@@ -42,7 +42,18 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
+/// Generic target versions emitted by this version of LLVM.
+///
+/// These numbers are incremented every time a codegen breaking change occurs
+/// within a generic family.
+namespace GenericVersion {
+static constexpr unsigned GFX9 = 1;
+static constexpr unsigned GFX10_1 = 1;
+static constexpr unsigned GFX10_3 = 1;
+static constexpr unsigned GFX11 = 1;
+} // namespace GenericVersion
+
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
@@ -50,12 +61,15 @@ bool isHsaAbi(const MCSubtargetInfo &STI);
 /// \returns Code object version from the IR module flag.
 unsigned getAMDHSACodeObjectVersion(const Module &M);
 
+/// \returns Code object version from ELF's e_ident[EI_ABIVERSION].
+unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
+
 /// \returns The default HSA code object version. This should only be used when
 /// we lack a more accurate CodeObjectVersion value (e.g. from the IR module
 /// flag or a .amdhsa_code_object_version directive)
 unsigned getDefaultAMDHSACodeObjectVersion();
 
-/// \returns ABIVersion suitable for use in ELF's e_ident[ABIVERSION]. \param
+/// \returns ABIVersion suitable for use in ELF's e_ident[EI_ABIVERSION]. \param
 /// CodeObjectVersion is a value returned by getAMDHSACodeObjectVersion().
 uint8_t getELFABIVersion(const Triple &OS, unsigned CodeObjectVersion);
 
@@ -485,6 +499,9 @@ bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 bool isVOPC64DPP(unsigned Opc);
+
+LLVM_READONLY
+bool isVOPCAsmOnly(unsigned Opc);
 
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
@@ -1318,17 +1335,24 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
     return 8;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
     return 2;
 
@@ -1357,10 +1381,16 @@ LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
 bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2I16(uint32_t Literal);
+
+LLVM_READNONE
+std::optional<unsigned> getInlineEncodingV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
@@ -1370,6 +1400,9 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
 bool isInlinableLiteralV2I16(uint32_t Literal);
+
+LLVM_READNONE
+bool isInlinableLiteralV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 bool isInlinableLiteralV2F16(uint32_t Literal);

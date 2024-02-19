@@ -36,9 +36,9 @@
 #  pragma GCC system_header
 #endif
 
-typedef ::timespec __libcpp_timespec_t;
-
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+using __libcpp_timespec_t = ::timespec;
 
 //
 // Mutex

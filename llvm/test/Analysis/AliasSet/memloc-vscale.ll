@@ -34,7 +34,8 @@ define void @ss2(ptr %p) {
   ret void
 }
 ; CHECK-LABEL: Alias sets for function 'son':
-; CHECK: AliasSet[{{.*}}, 2] may alias, Mod       Memory locations: (ptr %g, LocationSize::precise(vscale x 16)), (ptr %p, LocationSize::precise(8))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %g, LocationSize::precise(vscale x 16))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod       Memory locations: (ptr %p, LocationSize::precise(8))
 define void @son(ptr %p) {
   %g = getelementptr i8, ptr %p, i64 8
   store <vscale x 2 x i64> zeroinitializer, ptr %g, align 2

@@ -2093,7 +2093,7 @@ TEST(TransferTest, TemporaryObject) {
 
 TEST(TransferTest, ElidableConstructor) {
   // This test is effectively the same as TransferTest.TemporaryObject, but
-  // the code is compiled as C++ 14.
+  // the code is compiled as C++14.
   std::string Code = R"(
     struct A {
       int Bar;
@@ -2311,6 +2311,81 @@ TEST(TransferTest, AssignmentOperatorWithInitAndInheritance) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsVoid) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      void operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsByValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      S operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, InitListExprAsXValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    void target() {
+      bool&& Foo{false};
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo");
+        ASSERT_TRUE(FooVal.formula().isLiteral(false));
+      });
+}
+
+TEST(TransferTest, InitListExprAsUnion) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    class target {
+      union {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      constexpr target() : F{nullptr} {}
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Just verify that it doesn't crash.
+      });
 }
 
 TEST(TransferTest, CopyConstructor) {
@@ -2732,6 +2807,39 @@ TEST(TransferTest, ResultObjectLocationForDefaultInitExpr) {
         // For the time being, we just document the current erroneous behavior
         // here (this should be `EXPECT_EQ` when the behavior is fixed).
         EXPECT_NE(&Loc, Env.getThisPointeeStorageLocation()->getChild(*SField));
+      });
+}
+
+// This test ensures that CXXOperatorCallExpr returning prvalues are correctly
+// handled by the transfer functions, especially that `getResultObjectLocation`
+// correctly returns a storage location for those.
+TEST(TransferTest, ResultObjectLocationForCXXOperatorCallExpr) {
+  std::string Code = R"(
+    struct A {
+      A operator+(int);
+    };
+
+    void target() {
+      A a;
+      a + 3;
+      (void)0; // [[p]]
+    }
+  )";
+  using ast_matchers::cxxOperatorCallExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *CallExpr = selectFirst<CXXOperatorCallExpr>(
+            "call_expr",
+            match(cxxOperatorCallExpr().bind("call_expr"), ASTCtx));
+
+        EXPECT_NE(&Env.getResultObjectLocation(*CallExpr), nullptr);
       });
 }
 

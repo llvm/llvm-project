@@ -141,7 +141,7 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 namespace clang {
 namespace interp {
 static void popArg(InterpState &S, const Expr *Arg) {
-  PrimType Ty = S.getContext().classify(Arg->getType()).value_or(PT_Ptr);
+  PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
@@ -169,16 +169,27 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.
     // This code path should be executed very rarely.
-    const auto *CE =
-        cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
-    unsigned FixedParams = CurFunc->getNumParams();
-    int32_t ArgsToPop = CE->getNumArgs() - FixedParams;
-    assert(ArgsToPop >= 0);
-    for (int32_t I = ArgsToPop - 1; I >= 0; --I) {
-      const Expr *A = CE->getArg(FixedParams + I);
+    unsigned NumVarArgs;
+    const Expr *const *Args = nullptr;
+    unsigned NumArgs = 0;
+    const Expr *CallSite = S.Current->Caller->getExpr(S.Current->getRetPC());
+    if (const auto *CE = dyn_cast<CallExpr>(CallSite)) {
+      Args = CE->getArgs();
+      NumArgs = CE->getNumArgs();
+    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite)) {
+      Args = CE->getArgs();
+      NumArgs = CE->getNumArgs();
+    } else
+      assert(false && "Can't get arguments from that expression type");
+
+    assert(NumArgs >= CurFunc->getNumWrittenParams());
+    NumVarArgs = NumArgs - CurFunc->getNumWrittenParams();
+    for (unsigned I = 0; I != NumVarArgs; ++I) {
+      const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
     }
   }
+
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
   S.Current->popArgs();
@@ -272,7 +283,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isZero() && !Ptr.isDummy();
+  return !Ptr.isDummy();
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -356,6 +367,23 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isInitialized())
+    return true;
+
+  assert(S.getLangOpts().CPlusPlus);
+  const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
+  if ((!VD->hasConstantInitialization() &&
+       VD->mightBeUsableInConstantExpressions(S.getCtx())) ||
+      (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
+       !VD->hasICEInitializer(S.getCtx()))) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+  }
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
@@ -381,6 +409,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Assign))
+    return false;
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -447,6 +477,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
           return false;
 
+        // If the declaration is defined _and_ declared 'constexpr', the below
+        // diagnostic doesn't add anything useful.
+        if (DiagDecl->isDefined() && DiagDecl->isConstexpr())
+          return false;
+
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
         S.Note(DiagDecl->getLocation(), diag::note_declared_at);
@@ -495,17 +530,6 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
   S.Note(MD->getLocation(), diag::note_declared_at);
-  return false;
-}
-
-bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
-                                   const Pointer &Ptr) {
-  if (!S.inConstantContext())
-    return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
   return false;
 }
 

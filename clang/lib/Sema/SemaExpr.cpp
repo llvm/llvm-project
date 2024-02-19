@@ -6201,6 +6201,12 @@ struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
 
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (const FunctionDecl *FD = E->getConstructor())
+      HasImmediateCalls |= FD->isImmediateFunction();
+    return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
+  }
+
   // SourceLocExpr are not immediate invocations
   // but CXXDefaultInitExpr/CXXDefaultArgExpr containing a SourceLocExpr
   // need to be rebuilt so that they refer to the correct SourceLocation and
@@ -14073,7 +14079,7 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
     Expr::EvalResult EVResult;
     if (RHS.get()->EvaluateAsInt(EVResult, Context)) {
       llvm::APSInt Result = EVResult.Val.getInt();
-      if ((getLangOpts().Bool && !RHS.get()->getType()->isBooleanType() &&
+      if ((getLangOpts().CPlusPlus && !RHS.get()->getType()->isBooleanType() &&
            !RHS.get()->getExprLoc().isMacroID()) ||
           (Result != 0 && Result != 1)) {
         Diag(Loc, diag::warn_logical_instead_of_bitwise)
@@ -19528,16 +19534,6 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
   }
 
-  BindingDecl *BD = dyn_cast<BindingDecl>(Var);
-  // FIXME: We should support capturing structured bindings in OpenMP.
-  if (!Invalid && BD && S.LangOpts.OpenMP) {
-    if (BuildAndDiagnose) {
-      S.Diag(Loc, diag::err_capture_binding_openmp) << Var;
-      S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-    }
-    Invalid = true;
-  }
-
   if (BuildAndDiagnose && S.Context.getTargetInfo().getTriple().isWasm() &&
       CaptureType.getNonReferenceType().isWebAssemblyReferenceType()) {
     S.Diag(Loc, diag::err_wasm_ca_reference) << 0;
@@ -19879,6 +19875,14 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
+          // FIXME: We should support capturing structured bindings in OpenMP.
+          if (isa<BindingDecl>(Var)) {
+            if (BuildAndDiagnose) {
+              Diag(ExprLoc, diag::err_capture_binding_openmp) << Var;
+              Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+            }
+            return true;
+          }
           OpenMPClauseKind IsOpenMPPrivateDecl = isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably

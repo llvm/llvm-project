@@ -14,15 +14,16 @@
 #include <__chrono/duration.h>
 #include <__config>
 #include <ctime>
+#include <errno.h>
 #include <threads.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
 #endif
 
-typedef ::timespec __libcpp_timespec_t;
-
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+using __libcpp_timespec_t = ::timespec;
 
 //
 // Mutex

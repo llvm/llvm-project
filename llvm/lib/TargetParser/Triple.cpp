@@ -188,7 +188,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case spirv:
   case spirv32:
-  case spirv64:     return "spirv";
+  case spirv64:     return "spv";
 
   case kalimba:     return "kalimba";
   case lanai:       return "lanai";
@@ -323,6 +323,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Callable: return "callable";
   case Mesh: return "mesh";
   case Amplification: return "amplification";
+  case OpenCL:
+    return "opencl";
   case OpenHOS: return "ohos";
   }
 
@@ -692,6 +694,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("callable", Triple::Callable)
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
+      .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("ohos", Triple::OpenHOS)
       .Default(Triple::UnknownEnvironment);
 }
@@ -1219,8 +1222,24 @@ VersionTuple Triple::getEnvironmentVersion() const {
 
 StringRef Triple::getEnvironmentVersionString() const {
   StringRef EnvironmentName = getEnvironmentName();
+
+  // none is a valid environment type - it basically amounts to a freestanding
+  // environment.
+  if (EnvironmentName == "none")
+    return "";
+
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
   EnvironmentName.consume_front(EnvironmentTypeName);
+
+  if (EnvironmentName.contains("-")) {
+    // -obj is the suffix
+    if (getObjectFormat() != Triple::UnknownObjectFormat) {
+      StringRef ObjectFormatTypeName =
+          getObjectFormatTypeName(getObjectFormat());
+      const std::string tmp = (Twine("-") + ObjectFormatTypeName).str();
+      EnvironmentName.consume_back(tmp);
+    }
+  }
   return EnvironmentName;
 }
 
@@ -1439,7 +1458,7 @@ void Triple::setOSAndEnvironmentName(StringRef Str) {
   setTriple(getArchName() + "-" + getVendorName() + "-" + Str);
 }
 
-static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
+unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   switch (Arch) {
   case llvm::Triple::UnknownArch:
     return 0;

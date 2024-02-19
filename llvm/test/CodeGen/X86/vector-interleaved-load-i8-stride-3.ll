@@ -770,7 +770,7 @@ define void @load_i8_stride3_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX-NEXT:    vpalignr {{.*#+}} xmm2 = xmm3[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX-NEXT:    vpmovsxdq {{.*#+}} xmm4 = [18446744073709551615,16777215]
 ; AVX-NEXT:    vpblendvb %xmm4, %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm3[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
@@ -792,7 +792,7 @@ define void @load_i8_stride3_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm2 = xmm3[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX2-NEXT:    vpmovsxdq {{.*#+}} xmm4 = [18446744073709551615,16777215]
 ; AVX2-NEXT:    vpblendvb %xmm4, %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm3[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
@@ -814,7 +814,7 @@ define void @load_i8_stride3_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-FP-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-FP-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-FP-NEXT:    vpalignr {{.*#+}} xmm2 = xmm3[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
-; AVX2-FP-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX2-FP-NEXT:    vpmovsxdq {{.*#+}} xmm4 = [18446744073709551615,16777215]
 ; AVX2-FP-NEXT:    vpblendvb %xmm4, %xmm0, %xmm1, %xmm1
 ; AVX2-FP-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm3[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-FP-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
@@ -836,7 +836,7 @@ define void @load_i8_stride3_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-FCP-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-FCP-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-FCP-NEXT:    vpalignr {{.*#+}} xmm2 = xmm3[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
-; AVX2-FCP-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
+; AVX2-FCP-NEXT:    vpmovsxdq {{.*#+}} xmm4 = [18446744073709551615,16777215]
 ; AVX2-FCP-NEXT:    vpblendvb %xmm4, %xmm0, %xmm1, %xmm1
 ; AVX2-FCP-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm3[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-FCP-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]

@@ -1282,3 +1282,35 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(ptr %arg) {
   %tmp8 = or i32 %tmp7, %tmp30
   ret i32 %tmp8
 }
+
+define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
+; CHECK-LABEL: pr80911_vector_load_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl (%edx), %esi
+; CHECK-NEXT:    movzwl (%edx), %eax
+; CHECK-NEXT:    movl $0, (%ecx)
+; CHECK-NEXT:    movl %esi, (%edx)
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: pr80911_vector_load_multiuse:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl (%rdi), %ecx
+; CHECK64-NEXT:    movzwl (%rdi), %eax
+; CHECK64-NEXT:    movl $0, (%rsi)
+; CHECK64-NEXT:    movl %ecx, (%rdi)
+; CHECK64-NEXT:    retq
+  %load = load <4 x i8>, ptr %ptr, align 16
+  store i32 0, ptr %clobber
+  store <4 x i8> %load, ptr %ptr, align 16
+  %e1 = extractelement <4 x i8> %load, i64 1
+  %e1.ext = zext i8 %e1 to i32
+  %e1.ext.shift = shl nuw nsw i32 %e1.ext, 8
+  %e0 = extractelement <4 x i8> %load, i64 0
+  %e0.ext = zext i8 %e0 to i32
+  %res = or i32 %e1.ext.shift, %e0.ext
+  ret i32 %res
+}

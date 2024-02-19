@@ -44,7 +44,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
-  auto Res = C.interpretExpr(E);
+  auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
   if (Res.isInvalid()) {
     Stk.clear();
@@ -58,16 +58,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   Stk.clear();
 #endif
 
-  // Implicit lvalue-to-rvalue conversion.
-  if (E->isGLValue()) {
-    std::optional<APValue> RValueResult = Res.toRValue();
-    if (!RValueResult) {
-      return false;
-    }
-    Result = *RValueResult;
-  } else {
-    Result = Res.toAPValue();
-  }
+  Result = Res.toAPValue();
 
   return true;
 }
@@ -97,7 +88,10 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
-  auto Res = C.interpretDecl(VD);
+  bool CheckGlobalInitialized =
+      shouldBeGloballyIndexed(VD) &&
+      (VD->getType()->isRecordType() || VD->getType()->isArrayType());
+  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     Stk.clear();
     return false;
@@ -110,22 +104,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   Stk.clear();
 #endif
 
-  // Ensure global variables are fully initialized.
-  if (shouldBeGloballyIndexed(VD) && !Res.isInvalid() &&
-      (VD->getType()->isRecordType() || VD->getType()->isArrayType())) {
-    assert(Res.isLValue());
-
-    if (!Res.checkFullyInitialized(C.getState()))
-      return false;
-
-    // lvalue-to-rvalue conversion.
-    std::optional<APValue> RValueResult = Res.toRValue();
-    if (!RValueResult)
-      return false;
-    Result = *RValueResult;
-
-  } else
-    Result = Res.toAPValue();
+  Result = Res.toAPValue();
   return true;
 }
 
@@ -207,7 +186,8 @@ bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
 
   {
     InterpState State(Parent, *P, Stk, *this);
-    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
+    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
+                                    Func->getArgSize());
     if (Interpret(State, Result)) {
       assert(Stk.empty());
       return true;

@@ -13,8 +13,8 @@ target datalayout = "p:64:64:64"
 declare void @my_other_async_function(ptr %async.ctxt)
 
 ; Function that implements the dispatch to the callee function.
-define swiftcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) {
-  tail call swiftcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
+define swifttailcc void @my_async_function.my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt, ptr %task, ptr %actor) alwaysinline {
+  musttail call swifttailcc void %fnPtr(ptr %async.ctxt, ptr %task, ptr %actor)
   ret void
 }
 
@@ -32,20 +32,20 @@ entry:
   <{ i32 trunc ( ; Relative pointer to async function
        i64 sub (
          i64 ptrtoint (ptr @unreachable to i64),
-         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @unreachable_fp, i32 0, i32 1) to i64)
+         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @unreachable_fp, i32 0, i32 1) to i64)
        )
      to i32),
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @unreachable(ptr %async.ctxt, ptr %task, ptr %actor)  {
+define swifttailcc void @unreachable(ptr %async.ctxt, ptr %task, ptr %actor)  {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, ptr %tmp, i64 0, i32 0
   %proj.2 = getelementptr inbounds { i64, i64 }, ptr %tmp, i64 0, i32 1
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
-          ptr bitcast (<{i32, i32}>* @unreachable_fp to ptr))
+          ptr @unreachable_fp)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   store i64 0, ptr %proj.1, align 8
   store i64 1, ptr %proj.2, align 8
@@ -53,7 +53,7 @@ entry:
 
 	; Begin lowering: apply %my_other_async_function(%args...)
   ; setup callee context
-  %arg1 = bitcast <{ i32, i32}>* @my_other_async_function_fp to ptr
+  %arg1 = bitcast ptr @my_other_async_function_fp to ptr
   %callee_context = call ptr @llvm.coro.async.context.alloc(ptr %task, ptr %arg1)
   ; store the return continuation
   %callee_context.return_to_caller.addr = getelementptr inbounds %async.ctxt, ptr %callee_context, i32 0, i32 1
@@ -77,11 +77,11 @@ entry:
   unreachable
 }
 
-; CHECK: define swiftcc void @unreachable
+; CHECK: define swifttailcc void @unreachable
 ; CHECK-NOT: @llvm.coro.suspend.async
 ; CHECK: return
 
-; CHECK: define internal swiftcc void @unreachable.resume.0
+; CHECK: define internal swifttailcc void @unreachable.resume.0
 ; CHECK: unreachable
 
 declare ptr @llvm.coro.prepare.async(ptr)

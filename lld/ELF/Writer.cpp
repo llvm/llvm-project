@@ -1104,7 +1104,9 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   PhdrEntry *last = nullptr;
   PhdrEntry *lastRO = nullptr;
-
+  auto isLarge = [](OutputSection *osec) {
+    return config->emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
+  };
   for (Partition &part : partitions) {
     for (PhdrEntry *p : part.phdrs) {
       if (p->p_type != PT_LOAD)
@@ -1124,10 +1126,11 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   if (last) {
-    // _edata points to the end of the last mapped initialized section.
+    // _edata points to the end of the last non-large mapped initialized
+    // section.
     OutputSection *edata = nullptr;
     for (OutputSection *os : outputSections) {
-      if (os->type != SHT_NOBITS)
+      if (os->type != SHT_NOBITS && !isLarge(os))
         edata = os;
       if (os == last->lastSec)
         break;
@@ -1518,12 +1521,12 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       osd->osec.sortRank = getSectionRank(osd->osec);
   if (!script->hasSectionsCommand) {
-    // We know that all the OutputSections are contiguous in this case.
-    auto isSection = [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); };
-    std::stable_sort(
-        llvm::find_if(script->sectionCommands, isSection),
-        llvm::find_if(llvm::reverse(script->sectionCommands), isSection).base(),
-        compareSections);
+    // OutputDescs are mostly contiguous, but may be interleaved with
+    // SymbolAssignments in the presence of INSERT commands.
+    auto mid = std::stable_partition(
+        script->sectionCommands.begin(), script->sectionCommands.end(),
+        [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); });
+    std::stable_sort(script->sectionCommands.begin(), mid, compareSections);
   }
 
   // Process INSERT commands and update output section attributes. From this
@@ -1752,8 +1755,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       }
     }
   }
-  if (!config->relocatable && config->emachine == EM_RISCV)
-    riscvFinalizeRelax(pass);
+  if (!config->relocatable)
+    target->finalizeRelax(pass);
 
   if (config->relocatable)
     for (OutputSection *sec : outputSections)
@@ -2353,17 +2356,12 @@ static bool needsPtLoad(OutputSection *sec) {
   return true;
 }
 
-// Linker scripts are responsible for aligning addresses. Unfortunately, most
-// linker scripts are designed for creating two PT_LOADs only, one RX and one
-// RW. This means that there is no alignment in the RO to RX transition and we
-// cannot create a PT_LOAD there.
+// Adjust phdr flags according to certain options.
 static uint64_t computeFlags(uint64_t flags) {
   if (config->omagic)
     return PF_R | PF_W | PF_X;
   if (config->executeOnly && (flags & PF_X))
     return flags & ~PF_R;
-  if (config->singleRoRx && !(flags & PF_W))
-    return flags | PF_X;
   return flags;
 }
 
@@ -2451,8 +2449,8 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // different flags or is loaded at a discontiguous address or memory region
-    // using AT or AT> linker script command, respectively.
+    // incompatible flags or is loaded at a discontiguous address or memory
+    // region using AT or AT> linker script command, respectively.
     //
     // As an exception, we don't create a separate load segment for the ELF
     // headers, even if the first "real" output has an AT or AT> attribute.
@@ -2465,13 +2463,22 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
+    // When --no-rosegment is specified, RO and RX sections are compatible.
+    uint32_t incompatible = flags ^ newFlags;
+    if (config->singleRoRx && !(newFlags & PF_W))
+      incompatible &= ~PF_X;
+    if (incompatible)
+      load = nullptr;
+
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
-    if (!(load && newFlags == flags && sec != relroEnd &&
-          sec->memRegion == load->firstSec->memRegion &&
-          (sameLMARegion || load->lastSec == Out::programHeaders) &&
-          (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
-           load->lastSec->type != SHT_NOBITS))) {
+    if (load && sec != relroEnd &&
+        sec->memRegion == load->firstSec->memRegion &&
+        (sameLMARegion || load->lastSec == Out::programHeaders) &&
+        (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
+         load->lastSec->type != SHT_NOBITS)) {
+      load->p_flags |= newFlags;
+    } else {
       load = addHdr(PT_LOAD, newFlags);
       flags = newFlags;
     }

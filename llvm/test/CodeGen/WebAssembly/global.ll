@@ -7,14 +7,14 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-NOT: llvm.used
 ; CHECK-NOT: llvm.metadata
-@llvm.used = appending global [1 x i32*] [i32* @g], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @g], section "llvm.metadata"
 
 ; CHECK: foo:
 ; CHECK: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.load $push1=, answer($pop0){{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @foo() {
-  %a = load i32, i32* @answer
+  %a = load i32, ptr @answer
   ret i32 %a
 }
 
@@ -22,10 +22,10 @@ define i32 @foo() {
 ; CHECK-NEXT: .functype call_memcpy (i32, i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: call            $push0=, memcpy, $0, $1, $2{{$}}
 ; CHECK-NEXT: return          $pop0{{$}}
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1)
-define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %p, i8* %q, i32 %n, i1 false)
-  ret i8* %p
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, i1)
+define ptr @call_memcpy(ptr %p, ptr nocapture readonly %q, i32 %n) {
+  tail call void @llvm.memcpy.p0.p0.i32(ptr %p, ptr %q, i32 %n, i1 false)
+  ret ptr %p
 }
 
 ; CHECK: .type   .Lg,@object
@@ -187,7 +187,7 @@ define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
 ; CHECK-NEXT: .int32 arr+80
 ; CHECK-NEXT: .size ptr, 4
 @arr = global [128 x i32] zeroinitializer, align 16
-@ptr = global i32* getelementptr inbounds ([128 x i32], [128 x i32]* @arr, i32 0, i32 20), align 4
+@ptr = global ptr getelementptr inbounds ([128 x i32], ptr @arr, i32 0, i32 20), align 4
 
 ; Constant global.
 ; CHECK: .type    rom,@object{{$}}
@@ -211,11 +211,11 @@ define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
 ; CHECK-NEXT: .int32      array+4
 ; CHECK-NEXT: .size       pointer_to_array, 4
 @array = internal constant [8 x i8] zeroinitializer, align 1
-@pointer_to_array = constant i8* getelementptr inbounds ([8 x i8], [8 x i8]* @array, i32 0, i32 4), align 4
+@pointer_to_array = constant ptr getelementptr inbounds ([8 x i8], ptr @array, i32 0, i32 4), align 4
 
 ; Handle external objects with opaque type.
 %struct.ASTRUCT = type opaque
 @g_struct = external global %struct.ASTRUCT, align 1
 define i32 @address_of_opaque()  {
-  ret i32 ptrtoint (%struct.ASTRUCT* @g_struct to i32)
+  ret i32 ptrtoint (ptr @g_struct to i32)
 }

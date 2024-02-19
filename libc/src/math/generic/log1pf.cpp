@@ -64,7 +64,7 @@ LIBC_INLINE float log(double x) {
   FPBits f = xbits;
 
   // Clear the lowest 45 bits.
-  f.bits &= ~0x0000'1FFF'FFFF'FFFFULL;
+  f.set_uintval(f.uintval() & ~0x0000'1FFF'FFFF'FFFFULL);
 
   double d = xbits.get_val() - f.get_val();
   d *= ONE_OVER_F[f_index];

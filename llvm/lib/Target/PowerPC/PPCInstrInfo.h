@@ -404,10 +404,10 @@ public:
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              Register &SrcReg, Register &DstReg,
                              unsigned &SubIdx) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,

@@ -720,6 +720,7 @@ static void addNonWeakDefinition(const Defined *defined) {
 
 void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
+  in.objcStubs->initialize();
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
