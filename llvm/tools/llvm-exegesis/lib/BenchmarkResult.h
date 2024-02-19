@@ -39,7 +39,8 @@ enum ValidationEvent {
   L1ICacheLoadMiss,
   DataTLBLoadMiss,
   DataTLBStoreMiss,
-  InstructionTLBLoadMiss
+  InstructionTLBLoadMiss,
+  BranchPredictionMiss
 };
 
 enum class BenchmarkPhaseSelectorE {
