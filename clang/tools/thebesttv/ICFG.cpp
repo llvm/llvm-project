@@ -110,7 +110,7 @@ void ICFG::addFunction(int fid, const CFG &cfg) {
         tryAndAddCallSite(fid, B);
     }
 
-    const std::string &signature = Global.functionLocations[fid]->name;
+    const std::string &signature = Global.functionLocations[fid].name;
     // process callsites
     for (const auto &[uEntry, uExit] : callsitesToProcess[signature]) {
         addCallAndReturnEdge(uEntry, uExit, fid);

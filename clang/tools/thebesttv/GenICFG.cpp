@@ -53,10 +53,8 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     if (idOfFunction.find(fullSignature) != idOfFunction.end())
         return true;
 
-    NamedLocation *loc = new NamedLocation(*pLoc, fullSignature);
-
     idOfFunction[fullSignature] = functionCnt++;
-    functionLocations.push_back(loc);
+    functionLocations.emplace_back(*pLoc, fullSignature);
 
     CallGraph CG;
     CG.addToCallGraph(D);

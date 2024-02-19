@@ -112,7 +112,7 @@ struct GlobalStat {
 
     int functionCnt;
     std::map<std::string, int> idOfFunction;
-    std::vector<NamedLocation *> functionLocations;
+    std::vector<NamedLocation> functionLocations;
 
     int getIdOfFunction(const std::string &signature) {
         auto it = idOfFunction.find(signature);

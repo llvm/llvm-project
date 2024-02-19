@@ -90,7 +90,7 @@ VarLocResult locateVariable(const std::string &signature, int line,
         return VarLocResult();
     }
 
-    const NamedLocation &loc = *Global.functionLocations[fid];
+    const NamedLocation &loc = Global.functionLocations[fid];
 
     ClangTool Tool(*Global.cb, {loc.file});
     DiagnosticConsumer DC = IgnoringDiagConsumer();
@@ -181,7 +181,7 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     auto [fid, bid] = Global.icfg.functionBlockOfNodeId[u];
     requireTrue(fid != -1);
 
-    const NamedLocation &loc = *Global.functionLocations[fid];
+    const NamedLocation &loc = Global.functionLocations[fid];
 
     llvm::errs() << ">> Node " << u << " is in " << loc.name << " at block "
                  << bid << "\n";
@@ -203,7 +203,7 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
 
     for (const FunctionInfo *fi : functionsInFile.at(loc.file)) {
-        if (fi->signature != Global.functionLocations[fid]->name)
+        if (fi->signature != Global.functionLocations[fid].name)
             continue;
         for (auto BI = fi->cfg->begin(); BI != fi->cfg->end(); ++BI) {
             const CFGBlock &B = **BI;
