@@ -34,8 +34,8 @@ define void @test2() {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl $-1, M1+4
 ; X86-NEXT:    movl $-1, M1
-; X86-NEXT:    pcmpeqd %xmm0, %xmm0
-; X86-NEXT:    movq %xmm0, M2
+; X86-NEXT:    movl $-1, M2+4
+; X86-NEXT:    movl $-1, M2
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:

@@ -5337,35 +5337,33 @@ define void @callfloat_2() {
 ; MIPS32R5-NEXT:    jr $ra
 ; MIPS32R5-NEXT:    nop
 ;
-; MIPS64R5-LABEL: callfloat_2:
-; MIPS64R5:       # %bb.0: # %entry
-; MIPS64R5-NEXT:    daddiu $sp, $sp, -16
-; MIPS64R5-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R5-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64R5-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
-; MIPS64R5-NEXT:    .cfi_offset 31, -8
-; MIPS64R5-NEXT:    .cfi_offset 28, -16
-; MIPS64R5-NEXT:    lui $1, %hi(%neg(%gp_rel(callfloat_2)))
-; MIPS64R5-NEXT:    daddu $1, $1, $25
-; MIPS64R5-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(callfloat_2)))
-; MIPS64R5-NEXT:    ld $1, %got_page(.LCPI37_0)($gp)
-; MIPS64R5-NEXT:    daddiu $1, $1, %got_ofst(.LCPI37_0)
-; MIPS64R5-NEXT:    ld.d $w0, 0($1)
-; MIPS64R5-NEXT:    copy_s.d $4, $w0[0]
-; MIPS64R5-NEXT:    ld $1, %got_page(.LCPI37_1)($gp)
-; MIPS64R5-NEXT:    daddiu $1, $1, %got_ofst(.LCPI37_1)
-; MIPS64R5-NEXT:    ld.d $w0, 0($1)
-; MIPS64R5-NEXT:    copy_s.d $5, $w0[0]
-; MIPS64R5-NEXT:    ld $25, %call16(float2_extern)($gp)
-; MIPS64R5-NEXT:    jalr $25
-; MIPS64R5-NEXT:    nop
-; MIPS64R5-NEXT:    ld $1, %got_disp(gv2f32)($gp)
-; MIPS64R5-NEXT:    sd $2, 0($1)
-; MIPS64R5-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
-; MIPS64R5-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
-; MIPS64R5-NEXT:    daddiu $sp, $sp, 16
-; MIPS64R5-NEXT:    jr $ra
-; MIPS64R5-NEXT:    nop
+; MIPS64R5EB-LABEL: callfloat_2:
+; MIPS64R5EB:       # %bb.0: # %entry
+; MIPS64R5EB-NEXT:    daddiu $sp, $sp, -16
+; MIPS64R5EB-NEXT:    .cfi_def_cfa_offset 16
+; MIPS64R5EB-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+; MIPS64R5EB-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
+; MIPS64R5EB-NEXT:    .cfi_offset 31, -8
+; MIPS64R5EB-NEXT:    .cfi_offset 28, -16
+; MIPS64R5EB-NEXT:    lui $1, %hi(%neg(%gp_rel(callfloat_2)))
+; MIPS64R5EB-NEXT:    daddu $1, $1, $25
+; MIPS64R5EB-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(callfloat_2)))
+; MIPS64R5EB-NEXT:    daddiu $1, $zero, 383
+; MIPS64R5EB-NEXT:    dsll $4, $1, 23
+; MIPS64R5EB-NEXT:    daddiu $1, $zero, 261
+; MIPS64R5EB-NEXT:    dsll $1, $1, 33
+; MIPS64R5EB-NEXT:    daddiu $1, $1, 523
+; MIPS64R5EB-NEXT:    dsll $5, $1, 21
+; MIPS64R5EB-NEXT:    ld $25, %call16(float2_extern)($gp)
+; MIPS64R5EB-NEXT:    jalr $25
+; MIPS64R5EB-NEXT:    nop
+; MIPS64R5EB-NEXT:    ld $1, %got_disp(gv2f32)($gp)
+; MIPS64R5EB-NEXT:    sd $2, 0($1)
+; MIPS64R5EB-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
+; MIPS64R5EB-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64R5EB-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R5EB-NEXT:    jr $ra
+; MIPS64R5EB-NEXT:    nop
 ;
 ; MIPS64EL-LABEL: callfloat_2:
 ; MIPS64EL:       # %bb.0: # %entry
@@ -5394,6 +5392,34 @@ define void @callfloat_2() {
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
+;
+; MIPS64R5EL-LABEL: callfloat_2:
+; MIPS64R5EL:       # %bb.0: # %entry
+; MIPS64R5EL-NEXT:    daddiu $sp, $sp, -16
+; MIPS64R5EL-NEXT:    .cfi_def_cfa_offset 16
+; MIPS64R5EL-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+; MIPS64R5EL-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
+; MIPS64R5EL-NEXT:    .cfi_offset 31, -8
+; MIPS64R5EL-NEXT:    .cfi_offset 28, -16
+; MIPS64R5EL-NEXT:    lui $1, %hi(%neg(%gp_rel(callfloat_2)))
+; MIPS64R5EL-NEXT:    daddu $1, $1, $25
+; MIPS64R5EL-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(callfloat_2)))
+; MIPS64R5EL-NEXT:    daddiu $1, $zero, 383
+; MIPS64R5EL-NEXT:    dsll $4, $1, 55
+; MIPS64R5EL-NEXT:    daddiu $1, $zero, 523
+; MIPS64R5EL-NEXT:    dsll $1, $1, 31
+; MIPS64R5EL-NEXT:    daddiu $1, $1, 261
+; MIPS64R5EL-NEXT:    dsll $5, $1, 22
+; MIPS64R5EL-NEXT:    ld $25, %call16(float2_extern)($gp)
+; MIPS64R5EL-NEXT:    jalr $25
+; MIPS64R5EL-NEXT:    nop
+; MIPS64R5EL-NEXT:    ld $1, %got_disp(gv2f32)($gp)
+; MIPS64R5EL-NEXT:    sd $2, 0($1)
+; MIPS64R5EL-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
+; MIPS64R5EL-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64R5EL-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R5EL-NEXT:    jr $ra
+; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = call <2 x float> @float2_extern(<2 x float> <float 0.0, float -1.0>, <2 x float> <float 12.0, float 14.0>)
   store <2 x float> %0, ptr @gv2f32

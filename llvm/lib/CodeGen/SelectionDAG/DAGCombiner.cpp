@@ -15228,11 +15228,9 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // scalar type is legal. Only do this before legalize ops, since the target
   // maybe depending on the bitcast.
   // First check to see if this is all constant.
-  // TODO: Support FP bitcasts after legalize types.
   if (VT.isVector() &&
       (!LegalTypes ||
-       (!LegalOperations && VT.isInteger() && N0.getValueType().isInteger() &&
-        TLI.isTypeLegal(VT.getVectorElementType()))) &&
+       (!LegalOperations && TLI.isTypeLegal(VT.getVectorElementType()))) &&
       N0.getOpcode() == ISD::BUILD_VECTOR && N0->hasOneUse() &&
       cast<BuildVectorSDNode>(N0)->isConstant())
     return ConstantFoldBITCASTofBUILD_VECTOR(N0.getNode(),

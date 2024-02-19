@@ -50,8 +50,8 @@ define void @concat_of_broadcast_v2f64_v4f64() {
 ; AVX1-NEXT:    movq %rcx, 46348(%rax)
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1065353216,1065353216,1065353216,1065353216,1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vmovups %ymm0, 48296(%rax)
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = [7.812501848093234E-3,0.0E+0]
-; AVX1-NEXT:    vmovsd %xmm0, 47372(%rax)
+; AVX1-NEXT:    movabsq $4575657222473777152, %rcx # imm = 0x3F8000003F800000
+; AVX1-NEXT:    movq %rcx, 47372(%rax)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -61,9 +61,10 @@ define void @concat_of_broadcast_v2f64_v4f64() {
 ; AVX2-NEXT:    movl $1091567616, 30256(%rax) # imm = 0x41100000
 ; AVX2-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; AVX2-NEXT:    movq %rcx, 46348(%rax)
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [4575657222473777152,4575657222473777152,4575657222473777152,4575657222473777152]
 ; AVX2-NEXT:    vmovups %ymm0, 48296(%rax)
-; AVX2-NEXT:    vmovlps %xmm0, 47372(%rax)
+; AVX2-NEXT:    movabsq $4575657222473777152, %rcx # imm = 0x3F8000003F800000
+; AVX2-NEXT:    movq %rcx, 47372(%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 alloca_0:
