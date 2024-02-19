@@ -93,6 +93,14 @@ struct IntelSubgroupsBuiltin {
 #define GET_IntelSubgroupsBuiltins_DECL
 #define GET_IntelSubgroupsBuiltins_IMPL
 
+struct AtomicFloatingBuiltin {
+  StringRef Name;
+  uint32_t Opcode;
+};
+
+#define GET_AtomicFloatingBuiltins_DECL
+#define GET_AtomicFloatingBuiltins_IMPL
+
 struct GetBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
@@ -402,7 +410,7 @@ getSPIRVMemSemantics(std::memory_order MemOrder) {
   case std::memory_order::memory_order_seq_cst:
     return SPIRV::MemorySemantics::SequentiallyConsistent;
   default:
-    llvm_unreachable("Unknown CL memory scope");
+    report_fatal_error("Unknown CL memory scope");
   }
 }
 
@@ -419,7 +427,7 @@ static SPIRV::Scope::Scope getSPIRVScope(SPIRV::CLMemoryScope ClScope) {
   case SPIRV::CLMemoryScope::memory_scope_sub_group:
     return SPIRV::Scope::Subgroup;
   }
-  llvm_unreachable("Unknown CL memory scope");
+  report_fatal_error("Unknown CL memory scope");
 }
 
 static Register buildConstantIntReg(uint64_t Val, MachineIRBuilder &MIRBuilder,
@@ -676,6 +684,38 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   return true;
 }
 
+/// Helper function for building an atomic floating-type instruction.
+static bool buildAtomicFloatingRMWInst(const SPIRV::IncomingCall *Call,
+                                       unsigned Opcode,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  assert(Call->Arguments.size() == 4 &&
+         "Wrong number of atomic floating-type builtin");
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  Register PtrReg = Call->Arguments[0];
+  MRI->setRegClass(PtrReg, &SPIRV::IDRegClass);
+
+  Register ScopeReg = Call->Arguments[1];
+  MRI->setRegClass(ScopeReg, &SPIRV::IDRegClass);
+
+  Register MemSemanticsReg = Call->Arguments[2];
+  MRI->setRegClass(MemSemanticsReg, &SPIRV::IDRegClass);
+
+  Register ValueReg = Call->Arguments[3];
+  MRI->setRegClass(ValueReg, &SPIRV::IDRegClass);
+
+  MIRBuilder.buildInstr(Opcode)
+      .addDef(Call->ReturnRegister)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(PtrReg)
+      .addUse(ScopeReg)
+      .addUse(MemSemanticsReg)
+      .addUse(ValueReg);
+  return true;
+}
+
 /// Helper function for building atomic flag instructions (e.g.
 /// OpAtomicFlagTestAndSet).
 static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
@@ -786,7 +826,7 @@ static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   case SPIRV::Dim::DIM_3D:
     return 3;
   default:
-    llvm_unreachable("Cannot get num components for given Dim");
+    report_fatal_error("Cannot get num components for given Dim");
   }
 }
 
@@ -1157,6 +1197,23 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   }
 }
 
+static bool generateAtomicFloatingInst(const SPIRV::IncomingCall *Call,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode = SPIRV::lookupAtomicFloatingBuiltin(Builtin->Name)->Opcode;
+
+  switch (Opcode) {
+  case SPIRV::OpAtomicFAddEXT:
+  case SPIRV::OpAtomicFMinEXT:
+  case SPIRV::OpAtomicFMaxEXT:
+    return buildAtomicFloatingRMWInst(Call, Opcode, MIRBuilder, GR);
+  default:
+    return false;
+  }
+}
+
 static bool generateBarrierInst(const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVGlobalRegistry *GR) {
@@ -1311,7 +1368,7 @@ getSamplerAddressingModeFromBitmask(unsigned Bitmask) {
   case SPIRV::CLK_ADDRESS_NONE:
     return SPIRV::SamplerAddressingMode::None;
   default:
-    llvm_unreachable("Unknown CL address mode");
+    report_fatal_error("Unknown CL address mode");
   }
 }
 
@@ -2021,6 +2078,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateBuiltinVar(Call.get(), MIRBuilder, GR);
   case SPIRV::Atomic:
     return generateAtomicInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::AtomicFloating:
+    return generateAtomicFloatingInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Barrier:
     return generateBarrierInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Dot:
@@ -2089,7 +2148,7 @@ static Type *parseTypeString(const StringRef Name, LLVMContext &Context) {
     return Type::getFloatTy(Context);
   else if (Name.starts_with("half"))
     return Type::getHalfTy(Context);
-  llvm_unreachable("Unable to recognize type!");
+  report_fatal_error("Unable to recognize type!");
 }
 
 //===----------------------------------------------------------------------===//
