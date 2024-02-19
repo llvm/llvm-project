@@ -825,19 +825,23 @@ backend:X86:
 backend:PowerPC:
   - llvm/include/llvm/IR/IntrinsicsPowerPC.td
   - llvm/lib/Target/PowerPC/**
+  - llvm/test/Analysis/**/PowerPC/**
   - llvm/test/CodeGen/PowerPC/**
-  - llvm/test/MC/PowerPC/**
-  - llvm/test/MC/XCOFF/**
+  - llvm/test/CodeGen/MIR/PowerPC/**
   - llvm/test/DebugInfo/XCOFF/**
   - llvm/test/DebugInfo/PowerPC/**
   - llvm/test/LTO/PowerPC/**
-  - clang/lib/Basic/Targets/PPC.*
-  - clang/lib/Driver/ToolChains/PPC.*
-  - clang/lib/Driver/ToolChains/AIX.*
-  - clang/lib/Driver/ToolChains/Arch/PPC.*
-  - clang/lib/CodeGen/Targets/PPC.cpp
-  - clang/test/CodeGen/PowerPC/**
+  - llvm/test/MC/Disassembler/PowerPC/**
+  - llvm/test/MC/PowerPC/**
+  - llvm/test/MC/XCOFF/**
+  - llvm/test/Transforms/**/PowerPC/**
   - clang/include/clang/Basic/BuiltinsPPC.*
+  - clang/lib/Basic/Targets/PPC.*
+  - clang/lib/CodeGen/Targets/PPC.cpp
+  - clang/lib/Driver/ToolChains/PPC*
+  - clang/lib/Driver/ToolChains/AIX*
+  - clang/lib/Driver/ToolChains/Arch/PPC.*
+  - clang/test/CodeGen/PowerPC/**
 
 third-party:unittests:
   - third-party/unittests/**
