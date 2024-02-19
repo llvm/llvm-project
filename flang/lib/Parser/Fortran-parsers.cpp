@@ -1269,8 +1269,8 @@ constexpr auto loopCount{
     "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
                              parenthesized(nonemptyList(digitString64)))};
 constexpr auto assumeAligned{"DIR$ ASSUME_ALIGNED" >>
-    construct<CompilerDirective::AssumeAligned>(
-        indirect(designator), ":"_tok >> digitString64)};
+    optionalList(construct<CompilerDirective::AssumeAligned>(
+        indirect(designator), ":"_tok >> digitString64))};
 TYPE_PARSER(beginDirective >>
     sourced(construct<CompilerDirective>(ignore_tkr) ||
         construct<CompilerDirective>(loopCount) ||

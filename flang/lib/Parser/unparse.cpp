@@ -1819,9 +1819,10 @@ public:
             [&](const CompilerDirective::LoopCount &lcount) {
               Walk("!DIR$ LOOP COUNT (", lcount.v, ", ", ")");
             },
-            [&](const CompilerDirective::AssumeAligned &assumeAligned) {
+            [&](const std::list<CompilerDirective::AssumeAligned>
+                    &assumeAligned) {
               Word("!DIR$ ASSUME_ALIGNED ");
-              Walk(assumeAligned);
+              Walk(" ", assumeAligned, ", ");
             },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");

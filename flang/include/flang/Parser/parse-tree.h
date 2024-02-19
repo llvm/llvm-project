@@ -3318,7 +3318,7 @@ struct CompilerDirective {
     std::tuple<Name, std::optional<std::uint64_t>> t;
   };
   CharBlock source;
-  std::variant<std::list<IgnoreTKR>, LoopCount, AssumeAligned,
+  std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       std::list<NameValue>>
       u;
 };

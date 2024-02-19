@@ -48,3 +48,10 @@ SUBROUTINE f(n)
     nodes%a(1,i) = nodes%a(1,i)+1 
   END DO 
 END SUBROUTINE f
+
+SUBROUTINE g(a, b)
+  IMPLICIT NONE
+  INTEGER, INTENT(in) :: a(128), b(128)
+  !DIR$ ASSUME_ALIGNED a:32, b:64
+!CHECK: !DIR$ ASSUME_ALIGNED a:32, b:64
+END SUBROUTINE g
