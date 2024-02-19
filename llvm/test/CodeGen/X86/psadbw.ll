@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,X64
 
 ; Only bottom 16 bits are set - upper 48 bits are zero.
-define <2 x i64> @combine_psadbw_shift(<16 x i8> %0, <16 x i8> %1) {
+define <2 x i64> @combine_psadbw_shift(<16 x i8> %0, <16 x i8> %1) nounwind {
 ; CHECK-LABEL: combine_psadbw_shift:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
@@ -14,7 +14,7 @@ define <2 x i64> @combine_psadbw_shift(<16 x i8> %0, <16 x i8> %1) {
 }
 
 ; Propagate the demanded result elements to the 8 aliasing source elements.
-define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) {
+define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) nounwind {
 ; X86-LABEL: combine_psadbw_demandedelt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psadbw %xmm1, %xmm0
@@ -32,6 +32,107 @@ define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) {
   %5 = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %3, <16 x i8> %4)
   %6 = extractelement <2 x i64> %5, i32 0
   ret i64 %6
+}
+
+; TODO: Each PSADBW source element has a maximum value of 3 - so max sum-of-diffs for each <8 x i8> should be 24.
+define <2 x i64> @combine_psadbw_cmp_knownbits(<16 x i8> %a0) nounwind {
+; X86-LABEL: combine_psadbw_cmp_knownbits:
+; X86:       # %bb.0:
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    psadbw %xmm0, %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,2,2]
+; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_psadbw_cmp_knownbits:
+; X64:       # %bb.0:
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    psadbw %xmm0, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,2,2]
+; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    retq
+  %mask = and <16 x i8> %a0, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+  %sad = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %mask, <16 x i8> zeroinitializer)
+  %cmp = icmp sgt <2 x i64> %sad, <i64 32, i64 32>
+  %ext = sext <2 x i1> %cmp to <2 x i64>
+  ret <2 x i64> %ext
+}
+
+; TODO: No need to scalarize the sitofp as the PSADBW results are smaller than i32.
+define <2 x double> @combine_psadbw_sitofp_knownbits(<16 x i8> %a0) nounwind {
+; X86-LABEL: combine_psadbw_sitofp_knownbits:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    psadbw %xmm0, %xmm1
+; X86-NEXT:    movq %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpl (%esp)
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_psadbw_sitofp_knownbits:
+; X64:       # %bb.0:
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    psadbw %xmm0, %xmm1
+; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    cvtsi2sd %eax, %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    cvtsi2sd %eax, %xmm1
+; X64-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    retq
+  %mask = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %sad = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %mask, <16 x i8> zeroinitializer)
+  %cvt = sitofp <2 x i64> %sad to <2 x double>
+  ret <2 x double> %cvt
+}
+
+; TODO: Convert from uitofp to sitofp as the PSADBW results are zero-extended.
+define <2 x double> @combine_psadbw_uitofp_knownbits(<16 x i8> %a0) nounwind {
+; X86-LABEL: combine_psadbw_uitofp_knownbits:
+; X86:       # %bb.0:
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    psadbw %xmm1, %xmm0
+; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movapd {{.*#+}} xmm1 = [0,1160773632,0,1160773632]
+; X86-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    addpd %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: combine_psadbw_uitofp_knownbits:
+; X64:       # %bb.0:
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    psadbw %xmm1, %xmm0
+; X64-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movapd {{.*#+}} xmm1 = [4985484787499139072,4985484787499139072]
+; X64-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    addpd %xmm1, %xmm0
+; X64-NEXT:    retq
+  %mask = and <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %sad = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %mask, <16 x i8> zeroinitializer)
+  %cvt = uitofp <2 x i64> %sad to <2 x double>
+  ret <2 x double> %cvt
 }
 
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>)
