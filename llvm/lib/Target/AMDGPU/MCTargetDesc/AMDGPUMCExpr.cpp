@@ -18,8 +18,7 @@ using namespace llvm;
 
 const AMDGPUVariadicMCExpr *
 AMDGPUVariadicMCExpr::create(AMDGPUVariadicKind Kind,
-                             const std::vector<const MCExpr *> &Args,
-                             MCContext &Ctx) {
+                             ArrayRef<const MCExpr *> Args, MCContext &Ctx) {
   return new (Ctx) AMDGPUVariadicMCExpr(Kind, Args);
 }
 
@@ -41,9 +40,9 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
     OS << "max(";
     break;
   }
-  for (auto it = Args.begin(); it != Args.end(); ++it) {
-    (*it)->print(OS, MAI, /*InParens=*/false);
-    if ((it + 1) != Args.end())
+  for (auto It = Args.begin(); It != Args.end(); ++It) {
+    (*It)->print(OS, MAI, /*InParens=*/false);
+    if ((It + 1) != Args.end())
       OS << ", ";
   }
   OS << ")";
@@ -51,36 +50,37 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
 
 bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAsmLayout *Layout, const MCFixup *Fixup) const {
-  int64_t total = 0;
+  int64_t Total = INT64_MIN;
 
   auto Op = [this](int64_t Arg1, int64_t Arg2) -> int64_t {
     switch (Kind) {
     default:
       llvm_unreachable("Unknown AMDGPUVariadicMCExpr kind.");
     case AGVK_Max:
-      return Arg1 > Arg2 ? Arg1 : Arg2;
+      return std::max(Arg1, Arg2);
     case AGVK_Or:
-      return (!!Arg1) || (!!Arg2);
+      return Arg1 || Arg2;
     }
   };
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
-    if (!Arg->evaluateAsRelocatable(ArgRes, Layout, Fixup))
+    if (!Arg->evaluateAsRelocatable(ArgRes, Layout, Fixup) ||
+        !ArgRes.isAbsolute())
       return false;
-    if (!ArgRes.isAbsolute())
-      return false;
-    total = Op(total, ArgRes.getConstant());
+
+    if (Total == INT64_MIN)
+      Total = ArgRes.getConstant();
+    Total = Op(Total, ArgRes.getConstant());
   }
 
-  Res = MCValue::get(total);
+  Res = MCValue::get(Total);
   return true;
 }
 
 void AMDGPUVariadicMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
-  for (const MCExpr *Arg : Args) {
+  for (const MCExpr *Arg : Args)
     Streamer.visitUsedExpr(*Arg);
-  }
 }
 
 MCFragment *AMDGPUVariadicMCExpr::findAssociatedFragment() const {

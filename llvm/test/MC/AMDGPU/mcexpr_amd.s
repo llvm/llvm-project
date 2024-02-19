@@ -15,6 +15,9 @@
 // OBJDUMP-NEXT: 000000000000000a l       *ABS*  0000000000000000 max_literals
 // OBJDUMP-NEXT: 000000000000000f l       *ABS*  0000000000000000 max_with_max_sym
 // OBJDUMP-NEXT: 000000000000000f l       *ABS*  0000000000000000 max
+// OBJDUMP-NEXT: ffffffffffffffff l       *ABS*  0000000000000000 neg_one
+// OBJDUMP-NEXT: ffffffffffffffff l       *ABS*  0000000000000000 max_neg_numbers
+// OBJDUMP-NEXT: ffffffffffffffff l       *ABS*  0000000000000000 max_neg_number
 // OBJDUMP-NEXT: 0000000000000003 l       *ABS*  0000000000000000 max_with_subexpr
 // OBJDUMP-NEXT: 0000000000000006 l       *ABS*  0000000000000000 max_as_subexpr
 // OBJDUMP-NEXT: 0000000000000005 l       *ABS*  0000000000000000 max_recursive_subexpr
@@ -50,6 +53,13 @@
 .set max_expression_one, max(one)
 .set max_literals, max(1,2,3,4,5,6,7,8,9,10)
 .set max_with_max_sym, max(max, 4, 3, one, two)
+
+// ASM: .set max_neg_numbers, -1
+// ASM: .set max_neg_number, -1
+
+.set neg_one, -1
+.set max_neg_numbers, max(-5, -4, -3, -2, neg_one)
+.set max_neg_number, max(neg_one)
 
 // ASM: .set max_with_subexpr, 3
 // ASM: .set max_as_subexpr, 1+(max(4, 3, five))

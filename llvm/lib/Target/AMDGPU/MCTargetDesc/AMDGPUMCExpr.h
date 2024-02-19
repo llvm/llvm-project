@@ -9,43 +9,44 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCEXPR_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCEXPR_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
 
-class AMDGPUMCExpr : public MCTargetExpr {
-  static bool classof(const MCExpr *E) {
-    return E->getKind() == MCExpr::Target;
-  }
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
-};
-
-class AMDGPUVariadicMCExpr : public AMDGPUMCExpr {
+/// AMDGPU target specific variadic MCExpr operations.
+///
+/// Takes in a minimum of 1 argument to be used with an operation. The supported
+/// operations are:
+///   - (logic) or
+///   - max
+///
+class AMDGPUVariadicMCExpr : public MCTargetExpr {
 public:
   enum AMDGPUVariadicKind { AGVK_None, AGVK_Or, AGVK_Max };
 
 private:
   AMDGPUVariadicKind Kind;
-  std::vector<const MCExpr *> Args;
+  SmallVector<const MCExpr *, 2> Args;
 
-  AMDGPUVariadicMCExpr(AMDGPUVariadicKind Kind,
-                       const std::vector<const MCExpr *> &Args)
+  AMDGPUVariadicMCExpr(AMDGPUVariadicKind Kind, ArrayRef<const MCExpr *> Args)
       : Kind(Kind), Args(Args) {
-    assert(Args.size() >= 1 && "Can't take the maximum of 0 expressions.");
+    assert(Args.size() >= 1 && "Needs a minimum of one expression.");
   }
 
 public:
-  static const AMDGPUVariadicMCExpr *
-  create(AMDGPUVariadicKind Kind, const std::vector<const MCExpr *> &Args,
-         MCContext &Ctx);
+  static const AMDGPUVariadicMCExpr *create(AMDGPUVariadicKind Kind,
+                                            ArrayRef<const MCExpr *> Args,
+                                            MCContext &Ctx);
 
-  static const AMDGPUVariadicMCExpr *
-  createOr(const std::vector<const MCExpr *> &Args, MCContext &Ctx) {
+  static const AMDGPUVariadicMCExpr *createOr(ArrayRef<const MCExpr *> Args,
+                                              MCContext &Ctx) {
     return create(AMDGPUVariadicKind::AGVK_Or, Args, Ctx);
   }
 
-  static const AMDGPUVariadicMCExpr *
-  createMax(const std::vector<const MCExpr *> &Args, MCContext &Ctx) {
+  static const AMDGPUVariadicMCExpr *createMax(ArrayRef<const MCExpr *> Args,
+                                               MCContext &Ctx) {
     return create(AMDGPUVariadicKind::AGVK_Max, Args, Ctx);
   }
 
@@ -57,6 +58,10 @@ public:
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
+  static bool classof(const MCExpr *E) {
+    return E->getKind() == MCExpr::Target;
+  }
+  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
 };
 
 } // end namespace llvm

@@ -8287,16 +8287,16 @@ void AMDGPUAsmParser::onBeginOfFile() {
 bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   using AGVK = AMDGPUVariadicMCExpr::AMDGPUVariadicKind;
 
-  auto parseVariadicExpr = [&](AGVK Kind, const MCExpr *&res, SMLoc &EndLoc) {
-    std::vector<const MCExpr *> Exprs;
+  auto ParseVariadicExpr = [&](AGVK Kind, const MCExpr *&Result,
+                               SMLoc &EndLoc) {
+    SmallVector<const MCExpr *, 4> Exprs;
     while (true) {
-      if (isToken(AsmToken::RParen)) {
+      if (trySkipToken(AsmToken::RParen)) {
         if (Exprs.empty()) {
           Error(getToken().getLoc(), "empty max/or expression");
           return true;
         }
-        lex();
-        res = AMDGPUVariadicMCExpr::create(Kind, Exprs, getContext());
+        Result = AMDGPUVariadicMCExpr::create(Kind, Exprs, getContext());
         return false;
       }
       const MCExpr *Expr;
@@ -8320,7 +8320,7 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
       lex(); // Eat 'max'/'or'
       lex(); // Eat '('
-      return parseVariadicExpr(VK, Res, EndLoc);
+      return ParseVariadicExpr(VK, Res, EndLoc);
     }
   }
   return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
