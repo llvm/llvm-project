@@ -57,6 +57,11 @@ void requireTrue(bool condition, std::string message = "");
  */
 std::string getFullSignature(const FunctionDecl *D);
 
+void dumpSourceLocation(const std::string &msg, const ASTContext &Context,
+                        const SourceLocation &loc);
+
+void dumpStmt(const ASTContext &Context, const Stmt *S);
+
 struct Location {
     std::string file; // absolute path
     int line;

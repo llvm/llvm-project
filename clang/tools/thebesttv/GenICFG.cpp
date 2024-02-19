@@ -79,6 +79,26 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
     Global.icfg.addFunction(Global.getIdOfFunction(fullSignature), *cfg);
 
+    /*
+    // traverse CFGBlocks
+    for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
+        CFGBlock &B = **BI;
+        // traverse all stmts
+        for (auto SI = B.begin(); SI != B.end(); ++SI) {
+            CFGElement &E = *SI;
+            if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
+                const Stmt *S = CS->getStmt();
+                dumpStmt(*Context, S);
+                for (const Stmt *child : S->children()) {
+                    if (child) {
+                        dumpStmt(*Context, child);
+                    }
+                }
+            }
+        }
+    }
+    */
+
     return true;
 }
 
