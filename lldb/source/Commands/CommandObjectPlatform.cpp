@@ -1103,7 +1103,8 @@ public:
     // I didn't make a type for RemoteRunArgs, but since we're going to run
     // this on the remote system we should use the remote completer.
     lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request, nullptr);
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   ~CommandObjectPlatformProcessLaunch() override = default;

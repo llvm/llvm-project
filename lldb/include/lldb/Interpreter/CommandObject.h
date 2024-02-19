@@ -241,11 +241,11 @@ public:
 
   /// The default version handles argument definitions that have only one
   /// argument type, and use one of the argument types that have an entry in
-  /// the CommonCompletions.  Override this if you have a more complex 
-  /// argument setup.  
-  /// FIXME: we should be able to extend this to more complex argument 
+  /// the CommonCompletions.  Override this if you have a more complex
+  /// argument setup.
+  /// FIXME: we should be able to extend this to more complex argument
   /// definitions provided we have completers for all the argument types.
-  ///  
+  ///
   /// The input array contains a parsed version of the line.
   ///
   /// We've constructed the map of options and their arguments as well if that

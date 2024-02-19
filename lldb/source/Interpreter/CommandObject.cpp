@@ -305,9 +305,8 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   }
 }
 
-void
-CommandObject::HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) {
+void CommandObject::HandleArgumentCompletion(
+    CompletionRequest &request, OptionElementVector &opt_element_vector) {
   size_t num_arg_entries = GetNumArgumentEntries();
   if (num_arg_entries != 1)
     return;
@@ -324,21 +323,21 @@ CommandObject::HandleArgumentCompletion(CompletionRequest &request,
     return;
 
   // Look up the completion type, and if it has one, invoke it:
-  const CommandObject::ArgumentTableEntry *arg_entry 
-      = FindArgumentDataByType(entry[0].arg_type);
+  const CommandObject::ArgumentTableEntry *arg_entry =
+      FindArgumentDataByType(entry[0].arg_type);
   const ArgumentRepetitionType repeat = entry[0].arg_repetition;
-  
+
   if (arg_entry == nullptr || arg_entry->completion_type == lldb::eNoCompletion)
     return;
-  
+
   // FIXME: This should be handled higher in the Command Parser.
   // Check the case where this command only takes one argument, and don't do
   // the completion if we aren't on the first entry:
   if (repeat == eArgRepeatPlain && request.GetCursorIndex() != 0)
     return;
-  
+
   lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-            GetCommandInterpreter(), arg_entry->completion_type, request, nullptr);
+      GetCommandInterpreter(), arg_entry->completion_type, request, nullptr);
 
 }
 
