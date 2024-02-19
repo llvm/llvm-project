@@ -2156,6 +2156,12 @@ bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
   return this->emitConstBool(E->isSatisfied(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXRewrittenBinaryOperator(
+    const CXXRewrittenBinaryOperator *E) {
+  return this->delegate(E->getSemanticForm());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2470,17 +2476,6 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
       if (!this->emitSetGlobal(T, *Idx, LV))
         return false;
       return DiscardResult ? true : this->emitGetPtrGlobal(*Idx, LV);
-    }
-  }
-
-  // If the declaration is a constant value, emit it here even
-  // though the declaration was not evaluated in the current scope.
-  // The access mode can only be read in this case.
-  if (!DiscardResult && AK == DerefKind::Read) {
-    if (VD->hasLocalStorage() && VD->hasInit() && !VD->isConstexpr()) {
-      QualType VT = VD->getType();
-      if (VT.isConstQualified() && VT->isFundamentalType())
-        return this->visit(VD->getInit());
     }
   }
 
