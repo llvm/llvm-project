@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref20 %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20 %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref20,all %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref23,all %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23,all %s -fexperimental-new-constant-interpreter
 
 /// FIXME: The new interpreter is missing all the 'control flows through...' diagnostics.
 
@@ -122,4 +122,25 @@ namespace StaticLambdas {
     return [n] { return n; }();
   }
   static_assert(capture_constexpr());
+}
+
+namespace StaticOperators {
+  auto lstatic = []() static { return 3; };  // ref20-warning {{C++23 extension}} \
+                                             // expected20-warning {{C++23 extension}}
+  static_assert(lstatic() == 3, "");
+  constexpr int (*f2)(void) = lstatic;
+  static_assert(f2() == 3);
+
+  struct S1 {
+    constexpr S1() { // all-error {{never produces a constant expression}}
+      throw; // all-note 2{{not valid in a constant expression}}
+    }
+    static constexpr int operator()() { return 3; } // ref20-warning {{C++23 extension}} \
+                                                    // expected20-warning {{C++23 extension}}
+  };
+  static_assert(S1{}() == 3, ""); // all-error {{not an integral constant expression}} \
+                                  // all-note {{in call to}}
+
+
+
 }
