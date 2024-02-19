@@ -82,6 +82,9 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return; // Already handled
   else if (Bitwidth <= 32) {
     MIB.addImm(Imm.getZExtValue());
+    // Asm Printer needs this info to print floating-type correctly
+    if (Bitwidth == 16)
+      MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
