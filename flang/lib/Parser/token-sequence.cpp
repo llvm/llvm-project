@@ -343,27 +343,29 @@ ProvenanceRange TokenSequence::GetProvenanceRange() const {
 }
 
 const TokenSequence &TokenSequence::CheckBadFortranCharacters(
-    Messages &messages) const {
+    Messages &messages, const Prescanner &prescanner) const {
   std::size_t tokens{SizeInTokens()};
-  bool isBangOk{true};
   for (std::size_t j{0}; j < tokens; ++j) {
     CharBlock token{TokenAt(j)};
     char ch{token.FirstNonBlank()};
     if (ch != ' ' && !IsValidFortranTokenCharacter(ch)) {
-      if (ch == '!' && isBangOk) {
-        // allow in !dir$
-      } else if (ch < ' ' || ch >= '\x7f') {
+      if (ch == '!') {
+        if (prescanner.IsCompilerDirectiveSentinel(token)) {
+          continue;
+        } else if (j + 1 < tokens &&
+            prescanner.IsCompilerDirectiveSentinel(
+                TokenAt(j + 1))) { // !dir$, &c.
+          ++j;
+          continue;
+        }
+      }
+      if (ch < ' ' || ch >= '\x7f') {
         messages.Say(GetTokenProvenanceRange(j),
             "bad character (0x%02x) in Fortran token"_err_en_US, ch & 0xff);
       } else {
         messages.Say(GetTokenProvenanceRange(j),
             "bad character ('%c') in Fortran token"_err_en_US, ch);
       }
-    }
-    if (ch == ';') {
-      isBangOk = true;
-    } else if (ch != ' ') {
-      isBangOk = false;
     }
   }
   return *this;
@@ -376,11 +378,13 @@ const TokenSequence &TokenSequence::CheckBadParentheses(
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
     CharBlock token{TokenAt(j)};
-    char ch{token.FirstNonBlank()};
+    char ch{token.OnlyNonBlank()};
     if (ch == '(') {
       ++nesting;
     } else if (ch == ')') {
-      --nesting;
+      if (nesting-- == 0) {
+        break;
+      }
     }
   }
   if (nesting != 0) {
@@ -388,7 +392,7 @@ const TokenSequence &TokenSequence::CheckBadParentheses(
     std::vector<std::size_t> stack;
     for (std::size_t j{0}; j < tokens; ++j) {
       CharBlock token{TokenAt(j)};
-      char ch{token.FirstNonBlank()};
+      char ch{token.OnlyNonBlank()};
       if (ch == '(') {
         stack.push_back(j);
       } else if (ch == ')') {

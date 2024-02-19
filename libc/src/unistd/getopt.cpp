@@ -19,9 +19,12 @@
 // just the re-ordering of argv elements such that unknown arguments can be
 // easily iterated over.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T> struct RefWrapper {
+  RefWrapper() = delete;
+  constexpr RefWrapper(T *p) : ptr{p} {}
+  constexpr RefWrapper(const RefWrapper &) = default;
   RefWrapper &operator=(const RefWrapper &) = default;
   operator T &() { return *ptr; }
   T &get() { return *ptr; }
@@ -42,8 +45,9 @@ struct GetoptContext {
 
   template <typename... Ts> void report_error(const char *fmt, Ts... ts) {
     if (opterr)
-      __llvm_libc::fprintf(
-          errstream ? errstream : reinterpret_cast<FILE *>(__llvm_libc::stderr),
+      LIBC_NAMESPACE::fprintf(
+          errstream ? errstream
+                    : reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr),
           fmt, ts...);
   }
 };
@@ -198,4 +202,4 @@ LLVM_LIBC_FUNCTION(int, getopt,
   return getopt_r(argc, argv, optstring, impl::ctx);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

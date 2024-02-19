@@ -13,8 +13,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define half @fadda_v4f16(half %start, <4 x half> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
@@ -27,8 +27,8 @@ define half @fadda_v4f16(half %start, <4 x half> %a) vscale_range(1,0) #0 {
 define half @fadda_v8f16(half %start, <8 x half> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fadda h0, p0, h0, z1.h
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
@@ -54,12 +54,12 @@ define half @fadda_v16f16(half %start, ptr %a) vscale_range(2,0) #0 {
 define half @fadda_v32f16(half %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fadda_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    fadda h0, p0, h0, z1.h
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadda h0, p0, h0, z2.h
 ; VBITS_GE_256-NEXT:    fadda h0, p0, h0, z1.h
 ; VBITS_GE_256-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
@@ -109,8 +109,8 @@ define half @fadda_v128f16(half %start, ptr %a) vscale_range(16,0) #0 {
 define float @fadda_v2f32(float %start, <2 x float> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fadda s0, p0, s0, z1.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
@@ -123,8 +123,8 @@ define float @fadda_v2f32(float %start, <2 x float> %a) vscale_range(1,0) #0 {
 define float @fadda_v4f32(float %start, <4 x float> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fadda s0, p0, s0, z1.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
@@ -150,12 +150,12 @@ define float @fadda_v8f32(float %start, ptr %a) vscale_range(2,0) #0 {
 define float @fadda_v16f32(float %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fadda_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    fadda s0, p0, s0, z1.s
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadda s0, p0, s0, z2.s
 ; VBITS_GE_256-NEXT:    fadda s0, p0, s0, z1.s
 ; VBITS_GE_256-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
@@ -215,8 +215,8 @@ define double @fadda_v1f64(double %start, <1 x double> %a) vscale_range(1,0) #0 
 define double @fadda_v2f64(double %start, <2 x double> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    fadda d0, p0, d0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -242,12 +242,12 @@ define double @fadda_v4f64(double %start, ptr %a) vscale_range(2,0) #0 {
 define double @fadda_v8f64(double %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fadda_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    fadda d0, p0, d0, z1.d
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadda d0, p0, d0, z2.d
 ; VBITS_GE_256-NEXT:    fadda d0, p0, d0, z1.d
 ; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
@@ -301,8 +301,8 @@ define double @fadda_v32f64(double %start, ptr %a) vscale_range(16,0) #0 {
 define half @faddv_v4f16(half %start, <4 x half> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: faddv_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    faddv h1, p0, z1.h
 ; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
@@ -314,8 +314,8 @@ define half @faddv_v4f16(half %start, <4 x half> %a) vscale_range(2,0) #0 {
 define half @faddv_v8f16(half %start, <8 x half> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: faddv_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    faddv h1, p0, z1.h
 ; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
@@ -339,8 +339,8 @@ define half @faddv_v16f16(half %start, ptr %a) vscale_range(2,0) #0 {
 define half @faddv_v32f16(half %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: faddv_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fadd z1.h, p0/m, z1.h, z2.h
@@ -401,8 +401,8 @@ define float @faddv_v2f32(float %start, <2 x float> %a) vscale_range(2,0) #0 {
 define float @faddv_v4f32(float %start, <4 x float> %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: faddv_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
@@ -426,8 +426,8 @@ define float @faddv_v8f32(float %start, ptr %a) vscale_range(2,0) #0 {
 define float @faddv_v16f32(float %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: faddv_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fadd z1.s, p0/m, z1.s, z2.s
@@ -510,8 +510,8 @@ define double @faddv_v4f64(double %start, ptr %a) vscale_range(2,0) #0 {
 define double @faddv_v8f64(double %start, ptr %a) #0 {
 ; VBITS_GE_256-LABEL: faddv_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fadd z1.d, p0/m, z1.d, z2.d
@@ -597,8 +597,8 @@ define half @fmaxv_v16f16(ptr %a) vscale_range(2,0) #0 {
 define half @fmaxv_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fmaxv_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
@@ -680,8 +680,8 @@ define float @fmaxv_v8f32(ptr %a) vscale_range(2,0) #0 {
 define float @fmaxv_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fmaxv_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
@@ -762,8 +762,8 @@ define double @fmaxv_v4f64(ptr %a) vscale_range(2,0) #0 {
 define double @fmaxv_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fmaxv_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
@@ -849,8 +849,8 @@ define half @fminv_v16f16(ptr %a) vscale_range(2,0) #0 {
 define half @fminv_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fminv_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
@@ -932,8 +932,8 @@ define float @fminv_v8f32(ptr %a) vscale_range(2,0) #0 {
 define float @fminv_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fminv_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
@@ -1014,8 +1014,8 @@ define double @fminv_v4f64(ptr %a) vscale_range(2,0) #0 {
 define double @fminv_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fminv_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
@@ -1099,8 +1099,8 @@ define half @fmaximumv_v16f16(ptr %a) vscale_range(2,0) #0 {
 define half @fmaximumv_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fmaximumv_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
@@ -1182,8 +1182,8 @@ define float @fmaximumv_v8f32(ptr %a) vscale_range(2,0) #0 {
 define float @fmaximumv_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fmaximumv_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
@@ -1264,8 +1264,8 @@ define double @fmaximumv_v4f64(ptr %a) vscale_range(2,0) #0 {
 define double @fmaximumv_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fmaximumv_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmax z0.d, p0/m, z0.d, z1.d
@@ -1349,8 +1349,8 @@ define half @fminimumv_v16f16(ptr %a) vscale_range(2,0) #0 {
 define half @fminimumv_v32f16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fminimumv_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
@@ -1432,8 +1432,8 @@ define float @fminimumv_v8f32(ptr %a) vscale_range(2,0) #0 {
 define float @fminimumv_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fminimumv_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
@@ -1514,8 +1514,8 @@ define double @fminimumv_v4f64(ptr %a) vscale_range(2,0) #0 {
 define double @fminimumv_v8f64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: fminimumv_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fmin z0.d, p0/m, z0.d, z1.d

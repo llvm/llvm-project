@@ -100,7 +100,6 @@ void boxString() {
 
   static const char strarr[] = "coolbox";
   s = [NSString stringWithUTF8String:strarr];
-  // rdar://18080352
   const char *utf8Bytes = "blah";
   NSString *string1 = [NSString stringWithUTF8String:utf8Bytes];
   NSString *string2 = [[NSString alloc] initWithUTF8String:utf8Bytes];

@@ -66,6 +66,9 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+Code actions
+^^^^^^^^^^^^
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -94,28 +97,14 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- Preprocessor-level module header parsing is now disabled by default due to
-  the problems it caused in C++20 and above, leading to performance and code
-  parsing issues regardless of whether modules were used or not. This change
-  will impact only the following checks:
-  :doc:`modernize-replace-disallow-copy-and-assign-macro
-  <clang-tidy/checks/modernize/replace-disallow-copy-and-assign-macro>`,
-  :doc:`bugprone-reserved-identifier
-  <clang-tidy/checks/bugprone/reserved-identifier>`, and
-  :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>`. Those checks will no
-  longer see macros defined in modules. Users can still enable this
-  functionality using the newly added command line option
-  `--enable-module-headers-parsing`.
-
 New checks
 ^^^^^^^^^^
 
-- New :doc:`performance-enum-size
-  <clang-tidy/checks/performance/enum-size>` check.
+- New :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check.
 
-  Recommends the smallest possible underlying type for an ``enum`` or ``enum``
-  class based on the range of its enumerators.
+  Replaces certain conditional statements with equivalent calls to
+  ``std::min`` or ``std::max``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -123,8 +112,94 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
+  <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
+  eliminating false positives resulting from direct usage of bitwise operators
+  within parentheses.
+
+- Improved :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
+  options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
+  global options of the same name.
+
+- Improved :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
+  better support for ``const`` loop boundaries.
+
+- Improved :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
+  ignoring local variable with ``[maybe_unused]`` attribute.
+
+- Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
+  by removing enforcement of rule `C.48
+  <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
+  which was deprecated since :program:`clang-tidy` 17. This rule is now covered
+  by :doc:`cppcoreguidelines-use-default-member-init
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` and fixes
+  incorrect hints when using list-initialization.
+
+- Improved :doc:`google-build-namespaces
+  <clang-tidy/checks/google/build-namespaces>` check by replacing the local
+  option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`google-global-names-in-headers
+  <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
+  option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`llvm-header-guard
+  <clang-tidy/checks/llvm/header-guard>` check by replacing the local
+  option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`misc-definitions-in-headers
+  <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
+  option `HeaderFileExtensions` by the global option of the same name.
+  Additionally, the option `UseHeaderFileExtensions` is removed, so that the
+  check uses the `HeaderFileExtensions` option unconditionally.
+
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
+  option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`misc-use-anonymous-namespace
+  <clang-tidy/checks/misc/use-anonymous-namespace>` check by replacing the local
+  option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
+  `AllowStringArrays` option, enabling the exclusion of array types with deduced
+  length initialized from string literals.
+
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check by ensuring that fix-its
+  don't remove parentheses used in ``sizeof`` calls when they have array index
+  accesses as arguments.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
+  whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
+  valid fix suggestions for ``static_cast`` without a preceding space and
+  fixed problem with duplicate parentheses in double implicit casts.
+
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
+  emit warnings for static data member with an in-class initializer.
+
 Removed checks
 ^^^^^^^^^^^^^^
+
+- Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
+  since the rule DCL21-CPP has been removed from the CERT guidelines.
+
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Fixed incorrect formatting in ``clang-apply-replacements`` when no ``--format``
+  option is specified. Now ``clang-apply-replacements`` applies formatting only with
+  the option.
 
 Improvements to include-fixer
 -----------------------------

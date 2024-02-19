@@ -23,4 +23,4 @@
 using T =  std::tuple<int, long, void*>;
 using E1 = typename std::tuple_element<1, T &>::type; // expected-error{{undefined template}}
 using E2 = typename std::tuple_element<3, T>::type;
-using E3 = typename std::tuple_element<4, T const>::type; // expected-error-re@*:* 2 {{{{(static_assert|static assertion)}} failed}}
+using E3 = typename std::tuple_element<4, T const>::type; // expected-error@*:* 2 {{static assertion failed}}

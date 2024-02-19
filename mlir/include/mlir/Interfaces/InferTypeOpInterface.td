@@ -67,8 +67,10 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       The return types may be elided or specific elements be null for elements
       that should just be returned but not verified.
 
-      Be aware that this method is supposed to be called with valid arguments,
-      e.g., operands are verified, or it may result in an undefined behavior.
+      Because this method can be called from within different stages of IR
+      verification, implementations should not assume the arguments to
+      represent fully valid IR and are responsible for checking inputs for
+      validity to the degree necessary to perform the return type inference.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"refineReturnTypes",
@@ -142,6 +144,11 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       Unknown (e.g., unranked) shape and nullptrs for element type and attribute
       may be returned by this function while returning success. E.g., partial
       population of components is not error condition.
+
+      Because this method can be called from within different stages of IR
+      verification, implementations should not assume the arguments to
+      represent fully valid IR and are responsible for checking inputs for
+      validity to the degree necessary to perform the return type inference.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypeComponents",
@@ -223,7 +230,7 @@ def InferTypeOpAdaptorWithIsCompatible : InferTypeOpAdaptorBase<
 >;
 
 // Convenient trait to define a wrapper to inferReturnTypeComponents that passes
-// in the Op Adaptor directly
+// in the Op Adaptor directly. Only uses the current types of the operands.
 class InferShapedTypeOpAdaptorBase<list<string> overridenMethods = []> : TraitList<
   [
     // Op implements infer type op interface.
@@ -368,5 +375,8 @@ def ReifyRankedShapedTypeOpInterface :
 // Op has the same operand and result type.
 // TODO: Change from hard coded to utilizing type inference trait.
 def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
+
+// Op has the same ranks for all operands and results types, if known.
+def SameOperandsAndResultRank : NativeOpTrait<"SameOperandsAndResultRank">;
 
 #endif // MLIR_INFERTYPEOPINTERFACE

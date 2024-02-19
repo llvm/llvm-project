@@ -108,7 +108,6 @@ CF_IMPLICIT_BRIDGING_DISABLED
 - (JSObjectRef*)JSObject2;
 @end
 
-// rdar://15044991
 typedef void *SecTrustRef;
 
 @interface NSURLProtectionSpace

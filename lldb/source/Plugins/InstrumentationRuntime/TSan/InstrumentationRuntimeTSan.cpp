@@ -14,9 +14,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -592,9 +592,10 @@ addr_t InstrumentationRuntimeTSan::GetFirstNonInternalFramePc(
     if (skip_one_frame && i == 0)
       continue;
 
-    addr_t addr;
-    if (!trace_array->GetItemAtIndexAsInteger(i, addr))
+    auto maybe_addr = trace_array->GetItemAtIndexAsInteger<addr_t>(i);
+    if (!maybe_addr)
       continue;
+    addr_t addr = *maybe_addr;
 
     lldb_private::Address so_addr;
     if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(

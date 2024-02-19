@@ -4,24 +4,25 @@
 define { float, float } @add_complex_float(ptr %a, ptr %b) {
   ; MIPS32-LABEL: name: add_complex_float
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-  ; MIPS32:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; MIPS32:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir..realp)
-  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir..imagp)
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir..realp1)
-  ; MIPS32:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir..imagp3)
-  ; MIPS32:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[LOAD]], [[LOAD2]]
-  ; MIPS32:   [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[LOAD1]], [[LOAD3]]
-  ; MIPS32:   $f0 = COPY [[FADD]](s32)
-  ; MIPS32:   $f2 = COPY [[FADD1]](s32)
-  ; MIPS32:   RetRA implicit $f0, implicit $f2
+  ; MIPS32-NEXT:   liveins: $a0, $a1
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
+  ; MIPS32-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir..realp)
+  ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir..imagp)
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
+  ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir..realp1)
+  ; MIPS32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir..imagp3)
+  ; MIPS32-NEXT:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[LOAD]], [[LOAD2]]
+  ; MIPS32-NEXT:   [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[LOAD1]], [[LOAD3]]
+  ; MIPS32-NEXT:   $f0 = COPY [[FADD]](s32)
+  ; MIPS32-NEXT:   $f2 = COPY [[FADD1]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $f0, implicit $f2
 entry:
   %.realp = getelementptr inbounds { float, float }, ptr %a, i32 0, i32 0
   %.real = load float, ptr %.realp, align 4
@@ -41,24 +42,25 @@ entry:
 define { double, double } @add_complex_double(ptr %a, ptr %b) {
   ; MIPS32-LABEL: name: add_complex_double
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-  ; MIPS32:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; MIPS32:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load (s64) from %ir..realp)
-  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from %ir..imagp)
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir..realp1)
-  ; MIPS32:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %ir..imagp3)
-  ; MIPS32:   [[FADD:%[0-9]+]]:_(s64) = G_FADD [[LOAD]], [[LOAD2]]
-  ; MIPS32:   [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[LOAD1]], [[LOAD3]]
-  ; MIPS32:   $d0 = COPY [[FADD]](s64)
-  ; MIPS32:   $d1 = COPY [[FADD1]](s64)
-  ; MIPS32:   RetRA implicit $d0, implicit $d1
+  ; MIPS32-NEXT:   liveins: $a0, $a1
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
+  ; MIPS32-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load (s64) from %ir..realp)
+  ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from %ir..imagp)
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
+  ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir..realp1)
+  ; MIPS32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %ir..imagp3)
+  ; MIPS32-NEXT:   [[FADD:%[0-9]+]]:_(s64) = G_FADD [[LOAD]], [[LOAD2]]
+  ; MIPS32-NEXT:   [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[LOAD1]], [[LOAD3]]
+  ; MIPS32-NEXT:   $d0 = COPY [[FADD]](s64)
+  ; MIPS32-NEXT:   $d1 = COPY [[FADD1]](s64)
+  ; MIPS32-NEXT:   RetRA implicit $d0, implicit $d1
 entry:
   %.realp = getelementptr inbounds { double, double }, ptr %a, i32 0, i32 0
   %.real = load double, ptr %.realp, align 8
@@ -79,19 +81,20 @@ declare { float, float } @ret_complex_float()
 define void @call_ret_complex_float(ptr %z) {
   ; MIPS32-LABEL: name: call_ret_complex_float
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-  ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32:   JAL @ret_complex_float, csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $f0, implicit-def $f2
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
-  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f2
-  ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   G_STORE [[COPY1]](s32), [[COPY3]](p0) :: (store (s32) into %ir..realp)
-  ; MIPS32:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir..imagp)
-  ; MIPS32:   RetRA
+  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   JAL @ret_complex_float, csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $f0, implicit-def $f2
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f2
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   G_STORE [[COPY1]](s32), [[COPY3]](p0) :: (store (s32) into %ir..realp)
+  ; MIPS32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir..imagp)
+  ; MIPS32-NEXT:   RetRA
 entry:
   %call = call { float, float } @ret_complex_float()
   %0 = extractvalue { float, float } %call, 0
@@ -107,19 +110,20 @@ declare { double, double } @ret_complex_double()
 define void @call_ret_complex_double(ptr %z) {
   ; MIPS32-LABEL: name: call_ret_complex_double
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-  ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32:   JAL @ret_complex_double, csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $d0, implicit-def $d1
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
-  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s64) = COPY $d1
-  ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   G_STORE [[COPY1]](s64), [[COPY3]](p0) :: (store (s64) into %ir..realp)
-  ; MIPS32:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir..imagp)
-  ; MIPS32:   RetRA
+  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   JAL @ret_complex_double, csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $d0, implicit-def $d1
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $d1
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   G_STORE [[COPY1]](s64), [[COPY3]](p0) :: (store (s64) into %ir..realp)
+  ; MIPS32-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir..imagp)
+  ; MIPS32-NEXT:   RetRA
 entry:
   %call = call { double, double } @ret_complex_double()
   %0 = extractvalue { double, double } %call, 0

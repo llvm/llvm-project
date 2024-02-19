@@ -21,7 +21,7 @@ Concepts
 **Pass:** A transformation applied to a *layer* that generates a new *layer* that is a more summarized, consolidated representation of the trace data.
 A pass merges instructions/blocks based on its specific purpose - for example, a pass designed to summarize a processor trace by function calls would merge all the blocks of a function into a single block representing the entire function.
 
-The image below illusrates the transformation of a trace's representation (HTR)
+The image below illustrates the transformation of a trace's representation (HTR)
 
 .. image:: media/htr-example.png
 

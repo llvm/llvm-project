@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerSumType.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
@@ -114,6 +113,7 @@ public:
                              // (e.g. branch folding) should skip
                              // this instruction.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
+    NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
   };
 
 private:
@@ -566,15 +566,6 @@ public:
   const MachineOperand &getDebugOperand(unsigned Index) const {
     assert(Index < getNumDebugOperands() && "getDebugOperand() out of range!");
     return *(debug_operands().begin() + Index);
-  }
-
-  SmallSet<Register, 4> getUsedDebugRegs() const {
-    assert(isDebugValue() && "not a DBG_VALUE*");
-    SmallSet<Register, 4> UsedRegs;
-    for (const auto &MO : debug_operands())
-      if (MO.isReg() && MO.getReg())
-        UsedRegs.insert(MO.getReg());
-    return UsedRegs;
   }
 
   /// Returns whether this debug value has at least one debug operand with the
@@ -1034,6 +1025,8 @@ public:
       if (ExtraInfo & InlineAsm::Extra_IsConvergent)
         return true;
     }
+    if (getFlag(NoConvergent))
+      return false;
     return hasProperty(MCID::Convergent, Type);
   }
 
@@ -1202,7 +1195,7 @@ public:
   /// Returns true if this instruction is a candidate for remat.
   /// This flag is deprecated, please don't use it anymore.  If this
   /// flag is set, the isReallyTriviallyReMaterializable() method is called to
-  /// verify the instruction is really rematable.
+  /// verify the instruction is really rematerializable.
   bool isRematerializable(QueryType Type = AllInBundle) const {
     // It's only possible to re-mat a bundle if all bundled instructions are
     // re-materializable.
@@ -1283,7 +1276,7 @@ public:
   /// eraseFromBundle() to erase individual bundled instructions.
   void eraseFromParent();
 
-  /// Unlink 'this' form its basic block and delete it.
+  /// Unlink 'this' from its basic block and delete it.
   ///
   /// If the instruction is part of a bundle, the other instructions in the
   /// bundle remain bundled.
@@ -1357,6 +1350,10 @@ public:
     return false;
   }
 
+  bool isJumpTableDebugInfo() const {
+    return getOpcode() == TargetOpcode::JUMP_TABLE_DEBUG_INFO;
+  }
+
   bool isPHI() const {
     return getOpcode() == TargetOpcode::PHI ||
            getOpcode() == TargetOpcode::G_PHI;
@@ -1367,12 +1364,10 @@ public:
     return getOpcode() == TargetOpcode::INLINEASM ||
            getOpcode() == TargetOpcode::INLINEASM_BR;
   }
-
-  /// FIXME: Seems like a layering violation that the AsmDialect, which is X86
-  /// specific, be attached to a generic MachineInstr.
-  bool isMSInlineAsm() const {
-    return isInlineAsm() && getInlineAsmDialect() == InlineAsm::AD_Intel;
-  }
+  /// Returns true if the register operand can be folded with a load or store
+  /// into a frame index. Does so by checking the InlineAsm::Flag immediate
+  /// operand at OpId - 1.
+  bool mayFoldInlineAsmRegOp(unsigned OpId) const;
 
   bool isStackAligningInlineAsm() const;
   InlineAsm::AsmDialect getInlineAsmDialect() const;
@@ -1745,6 +1740,9 @@ public:
   /// Return true if all the defs of this instruction are dead.
   bool allDefsAreDead() const;
 
+  /// Return true if all the implicit defs of this instruction are dead.
+  bool allImplicitDefsAreDead() const;
+
   /// Return a valid size if the instruction is a spill instruction.
   std::optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
 
@@ -1818,9 +1816,12 @@ public:
   /// preferred.
   void addOperand(const MachineOperand &Op);
 
+  /// Inserts Ops BEFORE It. Can untie/retie tied operands.
+  void insert(mop_iterator InsertBefore, ArrayRef<MachineOperand> Ops);
+
   /// Replace the instruction descriptor (thus opcode) of
   /// the current instruction with a new one.
-  void setDesc(const MCInstrDesc &TID) { MCID = &TID; }
+  void setDesc(const MCInstrDesc &TID);
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.
@@ -1929,12 +1930,6 @@ public:
   /// Find all DBG_VALUEs that point to the register def in this instruction
   /// and point them to \p Reg instead.
   void changeDebugValuesDefReg(Register Reg);
-
-  /// Returns the Intrinsic::ID for this instruction.
-  /// \pre Must have an intrinsic ID operand.
-  unsigned getIntrinsicID() const {
-    return getOperand(getNumExplicitDefs()).getIntrinsicID();
-  }
 
   /// Sets all register debug operands in this debug value instruction to be
   /// undef.

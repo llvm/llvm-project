@@ -253,7 +253,7 @@ bool isYAML(const StringRef Filename) {
   if (std::error_code EC = MB.getError())
     report_error(Filename, EC);
   StringRef Buffer = MB.get()->getBuffer();
-  if (Buffer.startswith("---\n"))
+  if (Buffer.starts_with("---\n"))
     return true;
   return false;
 }
@@ -279,7 +279,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     {
       std::lock_guard<std::mutex> Lock(BoltedCollectionMutex);
       // Check if the string "boltedcollection" is in the first line
-      if (Buf.startswith("boltedcollection\n")) {
+      if (Buf.starts_with("boltedcollection\n")) {
         if (!BoltedCollection.value_or(true))
           report_error(
               Filename,
@@ -329,7 +329,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       MergedProfile.insert_or_assign(Key, Count);
     }
 
-  if (BoltedCollection)
+  if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   for (const auto &[Key, Value] : MergedProfile)
     output() << Key << " " << Value << "\n";

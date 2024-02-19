@@ -37,7 +37,7 @@ class InputSectionBase;
 class SharedSymbol;
 class Symbol;
 class Undefined;
-class LazyObject;
+class LazySymbol;
 class InputFile;
 
 void printTraceSymbol(const Symbol &sym, StringRef name);
@@ -76,7 +76,7 @@ public:
     CommonKind,
     SharedKind,
     UndefinedKind,
-    LazyObjectKind,
+    LazyKind,
   };
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
@@ -181,7 +181,7 @@ public:
 
   bool isLocal() const { return binding == llvm::ELF::STB_LOCAL; }
 
-  bool isLazy() const { return symbolKind == LazyObjectKind; }
+  bool isLazy() const { return symbolKind == LazyKind; }
 
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
@@ -237,7 +237,7 @@ public:
   void resolve(const Undefined &other);
   void resolve(const CommonSymbol &other);
   void resolve(const Defined &other);
-  void resolve(const LazyObject &other);
+  void resolve(const LazySymbol &other);
   void resolve(const SharedSymbol &other);
 
   // If this is a lazy symbol, extract an input file and add the symbol
@@ -254,8 +254,8 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k),
-        exportDynamic(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
+        archSpecificBit(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -279,9 +279,18 @@ public:
   // True if defined relative to a section discarded by ICF.
   uint8_t folded : 1;
 
-  // True if a call to this symbol needs to be followed by a restore of the
-  // PPC64 toc pointer.
-  uint8_t needsTocRestore : 1;
+  // Allow reuse of a bit between architecture-exclusive symbol flags.
+  // - needsTocRestore(): On PPC64, true if a call to this symbol needs to be
+  //   followed by a restore of the toc pointer.
+  // - isTagged(): On AArch64, true if the symbol needs special relocation and
+  //   metadata semantics because it's tagged, under the AArch64 MemtagABI.
+  uint8_t archSpecificBit : 1;
+  bool needsTocRestore() const { return archSpecificBit; }
+  bool isTagged() const { return archSpecificBit; }
+  void setNeedsTocRestore(bool v) { archSpecificBit = v; }
+  void setIsTagged(bool v) {
+    archSpecificBit = v;
+  }
 
   // True if this symbol is defined by a symbol assignment or wrapped by --wrap.
   //
@@ -289,11 +298,12 @@ public:
   // of the symbol.
   uint8_t scriptDefined : 1;
 
+  // True if defined in a DSO. There may also be a definition in a relocatable
+  // object file.
+  uint8_t dsoDefined : 1;
+
   // True if defined in a DSO as protected visibility.
   uint8_t dsoProtected : 1;
-
-  // True if targeted by a range extension thunk.
-  uint8_t thunkAccessed : 1;
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
@@ -304,11 +314,15 @@ public:
   uint32_t auxIdx;
   uint32_t dynsymIndex;
 
-  // This field is a index to the symbol's version definition.
-  uint16_t verdefIndex;
-
-  // Version definition index.
+  // If `file` is SharedFile (for SharedSymbol or copy-relocated Defined), this
+  // represents the Verdef index within the input DSO, which will be converted
+  // to a Verneed index in the output. Otherwise, this represents the Verdef
+  // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
   uint16_t versionId;
+  uint8_t versionScriptAssigned : 1;
+
+  // True if targeted by a range extension thunk.
+  uint8_t thunkAccessed : 1;
 
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);
@@ -346,14 +360,7 @@ public:
         size(size), section(section) {
     exportDynamic = config->exportDynamic;
   }
-  void overwrite(Symbol &sym) const {
-    Symbol::overwrite(sym, DefinedKind);
-    sym.verdefIndex = -1;
-    auto &s = static_cast<Defined &>(sym);
-    s.value = value;
-    s.size = size;
-    s.section = section;
-  }
+  void overwrite(Symbol &sym) const;
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
 
@@ -468,7 +475,7 @@ public:
   uint32_t alignment;
 };
 
-// LazyObject symbols represent symbols in object files between --start-lib and
+// LazySymbol symbols represent symbols in object files between --start-lib and
 // --end-lib options. LLD also handles traditional archives as if all the files
 // in the archive are surrounded by --start-lib and --end-lib.
 //
@@ -477,14 +484,14 @@ public:
 // and the lazy. We represent that with a lazy symbol with a weak binding. This
 // means that code looking for undefined symbols normally also has to take lazy
 // symbols into consideration.
-class LazyObject : public Symbol {
+class LazySymbol : public Symbol {
 public:
-  LazyObject(InputFile &file)
-      : Symbol(LazyObjectKind, &file, {}, llvm::ELF::STB_GLOBAL,
+  LazySymbol(InputFile &file)
+      : Symbol(LazyKind, &file, {}, llvm::ELF::STB_GLOBAL,
                llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
-  void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazyObjectKind); }
+  void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazyKind); }
 
-  static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
+  static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 };
 
 // Some linker-generated symbols need to be created as
@@ -538,7 +545,7 @@ union SymbolUnion {
   alignas(CommonSymbol) char b[sizeof(CommonSymbol)];
   alignas(Undefined) char c[sizeof(Undefined)];
   alignas(SharedSymbol) char d[sizeof(SharedSymbol)];
-  alignas(LazyObject) char e[sizeof(LazyObject)];
+  alignas(LazySymbol) char e[sizeof(LazySymbol)];
 };
 
 template <typename... T> Defined *makeDefined(T &&...args) {

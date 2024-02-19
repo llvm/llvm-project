@@ -32,11 +32,12 @@ void SystemZInstPrinter::printAddress(const MCAsmInfo *MAI, MCRegister Base,
     O << '(';
     if (Index) {
       printFormattedRegName(MAI, Index, O);
-      if (Base)
-        O << ',';
+      O << ',';
     }
     if (Base)
       printFormattedRegName(MAI, Base, O);
+    else
+      O << '0';
     O << ')';
   }
 }
@@ -50,7 +51,7 @@ void SystemZInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
       printFormattedRegName(MAI, MO.getReg(), O);
   }
   else if (MO.isImm())
-    O << markup("<imm:") << MO.getImm() << markup(">");
+    markup(O, Markup::Immediate) << MO.getImm();
   else if (MO.isExpr())
     MO.getExpr()->print(O, MAI);
   else
@@ -64,9 +65,9 @@ void SystemZInstPrinter::printFormattedRegName(const MCAsmInfo *MAI,
   if (MAI->getAssemblerDialect() == AD_HLASM) {
     // Skip register prefix so that only register number is left
     assert(isalpha(RegName[0]) && isdigit(RegName[1]));
-    O << markup("<reg:") << (RegName + 1) << markup(">");
+    markup(O, Markup::Register) << (RegName + 1);
   } else
-    O << markup("<reg:") << '%' << RegName << markup(">");
+    markup(O, Markup::Register) << '%' << RegName;
 }
 
 void SystemZInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
@@ -90,7 +91,7 @@ void SystemZInstPrinter::printUImmOperand(const MCInst *MI, int OpNum,
   }
   uint64_t Value = static_cast<uint64_t>(MO.getImm());
   assert(isUInt<N>(Value) && "Invalid uimm argument");
-  O << markup("<imm:") << Value << markup(">");
+  markup(O, Markup::Immediate) << Value;
 }
 
 template <unsigned N>
@@ -103,7 +104,7 @@ void SystemZInstPrinter::printSImmOperand(const MCInst *MI, int OpNum,
   }
   int64_t Value = MI->getOperand(OpNum).getImm();
   assert(isInt<N>(Value) && "Invalid simm argument");
-  O << markup("<imm:") << Value << markup(">");
+  markup(O, Markup::Immediate) << Value;
 }
 
 void SystemZInstPrinter::printU1ImmOperand(const MCInst *MI, int OpNum,
@@ -170,9 +171,9 @@ void SystemZInstPrinter::printPCRelOperand(const MCInst *MI, int OpNum,
                                            raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isImm()) {
-    O << markup("<imm:") << "0x";
+    WithMarkup M = markup(O, Markup::Immediate);
+    O << "0x";
     O.write_hex(MO.getImm());
-    O << markup(">");
   } else
     MO.getExpr()->print(O, &MAI);
 }

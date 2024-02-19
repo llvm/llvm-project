@@ -17,8 +17,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   assert(std::char_traits<char>::lt('\0', 'A') == ('\0' < 'A'));
   assert(std::char_traits<char>::lt('A', '\0') == ('A' < '\0'));
 

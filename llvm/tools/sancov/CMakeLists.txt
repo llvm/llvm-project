@@ -20,4 +20,5 @@ add_llvm_tool(sancov
 
   DEPENDS
   SancovOptsTableGen
+  GENERATE_DRIVER
   )

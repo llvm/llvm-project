@@ -10,8 +10,8 @@
 // produce portable code by parameterizing compilation based on the presence or
 // lack of a given feature.
 
-#ifndef LLVM_LIBC_SUPPORT_MACROS_CONFIG_H
-#define LLVM_LIBC_SUPPORT_MACROS_CONFIG_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 
 // LIBC_HAS_BUILTIN()
 //
@@ -39,4 +39,12 @@
 #define LIBC_HAS_FEATURE(f) 0
 #endif
 
-#endif // LLVM_LIBC_SUPPORT_MACROS_CONFIG_H
+// Compiler attribute-detection.
+// https://clang.llvm.org/docs/LanguageExtensions.html#has-attribute
+#ifdef __has_attribute
+#define LIBC_HAS_ATTRIBUTE(f) __has_attribute(f)
+#else
+#define LIBC_HAS_ATTRIBUTE(f) 0
+#endif
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
+#define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct FileIOResult {
   size_t value;
@@ -37,15 +37,6 @@ struct FileIOResult {
 class File {
 public:
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
-
-// Some platforms like the GPU build cannot support buffering due to extra
-// resource usage or hardware constraints. This function allows us to optimize
-// out the buffering portions of the code in the general implementation.
-#if defined(LIBC_TARGET_ARCH_IS_GPU)
-  static constexpr bool ENABLE_BUFFER = false;
-#else
-  static constexpr bool ENABLE_BUFFER = true;
-#endif
 
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
@@ -167,8 +158,7 @@ public:
         buf(buffer), bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
         mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
         eof(false), err(false) {
-    if constexpr (ENABLE_BUFFER)
-      adjust_buf();
+    adjust_buf();
   }
 
   // Buffered write of |len| bytes from |data| without the file lock.
@@ -321,6 +311,6 @@ extern File *stdin;
 extern File *stdout;
 extern File *stderr;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H

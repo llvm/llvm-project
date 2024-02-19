@@ -21,6 +21,8 @@ class TestRunLocker(TestBase):
         self.runlocker_test(False)
 
     @expectedFailureAll(oslist=["windows"])
+    # Is flaky on Linux AArch64 buildbot.
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     def test_run_locker_stop_at_entry(self):
         """Test that the run locker is set correctly when we launch"""
         self.build()
@@ -83,7 +85,6 @@ class TestRunLocker(TestBase):
         val = target.EvaluateExpression("SomethingToCall()")
         error = val.GetError()
         self.assertTrue(error.Fail(), "Failed to run expression")
-        print(f"Got Error: {error.GetCString()}")
         self.assertIn(
             "can't evaluate expressions when the process is running",
             error.GetCString(),

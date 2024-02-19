@@ -3,7 +3,7 @@
 // RUN: c-index-test -test-load-tu %t.ast local | FileCheck -check-prefix=CHECK-load %s
 // REQUIRES: x86-registered-target
 // This test checks how the @class resolves as a cursor when the @interface is implicitly defined.
-// See TestClassDecl.m for the corresponding test case. (<rdar://problem/7383421>)
+// See TestClassDecl.m for the corresponding test case.
 
 @class Foo;
 

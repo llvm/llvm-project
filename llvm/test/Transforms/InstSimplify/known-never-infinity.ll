@@ -753,11 +753,7 @@ define i1 @isKnownNeverInfinity_cos(double %x) {
 define i1 @isKnownNeverInfinity_log(double %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_log
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X]], double 0.000000e+00)
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X_CLAMP_ZERO]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %a = fadd ninf double %x.clamp.zero, 1.0
@@ -769,10 +765,7 @@ define i1 @isKnownNeverInfinity_log(double %x) {
 define i1 @isNotKnownNeverInfinity_log_maybe_negative(double %x) {
 ; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_log_maybe_negative
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[X_NOT_INF:%.*]] = fadd ninf double [[X]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log.f64(double [[X_NOT_INF]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
 
   %x.not.inf = fadd ninf double %x, 1.0
@@ -812,11 +805,7 @@ define i1 @isKnownNeverNegInfinity_log_maybe_0(double %x) {
 define i1 @isKnownNeverInfinity_log10(double %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_log10
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X]], double 0.000000e+00)
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X_CLAMP_ZERO]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log10.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %a = fadd ninf double %x.clamp.zero, 1.0
@@ -828,10 +817,7 @@ define i1 @isKnownNeverInfinity_log10(double %x) {
 define i1 @isNotKnownNeverInfinity_log10_maybe_negative(double %x) {
 ; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_log10_maybe_negative
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[X_NOT_INF:%.*]] = fadd ninf double [[X]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log10.f64(double [[X_NOT_INF]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
 
   %x.not.inf = fadd ninf double %x, 1.0
@@ -871,11 +857,7 @@ define i1 @isKnownNeverNegInfinity_log10_maybe_0(double %x) {
 define i1 @isKnownNeverInfinity_log2(double %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_log2
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[X_CLAMP_ZERO:%.*]] = call double @llvm.maxnum.f64(double [[X]], double 0.000000e+00)
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X_CLAMP_ZERO]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log2.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.clamp.zero = call double @llvm.maxnum.f64(double %x, double 0.0)
   %a = fadd ninf double %x.clamp.zero, 1.0
@@ -887,10 +869,7 @@ define i1 @isKnownNeverInfinity_log2(double %x) {
 define i1 @isNotKnownNeverInfinity_log2_maybe_negative(double %x) {
 ; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_log2_maybe_negative
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[X_NOT_INF:%.*]] = fadd ninf double [[X]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.log2.f64(double [[X_NOT_INF]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
 
   %x.not.inf = fadd ninf double %x, 1.0
@@ -1057,10 +1036,7 @@ define i1 @not_ninf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-LABEL: define i1 @not_ninf_fabs_select_nzero_or_pinf
 ; CHECK-SAME: (i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float -0.000000e+00, float 0x7FF0000000000000
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
-; CHECK-NEXT:    [[ONE:%.*]] = fcmp one float [[FABS]], 0xFFF0000000000000
-; CHECK-NEXT:    ret i1 [[ONE]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
@@ -1087,6 +1063,51 @@ entry:
   ret i1 %one
 }
 
+; This asserted because we didn't handle non-equality comparisons to
+; negative infinity when recognizing is.fpclass-like compares.
+define float @fcmp_ogt_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_ogt_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.ogt.neginf = fcmp ogt float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.ogt.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
+
+define float @fcmp_ule_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_ule_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.ule.neginf = fcmp ule float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.ule.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
+
+define float @fcmp_oge_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_oge_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.oge.neginf = fcmp oge float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.oge.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
+
+define float @fcmp_ult_neginf_implies_class_assert(float %arg) {
+; CHECK-LABEL: define float @fcmp_ult_neginf_implies_class_assert
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %cmp.ult.neginf = fcmp ult float %arg, 0xFFF0000000000000
+  %select_1_0 = select i1 %cmp.ult.neginf, float 1.0, float 0.0
+  %mul_by_zero = fmul float %select_1_0, 0.0
+  ret float %mul_by_zero
+}
 
 declare double @llvm.arithmetic.fence.f64(double)
 declare double @llvm.canonicalize.f64(double)

@@ -44,9 +44,9 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -57,6 +57,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -537,59 +538,50 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
                                                    raw_ostream &O) const {
   // If the NVVM IR has some of reqntid* specified, then output
   // the reqntid directive, and set the unspecified ones to 1.
-  // If none of reqntid* is specified, don't output reqntid directive.
-  unsigned reqntidx, reqntidy, reqntidz;
-  bool specified = false;
-  if (!getReqNTIDx(F, reqntidx))
-    reqntidx = 1;
-  else
-    specified = true;
-  if (!getReqNTIDy(F, reqntidy))
-    reqntidy = 1;
-  else
-    specified = true;
-  if (!getReqNTIDz(F, reqntidz))
-    reqntidz = 1;
-  else
-    specified = true;
+  // If none of Reqntid* is specified, don't output reqntid directive.
+  unsigned Reqntidx, Reqntidy, Reqntidz;
+  Reqntidx = Reqntidy = Reqntidz = 1;
+  bool ReqSpecified = false;
+  ReqSpecified |= getReqNTIDx(F, Reqntidx);
+  ReqSpecified |= getReqNTIDy(F, Reqntidy);
+  ReqSpecified |= getReqNTIDz(F, Reqntidz);
 
-  if (specified)
-    O << ".reqntid " << reqntidx << ", " << reqntidy << ", " << reqntidz
+  if (ReqSpecified)
+    O << ".reqntid " << Reqntidx << ", " << Reqntidy << ", " << Reqntidz
       << "\n";
 
   // If the NVVM IR has some of maxntid* specified, then output
   // the maxntid directive, and set the unspecified ones to 1.
   // If none of maxntid* is specified, don't output maxntid directive.
-  unsigned maxntidx, maxntidy, maxntidz;
-  specified = false;
-  if (!getMaxNTIDx(F, maxntidx))
-    maxntidx = 1;
-  else
-    specified = true;
-  if (!getMaxNTIDy(F, maxntidy))
-    maxntidy = 1;
-  else
-    specified = true;
-  if (!getMaxNTIDz(F, maxntidz))
-    maxntidz = 1;
-  else
-    specified = true;
+  unsigned Maxntidx, Maxntidy, Maxntidz;
+  Maxntidx = Maxntidy = Maxntidz = 1;
+  bool MaxSpecified = false;
+  MaxSpecified |= getMaxNTIDx(F, Maxntidx);
+  MaxSpecified |= getMaxNTIDy(F, Maxntidy);
+  MaxSpecified |= getMaxNTIDz(F, Maxntidz);
 
-  if (specified)
-    O << ".maxntid " << maxntidx << ", " << maxntidy << ", " << maxntidz
+  if (MaxSpecified)
+    O << ".maxntid " << Maxntidx << ", " << Maxntidy << ", " << Maxntidz
       << "\n";
 
-  unsigned mincta;
-  if (getMinCTASm(F, mincta))
-    O << ".minnctapersm " << mincta << "\n";
+  unsigned Mincta = 0;
+  if (getMinCTASm(F, Mincta))
+    O << ".minnctapersm " << Mincta << "\n";
 
-  unsigned maxnreg;
-  if (getMaxNReg(F, maxnreg))
-    O << ".maxnreg " << maxnreg << "\n";
+  unsigned Maxnreg = 0;
+  if (getMaxNReg(F, Maxnreg))
+    O << ".maxnreg " << Maxnreg << "\n";
+
+  // .maxclusterrank directive requires SM_90 or higher, make sure that we
+  // filter it out for lower SM versions, as it causes a hard ptxas crash.
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  unsigned Maxclusterrank = 0;
+  if (getMaxClusterRank(F, Maxclusterrank) && STI->getSmVersion() >= 90)
+    O << ".maxclusterrank " << Maxclusterrank << "\n";
 }
 
-std::string
-NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
+std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
   std::string Name;
@@ -614,14 +606,33 @@ void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
   O << getVirtualRegisterName(vr);
 }
 
+void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
+                                           raw_ostream &O) {
+  const Function *F = dyn_cast_or_null<Function>(GA->getAliaseeObject());
+  if (!F || isKernelFunction(*F) || F->isDeclaration())
+    report_fatal_error(
+        "NVPTX aliasee must be a non-kernel function definition");
+
+  if (GA->hasLinkOnceLinkage() || GA->hasWeakLinkage() ||
+      GA->hasAvailableExternallyLinkage() || GA->hasCommonLinkage())
+    report_fatal_error("NVPTX aliasee must not be '.weak'");
+
+  emitDeclarationWithName(F, getSymbol(GA), O);
+}
+
 void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
+  emitDeclarationWithName(F, getSymbol(F), O);
+}
+
+void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
+                                              raw_ostream &O) {
   emitLinkageDirective(F, O);
   if (isKernelFunction(*F))
     O << ".entry ";
   else
     O << ".func ";
   printReturnValStr(F, O);
-  getSymbol(F)->print(O, MAI);
+  S->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
   O << "\n";
@@ -674,11 +685,11 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
  * Currently, this is valid for CUDA shared variables, which have local
  * scope and global lifetime. So the conditions to check are :
  * 1. Is the global variable in shared address space?
- * 2. Does it have internal linkage?
+ * 2. Does it have local linkage?
  * 3. Is the global variable referenced only in one function?
  */
 static bool canDemoteGlobalVar(const GlobalVariable *gv, Function const *&f) {
-  if (!gv->hasInternalLinkage())
+  if (!gv->hasLocalLinkage())
     return false;
   PointerType *Pty = gv->getType();
   if (Pty->getAddressSpace() != ADDRESS_SPACE_SHARED)
@@ -768,6 +779,8 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
     }
     seenMap[&F] = true;
   }
+  for (const GlobalAlias &GA : M.aliases())
+    emitAliasDeclaration(&GA, O);
 }
 
 static bool isEmptyXXStructor(GlobalVariable *GV) {
@@ -798,14 +811,17 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
+  // OpenMP supports NVPTX global constructors and destructors.
+  bool IsOpenMP = M.getModuleFlag("openmp") != nullptr;
+
   if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_ctors")) &&
-      !LowerCtorDtor) {
+      !LowerCtorDtor && !IsOpenMP) {
     report_fatal_error(
         "Module has a nontrivial global ctor, which NVPTX does not support.");
     return true;  // error
   }
   if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_dtors")) &&
-      !LowerCtorDtor) {
+      !LowerCtorDtor && !IsOpenMP) {
     report_fatal_error(
         "Module has a nontrivial global dtor, which NVPTX does not support.");
     return true;  // error
@@ -859,25 +875,9 @@ void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   raw_svector_ostream OS(Str);
 
   MCSymbol *Name = getSymbol(&GA);
-  const Function *F = dyn_cast<Function>(GA.getAliasee());
-  if (!F || isKernelFunction(*F))
-    report_fatal_error("NVPTX aliasee must be a non-kernel function");
 
-  if (GA.hasLinkOnceLinkage() || GA.hasWeakLinkage() ||
-      GA.hasAvailableExternallyLinkage() || GA.hasCommonLinkage())
-    report_fatal_error("NVPTX aliasee must not be '.weak'");
-
-  OS << "\n";
-  emitLinkageDirective(F, OS);
-  OS << ".func ";
-  printReturnValStr(F, OS);
-  OS << Name->getName();
-  emitFunctionParamList(F, OS);
-  if (shouldEmitPTXNoReturn(F, TM))
-    OS << "\n.noreturn";
-  OS << ";\n";
-
-  OS << ".alias " << Name->getName() << ", " << F->getName() << ";\n";
+  OS << ".alias " << Name->getName() << ", " << GA.getAliaseeObject()->getName()
+     << ";\n";
 
   OutStreamer->emitRawText(OS.str());
 }
@@ -937,16 +937,6 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     emitGlobals(M);
     GlobalsEmitted = true;
   }
-
-  // If we have any aliases we emit them at the end.
-  SmallVector<GlobalAlias *> AliasesToRemove;
-  for (GlobalAlias &Alias : M.aliases()) {
-    emitGlobalAlias(M, Alias);
-    AliasesToRemove.push_back(&Alias);
-  }
-
-  for (GlobalAlias *A : AliasesToRemove)
-    A->eraseFromParent();
 
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
@@ -1022,8 +1012,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   }
 
   // Skip LLVM intrinsic global variables
-  if (GVar->getName().startswith("llvm.") ||
-      GVar->getName().startswith("nvvm."))
+  if (GVar->getName().starts_with("llvm.") ||
+      GVar->getName().starts_with("nvvm."))
     return;
 
   const DataLayout &DL = getDataLayout();
@@ -1298,10 +1288,21 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  // Do not emit trailing zero initializers. They will be zero-initialized by
+  // ptxas. This saves on both space requirements for the generated PTX and on
+  // memory use by ptxas. (See:
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
+  unsigned int InitializerCount = size;
+  // TODO: symbols make this harder, but it would still be good to trim trailing
+  // 0s for aggs with symbols as well.
+  if (numSymbols() == 0)
+    while (InitializerCount >= 1 && !buffer[InitializerCount - 1])
+      InitializerCount--;
+
+  symbolPosInBuffer.push_back(InitializerCount);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
-  for (unsigned int pos = 0; pos < size;) {
+  for (unsigned int pos = 0; pos < InitializerCount;) {
     if (pos)
       os << ", ";
     if (pos != nextSymbolPos) {
@@ -1525,7 +1526,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     if (isKernelFunction(*F)) {
       if (isSampler(*I) || isImage(*I)) {
         if (isImage(*I)) {
-          std::string sname = std::string(I->getName());
           if (isImageWriteOnly(*I) || isImageReadWrite(*I)) {
             if (hasImageHandles)
               O << "\t.param .u64 .ptr .surfref ";
@@ -1989,35 +1989,16 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
   }
 
   switch (CE->getOpcode()) {
-  default: {
-    // If the code isn't optimized, there may be outstanding folding
-    // opportunities. Attempt to fold the expression using DataLayout as a
-    // last resort before giving up.
-    Constant *C = ConstantFoldConstant(CE, getDataLayout());
-    if (C != CE)
-      return lowerConstantForGV(C, ProcessingGeneric);
-
-    // Otherwise report the problem to the user.
-    std::string S;
-    raw_string_ostream OS(S);
-    OS << "Unsupported expression in static initializer: ";
-    CE->printAsOperand(OS, /*PrintType=*/false,
-                   !MF ? nullptr : MF->getFunction().getParent());
-    report_fatal_error(Twine(OS.str()));
-  }
+  default:
+    break; // Error
 
   case Instruction::AddrSpaceCast: {
     // Strip the addrspacecast and pass along the operand
     PointerType *DstTy = cast<PointerType>(CE->getType());
-    if (DstTy->getAddressSpace() == 0) {
+    if (DstTy->getAddressSpace() == 0)
       return lowerConstantForGV(cast<const Constant>(CE->getOperand(0)), true);
-    }
-    std::string S;
-    raw_string_ostream OS(S);
-    OS << "Unsupported expression in static initializer: ";
-    CE->printAsOperand(OS, /*PrintType=*/ false,
-                       !MF ? nullptr : MF->getFunction().getParent());
-    report_fatal_error(Twine(OS.str()));
+
+    break; // Error
   }
 
   case Instruction::GetElementPtr: {
@@ -2052,9 +2033,12 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     // Handle casts to pointers by changing them into casts to the appropriate
     // integer type.  This promotes constant folding and simplifies this code.
     Constant *Op = CE->getOperand(0);
-    Op = ConstantExpr::getIntegerCast(Op, DL.getIntPtrType(CV->getType()),
-                                      false/*ZExt*/);
-    return lowerConstantForGV(Op, ProcessingGeneric);
+    Op = ConstantFoldIntegerCast(Op, DL.getIntPtrType(CV->getType()),
+                                 /*IsSigned*/ false, DL);
+    if (Op)
+      return lowerConstantForGV(Op, ProcessingGeneric);
+
+    break; // Error
   }
 
   case Instruction::PtrToInt: {
@@ -2091,6 +2075,21 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     }
   }
   }
+
+  // If the code isn't optimized, there may be outstanding folding
+  // opportunities. Attempt to fold the expression using DataLayout as a
+  // last resort before giving up.
+  Constant *C = ConstantFoldConstant(CE, getDataLayout());
+  if (C != CE)
+    return lowerConstantForGV(C, ProcessingGeneric);
+
+  // Otherwise report the problem to the user.
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << "Unsupported expression in static initializer: ";
+  CE->printAsOperand(OS, /*PrintType=*/false,
+                 !MF ? nullptr : MF->getFunction().getParent());
+  report_fatal_error(Twine(OS.str()));
 }
 
 // Copy of MCExpr::print customized for NVPTX
@@ -2200,9 +2199,9 @@ bool NVPTXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
+void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
                                    raw_ostream &O) {
-  const MachineOperand &MO = MI->getOperand(opNum);
+  const MachineOperand &MO = MI->getOperand(OpNum);
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     if (MO.getReg().isPhysical()) {
@@ -2236,19 +2235,19 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   }
 }
 
-void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
+void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
                                       raw_ostream &O, const char *Modifier) {
-  printOperand(MI, opNum, O);
+  printOperand(MI, OpNum, O);
 
   if (Modifier && strcmp(Modifier, "add") == 0) {
     O << ", ";
-    printOperand(MI, opNum + 1, O);
+    printOperand(MI, OpNum + 1, O);
   } else {
-    if (MI->getOperand(opNum + 1).isImm() &&
-        MI->getOperand(opNum + 1).getImm() == 0)
+    if (MI->getOperand(OpNum + 1).isImm() &&
+        MI->getOperand(OpNum + 1).getImm() == 0)
       return; // don't print ',0' or '+0'
     O << "+";
-    printOperand(MI, opNum + 1, O);
+    printOperand(MI, OpNum + 1, O);
   }
 }
 

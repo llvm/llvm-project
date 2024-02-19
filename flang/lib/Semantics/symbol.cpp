@@ -153,6 +153,8 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 }
 
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
+void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
+void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -190,12 +192,10 @@ void GenericDetails::AddSpecificProc(
 }
 void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!specific_);
-  CHECK(!derivedType_);
   specific_ = &specific;
 }
 void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
-  CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
@@ -209,7 +209,7 @@ const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
 }
 Symbol *GenericDetails::CheckSpecific() {
-  if (specific_) {
+  if (specific_ && !specific_->has<UseErrorDetails>()) {
     for (const Symbol &proc : specificProcs_) {
       if (&proc == specific_) {
         return nullptr;
@@ -438,8 +438,12 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const AssocEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
-  if (auto assocRank{x.rank()}) {
-    os << " rank: " << *assocRank;
+  if (x.IsAssumedSize()) {
+    os << " RANK(*)";
+  } else if (x.IsAssumedRank()) {
+    os << " RANK DEFAULT";
+  } else if (auto assocRank{x.rank()}) {
+    os << " RANK(" << *assocRank << ')';
   }
   DumpExpr(os, "expr", x.expr());
   return os;
@@ -727,22 +731,10 @@ bool GenericKind::IsOperator() const {
 
 std::string GenericKind::ToString() const {
   return common::visit(
-      common::visitors {
-        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
-            [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            [](const common::NumericOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::LogicalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::RelationalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-#else
-            [](const auto &x) { return std::string{common::EnumToString(x)}; },
-#endif
+      common::visitors{
+          [](const OtherKind &x) { return std::string{EnumToString(x)}; },
+          [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
+          [](const auto &x) { return std::string{common::EnumToString(x)}; },
       },
       u);
 }
@@ -755,6 +747,57 @@ SourceName GenericKind::AsFortran(common::DefinedIo x) {
 bool GenericKind::Is(GenericKind::OtherKind x) const {
   const OtherKind *y{std::get_if<OtherKind>(&u)};
   return y && *y == x;
+}
+
+std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
+  std::string clauseName;
+  switch (ompFlag) {
+  case Symbol::Flag::OmpShared:
+    clauseName = "SHARED";
+    break;
+  case Symbol::Flag::OmpPrivate:
+    clauseName = "PRIVATE";
+    break;
+  case Symbol::Flag::OmpLinear:
+    clauseName = "LINEAR";
+    break;
+  case Symbol::Flag::OmpFirstPrivate:
+    clauseName = "FIRSTPRIVATE";
+    break;
+  case Symbol::Flag::OmpLastPrivate:
+    clauseName = "LASTPRIVATE";
+    break;
+  case Symbol::Flag::OmpMapTo:
+  case Symbol::Flag::OmpMapFrom:
+  case Symbol::Flag::OmpMapToFrom:
+  case Symbol::Flag::OmpMapAlloc:
+  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapDelete:
+    clauseName = "MAP";
+    break;
+  case Symbol::Flag::OmpUseDevicePtr:
+    clauseName = "USE_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpUseDeviceAddr:
+    clauseName = "USE_DEVICE_ADDR";
+    break;
+  case Symbol::Flag::OmpCopyIn:
+    clauseName = "COPYIN";
+    break;
+  case Symbol::Flag::OmpCopyPrivate:
+    clauseName = "COPYPRIVATE";
+    break;
+  case Symbol::Flag::OmpIsDevicePtr:
+    clauseName = "IS_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpHasDeviceAddr:
+    clauseName = "HAS_DEVICE_ADDR";
+    break;
+  default:
+    clauseName = "";
+    break;
+  }
+  return clauseName;
 }
 
 bool SymbolOffsetCompare::operator()(

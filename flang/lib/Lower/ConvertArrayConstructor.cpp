@@ -214,9 +214,9 @@ public:
     assert(!elementalOp && "expected only one implied-do");
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    elementalOp =
-        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams,
-                                           /*isUnordered=*/true);
+    elementalOp = builder.create<hlfir::ElementalOp>(
+        loc, exprType, shape,
+        /*mold=*/nullptr, lengthParams, /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
     mlir::Value diff = builder.create<mlir::arith::SubIOp>(

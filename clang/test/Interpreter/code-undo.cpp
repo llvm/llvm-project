@@ -1,7 +1,4 @@
-// RUN: clang-repl "int i = 10;" 'extern "C" int printf(const char*,...);' \
-// RUN:            'auto r1 = printf("i = %d\n", i);' | FileCheck --check-prefix=CHECK-DRIVER %s
 // UNSUPPORTED: system-aix
-// CHECK-DRIVER: i = 10
 // RUN: cat %s | clang-repl | FileCheck %s
 extern "C" int printf(const char *, ...);
 int x1 = 0;

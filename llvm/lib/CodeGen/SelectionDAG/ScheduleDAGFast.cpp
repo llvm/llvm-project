@@ -296,28 +296,24 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       if (isNewLoad)
         AddPred(LoadSU, ChainPred);
     }
-    for (unsigned i = 0, e = LoadPreds.size(); i != e; ++i) {
-      const SDep &Pred = LoadPreds[i];
+    for (const SDep &Pred : LoadPreds) {
       RemovePred(SU, Pred);
       if (isNewLoad) {
         AddPred(LoadSU, Pred);
       }
     }
-    for (unsigned i = 0, e = NodePreds.size(); i != e; ++i) {
-      const SDep &Pred = NodePreds[i];
+    for (const SDep &Pred : NodePreds) {
       RemovePred(SU, Pred);
       AddPred(NewSU, Pred);
     }
-    for (unsigned i = 0, e = NodeSuccs.size(); i != e; ++i) {
-      SDep D = NodeSuccs[i];
+    for (SDep D : NodeSuccs) {
       SUnit *SuccDep = D.getSUnit();
       D.setSUnit(SU);
       RemovePred(SuccDep, D);
       D.setSUnit(NewSU);
       AddPred(SuccDep, D);
     }
-    for (unsigned i = 0, e = ChainSuccs.size(); i != e; ++i) {
-      SDep D = ChainSuccs[i];
+    for (SDep D : ChainSuccs) {
       SUnit *SuccDep = D.getSUnit();
       D.setSUnit(SU);
       RemovePred(SuccDep, D);
@@ -496,14 +492,13 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
         --NumOps;  // Ignore the glue operand.
 
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-        unsigned Flags =
-          cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
-        unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+        unsigned Flags = Node->getConstantOperandVal(i);
+        const InlineAsm::Flag F(Flags);
+        unsigned NumVals = F.getNumOperandRegisters();
 
         ++i; // Skip the ID value.
-        if (InlineAsm::isRegDefKind(Flags) ||
-            InlineAsm::isRegDefEarlyClobberKind(Flags) ||
-            InlineAsm::isClobberKind(Flags)) {
+        if (F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
+            F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
             unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
@@ -808,12 +803,12 @@ ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-llvm::ScheduleDAGSDNodes *
-llvm::createFastDAGScheduler(SelectionDAGISel *IS, CodeGenOpt::Level) {
+llvm::ScheduleDAGSDNodes *llvm::createFastDAGScheduler(SelectionDAGISel *IS,
+                                                       CodeGenOptLevel) {
   return new ScheduleDAGFast(*IS->MF);
 }
 
-llvm::ScheduleDAGSDNodes *
-llvm::createDAGLinearizer(SelectionDAGISel *IS, CodeGenOpt::Level) {
+llvm::ScheduleDAGSDNodes *llvm::createDAGLinearizer(SelectionDAGISel *IS,
+                                                    CodeGenOptLevel) {
   return new ScheduleDAGLinearize(*IS->MF);
 }

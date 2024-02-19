@@ -30,7 +30,6 @@ Vi2 g0; // expected-error {{redefinition of 'g0'}}
 _Complex int g1; // expected-note {{previous definition is here}}
 _Complex float g1; // expected-error {{redefinition of 'g1'}}
 
-// rdar://6096412
 extern char i6096412[10];
 extern char i6096412[];
 void foo6096412(void) {

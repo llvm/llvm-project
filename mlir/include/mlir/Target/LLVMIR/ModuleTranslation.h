@@ -44,6 +44,8 @@ class DebugTranslation;
 class LoopAnnotationTranslation;
 } // namespace detail
 
+class AliasScopeAttr;
+class AliasScopeDomainAttr;
 class DINodeAttr;
 class LLVMFuncOp;
 class ComdatSelectorOp;
@@ -137,12 +139,14 @@ public:
   void forgetMapping(Region &region);
 
   /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
-  /// attribute.
-  llvm::MDNode *getAliasScope(AliasScopeAttr aliasScopeAttr) const;
+  /// attribute. Creates the metadata node if it has not been converted before.
+  llvm::MDNode *getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr);
 
   /// Returns the LLVM metadata corresponding to an array of mlir LLVM dialect
-  /// alias scope attributes.
-  llvm::MDNode *getAliasScopes(ArrayRef<AliasScopeAttr> aliasScopeAttrs) const;
+  /// alias scope attributes. Creates the metadata nodes if they have not been
+  /// converted before.
+  llvm::MDNode *
+  getOrCreateAliasScopes(ArrayRef<AliasScopeAttr> aliasScopeAttrs);
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(AccessGroupOpInterface op,
@@ -187,6 +191,13 @@ public:
   /// Translates the given location.
   llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
+  /// Translates the given LLVM DWARF expression metadata.
+  llvm::DIExpression *translateExpression(LLVM::DIExpressionAttr attr);
+
+  /// Translates the given LLVM global variable expression metadata.
+  llvm::DIGlobalVariableExpression *
+  translateGlobalVariableExpression(LLVM::DIGlobalVariableExpressionAttr attr);
+
   /// Translates the given LLVM debug info metadata.
   llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
 
@@ -198,7 +209,10 @@ public:
   /// PHI nodes are constructed for block arguments but are _not_ connected to
   /// the predecessors that may not exist yet.
   LogicalResult convertBlock(Block &bb, bool ignoreArguments,
-                             llvm::IRBuilderBase &builder);
+                             llvm::IRBuilderBase &builder) {
+    return convertBlockImpl(bb, ignoreArguments, builder,
+                            /*recordInsertions=*/false);
+  }
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
@@ -288,16 +302,16 @@ private:
   ~ModuleTranslation();
 
   /// Converts individual components.
-  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder);
+  LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder,
+                                 bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
-
-  /// Process alias.scope LLVM Metadata operations and create LLVM
-  /// metadata nodes for them and their domains.
-  LogicalResult createAliasScopeMetadata();
+  LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
+                                 llvm::IRBuilderBase &builder,
+                                 bool recordInsertions);
 
   /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
   /// TBAATagAttr.
@@ -308,10 +322,14 @@ private:
   LogicalResult createTBAAMetadata();
 
   /// Translates dialect attributes attached to the given operation.
-  LogicalResult convertDialectAttributes(Operation *op);
+  LogicalResult
+  convertDialectAttributes(Operation *op,
+                           ArrayRef<llvm::Instruction *> instructions);
 
   /// Translates parameter attributes and adds them to the returned AttrBuilder.
-  llvm::AttrBuilder convertParameterAttrs(DictionaryAttr paramAttrs);
+  /// Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder>
+  convertParameterAttrs(LLVMFuncOp func, int argIdx, DictionaryAttr paramAttrs);
 
   /// Original and translated module.
   Operation *mlirModule;
@@ -350,9 +368,13 @@ private:
   /// have been converted.
   DenseMap<Operation *, llvm::CallInst *> callMapping;
 
-  /// Mapping from an alias scope metadata operation to its LLVM metadata.
-  /// This map is populated on module entry.
-  DenseMap<Attribute, llvm::MDNode *> aliasScopeMetadataMapping;
+  /// Mapping from an alias scope attribute to its LLVM metadata.
+  /// This map is populated lazily.
+  DenseMap<AliasScopeAttr, llvm::MDNode *> aliasScopeMetadataMapping;
+
+  /// Mapping from an alias scope domain attribute to its LLVM metadata.
+  /// This map is populated lazily.
+  DenseMap<AliasScopeDomainAttr, llvm::MDNode *> aliasDomainMetadataMapping;
 
   /// Mapping from a tbaa attribute to its LLVM metadata.
   /// This map is populated on module entry.
@@ -376,9 +398,6 @@ namespace detail {
 /// to the results of preceding blocks.
 void connectPHINodes(Region &region, const ModuleTranslation &state);
 
-/// Get a topologically sorted list of blocks of the given region.
-SetVector<Block *> getTopologicallySortedBlocks(Region &region);
-
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
 /// attributes and combinations thereof. Also, an array attribute with two
@@ -393,6 +412,17 @@ llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
                                     llvm::Intrinsic::ID intrinsic,
                                     ArrayRef<llvm::Value *> args = {},
                                     ArrayRef<llvm::Type *> tys = {});
+
+/// Creates a call to a LLVM IR intrinsic defined by LLVM_IntrOpBase. This
+/// resolves the overloads, and maps mixed MLIR value and attribute arguments to
+/// LLVM values.
+llvm::CallInst *createIntrinsicCall(
+    llvm::IRBuilderBase &builder, ModuleTranslation &moduleTranslation,
+    Operation *intrOp, llvm::Intrinsic::ID intrinsic, unsigned numResults,
+    ArrayRef<unsigned> overloadedResults, ArrayRef<unsigned> overloadedOperands,
+    ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames);
+
 } // namespace detail
 
 } // namespace LLVM

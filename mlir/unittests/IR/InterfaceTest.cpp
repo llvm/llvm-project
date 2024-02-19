@@ -57,3 +57,29 @@ TEST(InterfaceTest, TypeInterfaceDenseMapKey) {
   EXPECT_TRUE(typeSet.contains(type2));
   EXPECT_FALSE(typeSet.contains(type3));
 }
+
+TEST(InterfaceTest, TestCustomClassOf) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  OpBuilder builder(&context);
+  auto op = builder.create<TestOpOptionallyImplementingInterface>(
+      builder.getUnknownLoc(), /*implementsInterface=*/true);
+  EXPECT_TRUE(isa<TestOptionallyImplementedOpInterface>(*op));
+  op.setImplementsInterface(false);
+  EXPECT_FALSE(isa<TestOptionallyImplementedOpInterface>(*op));
+  op.erase();
+}
+
+TEST(InterfaceTest, TestImplicitConversion) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  TestBaseTypeInterfacePrintTypeB typeB;
+  TestBaseTypeInterfacePrintTypeA typeA = typeB;
+  EXPECT_EQ(typeA, nullptr);
+
+  typeB = TestType::get(&context);
+  typeA = typeB;
+  EXPECT_EQ(typeA, typeB);
+}

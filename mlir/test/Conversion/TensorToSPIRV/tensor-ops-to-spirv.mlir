@@ -1,4 +1,5 @@
-// RUN: mlir-opt -split-input-file -convert-tensor-to-spirv -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --convert-tensor-to-spirv \
+// RUN:   --verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // tensor.extract
@@ -26,4 +27,39 @@ func.func @tensor_extract_constant(%a : index, %b: index, %c: index) -> i32 {
   %extract = tensor.extract %cst[%a, %b, %c] : tensor<2x2x3xi32>
   // CHECK: spirv.ReturnValue %[[VAL]]
   return %extract : i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Type conversion
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @tensor_0d
+// CHECK-NEXT:    spirv.Constant 1 : i32
+func.func @tensor_0d() -> () {
+  %x = arith.constant dense<1> : tensor<i32>
+  return
+}
+
+// CHECK-LABEL: func @tensor_1d
+// CHECK-NEXT:    spirv.Constant dense<[1, 2, 3]> : tensor<3xi32> : !spirv.array<3 x i32>
+func.func @tensor_1d() -> () {
+  %x = arith.constant dense<[1, 2, 3]> : tensor<3xi32>
+  return
+}
+
+// CHECK-LABEL: func @tensor_2d
+// CHECK-NEXT:    spirv.Constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spirv.array<6 x i32>
+func.func @tensor_2d() -> () {
+  %x = arith.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
+  return
+}
+
+// We do not handle zero-element tensors yet. Just make we do not crash on them.
+// CHECK-LABEL: func @tensor_2d_empty
+// CHECK-NEXT:    arith.constant dense<>
+func.func @tensor_2d_empty() -> () {
+  %x = arith.constant dense<> : tensor<2x0xi32>
+  return
 }

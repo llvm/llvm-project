@@ -10,6 +10,7 @@ add_object_library(
     time_utils.h
   DEPENDS
     libc.include.time
+    libc.src.__support.CPP.limits
     libc.src.errno.errno
 )
 
@@ -36,19 +37,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  clock_gettime
-  SRCS
-    clock_gettime.cpp
-  HDRS
-    clock_gettime.h
-  DEPENDS
-    libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   difftime
   SRCS
     difftime.cpp
@@ -56,20 +44,6 @@ add_entrypoint_object(
     difftime.h
   DEPENDS
     libc.include.time
-)
-
-add_entrypoint_object(
-  gettimeofday
-  SRCS
-    gettimeofday.cpp
-  HDRS
-    gettimeofday.h
-  DEPENDS
-    .clock_gettime
-    libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -107,19 +81,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  nanosleep
-  SRCS
-    nanosleep.cpp
-  HDRS
-    nanosleep.h
-  DEPENDS
-    libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
   time
   ALIAS
   DEPENDS
@@ -131,4 +92,25 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.clock
+)
+
+add_entrypoint_object(
+  nanosleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.nanosleep
+)
+
+add_entrypoint_object(
+  clock_gettime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_gettime
+)
+
+add_entrypoint_object(
+  gettimeofday
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.gettimeofday
 )

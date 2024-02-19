@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t -- -config="{CheckOptions: [{key: performance-unnecessary-copy-initialization.ExcludedContainerTypes, value: 'ns::ViewType$;::ConstInCorrectType$'}]}" --
+// RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t -- -config="{CheckOptions: {performance-unnecessary-copy-initialization.ExcludedContainerTypes: 'ns::ViewType$;::ConstInCorrectType$'}}" --
 
 namespace ns {
 template <typename T>

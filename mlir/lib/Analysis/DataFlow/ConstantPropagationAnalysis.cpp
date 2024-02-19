@@ -7,8 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 
 #define DEBUG_TYPE "constant-propagation"
 
@@ -96,7 +105,7 @@ void SparseConstantPropagation::visitOperation(
     } else {
       LLVM_DEBUG(llvm::dbgs()
                  << "Folded to value: " << foldResult.get<Value>() << "\n");
-      AbstractSparseDataFlowAnalysis::join(
+      AbstractSparseForwardDataFlowAnalysis::join(
           lattice, *getLatticeElement(foldResult.get<Value>()));
     }
   }

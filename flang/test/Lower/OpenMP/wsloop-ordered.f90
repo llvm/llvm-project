@@ -1,6 +1,6 @@
 ! This test checks lowering of worksharing-loop construct with ordered clause.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 ! This checks lowering ordered clause specified without parameter
 subroutine wsloop_ordered_no_para()

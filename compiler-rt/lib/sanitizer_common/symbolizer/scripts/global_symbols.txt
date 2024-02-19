@@ -1,3 +1,6 @@
+# This file is used to control symbols used by internal symbolizer. We want to
+# avoid unexpected dependency on function intercepted by sanitizers.
+
 _GLOBAL_OFFSET_TABLE_ U
 _ZN11__sanitizer13internal_mmapEPvjiiiy U
 _ZN11__sanitizer13internal_mmapEPvmiiiy U
@@ -11,6 +14,13 @@ _ZN11__sanitizer16internal_iserrorEjPi U
 _ZN11__sanitizer16internal_iserrorEmPi U
 _ZN11__sanitizer17internal_snprintfEPcjPKcz U
 _ZN11__sanitizer17internal_snprintfEPcmPKcz U
+__aarch64_cas8_acq_rel U
+__aarch64_ldadd4_acq_rel U
+__aarch64_ldadd8_acq_rel U
+__aarch64_ldadd8_relax U
+__aarch64_swp8_acq_rel U
+__ashldi3 U
+__ashrdi3 U
 __ctype_b_loc U
 __ctype_get_mb_cur_max U
 __cxa_atexit U
@@ -34,15 +44,29 @@ __interceptor_pthread_setspecific w
 __interceptor_read w
 __interceptor_realpath w
 __isinf U
+__isoc23_sscanf U
+__isoc23_strtol U
+__isoc23_strtoll U
+__isoc23_strtoll_l U
+__isoc23_strtoull U
+__isoc23_strtoull_l U
+__isoc23_vsscanf U
 __isoc99_sscanf U
 __isoc99_vsscanf U
+__lshrdi3 U
 __moddi3 U
+__sanitizer_internal_memcpy U
+__sanitizer_internal_memmove U
+__sanitizer_internal_memset U
 __sanitizer_symbolize_code T
 __sanitizer_symbolize_data T
 __sanitizer_symbolize_demangle T
 __sanitizer_symbolize_flush T
+__sanitizer_symbolize_frame T
 __sanitizer_symbolize_set_demangle T
 __sanitizer_symbolize_set_inline_frames T
+__start___lcxx_override U
+__stop___lcxx_override U
 __strdup U
 __udivdi3 U
 __umoddi3 U

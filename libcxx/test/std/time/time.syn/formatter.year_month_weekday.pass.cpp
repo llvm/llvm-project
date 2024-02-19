@@ -5,8 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -328,7 +326,7 @@ static void test_valid_md_values() {
         std::chrono::year_month_weekday{
             std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
 
-#elif defined(_AIX)      // defined(_WIN32)
+#elif defined(_AIX) // defined(_WIN32)
   check(loc,
         SV("%b='1月'\t%B='1月'\t%h='1月'\t%m='01'\t%Om='01'\t%d='01'\t%e=' 1'\t%Od='01'\t%Oe=' 1'\n"),
         lfmt,
@@ -354,6 +352,18 @@ static void test_valid_md_values() {
         std::chrono::year_month_weekday{
             std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
 
+#elif defined(__FreeBSD__) // defined(_WIN32)
+  check(loc,
+        SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='01'\t%d='01'\t%e=' 1'\t%Od='01'\t%Oe=' 1'\n"),
+        lfmt,
+        std::chrono::year_month_weekday{
+            std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{4}, 1}});
+
+  check(loc,
+        SV("%b='12月'\t%B='12月'\t%h='12月'\t%m='12'\t%Om='12'\t%d='20'\t%e='20'\t%Od='20'\t%Oe='20'\n"),
+        lfmt,
+        std::chrono::year_month_weekday{
+            std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
 #else                    // defined(_WIN32)
   check(loc,
         SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='一'\t%d='01'\t%e=' 1'\t%Od='一'\t%Oe='一'\n"),
@@ -507,14 +517,14 @@ static void test_valid_ymd_values() {
          "%V='01'\t"
          "%w='4'\t"
          "%W='00'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%x='01.01.1970'\t"
 #else
          "%x='01/01/1970'\t"
 #endif
          "%y='70'\t"
          "%Y='1970'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%Ex='01.01.1970'\t"
 #else
          "%Ex='01/01/1970'\t"
@@ -545,14 +555,14 @@ static void test_valid_ymd_values() {
          "%V='22'\t"
          "%w='6'\t"
          "%W='21'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%x='29.05.2004'\t"
 #else
          "%x='29/05/2004'\t"
 #endif
          "%y='04'\t"
          "%Y='2004'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%Ex='29.05.2004'\t"
 #else
          "%Ex='29/05/2004'\t"
@@ -585,14 +595,14 @@ static void test_valid_ymd_values() {
          "%V='01'\t"
          "%w='4'\t"
          "%W='00'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='1970/01/01'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='1970年01月01日'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%y='70'\t"
          "%Y='1970'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='1970/01/01'\t"
          "%EC='19'\t"
          "%Ey='70'\t"
@@ -603,7 +613,7 @@ static void test_valid_ymd_values() {
          "%Ow='4'\t"
          "%OW='00'\t"
          "%Oy='70'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='昭和45年01月01日'\t"
          "%EC='昭和'\t"
          "%Ey='45'\t"
@@ -614,7 +624,7 @@ static void test_valid_ymd_values() {
          "%Ow='四'\t"
          "%OW='〇'\t"
          "%Oy='七十'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "\n"),
       lfmt,
       std::chrono::year_month_weekday{
@@ -633,14 +643,14 @@ static void test_valid_ymd_values() {
          "%V='22'\t"
          "%w='6'\t"
          "%W='21'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='2004/05/29'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='2004年05月29日'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%y='04'\t"
          "%Y='2004'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='2004/05/29'\t"
          "%EC='20'\t"
          "%Ey='04'\t"
@@ -651,7 +661,7 @@ static void test_valid_ymd_values() {
          "%Ow='6'\t"
          "%OW='21'\t"
          "%Oy='04'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='平成16年05月29日'\t"
          "%EC='平成'\t"
          "%Ey='16'\t"
@@ -662,7 +672,7 @@ static void test_valid_ymd_values() {
          "%Ow='六'\t"
          "%OW='二十一'\t"
          "%Oy='四'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "\n"),
       lfmt,
       std::chrono::year_month_weekday{

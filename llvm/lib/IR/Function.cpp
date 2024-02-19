@@ -37,12 +37,14 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -79,6 +81,27 @@ template class llvm::SymbolTableListTraits<BasicBlock>;
 static cl::opt<unsigned> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
+
+void Function::convertToNewDbgValues() {
+  IsNewDbgInfoFormat = true;
+  for (auto &BB : *this) {
+    BB.convertToNewDbgValues();
+  }
+}
+
+void Function::convertFromNewDbgValues() {
+  IsNewDbgInfoFormat = false;
+  for (auto &BB : *this) {
+    BB.convertFromNewDbgValues();
+  }
+}
+
+void Function::setIsNewDbgInfoFormat(bool NewFlag) {
+  if (NewFlag && !IsNewDbgInfoFormat)
+    convertToNewDbgValues();
+  else if (!NewFlag && IsNewDbgInfoFormat)
+    convertFromNewDbgValues();
+}
 
 //===----------------------------------------------------------------------===//
 // Argument Implementation
@@ -401,7 +424,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     : GlobalObject(Ty, Value::FunctionVal,
                    OperandTraits<Function>::op_begin(this), 0, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
-      NumArgs(Ty->getNumParams()) {
+      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(false) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -417,7 +440,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   if (ParentModule)
     ParentModule->getFunctionList().push_back(this);
 
-  HasLLVMReservedName = getName().startswith("llvm.");
+  HasLLVMReservedName = getName().starts_with("llvm.");
   // Ensure intrinsics have the right parameter attributes.
   // Note, the IntID field will have been set in Value::setName if this function
   // name is a valid intrinsic ID.
@@ -517,15 +540,7 @@ void Function::stealArgumentListFrom(Function &Src) {
   Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
 }
 
-// dropAllReferences() - This function causes all the subinstructions to "let
-// go" of all references that they are maintaining.  This allows one to
-// 'delete' a whole class at a time, even though there may be circular
-// references... first all references are dropped, and all use counts go to
-// zero.  Then everything is deleted for real.  Note that no operations are
-// valid on an object that has "dropped all references", except operator
-// delete.
-//
-void Function::dropAllReferences() {
+void Function::deleteBodyImpl(bool ShouldDrop) {
   setIsMaterializable(false);
 
   for (BasicBlock &BB : *this)
@@ -536,10 +551,18 @@ void Function::dropAllReferences() {
   while (!BasicBlocks.empty())
     BasicBlocks.begin()->eraseFromParent();
 
-  // Drop uses of any optional data (real or placeholder).
   if (getNumOperands()) {
-    User::dropAllReferences();
-    setNumHungOffUseOperands(0);
+    if (ShouldDrop) {
+      // Drop uses of any optional data (real or placeholder).
+      User::dropAllReferences();
+      setNumHungOffUseOperands(0);
+    } else {
+      // The code needs to match Function::allocHungoffUselist().
+      auto *CPN = ConstantPointerNull::get(PointerType::get(getContext(), 0));
+      Op<0>().set(CPN);
+      Op<1>().set(CPN);
+      Op<2>().set(CPN);
+    }
     setValueSubclassData(getSubclassDataFromValue() & ~0xe);
   }
 
@@ -854,7 +877,7 @@ bool Function::isTargetIntrinsic() const {
 ///
 /// Returns the relevant slice of \c IntrinsicNameTable
 static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
-  assert(Name.startswith("llvm."));
+  assert(Name.starts_with("llvm."));
 
   ArrayRef<IntrinsicTargetInfo> Targets(TargetInfos);
   // Drop "llvm." and take the first dotted component. That will be the target
@@ -890,9 +913,10 @@ Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
                                                      : Intrinsic::not_intrinsic;
 }
 
-void Function::recalculateIntrinsicID() {
+void Function::updateAfterNameChange() {
+  LibFuncCache = UnknownLibFunc;
   StringRef Name = getName();
-  if (!Name.startswith("llvm.")) {
+  if (!Name.starts_with("llvm.")) {
     HasLLVMReservedName = false;
     IntID = Intrinsic::not_intrinsic;
     return;
@@ -1751,7 +1775,8 @@ std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCallbackUses,
                                bool IgnoreAssumeLikeCalls, bool IgnoreLLVMUsed,
-                               bool IgnoreARCAttachedCall) const {
+                               bool IgnoreARCAttachedCall,
+                               bool IgnoreCastedDirectCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1800,7 +1825,8 @@ bool Function::hasAddressTaken(const User **PutOffender,
           continue;
     }
 
-    if (!Call->isCallee(&U) || Call->getFunctionType() != getFunctionType()) {
+    if (!Call->isCallee(&U) || (!IgnoreCastedDirectCall &&
+                                Call->getFunctionType() != getFunctionType())) {
       if (IgnoreARCAttachedCall &&
           Call->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
                                       U.getOperandNo()))
@@ -1878,7 +1904,7 @@ void Function::allocHungoffUselist() {
   setNumHungOffUseOperands(3);
 
   // Initialize the uselist with placeholder operands to allow traversal.
-  auto *CPN = ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0));
+  auto *CPN = ConstantPointerNull::get(PointerType::get(getContext(), 0));
   Op<0>().set(CPN);
   Op<1>().set(CPN);
   Op<2>().set(CPN);
@@ -1890,8 +1916,7 @@ void Function::setHungoffOperand(Constant *C) {
     allocHungoffUselist();
     Op<Idx>().set(C);
   } else if (getNumOperands()) {
-    Op<Idx>().set(
-        ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0)));
+    Op<Idx>().set(ConstantPointerNull::get(PointerType::get(getContext(), 0)));
   }
 }
 

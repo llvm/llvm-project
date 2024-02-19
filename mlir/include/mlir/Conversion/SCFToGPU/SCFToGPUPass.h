@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
 #define MLIR_CONVERSION_SCFTOGPU_SCFTOGPUPASS_H_
 
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 
 #include <memory>

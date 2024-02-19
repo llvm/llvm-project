@@ -1,6 +1,6 @@
 // HLFIR ops diagnotic tests
 
-// RUN: fir-opt -split-input-file -verify-diagnostics %s
+// RUN: fir-opt -strict-intrinsic-verifier -split-input-file -verify-diagnostics %s
 
 func.func @bad_declare(%arg0: !fir.ref<f32>) {
   // expected-error@+1 {{'hlfir.declare' op first result type is inconsistent with variable properties: expected '!fir.ref<f32>'}}
@@ -267,7 +267,7 @@ func.func @bad_concat(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.cha
 // -----
 func.func @bad_concat_2(%arg0: !fir.ref<!fir.array<100x!fir.char<1,10>>>, %arg1: !fir.ref<!fir.array<100x!fir.char<1,20>>>) {
   %c30 = arith.constant 30 : index
-  // expected-error@+1 {{'hlfir.concat' op operand #0 must be any character scalar type, but got '!fir.ref<!fir.array<100x!fir.char<1,10>>>'}}
+  // expected-error@+1 {{'hlfir.concat' op operand #0 must be variadic of any character scalar type, but got '!fir.ref<!fir.array<100x!fir.char<1,10>>>'}}
   %0 = hlfir.concat %arg0, %arg1 len %c30 : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>, index) -> (!hlfir.expr<100x!fir.char<1,30>>)
   return
 }
@@ -275,7 +275,7 @@ func.func @bad_concat_2(%arg0: !fir.ref<!fir.array<100x!fir.char<1,10>>>, %arg1:
 // -----
 func.func @bad_concat_3(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<i32>) {
   %c30 = arith.constant 30 : index
-  // expected-error@+1 {{'hlfir.concat' op operand #1 must be any character scalar type, but got '!fir.ref<i32>'}}
+  // expected-error@+1 {{'hlfir.concat' op operand #1 must be variadic of any character scalar type, but got '!fir.ref<i32>'}}
   %0 = hlfir.concat %arg0, %arg1 len %c30 : (!fir.ref<!fir.char<1,10>>, !fir.ref<i32>, index) -> (!hlfir.expr<!fir.char<1,30>>)
   return
 }
@@ -382,7 +382,7 @@ func.func @bad_count2(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32){
 
 // -----
 func.func @bad_count3(%arg0: !hlfir.expr<?x!fir.logical<4>>, %arg1: i32) {
-  // expected-error@+1 {{'hlfir.count' op result must be of numerical scalar type}}
+  // expected-error@+1 {{'hlfir.count' op result must be of numerical array type}}
   %0 = hlfir.count %arg0 dim %arg1 : (!hlfir.expr<?x!fir.logical<4>>, i32) -> !hlfir.expr<i32>
 }
 
@@ -391,6 +391,295 @@ func.func @bad_count4(%arg0: !hlfir.expr<?x!fir.logical<4>>, %arg1: i32) {
   // expected-error@+1 {{'hlfir.count' op result must be of numerical scalar type}}
   %0 = hlfir.count %arg0 dim %arg1 : (!hlfir.expr<?x!fir.logical<4>>, i32) -> !fir.logical<4>
 }
+
+// -----
+func.func @bad_maxval1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxval' op result must have the same element type as ARRAY argument}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
+}
+
+// -----
+func.func @bad_maxval2(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxval3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?xi32>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxval4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxval' op result rank must be one less than ARRAY}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_maxval5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxval' op result must be of numerical scalar type}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_maxval6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.maxval' op result must be an array}}
+  %0 = hlfir.maxval %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxval7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.maxval' op result must be of numerical scalar type}}
+  %0 = hlfir.maxval %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxval8(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxval' op result must have the same element type as ARRAY argument}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> i32
+}
+
+// -----
+func.func @bad_maxval9(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxval10(%arg0: !hlfir.expr<?x5x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?x!fir.char<1,?>>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxval11(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxval' op result rank must be one less than ARRAY}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?x!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxval12(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxval' op result must be scalar character}}
+  %0 = hlfir.maxval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxval13(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.maxval' op result must be an array}}
+  %0 = hlfir.maxval %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minval1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minval' op result must have the same element type as ARRAY argument}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
+}
+
+// -----
+func.func @bad_minval2(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minval3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?xi32>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minval4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minval' op result rank must be one less than ARRAY}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_minval5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minval' op result must be of numerical scalar type}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_minval6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.minval' op result must be an array}}
+  %0 = hlfir.minval %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minval7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.minval' op result must be of numerical scalar type}}
+  %0 = hlfir.minval %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minval8(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minval' op result must have the same element type as ARRAY argument}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> i32
+}
+
+// -----
+func.func @bad_minval9(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minval10(%arg0: !hlfir.expr<?x5x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?x!fir.char<1,?>>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minval11(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minval' op result rank must be one less than ARRAY}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?x!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minval12(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minval' op result must be scalar character}}
+  %0 = hlfir.minval %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minval13(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.minval' op result must be an array}}
+  %0 = hlfir.minval %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minloc1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minloc' op result must be scalar integer}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
+}
+
+// -----
+func.func @bad_minloc2(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minloc3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?xi32>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minloc4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minloc' op result rank must be one less than ARRAY}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_minloc5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minloc' op result must be scalar integer}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_minloc6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.minloc' op result must be an array}}
+  %0 = hlfir.minloc %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_minloc7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.minloc' op result must be of numerical expr type}}
+  %0 = hlfir.minloc %arg0 : (!hlfir.expr<?xi32>) -> i32
+}
+
+// -----
+func.func @bad_minloc8(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.minloc' op result must have integer elements}}
+  %0 = hlfir.minloc %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<?xf32>
+}
+
+// -----
+func.func @bad_minloc9(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minloc10(%arg0: !hlfir.expr<?x5x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?x!fir.char<1,?>>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_minloc11(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.minloc' op result rank must be one less than ARRAY}}
+  %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_maxloc1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result must be scalar integer}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
+}
+
+// -----
+func.func @bad_maxloc2(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxloc3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?xi32>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxloc4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result rank must be one less than ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_maxloc5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result must be scalar integer}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_maxloc6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.maxloc' op result must be an array}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxloc7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.maxloc' op result must be of numerical expr type}}
+  %0 = hlfir.maxloc %arg0 : (!hlfir.expr<?xi32>) -> i32
+}
+
+// -----
+func.func @bad_maxloc8(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.maxloc' op result must have integer elements}}
+  %0 = hlfir.maxloc %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<?xf32>
+}
+
+// -----
+func.func @bad_maxloc9(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxloc10(%arg0: !hlfir.expr<?x5x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?x!fir.char<1,?>>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxloc11(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result rank must be one less than ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
 
 // -----
 func.func @bad_product1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
@@ -959,5 +1248,69 @@ func.func @bad_get_length_2(%arg0: !hlfir.expr<?xi32>) {
 func.func @bad_get_length_3(%arg0: !hlfir.expr<!fir.boxchar<1>>) {
   // expected-error@+1 {{'hlfir.get_length' op operand #0 must be any character scalar or array expression type, but got '!hlfir.expr<!fir.boxchar<1>>'}}
   %1 = hlfir.get_length %arg0 : (!hlfir.expr<!fir.boxchar<1>>) -> index
+  return
+}
+
+// -----
+func.func @elemental_poly_1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, %shape : index) {
+  %3 = fir.shape %shape : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'hlfir.elemental' op operand #1 must be any polymorphic object, but got '!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>'}}
+  %4 = hlfir.elemental %3 mold %arg0 unordered : (!fir.shape<1>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+  ^bb0(%arg2: index):
+    %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+  }
+  return
+}
+
+// -----
+func.func @elemental_poly_2(%arg0: !hlfir.expr<?x!fir.type<_QMtypesTt>>, %shape : index) {
+  %3 = fir.shape %shape : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'hlfir.elemental' op operand #1 must be any polymorphic object, but got '!hlfir.expr<?x!fir.type<_QMtypesTt>>'}}
+  %4 = hlfir.elemental %3 mold %arg0 unordered : (!fir.shape<1>, !hlfir.expr<?x!fir.type<_QMtypesTt>>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+  ^bb0(%arg2: index):
+    %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+  }
+  return
+}
+
+// -----
+func.func @elemental_poly_3(%arg0: !hlfir.expr<?x!fir.type<_QMtypesTt>?>, %shape : index) {
+  %3 = fir.shape %shape : (index) -> !fir.shape<1>
+// expected-error@+1 {{'hlfir.elemental' op result must be polymorphic when mold is present and vice versa}}
+  %4 = hlfir.elemental %3 mold %arg0 unordered : (!fir.shape<1>, !hlfir.expr<?x!fir.type<_QMtypesTt>?>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>> {
+  ^bb0(%arg2: index):
+    %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>>
+  }
+  return
+}
+
+// -----
+func.func @elemental_poly_4(%shape : index) {
+  %3 = fir.shape %shape : (index) -> !fir.shape<1>
+// expected-error@+1 {{'hlfir.elemental' op result must be polymorphic when mold is present and vice versa}}
+  %4 = hlfir.elemental %3 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+  ^bb0(%arg2: index):
+    %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+  }
+  return
+}
+
+// -----
+func.func @destroy_with_finalize(%expr: !hlfir.expr<?xi32>) {
+// expected-error@+1 {{'hlfir.destroy' op the element type must be finalizable, when 'finalize' is set}}
+  hlfir.destroy %expr finalize : !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @end_associate_with_alloc_comp(%var: !hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, %shape: !fir.shape<1>) {
+  %4:3 = hlfir.associate %var(%shape) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
+// expected-error@+1 {{'hlfir.end_associate' op that requires components deallocation must have var operand that is a Fortran entity}}
+  hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
   return
 }

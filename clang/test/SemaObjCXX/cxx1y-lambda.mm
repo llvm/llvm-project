@@ -5,7 +5,6 @@ __attribute__((objc_root_class))
 @interface NSString
 @end
 
-// rdar://problem/22344904
 void testResultTypeDeduction(int i) {
   auto x = [i] {
     switch (i) {

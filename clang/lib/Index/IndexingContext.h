@@ -79,7 +79,7 @@ public:
                        const NamedDecl *Parent, const DeclContext *DC,
                        SymbolRoleSet Roles = SymbolRoleSet(),
                        ArrayRef<SymbolRelation> Relations = std::nullopt,
-                       const Expr *RefE = nullptr, const Decl *RefD = nullptr);
+                       const Expr *RefE = nullptr);
 
   void handleMacroDefined(const IdentifierInfo &Name, SourceLocation Loc,
                           const MacroInfo &MI);

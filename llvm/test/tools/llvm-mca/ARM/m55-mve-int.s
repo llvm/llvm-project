@@ -631,15 +631,15 @@ vsub.i32 q0, q2, r0
 # CHECK-NEXT:  1      1     2.00                        vmaxa.s8	q0, q2
 # CHECK-NEXT:  1      1     2.00                        vmaxa.s16	q0, q2
 # CHECK-NEXT:  1      1     2.00                        vmaxa.s32	q0, q2
-# CHECK-NEXT:  1      2     2.00                        vmaxv.s8	r0, q2
-# CHECK-NEXT:  1      2     2.00                        vmaxv.u8	r0, q2
+# CHECK-NEXT:  1      4     2.00                        vmaxv.s8	r0, q2
+# CHECK-NEXT:  1      4     2.00                        vmaxv.u8	r0, q2
 # CHECK-NEXT:  1      3     2.00                        vmaxv.s16	r0, q2
 # CHECK-NEXT:  1      3     2.00                        vmaxv.u16	r0, q2
-# CHECK-NEXT:  1      4     2.00                        vmaxv.s32	r0, q2
-# CHECK-NEXT:  1      4     2.00                        vmaxv.u32	r0, q2
-# CHECK-NEXT:  1      2     2.00                        vmaxav.s8	r0, q2
+# CHECK-NEXT:  1      2     2.00                        vmaxv.s32	r0, q2
+# CHECK-NEXT:  1      2     2.00                        vmaxv.u32	r0, q2
+# CHECK-NEXT:  1      4     2.00                        vmaxav.s8	r0, q2
 # CHECK-NEXT:  1      3     2.00                        vmaxav.s16	r0, q2
-# CHECK-NEXT:  1      4     2.00                        vmaxav.s32	r0, q2
+# CHECK-NEXT:  1      2     2.00                        vmaxav.s32	r0, q2
 # CHECK-NEXT:  1      1     2.00                        vmin.s8	q0, q2, q1
 # CHECK-NEXT:  1      1     2.00                        vmin.u8	q0, q2, q1
 # CHECK-NEXT:  1      1     2.00                        vmin.s16	q0, q2, q1
@@ -649,15 +649,15 @@ vsub.i32 q0, q2, r0
 # CHECK-NEXT:  1      1     2.00                        vmina.s8	q0, q2
 # CHECK-NEXT:  1      1     2.00                        vmina.s16	q0, q2
 # CHECK-NEXT:  1      1     2.00                        vmina.s32	q0, q2
-# CHECK-NEXT:  1      2     2.00                        vminv.s8	r0, q2
-# CHECK-NEXT:  1      2     2.00                        vminv.u8	r0, q2
+# CHECK-NEXT:  1      4     2.00                        vminv.s8	r0, q2
+# CHECK-NEXT:  1      4     2.00                        vminv.u8	r0, q2
 # CHECK-NEXT:  1      3     2.00                        vminv.s16	r0, q2
 # CHECK-NEXT:  1      3     2.00                        vminv.u16	r0, q2
-# CHECK-NEXT:  1      4     2.00                        vminv.s32	r0, q2
-# CHECK-NEXT:  1      4     2.00                        vminv.u32	r0, q2
-# CHECK-NEXT:  1      2     2.00                        vminav.s8	r0, q2
+# CHECK-NEXT:  1      2     2.00                        vminv.s32	r0, q2
+# CHECK-NEXT:  1      2     2.00                        vminv.u32	r0, q2
+# CHECK-NEXT:  1      4     2.00                        vminav.s8	r0, q2
 # CHECK-NEXT:  1      3     2.00                        vminav.s16	r0, q2
-# CHECK-NEXT:  1      4     2.00                        vminav.s32	r0, q2
+# CHECK-NEXT:  1      2     2.00                        vminav.s32	r0, q2
 # CHECK-NEXT:  1      2     2.00                        vmla.i8	q0, q2, r0
 # CHECK-NEXT:  1      2     2.00                        vmla.i16	q0, q2, r0
 # CHECK-NEXT:  1      2     2.00                        vmla.i32	q0, q2, r0

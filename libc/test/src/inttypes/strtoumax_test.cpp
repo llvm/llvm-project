@@ -12,4 +12,4 @@
 
 #include "test/src/stdlib/StrtolTest.h"
 
-STRTOL_TEST(Strtoumax, __llvm_libc::strtoumax)
+STRTOL_TEST(Strtoumax, LIBC_NAMESPACE::strtoumax)

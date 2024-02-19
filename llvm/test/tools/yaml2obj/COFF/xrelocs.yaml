@@ -30,6 +30,7 @@
 # CHECK-YAML-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_NRELOC_OVFL, IMAGE_SCN_MEM_READ ]
 # CHECK-YAML-NEXT:     Alignment:       16
 # CHECK-YAML-NEXT:     SectionData:     '00000000000000000000000000000000'
+# CHECK-YAML-NEXT:     SizeOfRawData:   16
 # CHECK-YAML-NEXT:     Relocations:
 # CHECK-YAML-NEXT:       - VirtualAddress:  0
 # CHECK-YAML-NEXT:         SymbolName:      foo

@@ -390,11 +390,13 @@ APValue &APValue::operator=(const APValue &RHS) {
 }
 
 APValue &APValue::operator=(APValue &&RHS) {
-  if (Kind != None && Kind != Indeterminate)
-    DestroyDataAndMakeUninit();
-  Kind = RHS.Kind;
-  Data = RHS.Data;
-  RHS.Kind = None;
+  if (this != &RHS) {
+    if (Kind != None && Kind != Indeterminate)
+      DestroyDataAndMakeUninit();
+    Kind = RHS.Kind;
+    Data = RHS.Data;
+    RHS.Kind = None;
+  }
   return *this;
 }
 
@@ -839,6 +841,10 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
           Out << *VD;
           ElemTy = VD->getType();
         }
+      } else if (ElemTy->isAnyComplexType()) {
+        // The lvalue refers to a complex type
+        Out << (Path[I].getAsArrayIndex() == 0 ? ".real" : ".imag");
+        ElemTy = ElemTy->castAs<ComplexType>()->getElementType();
       } else {
         // The lvalue must refer to an array.
         Out << '[' << Path[I].getAsArrayIndex() << ']';
@@ -1109,7 +1115,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
 
   auto MergeLV = [&](LinkageInfo MergeLV) {
     LV.merge(MergeLV);
-    return LV.getLinkage() == InternalLinkage;
+    return LV.getLinkage() == Linkage::Internal;
   };
   auto Merge = [&](const APValue &V) {
     return MergeLV(getLVForValue(V, computation));

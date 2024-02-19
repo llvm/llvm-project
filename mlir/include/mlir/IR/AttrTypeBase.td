@@ -14,7 +14,11 @@
 #ifndef ATTRTYPEBASE_TD
 #define ATTRTYPEBASE_TD
 
-include "mlir/IR/OpBase.td"
+include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/IR/CommonTypeConstraints.td"
+include "mlir/IR/Constraints.td"
+include "mlir/IR/DialectBase.td"
+include "mlir/IR/Traits.td"
 
 //-------------------------------------------------------------------------===//
 // AttrTrait definitions
@@ -260,6 +264,9 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   // Make it possible to use such attributes as parameters for other attributes.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
 
+  // The unique attribute name.
+  string attrName = dialect.name # "." # mnemonic;
+
   // The call expression to convert from the storage type to the return
   // type. For example, an enum can be stored as an int but returned as an
   // enum class.
@@ -284,6 +291,9 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
       AttrOrTypeDef<"Type", name, traits, baseCppClass> {
   // Make it possible to use such type as parameters for other types.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
+
+  // The unique type name.
+  string typeName = dialect.name # "." # mnemonic;
 
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
@@ -311,7 +321,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string cppType = type;
   // The C++ type of the accessor for this parameter.
   string cppAccessorType = !if(!empty(accessorType), type, accessorType);
-  // The C++ storage type of of this parameter if it is a reference, e.g.
+  // The C++ storage type of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
   string cppStorageType = cppType;
   // The C++ code to convert from the storage type to the parameter type.
@@ -359,7 +369,7 @@ class DefaultValuedParameter<string type, string value, string desc = ""> :
 class StringRefParameter<string desc = "", string value = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
-  let printer = [{$_printer << '"' << $_self << '"';}];
+  let printer = [{$_printer.printString($_self);}];
   let cppStorageType = "std::string";
   let defaultValue = value;
 }
@@ -427,15 +437,15 @@ class AttributeSelfTypeParameter<string desc,
 /// This class defines an attribute that contains an array of elements. The
 /// elements can be any type, but if they are attributes, the nested elements
 /// are parsed and printed using the custom attribute syntax.
-class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
+class ArrayOfAttr<Dialect dialect, string name, string attrMnemonic,
                   string eltName, list<Trait> traits = []>
-    : AttrDef<dialect, attrName, traits> {
+    : AttrDef<dialect, name, traits> {
   let parameters = (ins OptionalArrayRefParameter<eltName>:$value);
   let mnemonic = attrMnemonic;
   let assemblyFormat = "`[` (`]`) : ($value^ `]`)?";
 
   let returnType = "::llvm::ArrayRef<" # eltName # ">";
-  let constBuilderCall = "$_builder.getAttr<" # attrName # "Attr>($0)";
+  let constBuilderCall = "$_builder.getAttr<" # name # "Attr>($0)";
   let convertFromStorage = "$_self.getValue()";
 
   let extraClassDeclaration = [{

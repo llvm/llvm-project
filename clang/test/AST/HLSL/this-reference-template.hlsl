@@ -32,15 +32,15 @@ void main() {
 // CHECK-NEXT:-MemberExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'V' lvalue .Second 0x{{[0-9A-Fa-f]+}}
 // CHECK-NEXT:-CXXThisExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'Pair<K, V>' lvalue implicit this
 
-// CHECK:     -CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <line:8:3, line:10:3> line:8:5 used getFirst 'int ()' implicit-inline
+// CHECK:     -CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <line:8:3, line:10:3> line:8:5 used getFirst 'int ()' implicit_instantiation implicit-inline
 // CHECK-NEXT:-CompoundStmt 0x{{[0-9A-Fa-f]+}} <col:16, line:10:3>
 // CHECK-NEXT:-ReturnStmt 0x{{[0-9A-Fa-f]+}} <line:9:4, col:16>
-// CHECK-NEXT:-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:11, col:16> 'int':'int' <LValueToRValue>
-// CHECK-NEXT:-MemberExpr 0x{{[0-9A-Fa-f]+}} <col:11, col:16> 'int':'int' lvalue .First 0x{{[0-9A-Fa-f]+}}
+// CHECK-NEXT:-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:11, col:16> 'int' <LValueToRValue>
+// CHECK-NEXT:-MemberExpr 0x{{[0-9A-Fa-f]+}} <col:11, col:16> 'int' lvalue .First 0x{{[0-9A-Fa-f]+}}
 // CHECK-NEXT:-CXXThisExpr 0x{{[0-9A-Fa-f]+}} <col:11> 'Pair<int, float>' lvalue this
-// CHECK-NEXT:-CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <line:12:3, line:14:3> line:12:5 used getSecond 'float ()' implicit-inline
+// CHECK-NEXT:-CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <line:12:3, line:14:3> line:12:5 used getSecond 'float ()' implicit_instantiation implicit-inline
 // CHECK-NEXT:-CompoundStmt 0x{{[0-9A-Fa-f]+}} <col:17, line:14:3>
 // CHECK-NEXT:-ReturnStmt 0x{{[0-9A-Fa-f]+}} <line:13:5, col:12>
-// CHECK-NEXT:-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'float':'float' <LValueToRValue>
-// CHECK-NEXT:-MemberExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'float':'float' lvalue .Second 0x{{[0-9A-Fa-f]+}}
+// CHECK-NEXT:-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'float' <LValueToRValue>
+// CHECK-NEXT:-MemberExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'float' lvalue .Second 0x{{[0-9A-Fa-f]+}}
 // CHECK-NEXT:-CXXThisExpr 0x{{[0-9A-Fa-f]+}} <col:12> 'Pair<int, float>' lvalue implicit this

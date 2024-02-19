@@ -1,8 +1,19 @@
+//===----------------------------------------------------------------------===//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: no-filesystem
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // XFAIL: msvc, target={{.+}}-windows-gnu
 // XFAIL: availability-fp_to_chars-missing
+
+// fmemopen is available starting in Android M (API 23)
+// XFAIL: target={{.+}}-android{{(eabi)?(21|22)}}
 
 // <print>
 
@@ -58,7 +69,8 @@ static void test_vprint_unicode() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::vprint_unicode(file, "hello world{}", std::make_format_args('!'));
+  char c = '!';
+  std::vprint_unicode(file, "hello world{}", std::make_format_args(c));
   long pos = std::ftell(file);
   std::fclose(file);
 
@@ -72,7 +84,8 @@ static void test_vprint_nonunicode() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::vprint_nonunicode(file, "hello world{}", std::make_format_args('!'));
+  char c = '!';
+  std::vprint_nonunicode(file, "hello world{}", std::make_format_args(c));
   long pos = std::ftell(file);
   std::fclose(file);
 

@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 # System modules
 import argparse
 import sys
@@ -218,12 +216,6 @@ def create_parser():
         dest="log_success",
         action="store_true",
         help="Leave logs/traces even for successful test runs (useful for creating reference log files during debugging.)",
-    )
-    group.add_argument(
-        "--codesign-identity",
-        metavar="Codesigning identity",
-        default="lldb_codesign",
-        help="The codesigning identity to use",
     )
     group.add_argument(
         "--build-dir",

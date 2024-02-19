@@ -32,7 +32,6 @@ struct T {
   void f8(int = func<0,1<2>(0), int = 1<0, T1<int,int>(int) = 0);
 };
 
-// rdar://18508589
 struct S { 
   void f(int &r = error);  // expected-error {{use of undeclared identifier 'error'}}
 };

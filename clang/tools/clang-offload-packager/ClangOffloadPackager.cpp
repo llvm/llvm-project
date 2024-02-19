@@ -104,33 +104,36 @@ static Error bundleImages() {
           inconvertibleErrorCode(),
           "'file' and 'triple' are required image arguments");
 
-    OffloadBinary::OffloadingImage ImageBinary{};
-    std::unique_ptr<llvm::MemoryBuffer> DeviceImage;
-    for (const auto &[Key, Value] : Args) {
-      if (Key == "file") {
-        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
-            llvm::MemoryBuffer::getFileOrSTDIN(Value);
-        if (std::error_code EC = ObjectOrErr.getError())
-          return errorCodeToError(EC);
+    // Permit using multiple instances of `file` in a single string.
+    for (auto &File : llvm::split(Args["file"], ",")) {
+      OffloadBinary::OffloadingImage ImageBinary{};
+      std::unique_ptr<llvm::MemoryBuffer> DeviceImage;
 
-        // Clang uses the '.o' suffix for LTO bitcode.
-        if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
-          ImageBinary.TheImageKind = object::IMG_Bitcode;
-        else
-          ImageBinary.TheImageKind =
-              getImageKind(sys::path::extension(Value).drop_front());
-        ImageBinary.Image = std::move(*ObjectOrErr);
-      } else if (Key == "kind") {
-        ImageBinary.TheOffloadKind = getOffloadKind(Value);
-      } else {
-        ImageBinary.StringData[Key] = Value;
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
+          llvm::MemoryBuffer::getFileOrSTDIN(File);
+      if (std::error_code EC = ObjectOrErr.getError())
+        return errorCodeToError(EC);
+
+      // Clang uses the '.o' suffix for LTO bitcode.
+      if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
+        ImageBinary.TheImageKind = object::IMG_Bitcode;
+      else
+        ImageBinary.TheImageKind =
+            getImageKind(sys::path::extension(File).drop_front());
+      ImageBinary.Image = std::move(*ObjectOrErr);
+      for (const auto &[Key, Value] : Args) {
+        if (Key == "kind") {
+          ImageBinary.TheOffloadKind = getOffloadKind(Value);
+        } else if (Key != "file") {
+          ImageBinary.StringData[Key] = Value;
+        }
       }
+      llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
+      if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+        return createStringError(inconvertibleErrorCode(),
+                                 "Offload binary has invalid size alignment");
+      OS << Buffer;
     }
-    std::unique_ptr<MemoryBuffer> Buffer = OffloadBinary::write(ImageBinary);
-    if (Buffer->getBufferSize() % OffloadBinary::getAlignment() != 0)
-      return createStringError(inconvertibleErrorCode(),
-                               "Offload binary has invalid size alignment");
-    OS << Buffer->getBuffer();
   }
 
   if (Error E = writeFile(OutputFile,
@@ -192,9 +195,9 @@ static Error unbundleImages() {
             Binary->getImage(),
             Binary->getMemoryBufferRef().getBufferIdentifier()));
 
-      if (Error E = writeArchive(Args["file"], Members, true,
-                                 Archive::getDefaultKindForHost(), true, false,
-                                 nullptr))
+      if (Error E = writeArchive(
+              Args["file"], Members, SymtabWritingMode::NormalSymtab,
+              Archive::getDefaultKindForHost(), true, false, nullptr))
         return E;
     } else if (Args.count("file")) {
       if (Extracted.size() > 1)

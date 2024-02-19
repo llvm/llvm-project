@@ -1,6 +1,7 @@
 ; Make sure that coro-split correctly deals with debug information.
 ; The test here is simply that it does not result in bad IR that will crash opt.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -disable-output
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -disable-output
 source_filename = "coro.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -38,7 +39,7 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !36
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call i1 @llvm.coro.end(ptr null, i1 false) #9, !dbg !38
+  tail call i1 @llvm.coro.end(ptr null, i1 false, token none) #9, !dbg !38
   ret ptr %2, !dbg !39
 }
 
@@ -57,7 +58,7 @@ declare i8 @llvm.coro.suspend(token, i1) #7
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
 declare void @free(ptr nocapture) local_unnamed_addr #6
-declare i1 @llvm.coro.end(ptr, i1) #7
+declare i1 @llvm.coro.end(ptr, i1, token) #7
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #5
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

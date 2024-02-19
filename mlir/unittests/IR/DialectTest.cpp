@@ -136,4 +136,50 @@ TEST(Dialect, RepeatedDelayedRegistration) {
   EXPECT_TRUE(testDialectInterface != nullptr);
 }
 
+namespace {
+/// A dummy extension that increases a counter when being applied and
+/// recursively adds additional extensions.
+struct DummyExtension : DialectExtension<DummyExtension, TestDialect> {
+  DummyExtension(int *counter, int numRecursive)
+      : DialectExtension(), counter(counter), numRecursive(numRecursive) {}
+
+  void apply(MLIRContext *ctx, TestDialect *dialect) const final {
+    ++(*counter);
+    DialectRegistry nestedRegistry;
+    for (int i = 0; i < numRecursive; ++i)
+      nestedRegistry.addExtension(
+          std::make_unique<DummyExtension>(counter, /*numRecursive=*/0));
+    // Adding additional extensions may trigger a reallocation of the
+    // `extensions` vector in the dialect registry.
+    ctx->appendDialectRegistry(nestedRegistry);
+  }
+
+private:
+  int *counter;
+  int numRecursive;
+};
+} // namespace
+
+TEST(Dialect, NestedDialectExtension) {
+  DialectRegistry registry;
+  registry.insert<TestDialect>();
+
+  // Add an extension that adds 100 more extensions.
+  int counter1 = 0;
+  registry.addExtension(std::make_unique<DummyExtension>(&counter1, 100));
+  // Add one more extension. This should not crash.
+  int counter2 = 0;
+  registry.addExtension(std::make_unique<DummyExtension>(&counter2, 0));
+
+  // Load dialect and apply extensions.
+  MLIRContext context(registry);
+  Dialect *testDialect = context.getOrLoadDialect<TestDialect>();
+  ASSERT_TRUE(testDialect != nullptr);
+
+  // Extensions may be applied multiple times. Make sure that each expected
+  // extension was applied at least once.
+  EXPECT_GE(counter1, 101);
+  EXPECT_GE(counter2, 1);
+}
+
 } // namespace

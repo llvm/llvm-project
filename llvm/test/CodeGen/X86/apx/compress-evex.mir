@@ -1,0 +1,83 @@
+# RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck %s
+
+...
+---
+name:            ndd_2_non_ndd_xor
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: xorq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xf0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_sub
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: subq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x29,0xf0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SUB64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_commutable
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: xorq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xf0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = XOR64rr_ND killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_commutable_new_opcode
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: shldq   $52, %rsi, %rax                 # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xa4,0xf0,0x34]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SHRD64rri8_ND killed renamable $rsi, killed renamable $rax, 12, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_incommutable
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: subq    %rax, %rsi, %rax                # encoding: [0x62,0xf4,0xfc,0x18,0x29,0xc6]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SUB64rr_ND killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_egpr
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $r16
+    ; CHECK: xorq    %r16, %rax                      # EVEX TO LEGACY Compression encoding: [0xd5,0x48,0x31,0xc0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
+    renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $r16, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_egpr_nf
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $r16
+    ; CHECK: {nf} xorq %r16, %rax                   # EVEX TO EVEX Compression encoding: [0x62,0xe4,0xfc,0x0c,0x31,0xc0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
+    renamable $rax = XOR64rr_NF_ND killed renamable $rax, killed renamable $r16
+    RET64 $rax
+...
+---
+name:            bswapr_to_movberr
+body:             |
+  bb.0.entry:
+    liveins: $rax
+    ; CHECK: bswapq  %rax                            # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xc8]
+    renamable $rax = MOVBE64rr killed renamable $rax
+    RET64 killed $rax
+
+...

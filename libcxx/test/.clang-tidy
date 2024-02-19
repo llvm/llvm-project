@@ -3,3 +3,9 @@ InheritParentConfig: true
 CheckOptions:
   - key:   readability-identifier-naming.ParameterPrefix
     value: ""
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: ""
+  - key:   readability-identifier-naming.LocalVariablePrefix
+    value: ""
+  - key:   readability-identifier-naming.TemplateParameterPrefix
+    value: ""

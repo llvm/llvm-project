@@ -13,6 +13,7 @@
 #include "SPIRVInstPrinter.h"
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
@@ -49,14 +50,49 @@ void SPIRVInstPrinter::printRemainingVariableOps(const MCInst *MI,
 void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              unsigned StartIndex,
                                              raw_ostream &O) {
+  const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
+
+  assert((NumVarOps == 1 || NumVarOps == 2) &&
+         "Unsupported number of bits for literal variable");
+
   O << ' ';
-  if (MI->getNumOperands() - StartIndex == 2) { // Handle 64 bit literals.
-    uint64_t Imm = MI->getOperand(StartIndex).getImm();
+
+  uint64_t Imm = MI->getOperand(StartIndex).getImm();
+
+  // Handle 64 bit literals.
+  if (NumVarOps == 2) {
     Imm |= (MI->getOperand(StartIndex + 1).getImm() << 32);
-    O << Imm;
-  } else {
-    printRemainingVariableOps(MI, StartIndex, O, true, false);
   }
+
+  // Format and print float values.
+  if (MI->getOpcode() == SPIRV::OpConstantF) {
+    APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
+                                : APFloat(APInt(64, Imm).bitsToDouble());
+
+    // Print infinity and NaN as hex floats.
+    // TODO: Make sure subnormal numbers are handled correctly as they may also
+    // require hex float notation.
+    if (FP.isInfinity()) {
+      if (FP.isNegative())
+        O << '-';
+      O << "0x1p+128";
+      return;
+    }
+    if (FP.isNaN()) {
+      O << "0x1.8p+128";
+      return;
+    }
+
+    // Format val as a decimal floating point or scientific notation (whichever
+    // is shorter), with enough digits of precision to produce the exact value.
+    O << format("%.*g", std::numeric_limits<double>::max_digits10,
+                FP.convertToDouble());
+
+    return;
+  }
+
+  // Print integer values directly.
+  O << Imm;
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
@@ -169,7 +205,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         }
         case SPIRV::OpConstantI:
         case SPIRV::OpConstantF:
-          printOpConstantVarOps(MI, NumFixedOps, OS);
+          // The last fixed operand along with any variadic operands that follow
+          // are part of the variable value.
+          printOpConstantVarOps(MI, NumFixedOps - 1, OS);
           break;
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);

@@ -19,6 +19,10 @@ CHECK-NEXT:      -Wformat-security
 CHECK-NEXT:      -Wformat-y2k
 CHECK-NEXT:      -Wformat-invalid-specifier
 CHECK-NEXT:      -Wformat-insufficient-args
+CHECK-NEXT:      -Wformat-overflow
+CHECK-NEXT:      -Wformat-overflow-non-kprintf
+CHECK-NEXT:      -Wformat-truncation
+CHECK-NEXT:      -Wformat-truncation-non-kprintf
 CHECK-NEXT:    -Wfor-loop-analysis
 CHECK-NEXT:    -Wframe-address
 CHECK-NEXT:    -Wimplicit
@@ -55,6 +59,7 @@ CHECK-NEXT:      -Wtautological-overlap-compare
 CHECK-NEXT:      -Wtautological-bitwise-compare
 CHECK-NEXT:      -Wtautological-undefined-compare
 CHECK-NEXT:      -Wtautological-objc-bool-compare
+CHECK-NEXT:      -Wtautological-negation-compare
 CHECK-NEXT:    -Wtrigraphs
 CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
@@ -100,6 +105,7 @@ CHECK-NEXT:  -Wswitch
 CHECK-NEXT:  -Wswitch-bool
 CHECK-NEXT:  -Wmisleading-indentation
 CHECK-NEXT:  -Wpacked-non-pod
-
+CHECK-NEXT:  -Wvla-cxx-extension
+CHECK-NEXT:    -Wvla-extension-static-assert
 
 CHECK-NOT:-W

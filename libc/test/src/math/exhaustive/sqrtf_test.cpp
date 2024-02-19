@@ -10,11 +10,11 @@
 #include "src/math/sqrtf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 using LlvmLibcSqrtfExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Sqrt,
-                                      __llvm_libc::sqrtf>;
+                                      LIBC_NAMESPACE::sqrtf>;
 
 // Range: [0, Inf];
 static constexpr uint32_t POS_START = 0x0000'0000U;

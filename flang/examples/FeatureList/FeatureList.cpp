@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+using namespace Fortran::common;
 using namespace Fortran::frontend;
 using namespace Fortran::parser;
 using namespace Fortran;
@@ -280,7 +281,7 @@ public:
   READ_FEATURE(ErrorRecovery)
   READ_FEATURE(EventPostStmt)
   READ_FEATURE(EventWaitStmt)
-  READ_FEATURE(EventWaitStmt::EventWaitSpec)
+  READ_FEATURE(EventWaitSpec)
   READ_FEATURE(ExecutableConstruct)
   READ_FEATURE(ExecutionPart)
   READ_FEATURE(ExecutionPartConstruct)
@@ -437,6 +438,7 @@ public:
   READ_FEATURE(NamelistStmt::Group)
   READ_FEATURE(NonLabelDoStmt)
   READ_FEATURE(NoPass)
+  READ_FEATURE(NotifyWaitStmt)
   READ_FEATURE(NullifyStmt)
   READ_FEATURE(NullInit)
   READ_FEATURE(ObjectDecl)
@@ -553,7 +555,7 @@ public:
   READ_FEATURE(OmpAtomicClause)
   READ_FEATURE(OmpAtomicClauseList)
   READ_FEATURE(OmpAtomicDefaultMemOrderClause)
-  READ_FEATURE(OmpAtomicDefaultMemOrderClause::Type)
+  READ_FEATURE(OmpAtomicDefaultMemOrderType)
   READ_FEATURE(OpenMPFlushConstruct)
   READ_FEATURE(OpenMPLoopConstruct)
   READ_FEATURE(OpenMPExecutableAllocate)

@@ -90,6 +90,10 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     return entry->second;
 
   auto doFind = [&] {
+    // Special case for Csu support files required for Mac OS X 10.7 and older
+    // (crt1.o)
+    if (name.ends_with(".o"))
+      return findPathCombination(name, config->librarySearchPaths, {""});
     if (config->searchDylibsFirst) {
       if (std::optional<StringRef> path =
               findPathCombination("lib" + name, config->librarySearchPaths,
@@ -311,7 +315,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                                path::filename(path).starts_with("libswift");
     if ((isCommandLineLoad && config->allLoad) ||
         loadType == LoadType::CommandLineForce || isLCLinkerForceLoad) {
-      if (std::optional<MemoryBufferRef> buffer = readFile(path)) {
+      if (readFile(path)) {
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           StringRef reason;
@@ -341,7 +345,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol.
-      if (std::optional<MemoryBufferRef> buffer = readFile(path)) {
+      if (readFile(path)) {
         Error e = Error::success();
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
@@ -411,7 +415,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 static std::vector<StringRef> missingAutolinkWarnings;
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isHidden, bool isExplicit,
-                       LoadType loadType, InputFile *originFile = nullptr) {
+                       LoadType loadType) {
   if (std::optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
             addFile(*path, loadType, /*isLazy=*/false, isExplicit,
@@ -428,10 +432,8 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
     return;
   }
   if (loadType == LoadType::LCLinkerOption) {
-    assert(originFile);
     missingAutolinkWarnings.push_back(
-        saver().save(toString(originFile) +
-                     ": auto-linked library not found for -l" + name));
+        saver().save("auto-linked library not found for -l" + name));
     return;
   }
   error("library not found for -l" + name);
@@ -439,8 +441,7 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
 
 static DenseSet<StringRef> loadedObjectFrameworks;
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
-                         bool isReexport, bool isExplicit, LoadType loadType,
-                         InputFile *originFile = nullptr) {
+                         bool isReexport, bool isExplicit, LoadType loadType) {
   if (std::optional<StringRef> path = findFramework(name)) {
     if (loadedObjectFrameworks.contains(*path))
       return;
@@ -468,10 +469,8 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
     return;
   }
   if (loadType == LoadType::LCLinkerOption) {
-    assert(originFile);
-    missingAutolinkWarnings.push_back(saver().save(
-        toString(originFile) +
-        ": auto-linked framework not found for -framework " + name));
+    missingAutolinkWarnings.push_back(
+        saver().save("auto-linked framework not found for -framework " + name));
     return;
   }
   error("framework not found for -framework " + name);
@@ -480,7 +479,9 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
 // Parses LC_LINKER_OPTION contents, which can add additional command line
 // flags. This directly parses the flags instead of using the standard argument
 // parser to improve performance.
-void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
+void macho::parseLCLinkerOption(
+    llvm::SmallVectorImpl<StringRef> &LCLinkerOptions, InputFile *f,
+    unsigned argc, StringRef data) {
   if (config->ignoreAutoLink)
     return;
 
@@ -498,18 +499,39 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   if (arg.consume_front("-l")) {
     if (config->ignoreAutoLinkOptions.contains(arg))
       return;
-    addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-               /*isReexport=*/false, /*isHidden=*/false, /*isExplicit=*/false,
-               LoadType::LCLinkerOption, f);
   } else if (arg == "-framework") {
     StringRef name = argv[++i];
     if (config->ignoreAutoLinkOptions.contains(name))
       return;
-    addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
-                 /*isReexport=*/false, /*isExplicit=*/false,
-                 LoadType::LCLinkerOption, f);
   } else {
     error(arg + " is not allowed in LC_LINKER_OPTION");
+  }
+
+  LCLinkerOptions.append(argv);
+}
+
+void macho::resolveLCLinkerOptions() {
+  while (!unprocessedLCLinkerOptions.empty()) {
+    SmallVector<StringRef> LCLinkerOptions(unprocessedLCLinkerOptions);
+    unprocessedLCLinkerOptions.clear();
+
+    for (unsigned i = 0; i < LCLinkerOptions.size(); ++i) {
+      StringRef arg = LCLinkerOptions[i];
+      if (arg.consume_front("-l")) {
+        assert(!config->ignoreAutoLinkOptions.contains(arg));
+        addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
+                   /*isReexport=*/false, /*isHidden=*/false,
+                   /*isExplicit=*/false, LoadType::LCLinkerOption);
+      } else if (arg == "-framework") {
+        StringRef name = LCLinkerOptions[++i];
+        assert(!config->ignoreAutoLinkOptions.contains(name));
+        addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
+                     /*isReexport=*/false, /*isExplicit=*/false,
+                     LoadType::LCLinkerOption);
+      } else {
+        error(arg + " is not allowed in LC_LINKER_OPTION");
+      }
+    }
   }
 }
 
@@ -805,9 +827,13 @@ static ObjCStubsMode getObjCStubsMode(const ArgList &args) {
   if (!arg)
     return ObjCStubsMode::fast;
 
-  if (arg->getOption().getID() == OPT_objc_stubs_small)
-    warn("-objc_stubs_small is not yet implemented, defaulting to "
-         "-objc_stubs_fast");
+  if (arg->getOption().getID() == OPT_objc_stubs_small) {
+    if (is_contained({AK_arm64e, AK_arm64}, config->arch()))
+      return ObjCStubsMode::small;
+    else
+      warn("-objc_stubs_small is not yet implemented, defaulting to "
+           "-objc_stubs_fast");
+  }
   return ObjCStubsMode::fast;
 }
 
@@ -934,8 +960,7 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef alignStr = arg->getValue(2);
-    if (alignStr.starts_with("0x") || alignStr.starts_with("0X"))
-      alignStr = alignStr.drop_front(2);
+    alignStr.consume_front_insensitive("0x");
     uint32_t align;
     if (alignStr.getAsInteger(16, align)) {
       error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +
@@ -1250,11 +1275,10 @@ static void foldIdenticalLiterals() {
 static void addSynthenticMethnames() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
-      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
-        os << sym->getName().drop_front(prefixLength) << '\0';
+      if (ObjCStubsSection::isObjCStubSymbol(sym))
+        os << ObjCStubsSection::getMethname(sym) << '\0';
 
   if (data.empty())
     return;
@@ -1335,8 +1359,10 @@ static void createAliases() {
 }
 
 static void handleExplicitExports() {
+  static constexpr int kMaxWarnings = 3;
   if (config->hasExplicitExports) {
-    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+    std::atomic<uint64_t> warningsCount{0};
+    parallelForEach(symtab->getSymbols(), [&warningsCount](Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym)) {
         if (config->exportedSymbols.match(sym->getName())) {
           if (defined->privateExtern) {
@@ -1347,8 +1373,12 @@ static void handleExplicitExports() {
               // The former can be exported but the latter cannot.
               defined->privateExtern = false;
             } else {
-              warn("cannot export hidden symbol " + toString(*defined) +
-                   "\n>>> defined in " + toString(defined->getFile()));
+              // Only print the first 3 warnings verbosely, and
+              // shorten the rest to avoid crowding logs.
+              if (warningsCount.fetch_add(1, std::memory_order_relaxed) <
+                  kMaxWarnings)
+                warn("cannot export hidden symbol " + toString(*defined) +
+                     "\n>>> defined in " + toString(defined->getFile()));
             }
           }
         } else {
@@ -1358,6 +1388,9 @@ static void handleExplicitExports() {
         dysym->shouldReexport = config->exportedSymbols.match(sym->getName());
       }
     });
+    if (warningsCount > kMaxWarnings)
+      warn("<... " + Twine(warningsCount - kMaxWarnings) +
+           " more similar warnings...>");
   } else if (!config->unexportedSymbols.empty()) {
     parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym))
@@ -1387,6 +1420,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     missingAutolinkWarnings.clear();
     syntheticSections.clear();
     thunkMap.clear();
+    unprocessedLCLinkerOptions.clear();
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
@@ -1640,6 +1674,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
+  config->pgoWarnMismatch =
+      args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
@@ -1888,6 +1924,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     handleExplicitExports();
 
     bool didCompileBitcodeFiles = compileBitcodeFiles();
+
+    resolveLCLinkerOptions();
 
     // If --thinlto-index-only is given, we should create only "index
     // files" and not object files. Index file creation is already done

@@ -172,6 +172,10 @@ private:
   /// if a pass manager has already been initialized.
   LogicalResult initialize(MLIRContext *context, unsigned newInitGeneration);
 
+  /// Compute a hash of the pipeline, so that we can detect changes (a pass is
+  /// added...).
+  llvm::hash_code hash();
+
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
 
@@ -202,6 +206,27 @@ enum class PassDisplayMode {
   // manager.
   Pipeline,
 };
+
+/// Streams on which to output crash reproducer.
+struct ReproducerStream {
+  virtual ~ReproducerStream() = default;
+
+  /// Description of the reproducer stream.
+  virtual StringRef description() = 0;
+
+  /// Stream on which to output reproducer.
+  virtual raw_ostream &os() = 0;
+};
+
+/// Method type for constructing ReproducerStream.
+using ReproducerStreamFactory =
+    std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
+
+std::string
+makeReproducer(StringRef anchorName,
+               const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+               Operation *op, StringRef outputFile, bool disableThreads = false,
+               bool verifyPasses = false);
 
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
@@ -238,21 +263,6 @@ public:
   /// smallest pipeline.
   void enableCrashReproducerGeneration(StringRef outputFile,
                                        bool genLocalReproducer = false);
-
-  /// Streams on which to output crash reproducer.
-  struct ReproducerStream {
-    virtual ~ReproducerStream() = default;
-
-    /// Description of the reproducer stream.
-    virtual StringRef description() = 0;
-
-    /// Stream on which to output reproducer.
-    virtual raw_ostream &os() = 0;
-  };
-
-  /// Method type for constructing ReproducerStream.
-  using ReproducerStreamFactory =
-      std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
 
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `factory` is used to construct the streams
@@ -439,8 +449,10 @@ private:
   /// generate reproducers.
   std::unique_ptr<detail::PassCrashReproducerGenerator> crashReproGenerator;
 
-  /// A hash key used to detect when reinitialization is necessary.
+  /// Hash keys used to detect when reinitialization is necessary.
   llvm::hash_code initializationKey =
+      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+  llvm::hash_code pipelineInitializationKey =
       DenseMapInfo<llvm::hash_code>::getTombstoneKey();
 
   /// Flag that specifies if pass timing is enabled.

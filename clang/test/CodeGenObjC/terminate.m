@@ -3,7 +3,6 @@
 
 void destroy(void**);
 
-// rdar://problem/9519113
 void test0(void) {
   void test0_helper(void);
   void *ptr __attribute__((cleanup(destroy)));

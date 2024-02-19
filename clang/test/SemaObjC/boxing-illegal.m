@@ -70,7 +70,6 @@ void testStringLiteral(void) {
   s = @("\pabc"); // expected-error {{illegal type 'unsigned char *' used in a boxed expression}}
 }
 
-// rdar://13333205
 @class NSMutableDictionary;
 
 @interface NSMutableArray

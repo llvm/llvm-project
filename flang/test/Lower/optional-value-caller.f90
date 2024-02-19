@@ -1,5 +1,5 @@
 ! Test lowering of OPTIONAL VALUE dummy argument on caller side.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! A copy must be made if the actual is a variable (and no copy-out), but care
 ! has to be take if the actual argument may be absent at runtime: the copy
@@ -328,7 +328,7 @@ subroutine test_array_ptr(i)
 ! CHECK:             %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_17:.*]] = fir.embox %[[VAL_15]](%[[VAL_16]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:             fir.store %[[VAL_17]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
-! CHECK:             %[[VAL_18:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK:             %[[VAL_18:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:             %[[VAL_19:.*]] = arith.constant {{.*}} : i32
 ! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
@@ -434,7 +434,7 @@ subroutine test_char_array(c)
 ! CHECK:             %[[VAL_19:.*]] = fir.shape %[[VAL_16]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_20:.*]] = fir.embox %[[VAL_18]](%[[VAL_19]]) typeparams %[[VAL_17]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:             fir.store %[[VAL_20]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<?x!fir.char<1,?>>>>
-! CHECK:             %[[VAL_21:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK:             %[[VAL_21:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:             %[[VAL_22:.*]] = arith.constant {{.*}} : i32
 ! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>

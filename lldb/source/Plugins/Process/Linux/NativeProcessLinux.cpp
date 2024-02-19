@@ -281,7 +281,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   int wstatus = 0;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
   assert(wpid == pid);
-  (void)wpid;
+  UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
@@ -671,7 +671,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     SetCurrentThreadID(main_thread->GetID());
     main_thread->SetStoppedByExec();
 
-    // Tell coordinator about about the "new" (since exec) stopped main thread.
+    // Tell coordinator about the "new" (since exec) stopped main thread.
     ThreadWasCreated(*main_thread);
 
     // Let our delegate know we have just exec'd.

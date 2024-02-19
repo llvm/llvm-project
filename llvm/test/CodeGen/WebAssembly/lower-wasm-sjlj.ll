@@ -25,16 +25,16 @@ entry:
   unreachable
 
 ; CHECK:    entry:
-; CHECK-NEXT: %malloccall = tail call ptr @malloc([[PTR]] 40)
-; CHECK-NEXT: store i32 0, ptr %malloccall, align 4
+; CHECK-NEXT: %setjmpTable = tail call ptr @malloc([[PTR]] 40)
+; CHECK-NEXT: store i32 0, ptr %setjmpTable, align 4
 ; CHECK-NEXT: %setjmpTableSize = add i32 4, 0
 ; CHECK-NEXT: br label %setjmp.dispatch
 
 ; CHECK:    setjmp.dispatch:
-; CHECK-NEXT: %val8 = phi i32 [ %val, %if.end ], [ undef, %entry ]
-; CHECK-NEXT: %buf7 = phi ptr [ %buf6, %if.end ], [ undef, %entry ]
-; CHECK-NEXT: %setjmpTableSize4 = phi i32 [ %setjmpTableSize5, %if.end ], [ %setjmpTableSize, %entry ]
-; CHECK-NEXT: %setjmpTable2 = phi ptr [ %setjmpTable3, %if.end ], [ %malloccall, %entry ]
+; CHECK-NEXT: %[[VAL2:.*]] = phi i32 [ %val, %if.end ], [ undef, %entry ]
+; CHECK-NEXT: %[[BUF:.*]] = phi ptr [ %[[BUF2:.*]], %if.end ], [ undef, %entry ]
+; CHECK-NEXT: %[[SETJMPTABLESIZE2:.*]] = phi i32 [ %[[SETJMPTABLESIZE3:.*]], %if.end ], [ %setjmpTableSize, %entry ]
+; CHECK-NEXT: %[[SETJMPTABLE2:.*]] = phi ptr [ %[[SETJMPTABLE3:.*]], %if.end ], [ %setjmpTable, %entry ]
 ; CHECK-NEXT: %label.phi = phi i32 [ %label, %if.end ], [ -1, %entry ]
 ; CHECK-NEXT: switch i32 %label.phi, label %entry.split [
 ; CHECK-NEXT:   i32 1, label %entry.split.split
@@ -42,16 +42,16 @@ entry:
 
 ; CHECK:    entry.split:
 ; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-; CHECK-NEXT: %setjmpTable = call ptr @saveSetjmp(ptr %buf, i32 1, ptr %setjmpTable2, i32 %setjmpTableSize4)
-; CHECK-NEXT: %setjmpTableSize1 = call i32 @getTempRet0()
+; CHECK-NEXT: %[[SETJMPTABLE4:.*]] = call ptr @saveSetjmp(ptr %buf, i32 1, ptr %[[SETJMPTABLE2]], i32 %[[SETJMPTABLESIZE2]])
+; CHECK-NEXT: %[[SETJMPTABLESIZE4:.*]] = call i32 @getTempRet0()
 ; CHECK-NEXT: br label %entry.split.split
 
 ; CHECK:    entry.split.split:
-; CHECK-NEXT: %buf6 = phi ptr [ %buf7, %setjmp.dispatch ], [ %buf, %entry.split ]
-; CHECK-NEXT: %setjmpTableSize5 = phi i32 [ %setjmpTableSize1, %entry.split ], [ %setjmpTableSize4, %setjmp.dispatch ]
-; CHECK-NEXT: %setjmpTable3 = phi ptr [ %setjmpTable, %entry.split ], [ %setjmpTable2, %setjmp.dispatch ]
-; CHECK-NEXT: %setjmp.ret = phi i32 [ 0, %entry.split ], [ %val8, %setjmp.dispatch ]
-; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %buf6, i32 1)
+; CHECK-NEXT: %[[BUF2]] = phi ptr [ %[[BUF]], %setjmp.dispatch ], [ %buf, %entry.split ]
+; CHECK-NEXT: %[[SETJMPTABLESIZE3]] = phi i32 [ %[[SETJMPTABLESIZE4]], %entry.split ], [ %[[SETJMPTABLESIZE2]], %setjmp.dispatch ]
+; CHECK-NEXT: %[[SETJMPTABLE3]] = phi ptr [ %[[SETJMPTABLE4]], %entry.split ], [ %[[SETJMPTABLE2]], %setjmp.dispatch ]
+; CHECK-NEXT: %setjmp.ret = phi i32 [ 0, %entry.split ], [ %[[VAL2]], %setjmp.dispatch ]
+; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %[[BUF2]], i32 1)
 ; CHECK-NEXT:         to label %.noexc unwind label %catch.dispatch.longjmp
 
 ; CHECK:    .noexc:
@@ -68,12 +68,12 @@ entry:
 ; CHECK-NEXT: %env = load ptr, ptr %env_gep, align {{.*}}
 ; CHECK-NEXT: %val = load i32, ptr %val_gep, align 4
 ; CHECK-NEXT: %setjmp.id = load [[PTR]], ptr %env, align {{.*}}
-; CHECK-NEXT: %label = call i32 @testSetjmp([[PTR]] %setjmp.id, ptr %setjmpTable3, i32 %setjmpTableSize5) [ "funclet"(token %1) ]
+; CHECK-NEXT: %label = call i32 @testSetjmp([[PTR]] %setjmp.id, ptr %[[SETJMPTABLE3]], i32 %[[SETJMPTABLESIZE3]]) [ "funclet"(token %1) ]
 ; CHECK-NEXT: %2 = icmp eq i32 %label, 0
 ; CHECK-NEXT: br i1 %2, label %if.then, label %if.end
 
 ; CHECK:    if.then:
-; CHECK-NEXT: tail call void @free(ptr %setjmpTable3) [ "funclet"(token %1) ]
+; CHECK-NEXT: tail call void @free(ptr %[[SETJMPTABLE3]]) [ "funclet"(token %1) ]
 ; CHECK-NEXT: call void @__wasm_longjmp(ptr %env, i32 %val) [ "funclet"(token %1) ]
 ; CHECK-NEXT: unreachable
 

@@ -90,7 +90,7 @@ class TestCase(TestBase):
             self.expect(
                 "expr const int *i = &A::int_val; *i",
                 error=True,
-                substrs=["Couldn't lookup symbols:"],
+                substrs=["Couldn't look up symbols:"],
             )
 
         # This should work on all platforms.
@@ -103,8 +103,8 @@ class TestCase(TestBase):
         self.expect("image lookup -t A")
 
     # dsymutil strips the debug info for classes that only have const static
-    # data members without a definition namespace scope.
-    @expectedFailureAll(debug_info=["dsym"])
+    # data members without locations.
+    @expectedFailureAll(debug_info=["dsym"], dwarf_version=["<", "5"])
     def test_class_with_only_const_static(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -112,6 +112,37 @@ class TestCase(TestBase):
         )
 
         self.expect_expr("ClassWithOnlyConstStatic::member", result_value="3")
+
+    def check_global_var(self, name: str, expect_type, expect_val):
+        var_list = self.target().FindGlobalVariables(name, lldb.UINT32_MAX)
+        self.assertGreaterEqual(len(var_list), 1)
+        varobj = var_list[0]
+        self.assertEqual(varobj.type.name, expect_type)
+        self.assertEqual(varobj.value, expect_val)
+
+    @expectedFailureAll(dwarf_version=["<", "5"])
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
+    def test_inline_static_members(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.check_global_var("A::int_val", "const int", "1")
+        self.check_global_var("A::int_val_with_address", "const int", "2")
+        self.check_global_var("A::bool_val", "const bool", "true")
+        self.check_global_var("A::enum_val", "Enum", "enum_case2")
+        self.check_global_var("A::enum_bool_val", "EnumBool", "enum_bool_case1")
+        self.check_global_var("A::scoped_enum_val", "ScopedEnum", "scoped_enum_case2")
+
+        self.check_global_var("ClassWithOnlyConstStatic::member", "const int", "3")
+
+        self.check_global_var("ClassWithConstexprs::member", "const int", "2")
+        self.check_global_var("ClassWithConstexprs::enum_val", "Enum", "enum_case2")
+        self.check_global_var(
+            "ClassWithConstexprs::scoped_enum_val", "ScopedEnum", "scoped_enum_case2"
+        )
 
     # With older versions of Clang, LLDB fails to evaluate classes with only
     # constexpr members when dsymutil is enabled
@@ -138,3 +169,27 @@ class TestCase(TestBase):
         self.expect_expr(
             "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
         )
+
+    @expectedFailureAll(dwarf_version=["<", "5"])
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
+    def test_shadowed_static_inline_members(self):
+        """Tests that the expression evaluator and SBAPI can both
+        correctly determine the requested inline static variable
+        in the presence of multiple variables of the same name."""
+
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "bar")
+
+        self.check_global_var("ns::Foo::mem", "const int", "10")
+
+        self.expect_expr("mem", result_value="10")
+        self.expect_expr("Foo::mem", result_value="10")
+        self.expect_expr("ns::Foo::mem", result_value="10")
+        self.expect_expr("::Foo::mem", result_value="-29")
+
+    @expectedFailureAll(bugnumber="target var doesn't honour global namespace")
+    def test_shadowed_static_inline_members_xfail(self):
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "bar")
+        self.check_global_var("::Foo::mem", "const int", "-29")

@@ -1,6 +1,10 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v %t.o 2> %t.err | FileCheck --check-prefix=COMMON --check-prefix=SPLIT %s
-# RUN: llvm-dwarfdump -verify %t.o | FileCheck --check-prefix=VERIFY %s
+# RUN: llvm-dwarfdump -v %t.o 2> %t.err | FileCheck --check-prefixes=COMMON,SPLIT,OFFSETS %s
+
+# FIXME: the verifier does not accept padding between debug-str-offset
+# sections, which this test uses.
+# RUN: llvm-dwarfdump -verify --debug-info %t.o | FileCheck --check-prefix=VERIFY %s
+# RUN: llvm-dwarfdump -debug-str-offsets %t.o | FileCheck --check-prefix=OFFSETS %s
 # 
 # Check that we don't report an error on a non-existent range list table.
 # RUN: FileCheck -allow-empty --check-prefix ERR %s < %t.err
@@ -403,31 +407,31 @@ TU_split_5_end:
 # SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] (indexed (00000004) string = "V5_split_Mystruct")
 # 
 # The .debug_str_offsets section
-# COMMON:      .debug_str_offsets contents:
-# COMMON-NEXT: 0x00000000: Contribution size = 32, Format = DWARF32, Version = 5
-# COMMON-NEXT: 0x00000008: 00000000 "Handmade DWARF producer"
-# COMMON-NEXT: 0x0000000c: 00000018 "Compile_Unit_1"
-# COMMON-NEXT: 0x00000010: 00000027 "/home/test/CU1"
-# COMMON-NEXT: 0x00000014: 00000067 "MyFunc"
-# COMMON-NEXT: 0x00000018: 0000006e "MyVar1"
-# COMMON-NEXT: 0x0000001c: 00000075 "MyVar2"
-# COMMON-NEXT: 0x00000020: 0000007c "MyVar3"
-# COMMON-NEXT: Gap, length = 4
-# COMMON-NEXT: 0x00000028: Contribution size = 28, Format = DWARF64, Version = 5
-# COMMON-NEXT: 0x00000038: 0000000000000000 "Handmade DWARF producer"
-# COMMON-NEXT: 0x00000040: 0000000000000036 "Compile_Unit_2"
-# COMMON-NEXT: 0x00000048: 0000000000000045 "/home/test/CU2"
-# COMMON-NEXT: 0x00000050: Contribution size = 12, Format = DWARF32, Version = 5
-# COMMON-NEXT: 0x00000058: 00000054 "Type_Unit"
-# COMMON-NEXT: 0x0000005c: 0000005e "MyStruct"
+# OFFSETS:      .debug_str_offsets contents:
+# OFFSETS-NEXT: 0x00000000: Contribution size = 32, Format = DWARF32, Version = 5
+# OFFSETS-NEXT: 0x00000008: 00000000 "Handmade DWARF producer"
+# OFFSETS-NEXT: 0x0000000c: 00000018 "Compile_Unit_1"
+# OFFSETS-NEXT: 0x00000010: 00000027 "/home/test/CU1"
+# OFFSETS-NEXT: 0x00000014: 00000067 "MyFunc"
+# OFFSETS-NEXT: 0x00000018: 0000006e "MyVar1"
+# OFFSETS-NEXT: 0x0000001c: 00000075 "MyVar2"
+# OFFSETS-NEXT: 0x00000020: 0000007c "MyVar3"
+# OFFSETS-NEXT: Gap, length = 4
+# OFFSETS-NEXT: 0x00000028: Contribution size = 28, Format = DWARF64, Version = 5
+# OFFSETS-NEXT: 0x00000038: 0000000000000000 "Handmade DWARF producer"
+# OFFSETS-NEXT: 0x00000040: 0000000000000036 "Compile_Unit_2"
+# OFFSETS-NEXT: 0x00000048: 0000000000000045 "/home/test/CU2"
+# OFFSETS-NEXT: 0x00000050: Contribution size = 12, Format = DWARF32, Version = 5
+# OFFSETS-NEXT: 0x00000058: 00000054 "Type_Unit"
+# OFFSETS-NEXT: 0x0000005c: 0000005e "MyStruct"
 # 
-# SPLIT:       .debug_str_offsets.dwo contents:
-# SPLIT-NEXT:  0x00000000: Contribution size = 24, Format = DWARF32, Version = 5
-# SPLIT-NEXT:  0x00000008: 00000000 "Handmade split DWARF producer"
-# SPLIT-NEXT:  0x0000000c: 0000001e "V5_split_compile_unit"
-# SPLIT-NEXT:  0x00000010: 00000034 "/home/test/splitCU"
-# SPLIT-NEXT:  0x00000014: 00000047 "V5_split_type_unit"
-# SPLIT-NEXT:  0x00000018: 0000005a "V5_split_Mystruct"
+# OFFSETS:       .debug_str_offsets.dwo contents:
+# OFFSETS-NEXT:  0x00000000: Contribution size = 24, Format = DWARF32, Version = 5
+# OFFSETS-NEXT:  0x00000008: 00000000 "Handmade split DWARF producer"
+# OFFSETS-NEXT:  0x0000000c: 0000001e "V5_split_compile_unit"
+# OFFSETS-NEXT:  0x00000010: 00000034 "/home/test/splitCU"
+# OFFSETS-NEXT:  0x00000014: 00000047 "V5_split_type_unit"
+# OFFSETS-NEXT:  0x00000018: 0000005a "V5_split_Mystruct"
 
 # VERIFY: No errors.
 

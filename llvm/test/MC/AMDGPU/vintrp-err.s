@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
 
 v_interp_p1_f32 v0, v1
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction

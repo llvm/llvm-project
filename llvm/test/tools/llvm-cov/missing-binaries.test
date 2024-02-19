@@ -1,4 +1,4 @@
 RUN: llvm-profdata merge %S/Inputs/binary-formats.proftext -o %t.profdata
 RUN: not llvm-cov show -instr-profile=%t.profdata --object=%t.nonexistent.binary.1 --object=%t.nonexistent.binary.2 2>&1 | FileCheck %s
 
-CHECK: Failed to load coverage: '{{.*}}nonexistent.binary.1':
+CHECK: failed to load coverage: '{{.*}}nonexistent.binary.1':

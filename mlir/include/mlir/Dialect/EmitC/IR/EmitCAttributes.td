@@ -15,6 +15,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -24,6 +25,20 @@ include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 class EmitC_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<EmitC_Dialect, name, traits> {
   let mnemonic = attrMnemonic;
+}
+
+def EmitC_CmpPredicateAttr : I64EnumAttr<
+    "CmpPredicate", "",
+    [
+      I64EnumAttrCase<"eq", 0>,
+      I64EnumAttrCase<"ne", 1>,
+      I64EnumAttrCase<"lt", 2>,
+      I64EnumAttrCase<"le", 3>,
+      I64EnumAttrCase<"gt", 4>,
+      I64EnumAttrCase<"ge", 5>,
+      I64EnumAttrCase<"three_way", 6>,
+    ]> {
+  let cppNamespace = "::mlir::emitc";
 }
 
 def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
@@ -42,8 +57,7 @@ def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
   }];
 
   let parameters = (ins StringRefParameter<"the opaque value">:$value);
-
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def EmitC_OpaqueOrTypedAttr : AnyAttrOf<[EmitC_OpaqueAttr, TypedAttrInterface]>;

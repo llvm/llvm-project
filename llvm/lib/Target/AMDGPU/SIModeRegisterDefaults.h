@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+class GCNSubtarget;
+
 // Track defaults for fields in the MODE register.
 struct SIModeRegisterDefaults {
   /// Floating point opcodes that support exception flag gathering quiet and
@@ -40,7 +42,7 @@ struct SIModeRegisterDefaults {
     FP32Denormals(DenormalMode::getIEEE()),
     FP64FP16Denormals(DenormalMode::getIEEE()) {}
 
-  SIModeRegisterDefaults(const Function &F);
+  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     SIModeRegisterDefaults Mode;
@@ -84,6 +86,65 @@ struct SIModeRegisterDefaults {
     return DX10Clamp == CalleeMode.DX10Clamp && IEEE == CalleeMode.IEEE;
   }
 };
+
+namespace AMDGPU {
+
+/// Return values used for llvm.get.rounding
+///
+/// When both the F32 and F64/F16 modes are the same, returns the standard
+/// values. If they differ, returns an extended mode starting at 8.
+enum AMDGPUFltRounds : int8_t {
+  // Inherit everything from RoundingMode
+  TowardZero = static_cast<int8_t>(RoundingMode::TowardZero),
+  NearestTiesToEven = static_cast<int8_t>(RoundingMode::NearestTiesToEven),
+  TowardPositive = static_cast<int8_t>(RoundingMode::TowardPositive),
+  TowardNegative = static_cast<int8_t>(RoundingMode::TowardNegative),
+  NearestTiesToAwayUnsupported =
+      static_cast<int8_t>(RoundingMode::NearestTiesToAway),
+
+  Dynamic = static_cast<int8_t>(RoundingMode::Dynamic),
+
+  // Permute the mismatched rounding mode cases.  If the modes are the same, use
+  // the standard values, otherwise, these values are sorted such that higher
+  // hardware encoded values have higher enum values.
+  NearestTiesToEvenF32_NearestTiesToEvenF64 = NearestTiesToEven,
+  NearestTiesToEvenF32_TowardPositiveF64 = 8,
+  NearestTiesToEvenF32_TowardNegativeF64 = 9,
+  NearestTiesToEvenF32_TowardZeroF64 = 10,
+
+  TowardPositiveF32_NearestTiesToEvenF64 = 11,
+  TowardPositiveF32_TowardPositiveF64 = TowardPositive,
+  TowardPositiveF32_TowardNegativeF64 = 12,
+  TowardPositiveF32_TowardZeroF64 = 13,
+
+  TowardNegativeF32_NearestTiesToEvenF64 = 14,
+  TowardNegativeF32_TowardPositiveF64 = 15,
+  TowardNegativeF32_TowardNegativeF64 = TowardNegative,
+  TowardNegativeF32_TowardZeroF64 = 16,
+
+  TowardZeroF32_NearestTiesToEvenF64 = 17,
+  TowardZeroF32_TowardPositiveF64 = 18,
+  TowardZeroF32_TowardNegativeF64 = 19,
+  TowardZeroF32_TowardZeroF64 = TowardZero,
+
+  Invalid = static_cast<int8_t>(RoundingMode::Invalid)
+};
+
+/// Offset of nonstandard values for llvm.get.rounding results from the largest
+/// supported mode.
+static constexpr uint32_t ExtendedFltRoundOffset = 4;
+
+/// Offset in mode register of f32 rounding mode.
+static constexpr uint32_t F32FltRoundOffset = 0;
+
+/// Offset in mode register of f64/f16 rounding mode.
+static constexpr uint32_t F64FltRoundOffset = 2;
+
+// Bit indexed table to convert from hardware rounding mode values to FLT_ROUNDS
+// values.
+extern const uint64_t FltRoundConversionTable;
+
+} // end namespace AMDGPU
 
 } // end namespace llvm
 

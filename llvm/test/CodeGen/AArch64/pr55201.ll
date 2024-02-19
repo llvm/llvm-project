@@ -4,8 +4,8 @@
 define i32 @f(i32 %x) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ror w8, w0, #27
-; CHECK-NEXT:    orr w8, w8, #0x20
+; CHECK-NEXT:    orr w8, w0, #0x1
+; CHECK-NEXT:    extr w8, w8, w0, #27
 ; CHECK-NEXT:    and w0, w8, #0xffffffe1
 ; CHECK-NEXT:    ret
   %or1 = or i32 %x, 1

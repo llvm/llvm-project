@@ -234,24 +234,24 @@ void dr031(int i) {
  */
 int dr032 = (1, 2); /* expected-warning {{left operand of comma operator has no effect}} */
 
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 /* WG14 DR035: partial
  * Questions about definition of functions without a prototype
  */
-void dr035_1(a, b) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void dr035_1(a, b) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
   int a(enum b {x, y}); /* expected-warning {{declaration of 'enum b' will not be visible outside of this function}} */
   int b; {
   int test = x; /* expected-error {{use of undeclared identifier 'x'}} */
 }
 
-void dr035_2(c) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void dr035_2(c) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
   enum m{q, r} c; { /* expected-warning {{declaration of 'enum m' will not be visible outside of this function}} */
   /* FIXME: This should be accepted because the scope of m, q, and r ends at
    * the closing brace of the function per C89 6.1.2.1.
    */
   int test = q; /* expected-error {{use of undeclared identifier 'q'}} */
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR038: yes
  * Questions about argument substitution during macro expansion
@@ -339,7 +339,7 @@ void dr050(void) {
   (void)NULL; /* expected-error {{use of undeclared identifier 'NULL'}} */
 }
 
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 /* WG14 DR053: yes
  * Accessing a pointer to a function with a prototype through a pointer to
  * pointer to function without a prototype
@@ -352,11 +352,11 @@ void dr053(void) {
 
   fp1 = f;
   fp2 = fp1;
-  (*fp2)(3);  /* expected-warning {{passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+  (*fp2)(3);  /* expected-warning {{passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23}} */
   fpp = &fp1;
-  (**fpp)(3); /* expected-warning {{passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+  (**fpp)(3); /* expected-warning {{passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23}} */
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR064: yes
  * Null pointer constants
@@ -385,7 +385,7 @@ void dr068(void) {
 #endif
 }
 
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 /* WG14: DR070: yes
  * Interchangeability of function arguments
  *
@@ -398,7 +398,7 @@ void dr068(void) {
  * a prototype causes implicit conversions rather than relying on default
  * argument promotion and warm thoughts.
  */
-void dr070_1(c) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void dr070_1(c) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
   int c; {
 }
 
@@ -406,7 +406,7 @@ void dr070_2(void) {
   dr070_1(6);
   dr070_1(6U); /* Pedantically UB */
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR071: yes
  * Enumerated types

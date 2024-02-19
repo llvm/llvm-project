@@ -244,7 +244,7 @@ private:
                             SynthesizedFilenameTok.getEndLoc())
               .toCharRange(SM),
           File, "SearchPath", "RelPath",
-          /*Imported=*/nullptr, Inc.FileKind);
+          /*SuggestedModule=*/nullptr, /*ModuleImported=*/false, Inc.FileKind);
       if (File)
         Delegate->FileSkipped(*File, SynthesizedFilenameTok, Inc.FileKind);
     }
@@ -288,7 +288,7 @@ public:
       if (Glob) {
         // Is this clang-diagnostic-*, or *, or so?
         // (We ignore all other types of globs).
-        if (CDPrefix.startswith(Check)) {
+        if (CDPrefix.starts_with(Check)) {
           Default = Enable;
           Exceptions.clear();
         }
@@ -381,6 +381,20 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
                                         Cfg.Diagnostics.Includes.IgnoreHeader);
 }
 
+tidy::ClangTidyCheckFactories
+filterFastTidyChecks(const tidy::ClangTidyCheckFactories &All,
+                     Config::FastCheckPolicy Policy) {
+  if (Policy == Config::FastCheckPolicy::None)
+    return All;
+  bool AllowUnknown = Policy == Config::FastCheckPolicy::Loose;
+  tidy::ClangTidyCheckFactories Fast;
+  for (const auto &Factory : All) {
+    if (isFastTidyCheck(Factory.getKey()).value_or(AllowUnknown))
+      Fast.registerCheckFactory(Factory.first(), Factory.second);
+  }
+  return Fast;
+}
+
 } // namespace
 
 std::optional<ParsedAST>
@@ -390,12 +404,22 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                  std::shared_ptr<const PreambleData> Preamble) {
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", Filename);
+  const Config &Cfg = Config::current();
 
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   if (Preamble && Preamble->StatCache)
     VFS = Preamble->StatCache->getConsumingFS(std::move(VFS));
 
   assert(CI);
+
+  if (CI->getFrontendOpts().Inputs.size() > 0) {
+    auto Lang = CI->getFrontendOpts().Inputs[0].getKind().getLanguage();
+    if (Lang == Language::Asm || Lang == Language::LLVM_IR) {
+      elog("Clangd does not support assembly or IR source files");
+      return std::nullopt;
+    }
+  }
+
   // Command-line parsing sets DisableFree to true by default, but we don't want
   // to leak memory in clangd.
   CI->getFrontendOpts().DisableFree = false;
@@ -404,7 +428,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
   // This is on-by-default in windows to allow parsing SDK headers, but it
   // breaks many features. Disable it for the main-file (not preamble).
-  CI->getLangOpts()->DelayedTemplateParsing = false;
+  CI->getLangOpts().DelayedTemplateParsing = false;
 
   std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
   if (Inputs.FeatureModules) {
@@ -416,8 +440,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   StoreDiags ASTDiags;
   ASTDiags.setDiagCallback(
       [&ASTListeners](const clang::Diagnostic &D, clangd::Diag &Diag) {
-        llvm::for_each(ASTListeners,
-                       [&](const auto &L) { L->sawDiagnostic(D, Diag); });
+        for (const auto &L : ASTListeners)
+          L->sawDiagnostic(D, Diag);
       });
 
   std::optional<PreamblePatch> Patch;
@@ -490,8 +514,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // (The rest of HeaderFileInfo is not relevant for our purposes).
   if (Preamble && Preamble->MainIsIncludeGuarded) {
     const SourceManager &SM = Clang->getSourceManager();
-    const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
-    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(MainFE);
+    OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
+    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(*MainFE);
   }
 
   // Set up ClangTidy. Must happen after BeginSourceFile() so ASTContext exists.
@@ -511,19 +535,21 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // diagnostics.
   {
     trace::Span Tracer("ClangTidyInit");
-    static const auto *CTFactories = [] {
+    static const auto *AllCTFactories = [] {
       auto *CTFactories = new tidy::ClangTidyCheckFactories;
       for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
         E.instantiate()->addCheckFactories(*CTFactories);
       return CTFactories;
     }();
+    tidy::ClangTidyCheckFactories FastFactories = filterFastTidyChecks(
+        *AllCTFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
-    CTChecks = CTFactories->createChecksForLanguage(&*CTContext);
+    CTChecks = FastFactories.createChecksForLanguage(&*CTContext);
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
@@ -545,7 +571,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                                           SourceLocation());
     }
 
-    const Config &Cfg = Config::current();
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
       if (Cfg.Diagnostics.SuppressAll ||
@@ -628,6 +653,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   }
 
   IncludeStructure Includes;
+  include_cleaner::PragmaIncludes PI;
   // If we are using a preamble, copy existing includes.
   if (Preamble) {
     Includes = Preamble->Includes;
@@ -635,11 +661,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // Replay the preamble includes so that clang-tidy checks can see them.
     ReplayPreamble::attach(Patch->preambleIncludes(), *Clang,
                            Patch->modifiedBounds());
+    PI = *Preamble->Pragmas;
   }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Includes.collect(*Clang);
+  // Same for pragma-includes, we're already inheriting preamble includes, so we
+  // should only receive callbacks for non-preamble mainfile includes.
+  PI.record(*Clang);
   // Copy over the macros in the preamble region of the main file, and combine
   // with non-preamble macros below.
   MainFileMacros Macros;
@@ -710,7 +740,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),
                    std::move(Clang), std::move(Action), std::move(Tokens),
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
-                   std::move(Diags), std::move(Includes));
+                   std::move(Diags), std::move(Includes), std::move(PI));
   llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents),
              std::back_inserter(Result.Diags));
   return std::move(Result);
@@ -803,23 +833,21 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, IncludeStructure Includes)
+                     std::vector<Diag> Diags, IncludeStructure Includes,
+                     include_cleaner::PragmaIncludes PI)
     : TUPath(TUPath), Version(Version), Preamble(std::move(Preamble)),
       Clang(std::move(Clang)), Action(std::move(Action)),
       Tokens(std::move(Tokens)), Macros(std::move(Macros)),
       Marks(std::move(Marks)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
-      Includes(std::move(Includes)) {
-  Resolver = std::make_unique<HeuristicResolver>(getASTContext());
+      Includes(std::move(Includes)), PI(std::move(PI)),
+      Resolver(std::make_unique<HeuristicResolver>(getASTContext())) {
   assert(this->Clang);
   assert(this->Action);
 }
 
-std::shared_ptr<const include_cleaner::PragmaIncludes>
-ParsedAST::getPragmaIncludes() const {
-  if (!Preamble)
-    return nullptr;
-  return Preamble->Pragmas;
+const include_cleaner::PragmaIncludes &ParsedAST::getPragmaIncludes() const {
+  return PI;
 }
 
 std::optional<llvm::StringRef> ParsedAST::preambleVersion() const {

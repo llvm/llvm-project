@@ -648,43 +648,24 @@ external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
 external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
-external const_and : llvalue -> llvalue -> llvalue = "llvm_const_and"
-external const_or : llvalue -> llvalue -> llvalue = "llvm_const_or"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
 external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
                     = "llvm_const_icmp"
 external const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
                     = "llvm_const_fcmp"
 external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
-external const_lshr : llvalue -> llvalue -> llvalue = "llvm_const_lshr"
-external const_ashr : llvalue -> llvalue -> llvalue = "llvm_const_ashr"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
 external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
                              = "llvm_const_in_bounds_gep"
 external const_trunc : llvalue -> lltype -> llvalue = "llvm_const_trunc"
-external const_sext : llvalue -> lltype -> llvalue = "llvm_const_sext"
-external const_zext : llvalue -> lltype -> llvalue = "llvm_const_zext"
-external const_fptrunc : llvalue -> lltype -> llvalue = "llvm_const_fptrunc"
-external const_fpext : llvalue -> lltype -> llvalue = "llvm_const_fpext"
-external const_uitofp : llvalue -> lltype -> llvalue = "llvm_const_uitofp"
-external const_sitofp : llvalue -> lltype -> llvalue = "llvm_const_sitofp"
-external const_fptoui : llvalue -> lltype -> llvalue = "llvm_const_fptoui"
-external const_fptosi : llvalue -> lltype -> llvalue = "llvm_const_fptosi"
 external const_ptrtoint : llvalue -> lltype -> llvalue = "llvm_const_ptrtoint"
 external const_inttoptr : llvalue -> lltype -> llvalue = "llvm_const_inttoptr"
 external const_bitcast : llvalue -> lltype -> llvalue = "llvm_const_bitcast"
-external const_zext_or_bitcast : llvalue -> lltype -> llvalue
-                               = "llvm_const_zext_or_bitcast"
-external const_sext_or_bitcast : llvalue -> lltype -> llvalue
-                               = "llvm_const_sext_or_bitcast"
 external const_trunc_or_bitcast : llvalue -> lltype -> llvalue
                                 = "llvm_const_trunc_or_bitcast"
 external const_pointercast : llvalue -> lltype -> llvalue
                            = "llvm_const_pointercast"
-external const_intcast : llvalue -> lltype -> is_signed:bool -> llvalue
-                       = "llvm_const_intcast"
-external const_fpcast : llvalue -> lltype -> llvalue = "llvm_const_fpcast"
 external const_extractelement : llvalue -> llvalue -> llvalue
                               = "llvm_const_extractelement"
 external const_insertelement : llvalue -> llvalue -> llvalue -> llvalue

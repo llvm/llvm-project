@@ -11,12 +11,12 @@
 
 #include <signal.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 using sighandler_t = __sighandler_t;
 
 sighandler_t signal(int signum, sighandler_t handler);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGNAL_H

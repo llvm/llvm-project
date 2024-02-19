@@ -11,7 +11,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -156,9 +156,10 @@ void StackFrameList::ResetCurrentInlinedDepth() {
         m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id));
     bool all_internal = true;
     if (bp_site_sp) {
-      uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
+      uint32_t num_owners = bp_site_sp->GetNumberOfConstituents();
       for (uint32_t i = 0; i < num_owners; i++) {
-        Breakpoint &bp_ref = bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
+        Breakpoint &bp_ref =
+            bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
         if (!bp_ref.IsInternal()) {
           all_internal = false;
         }

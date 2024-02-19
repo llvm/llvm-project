@@ -307,7 +307,6 @@ void with_local_struct(void) {
   }
 }
 
-// rdar://33156429:
 // Avoid the warning on protocol requirements.
 
 AVAILABLE_10_12

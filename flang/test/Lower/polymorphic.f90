@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Tests various aspect of the lowering of polymorphic entities.
 
@@ -330,7 +330,7 @@ module polymorphic_test
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpass_trivial_to_up() {
-! CHECK: %[[CHAR:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,5>>
+! CHECK: %[[CHAR:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,5>>
 ! CHECK: %[[BOX_CHAR:.*]] = fir.embox %[[CHAR]] : (!fir.ref<!fir.char<1,5>>) -> !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_CHAR]]) {{.*}} : (!fir.class<none>) -> ()
 
@@ -766,7 +766,7 @@ module polymorphic_test
 ! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {bindc_name = "p", uniq_name = "_QMpolymorphic_testFtest_polymorphic_ioEp"}
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAioInputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}} : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK: %{{.*}} = fir.call @_FortranAioInputDerivedType(%{{.*}}, %[[BOX_NONE]], %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
 
   function unlimited_polymorphic_alloc_array_ret()
     class(*), allocatable :: unlimited_polymorphic_alloc_array_ret(:)
@@ -839,9 +839,7 @@ module polymorphic_test
 ! CHECK: %[[IS_ALLOCATED_OR_ASSOCIATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_I64]], %[[C0]] : i64
 ! CHECK: %[[ABSENT:.*]] = fir.absent !fir.class<none>
 ! CHECK: %[[PTR_LOAD2:.*]] = fir.load %[[NULL_PTR]] : !fir.ref<!fir.box<!fir.ptr<none>>>
-! CHECK: %[[BOX_ADDR2:.*]] = fir.box_addr %[[PTR_LOAD2]] : (!fir.box<!fir.ptr<none>>) -> !fir.ptr<none>
-! CHECK: %[[BOX_NONE:.*]] = fir.embox %[[BOX_ADDR2]] : (!fir.ptr<none>) -> !fir.box<none>
-! CHECK: %[[CLASS_NONE:.*]] = fir.convert %[[BOX_NONE]] : (!fir.box<none>) -> !fir.class<none>
+! CHECK: %[[CLASS_NONE:.*]] = fir.rebox %[[PTR_LOAD2]] : (!fir.box<!fir.ptr<none>>) -> !fir.class<none>
 ! CHECK: %[[ARG:.*]] = arith.select %[[IS_ALLOCATED_OR_ASSOCIATED]], %[[CLASS_NONE]], %[[ABSENT]] : !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_optional(%[[ARG]]) {{.*}} : (!fir.class<none>) -> ()
 

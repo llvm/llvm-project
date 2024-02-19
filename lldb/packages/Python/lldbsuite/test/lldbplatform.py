@@ -1,7 +1,5 @@
 """ This module represents an abstraction of an lldb target / host platform. """
 
-from __future__ import absolute_import
-
 # System modules
 import itertools
 

@@ -257,8 +257,8 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float [[A:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR14:[0-9]+]]
+; CHECK-SAME: (float nofpclass(sub) [[A:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float nofpclass(sub) [[A]]) #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -498,10 +498,10 @@ attributes #2 = { nobuiltin nounwind }
 ; TUNIT: attributes #[[ATTR9]] = { nosync memory(none) }
 ; TUNIT: attributes #[[ATTR10]] = { nosync memory(read) }
 ; TUNIT: attributes #[[ATTR11]] = { nofree }
-; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync willreturn }
-; TUNIT: attributes #[[ATTR15]] = { nofree willreturn }
+; TUNIT: attributes #[[ATTR15]] = { nofree willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { noinline nounwind uwtable }
@@ -515,8 +515,8 @@ attributes #2 = { nobuiltin nounwind }
 ; CGSCC: attributes #[[ATTR9]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR10]] = { nosync memory(read) }
 ; CGSCC: attributes #[[ATTR11]] = { nofree }
-; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nosync willreturn }
-; CGSCC: attributes #[[ATTR15]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR15]] = { nofree willreturn memory(write) }
 ;.

@@ -3,7 +3,6 @@
 // FIXME: Access control checks
 
 namespace PR5820 {
-  // also <rdar://problem/7535045>
   struct Base {
     void Foo();
     int Member;

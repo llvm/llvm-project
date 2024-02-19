@@ -105,7 +105,7 @@ RawStringLiteralCheck::RawStringLiteralCheck(StringRef Name,
     DisallowedChars.set(C);
 
   // Non-ASCII are disallowed too.
-  for (unsigned int C = 0x80u; C <= 0xFFu; ++C)
+  for (unsigned int C = 0x80U; C <= 0xFFU; ++C)
     DisallowedChars.set(static_cast<unsigned char>(C));
 }
 

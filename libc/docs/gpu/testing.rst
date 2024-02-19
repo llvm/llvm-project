@@ -8,7 +8,7 @@ Testing the GPU libc library
 .. note::
    Running GPU tests with high parallelism is likely to cause spurious failures,
    out of resource errors, or indefinite hangs. limiting the number of threads
-   used while testing is highly recommended.
+   used while testing using ``LIBC_GPU_TEST_JOBS=<N>`` is highly recommended.
 
 .. contents:: Table of Contents
   :depth: 4
@@ -18,9 +18,9 @@ Testing Infrastructure
 ======================
 
 The testing support in LLVM's libc implementation for GPUs is designed to mimic
-the standard unit tests as much as possible. We use the `remote procedure call
-<libc_gpu_rpc>`_ support to provide the necessary utilities like printing from
-the GPU. Execution is performed by emitting a ``_start`` kernel from the GPU
+the standard unit tests as much as possible. We use the :ref:`libc_gpu_rpc` 
+support to provide the necessary utilities like printing from the GPU. Execution 
+is performed by emitting a ``_start`` kernel from the GPU
 that is then called by an external loader utility. This is an example of how
 this can be done manually:
 

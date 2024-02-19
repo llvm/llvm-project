@@ -24,6 +24,17 @@
 #include "llvm/ADT/Twine.h"
 
 namespace mlir {
+//===--------------------------------------------------------------------===//
+// Dialect Version Interface.
+//===--------------------------------------------------------------------===//
+
+/// This class is used to represent the version of a dialect, for the purpose
+/// of polymorphic destruction.
+class DialectVersion {
+public:
+  virtual ~DialectVersion() = default;
+};
+
 //===----------------------------------------------------------------------===//
 // DialectBytecodeReader
 //===----------------------------------------------------------------------===//
@@ -38,7 +49,18 @@ public:
   virtual ~DialectBytecodeReader() = default;
 
   /// Emit an error to the reader.
-  virtual InFlightDiagnostic emitError(const Twine &msg = {}) = 0;
+  virtual InFlightDiagnostic emitError(const Twine &msg = {}) const = 0;
+
+  /// Retrieve the dialect version by name if available.
+  virtual FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const = 0;
+  template <class T>
+  FailureOr<const DialectVersion *> getDialectVersion() const {
+    return getDialectVersion(T::getDialectNamespace());
+  }
+
+  /// Retrieve the context associated to the reader.
+  virtual MLIRContext *getContext() const = 0;
 
   /// Return the bytecode version being read.
   virtual uint64_t getBytecodeVersion() const = 0;
@@ -382,17 +404,15 @@ public:
 
   /// Return the bytecode version being emitted for.
   virtual int64_t getBytecodeVersion() const = 0;
-};
 
-//===--------------------------------------------------------------------===//
-// Dialect Version Interface.
-//===--------------------------------------------------------------------===//
+  /// Retrieve the dialect version by name if available.
+  virtual FailureOr<const DialectVersion *>
+  getDialectVersion(StringRef dialectName) const = 0;
 
-/// This class is used to represent the version of a dialect, for the purpose
-/// of polymorphic destruction.
-class DialectVersion {
-public:
-  virtual ~DialectVersion() = default;
+  template <class T>
+  FailureOr<const DialectVersion *> getDialectVersion() const {
+    return getDialectVersion(T::getDialectNamespace());
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -409,44 +429,20 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Read an attribute belonging to this dialect from the given reader. This
-  /// method should return null in the case of failure.
+  /// method should return null in the case of failure. Optionally, the dialect
+  /// version can be accessed through the reader.
   virtual Attribute readAttribute(DialectBytecodeReader &reader) const {
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading attributes from bytecode";
     return Attribute();
   }
 
-  /// Read a versioned attribute encoding belonging to this dialect from the
-  /// given reader. This method should return null in the case of failure, and
-  /// falls back to the non-versioned reader in case the dialect implements
-  /// versioning but it does not support versioned custom encodings for the
-  /// attributes.
-  virtual Attribute readAttribute(DialectBytecodeReader &reader,
-                                  const DialectVersion &version) const {
-    reader.emitError()
-        << "dialect " << getDialect()->getNamespace()
-        << " does not support reading versioned attributes from bytecode";
-    return Attribute();
-  }
-
   /// Read a type belonging to this dialect from the given reader. This method
-  /// should return null in the case of failure.
+  /// should return null in the case of failure. Optionally, the dialect version
+  /// can be accessed thorugh the reader.
   virtual Type readType(DialectBytecodeReader &reader) const {
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading types from bytecode";
-    return Type();
-  }
-
-  /// Read a versioned type encoding belonging to this dialect from the given
-  /// reader. This method should return null in the case of failure, and
-  /// falls back to the non-versioned reader in case the dialect implements
-  /// versioning but it does not support versioned custom encodings for the
-  /// types.
-  virtual Type readType(DialectBytecodeReader &reader,
-                        const DialectVersion &version) const {
-    reader.emitError()
-        << "dialect " << getDialect()->getNamespace()
-        << " does not support reading versioned types from bytecode";
     return Type();
   }
 

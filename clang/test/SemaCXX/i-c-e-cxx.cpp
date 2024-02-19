@@ -39,7 +39,7 @@ namespace pr6206 {
   };
 
   const int Foo::kBar = 20;
-  
+
   char Test() {
     char str[Foo::kBar];
     str[0] = '0';
@@ -53,9 +53,8 @@ void pr6373(const unsigned x = 0) {
 }
 
 
-// rdar://9204520
 namespace rdar9204520 {
-  
+
 struct A {
   static const int B = int(0.75 * 1000 * 1000);
 #if __cplusplus <= 199711L
@@ -77,7 +76,7 @@ struct PR8836 { char _; long long a; };
 #endif
 
 int PR8836test[(__typeof(sizeof(int)))&reinterpret_cast<const volatile char&>((((PR8836*)0)->a))];
-// expected-warning@-1 0-1{{C99 feature}} expected-warning@-1 {{folded to constant array as an extension}}
+// expected-warning@-1 0-1{{variable length arrays in C++ are a Clang extension}} expected-warning@-1 {{folded to constant array as an extension}}
 // expected-note@-2 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
 
 const int nonconst = 1.0;
@@ -86,7 +85,7 @@ const int nonconst = 1.0;
 #endif
 int arr[nonconst];
 #if __cplusplus <= 199711L
-// expected-warning@-2 0-1{{C99 feature}} expected-warning@-2 {{folded to constant array as an extension}}
+// expected-warning@-2 0-1{{variable length arrays in C++ are a Clang extension}} expected-warning@-2 {{folded to constant array as an extension}}
 // expected-note@-3 {{initializer of 'nonconst' is not a constant expression}}
 #endif
 

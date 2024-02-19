@@ -81,7 +81,7 @@ If the call is deemed suitable for conversion then:
   is of ``signed char`` or ``unsigned char`` type are wrapped in a
   ``reinterpret_cast<const char *>``.
 - any arguments where the format string and the parameter differ in
-  signedness will be wrapped in an approprate ``static_cast`` if `StrictMode`
+  signedness will be wrapped in an appropriate ``static_cast`` if `StrictMode`
   is enabled.
 - any arguments that end in a call to ``std::string::c_str()`` or
   ``std::string::data()`` will have that call removed.

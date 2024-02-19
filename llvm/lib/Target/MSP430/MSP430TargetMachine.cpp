@@ -43,7 +43,7 @@ MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
                                          const TargetOptions &Options,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
-                                         CodeGenOpt::Level OL, bool JIT)
+                                         CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
                         Options, getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -65,6 +65,7 @@ public:
     return getTM<MSP430TargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
 };
@@ -79,6 +80,12 @@ MachineFunctionInfo *MSP430TargetMachine::createMachineFunctionInfo(
     const TargetSubtargetInfo *STI) const {
   return MSP430MachineFunctionInfo::create<MSP430MachineFunctionInfo>(Allocator,
                                                                       F, STI);
+}
+
+void MSP430PassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 bool MSP430PassConfig::addInstSelector() {

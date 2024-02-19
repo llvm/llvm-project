@@ -45,37 +45,48 @@ string.h
 Function Name  Available  RPC Required
 =============  =========  ============
 bcmp           |check|
+bcopy          |check|
 bzero          |check|
+index          |check|
 memccpy        |check|
-memchr         
+memchr         |check|
 memcmp         |check|
 memcpy         |check|
+memmem         |check|
 memmove        |check|
 mempcpy        |check|
 memrchr        |check|
 memset         |check|
+rindex         |check|
 stpcpy         |check|
 stpncpy        |check|
+strcasecmp     |check|
+strcasestr     |check|
 strcat         |check|
-strchr         
+strchr         |check|
+strchrnul      |check|
 strcmp         |check|
+strcoll        |check|
 strcpy         |check|
 strcspn        |check|
+strdup         |check|
 strlcat        |check|
 strlcpy        |check|
 strlen         |check|
+strncasecmp    |check|
 strncat        |check|
 strncmp        |check|
 strncpy        |check|
+strndup        |check|
 strnlen        |check|
-strpbrk        
-strrchr        
+strpbrk        |check|
+strrchr        |check|
+strsep         |check|
 strspn         |check|
-strstr         
+strstr         |check|
 strtok         |check|
 strtok_r       |check|
-strdup
-strndup
+strxfrm        |check|
 =============  =========  ============
 
 stdlib.h
@@ -90,11 +101,15 @@ atof           |check|
 atol           |check|
 atoll          |check|
 exit           |check|    |check|
+abort          |check|    |check|
 labs           |check|
 llabs          |check|
 div            |check|
 ldiv           |check|
 lldiv          |check|
+bsearch        |check|
+qsort          |check|
+qsort_r        |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|
@@ -105,7 +120,7 @@ strtoull       |check|
 =============  =========  ============
 
 inttypes.h
---------
+----------
 
 =============  =========  ============
 Function Name  Available  RPC Required
@@ -117,13 +132,49 @@ strtoumax      |check|
 =============  =========  ============
 
 stdio.h
+-------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+feof           |check|    |check|
+ferror         |check|    |check|
+clearerr       |check|    |check|
+fseek          |check|    |check|
+ftell          |check|    |check|
+fflush         |check|    |check|
+fgetc          |check|    |check|
+fgets          |check|    |check|
+ungetc         |check|    |check|
+getc           |check|    |check|
+getchar        |check|    |check|
+puts           |check|    |check|
+fputs          |check|    |check|
+fputc          |check|    |check|
+fwrite         |check|    |check|
+putc           |check|    |check|
+putchar        |check|    |check|
+fclose         |check|    |check|
+fopen          |check|    |check|
+fread          |check|    |check|
+=============  =========  ============
+
+time.h
+------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+clock          |check|
+nanosleep      |check|
+=============  =========  ============
+
+assert.h
 --------
 
 =============  =========  ============
 Function Name  Available  RPC Required
 =============  =========  ============
-puts           |check|    |check|
-fputs          |check|    |check|
-fclose         |check|    |check|
-fopen          |check|    |check|
+assert         |check|    |check|
+__assert_fail  |check|    |check|
 =============  =========  ============

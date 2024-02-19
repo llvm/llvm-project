@@ -199,16 +199,22 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
     }
   }
   while (nextOp && nextOp != toOp) {
-    auto nextOpMemEffects = dyn_cast<MemoryEffectOpInterface>(nextOp);
-    // TODO: Do we need to handle other effects generically?
-    // If the operation does not implement the MemoryEffectOpInterface we
-    // conservatively assumes it writes.
-    if ((nextOpMemEffects &&
-         nextOpMemEffects.hasEffect<MemoryEffects::Write>()) ||
-        !nextOpMemEffects) {
+    std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
+        getEffectsRecursively(nextOp);
+    if (!effects) {
+      // TODO: Do we need to handle other effects generically?
+      // If the operation does not implement the MemoryEffectOpInterface we
+      // conservatively assume it writes.
       result.first->second =
           std::make_pair(nextOp, MemoryEffects::Write::get());
       return true;
+    }
+
+    for (const MemoryEffects::EffectInstance &effect : *effects) {
+      if (isa<MemoryEffects::Write>(effect.getEffect())) {
+        result.first->second = {nextOp, MemoryEffects::Write::get()};
+        return true;
+      }
     }
     nextOp = nextOp->getNextNode();
   }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-cf \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf \
 // RUN:             -convert-vector-to-llvm='reassociate-fp-reductions' \
 // RUN:             -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
@@ -27,11 +27,17 @@ func.func @entry() {
   %1 = vector.reduction <mul>, %v2 : vector<64xf64> into f64
   vector.print %1 : f64
   // CHECK: 6
-  %2 = vector.reduction <minf>, %v2 : vector<64xf64> into f64
+  %2 = vector.reduction <minimumf>, %v2 : vector<64xf64> into f64
   vector.print %2 : f64
   // CHECK: 1
-  %3 = vector.reduction <maxf>, %v2 : vector<64xf64> into f64
+  %3 = vector.reduction <maximumf>, %v2 : vector<64xf64> into f64
   vector.print %3 : f64
+  // CHECK: 3
+  %4 = vector.reduction <minnumf>, %v2 : vector<64xf64> into f64
+  vector.print %4 : f64
+  // CHECK: 1
+  %5 = vector.reduction <maxnumf>, %v2 : vector<64xf64> into f64
+  vector.print %5 : f64
   // CHECK: 3
 
   return

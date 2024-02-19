@@ -87,6 +87,8 @@ private:
   /// Emit top-level declarations: using declarations and any extra class
   /// declarations.
   void emitTopLevelDeclarations();
+  /// Emit the function that returns the type or attribute name.
+  void emitName();
   /// Emit attribute or type builders.
   void emitBuilders();
   /// Emit a verifier for the def.
@@ -180,6 +182,8 @@ DefGen::DefGen(const AttrOrTypeDef &def)
   // Emit builders for defs with parameters
   if (storageCls)
     emitBuilders();
+  // Emit the type name.
+  emitName();
   // Emit the verifier.
   if (storageCls && def.genVerifyDecl())
     emitVerifier();
@@ -262,6 +266,19 @@ void DefGen::emitTopLevelDeclarations() {
   std::string extraDef = formatExtraDefinitions(def);
   defCls.declare<ExtraClassDeclaration>(std::move(extraDecl),
                                         std::move(extraDef));
+}
+
+void DefGen::emitName() {
+  StringRef name;
+  if (auto *attrDef = dyn_cast<AttrDef>(&def)) {
+    name = attrDef->getAttrName();
+  } else {
+    auto *typeDef = cast<TypeDef>(&def);
+    name = typeDef->getTypeName();
+  }
+  std::string nameDecl =
+      strfmt("static constexpr ::llvm::StringLiteral name = \"{0}\";\n", name);
+  defCls.declare<ExtraClassDeclaration>(std::move(nameDecl));
 }
 
 void DefGen::emitBuilders() {
@@ -353,7 +370,7 @@ void DefGen::emitDefaultBuilder() {
   MethodBody &body = m->body().indent();
   auto scope = body.scope("return Base::get(context", ");");
   for (const auto &param : params)
-    body << ", " << param.getName();
+    body << ", std::move(" << param.getName() << ")";
 }
 
 void DefGen::emitCheckedBuilder() {
@@ -474,8 +491,10 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
 void DefGen::emitStorageConstructor() {
   Constructor *ctor =
       storageCls->addConstructor<Method::Inline>(getBuilderParams({}));
-  for (auto &param : params)
-    ctor->addMemberInitializer(param.getName(), param.getName());
+  for (auto &param : params) {
+    std::string movedValue = ("std::move(" + param.getName() + ")").str();
+    ctor->addMemberInitializer(param.getName(), movedValue);
+  }
 }
 
 void DefGen::emitKeyType() {
@@ -525,11 +544,11 @@ void DefGen::emitConstruct() {
                                         : Method::Static,
       MethodParameter(strfmt("::mlir::{0}StorageAllocator &", valueType),
                       "allocator"),
-      MethodParameter("const KeyTy &", "tblgenKey"));
+      MethodParameter("KeyTy &&", "tblgenKey"));
   if (!def.hasStorageCustomConstructor()) {
     auto &body = construct->body().indent();
     for (const auto &it : llvm::enumerate(params)) {
-      body << formatv("auto {0} = std::get<{1}>(tblgenKey);\n",
+      body << formatv("auto {0} = std::move(std::get<{1}>(tblgenKey));\n",
                       it.value().getName(), it.index());
     }
     // Use the parameters' custom allocator code, if provided.
@@ -544,8 +563,9 @@ void DefGen::emitConstruct() {
         body.scope(strfmt("return new (allocator.allocate<{0}>()) {0}(",
                           def.getStorageClassName()),
                    ");");
-    llvm::interleaveComma(params, body,
-                          [&](auto &param) { body << param.getName(); });
+    llvm::interleaveComma(params, body, [&](auto &param) {
+      body << "std::move(" << param.getName() << ")";
+    });
   }
 }
 
@@ -584,7 +604,12 @@ protected:
   DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
                StringRef defType, StringRef valueType, bool isAttrGenerator)
       : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {}
+        valueType(valueType), isAttrGenerator(isAttrGenerator) {
+    // Sort by occurrence in file.
+    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
+      return lhs->getID() < rhs->getID();
+    });
+  }
 
   /// Emit the list of def type names.
   void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
@@ -763,7 +788,7 @@ static const char *const dialectDynamicTypeParserDispatch = R"(
   {
     auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
     if (parseResult.has_value()) {
-      if (::mlir::succeeded(parseResult.getValue()))
+      if (::mlir::succeeded(parseResult.value()))
         return genType;
       return ::mlir::Type();
     }

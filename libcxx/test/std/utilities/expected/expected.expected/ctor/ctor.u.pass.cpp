@@ -29,6 +29,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints:
 static_assert(std::is_constructible_v<std::expected<int, int>, int>);
@@ -67,24 +68,27 @@ struct CopyOnly {
   friend constexpr bool operator==(const CopyOnly& mi, int ii) { return mi.i == ii; }
 };
 
-template <class T>
+struct BaseError {};
+struct DerivedError : BaseError {};
+
+template <class T, class E = int>
 constexpr void testInt() {
-  std::expected<T, int> e(5);
+  std::expected<T, E> e(5);
   assert(e.has_value());
   assert(e.value() == 5);
 }
 
-template <class T>
+template <class T, class E = int>
 constexpr void testLValue() {
   T t(5);
-  std::expected<T, int> e(t);
+  std::expected<T, E> e(t);
   assert(e.has_value());
   assert(e.value() == 5);
 }
 
-template <class T>
+template <class T, class E = int>
 constexpr void testRValue() {
-  std::expected<T, int> e(T(5));
+  std::expected<T, E> e(T(5));
   assert(e.has_value());
   assert(e.value() == 5);
 }
@@ -93,10 +97,13 @@ constexpr bool test() {
   testInt<int>();
   testInt<CopyOnly>();
   testInt<MoveOnly>();
+  testInt<TailClobberer<0>, bool>();
   testLValue<int>();
   testLValue<CopyOnly>();
+  testLValue<TailClobberer<0>, bool>();
   testRValue<int>();
   testRValue<MoveOnly>();
+  testRValue<TailClobberer<0>, bool>();
 
   // Test default template argument.
   // Without it, the template parameter cannot be deduced from an initializer list
@@ -112,25 +119,44 @@ constexpr bool test() {
     assert(e.value().j == 6);
   }
 
-  // this is a confusing example, but the behaviour
-  // is exactly what is specified in the spec
-  // see https://cplusplus.github.io/LWG/issue3836
-  {
-    struct BaseError {};
-    struct DerivedError : BaseError {};
+  // https://cplusplus.github.io/LWG/issue3836
 
+  // Test &
+  {
     std::expected<bool, DerivedError> e1(false);
     std::expected<bool, BaseError> e2(e1);
     assert(e2.has_value());
-    assert(e2.value()); // yes, e2 holds "true"
+    assert(!e2.value()); // yes, e2 holds "false" since LWG3836
+  }
+
+  // Test &&
+  {
+    std::expected<bool, DerivedError> e1(false);
+    std::expected<bool, BaseError> e2(std::move(e1));
+    assert(e2.has_value());
+    assert(!e2.value()); // yes, e2 holds "false" since LWG3836
+  }
+
+  // Test const&
+  {
+    const std::expected<bool, DerivedError> e1(false);
+    std::expected<bool, BaseError> e2(e1);
+    assert(e2.has_value());
+    assert(!e2.value()); // yes, e2 holds "false" since LWG3836
+  }
+
+  // Test const&&
+  {
+    const std::expected<bool, DerivedError> e1(false);
+    std::expected<bool, BaseError> e2(std::move(e1));
+    assert(e2.has_value());
+    assert(!e2.value()); // yes, e2 holds "false" since LWG3836
   }
   return true;
 }
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing(int) { throw Except{}; };
   };

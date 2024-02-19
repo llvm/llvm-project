@@ -13,7 +13,7 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The implementation currently handles only plain mutexes.
 LLVM_LIBC_FUNCTION(int, pthread_mutex_lock, (pthread_mutex_t * mutex)) {
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_lock, (pthread_mutex_t * mutex)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

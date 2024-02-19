@@ -169,6 +169,12 @@ SDValue VETargetLowering::lowerVVP_LOAD_STORE(SDValue Op,
 
   // VVP_STORE
   assert(VVPOpc == VEISD::VVP_STORE);
+  if (getTypeAction(*CDAG.getDAG()->getContext(), Data.getValueType()) !=
+      TargetLowering::TypeLegal)
+    // Doesn't lower store instruction if an operand is not lowered yet.
+    // If it isn't, return SDValue().  In this way, LLVM will try to lower
+    // store instruction again after lowering all operands.
+    return SDValue();
   return CDAG.getNode(VEISD::VVP_STORE, Op.getNode()->getVTList(),
                       {Chain, Data, BasePtr, StrideV, Mask, AVL});
 }

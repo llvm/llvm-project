@@ -1,10 +1,10 @@
 # RUN: llc -mtriple=riscv64 -mattr=+v -run-pass prologepilog %s -o - | FileCheck %s
 --- |
-  declare void @extern(<vscale x 16 x i8>*) #0
+  declare void @extern(ptr) #0
   
   define void @addi_rvv_stack_object() #0 {
     %local0 = alloca <vscale x 16 x i8>, align 16
-    call void @extern(<vscale x 16 x i8>* %local0)
+    call void @extern(ptr %local0)
     ret void
   }
   
@@ -53,7 +53,7 @@ body:             |
   bb.0 (%ir-block.0):
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
     $x10 = ADDI %stack.0.local0, 0
-    PseudoCALL target-flags(riscv-plt) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
+    PseudoCALL target-flags(riscv-call) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoRET
 

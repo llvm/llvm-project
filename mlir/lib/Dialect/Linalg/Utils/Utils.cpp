@@ -65,7 +65,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
     visit(expr.getLHS());
     visit(expr.getRHS());
     if (expr.getKind() == mlir::AffineExprKind::Mul)
-      assert(expr.getRHS().cast<AffineConstantExpr>().getValue() > 0 &&
+      assert(cast<AffineConstantExpr>(expr.getRHS()).getValue() > 0 &&
              "nonpositive multiplying coefficient");
   }
   bool isTiled = false;
@@ -174,8 +174,8 @@ bool isElementwise(LinalgOp op) {
     return false;
 
   // TODO: relax the restrictions on indexing map.
-  for (OpOperand *opOperand : op.getDpsInitOperands()) {
-    if (!op.getMatchingIndexingMap(opOperand).isPermutation())
+  for (OpOperand &opOperand : op.getDpsInitsMutable()) {
+    if (!op.getMatchingIndexingMap(&opOperand).isPermutation())
       return false;
   }
   return hasOnlyScalarElementwiseOp(op->getRegion(0));
@@ -321,10 +321,9 @@ void GenerateLoopNest<scf::ForOp>::doit(
   assert((procInfo.empty() || (procInfo.size() == loopRanges.size())) &&
          "expected as many entries for proc info as number of loops, even if "
          "they are null entries");
-  SmallVector<Value> iterArgInitValues = linalgOp.hasBufferSemantics()
-                                             ? SmallVector<Value>{}
-                                             : linalgOp.getDpsInitOperands();
-
+  SmallVector<Value> iterArgInitValues;
+  if (!linalgOp.hasPureBufferSemantics())
+    llvm::append_range(iterArgInitValues, linalgOp.getDpsInits());
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
   LoopNest loopNest = mlir::scf::buildLoopNest(
@@ -334,7 +333,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
                "expect the number of output tensors and iter args to match");
         SmallVector<Value> operandValuesToUse = linalgOp->getOperands();
         if (!iterArgs.empty()) {
-          operandValuesToUse = linalgOp.getDpsInputOperands();
+          operandValuesToUse = linalgOp.getDpsInputs();
           operandValuesToUse.append(iterArgs.begin(), iterArgs.end());
         }
         return bodyBuilderFn(b, loc, ivs, operandValuesToUse);
@@ -362,9 +361,9 @@ void GenerateLoopNest<AffineForOp>::doit(
                                   ValueRange)>
         bodyBuilderFn,
     ArrayRef<linalg::ProcInfo> /*procInfo*/) {
-  SmallVector<Value> iterArgInitValues = linalgOp.hasBufferSemantics()
-                                             ? SmallVector<Value>{}
-                                             : linalgOp.getDpsInitOperands();
+  SmallVector<Value> iterArgInitValues;
+  if (!linalgOp.hasPureBufferSemantics())
+    llvm::append_range(iterArgInitValues, linalgOp.getDpsInits());
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
@@ -529,9 +528,9 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
                                   ValueRange)>
         bodyBuilderFn,
     ArrayRef<linalg::ProcInfo> procInfo) {
-  SmallVector<Value> iterArgInitValues = linalgOp.hasBufferSemantics()
-                                             ? SmallVector<Value>{}
-                                             : linalgOp.getDpsInitOperands();
+  SmallVector<Value> iterArgInitValues;
+  if (!linalgOp.hasPureBufferSemantics())
+    llvm::append_range(iterArgInitValues, linalgOp.getDpsInits());
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
   assert(iteratorTypes.size() >= loopRanges.size() &&
@@ -671,7 +670,8 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
                               << ": make sure in bound with affine.min\n");
 
       AffineExpr dim0, dim1, dim2;
-      bindDims(builder.getContext(), dim0, dim1, dim2);
+      MLIRContext *context = builder.getContext();
+      bindDims(context, dim0, dim1, dim2);
 
       // Get the dimension size for this dimension. We need to first calculate
       // the max index and then plus one. This is important because for
@@ -679,12 +679,12 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
       // form `(d0 * s0 + d1)`, where `d0`/`d1 is an output/filter window
       // dimension and `s0` is stride. Directly use the dimension size of
       // output/filer window dimensions will cause incorrect calculation.
-      AffineMap minusOneMap =
-          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 - 1}})
-              .front();
-      AffineMap plusOneMap =
-          AffineMap::inferFromExprList({ArrayRef<AffineExpr>{dim0 + 1}})
-              .front();
+      AffineMap minusOneMap = AffineMap::inferFromExprList(
+                                  {ArrayRef<AffineExpr>{dim0 - 1}}, context)
+                                  .front();
+      AffineMap plusOneMap = AffineMap::inferFromExprList(
+                                 {ArrayRef<AffineExpr>{dim0 + 1}}, context)
+                                 .front();
       SmallVector<OpFoldResult> maxIndices =
           llvm::to_vector(llvm::map_range(ubs, [&](OpFoldResult ub) {
             return makeComposedFoldedAffineApply(rewriter, loc, minusOneMap,
@@ -697,7 +697,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
 
       // Compute min(dim - offset, size) to avoid out-of-bounds accesses.
       AffineMap minMap = AffineMap::inferFromExprList(
-                             {ArrayRef<AffineExpr>{dim1 - dim2, dim0}})
+                             {ArrayRef<AffineExpr>{dim1 - dim2, dim0}}, context)
                              .front();
       size =
           makeComposedFoldedAffineMin(rewriter, loc, minMap, {size, d, offset});
@@ -739,27 +739,27 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
 }
 
 SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands) {
-  if (op.hasBufferSemantics())
+  if (op.hasPureBufferSemantics())
     return {};
   return llvm::to_vector(
-      llvm::map_range(op.getDpsInitOperands(), [&](OpOperand *opOperand) {
-        return operands[opOperand->getOperandNumber()].getType();
+      llvm::map_range(op.getDpsInitsMutable(), [&](OpOperand &opOperand) {
+        return operands[opOperand.getOperandNumber()].getType();
       }));
 }
 
 SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
                                     LinalgOp op, ValueRange operands,
                                     ValueRange results) {
-  if (op.hasBufferSemantics())
+  if (op.hasPureBufferSemantics())
     return {};
   SmallVector<Value> tensorResults;
   tensorResults.reserve(results.size());
   // Insert a insert_slice for each output tensor.
   unsigned resultIdx = 0;
-  for (OpOperand *opOperand : op.getDpsInitOperands()) {
+  for (OpOperand &opOperand : op.getDpsInitsMutable()) {
     // TODO: use an interface/adaptor to avoid leaking position in
     // `tiledOperands`.
-    Value outputTensor = operands[opOperand->getOperandNumber()];
+    Value outputTensor = operands[opOperand.getOperandNumber()];
     if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
       Value inserted = builder.create<tensor::InsertSliceOp>(
           loc, sliceOp.getSource().getType(), results[resultIdx],

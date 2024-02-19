@@ -14,6 +14,7 @@ unittest("ScudoUnitTest") {
     "chunk_test.cpp",
     "combined_test.cpp",
     "common_test.cpp",
+    "condition_variable_test.cpp",
     "flags_test.cpp",
     "list_test.cpp",
     "map_test.cpp",
@@ -75,9 +76,6 @@ unittest("ScudoHooksUnitTest") {
     "//compiler-rt/lib/scudo/standalone:c_wrapper_sources",
     "//compiler-rt/lib/scudo/standalone:sources",
   ]
-  sources = [
-    "scudo_hooks_test.cpp",
-    "scudo_unit_test_main.cpp",
-  ]
+  sources = [ "scudo_unit_test_main.cpp" ]
   has_custom_main = true
 }

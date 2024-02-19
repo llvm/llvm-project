@@ -30,6 +30,7 @@
 #include "test_macros.h"
 #include "test_execution_policies.h"
 #include "test_iterators.h"
+#include "MoveOnly.h"
 
 EXECUTION_POLICY_SFINAE_TEST(stable_sort);
 
@@ -45,9 +46,9 @@ struct OrderedValue {
   auto operator>(const OrderedValue& rhs) const { return value > rhs.value; }
 };
 
-template <class Iter, std::size_t N>
-void test_one(std::array<int, N> input, std::array<int, N> expected) {
-  std::stable_sort(Iter(input.data()), Iter(input.data() + input.size()));
+template <class Iter, std::size_t N, class Policy, class ValueT = typename std::iterator_traits<Iter>::value_type>
+void test_one(Policy&& policy, std::array<ValueT, N> input, std::array<ValueT, N> expected) {
+  std::stable_sort(policy, Iter(input.data()), Iter(input.data() + input.size()));
   assert(input == expected);
 }
 
@@ -55,27 +56,26 @@ template <class Iter>
 struct Test {
   template <class Policy>
   void operator()(Policy&& policy) {
-
     // Empty sequence.
-    test_one<Iter, 0>({}, {});
+    test_one<Iter, 0>(policy, {}, {});
     // 1-element sequence.
-    test_one<Iter, 1>({1}, {1});
+    test_one<Iter, 1>(policy, {1}, {1});
     // 2-element sequence.
-    test_one<Iter, 2>({2, 1}, {1, 2});
+    test_one<Iter, 2>(policy, {2, 1}, {1, 2});
     // 3-element sequence.
-    test_one<Iter, 3>({2, 1, 3}, {1, 2, 3});
+    test_one<Iter, 3>(policy, {2, 1, 3}, {1, 2, 3});
     // Longer sequence.
-    test_one<Iter, 8>({2, 1, 3, 6, 8, 4, 11, 5}, {1, 2, 3, 4, 5, 6, 8, 11});
+    test_one<Iter, 8>(policy, {2, 1, 3, 6, 8, 4, 11, 5}, {1, 2, 3, 4, 5, 6, 8, 11});
     // Longer sequence with duplicates.
-    test_one<Iter, 7>({2, 1, 3, 6, 2, 8, 6}, {1, 2, 2, 3, 6, 6, 8});
+    test_one<Iter, 7>(policy, {2, 1, 3, 6, 2, 8, 6}, {1, 2, 2, 3, 6, 6, 8});
     // All elements are the same.
-    test_one<Iter, 3>({1, 1, 1}, {1, 1, 1});
+    test_one<Iter, 3>(policy, {1, 1, 1}, {1, 1, 1});
     // Already sorted.
-    test_one<Iter, 5>({1, 2, 3, 4, 5}, {1, 2, 3, 4, 5});
+    test_one<Iter, 5>(policy, {1, 2, 3, 4, 5}, {1, 2, 3, 4, 5});
     // Reverse-sorted.
-    test_one<Iter, 5>({5, 4, 3, 2, 1}, {1, 2, 3, 4, 5});
+    test_one<Iter, 5>(policy, {5, 4, 3, 2, 1}, {1, 2, 3, 4, 5});
     // Repeating pattern.
-    test_one<Iter, 6>({1, 2, 1, 2, 1, 2}, {1, 1, 1, 2, 2, 2});
+    test_one<Iter, 6>(policy, {1, 2, 1, 2, 1, 2}, {1, 1, 1, 2, 2, 2});
 
     { // The sort is stable (equivalent elements remain in the same order).
       using V        = OrderedValue;
@@ -126,18 +126,25 @@ struct Test {
   }
 };
 
-int main(int, char**) {
-  types::for_each(types::random_access_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
+struct NotDefaultConstructible {
+  NotDefaultConstructible(int i) : i_(i) {}
 
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  std::set_terminate(terminate_successful);
-  int a[] = {1, 2};
-  try {
-    std::stable_sort(std::execution::par, std::begin(a), std::end(a), [](int, int) -> bool { throw int{}; });
-  } catch (int) {
-    assert(false);
+  int i_;
+
+  friend bool operator==(NotDefaultConstructible lhs, NotDefaultConstructible rhs) {
+    return lhs.i_ == rhs.i_;
   }
-#endif
+
+  friend bool operator<(NotDefaultConstructible lhs, NotDefaultConstructible rhs) {
+    return lhs.i_ < rhs.i_;
+  }
+};
+
+int main(int, char**) {
+  types::for_each(types::concatenate_t<types::random_access_iterator_list<int*>,
+                                       types::random_access_iterator_list<MoveOnly*>,
+                                       types::random_access_iterator_list<NotDefaultConstructible*>>{},
+                  TestIteratorWithPolicies<Test>{});
 
   return 0;
 }

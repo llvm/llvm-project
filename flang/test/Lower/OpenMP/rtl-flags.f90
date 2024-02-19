@@ -1,24 +1,24 @@
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=45 %s -o - | FileCheck %s --check-prefix=DEFAULT-HOST-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-target-device -fopenmp-version=45  %s -o - | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR-VERSION
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=45 %s -o - | FileCheck %s --check-prefix=DEFAULT-HOST-FIR-VERSION
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-target-debug -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DBG-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-target-debug=111 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DBG-EQ-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-assume-teams-oversubscription -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=TEAMS-OSUB-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-assume-threads-oversubscription -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=THREAD-OSUB-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-assume-no-thread-state -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=THREAD-STATE-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-assume-no-nested-parallelism -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=NEST-PAR-DEVICE-FIR
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-target-debug -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism -fopenmp-assume-threads-oversubscription -fopenmp-assume-no-thread-state -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=ALL-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-is-target-device -fopenmp-version=45 -o - %s | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR-VERSION
-!RUN: bbc -emit-fir -fopenmp -o - %s | FileCheck %s --check-prefix=DEFAULT-HOST-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-version=45 -o - %s | FileCheck %s --check-prefix=DEFAULT-HOST-FIR-VERSION
-!RUN: bbc -emit-fir -fopenmp -fopenmp-target-debug=111 -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=DBG-EQ-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-assume-teams-oversubscription -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=TEAMS-OSUB-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-assume-threads-oversubscription -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=THREAD-OSUB-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-assume-no-thread-state -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=THREAD-STATE-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-assume-no-nested-parallelism -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=NEST-PAR-DEVICE-FIR
-!RUN: bbc -emit-fir -fopenmp -fopenmp-target-debug=1 -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism -fopenmp-assume-threads-oversubscription -fopenmp-assume-no-thread-state -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=ALL-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=45 %s -o - | FileCheck %s --check-prefix=DEFAULT-HOST-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-target-device -fopenmp-version=45  %s -o - | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR-VERSION
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=45 %s -o - | FileCheck %s --check-prefix=DEFAULT-HOST-FIR-VERSION
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-target-debug -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DBG-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-target-debug=111 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DBG-EQ-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-assume-teams-oversubscription -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=TEAMS-OSUB-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-assume-threads-oversubscription -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=THREAD-OSUB-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-assume-no-thread-state -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=THREAD-STATE-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-assume-no-nested-parallelism -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=NEST-PAR-DEVICE-FIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-target-debug -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism -fopenmp-assume-threads-oversubscription -fopenmp-assume-no-thread-state -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=ALL-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-is-target-device -fopenmp-version=45 -o - %s | FileCheck %s --check-prefix=DEFAULT-DEVICE-FIR-VERSION
+!RUN: bbc -emit-hlfir -fopenmp -o - %s | FileCheck %s --check-prefix=DEFAULT-HOST-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=45 -o - %s | FileCheck %s --check-prefix=DEFAULT-HOST-FIR-VERSION
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-target-debug=111 -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=DBG-EQ-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-assume-teams-oversubscription -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=TEAMS-OSUB-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-assume-threads-oversubscription -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=THREAD-OSUB-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-assume-no-thread-state -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=THREAD-STATE-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-assume-no-nested-parallelism -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=NEST-PAR-DEVICE-FIR
+!RUN: bbc -emit-hlfir -fopenmp -fopenmp-target-debug=1 -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism -fopenmp-assume-threads-oversubscription -fopenmp-assume-no-thread-state -fopenmp-is-target-device -o - %s | FileCheck %s --check-prefix=ALL-DEVICE-FIR
 
 !DEFAULT-DEVICE-FIR: module attributes {{{.*}}omp.flags = #omp.flags<openmp_device_version = 11>
 !DEFAULT-DEVICE-FIR-SAME: omp.is_target_device = true

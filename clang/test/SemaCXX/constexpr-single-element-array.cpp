@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++20 -verify -fexperimental-new-constant-interpreter %s
+
 
 // This test makes sure that a single element array doesn't produce
 // spurious errors during constexpr evaluation.

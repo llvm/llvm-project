@@ -2470,7 +2470,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK5-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK5-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK5-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal [[META15:![0-9]+]]
+// CHECK5-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal !15
 // CHECK5-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK5-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP13]] to i64
 // CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[IDXPROM]]
@@ -2487,7 +2487,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i64 [[IDXPROM5]]
 // CHECK5-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
 // CHECK5-NEXT:    [[MUL7:%.*]] = fmul float [[MUL4]], [[TMP20]]
-// CHECK5-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal [[META15]]
+// CHECK5-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal !15
 // CHECK5-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK5-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[TMP22]] to i64
 // CHECK5-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i64 [[IDXPROM8]]
@@ -2904,7 +2904,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK5-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK5-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK5-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META15]], !llvm.access.group [[ACC_GRP21]]
+// CHECK5-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !15, !llvm.access.group [[ACC_GRP21]]
 // CHECK5-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK5:       omp.body.continue:
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -3489,7 +3489,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK7-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK7-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK7-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal [[META16:![0-9]+]]
+// CHECK7-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal !16
 // CHECK7-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK7-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 [[TMP13]]
 // CHECK7-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -3503,7 +3503,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i32 [[TMP19]]
 // CHECK7-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK7-NEXT:    [[MUL5:%.*]] = fmul float [[MUL3]], [[TMP20]]
-// CHECK7-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal [[META16]]
+// CHECK7-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal !16
 // CHECK7-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK7-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i32 [[TMP22]]
 // CHECK7-NEXT:    store float [[MUL5]], ptr [[ARRAYIDX6]], align 4
@@ -3915,7 +3915,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK7-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK7-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK7-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META16]], !llvm.access.group [[ACC_GRP22]]
+// CHECK7-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !16, !llvm.access.group [[ACC_GRP22]]
 // CHECK7-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK7:       omp.body.continue:
 // CHECK7-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -4887,7 +4887,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 7
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK13-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK13-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nontemporal [[META7:![0-9]+]]
+// CHECK13-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nontemporal !7
 // CHECK13-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4
 // CHECK13-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP5]] to i64
 // CHECK13-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[IDXPROM]]
@@ -4904,7 +4904,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[IDXPROM4]]
 // CHECK13-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
 // CHECK13-NEXT:    [[MUL6:%.*]] = fmul float [[MUL3]], [[TMP12]]
-// CHECK13-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nontemporal [[META7]]
+// CHECK13-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nontemporal !7
 // CHECK13-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
 // CHECK13-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP14]] to i64
 // CHECK13-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[IDXPROM7]]
@@ -5045,7 +5045,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 1
 // CHECK13-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK13-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK13-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META7]], !llvm.access.group [[ACC_GRP13]]
+// CHECK13-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !7, !llvm.access.group [[ACC_GRP13]]
 // CHECK13-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK13:       omp.body.continue:
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -5239,7 +5239,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 7
 // CHECK15-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK15-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK15-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nontemporal [[META8:![0-9]+]]
+// CHECK15-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nontemporal !8
 // CHECK15-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4
 // CHECK15-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 [[TMP5]]
 // CHECK15-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -5253,7 +5253,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i32 [[TMP11]]
 // CHECK15-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 // CHECK15-NEXT:    [[MUL4:%.*]] = fmul float [[MUL2]], [[TMP12]]
-// CHECK15-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nontemporal [[META8]]
+// CHECK15-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nontemporal !8
 // CHECK15-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
 // CHECK15-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 [[TMP14]]
 // CHECK15-NEXT:    store float [[MUL4]], ptr [[ARRAYIDX5]], align 4
@@ -5389,7 +5389,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 1
 // CHECK15-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK15-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK15-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META8]], !llvm.access.group [[ACC_GRP14]]
+// CHECK15-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !8, !llvm.access.group [[ACC_GRP14]]
 // CHECK15-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK15:       omp.body.continue:
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -5489,12 +5489,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK17-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK17-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK17-NEXT:  entry:
+// CHECK17-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK17-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
@@ -5607,12 +5609,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK17-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
+// CHECK17-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK17-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
@@ -5723,12 +5727,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK17-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
+// CHECK17-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK17-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK17-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
@@ -5856,10 +5862,12 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK17-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
+// CHECK17-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK17-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK17-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[I]], ptr [[I_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK17-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115.omp_outlined, ptr [[I_ADDR]], ptr [[A_ADDR]])
@@ -5981,9 +5989,11 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK17-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK17-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK17-NEXT:  entry:
+// CHECK17-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
+// CHECK17-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK17-NEXT:    store i64 [[AA]], ptr [[AA_ADDR]], align 8
 // CHECK17-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135.omp_outlined, ptr [[AA_ADDR]])
 // CHECK17-NEXT:    ret void
@@ -6079,12 +6089,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK19-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK19-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK19-NEXT:  entry:
+// CHECK19-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK19-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
@@ -6193,12 +6205,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK19-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
+// CHECK19-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK19-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
@@ -6305,12 +6319,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK19-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
+// CHECK19-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK19-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK19-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
@@ -6434,10 +6450,12 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK19-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
+// CHECK19-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK19-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// CHECK19-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK19-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK19-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK19-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115.omp_outlined, ptr [[I_ADDR]], ptr [[A_ADDR]])
@@ -6559,9 +6577,11 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK19-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK19-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK19-NEXT:  entry:
+// CHECK19-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
+// CHECK19-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK19-NEXT:    store i32 [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK19-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135.omp_outlined, ptr [[AA_ADDR]])
 // CHECK19-NEXT:    ret void
@@ -6657,12 +6677,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK21-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK21-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK21-NEXT:  entry:
+// CHECK21-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK21-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
@@ -6775,12 +6797,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK21-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
+// CHECK21-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK21-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
@@ -6846,7 +6870,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK21-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK21-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK21-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK21-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal [[META16:![0-9]+]]
+// CHECK21-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal !16
 // CHECK21-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK21-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP13]] to i64
 // CHECK21-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[IDXPROM]]
@@ -6863,7 +6887,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK21-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i64 [[IDXPROM5]]
 // CHECK21-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
 // CHECK21-NEXT:    [[MUL7:%.*]] = fmul float [[MUL4]], [[TMP20]]
-// CHECK21-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal [[META16]]
+// CHECK21-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal !16
 // CHECK21-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK21-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[TMP22]] to i64
 // CHECK21-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i64 [[IDXPROM8]]
@@ -6891,12 +6915,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK21-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
+// CHECK21-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK21-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK21-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
@@ -7024,10 +7050,12 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK21-SAME: (i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[I:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
+// CHECK21-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[I_ADDR:%.*]] = alloca i64, align 8
 // CHECK21-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// CHECK21-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK21-NEXT:    store i64 [[I]], ptr [[I_ADDR]], align 8
 // CHECK21-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK21-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115.omp_outlined, ptr [[I_ADDR]], ptr [[A_ADDR]])
@@ -7114,7 +7142,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK21-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK21-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK21-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK21-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META16]], !llvm.access.group [[ACC_GRP22]]
+// CHECK21-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !16, !llvm.access.group [[ACC_GRP22]]
 // CHECK21-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK21:       omp.body.continue:
 // CHECK21-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -7180,9 +7208,11 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK21-SAME: (i64 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK21-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK21-NEXT:  entry:
+// CHECK21-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK21-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
+// CHECK21-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK21-NEXT:    store i64 [[AA]], ptr [[AA_ADDR]], align 8
 // CHECK21-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135.omp_outlined, ptr [[AA_ADDR]])
 // CHECK21-NEXT:    ret void
@@ -7278,12 +7308,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z23without_schedule_clausePfS_S_S__l70
-// CHECK23-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK23-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK23-NEXT:  entry:
+// CHECK23-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK23-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
@@ -7392,12 +7424,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z18static_not_chunkedPfS_S_S__l86
-// CHECK23-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
+// CHECK23-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK23-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
@@ -7463,7 +7497,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK23-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK23-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK23-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK23-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal [[META17:![0-9]+]]
+// CHECK23-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal !17
 // CHECK23-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK23-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 [[TMP13]]
 // CHECK23-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -7477,7 +7511,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK23-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i32 [[TMP19]]
 // CHECK23-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK23-NEXT:    [[MUL5:%.*]] = fmul float [[MUL3]], [[TMP20]]
-// CHECK23-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal [[META17]]
+// CHECK23-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal !17
 // CHECK23-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK23-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i32 [[TMP22]]
 // CHECK23-NEXT:    store float [[MUL5]], ptr [[ARRAYIDX6]], align 4
@@ -7504,12 +7538,14 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14static_chunkedPfS_S_S__l103
-// CHECK23-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
+// CHECK23-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK23-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK23-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
@@ -7633,10 +7669,12 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115
-// CHECK23-SAME: (i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[I:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
+// CHECK23-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK23-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// CHECK23-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK23-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK23-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK23-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z12test_precondv_l115.omp_outlined, ptr [[I_ADDR]], ptr [[A_ADDR]])
@@ -7723,7 +7761,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK23-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK23-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK23-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK23-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META17]], !llvm.access.group [[ACC_GRP23]]
+// CHECK23-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !17, !llvm.access.group [[ACC_GRP23]]
 // CHECK23-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK23:       omp.body.continue:
 // CHECK23-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -7789,9 +7827,11 @@ int fint(void) { return ftemplate<int>(); }
 //
 //
 // CHECK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135
-// CHECK23-SAME: (i32 noundef [[AA:%.*]]) #[[ATTR0]] {
+// CHECK23-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[AA:%.*]]) #[[ATTR0]] {
 // CHECK23-NEXT:  entry:
+// CHECK23-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK23-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
+// CHECK23-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK23-NEXT:    store i32 [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK23-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_v_l135.omp_outlined, ptr [[AA_ADDR]])
 // CHECK23-NEXT:    ret void

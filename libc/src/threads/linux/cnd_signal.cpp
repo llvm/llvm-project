@@ -11,11 +11,11 @@
 #include "src/threads/cnd_signal.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, cnd_signal, (cnd_t * cond)) {
   CndVar *cndvar = reinterpret_cast<CndVar *>(cond);
   return cndvar->notify_one();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

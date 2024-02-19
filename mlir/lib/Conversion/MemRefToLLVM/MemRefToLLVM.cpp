@@ -9,6 +9,7 @@
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -21,6 +22,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/MathExtras.h"
@@ -40,18 +42,18 @@ bool isStaticStrideOrOffset(int64_t strideOrOffset) {
   return !ShapedType::isDynamic(strideOrOffset);
 }
 
-LLVM::LLVMFuncOp getFreeFn(LLVMTypeConverter *typeConverter, ModuleOp module) {
+LLVM::LLVMFuncOp getFreeFn(const LLVMTypeConverter *typeConverter,
+                           ModuleOp module) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericFreeFn(
-        module, typeConverter->useOpaquePointers());
+    return LLVM::lookupOrCreateGenericFreeFn(module);
 
-  return LLVM::lookupOrCreateFreeFn(module, typeConverter->useOpaquePointers());
+  return LLVM::lookupOrCreateFreeFn(module);
 }
 
 struct AllocOpLowering : public AllocLikeOpLLVMLowering {
-  AllocOpLowering(LLVMTypeConverter &converter)
+  AllocOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
                                 converter) {}
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
@@ -64,7 +66,7 @@ struct AllocOpLowering : public AllocLikeOpLLVMLowering {
 };
 
 struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
-  AlignedAllocOpLowering(LLVMTypeConverter &converter)
+  AlignedAllocOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
                                 converter) {}
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
@@ -74,6 +76,8 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
         rewriter, loc, sizeBytes, op, &defaultLayout,
         alignedAllocationGetAlignment(rewriter, loc, cast<memref::AllocOp>(op),
                                       &defaultLayout));
+    if (!ptr)
+      return std::make_tuple(Value(), Value());
     return std::make_tuple(ptr, ptr);
   }
 
@@ -83,7 +87,7 @@ private:
 };
 
 struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
-  AllocaOpLowering(LLVMTypeConverter &converter)
+  AllocaOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocaOp::getOperationName(),
                                 converter) {
     setRequiresNumElements();
@@ -104,7 +108,7 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
     unsigned addrSpace =
         *getTypeConverter()->getMemRefAddressSpace(allocaOp.getType());
     auto elementPtrType =
-        getTypeConverter()->getPointerType(elementType, addrSpace);
+        LLVM::LLVMPointerType::get(rewriter.getContext(), addrSpace);
 
     auto allocatedElementPtr =
         rewriter.create<LLVM::AllocaOp>(loc, elementPtrType, elementType, size,
@@ -112,168 +116,6 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
 
     return std::make_tuple(allocatedElementPtr, allocatedElementPtr);
   }
-};
-
-/// The base class for lowering realloc op, to support the implementation of
-/// realloc via allocation methods that may or may not support alignment.
-/// A derived class should provide an implementation of allocateBuffer using
-/// the underline allocation methods.
-struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
-  using OpAdaptor = typename memref::ReallocOp::Adaptor;
-
-  ReallocOpLoweringBase(LLVMTypeConverter &converter)
-      : AllocationOpLLVMLowering(memref::ReallocOp::getOperationName(),
-                                 converter) {}
-
-  /// Allocates the new buffer. Returns the allocated pointer and the
-  /// aligned pointer.
-  virtual std::tuple<Value, Value>
-  allocateBuffer(ConversionPatternRewriter &rewriter, Location loc,
-                 Value sizeBytes, memref::ReallocOp op) const = 0;
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const final {
-    auto reallocOp = cast<memref::ReallocOp>(op);
-    return matchAndRewrite(reallocOp,
-                           OpAdaptor(operands,
-                                     op->getDiscardableAttrDictionary(),
-                                     reallocOp.getProperties()),
-                           rewriter);
-  }
-
-  // A `realloc` is converted as follows:
-  //   If new_size > old_size
-  //     1. allocates a new buffer
-  //     2. copies the content of the old buffer to the new buffer
-  //     3. release the old buffer
-  //     3. updates the buffer pointers in the memref descriptor
-  //   Update the size in the memref descriptor
-  // Alignment request is handled by allocating `alignment` more bytes than
-  // requested and shifting the aligned pointer relative to the allocated
-  // memory.
-  LogicalResult matchAndRewrite(memref::ReallocOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter &rewriter) const {
-    OpBuilder::InsertionGuard guard(rewriter);
-    Location loc = op.getLoc();
-
-    auto computeNumElements =
-        [&](MemRefType type, function_ref<Value()> getDynamicSize) -> Value {
-      // Compute number of elements.
-      Value numElements =
-          type.isDynamicDim(0)
-              ? getDynamicSize()
-              : createIndexConstant(rewriter, loc, type.getDimSize(0));
-      Type indexType = getIndexType();
-      if (numElements.getType() != indexType)
-        numElements = typeConverter->materializeTargetConversion(
-            rewriter, loc, indexType, numElements);
-      return numElements;
-    };
-
-    MemRefDescriptor desc(adaptor.getSource());
-    Value oldDesc = desc;
-
-    // Split the block right before the current op into two blocks.
-    Block *currentBlock = rewriter.getInsertionBlock();
-    Block *block =
-        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
-    // Add a block argument by creating an empty block with the argument type
-    // and then merging the block into the empty block.
-    Block *endBlock = rewriter.createBlock(
-        block->getParent(), Region::iterator(block), oldDesc.getType(), loc);
-    rewriter.mergeBlocks(block, endBlock, {});
-    // Add a new block for the true branch of the conditional statement we will
-    // add.
-    Block *trueBlock = rewriter.createBlock(
-        currentBlock->getParent(), std::next(Region::iterator(currentBlock)));
-
-    rewriter.setInsertionPointToEnd(currentBlock);
-    Value src = op.getSource();
-    auto srcType = dyn_cast<MemRefType>(src.getType());
-    Value srcNumElements = computeNumElements(
-        srcType, [&]() -> Value { return desc.size(rewriter, loc, 0); });
-    auto dstType = cast<MemRefType>(op.getType());
-    Value dstNumElements = computeNumElements(
-        dstType, [&]() -> Value { return op.getDynamicResultSize(); });
-    Value cond = rewriter.create<LLVM::ICmpOp>(
-        loc, IntegerType::get(rewriter.getContext(), 1),
-        LLVM::ICmpPredicate::ugt, dstNumElements, srcNumElements);
-    rewriter.create<LLVM::CondBrOp>(loc, cond, trueBlock, ArrayRef<Value>(),
-                                    endBlock, ValueRange{oldDesc});
-
-    rewriter.setInsertionPointToStart(trueBlock);
-    Value sizeInBytes = getSizeInBytes(loc, dstType.getElementType(), rewriter);
-    // Compute total byte size.
-    auto dstByteSize =
-        rewriter.create<LLVM::MulOp>(loc, dstNumElements, sizeInBytes);
-    // Since the src and dst memref are guarantee to have the same
-    // element type by the verifier, it is safe here to reuse the
-    // type size computed from dst memref.
-    auto srcByteSize =
-        rewriter.create<LLVM::MulOp>(loc, srcNumElements, sizeInBytes);
-    // Allocate a new buffer.
-    auto [dstRawPtr, dstAlignedPtr] =
-        allocateBuffer(rewriter, loc, dstByteSize, op);
-    // Copy the data from the old buffer to the new buffer.
-    Value srcAlignedPtr = desc.alignedPtr(rewriter, loc);
-    auto toVoidPtr = [&](Value ptr) -> Value {
-      if (getTypeConverter()->useOpaquePointers())
-        return ptr;
-      return rewriter.create<LLVM::BitcastOp>(loc, getVoidPtrType(), ptr);
-    };
-    rewriter.create<LLVM::MemcpyOp>(loc, toVoidPtr(dstAlignedPtr),
-                                    toVoidPtr(srcAlignedPtr), srcByteSize,
-                                    /*isVolatile=*/false);
-    // Deallocate the old buffer.
-    LLVM::LLVMFuncOp freeFunc =
-        getFreeFn(getTypeConverter(), op->getParentOfType<ModuleOp>());
-    rewriter.create<LLVM::CallOp>(loc, freeFunc,
-                                  toVoidPtr(desc.allocatedPtr(rewriter, loc)));
-    // Replace the old buffer addresses in the MemRefDescriptor with the new
-    // buffer addresses.
-    desc.setAllocatedPtr(rewriter, loc, dstRawPtr);
-    desc.setAlignedPtr(rewriter, loc, dstAlignedPtr);
-    rewriter.create<LLVM::BrOp>(loc, Value(desc), endBlock);
-
-    rewriter.setInsertionPoint(op);
-    // Update the memref size.
-    MemRefDescriptor newDesc(endBlock->getArgument(0));
-    newDesc.setSize(rewriter, loc, 0, dstNumElements);
-    rewriter.replaceOp(op, {newDesc});
-    return success();
-  }
-
-private:
-  using ConvertToLLVMPattern::matchAndRewrite;
-};
-
-struct ReallocOpLowering : public ReallocOpLoweringBase {
-  ReallocOpLowering(LLVMTypeConverter &converter)
-      : ReallocOpLoweringBase(converter) {}
-  std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value sizeBytes,
-                                          memref::ReallocOp op) const override {
-    return allocateBufferManuallyAlign(rewriter, loc, sizeBytes, op,
-                                       getAlignment(rewriter, loc, op));
-  }
-};
-
-struct AlignedReallocOpLowering : public ReallocOpLoweringBase {
-  AlignedReallocOpLowering(LLVMTypeConverter &converter)
-      : ReallocOpLoweringBase(converter) {}
-  std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value sizeBytes,
-                                          memref::ReallocOp op) const override {
-    Value ptr = allocateBufferAutoAlign(
-        rewriter, loc, sizeBytes, op, &defaultLayout,
-        alignedAllocationGetAlignment(rewriter, loc, op, &defaultLayout));
-    return std::make_tuple(ptr, ptr);
-  }
-
-private:
-  /// Default layout to use in absence of the corresponding analysis.
-  DataLayout defaultLayout;
 };
 
 struct AllocaScopeOpLowering
@@ -336,7 +178,7 @@ struct AssumeAlignmentOpLowering
     : public ConvertOpToLLVMPattern<memref::AssumeAlignmentOp> {
   using ConvertOpToLLVMPattern<
       memref::AssumeAlignmentOp>::ConvertOpToLLVMPattern;
-  explicit AssumeAlignmentOpLowering(LLVMTypeConverter &converter)
+  explicit AssumeAlignmentOpLowering(const LLVMTypeConverter &converter)
       : ConvertOpToLLVMPattern<memref::AssumeAlignmentOp>(converter) {}
 
   LogicalResult
@@ -378,7 +220,7 @@ struct AssumeAlignmentOpLowering
 struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
   using ConvertOpToLLVMPattern<memref::DeallocOp>::ConvertOpToLLVMPattern;
 
-  explicit DeallocOpLowering(LLVMTypeConverter &converter)
+  explicit DeallocOpLowering(const LLVMTypeConverter &converter)
       : ConvertOpToLLVMPattern<memref::DeallocOp>(converter) {}
 
   LogicalResult
@@ -390,10 +232,8 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
     Value allocatedPtr;
     if (auto unrankedTy =
             llvm::dyn_cast<UnrankedMemRefType>(op.getMemref().getType())) {
-      Type elementType = unrankedTy.getElementType();
-      Type llvmElementTy = getTypeConverter()->convertType(elementType);
-      LLVM::LLVMPointerType elementPtrTy = getTypeConverter()->getPointerType(
-          llvmElementTy, unrankedTy.getMemorySpaceAsInt());
+      auto elementPtrTy = LLVM::LLVMPointerType::get(
+          rewriter.getContext(), unrankedTy.getMemorySpaceAsInt());
       allocatedPtr = UnrankedMemRefDescriptor::allocatedPtr(
           rewriter, op.getLoc(),
           UnrankedMemRefDescriptor(adaptor.getMemref())
@@ -403,10 +243,6 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
       allocatedPtr = MemRefDescriptor(adaptor.getMemref())
                          .allocatedPtr(rewriter, op.getLoc());
     }
-    if (!getTypeConverter()->useOpaquePointers())
-      allocatedPtr = rewriter.create<LLVM::BitcastOp>(
-          op.getLoc(), getVoidPtrType(), allocatedPtr);
-
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc, allocatedPtr);
     return success();
   }
@@ -464,25 +300,19 @@ private:
     Value underlyingRankedDesc = unrankedDesc.memRefDescPtr(rewriter, loc);
 
     Type elementType = typeConverter->convertType(scalarMemRefType);
-    Value scalarMemRefDescPtr;
-    if (getTypeConverter()->useOpaquePointers())
-      scalarMemRefDescPtr = underlyingRankedDesc;
-    else
-      scalarMemRefDescPtr = rewriter.create<LLVM::BitcastOp>(
-          loc, LLVM::LLVMPointerType::get(elementType, addressSpace),
-          underlyingRankedDesc);
 
     // Get pointer to offset field of memref<element_type> descriptor.
-    Type indexPtrTy = getTypeConverter()->getPointerType(
-        getTypeConverter()->getIndexType(), addressSpace);
+    auto indexPtrTy =
+        LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
     Value offsetPtr = rewriter.create<LLVM::GEPOp>(
-        loc, indexPtrTy, elementType, scalarMemRefDescPtr,
+        loc, indexPtrTy, elementType, underlyingRankedDesc,
         ArrayRef<LLVM::GEPArg>{0, 2});
 
     // The size value that we have to extract can be obtained using GEPop with
     // `dimOp.index() + 1` index argument.
     Value idxPlusOne = rewriter.create<LLVM::AddOp>(
-        loc, createIndexConstant(rewriter, loc, 1), adaptor.getIndex());
+        loc, createIndexAttrConstant(rewriter, loc, getIndexType(), 1),
+        adaptor.getIndex());
     Value sizePtr = rewriter.create<LLVM::GEPOp>(
         loc, indexPtrTy, getTypeConverter()->getIndexType(), offsetPtr,
         idxPlusOne);
@@ -508,6 +338,7 @@ private:
 
     // Take advantage if index is constant.
     MemRefType memRefType = cast<MemRefType>(operandType);
+    Type indexType = getIndexType();
     if (std::optional<int64_t> index = getConstantDimIndex(dimOp)) {
       int64_t i = *index;
       if (i >= 0 && i < memRefType.getRank()) {
@@ -518,7 +349,7 @@ private:
         }
         // Use constant for static size.
         int64_t dimSize = memRefType.getDimSize(i);
-        return createIndexConstant(rewriter, loc, dimSize);
+        return createIndexAttrConstant(rewriter, loc, indexType, dimSize);
       }
     }
     Value index = adaptor.getIndex();
@@ -635,8 +466,9 @@ struct GenericAtomicRMWOpLowering
 };
 
 /// Returns the LLVM type of the global variable given the memref type `type`.
-static Type convertGlobalMemrefTypeToLLVM(MemRefType type,
-                                          LLVMTypeConverter &typeConverter) {
+static Type
+convertGlobalMemrefTypeToLLVM(MemRefType type,
+                              const LLVMTypeConverter &typeConverter) {
   // LLVM type for a global memref will be a multi-dimension array. For
   // declarations or uninitialized global memrefs, we can potentially flatten
   // this to a 1D array. However, for memref.global's with an initial value,
@@ -703,7 +535,7 @@ struct GlobalMemrefOpLowering
 /// the first element stashed into the descriptor. This reuses
 /// `AllocLikeOpLowering` to reuse the Memref descriptor construction.
 struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
-  GetGlobalMemrefOpLowering(LLVMTypeConverter &converter)
+  GetGlobalMemrefOpLowering(const LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::GetGlobalOp::getOperationName(),
                                 converter) {}
 
@@ -717,21 +549,21 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
 
     // This is called after a type conversion, which would have failed if this
     // call fails.
-    unsigned memSpace = *getTypeConverter()->getMemRefAddressSpace(type);
+    FailureOr<unsigned> maybeAddressSpace =
+        getTypeConverter()->getMemRefAddressSpace(type);
+    if (failed(maybeAddressSpace))
+      return std::make_tuple(Value(), Value());
+    unsigned memSpace = *maybeAddressSpace;
 
     Type arrayTy = convertGlobalMemrefTypeToLLVM(type, *getTypeConverter());
-    Type resTy = getTypeConverter()->getPointerType(arrayTy, memSpace);
+    auto ptrTy = LLVM::LLVMPointerType::get(rewriter.getContext(), memSpace);
     auto addressOf =
-        rewriter.create<LLVM::AddressOfOp>(loc, resTy, getGlobalOp.getName());
+        rewriter.create<LLVM::AddressOfOp>(loc, ptrTy, getGlobalOp.getName());
 
     // Get the address of the first element in the array by creating a GEP with
     // the address of the GV as the base, and (rank + 1) number of 0 indices.
-    Type elementType = typeConverter->convertType(type.getElementType());
-    Type elementPtrType =
-        getTypeConverter()->getPointerType(elementType, memSpace);
-
     auto gep = rewriter.create<LLVM::GEPOp>(
-        loc, elementPtrType, arrayTy, addressOf,
+        loc, ptrTy, arrayTy, addressOf,
         SmallVector<LLVM::GEPArg>(type.getRank() + 1, 0));
 
     // We do not expect the memref obtained using `memref.get_global` to be
@@ -741,7 +573,7 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
     Value deadBeefConst =
         createIndexAttrConstant(rewriter, op->getLoc(), intPtrType, 0xdeadbeef);
     auto deadBeefPtr =
-        rewriter.create<LLVM::IntToPtrOp>(loc, elementPtrType, deadBeefConst);
+        rewriter.create<LLVM::IntToPtrOp>(loc, ptrTy, deadBeefConst);
 
     // Both allocated and aligned pointers are same. We could potentially stash
     // a nullptr for the allocated pointer since we do not expect any dealloc.
@@ -820,14 +652,16 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Type operandType = op.getMemref().getType();
-    if (auto unrankedMemRefType = dyn_cast<UnrankedMemRefType>(operandType)) {
+    if (dyn_cast<UnrankedMemRefType>(operandType)) {
       UnrankedMemRefDescriptor desc(adaptor.getMemref());
       rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
       return success();
     }
     if (auto rankedMemRefType = dyn_cast<MemRefType>(operandType)) {
-      rewriter.replaceOp(
-          op, {createIndexConstant(rewriter, loc, rankedMemRefType.getRank())});
+      Type indexType = getIndexType();
+      rewriter.replaceOp(op,
+                         {createIndexAttrConstant(rewriter, loc, indexType,
+                                                  rankedMemRefType.getRank())});
       return success();
     }
     return failure();
@@ -883,13 +717,6 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
       auto ptr = getTypeConverter()->promoteOneMemRefDescriptor(
           loc, adaptor.getSource(), rewriter);
 
-      // voidptr = BitCastOp srcType* to void*
-      Value voidPtr;
-      if (getTypeConverter()->useOpaquePointers())
-        voidPtr = ptr;
-      else
-        voidPtr = rewriter.create<LLVM::BitcastOp>(loc, getVoidPtrType(), ptr);
-
       // rank = ConstantOp srcRank
       auto rankVal = rewriter.create<LLVM::ConstantOp>(
           loc, getIndexType(), rewriter.getIndexAttr(rank));
@@ -898,8 +725,8 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
           UnrankedMemRefDescriptor::undef(rewriter, loc, targetStructType);
       // d1 = InsertValueOp undef, rank, 0
       memRefDesc.setRank(rewriter, loc, rankVal);
-      // d2 = InsertValueOp d1, voidptr, 1
-      memRefDesc.setMemRefDescPtr(rewriter, loc, voidPtr);
+      // d2 = InsertValueOp d1, ptr, 1
+      memRefDesc.setMemRefDescPtr(rewriter, loc, ptr);
       rewriter.replaceOp(memRefCastOp, (Value)memRefDesc);
 
     } else if (isa<UnrankedMemRefType>(srcType) && isa<MemRefType>(dstType)) {
@@ -909,17 +736,9 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
       UnrankedMemRefDescriptor memRefDesc(adaptor.getSource());
       // ptr = ExtractValueOp src, 1
       auto ptr = memRefDesc.memRefDescPtr(rewriter, loc);
-      // castPtr = BitCastOp i8* to structTy*
-      Value castPtr;
-      if (getTypeConverter()->useOpaquePointers())
-        castPtr = ptr;
-      else
-        castPtr = rewriter.create<LLVM::BitcastOp>(
-            loc, LLVM::LLVMPointerType::get(targetStructType), ptr);
 
-      // struct = LoadOp castPtr
-      auto loadOp =
-          rewriter.create<LLVM::LoadOp>(loc, targetStructType, castPtr);
+      // struct = LoadOp ptr
+      auto loadOp = rewriter.create<LLVM::LoadOp>(loc, targetStructType, ptr);
       rewriter.replaceOp(memRefCastOp, loadOp.getResult());
     } else {
       llvm_unreachable("Unsupported unranked memref to unranked memref cast");
@@ -990,17 +809,10 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
       auto ptr =
           typeConverter->promoteOneMemRefDescriptor(loc, ranked, rewriter);
 
-      Value voidPtr;
-      if (getTypeConverter()->useOpaquePointers())
-        voidPtr = ptr;
-      else
-        voidPtr = rewriter.create<LLVM::BitcastOp>(loc, getVoidPtrType(), ptr);
-
       auto unrankedType =
           UnrankedMemRefType::get(type.getElementType(), type.getMemorySpace());
-      return UnrankedMemRefDescriptor::pack(rewriter, loc, *typeConverter,
-                                            unrankedType,
-                                            ValueRange{rank, voidPtr});
+      return UnrankedMemRefDescriptor::pack(
+          rewriter, loc, *typeConverter, unrankedType, ValueRange{rank, ptr});
     };
 
     // Save stack position before promoting descriptors
@@ -1020,7 +832,7 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto one = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                  rewriter.getIndexAttr(1));
     auto promote = [&](Value desc) {
-      Type ptrType = getTypeConverter()->getPointerType(desc.getType());
+      auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
       auto allocated =
           rewriter.create<LLVM::AllocaOp>(loc, ptrType, desc.getType(), one);
       rewriter.create<LLVM::StoreOp>(loc, desc, allocated);
@@ -1030,10 +842,9 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto sourcePtr = promote(unrankedSource);
     auto targetPtr = promote(unrankedTarget);
 
-    unsigned typeSize =
-        mlir::DataLayout::closest(op).getTypeSize(srcType.getElementType());
-    auto elemSize = rewriter.create<LLVM::ConstantOp>(
-        loc, getIndexType(), rewriter.getIndexAttr(typeSize));
+    // Derive size from llvm.getelementptr which will account for any
+    // potential alignment
+    auto elemSize = getSizeInBytes(loc, srcType.getElementType(), rewriter);
     auto copyFn = LLVM::lookupOrCreateMemRefCopyFn(
         op->getParentOfType<ModuleOp>(), getIndexType(), sourcePtr.getType());
     rewriter.create<LLVM::CallOp>(loc, copyFn,
@@ -1133,12 +944,10 @@ struct MemorySpaceCastOpLowering
       result.setMemRefDescPtr(rewriter, loc, resultUnderlyingDesc);
 
       // Copy pointers, performing address space casts.
-      Type llvmElementType =
-          typeConverter->convertType(sourceType.getElementType());
-      LLVM::LLVMPointerType sourceElemPtrType =
-          getTypeConverter()->getPointerType(llvmElementType, sourceAddrSpace);
+      auto sourceElemPtrType =
+          LLVM::LLVMPointerType::get(rewriter.getContext(), sourceAddrSpace);
       auto resultElemPtrType =
-          getTypeConverter()->getPointerType(llvmElementType, resultAddrSpace);
+          LLVM::LLVMPointerType::get(rewriter.getContext(), resultAddrSpace);
 
       Value allocatedPtr = sourceDesc.allocatedPtr(
           rewriter, loc, sourceUnderlyingDesc, sourceElemPtrType);
@@ -1185,7 +994,7 @@ struct MemorySpaceCastOpLowering
 /// ranked descriptor.
 static void extractPointersAndOffset(Location loc,
                                      ConversionPatternRewriter &rewriter,
-                                     LLVMTypeConverter &typeConverter,
+                                     const LLVMTypeConverter &typeConverter,
                                      Value originalOperand,
                                      Value convertedOperand,
                                      Value *allocatedPtr, Value *alignedPtr,
@@ -1203,10 +1012,8 @@ static void extractPointersAndOffset(Location loc,
   // These will all cause assert()s on unconvertible types.
   unsigned memorySpace = *typeConverter.getMemRefAddressSpace(
       cast<UnrankedMemRefType>(operandType));
-  Type elementType = cast<UnrankedMemRefType>(operandType).getElementType();
-  Type llvmElementType = typeConverter.convertType(elementType);
-  LLVM::LLVMPointerType elementPtrType =
-      typeConverter.getPointerType(llvmElementType, memorySpace);
+  auto elementPtrType =
+      LLVM::LLVMPointerType::get(rewriter.getContext(), memorySpace);
 
   // Extract pointer to the underlying ranked memref descriptor and cast it to
   // ElemType**.
@@ -1351,29 +1158,31 @@ private:
       assert(targetMemRefType.getLayout().isIdentity() &&
              "Identity layout map is a precondition of a valid reshape op");
 
+      Type indexType = getIndexType();
       Value stride = nullptr;
       int64_t targetRank = targetMemRefType.getRank();
       for (auto i : llvm::reverse(llvm::seq<int64_t>(0, targetRank))) {
         if (!ShapedType::isDynamic(strides[i])) {
           // If the stride for this dimension is dynamic, then use the product
           // of the sizes of the inner dimensions.
-          stride = createIndexConstant(rewriter, loc, strides[i]);
+          stride =
+              createIndexAttrConstant(rewriter, loc, indexType, strides[i]);
         } else if (!stride) {
           // `stride` is null only in the first iteration of the loop.  However,
           // since the target memref has an identity layout, we can safely set
           // the innermost stride to 1.
-          stride = createIndexConstant(rewriter, loc, 1);
+          stride = createIndexAttrConstant(rewriter, loc, indexType, 1);
         }
 
         Value dimSize;
         // If the size of this dimension is dynamic, then load it at runtime
         // from the shape operand.
         if (!targetMemRefType.isDynamicDim(i)) {
-          dimSize = createIndexConstant(rewriter, loc,
-                                        targetMemRefType.getDimSize(i));
+          dimSize = createIndexAttrConstant(rewriter, loc, indexType,
+                                            targetMemRefType.getDimSize(i));
         } else {
           Value shapeOp = reshapeOp.getShape();
-          Value index = createIndexConstant(rewriter, loc, i);
+          Value index = createIndexAttrConstant(rewriter, loc, indexType, i);
           dimSize = rewriter.create<memref::LoadOp>(loc, shapeOp, index);
           Type indexType = getIndexType();
           if (dimSize.getType() != indexType)
@@ -1402,7 +1211,6 @@ private:
     auto targetType = cast<UnrankedMemRefType>(reshapeOp.getResult().getType());
     unsigned addressSpace =
         *getTypeConverter()->getMemRefAddressSpace(targetType);
-    Type elementType = targetType.getElementType();
 
     // Create the unranked memref descriptor that holds the ranked one. The
     // inner descriptor is allocated on stack.
@@ -1424,9 +1232,8 @@ private:
                              &allocatedPtr, &alignedPtr, &offset);
 
     // Set pointers and offset.
-    Type llvmElementType = typeConverter->convertType(elementType);
-    LLVM::LLVMPointerType elementPtrType =
-        getTypeConverter()->getPointerType(llvmElementType, addressSpace);
+    auto elementPtrType =
+        LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
 
     UnrankedMemRefDescriptor::setAllocatedPtr(rewriter, loc, underlyingDescPtr,
                                               elementPtrType, allocatedPtr);
@@ -1444,7 +1251,7 @@ private:
     Value targetStridesBase = UnrankedMemRefDescriptor::strideBasePtr(
         rewriter, loc, *getTypeConverter(), targetSizesBase, resultRank);
     Value shapeOperandPtr = shapeDesc.alignedPtr(rewriter, loc);
-    Value oneIndex = createIndexConstant(rewriter, loc, 1);
+    Value oneIndex = createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     Value resultRankMinusOne =
         rewriter.create<LLVM::SubOp>(loc, resultRank, oneIndex);
 
@@ -1466,7 +1273,7 @@ private:
     Value indexArg = condBlock->getArgument(0);
     Value strideArg = condBlock->getArgument(1);
 
-    Value zeroIndex = createIndexConstant(rewriter, loc, 0);
+    Value zeroIndex = createIndexAttrConstant(rewriter, loc, indexType, 0);
     Value pred = rewriter.create<LLVM::ICmpOp>(
         loc, IntegerType::get(rewriter.getContext(), 1),
         LLVM::ICmpPredicate::sge, indexArg, zeroIndex);
@@ -1476,7 +1283,7 @@ private:
     rewriter.setInsertionPointToStart(bodyBlock);
 
     // Copy size from shape to descriptor.
-    Type llvmIndexPtrType = getTypeConverter()->getPointerType(indexType);
+    auto llvmIndexPtrType = LLVM::LLVMPointerType::get(rewriter.getContext());
     Value sizeLoadGep = rewriter.create<LLVM::GEPOp>(
         loc, llvmIndexPtrType,
         typeConverter->convertType(shapeMemRefType.getElementType()),
@@ -1577,11 +1384,14 @@ public:
     // Copy the offset pointer from the old descriptor to the new one.
     targetMemRef.setOffset(rewriter, loc, viewMemRef.offset(rewriter, loc));
 
-    // Iterate over the dimensions and apply size/stride permutation.
+    // Iterate over the dimensions and apply size/stride permutation:
+    // When enumerating the results of the permutation map, the enumeration
+    // index is the index into the target dimensions and the DimExpr points to
+    // the dimension of the source memref.
     for (const auto &en :
          llvm::enumerate(transposeOp.getPermutation().getResults())) {
-      int sourcePos = en.index();
-      int targetPos = en.value().cast<AffineDimExpr>().getPosition();
+      int targetPos = en.index();
+      int sourcePos = cast<AffineDimExpr>(en.value()).getPosition();
       targetMemRef.setSize(rewriter, loc, targetPos,
                            viewMemRef.size(rewriter, loc, sourcePos));
       targetMemRef.setStride(rewriter, loc, targetPos,
@@ -1604,11 +1414,11 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
   // Build and return the value for the idx^th shape dimension, either by
   // returning the constant shape dimension or counting the proper dynamic size.
   Value getSize(ConversionPatternRewriter &rewriter, Location loc,
-                ArrayRef<int64_t> shape, ValueRange dynamicSizes,
-                unsigned idx) const {
+                ArrayRef<int64_t> shape, ValueRange dynamicSizes, unsigned idx,
+                Type indexType) const {
     assert(idx < shape.size());
     if (!ShapedType::isDynamic(shape[idx]))
-      return createIndexConstant(rewriter, loc, shape[idx]);
+      return createIndexAttrConstant(rewriter, loc, indexType, shape[idx]);
     // Count the number of dynamic dims in range [0, idx]
     unsigned nDynamic =
         llvm::count_if(shape.take_front(idx), ShapedType::isDynamic);
@@ -1621,16 +1431,16 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
   // result returned by this function.
   Value getStride(ConversionPatternRewriter &rewriter, Location loc,
                   ArrayRef<int64_t> strides, Value nextSize,
-                  Value runningStride, unsigned idx) const {
+                  Value runningStride, unsigned idx, Type indexType) const {
     assert(idx < strides.size());
     if (!ShapedType::isDynamic(strides[idx]))
-      return createIndexConstant(rewriter, loc, strides[idx]);
+      return createIndexAttrConstant(rewriter, loc, indexType, strides[idx]);
     if (nextSize)
       return runningStride
                  ? rewriter.create<LLVM::MulOp>(loc, runningStride, nextSize)
                  : nextSize;
     assert(!runningStride);
-    return createIndexConstant(rewriter, loc, 1);
+    return createIndexAttrConstant(rewriter, loc, indexType, 1);
   }
 
   LogicalResult
@@ -1668,17 +1478,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     // Field 1: Copy the allocated pointer, used for malloc/free.
     Value allocatedPtr = sourceMemRef.allocatedPtr(rewriter, loc);
     auto srcMemRefType = cast<MemRefType>(viewOp.getSource().getType());
-    unsigned sourceMemorySpace =
-        *getTypeConverter()->getMemRefAddressSpace(srcMemRefType);
-    Value bitcastPtr;
-    if (getTypeConverter()->useOpaquePointers())
-      bitcastPtr = allocatedPtr;
-    else
-      bitcastPtr = rewriter.create<LLVM::BitcastOp>(
-          loc, LLVM::LLVMPointerType::get(targetElementTy, sourceMemorySpace),
-          allocatedPtr);
-
-    targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
+    targetMemRef.setAllocatedPtr(rewriter, loc, allocatedPtr);
 
     // Field 2: Copy the actual aligned pointer to payload.
     Value alignedPtr = sourceMemRef.alignedPtr(rewriter, loc);
@@ -1687,21 +1487,15 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
         typeConverter->convertType(srcMemRefType.getElementType()), alignedPtr,
         adaptor.getByteShift());
 
-    if (getTypeConverter()->useOpaquePointers()) {
-      bitcastPtr = alignedPtr;
-    } else {
-      bitcastPtr = rewriter.create<LLVM::BitcastOp>(
-          loc, LLVM::LLVMPointerType::get(targetElementTy, sourceMemorySpace),
-          alignedPtr);
-    }
+    targetMemRef.setAlignedPtr(rewriter, loc, alignedPtr);
 
-    targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
-
-    // Field 3: The offset in the resulting type must be 0. This is because of
-    // the type change: an offset on srcType* may not be expressible as an
-    // offset on dstType*.
-    targetMemRef.setOffset(rewriter, loc,
-                           createIndexConstant(rewriter, loc, offset));
+    Type indexType = getIndexType();
+    // Field 3: The offset in the resulting type must be 0. This is
+    // because of the type change: an offset on srcType* may not be
+    // expressible as an offset on dstType*.
+    targetMemRef.setOffset(
+        rewriter, loc,
+        createIndexAttrConstant(rewriter, loc, indexType, offset));
 
     // Early exit for 0-D corner case.
     if (viewMemRefType.getRank() == 0)
@@ -1712,10 +1506,11 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     for (int i = viewMemRefType.getRank() - 1; i >= 0; --i) {
       // Update size.
       Value size = getSize(rewriter, loc, viewMemRefType.getShape(),
-                           adaptor.getSizes(), i);
+                           adaptor.getSizes(), i, indexType);
       targetMemRef.setSize(rewriter, loc, i, size);
       // Update stride.
-      stride = getStride(rewriter, loc, strides, nextSize, stride, i);
+      stride =
+          getStride(rewriter, loc, strides, nextSize, stride, i, indexType);
       targetMemRef.setStride(rewriter, loc, i, stride);
       nextSize = size;
     }
@@ -1740,10 +1535,14 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::add;
   case arith::AtomicRMWKind::assign:
     return LLVM::AtomicBinOp::xchg;
+  case arith::AtomicRMWKind::maximumf:
+    return LLVM::AtomicBinOp::fmax;
   case arith::AtomicRMWKind::maxs:
     return LLVM::AtomicBinOp::max;
   case arith::AtomicRMWKind::maxu:
     return LLVM::AtomicBinOp::umax;
+  case arith::AtomicRMWKind::minimumf:
+    return LLVM::AtomicBinOp::fmin;
   case arith::AtomicRMWKind::mins:
     return LLVM::AtomicBinOp::min;
   case arith::AtomicRMWKind::minu:
@@ -1764,12 +1563,14 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<memref::AtomicRMWOp> {
   LogicalResult
   matchAndRewrite(memref::AtomicRMWOp atomicOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(match(atomicOp)))
-      return failure();
     auto maybeKind = matchSimpleAtomicOp(atomicOp);
     if (!maybeKind)
       return failure();
     auto memRefType = atomicOp.getMemRefType();
+    SmallVector<int64_t> strides;
+    int64_t offset;
+    if (failed(getStridesAndOffset(memRefType, strides, offset)))
+      return failure();
     auto dataPtr =
         getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.getMemref(),
                              adaptor.getIndices(), rewriter);
@@ -1882,11 +1683,9 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
   // clang-format on
   auto allocLowering = converter.getOptions().allocLowering;
   if (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc)
-    patterns.add<AlignedAllocOpLowering, AlignedReallocOpLowering,
-                 DeallocOpLowering>(converter);
+    patterns.add<AlignedAllocOpLowering, DeallocOpLowering>(converter);
   else if (allocLowering == LowerToLLVMOptions::AllocLowering::Malloc)
-    patterns.add<AllocOpLowering, ReallocOpLowering, DeallocOpLowering>(
-        converter);
+    patterns.add<AllocOpLowering, DeallocOpLowering>(converter);
 }
 
 namespace {
@@ -1906,7 +1705,6 @@ struct FinalizeMemRefToLLVMConversionPass
                          : LowerToLLVMOptions::AllocLowering::Malloc);
 
     options.useGenericFunctions = useGenericFunctions;
-    options.useOpaquePointers = useOpaquePointers;
 
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
@@ -1921,4 +1719,27 @@ struct FinalizeMemRefToLLVMConversionPass
       signalPassFailure();
   }
 };
+
+/// Implement the interface to convert MemRef to LLVM.
+struct MemRefToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+
 } // namespace
+
+void mlir::registerConvertMemRefToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    dialect->addInterfaces<MemRefToLLVMDialectInterface>();
+  });
+}

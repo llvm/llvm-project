@@ -51,7 +51,8 @@ enum class SymbolFlags : uint8_t {
 
 // clang-format on
 
-enum class SymbolKind : uint8_t {
+/// Mapping of entry types in TextStubs.
+enum class EncodeKind : uint8_t {
   GlobalSymbol,
   ObjectiveCClass,
   ObjectiveCClassEHType,
@@ -63,6 +64,19 @@ constexpr StringLiteral ObjC2ClassNamePrefix = "_OBJC_CLASS_$_";
 constexpr StringLiteral ObjC2MetaClassNamePrefix = "_OBJC_METACLASS_$_";
 constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
 constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
+
+/// ObjC Interface symbol mappings.
+enum class ObjCIFSymbolKind : uint8_t {
+  None = 0,
+  /// Is OBJC_CLASS* symbol.
+  Class = 1U << 0,
+  /// Is OBJC_METACLASS* symbol.
+  MetaClass = 1U << 1,
+  /// Is OBJC_EHTYPE* symbol.
+  EHType = 1U << 2,
+
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/EHType),
+};
 
 using TargetList = SmallVector<Target, 5>;
 
@@ -81,11 +95,11 @@ typename C::iterator addEntry(C &Container, const Target &Targ) {
 
 class Symbol {
 public:
-  Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
+  Symbol(EncodeKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
       : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}
 
   void addTarget(Target InputTarget) { addEntry(Targets, InputTarget); }
-  SymbolKind getKind() const { return Kind; }
+  EncodeKind getKind() const { return Kind; }
   StringRef getName() const { return Name; }
   ArchitectureSet getArchitectures() const {
     return mapToArchitectureSet(Targets);
@@ -125,6 +139,10 @@ public:
     return mapToArchitectureSet(Targets).contains(Arch);
   }
 
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
+
   using const_target_iterator = TargetList::const_iterator;
   using const_target_range = llvm::iterator_range<const_target_iterator>;
   const_target_range targets() const { return {Targets}; }
@@ -146,16 +164,32 @@ public:
   bool operator!=(const Symbol &O) const { return !(*this == O); }
 
   bool operator<(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) <
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
+    return std::tie(Kind, Name) < std::tie(O.Kind, O.Name);
   }
 
 private:
   StringRef Name;
   TargetList Targets;
-  SymbolKind Kind;
+  EncodeKind Kind;
   SymbolFlags Flags;
 };
+
+/// Lightweight struct for passing around symbol information.
+struct SimpleSymbol {
+  StringRef Name;
+  EncodeKind Kind;
+  ObjCIFSymbolKind ObjCInterfaceType;
+
+  bool operator<(const SimpleSymbol &O) const {
+    return std::tie(Name, Kind, ObjCInterfaceType) <
+           std::tie(O.Name, O.Kind, O.ObjCInterfaceType);
+  }
+};
+
+/// Get symbol classification by parsing the name of a symbol.
+///
+/// \param SymName The name of symbol.
+SimpleSymbol parseSymbol(StringRef SymName);
 
 } // end namespace MachO.
 } // end namespace llvm.

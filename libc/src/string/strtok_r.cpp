@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 #include "src/string/string_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strtok_r,
                    (char *__restrict src,
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(char *, strtok_r,
   return internal::string_token(src, delimiter_string, saveptr);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

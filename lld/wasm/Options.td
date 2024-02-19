@@ -70,6 +70,9 @@ defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",
     "Do not put symbols in the dynamic symbol table (default)">;
 
+def end_lib: F<"end-lib">,
+  HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
+
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
 
@@ -127,6 +130,9 @@ defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
+
+def start_lib: F<"start-lib">,
+  HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 
@@ -191,7 +197,10 @@ def growable_table: FF<"growable-table">,
   HelpText<"Remove maximum size from function table, allowing table to grow">;
 
 def global_base: JJ<"global-base=">,
-  HelpText<"Where to start to place global data">;
+  HelpText<"Memory offset at which to place global data (Defaults to 1024)">;
+
+defm keep_section: Eq<"keep-section",
+     "Preserve a section even when --strip-all is given. This is useful for compiler drivers such as clang or emcc that, for example, depend on the features section for post-link processing. Can be specified multiple times to keep multiple sections">;
 
 def import_memory: FF<"import-memory">,
   HelpText<"Import the module's memory from the default module of \"env\" with the name \"memory\".">;
@@ -207,8 +216,13 @@ def export_memory_with_name: JJ<"export-memory=">,
 def shared_memory: FF<"shared-memory">,
   HelpText<"Use shared linear memory">;
 
+defm soname: Eq<"soname", "Set the module name in the generated name section">;
+
 def import_table: FF<"import-table">,
   HelpText<"Import function table from the environment">;
+
+def initial_heap: JJ<"initial-heap=">,
+  HelpText<"Initial size of the heap">;
 
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
@@ -221,6 +235,9 @@ def no_entry: FF<"no-entry">,
 
 def stack_first: FF<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
+
+def table_base: JJ<"table-base=">,
+  HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
 
 defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",

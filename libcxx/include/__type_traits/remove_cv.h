@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__remove_cv)
+#if __has_builtin(__remove_cv) && !defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp>
 struct remove_cv {
   using type _LIBCPP_NODEBUG = __remove_cv(_Tp);

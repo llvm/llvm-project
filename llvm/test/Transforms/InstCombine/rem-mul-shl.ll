@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 declare void @use8(i8)
 declare i64 @llvm.vscale.i64()
+declare i32 @llvm.vscale.i32()
 
 define i8 @srem_non_matching(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @srem_non_matching(
@@ -843,11 +844,7 @@ define i64 @urem_shl_vscale() {
 
 define i64 @urem_shl_vscale_range() vscale_range(1,16) {
 ; CHECK-LABEL: @urem_shl_vscale_range(
-; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[SHIFT]], 2047
-; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], 1024
-; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK-NEXT:    ret i64 0
 ;
   %vscale = call i64 @llvm.vscale.i64()
   %shift = shl nuw nsw i64 %vscale, 2
@@ -857,14 +854,10 @@ define i64 @urem_shl_vscale_range() vscale_range(1,16) {
 
 define i64 @urem_vscale_range() vscale_range(1,16) {
 ; CHECK-LABEL: @urem_vscale_range(
-; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[SHIFT]], 2047
-; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], 1024
-; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK-NEXT:    ret i64 0
 ;
   %vscale = call i64 @llvm.vscale.i64()
-  %shift = shl nuw nsw i64 %vscale, 2
+  %shift = shl nuw nsw i64 %vscale, 6
   %rem = urem i64 1024, %shift
   ret i64 %rem
 }
@@ -874,7 +867,78 @@ define i64 @urem_shl_vscale_out_of_range() vscale_range(1,16) {
 ; CHECK-NEXT:    ret i64 1024
 ;
   %vscale = call i64 @llvm.vscale.i64()
-  %shift = shl nuw nsw i64 %vscale, 20
+  %shift = shl nuw nsw i64 %vscale, 11
   %rem = urem i64 1024, %shift
   ret i64 %rem
 }
+
+; Negative test: The min value 1 << 10 is overlap to 1024
+define i64 @urem_shl_vscale_overlap() vscale_range(1,16) {
+; CHECK-LABEL: @urem_shl_vscale_overlap(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[SHIFT]], 2047
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], 1024
+; CHECK-NEXT:    ret i64 [[REM]]
+;
+  %vscale = call i64 @llvm.vscale.i64()
+  %shift = shl nuw nsw i64 %vscale, 10
+  %rem = urem i64 1024, %shift
+  ret i64 %rem
+}
+
+define i64 @and_add_vscale_range_low() vscale_range(1,16) {
+; CHECK-LABEL: @and_add_vscale_range_low(
+; CHECK-NEXT:    ret i64 0
+;
+  %vscale = call i64 @llvm.vscale.i64()
+  %shift = shl nuw nsw i64 %vscale, 6
+  %add = add i64 %shift, -1
+  %rem = and i64 1024, %add
+  ret i64 %rem
+}
+
+; TODO: have no bits that may be part of the mask set,
+; but now expect the const is a power of two
+define i64 @and_add_shl_vscale_not_power2() vscale_range(1,16) {
+; CHECK-LABEL: @and_add_shl_vscale_not_power2(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SHIFT]], 4095
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[ADD]], 3072
+; CHECK-NEXT:    ret i64 [[REM]]
+;
+  %vscale = call i64 @llvm.vscale.i64()
+  %shift = shl nuw nsw i64 %vscale, 6
+  %add = add i64 %shift, -1
+  %rem = and i64 3072, %add
+  ret i64 %rem
+}
+
+; Allow for INT_MIN, https://alive2.llvm.org/ce/z/yZ_I2a
+define i32 @and_add_shl_vscale_not_power2_negative() vscale_range(1,16) {
+; CHECK-LABEL: @and_add_shl_vscale_not_power2_negative(
+; CHECK-NEXT:    ret i32 0
+;
+  %vscale = call i32 @llvm.vscale.i32()
+  %shift = shl nuw nsw i32 %vscale, 6
+  %add = add i32 %shift, -1
+  %rem = and i32 -2147483648, %add
+  ret i32 %rem
+}
+
+; Negative test: the %sign may be 0, https://alive2.llvm.org/ce/z/WU_j4a
+define i32 @and_add_and (i32 %x) {
+; CHECK-LABEL: @and_add_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -2147483648
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP2]], -2147483648
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %x1 = lshr i32 %x, 7
+  %sign = and i32 %x1, 1  ; %sign = (%x >> 7) & 1
+  %add = add i32 %sign, -1
+  %and = and i32 %add, 2147483648
+  ret i32 %and
+}
+

@@ -9,8 +9,6 @@
 #ifndef LLDB_LLDB_FORWARD_H
 #define LLDB_LLDB_FORWARD_H
 
-#if defined(__cplusplus)
-
 #include <memory>
 
 // lldb forward declarations
@@ -41,7 +39,6 @@ class BreakpointOptions;
 class BreakpointPrecondition;
 class BreakpointResolver;
 class BreakpointSite;
-class BreakpointSiteList;
 class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
@@ -98,6 +95,9 @@ class File;
 class FileSpec;
 class FileSpecList;
 class Flags;
+namespace FormatEntity {
+struct Entry;
+} // namespace FormatEntity
 class FormatManager;
 class FormattersMatchCandidate;
 class FuncUnwinders;
@@ -132,6 +132,7 @@ class ObjectContainer;
 class ObjectFile;
 class ObjectFileJITDelegate;
 class OperatingSystem;
+class OperatingSystemInterface;
 class OptionGroup;
 class OptionGroupOptions;
 class OptionGroupPlatform;
@@ -211,6 +212,7 @@ class StringList;
 class StringTableReader;
 class StructuredDataImpl;
 class StructuredDataPlugin;
+class SupportFile;
 class Symbol;
 class SymbolContext;
 class SymbolContextList;
@@ -218,6 +220,7 @@ class SymbolContextScope;
 class SymbolContextSpecifier;
 class SymbolFile;
 class SymbolFileType;
+class SymbolLocator;
 class SymbolVendor;
 class Symtab;
 class SyntheticChildren;
@@ -256,9 +259,11 @@ class TypeImpl;
 class TypeList;
 class TypeListImpl;
 class TypeMap;
+class TypeQuery;
 class TypeMemberFunctionImpl;
 class TypeMemberImpl;
 class TypeNameSpecifierImpl;
+class TypeResults;
 class TypeSummaryImpl;
 class TypeSummaryOptions;
 class TypeSystem;
@@ -286,10 +291,14 @@ class VariableList;
 class Watchpoint;
 class WatchpointList;
 class WatchpointOptions;
+class WatchpointResource;
+class WatchpointResourceCollection;
+class WatchpointSetOptions;
 struct CompilerContext;
 struct LineEntry;
 struct PropertyDefinition;
 struct ScriptSummaryFormat;
+struct StatisticsOptions;
 struct StringSummaryFormat;
 template <unsigned N> class StreamBuffer;
 
@@ -334,6 +343,7 @@ typedef std::shared_ptr<lldb_private::ExecutionContextRef>
 typedef std::shared_ptr<lldb_private::ExpressionVariable> ExpressionVariableSP;
 typedef std::unique_ptr<lldb_private::File> FileUP;
 typedef std::shared_ptr<lldb_private::File> FileSP;
+typedef std::shared_ptr<lldb_private::FormatEntity::Entry> FormatEntrySP;
 typedef std::shared_ptr<lldb_private::Function> FunctionSP;
 typedef std::shared_ptr<lldb_private::FuncUnwinders> FuncUnwindersSP;
 typedef std::shared_ptr<lldb_private::InlineFunctionInfo> InlineFunctionInfoSP;
@@ -361,6 +371,8 @@ typedef std::shared_ptr<lldb_private::ObjectFileJITDelegate>
 typedef std::weak_ptr<lldb_private::ObjectFileJITDelegate>
     ObjectFileJITDelegateWP;
 typedef std::unique_ptr<lldb_private::OperatingSystem> OperatingSystemUP;
+typedef std::shared_ptr<lldb_private::OperatingSystemInterface>
+    OperatingSystemInterfaceSP;
 typedef std::shared_ptr<lldb_private::OptionValue> OptionValueSP;
 typedef std::weak_ptr<lldb_private::OptionValue> OptionValueWP;
 typedef std::shared_ptr<lldb_private::OptionValueProperties>
@@ -452,6 +464,7 @@ typedef std::shared_ptr<lldb_private::TypeSummaryImpl> TypeSummaryImplSP;
 typedef std::shared_ptr<lldb_private::TypeSummaryOptions> TypeSummaryOptionsSP;
 typedef std::shared_ptr<lldb_private::ScriptedSyntheticChildren>
     ScriptedSyntheticChildrenSP;
+typedef std::shared_ptr<lldb_private::SupportFile> SupportFileSP;
 typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;
 typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;
@@ -462,8 +475,8 @@ typedef std::shared_ptr<lldb_private::Variable> VariableSP;
 typedef std::shared_ptr<lldb_private::VariableList> VariableListSP;
 typedef std::shared_ptr<lldb_private::ValueObjectList> ValueObjectListSP;
 typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
+typedef std::shared_ptr<lldb_private::WatchpointResource> WatchpointResourceSP;
 
 } // namespace lldb
 
-#endif // #if defined(__cplusplus)
 #endif // LLDB_LLDB_FORWARD_H

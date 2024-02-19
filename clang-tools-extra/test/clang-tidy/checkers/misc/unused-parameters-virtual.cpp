@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s misc-unused-parameters %t -- \
-// RUN:   -config="{CheckOptions: [{key: misc-unused-parameters.IgnoreVirtual, value: true}]}" --
+// RUN:   -config="{CheckOptions: {misc-unused-parameters.IgnoreVirtual: true}}" --
 
 struct Base {
   int f(int foo) {

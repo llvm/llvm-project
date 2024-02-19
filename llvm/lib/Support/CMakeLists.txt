@@ -40,7 +40,7 @@ endif()
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32)
+  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -65,21 +65,25 @@ elseif( CMAKE_HOST_UNIX )
     set(system_libs ${system_libs} m)
   endif()
   if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
-    set(system_libs ${system_libs} kstat)
+    set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
     set(system_libs ${system_libs} zircon)
   endif()
   if ( HAIKU )
     add_compile_definitions(_BSD_SOURCE)
-    set(system_libs ${system_libs} bsd)
+    set(system_libs ${system_libs} bsd network)
   endif()
 endif( MSVC OR MINGW )
 
 # Delay load shell32.dll if possible to speed up process startup.
 set (delayload_flags)
 if (MSVC)
-  set (delayload_flags delayimp -delayload:shell32.dll -delayload:ole32.dll)
+  # When linking with Swift, `swiftc.exe` is used as the linker drive rather
+  # than invoking `link.exe` directly.  In such a case, the flags should be
+  # marked as `-Xlinker` to pass them directly to the linker.  As a temporary
+  # workaround simply elide the delay loading.
+  set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp -delayload:shell32.dll -delayload:ole32.dll>)
 endif()
 
 # Link Z3 if the user wants to build it.
@@ -112,6 +116,15 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     endif()
     set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
   endif()
+endif()
+
+# FIXME: We are currently guarding AIX headers with _XOPEN_SOURCE=700.
+# See llvm/CMakeLists.txt. However, we need _SC_NPROCESSORS_ONLN in
+# unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
+# guard here. We should remove the guards all together once AIX cleans up
+# the system headers.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
 add_subdirectory(BLAKE3)
@@ -163,6 +176,7 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   Error.cpp
   ErrorHandling.cpp
+  ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
   FileUtilities.cpp
@@ -239,6 +253,7 @@ add_llvm_component_library(LLVMSupport
   YAMLTraits.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
+  raw_socket_stream.cpp
   regcomp.c
   regerror.c
   regexec.c

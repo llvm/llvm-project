@@ -194,9 +194,7 @@ Error ExecutorSharedMemoryMapperService::deinitialize(
 
       // Remove the allocation from the allocation list of its reservation
       for (auto &Reservation : Reservations) {
-        auto AllocationIt =
-            std::find(Reservation.second.Allocations.begin(),
-                      Reservation.second.Allocations.end(), Base);
+        auto AllocationIt = llvm::find(Reservation.second.Allocations, Base);
         if (AllocationIt != Reservation.second.Allocations.end()) {
           Reservation.second.Allocations.erase(AllocationIt);
           break;

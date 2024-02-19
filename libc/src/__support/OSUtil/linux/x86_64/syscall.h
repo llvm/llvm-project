@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
 
 #include "src/__support/common.h"
 
 #define SYSCALL_CLOBBER_LIST "rcx", "r11", "memory"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE long syscall_impl(long __number) {
   long retcode;
@@ -93,6 +93,6 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
 }
 
 #undef SYSCALL_CLOBBER_LIST
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H

@@ -9,6 +9,7 @@
 #include "flang/Runtime/reduction.h"
 #include "gtest/gtest.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"

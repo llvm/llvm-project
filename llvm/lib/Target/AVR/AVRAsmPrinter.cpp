@@ -118,8 +118,8 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     Register Reg = MO.getReg();
 
     unsigned ByteNumber = ExtraCode[0] - 'A';
-    unsigned OpFlags = MI->getOperand(OpNum - 1).getImm();
-    unsigned NumOpRegs = InlineAsm::getNumOperandRegisters(OpFlags);
+    const InlineAsm::Flag OpFlags(MI->getOperand(OpNum - 1).getImm());
+    const unsigned NumOpRegs = OpFlags.getNumOperandRegisters();
 
     const AVRSubtarget &STI = MF->getSubtarget<AVRSubtarget>();
     const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -176,8 +176,8 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   // If NumOpRegs == 2, then we assume it is product of a FrameIndex expansion
   // and the second operand is an Imm.
-  unsigned OpFlags = MI->getOperand(OpNum - 1).getImm();
-  unsigned NumOpRegs = InlineAsm::getNumOperandRegisters(OpFlags);
+  const InlineAsm::Flag OpFlags(MI->getOperand(OpNum - 1).getImm());
+  const unsigned NumOpRegs = OpFlags.getNumOperandRegisters();
 
   if (NumOpRegs == 2) {
     assert(MI->getOperand(OpNum).getReg() != AVR::R27R26 &&
@@ -251,13 +251,13 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
     }
 
     auto *Section = cast<MCSectionELF>(TLOF.SectionForGlobal(&GO, TM));
-    if (Section->getName().startswith(".data"))
+    if (Section->getName().starts_with(".data"))
       NeedsCopyData = true;
-    else if (Section->getName().startswith(".rodata") && SubTM->hasLPM())
+    else if (Section->getName().starts_with(".rodata") && SubTM->hasLPM())
       // AVRs that have a separate program memory (that's most AVRs) store
       // .rodata sections in RAM.
       NeedsCopyData = true;
-    else if (Section->getName().startswith(".bss"))
+    else if (Section->getName().starts_with(".bss"))
       NeedsClearBSS = true;
   }
 

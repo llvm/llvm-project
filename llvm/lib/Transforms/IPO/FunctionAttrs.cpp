@@ -76,6 +76,7 @@ STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
 STATISTIC(NumWriteOnlyArg, "Number of arguments marked writeonly");
 STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
+STATISTIC(NumNoUndefReturn, "Number of function returns marked noundef");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
@@ -110,6 +111,39 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 
 } // end anonymous namespace
 
+static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
+                         ModRefInfo MR, AAResults &AAR) {
+  // Ignore accesses to known-invariant or local memory.
+  MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
+  if (isNoModRef(MR))
+    return;
+
+  const Value *UO = getUnderlyingObject(Loc.Ptr);
+  assert(!isa<AllocaInst>(UO) &&
+         "Should have been handled by getModRefInfoMask()");
+  if (isa<Argument>(UO)) {
+    ME |= MemoryEffects::argMemOnly(MR);
+    return;
+  }
+
+  // If it's not an identified object, it might be an argument.
+  if (!isIdentifiedObject(UO))
+    ME |= MemoryEffects::argMemOnly(MR);
+  ME |= MemoryEffects(IRMemLocation::Other, MR);
+}
+
+static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
+                       ModRefInfo ArgMR, AAResults &AAR) {
+  for (const Value *Arg : Call->args()) {
+    if (!Arg->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    addLocAccess(ME,
+                 MemoryLocation::getBeforeOrAfter(Arg, Call->getAAMetadata()),
+                 ArgMR, AAR);
+  }
+}
+
 /// Returns the memory access attribute for function F using AAR for AA results,
 /// where SCCNodes is the current SCC.
 ///
@@ -118,54 +152,48 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 /// result will be based only on AA results for the function declaration; it
 /// will be assumed that some other (perhaps less optimized) version of the
 /// function may be selected at link time.
-static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
-                                               AAResults &AAR,
-                                               const SCCNodeSet &SCCNodes) {
+///
+/// The return value is split into two parts: Memory effects that always apply,
+/// and additional memory effects that apply if any of the functions in the SCC
+/// can access argmem.
+static std::pair<MemoryEffects, MemoryEffects>
+checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
+                          const SCCNodeSet &SCCNodes) {
   MemoryEffects OrigME = AAR.getMemoryEffects(&F);
   if (OrigME.doesNotAccessMemory())
     // Already perfect!
-    return OrigME;
+    return {OrigME, MemoryEffects::none()};
 
   if (!ThisBody)
-    return OrigME;
+    return {OrigME, MemoryEffects::none()};
 
   MemoryEffects ME = MemoryEffects::none();
+  // Additional locations accessed if the SCC accesses argmem.
+  MemoryEffects RecursiveArgME = MemoryEffects::none();
+
   // Inalloca and preallocated arguments are always clobbered by the call.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
     ME |= MemoryEffects::argMemOnly(ModRefInfo::ModRef);
 
-  auto AddLocAccess = [&](const MemoryLocation &Loc, ModRefInfo MR) {
-    // Ignore accesses to known-invariant or local memory.
-    MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
-    if (isNoModRef(MR))
-      return;
-
-    const Value *UO = getUnderlyingObject(Loc.Ptr);
-    assert(!isa<AllocaInst>(UO) &&
-           "Should have been handled by getModRefInfoMask()");
-    if (isa<Argument>(UO)) {
-      ME |= MemoryEffects::argMemOnly(MR);
-      return;
-    }
-
-    // If it's not an identified object, it might be an argument.
-    if (!isIdentifiedObject(UO))
-      ME |= MemoryEffects::argMemOnly(MR);
-    ME |= MemoryEffects(IRMemLocation::Other, MR);
-  };
   // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
     if (auto *Call = dyn_cast<CallBase>(&I)) {
-      // Ignore calls to functions in the same SCC, as long as the call sites
-      // don't have operand bundles.  Calls with operand bundles are allowed to
-      // have memory effects not described by the memory effects of the call
-      // target.
+      // We can optimistically ignore calls to functions in the same SCC, with
+      // two caveats:
+      //  * Calls with operand bundles may have additional effects.
+      //  * Argument memory accesses may imply additional effects depending on
+      //    what the argument location is.
       if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
-          SCCNodes.count(Call->getCalledFunction()))
+          SCCNodes.count(Call->getCalledFunction())) {
+        // Keep track of which additional locations are accessed if the SCC
+        // turns out to access argmem.
+        addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR);
         continue;
+      }
+
       MemoryEffects CallME = AAR.getMemoryEffects(Call);
 
       // If the call doesn't access memory, we're done.
@@ -190,15 +218,8 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
       ModRefInfo ArgMR = CallME.getModRef(IRMemLocation::ArgMem);
-      if (ArgMR != ModRefInfo::NoModRef) {
-        for (const Use &U : Call->args()) {
-          const Value *Arg = U;
-          if (!Arg->getType()->isPtrOrPtrVectorTy())
-            continue;
-
-          AddLocAccess(MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata()), ArgMR);
-        }
-      }
+      if (ArgMR != ModRefInfo::NoModRef)
+        addArgLocs(ME, Call, ArgMR, AAR);
       continue;
     }
 
@@ -222,15 +243,15 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
     if (I.isVolatile())
       ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
-    AddLocAccess(*Loc, MR);
+    addLocAccess(ME, *Loc, MR, AAR);
   }
 
-  return OrigME & ME;
+  return {OrigME & ME, RecursiveArgME};
 }
 
 MemoryEffects llvm::computeFunctionBodyMemoryAccess(Function &F,
                                                     AAResults &AAR) {
-  return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {});
+  return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {}).first;
 }
 
 /// Deduce readonly/readnone/writeonly attributes for the SCC.
@@ -238,17 +259,26 @@ template <typename AARGetterT>
 static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
                            SmallSet<Function *, 8> &Changed) {
   MemoryEffects ME = MemoryEffects::none();
+  MemoryEffects RecursiveArgME = MemoryEffects::none();
   for (Function *F : SCCNodes) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
     // Non-exact function definitions may not be selected at link time, and an
     // alternative version that writes to memory may be selected.  See the
     // comment on GlobalValue::isDefinitionExact for more details.
-    ME |= checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    auto [FnME, FnRecursiveArgME] =
+        checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    ME |= FnME;
+    RecursiveArgME |= FnRecursiveArgME;
     // Reached bottom of the lattice, we will not be able to improve the result.
     if (ME == MemoryEffects::unknown())
       return;
   }
+
+  // If the SCC accesses argmem, add recursive accesses resulting from that.
+  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
+  if (ArgMR != ModRefInfo::NoModRef)
+    ME |= RecursiveArgME & MemoryEffects(ArgMR);
 
   for (Function *F : SCCNodes) {
     MemoryEffects OldME = F->getMemoryEffects();
@@ -256,6 +286,10 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     if (NewME != OldME) {
       ++NumMemoryAttr;
       F->setMemoryEffects(NewME);
+      // Remove conflicting writable attributes.
+      if (!isModSet(NewME.getModRef(IRMemLocation::ArgMem)))
+        for (Argument &A : F->args())
+          A.removeAttr(Attribute::Writable);
       Changed.insert(F);
     }
   }
@@ -625,7 +659,15 @@ determinePointerAccessAttrs(Argument *A,
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
 
-      if (!CB.doesNotCapture(UseIndex)) {
+      // Some intrinsics (for instance ptrmask) do not capture their results,
+      // but return results thas alias their pointer argument, and thus should
+      // be handled like GEP or addrspacecast above.
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+              &CB, /*MustPreserveNullness=*/false)) {
+        for (Use &UU : CB.uses())
+          if (Visited.insert(&UU).second)
+            Worklist.push_back(&UU);
+      } else if (!CB.doesNotCapture(UseIndex)) {
         if (!CB.onlyReadsMemory())
           // If the callee can save a copy into other memory, then simply
           // scanning uses of the call is insufficient.  We have no way
@@ -639,7 +681,8 @@ determinePointerAccessAttrs(Argument *A,
               Worklist.push_back(&UU);
       }
 
-      if (CB.doesNotAccessMemory())
+      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
+      if (isNoModRef(ArgMR))
         continue;
 
       if (Function *F = CB.getCalledFunction())
@@ -654,9 +697,9 @@ determinePointerAccessAttrs(Argument *A,
       // invokes with operand bundles.
       if (CB.doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (CB.onlyReadsMemory() || CB.onlyReadsMemory(UseIndex)) {
+      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
         IsRead = true;
-      } else if (CB.hasFnAttr(Attribute::WriteOnly) ||
+      } else if (!isRefSet(ArgMR) ||
                  CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
         IsWrite = true;
       } else {
@@ -810,6 +853,9 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
   A->removeAttr(Attribute::WriteOnly);
   A->removeAttr(Attribute::ReadOnly);
   A->removeAttr(Attribute::ReadNone);
+  // Remove conflicting writable attribute.
+  if (R == Attribute::ReadNone || R == Attribute::ReadOnly)
+    A->removeAttr(Attribute::Writable);
   A->addAttr(R);
   if (R == Attribute::ReadOnly)
     ++NumReadOnlyArg;
@@ -1234,6 +1280,45 @@ static void addNonNullAttrs(const SCCNodeSet &SCCNodes,
   }
 }
 
+/// Deduce noundef attributes for the SCC.
+static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
+                            SmallSet<Function *, 8> &Changed) {
+  // Check each function in turn, determining which functions return noundef
+  // values.
+  for (Function *F : SCCNodes) {
+    // Already noundef.
+    if (F->getAttributes().hasRetAttr(Attribute::NoUndef))
+      continue;
+
+    // We can infer and propagate function attributes only when we know that the
+    // definition we'll get at link time is *exactly* the definition we see now.
+    // For more details, see GlobalValue::mayBeDerefined.
+    if (!F->hasExactDefinition())
+      return;
+
+    // MemorySanitizer assumes that the definition and declaration of a
+    // function will be consistent. A function with sanitize_memory attribute
+    // should be skipped from inference.
+    if (F->hasFnAttribute(Attribute::SanitizeMemory))
+      continue;
+
+    if (F->getReturnType()->isVoidTy())
+      continue;
+
+    if (all_of(*F, [](BasicBlock &BB) {
+          if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
+            // TODO: perform context-sensitive analysis?
+            return isGuaranteedNotToBeUndefOrPoison(Ret->getReturnValue());
+          }
+          return true;
+        })) {
+      F->addRetAttr(Attribute::NoUndef);
+      ++NumNoUndefReturn;
+      Changed.insert(F);
+    }
+  }
+}
+
 namespace {
 
 /// Collects a set of attribute inference requests and performs them all in one
@@ -1584,7 +1669,10 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
     for (auto &I : BB.instructionsWithoutDebug())
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F || !Callee->doesNotRecurse())
+        if (!Callee || Callee == F ||
+            (!Callee->doesNotRecurse() &&
+             !(Callee->isDeclaration() &&
+               Callee->hasFnAttribute(Attribute::NoCallback))))
           // Function calls a potentially recursive function.
           return;
       }
@@ -1720,7 +1808,8 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 
 template <typename AARGetterT>
 static SmallSet<Function *, 8>
-deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
+deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
+                       bool ArgAttrsOnly) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
 
   // Bail if the SCC only contains optnone functions.
@@ -1728,6 +1817,10 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
     return {};
 
   SmallSet<Function *, 8> Changed;
+  if (ArgAttrsOnly) {
+    addArgumentAttrs(Nodes.SCCNodes, Changed);
+    return Changed;
+  }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
   addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
@@ -1735,6 +1828,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter) {
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);
+  addNoUndefAttrs(Nodes.SCCNodes, Changed);
 
   // If we have no external nodes participating in the SCC, we can deduce some
   // more precise attributes as well.
@@ -1762,10 +1856,13 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
                                                   LazyCallGraph &CG,
                                                   CGSCCUpdateResult &) {
   // Skip non-recursive functions if requested.
+  // Only infer argument attributes for non-recursive functions, because
+  // it can affect optimization behavior in conjunction with noalias.
+  bool ArgAttrsOnly = false;
   if (C.size() == 1 && SkipNonRecursive) {
     LazyCallGraph::Node &N = *C.begin();
     if (!N->lookup(N))
-      return PreservedAnalyses::all();
+      ArgAttrsOnly = true;
   }
 
   FunctionAnalysisManager &FAM =
@@ -1782,7 +1879,8 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     Functions.push_back(&N.getFunction());
   }
 
-  auto ChangedFunctions = deriveAttrsInPostOrder(Functions, AARGetter);
+  auto ChangedFunctions =
+      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly);
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
@@ -1818,7 +1916,7 @@ void PostOrderFunctionAttrsPass::printPipeline(
   static_cast<PassInfoMixin<PostOrderFunctionAttrsPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   if (SkipNonRecursive)
-    OS << "<skip-non-recursive>";
+    OS << "<skip-non-recursive-function-attrs>";
 }
 
 template <typename AARGetterT>

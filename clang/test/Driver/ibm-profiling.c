@@ -1,5 +1,5 @@
 // Check that -pg throws an error on z/OS.
-// RUN: %clang -### 2>&1 --target=s390x-none-zos -S -pg %s | FileCheck -check-prefix=FAIL-PG-NAME %s
+// RUN: not %clang -### 2>&1 --target=s390x-none-zos -S -pg %s | FileCheck -check-prefix=FAIL-PG-NAME %s
 // FAIL-PG-NAME: error: unsupported option '-pg' for target 's390x-none-zos'
 
 // Check that -p is still used when not linking on AIX.

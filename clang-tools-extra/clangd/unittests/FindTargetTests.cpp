@@ -537,7 +537,7 @@ TEST_F(TargetDeclTest, Concept) {
     }
   )cpp";
   EXPECT_DECLS(
-      "ConceptSpecializationExpr",
+      "ConceptReference",
       {"template <typename T> concept Fooable = requires (T t) { t.foo(); }"});
 
   // trailing requires clause
@@ -548,7 +548,7 @@ TEST_F(TargetDeclTest, Concept) {
       template <typename T>
       void foo() requires [[Fooable]]<T>;
   )cpp";
-  EXPECT_DECLS("ConceptSpecializationExpr",
+  EXPECT_DECLS("ConceptReference",
                {"template <typename T> concept Fooable = true"});
 
   // constrained-parameter
@@ -559,7 +559,7 @@ TEST_F(TargetDeclTest, Concept) {
     template <[[Fooable]] T>
     void bar(T t);
   )cpp";
-  EXPECT_DECLS("ConceptSpecializationExpr",
+  EXPECT_DECLS("ConceptReference",
                {"template <typename T> concept Fooable = true"});
 
   // partial-concept-id
@@ -570,7 +570,7 @@ TEST_F(TargetDeclTest, Concept) {
     template <[[Fooable]]<int> T>
     void bar(T t);
   )cpp";
-  EXPECT_DECLS("ConceptSpecializationExpr",
+  EXPECT_DECLS("ConceptReference",
                {"template <typename T, typename U> concept Fooable = true"});
 }
 
@@ -707,6 +707,33 @@ TEST_F(TargetDeclTest, TypeAliasTemplate) {
                {"class SmallVector", Rel::TemplatePattern | Rel::Underlying},
                {"using TinyVector = SmallVector<U, 1>",
                 Rel::Alias | Rel::TemplatePattern});
+}
+
+TEST_F(TargetDeclTest, BuiltinTemplates) {
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence {};
+    [[__make_integer_seq]]<integer_sequence, int, 3> X;
+  )cpp";
+  EXPECT_DECLS(
+      "TemplateSpecializationTypeLoc",
+      {"struct integer_sequence", Rel::TemplatePattern | Rel::Underlying},
+      {"template<> struct integer_sequence<int, <0, 1, 2>>",
+       Rel::TemplateInstantiation | Rel::Underlying});
+
+  // Dependent context.
+  Code = R"cpp(
+    template <class T, T... Index> struct integer_sequence;
+
+    template <class T, int N>
+    using make_integer_sequence = [[__make_integer_seq]]<integer_sequence, T, N>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc");
+
+  Code = R"cpp(
+    template <int N, class... Pack>
+    using type_pack_element = [[__type_pack_element]]<N, Pack...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc");
 }
 
 TEST_F(TargetDeclTest, MemberOfTemplate) {

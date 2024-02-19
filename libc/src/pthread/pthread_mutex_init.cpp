@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 static_assert(sizeof(Mutex) <= sizeof(pthread_mutex_t),
               "The public pthread_mutex_t type cannot accommodate the internal "
@@ -32,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_init,
   return err == MutexError::NONE ? 0 : EAGAIN;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

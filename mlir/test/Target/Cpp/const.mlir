@@ -2,7 +2,7 @@
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
 func.func @emitc_constant() {
-  %c0 = "emitc.constant"(){value = #emitc.opaque<"">} : () -> i32
+  %c0 = "emitc.constant"(){value = #emitc.opaque<"INT_MAX">} : () -> i32
   %c1 = "emitc.constant"(){value = 42 : i32} : () -> i32
   %c2 = "emitc.constant"(){value = -1 : i32} : () -> i32
   %c3 = "emitc.constant"(){value = -1 : si8} : () -> si8
@@ -11,7 +11,7 @@ func.func @emitc_constant() {
   return
 }
 // CPP-DEFAULT: void emitc_constant() {
-// CPP-DEFAULT-NEXT: int32_t [[V0:[^ ]*]];
+// CPP-DEFAULT-NEXT: int32_t [[V0:[^ ]*]] = INT_MAX;
 // CPP-DEFAULT-NEXT: int32_t [[V1:[^ ]*]] = 42;
 // CPP-DEFAULT-NEXT: int32_t [[V2:[^ ]*]] = -1;
 // CPP-DEFAULT-NEXT: int8_t [[V3:[^ ]*]] = -1;
@@ -25,7 +25,7 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: int8_t [[V3:[^ ]*]];
 // CPP-DECLTOP-NEXT: uint8_t [[V4:[^ ]*]];
 // CPP-DECLTOP-NEXT: char [[V5:[^ ]*]];
-// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: [[V0]] = INT_MAX;
 // CPP-DECLTOP-NEXT: [[V1]] = 42;
 // CPP-DECLTOP-NEXT: [[V2]] = -1;
 // CPP-DECLTOP-NEXT: [[V3]] = -1;

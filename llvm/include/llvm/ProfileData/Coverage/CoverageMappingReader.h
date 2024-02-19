@@ -213,7 +213,7 @@ public:
                                  FuncRecordsStorage &&FuncRecords,
                                  InstrProfSymtab &&ProfileNames,
                                  uint8_t BytesInAddress,
-                                 support::endianness Endian,
+                                 llvm::endianness Endian,
                                  StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;

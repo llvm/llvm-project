@@ -12,6 +12,7 @@
 include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td"
+include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -53,14 +54,14 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
 
-def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
+def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     Arguments<(ins TensorOf<[AnyType]>:$values,
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels)>,
     Results<(outs AnySparseTensor: $result)> {
-  let summary = "Returns a sparse tensor from the given values, levels";
+  let summary = "Returns a sparse tensor assembled from the given values and levels";
 
   let description = [{
-    Packs the values and per-level coordinate or postion arrays into a sparse tensor.
+    Assembles the values and per-level coordinate or postion arrays into a sparse tensor.
     The order and types of provided levels must be consistent with the actual storage
     layout of the returned sparse tensor described below.
 
@@ -70,24 +71,23 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
       each supplies the sparse tensor coordinates scheme in the sparse tensor for
       the corresponding level as specifed by `sparse_tensor::StorageLayout`.
 
-    This operation can be used to materialize a sparse tensor from external
+    This operation can be used to assemble a sparse tensor from external
     sources; e.g., when passing two numpy arrays from Python.
 
     Disclaimer: This is the user's responsibility to provide input that can be
-    correctly interpreted by the sparse compiler, which does not perform
+    correctly interpreted by the sparsifier, which does not perform
     any sanity test during runtime to verify data integrity.
 
     TODO: The returned tensor is allowed (in principle) to have non-identity
     dimOrdering/higherOrdering mappings.  However, the current implementation
     does not yet support them.
 
-
     Example:
 
     ```mlir
     %values      = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     %coordinates = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
-    %st = sparse_tensor.pack %values, %coordinates
+    %st = sparse_tensor.assemble %values, %coordinates
         : tensor<3xf64>, tensor<3x2xindex> to tensor<3x4xf64, #COO>
     // yields COO format |1.1, 0.0, 0.0, 0.0|
     //     of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
@@ -102,25 +102,26 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultSize]>,
+def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVariadicResultSize]>,
     Arguments<(ins AnySparseTensor:$tensor,
                    TensorOf<[AnyType]>:$out_values,
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
     Results<(outs TensorOf<[AnyType]>:$ret_values,
                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  Index:$val_len,
-                  Variadic<Index>:$lvl_lens)> {
-  let summary = "Returns the (values, coordinates) pair unpacked from the input tensor";
+                  AnyIndexingScalarLike:$val_len,
+                  Variadic<AnyIndexingScalarLike>:$lvl_lens)> {
+  let summary = "Returns the (values, coordinates) pair disassembled from the input tensor";
 
   let description = [{
-    The unpack operation is the inverse of `sparse_tensor::pack`.  It returns
-    the values and per-level position and coordinate array to the user
-    from the sparse tensor along with the actual length of the memory used in
-    each returned buffer. This operation can be used for returning an
-    unpacked MLIR sparse tensor to frontend; e.g., returning two numpy arrays to Python.
+    The disassemble operation is the inverse of `sparse_tensor::assemble`.
+    It returns the values and per-level position and coordinate array to the
+    user from the sparse tensor along with the actual length of the memory used
+    in each returned buffer. This operation can be used for returning an
+    disassembled MLIR sparse tensor to frontend; e.g., returning two numpy arrays
+    to Python.
 
     Disclaimer: This is the user's responsibility to allocate large enough buffers
-    to hold the sparse tensor. The sparse compiler simply copies each fields
+    to hold the sparse tensor. The sparsifier simply copies each fields
     of the sparse tensor into the user-supplied buffer without bound checking.
 
     TODO: the current implementation does not yet support non-identity mappings.
@@ -131,9 +132,10 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
     // input COO format |1.1, 0.0, 0.0, 0.0|
     //    of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                  |0.0, 0.0, 0.0, 0.0|
-    %v, %p, %c, %v_len, %p_len, %c_len = sparse_tensor.unpack %sp : tensor<3x4xf64, #SparseVector>
-                                         outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
-                                      -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
+    %v, %p, %c, %v_len, %p_len, %c_len =
+        sparse_tensor.disassemble %sp : tensor<3x4xf64, #COO>
+          outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
+                            -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
     // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     // %p = arith.constant dense<[ 0,              3 ]> : tensor<2xindex>
     // %c = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
@@ -152,7 +154,7 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [Pure]>,
+  [Pure, StageWithSortSparseOpInterface]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
@@ -194,6 +196,62 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
     ```
 
   }];
+
+  let extraClassDeclaration = [{
+     // Whether the convert can be done by a single step or it would require
+     // an extra sort. Inherited from StageWithSortSparseOpInterface.
+     bool needsExtraSort();
+  }];
+
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+def SparseTensor_ReinterpretMapOp : SparseTensor_Op<"reinterpret_map", [NoMemoryEffect]>,
+    Arguments<(ins AnySparseTensor:$source)>,
+    Results<(outs AnySparseTensor:$dest)> {
+  let summary = "Reinterprets the dimension/level maps of the source tensor";
+  let description = [{
+    Reinterprets the dimension-to-level and level-to-dimension map specified in
+    `source` according to the type of `dest`.
+    `reinterpret_map` is a no-op and is introduced merely to resolve type conflicts.
+    It does not make any modification to the source tensor and source/dest tensors
+    are considered to be aliases.
+
+    `source` and `dest` tensors are "reinterpretable" if and only if they have
+    the exactly same storage at a low level.
+    That is, both `source` and `dest` has the same number of levels and level types,
+    and their shape is consistent before and after `reinterpret_map`.
+
+    Example:
+    ```mlir
+    #CSC = #sparse_tensor.encoding<{
+      map = (d0, d1) -> (d1: dense, d0: compressed)
+    }>
+    #CSR = #sparse_tensor.encoding<{
+      map = (d0, d1) -> (d0: dense, d1: compressed)
+    }>
+    %t1 = sparse_tensor.reinterpret_map %t0 : tensor<3x4xi32, #CSC> to tensor<4x3xi32, #CSR>
+
+    #BSR = #sparse_tensor.encoding<{
+      map = ( i, j ) -> ( i floordiv 2 : dense,
+                          j floordiv 3 : compressed,
+                          i mod 2      : dense,
+                          j mod 3      : dense
+      )
+    }>
+    #DSDD = #sparse_tensor.encoding<{
+      map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+    }>
+    %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR> to tensor<3x4x2x3xi32, #DSDD>
+    ```
+    }];
+
+  let builders = [
+    OpBuilder<(ins "SparseTensorEncodingAttr":$dstEnc, "Value":$source)>
+  ];
+
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -326,7 +384,8 @@ def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
-def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
+                                 [Pure, StageWithSortSparseOpInterface]>,
     Arguments<(ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
@@ -349,6 +408,12 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
      ```
    }];
 
+  let extraClassDeclaration = [{
+     // Whether the concatenate can be done by a single step or it would require
+     // an extra sort. Inherited from StageWithSortSparseOpInterface.
+     bool needsExtraSort();
+  }];
+
   let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
   let hasVerifier = 1;
 }
@@ -361,7 +426,7 @@ def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]>,
     Extracts the offset of the sparse tensor slice at the given dimension.
 
     Currently, sparse tensor slices are still a work in progress, and only
-    works when runtime library is disabled (i.e., running sparse compiler
+    works when runtime library is disabled (i.e., running the sparsifier
     with `enable-runtime-library=false`).
 
     Example:
@@ -388,7 +453,7 @@ def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
     Extracts the stride of the sparse tensor slice at the given dimension.
 
     Currently, sparse tensor slices are still a work in progress, and only
-    works when runtime library is disabled (i.e., running sparse compiler
+    works when runtime library is disabled (i.e., running the sparsifier
     with `enable-runtime-library=false`).
 
     Example:
@@ -430,10 +495,13 @@ def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.ini
     Example:
 
     ```mlir
-    #CSR = #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ]}>
+    #CSR = #sparse_tensor.encoding<{
+      map = (i, j) -> (i : dense, j : compressed)
+    }>
     #CSR_SLICE = #sparse_tensor.encoding<{
-      dimLevelType = [ "dense", "compressed" ],
-      slice = [ (1, 4, 1), (1, 4, 2) ]
+      map = (d0 : #sparse_tensor<slice(1, 4, 1)>,
+             d1 : #sparse_tensor<slice(1, 4, 2)>) ->
+            (d0 : dense, d1 : compressed)
     }>
 
     %0 = sparse_tensor.storage_specifier.init :  !sparse_tensor.storage_specifier<#CSR>
@@ -502,6 +570,90 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
 }
 
 //===----------------------------------------------------------------------===//
+// Sparse Tensor Coordinate Operations.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMemoryEffect]>,
+    Arguments<(ins AnySparseTensor:$source, Index:$index)>,
+    Results<(outs Index:$result)> {
+  let summary = "level index operation";
+  let description = [{
+    The `sparse_tensor.lvl` behaves similar to `tensor.dim` operation.
+    It takes a sparse tensor and a level operand of type `index` and returns
+    the size of the requested level of the given sparse tensor.
+    If the sparse tensor has an identity dimension to level mapping, it returns
+    the same result as `tensor.dim`.
+    If the level index is out of bounds, the behavior is undefined.
+
+    Example:
+
+    ```mlir
+    #BSR = #sparse_tensor.encoding<{
+      map = ( i, j ) ->
+        ( i floordiv 2 : dense,
+          j floordiv 3 : compressed,
+          i mod 2      : dense,
+          j mod 3      : dense
+        )
+    }>
+
+    // Always returns 2 (4 floordiv 2), can be constant folded:
+    %c0 = arith.constant 0 : index
+    %x = sparse_tensor.lvl %A, %c0 : tensor<4x?xf32, #BSR>
+
+    // Return the dynamic dimension of %A computed by %j mod 3.
+    %c1 = arith.constant 1 : index
+    %y = sparse_tensor.lvl %A, %c1 : tensor<4x?xf32, #BSR>
+
+    // Always return 3 (since j mod 3 < 3), can be constant fold
+    %c3 = arith.constant 3 : index
+    %y = sparse_tensor.lvl %A, %c3 : tensor<4x?xf32, #BSR>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    attr-dict $source `,` $index `:` type($source)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$source, "int64_t":$index)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Helper function to get the index as a simple integer if it is constant.
+    std::optional<uint64_t> getConstantLvlIndex();
+
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]>,
+    Arguments<(ins Variadic<Index>:$in_crds,
+                   SparseTensorCrdTransDirectionAttr:$direction,
+                   SparseTensorEncodingAttr:$encoder)>,
+    Results<(outs Variadic<Index>:$out_crds)> {
+  string summary = "Performs coordinate translation between level and dimension coordinate space.";
+  string description = [{
+    Performs coordinate translation between level and dimension coordinate space according
+    to the affine maps defined by $encoder.
+
+    Example:
+
+    ```mlir
+    %l0, %l1, %l2, %l3 = sparse_tensor.crd_translate dim_to_lvl [%d0, %d1] as #BSR
+                       : index, index, index, index
+    ```
+  }];
+  let assemblyFormat = "$direction `[` $in_crds `]` `as` $encoder attr-dict `:` type($out_crds)";
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Sparse Tensor Management Operations. These operations are "impure" in the
 // sense that some behavior is defined by side-effects. These operations provide
 // a bridge between "sparsification" on one hand and a support library or actual
@@ -521,11 +673,11 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert",
   string summary = "Inserts a value into the sparse tensor";
   string description = [{
     Inserts the value into the underlying storage of the tensor at the
-    given level-coordinates.  The arity of `lvlCoords` must match the
-    level-rank of the tensor.  This operation can only be applied when
-    the tensor materializes unintialized from a `bufferization.alloc_tensor`
-    operation and the final tensor is constructed with a `load` operation
-    which has the `hasInserts` attribute set.
+    given level-coordinates. The arity of `lvlCoords` must match the
+    level-rank of the tensor. This operation can only be applied when
+    the tensor materializes unintialized from a `tensor.empty` operation
+    and the final tensor is constructed with a `load` operation which
+    has the `hasInserts` attribute set.
 
     The level-properties of the sparse tensor type fully describe what
     kind of insertion order is allowed.  When all levels have "unique"
@@ -758,105 +910,71 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Sorting Operations.
+// Sparse Tensor Sorting/Ordering Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
-    // TODO: May want to extend tablegen with
-    // class NonemptyVariadic<Type type> : Variadic<type> { let minSize = 1; }
-    // and then use NonemptyVariadic<...>:$xs here.
-    //
-    // TODO: Currently tablegen doesn't support the assembly syntax when
-    // `algorithm` is an optional enum attribute. We may want to use an optional
-    // enum attribute when this is fixed in tablegen.
-    //
-    Arguments<(ins Index:$n,
-               Variadic<StridedMemRefRankOf<[AnyInteger, Index], [1]>>:$xs,
-               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
-               SparseTensorSortKindAttr:$algorithm)>  {
-  string summary = "Sorts the arrays in xs and ys lexicographically on the "
-                   "integral values found in the xs list";
-  string description = [{
-    Lexicographically sort the first `n` values in `xs` along with the values in
-    `ys`. Conceptually, the values being sorted are tuples produced by
-    `zip(zip(xs), zip(ys))`. In particular, values in `ys` needed to be sorted
-    along with values in `xs`, but values in `ys` don't affect the
-    lexicographical order. The order in which arrays appear in `xs` affects the
-    sorting result. The operator updates `xs` and `ys` in place with the result
-    of the sorting.
-
-    For example, assume x1=[4, 3], x2=[1, 2], y1=[10, 5], then the output of
-    "sort 2, x1, x2 jointly y1" are x1=[3, 4], x2=[2, 1], y1=[5, 10] while the
-    output of "sort 2, x2, x1, jointly y1" are x2=[1, 2], x1=[4, 3], y1=[10, 5].
-
-    Buffers in `xs` needs to have the same integral element type while buffers
-    in `ys` can have different numeric element types. All buffers in `xs` and
-    `ys` should have a dimension not less than `n`. The behavior of the operator
-    is undefined if this condition is not met. The operator requires at least
-    one buffer in `xs` while `ys` can be empty.
-
-    The enum attribute `algorithm` indicates the sorting algorithm used to
-    implement the operator: hybrid_quick_sort, insertion_sort_stable,
-    quick_sort, or heap_sort.
-
-    Note that this operation is "impure" in the sense that its behavior is
-    solely defined by side-effects and not SSA values.
-
-    Example:
-
-    ```mlir
-    sparse_tensor.sort insertion_sort_stable %n, %x1, %x2 jointly y1, %y2
-      : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
-    ```
-
-    ```mlir
-    sparse_tensor.sort hybrid_quick_sort %n, %x1, %x2 jointly y1, %y2
-      { alg=1 : index}
-      : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
-    ```
-  }];
-  let assemblyFormat = "$algorithm $n `,` $xs (`jointly` $ys^)? attr-dict"
-                       "`:` type($xs) (`jointly` type($ys)^)?";
-  let hasVerifier = 1;
-}
-
-def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
+def SparseTensor_SortOp : SparseTensor_Op<"sort">,
     Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
                Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
-               OptionalAttr<IndexAttr>:$nx, OptionalAttr<IndexAttr>:$ny,
+               AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
                SparseTensorSortKindAttr:$algorithm)>  {
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort_coo is similar to sparse_tensor.sort, except that all the
-    `xs` values and some `ys` values are put in the linear buffer `xy`. The
-    optional index attribute `nx` provides the number of `xs` values in `xy`.
-    When `nx` is not explicitly specified, its value is 1. The optional index
-    attribute `ny` provides the number of `ys` values in `xy`. When `ny` is not
-    explicitly specified, its value is 0. This instruction supports a more
-    efficient way to store the COO definition in sparse tensor type.
+    Sorts the `xs` values along with some `ys` values that are put in a single linear
+    buffer `xy`.  The affine map attribute `perm_map` specifies the permutation to be
+    applied on the `xs` before comparison, the rank of the permutation map
+    also specifies the number of `xs` values in `xy`.
+    The optional index attribute `ny` provides the number of `ys` values in `xy`.
+    When `ny` is not explicitly specified, its value is 0.
+    This instruction supports a more efficient way to store the COO definition
+    in sparse tensor type.
 
-    The buffer xy should have a dimension not less than n * (nx + ny) while the
+    The buffer xy should have a dimension not less than n * (rank(perm_map) + ny) while the
     buffers in `ys` should have a dimension not less than `n`. The behavior of
     the operator is undefined if this condition is not met.
 
     Example:
 
     ```mlir
-    sparse_tensor.sort_coo insertion_sort_stable %n, %x { nx = 2 : index}
+    sparse_tensor.sort insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
       : memref<?xindex>
-    ```
-
-    ```mlir
-    sparse_tensor.sort hybrid_quick_sort %n, %xy jointly %y1
-      { nx = 2 : index, ny = 2 : index}
-      : memref<?xi64> jointly memref<?xf32>
     ```
   }];
 
   let assemblyFormat = "$algorithm $n"
                        "`,`$xy (`jointly` $ys^)? attr-dict"
                        "`:` type($xy) (`jointly` type($ys)^)?";
+  let hasVerifier = 1;
+}
+
+def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
+    Arguments<(ins AnySparseTensor: $input_coo,
+                   SparseTensorSortKindAttr:$algorithm)>,
+    Results<(outs AnySparseTensor: $result_coo)> {
+  let summary = "Reorder the input COO such that it has the the same order as "
+                "the output COO";
+  let description = [{
+    Reorders the input COO to the same order as specified by the output format.
+    E.g., reorder an unordered COO into an ordered one.
+
+    The input and result COO tensor must have the same element type, position type and
+    coordinate type. At the moment, the operation also only supports ordering
+    input and result COO with the same dim2lvl map.
+
+    Example:
+
+    ```mlir
+    %res = sparse_tensor.reorder_coo quick_sort %coo : tensor<?x?xf64 : #Unordered_COO> to
+                                                       tensor<?x?xf64 : #Ordered_COO>
+
+    ```
+  }];
+
+  let assemblyFormat = "$algorithm $input_coo attr-dict"
+                       "`:` type($input_coo) `to` type($result_coo)";
+
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
@@ -904,7 +1022,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]>,
       Example of isEqual applied to intersecting elements only:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...)
       %0 = linalg.generic #trait
         ins(%A: tensor<?xf64, #SparseVector>,
             %B: tensor<?xf64, #SparseVector>)
@@ -926,7 +1044,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]>,
       Example of A+B in upper triangle, A-B in lower triangle:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...)
       %1 = linalg.generic #trait
         ins(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64, #CSR>
         outs(%C: tensor<?x?xf64, #CSR> {
@@ -959,7 +1077,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]>,
       because we never use its values, only its sparse structure:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...)
       %2 = linalg.generic #trait
         ins(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xi32, #CSR>
         outs(%C: tensor<?x?xf64, #CSR> {
@@ -999,7 +1117,9 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]>,
       Each region contains a single block describing the computation and result.
       A non-empty block must end with a sparse_tensor.yield and the return type
       must match the type of `output`. The primary region's block has one
-      argument, while the missing region's block has zero arguments.
+      argument, while the missing region's block has zero arguments. The
+      absent region may only generate constants or values already computed
+      on entry of the `linalg.generic` operation.
 
       A region may also be declared empty (i.e. `absent={}`), indicating that the
       region does not contribute to the output.
@@ -1012,17 +1132,17 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]>,
       Example of A+1, restricted to existing elements:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...) : tensor<?xf64, #SparseVector>
       %0 = linalg.generic #trait
          ins(%A: tensor<?xf64, #SparseVector>)
         outs(%C: tensor<?xf64, #SparseVector>) {
         ^bb0(%a: f64, %c: f64) :
           %result = sparse_tensor.unary %a : f64 to f64
             present={
-              ^bb0(%arg0: f64):
-                %cf1 = arith.constant 1.0 : f64
-                %ret = arith.addf %arg0, %cf1 : f64
-                sparse_tensor.yield %ret : f64
+            ^bb0(%arg0: f64):
+              %cf1 = arith.constant 1.0 : f64
+              %ret = arith.addf %arg0, %cf1 : f64
+              sparse_tensor.yield %ret : f64
             }
             absent={}
           linalg.yield %result : f64
@@ -1032,41 +1152,42 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]>,
       Example returning +1 for existing values and -1 for missing values:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %p1 = arith.constant  1 : i32
+      %m1 = arith.constant -1 : i32
+      %C = tensor.empty(...) : tensor<?xi32, #SparseVector>
       %1 = linalg.generic #trait
          ins(%A: tensor<?xf64, #SparseVector>)
-        outs(%C: tensor<?xf64, #SparseVector>) {
-        ^bb0(%a: f64, %c: f64) :
+        outs(%C: tensor<?xi32, #SparseVector>) {
+        ^bb0(%a: f64, %c: i32) :
           %result = sparse_tensor.unary %a : f64 to i32
             present={
             ^bb0(%x: f64):
-              %ret = arith.constant 1 : i32
-              sparse_tensor.yield %ret : i32
-          }
-          absent={
-            %ret = arith.constant -1 : i32
-            sparse_tensor.yield %ret : i32
-          }
-          linalg.yield %result : f64
-      } -> tensor<?xf64, #SparseVector>
+              sparse_tensor.yield %p1 : i32
+            }
+            absent={
+              sparse_tensor.yield %m1 : i32
+            }
+          linalg.yield %result : i32
+      } -> tensor<?xi32, #SparseVector>
       ```
 
       Example showing a structural inversion (existing values become missing in
       the output, while missing values are filled with 1):
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %c1 = arith.constant 1 : i64
+      %C = tensor.empty(...) : tensor<?xi64, #SparseVector>
       %2 = linalg.generic #trait
-          ins(%A: tensor<?xf64, #SparseVector>)
-          outs(%C: tensor<?xf64, #SparseVector>) {
-            %result = sparse_tensor.unary %a : f64 to i64
-              present={}
-              absent={
-                %ret = arith.constant 1 : i64
-                sparse_tensor.yield %ret : i64
-              }
-          linalg.yield %result : f64
-      } -> tensor<?xf64, #SparseVector>
+         ins(%A: tensor<?xf64, #SparseVector>)
+        outs(%C: tensor<?xi64, #SparseVector>) {
+        ^bb0(%a: f64, %c: i64) :
+          %result = sparse_tensor.unary %a : f64 to i64
+            present={}
+            absent={
+              sparse_tensor.yield %c1 : i64
+            }
+          linalg.yield %result : i64
+      } -> tensor<?xi64, #SparseVector>
       ```
   }];
 
@@ -1107,7 +1228,7 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [Pure, SameOperandsAndResu
       ```mlir
       %cf1 = arith.constant 1.0 : f64
       %cf100 = arith.constant 100.0 : f64
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...)
       %0 = linalg.generic #trait
          ins(%A: tensor<?x?xf64, #SparseMatrix>)
         outs(%C: tensor<?xf64, #SparseVector>) {
@@ -1150,7 +1271,7 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
       Example of selecting A >= 4.0:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...)
       %0 = linalg.generic #trait
          ins(%A: tensor<?xf64, #SparseVector>)
         outs(%C: tensor<?xf64, #SparseVector>) {
@@ -1168,7 +1289,7 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
       Example of selecting lower triangle of a matrix:
 
       ```mlir
-      %C = bufferization.alloc_tensor...
+      %C = tensor.empty(...)
       %1 = linalg.generic #trait
          ins(%A: tensor<?x?xf64, #CSR>)
         outs(%C: tensor<?x?xf64, #CSR>) {
@@ -1277,8 +1398,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      For example:
      ```mlir
      #COL_MAJOR = #sparse_tensor.encoding<{
-       dimLevelType = [ "compressed", "compressed" ],
-       dimOrdering = affine_map<(i,j) -> (j,i)>
+       map = (d0, d1) -> (d1 : compressed, d0 : compressed)
      }>
 
      // foreach on a column-major sparse tensor
@@ -1288,7 +1408,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      }
 
      #ROW_MAJOR = #sparse_tensor.encoding<{
-       dimLevelType = [ "compressed", "compressed" ],
+       map = (d0, d1) -> (d0 : compressed, d1 : compressed)
      }>
 
      // foreach on a row-major sparse tensor

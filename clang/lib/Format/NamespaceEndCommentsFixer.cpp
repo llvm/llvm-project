@@ -48,7 +48,7 @@ processTokens(const FormatToken *Tok, tok::TokenKind StartTok,
 const FormatToken *skipAttribute(const FormatToken *Tok) {
   if (!Tok)
     return nullptr;
-  if (Tok->is(tok::kw___attribute)) {
+  if (Tok->isAttribute()) {
     Tok = Tok->getNextNonComment();
     Tok = processTokens(Tok, tok::l_paren, tok::r_paren, nullptr);
   } else if (Tok->is(tok::l_square)) {
@@ -170,11 +170,11 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
   // Valid namespace end comments don't need to be edited.
   static const llvm::Regex NamespaceCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                  "namespace( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$",
+                  "namespace( +([a-zA-Z0-9:_ ]+))?\\.? *(\\*/)?$",
                   llvm::Regex::IgnoreCase);
   static const llvm::Regex NamespaceMacroCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*)\\)\\.? *(\\*/)?$",
+                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*|\".+\")\\)\\.? *(\\*/)?$",
                   llvm::Regex::IgnoreCase);
 
   SmallVector<StringRef, 8> Groups;
@@ -189,7 +189,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
     // Comment does not match regex.
     return false;
   }
-  StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
+  StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5].rtrim() : "";
   // Anonymous namespace comments must not mention a namespace name.
   if (NamespaceName.empty() && !NamespaceNameInComment.empty())
     return false;
@@ -359,8 +359,10 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
         computeEndCommentText(NamespaceName, AddNewline, NamespaceTok,
                               Style.SpacesInLineCommentPrefix.Minimum);
     if (!hasEndComment(EndCommentPrevTok)) {
-      bool isShort = I - StartLineIndex <= Style.ShortNamespaceLines + 1;
-      if (!isShort) {
+      unsigned LineCount = 0;
+      for (auto J = StartLineIndex + 1; J < I; ++J)
+        LineCount += AnnotatedLines[J]->size();
+      if (LineCount > Style.ShortNamespaceLines) {
         addEndComment(EndCommentPrevTok,
                       std::string(Style.SpacesBeforeTrailingComments, ' ') +
                           EndCommentText,

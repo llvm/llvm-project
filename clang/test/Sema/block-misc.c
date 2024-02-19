@@ -52,7 +52,7 @@ void test3(void) {
 
 enum {NSBIRLazilyAllocated = 0};
 
-int test4(int argc) {  // rdar://6251437
+int test4(int argc) {
   ^{
     switch (argc) {
       case NSBIRLazilyAllocated:  // is an integer constant expression.
@@ -65,20 +65,17 @@ int test4(int argc) {  // rdar://6251437
 
 
 void bar(void*);
-// rdar://6257721 - reference to static/global is byref by default.
 static int test5g;
 void test5() {
   bar(^{ test5g = 1; });
 }
 
-// rdar://6405429 - __func__ in a block refers to the containing function name.
 const char*test6(void) {
   return ^{
     return __func__;
   } ();
 }
 
-// radr://6732116 - block comparisons
 void (^test7a)();
 int test7(void (^p)()) {
   return test7a == p;
@@ -117,7 +114,6 @@ void test12() {
   test12f = ^test12f;  // expected-error {{type name requires a specifier or qualifier}} expected-error {{expected expression}}
 }
 
-// rdar://6808730
 void *test13 = ^{
   int X = 32;
 
@@ -188,7 +184,6 @@ void test18(void) {
   blockA = ^{ }; // expected-error {{cannot assign to variable 'blockA' with const-qualified type 'void (^const)(void)}}
 }
 
-// rdar://7072507
 int test19(void) {
   goto L0;       // expected-error {{cannot jump}}
   
@@ -199,7 +194,6 @@ L0:
   return x;
 }
 
-// radr://7438948
 void test20(void) {
   int n = 7;
   int vla[n]; // expected-note {{declared here}}
@@ -211,7 +205,6 @@ void test20(void) {
   }();
 }
 
-// radr://7438948
 void test21(void) {
   int a[7]; // expected-note {{declared here}}
   __block int b[10]; // expected-note {{declared here}}
@@ -222,7 +215,6 @@ void test21(void) {
   }();
 }
 
-// rdar ://8218839
 const char * (^func)(void) = ^{ return __func__; };
 const char * (^function)(void) = ^{ return __FUNCTION__; };
 const char * (^pretty)(void) = ^{ return __PRETTY_FUNCTION__; };

@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -95,12 +96,12 @@ static constexpr std::tuple<
     mkIOKey(BeginUnformattedInput), mkIOKey(BeginUnformattedOutput),
     mkIOKey(BeginWait), mkIOKey(BeginWaitAll),
     mkIOKey(CheckUnitNumberInRange64), mkIOKey(CheckUnitNumberInRange128),
-    mkIOKey(EnableHandlers), mkIOKey(EndIoStatement), mkIOKey(GetIoLength),
-    mkIOKey(GetIoMsg), mkIOKey(GetNewUnit), mkIOKey(GetSize),
-    mkIOKey(InputAscii), mkIOKey(InputComplex32), mkIOKey(InputComplex64),
-    mkIOKey(InputDerivedType), mkIOKey(InputDescriptor), mkIOKey(InputInteger),
-    mkIOKey(InputLogical), mkIOKey(InputNamelist), mkIOKey(InputReal32),
-    mkIOKey(InputReal64), mkIOKey(InputUnformattedBlock),
+    mkIOKey(EnableHandlers), mkIOKey(EndIoStatement),
+    mkIOKey(GetAsynchronousId), mkIOKey(GetIoLength), mkIOKey(GetIoMsg),
+    mkIOKey(GetNewUnit), mkIOKey(GetSize), mkIOKey(InputAscii),
+    mkIOKey(InputComplex32), mkIOKey(InputComplex64), mkIOKey(InputDerivedType),
+    mkIOKey(InputDescriptor), mkIOKey(InputInteger), mkIOKey(InputLogical),
+    mkIOKey(InputNamelist), mkIOKey(InputReal32), mkIOKey(InputReal64),
     mkIOKey(InquireCharacter), mkIOKey(InquireInteger64),
     mkIOKey(InquireLogical), mkIOKey(InquirePendingId), mkIOKey(OutputAscii),
     mkIOKey(OutputComplex32), mkIOKey(OutputComplex64),
@@ -108,12 +109,12 @@ static constexpr std::tuple<
     mkIOKey(OutputInteger8), mkIOKey(OutputInteger16), mkIOKey(OutputInteger32),
     mkIOKey(OutputInteger64), mkIOKey(OutputInteger128), mkIOKey(OutputLogical),
     mkIOKey(OutputNamelist), mkIOKey(OutputReal32), mkIOKey(OutputReal64),
-    mkIOKey(OutputUnformattedBlock), mkIOKey(SetAccess), mkIOKey(SetAction),
-    mkIOKey(SetAdvance), mkIOKey(SetAsynchronous), mkIOKey(SetBlank),
-    mkIOKey(SetCarriagecontrol), mkIOKey(SetConvert), mkIOKey(SetDecimal),
-    mkIOKey(SetDelim), mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm),
-    mkIOKey(SetPad), mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec),
-    mkIOKey(SetRecl), mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
+    mkIOKey(SetAccess), mkIOKey(SetAction), mkIOKey(SetAdvance),
+    mkIOKey(SetAsynchronous), mkIOKey(SetBlank), mkIOKey(SetCarriagecontrol),
+    mkIOKey(SetConvert), mkIOKey(SetDecimal), mkIOKey(SetDelim),
+    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm), mkIOKey(SetPad),
+    mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl),
+    mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
     newIOTable;
 } // namespace Fortran::lower
 
@@ -361,17 +362,14 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
                       Fortran::evaluate::ProcedureDesignator{*procSym}},
                   stmtCtx))));
         } else {
-          std::string procName = converter.mangleName(*procSym);
-          mlir::func::FuncOp procDef = builder.getNamedFunction(procName);
-          if (!procDef)
-            procDef = Fortran::lower::getOrDeclareFunction(
-                procName, Fortran::evaluate::ProcedureDesignator{*procSym},
-                converter);
-          insert(
-              builder.createConvert(loc, refTy,
-                                    builder.create<fir::AddrOfOp>(
-                                        loc, procDef.getFunctionType(),
-                                        builder.getSymbolRefAttr(procName))));
+          mlir::func::FuncOp procDef = Fortran::lower::getOrDeclareFunction(
+              Fortran::evaluate::ProcedureDesignator{*procSym}, converter);
+          mlir::SymbolRefAttr nameAttr =
+              builder.getSymbolRefAttr(procDef.getSymName());
+          insert(builder.createConvert(
+              loc, refTy,
+              builder.create<fir::AddrOfOp>(loc, procDef.getFunctionType(),
+                                            nameAttr)));
         }
       } else {
         insert(builder.createNullConstant(loc, refTy));
@@ -497,7 +495,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
     // A global pointer or allocatable variable has a descriptor for typical
     // accesses. Variables in multiple namelist groups may already have one.
     // Create descriptors for other cases.
-    if (!IsAllocatableOrPointer(s)) {
+    if (!IsAllocatableOrObjectPointer(&s)) {
       std::string mangleName =
           Fortran::lower::mangle::globalNamelistDescriptorName(s);
       if (builder.getNamedGlobal(mangleName))
@@ -644,7 +642,8 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   makeNextConditionalOn(builder, loc, checkResult, ok);
   mlir::Type argType = funcOp.getFunctionType().getInput(1);
-  mlir::Value groupAddr = getNamelistGroup(converter, symbol, stmtCtx);
+  mlir::Value groupAddr =
+      getNamelistGroup(converter, symbol.GetUltimate(), stmtCtx);
   groupAddr = builder.createConvert(loc, argType, groupAddr);
   llvm::SmallVector<mlir::Value> args = {cookie, groupAddr};
   ok = builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
@@ -654,7 +653,7 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
 static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         mlir::Type type, bool isFormatted) {
-  if (type.isa<fir::RecordType>())
+  if (fir::unwrapPassByRefType(type).isa<fir::RecordType>())
     return getIORuntimeFunc<mkIOKey(OutputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
@@ -736,7 +735,7 @@ static void genOutputItemList(
     if (argType.isa<fir::BoxType>()) {
       mlir::Value box = fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
       outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-      if (itemTy.isa<fir::RecordType>())
+      if (fir::unwrapPassByRefType(itemTy).isa<fir::RecordType>())
         outputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
     } else if (helper.isCharacterScalar(itemTy)) {
       fir::ExtendedValue exv = converter.genExprAddr(loc, expr, stmtCtx);
@@ -771,7 +770,7 @@ static void genOutputItemList(
 static mlir::func::FuncOp getInputFunc(mlir::Location loc,
                                        fir::FirOpBuilder &builder,
                                        mlir::Type type, bool isFormatted) {
-  if (type.isa<fir::RecordType>())
+  if (fir::unwrapPassByRefType(type).isa<fir::RecordType>())
     return getIORuntimeFunc<mkIOKey(InputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
@@ -833,7 +832,7 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
     auto boxTy = box.getType().dyn_cast<fir::BaseBoxType>();
     assert(boxTy && "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-    if (boxTy.getEleTy().isa<fir::RecordType>())
+    if (fir::unwrapPassByRefType(boxTy).isa<fir::RecordType>())
       inputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
   } else {
     mlir::Value itemAddr = fir::getBase(item);
@@ -1316,13 +1315,6 @@ mlir::Value genIOOption<Fortran::parser::IoControlSpec::Asynchronous>(
 }
 
 template <>
-mlir::Value genIOOption<Fortran::parser::IdVariable>(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    mlir::Value cookie, const Fortran::parser::IdVariable &spec) {
-  TODO(loc, "asynchronous ID not implemented");
-}
-
-template <>
 mlir::Value genIOOption<Fortran::parser::IoControlSpec::Pos>(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::Value cookie, const Fortran::parser::IoControlSpec::Pos &spec) {
@@ -1336,35 +1328,21 @@ mlir::Value genIOOption<Fortran::parser::IoControlSpec::Rec>(
   return genIntIOOption<mkIOKey(SetRec)>(converter, loc, cookie, spec);
 }
 
-/// Generate runtime call to query the read size after an input statement if
-/// the statement has SIZE control-spec.
-template <typename A>
-static void genIOReadSize(Fortran::lower::AbstractConverter &converter,
-                          mlir::Location loc, mlir::Value cookie,
-                          const A &specList, bool checkResult) {
-  // This call is not conditional on the current IO status (ok) because the size
-  // needs to be filled even if some error condition (end-of-file...) was met
-  // during the input statement (in which case the runtime may return zero for
-  // the size read).
-  for (const auto &spec : specList)
-    if (const auto *size =
-            std::get_if<Fortran::parser::IoControlSpec::Size>(&spec.u)) {
-
-      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      mlir::func::FuncOp ioFunc =
-          getIORuntimeFunc<mkIOKey(GetSize)>(loc, builder);
-      auto sizeValue =
-          builder.create<fir::CallOp>(loc, ioFunc, mlir::ValueRange{cookie})
-              .getResult(0);
-      Fortran::lower::StatementContext localStatementCtx;
-      fir::ExtendedValue var = converter.genExprAddr(
-          loc, Fortran::semantics::GetExpr(size->v), localStatementCtx);
-      mlir::Value varAddr = fir::getBase(var);
-      mlir::Type varType = fir::unwrapPassByRefType(varAddr.getType());
-      mlir::Value sizeCast = builder.createConvert(loc, varType, sizeValue);
-      builder.create<fir::StoreOp>(loc, sizeCast, varAddr);
-      break;
-    }
+/// Generate runtime call to set some control variable.
+/// Generates "VAR = IoRuntimeKey(cookie)".
+template <typename IoRuntimeKey, typename VAR>
+static void genIOGetVar(Fortran::lower::AbstractConverter &converter,
+                        mlir::Location loc, mlir::Value cookie,
+                        const VAR &parserVar) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::func::FuncOp ioFunc = getIORuntimeFunc<IoRuntimeKey>(loc, builder);
+  mlir::Value value =
+      builder.create<fir::CallOp>(loc, ioFunc, mlir::ValueRange{cookie})
+          .getResult(0);
+  Fortran::lower::StatementContext localStatementCtx;
+  fir::ExtendedValue var = converter.genExprAddr(
+      loc, Fortran::semantics::GetExpr(parserVar.v), localStatementCtx);
+  builder.createStoreWithConvert(loc, value, fir::getBase(var));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1412,6 +1390,12 @@ static void threadSpecs(Fortran::lower::AbstractConverter &converter,
               // Newunit must be queried after OPEN specifier runtime calls
               // that may fail to avoid modifying the newunit variable if
               // there is an error.
+              return ok;
+            },
+            [&](const Fortran::parser::IdVariable &) -> mlir::Value {
+              // ID is queried after the transfer so that ASYNCHROUNOUS= has
+              // been processed and also to set it to zero if the transfer is
+              // already finished.
               return ok;
             },
             [&](const auto &x) {
@@ -1605,21 +1589,6 @@ maybeGetInternalIODescriptor<Fortran::parser::PrintStmt>(
 }
 
 template <typename A>
-static bool isDataTransferAsynchronous(mlir::Location loc, const A &stmt) {
-  if (auto *asynch =
-          getIOControl<Fortran::parser::IoControlSpec::Asynchronous>(stmt)) {
-    // FIXME: should contain a string of YES or NO
-    TODO(loc, "asynchronous transfers not implemented in runtime");
-  }
-  return false;
-}
-template <>
-bool isDataTransferAsynchronous<Fortran::parser::PrintStmt>(
-    mlir::Location, const Fortran::parser::PrintStmt &) {
-  return false;
-}
-
-template <typename A>
 static bool isDataTransferNamelist(const A &stmt) {
   if (stmt.format)
     return formatIsActuallyNamelist(*stmt.format);
@@ -1639,12 +1608,6 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
                              const Fortran::lower::SomeExpr &expr,
                              mlir::Type strTy, mlir::Type lenTy,
                              Fortran::lower::StatementContext &stmtCtx) {
-  // Possible optimization TODO: Instead of inlining a selectOp every time there
-  // is a variable reference to a format statement, a function with the selectOp
-  // could be generated to reduce code size. It is not clear if such an
-  // optimization would be deployed very often or improve the object code
-  // beyond, say, what GVN/GCM might produce.
-
   // Create the requisite blocks to inline a selectOp.
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Block *startBlock = builder.getBlock();
@@ -1657,9 +1620,7 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
 
   auto symbol = GetLastSymbol(&expr);
   Fortran::lower::pft::LabelSet labels;
-  [[maybe_unused]] auto foundLabelSet =
-      converter.lookupLabelSet(*symbol, labels);
-  assert(foundLabelSet && "Label not found in map");
+  converter.lookupLabelSet(*symbol, labels);
 
   for (auto label : labels) {
     indexList.push_back(label);
@@ -1698,11 +1659,11 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
   // Create the unit case which should result in an error.
   auto *unitBlock = block->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToEnd(unitBlock);
-
-  // Crash the program.
+  fir::runtime::genReportFatalUserError(
+      builder, loc,
+      "Assigned format variable '" + symbol->name().ToString() +
+          "' has not been assigned a valid format label");
   builder.create<fir::UnreachableOp>(loc);
-
-  // Add unit case to the select statement.
   blockList.push_back(unitBlock);
 
   // Lower the selectOp.
@@ -1860,24 +1821,25 @@ static mlir::Value genIOUnit(Fortran::lower::AbstractConverter &converter,
                              mlir::Location loc,
                              const Fortran::parser::IoUnit *iounit,
                              mlir::Type ty, ConditionSpecInfo &csi,
-                             Fortran::lower::StatementContext &stmtCtx) {
+                             Fortran::lower::StatementContext &stmtCtx,
+                             int defaultUnitNumber) {
   auto &builder = converter.getFirOpBuilder();
   if (iounit)
     if (auto *e = std::get_if<Fortran::parser::FileUnitNumber>(&iounit->u))
       return genIOUnitNumber(converter, loc, Fortran::semantics::GetExpr(*e),
                              ty, csi, stmtCtx);
   return builder.create<mlir::arith::ConstantOp>(
-      loc, builder.getIntegerAttr(ty, Fortran::runtime::io::DefaultUnit));
+      loc, builder.getIntegerAttr(ty, defaultUnitNumber));
 }
 
 template <typename A>
-static mlir::Value getIOUnit(Fortran::lower::AbstractConverter &converter,
-                             mlir::Location loc, const A &stmt, mlir::Type ty,
-                             ConditionSpecInfo &csi,
-                             Fortran::lower::StatementContext &stmtCtx) {
+static mlir::Value
+getIOUnit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+          const A &stmt, mlir::Type ty, ConditionSpecInfo &csi,
+          Fortran::lower::StatementContext &stmtCtx, int defaultUnitNumber) {
   const Fortran::parser::IoUnit *iounit =
       stmt.iounit ? &*stmt.iounit : getIOControl<Fortran::parser::IoUnit>(stmt);
-  return genIOUnit(converter, loc, iounit, ty, csi, stmtCtx);
+  return genIOUnit(converter, loc, iounit, ty, csi, stmtCtx, defaultUnitNumber);
 }
 //===----------------------------------------------------------------------===//
 // Generators for each IO statement type.
@@ -2052,7 +2014,7 @@ template <bool isInput>
 mlir::func::FuncOp
 getBeginDataTransferFunc(mlir::Location loc, fir::FirOpBuilder &builder,
                          bool isFormatted, bool isListOrNml, bool isInternal,
-                         bool isInternalWithDesc, bool isAsync) {
+                         bool isInternalWithDesc) {
   if constexpr (isInput) {
     if (isFormatted || isListOrNml) {
       if (isInternal) {
@@ -2101,13 +2063,12 @@ getBeginDataTransferFunc(mlir::Location loc, fir::FirOpBuilder &builder,
 }
 
 /// Generate the arguments of a begin data transfer statement call.
-template <bool hasIOCtrl, typename A>
+template <bool hasIOCtrl, int defaultUnitNumber, typename A>
 void genBeginDataTransferCallArgs(
     llvm::SmallVectorImpl<mlir::Value> &ioArgs,
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const A &stmt, mlir::FunctionType ioFuncTy, bool isFormatted,
     bool isListOrNml, [[maybe_unused]] bool isInternal,
-    [[maybe_unused]] bool isAsync,
     const std::optional<fir::ExtendedValue> &descRef, ConditionSpecInfo &csi,
     Fortran::lower::StatementContext &stmtCtx) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -2155,18 +2116,16 @@ void genBeginDataTransferCallArgs(
       ioArgs.push_back( // buffer length
           getDefaultScratchLen(builder, loc, ioFuncTy.getInput(ioArgs.size())));
     } else { // external IO - maybe explicit format; unit
-      if (isAsync)
-        TODO(loc, "asynchronous");
       maybeGetFormatArgs();
       ioArgs.push_back(getIOUnit(converter, loc, stmt,
-                                 ioFuncTy.getInput(ioArgs.size()), csi,
-                                 stmtCtx));
+                                 ioFuncTy.getInput(ioArgs.size()), csi, stmtCtx,
+                                 defaultUnitNumber));
     }
   } else { // PRINT - maybe explicit format; default unit
     maybeGetFormatArgs();
     ioArgs.push_back(builder.create<mlir::arith::ConstantOp>(
         loc, builder.getIntegerAttr(ioFuncTy.getInput(ioArgs.size()),
-                                    Fortran::runtime::io::DefaultUnit)));
+                                    defaultUnitNumber)));
   }
   // File name and line number are always the last two arguments.
   ioArgs.push_back(
@@ -2189,8 +2148,12 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
       isInternal ? maybeGetInternalIODescriptor(converter, loc, stmt, stmtCtx)
                  : std::nullopt;
   const bool isInternalWithDesc = descRef.has_value();
-  const bool isAsync = isDataTransferAsynchronous(loc, stmt);
   const bool isNml = isDataTransferNamelist(stmt);
+  // Flang runtime currently implement asynchronous IO synchronously, so
+  // asynchronous IO statements are lowered as regular IO statements
+  // (except that GetAsynchronousId may be called to set the ID variable
+  // and SetAsynchronous will be call to tell the runtime that this is supposed
+  // to be (or not) an asynchronous IO statements).
 
   // Generate an EnableHandlers call and remaining specifier calls.
   ConditionSpecInfo csi;
@@ -2201,11 +2164,13 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   // Generate the begin data transfer function call.
   mlir::func::FuncOp ioFunc = getBeginDataTransferFunc<isInput>(
       loc, builder, isFormatted, isList || isNml, isInternal,
-      isInternalWithDesc, isAsync);
+      isInternalWithDesc);
   llvm::SmallVector<mlir::Value> ioArgs;
-  genBeginDataTransferCallArgs<hasIOCtrl>(
+  genBeginDataTransferCallArgs<
+      hasIOCtrl, isInput ? Fortran::runtime::io::DefaultInputUnit
+                         : Fortran::runtime::io::DefaultOutputUnit>(
       ioArgs, converter, loc, stmt, ioFunc.getFunctionType(), isFormatted,
-      isList || isNml, isInternal, isAsync, descRef, csi, stmtCtx);
+      isList || isNml, isInternal, descRef, csi, stmtCtx);
   mlir::Value cookie =
       builder.create<fir::CallOp>(loc, ioFunc, ioArgs).getResult(0);
 
@@ -2245,8 +2210,18 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
 
   builder.restoreInsertionPoint(insertPt);
   if constexpr (hasIOCtrl) {
-    genIOReadSize(converter, loc, cookie, stmt.controls,
-                  csi.hasErrorConditionSpec());
+    for (const auto &spec : stmt.controls)
+      if (const auto *size =
+              std::get_if<Fortran::parser::IoControlSpec::Size>(&spec.u)) {
+        // This call is not conditional on the current IO status (ok) because
+        // the size needs to be filled even if some error condition
+        // (end-of-file...) was met during the input statement (in which case
+        // the runtime may return zero for the size read).
+        genIOGetVar<mkIOKey(GetSize)>(converter, loc, cookie, *size);
+      } else if (const auto *idVar =
+                     std::get_if<Fortran::parser::IdVariable>(&spec.u)) {
+        genIOGetVar<mkIOKey(GetAsynchronousId)>(converter, loc, cookie, *idVar);
+      }
   }
   // Generate end statement call/s.
   mlir::Value result = genEndIO(converter, loc, cookie, csi, stmtCtx);

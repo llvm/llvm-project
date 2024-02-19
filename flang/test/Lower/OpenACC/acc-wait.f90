@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenACC wait directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine acc_update
   integer :: async = 1

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck %s --check-prefix=GFX90A
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=GFX900 --implicit-check-not=error:
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck %s --check-prefix=GFX90A
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=GFX900 --implicit-check-not=error:
 
 // GFX90A: v_ceil_f64_dpp v[0:1], v[2:3]  row_newbcast:1 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x30,0x00,0x7e,0x02,0x51,0x01,0xff]
 // GFX900: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand.

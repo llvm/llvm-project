@@ -9,7 +9,7 @@
 // This test ensures that assertions trigger without the user having to do anything when the debug mode has been enabled
 // by default.
 
-// UNSUPPORTED: !libcpp-has-debug-mode
+// REQUIRES: libcpp-hardening-mode=debug
 // `check_assertion.h` is only available starting from C++11.
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.
@@ -19,10 +19,8 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_UNCATEGORIZED(false, "Should fire");
-  }(), "Should fire");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire"); }(), "Should fire");
 
   return 0;
 }

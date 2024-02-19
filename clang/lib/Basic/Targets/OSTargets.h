@@ -34,36 +34,6 @@ public:
   }
 };
 
-// CloudABI Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY CloudABITargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    Builder.defineMacro("__CloudABI__");
-
-    // CloudABI uses ISO/IEC 10646:2012 for wchar_t, char16_t and char32_t.
-    Builder.defineMacro("__STDC_ISO_10646__", "201206L");
-  }
-
-public:
-  using OSTargetInfo<Target>::OSTargetInfo;
-};
-
-// Ananas target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY AnanasTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    // Ananas defines
-    Builder.defineMacro("__Ananas__");
-  }
-
-public:
-  using OSTargetInfo<Target>::OSTargetInfo;
-};
-
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                       const llvm::Triple &Triple, StringRef &PlatformName,
                       VersionTuple &PlatformMinVersion);
@@ -104,7 +74,8 @@ public:
         this->TLSSupported = !Triple.isOSVersionLT(3);
     } else if (Triple.isDriverKit()) {
       // No TLS on DriverKit.
-    }
+    } else if (Triple.isXROS())
+      this->TLSSupported = true;
 
     this->MCountName = "\01mcount";
   }
@@ -138,6 +109,9 @@ public:
       break;
     case llvm::Triple::WatchOS: // Earliest supporting version is 5.0.0.
       MinVersion = llvm::VersionTuple(5U);
+      break;
+    case llvm::Triple::XROS:
+      MinVersion = llvm::VersionTuple(0);
       break;
     default:
       // Conservatively return 8 bytes if OS is unknown.
@@ -217,6 +191,8 @@ protected:
     Builder.defineMacro("__FreeBSD_cc_version", Twine(CCVersion));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
 
     // On FreeBSD, wchar_t contains the number of the code point as
     // used by the character set of the locale. These character sets are
@@ -234,9 +210,11 @@ public:
   FreeBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
     switch (Triple.getArch()) {
-    default:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      [[fallthrough]];
+    default:
       this->MCountName = ".mcount";
       break;
     case llvm::Triple::mips:
@@ -298,7 +276,6 @@ public:
     this->IntPtrType = TargetInfo::SignedLong;
     this->PtrDiffType = TargetInfo::SignedLong;
     this->ProcessIDType = TargetInfo::SignedLong;
-    this->TLSSupported = false;
     switch (Triple.getArch()) {
     default:
       break;
@@ -327,28 +304,6 @@ protected:
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
-public:
-  using OSTargetInfo<Target>::OSTargetInfo;
-};
-
-// Minix Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY MinixTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    // Minix defines
-
-    Builder.defineMacro("__minix", "3");
-    Builder.defineMacro("_EM_WSIZE", "4");
-    Builder.defineMacro("_EM_PSIZE", "4");
-    Builder.defineMacro("_EM_SSIZE", "2");
-    Builder.defineMacro("_EM_LSIZE", "4");
-    Builder.defineMacro("_EM_FSIZE", "4");
-    Builder.defineMacro("_EM_DSIZE", "8");
-    DefineStd(Builder, "unix", Opts);
-  }
-
 public:
   using OSTargetInfo<Target>::OSTargetInfo;
 };
@@ -425,12 +380,22 @@ protected:
     Builder.defineMacro("__unix__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 
 public:
   NetBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
     this->MCountName = "__mcount";
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
   }
 };
 
@@ -870,10 +835,10 @@ public:
       // Handled in ARM's setABI().
     } else if (Triple.getArch() == llvm::Triple::x86) {
       this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-n8:16:32-S128");
+                            "i64:64-i128:128-n8:16:32-S128");
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-n8:16:32:64-S128");
+                            "i64:64-i128:128-n8:16:32:64-S128");
     } else if (Triple.getArch() == llvm::Triple::mipsel) {
       // Handled on mips' setDataLayout.
     } else {

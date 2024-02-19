@@ -10,11 +10,11 @@
 #include "src/math/asinhf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 using LlvmLibcAsinhfExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Asinh,
-                                      __llvm_libc::asinhf>;
+                                      LIBC_NAMESPACE::asinhf>;
 
 // Range: [0, Inf];
 static constexpr uint32_t POS_START = 0x0000'0000U;

@@ -27,5 +27,5 @@ typedef std::make_integer_sequence<int, -3> MakeSeqT;
 #if TEST_HAS_BUILTIN(__make_integer_seq)
 MakeSeqT i; // expected-error@*:* {{integer sequences must have non-negative sequence length}}
 #else
-MakeSeqT i; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}std::make_integer_sequence must have a non-negative sequence length}}
+MakeSeqT i; // expected-error-re@*:* {{static assertion failed{{.*}}std::make_integer_sequence must have a non-negative sequence length}}
 #endif

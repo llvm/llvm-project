@@ -3,10 +3,10 @@
 # RUN: llvm-mc -triple riscv32 -mattr=+c -show-encoding \
 # RUN:   -riscv-no-aliases < %s | FileCheck -check-prefixes=CHECK,CHECK-INST,CHECK-INSTASM %s
 # RUN: llvm-mc -triple riscv32 -mattr=+c -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c -d - \
+# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c --no-print-imm-hex -d - \
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS,CHECK-ALIASOBJ32 %s
 # RUN: llvm-mc -triple riscv32 -mattr=+c -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c -d -M no-aliases - \
+# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c --no-print-imm-hex -d -M no-aliases - \
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST,CHECK-INSTOBJ32 %s
 
 # RUN: llvm-mc -triple riscv64 -mattr=+c -show-encoding < %s \
@@ -14,10 +14,10 @@
 # RUN: llvm-mc -triple riscv64 -mattr=+c -show-encoding \
 # RUN:   -riscv-no-aliases < %s | FileCheck -check-prefixes=CHECK-INST,CHECK-INSTASM %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c -d - \
+# RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c --no-print-imm-hex -d - \
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS,CHECK-ALIASOBJ64 %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c -d -M no-aliases - \
+# RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c --no-print-imm-hex -d -M no-aliases - \
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST,CHECK-INSTOBJ64 %s
 
 # CHECK-BYTES: 2e 85
@@ -154,15 +154,35 @@ jal zero, -2048
 # CHECK: # encoding: [0x01,0xd0]
 beq s0, zero, -256
 
+# CHECK-BYTES: 01 d0
+# CHECK-ALIASASM: beqz s0, -256
+# CHECK-ALIASOBJ32: beqz s0, 0xffffff2a
+# CHECK-ALIASOBJ64: beqz s0, 0xffffffffffffff2a
+# CHECK-INSTASM: c.beqz s0, -256
+# CHECK-INSTOBJ32: c.beqz s0, 0xffffff2a
+# CHECK-INSTOBJ64: c.beqz s0, 0xffffffffffffff2a
+# CHECK: # encoding: [0x01,0xd0]
+beq zero, s0, -256
+
 # CHECK-BYTES: 7d ec
 # CHECK-ALIASASM: bnez s0, 254
-# CHECK-ALIASOBJ32: bnez s0, 0x128
-# CHECK-ALIASOBJ64: bnez s0, 0x128
+# CHECK-ALIASOBJ32: bnez s0, 0x12a
+# CHECK-ALIASOBJ64: bnez s0, 0x12a
 # CHECK-INSTASM: c.bnez s0, 254
-# CHECK-INSTOBJ32: c.bnez s0, 0x128
-# CHECK-INSTOBJ64: c.bnez s0, 0x128
+# CHECK-INSTOBJ32: c.bnez s0, 0x12a
+# CHECK-INSTOBJ64: c.bnez s0, 0x12a
 # CHECK: # encoding: [0x7d,0xec]
 bne s0, zero, 254
+
+# CHECK-BYTES: 7d ec
+# CHECK-ALIASASM: bnez s0, 254
+# CHECK-ALIASOBJ32: bnez s0, 0x12c
+# CHECK-ALIASOBJ64: bnez s0, 0x12c
+# CHECK-INSTASM: c.bnez s0, 254
+# CHECK-INSTOBJ32: c.bnez s0, 0x12c
+# CHECK-INSTOBJ64: c.bnez s0, 0x12c
+# CHECK: # encoding: [0x7d,0xec]
+bne zero, s0, 254
 
 # CHECK-BYTES: 7e 04
 # CHECK-ALIAS: slli s0, s0, 31

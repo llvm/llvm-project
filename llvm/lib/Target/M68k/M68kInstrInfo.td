@@ -55,15 +55,6 @@ def MxSDT_BiArithCCRInOut : SDTypeProfile<2, 3, [
   /*   CCR */ SDTCisSameAs<1, 4>
 ]>;
 
-// RES1, RES2, CCR <- op LHS, RHS
-def MxSDT_2BiArithCCROut : SDTypeProfile<3, 2, [
-  /* RES 1 */ SDTCisInt<0>,
-  /* RES 2 */ SDTCisSameAs<0, 1>,
-  /*   CCR */ SDTCisVT<1, i8>,
-  /*   LHS */ SDTCisSameAs<0, 2>,
-  /*   RHS */ SDTCisSameAs<0, 3>
-]>;
-
 def MxSDT_CmpTest : SDTypeProfile<1, 2, [
    /* CCR */ SDTCisVT<0, i8>,
    /* Ops */ SDTCisSameAs<1, 2>
@@ -134,7 +125,7 @@ def MxAddX : SDNode<"M68kISD::ADDX", MxSDT_BiArithCCRInOut>;
 def MxSubX : SDNode<"M68kISD::SUBX", MxSDT_BiArithCCRInOut>;
 
 def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
-def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_2BiArithCCROut, [SDNPCommutative]>;
+def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
 def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
@@ -186,6 +177,7 @@ let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass]in {
   def MxDRegClass : MxOpClass<"DReg">;
 
   def MxFPDRegClass : MxOpClass<"FPDReg">;
+  def MxFPCRegClass : MxOpClass<"FPCReg">;
 }
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
@@ -240,6 +232,12 @@ let ParserMatchClass = MxFPDRegClass in {
   def MxFPR32 : MxRegOp<f32, FPDR32, MxSizeF32, "fp">;
   def MxFPR64 : MxRegOp<f64, FPDR64, MxSizeF64, "fp">;
   def MxFPR80 : MxRegOp<f80, FPDR80, MxSizeF80, "fp">;
+}
+
+// FLOATING POINT SYSTEM CONTROL REGISTER
+let ParserMatchClass = MxFPCRegClass in {
+  def MxFPCSR : MxRegOp<i32, FPCSC, MxSize32, "fpcs">;
+  def MxFPIR  : MxRegOp<i32, FPIC,  MxSize32, "fpi">;
 }
 
 class MxMemOp<dag ops, MxSize size, string letter,
@@ -515,9 +513,14 @@ def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
 // Pattern Fragments
 //===----------------------------------------------------------------------===//
 
-def MximmSExt8  : PatLeaf<(i8  imm)>;
-def MximmSExt16 : PatLeaf<(i16 imm)>;
-def MximmSExt32 : PatLeaf<(i32 imm)>;
+def Mxi8immSExt8  : PatLeaf<(i8  imm)>;
+def MximmSExt8    : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
+
+def Mxi16immSExt16 : PatLeaf<(i16 imm)>;
+def MximmSExt16    : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+
+def Mxi32immSExt32 : PatLeaf<(i32 imm)>;
+def MximmSExt32    : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 
 // Used for Shifts and Rotations, since M68k immediates in these instructions
 // are 1 <= i <= 8. Generally, if immediate is bigger than 8 it will be moved
@@ -710,7 +713,7 @@ foreach size = [8, 16, 32] in {
   // #imm
   def MxOp#size#AddrMode_i
     : MxImmOpBundle<size, !cast<MxOperand>("Mxi"#size#"imm"),
-                    !cast<PatFrag>("MximmSExt"#size)>;
+                    !cast<PatFrag>("Mxi"#size#"immSExt"#size)>;
 } // foreach size = [8, 16, 32]
 
 foreach size = [16, 32] in {
@@ -727,6 +730,9 @@ foreach size = [32, 64, 80] in
 def MxOp#size#AddrMode_fpr
   : MxOpBundle<size, !cast<MxOperand>("MxFPR"#size), ?>;
 
+def MxOp32AddrMode_fpcs : MxOpBundle<32, MxFPCSR, ?>;
+def MxOp32AddrMode_fpi  : MxOpBundle<32, MxFPIR, ?>;
+
 class MxType8Class<string rLet, MxOperand reg>
     : MxType<i8, "b", "", rLet, reg,
              MxARI8,   MxCP_ARI,
@@ -737,7 +743,7 @@ class MxType8Class<string rLet, MxOperand reg>
              MxAL8,    MxCP_AL,
              MxPCD8,   MxCP_PCD,
              MxPCI8,   MxCP_PCI,
-             Mxi8imm,  MximmSExt8,
+             Mxi8imm,  Mxi8immSExt8,
              Mxloadi8>;
 
 def MxType8 : MxType8Class<?,?>;
@@ -752,7 +758,7 @@ class MxType16Class<string rLet, MxOperand reg>
              MxAL16,    MxCP_AL,
              MxPCD16,   MxCP_PCD,
              MxPCI16,   MxCP_PCI,
-             Mxi16imm,  MximmSExt16,
+             Mxi16imm,  Mxi16immSExt16,
              Mxloadi16>;
 
 def MxType16 : MxType16Class<?,?>;
@@ -767,7 +773,7 @@ class MxType32Class<string rLet, MxOperand reg>
              MxAL32,    MxCP_AL,
              MxPCD32,   MxCP_PCD,
              MxPCI32,   MxCP_PCI,
-             Mxi32imm,  MximmSExt32,
+             Mxi32imm,  Mxi32immSExt32,
              Mxloadi32>;
 
 def MxType32 : MxType32Class<?,?>;

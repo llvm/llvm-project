@@ -34,12 +34,6 @@ namespace {
 
 // Function definition of a RVV intrinsic.
 struct RVVIntrinsicDef {
-  /// Full function name with suffix, e.g. vadd_vv_i32m1.
-  std::string Name;
-
-  /// Overloaded function name, e.g. vadd.
-  std::string OverloadName;
-
   /// Mapping to which clang built-in function, e.g. __builtin_rvv_vadd.
   std::string BuiltinName;
 
@@ -49,7 +43,7 @@ struct RVVIntrinsicDef {
 
 struct RVVOverloadIntrinsicDef {
   // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
-  SmallVector<size_t, 8> Indexes;
+  SmallVector<uint16_t, 8> Indexes;
 };
 
 } // namespace
@@ -117,6 +111,9 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
   case ScalarTypeKind::UnsignedInteger:
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
+  case ScalarTypeKind::BFloat:
+    QT = Context.BFloat16Ty;
+    break;
   case ScalarTypeKind::Float:
     switch (Type->getElementBitwidth()) {
     case 64:
@@ -133,6 +130,7 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     }
     break;
   case Invalid:
+  case Undefined:
     llvm_unreachable("Unhandled type.");
   }
   if (Type->isVector()) {
@@ -164,7 +162,7 @@ private:
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
   // Mapping function name to index of IntrinsicList.
-  StringMap<size_t> Intrinsics;
+  StringMap<uint16_t> Intrinsics;
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
@@ -176,7 +174,7 @@ private:
 
   // Create FunctionDecl for a vector intrinsic.
   void CreateRVVIntrinsicDecl(LookupResult &LR, IdentifierInfo *II,
-                              Preprocessor &PP, unsigned Index,
+                              Preprocessor &PP, uint32_t Index,
                               bool IsOverload);
 
   void ConstructRVVIntrinsics(ArrayRef<RVVIntrinsicRecord> Recs,
@@ -201,10 +199,35 @@ public:
 void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
   const TargetInfo &TI = Context.getTargetInfo();
-  bool HasRV64 = TI.hasFeature("64bit");
+  static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
+      {"64bit", RVV_REQ_RV64},
+      {"xsfvcp", RVV_REQ_Xsfvcp},
+      {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
+      {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
+      {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
+      {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
+      {"zvbb", RVV_REQ_Zvbb},
+      {"zvbc", RVV_REQ_Zvbc},
+      {"zvkb", RVV_REQ_Zvkb},
+      {"zvkg", RVV_REQ_Zvkg},
+      {"zvkned", RVV_REQ_Zvkned},
+      {"zvknha", RVV_REQ_Zvknha},
+      {"zvknhb", RVV_REQ_Zvknhb},
+      {"zvksed", RVV_REQ_Zvksed},
+      {"zvksh", RVV_REQ_Zvksh},
+      {"zvfbfwma", RVV_REQ_Zvfbfwma},
+      {"experimental", RVV_REQ_Experimental}};
+
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.
   for (auto &Record : Recs) {
+    // Check requirements.
+    if (llvm::any_of(FeatureCheckList, [&](const auto &Item) {
+          return (Record.RequiredExtensions & Item.second) == Item.second &&
+                 !TI.hasFeature(Item.first);
+        }))
+      continue;
+
     // Create Intrinsics for each type and LMUL.
     BasicType BaseType = BasicType::Unknown;
     ArrayRef<PrototypeDescriptor> BasicProtoSeq =
@@ -227,11 +250,12 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
             /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
             UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
-    llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq =
-        RVVIntrinsic::computeBuiltinTypes(
-            BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-            Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
-            Record.IsTuple);
+    llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
+    if (Record.HasMasked)
+      ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
+          BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
+          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
+          Record.IsTuple);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -250,10 +274,14 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       if ((BaseTypeI & Record.TypeRangeMask) != BaseTypeI)
         continue;
 
-      // Check requirement.
-      if (((Record.RequiredExtensions & RVV_REQ_RV64) == RVV_REQ_RV64) &&
-          !HasRV64)
-        continue;
+      if (BaseType == BasicType::Float16) {
+        if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
+          if (!TI.hasFeature("zvfhmin"))
+            continue;
+        } else if (!TI.hasFeature("zvfh")) {
+          continue;
+        }
+      }
 
       // Expanded with different LMUL.
       for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
@@ -352,15 +380,17 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
     OverloadedName += "_" + OverloadedSuffixStr.str();
 
   // clang built-in function name, e.g. __builtin_rvv_vadd.
-  std::string BuiltinName = "__builtin_rvv_" + std::string(Record.Name);
+  std::string BuiltinName = std::string(Record.Name);
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
                                      OverloadedName, PolicyAttrs,
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  size_t Index = IntrinsicList.size();
-  IntrinsicList.push_back({Name, OverloadedName, BuiltinName, Signature});
+  uint16_t Index = IntrinsicList.size();
+  assert(IntrinsicList.size() == (size_t)Index &&
+         "Intrinsics indices overflow.");
+  IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
   Intrinsics.insert({Name, Index});
@@ -376,7 +406,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP,
-                                                       unsigned Index,
+                                                       uint32_t Index,
                                                        bool IsOverload) {
   ASTContext &Context = S.Context;
   RVVIntrinsicDef &IDef = IntrinsicList[Index];
@@ -424,7 +454,8 @@ void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
     RVVIntrinsicDecl->addAttr(OverloadableAttr::CreateImplicit(Context));
 
   // Setup alias to __builtin_rvv_*
-  IdentifierInfo &IntrinsicII = PP.getIdentifierTable().get(IDef.BuiltinName);
+  IdentifierInfo &IntrinsicII =
+      PP.getIdentifierTable().get("__builtin_rvv_" + IDef.BuiltinName);
   RVVIntrinsicDecl->addAttr(
       BuiltinAliasAttr::CreateImplicit(S.Context, &IntrinsicII));
 
@@ -436,6 +467,8 @@ bool RISCVIntrinsicManagerImpl::CreateIntrinsicIfFound(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP) {
   StringRef Name = II->getName();
+  if (!Name.consume_front("__riscv_"))
+    return false;
 
   // Lookup the function name from the overload intrinsics first.
   auto OvIItr = OverloadIntrinsics.find(Name);

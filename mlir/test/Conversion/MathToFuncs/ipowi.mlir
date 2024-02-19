@@ -141,28 +141,28 @@ func.func @ipowi(%arg0: i8, %arg1: i8) {
 // CHECK-SAME:                          %[[VAL_1:.*]]: vector<2x3xi64>) {
 func.func @ipowi_vec(%arg0: vector<2x3xi64>, %arg1: vector<2x3xi64>) {
 // CHECK:   %[[CST:.*]] = arith.constant dense<0> : vector<2x3xi64>
-// CHECK:   %[[B00:.*]] = vector.extract %[[VAL_0]][0, 0] : vector<2x3xi64>
-// CHECK:   %[[E00:.*]] = vector.extract %[[VAL_1]][0, 0] : vector<2x3xi64>
+// CHECK:   %[[B00:.*]] = vector.extract %[[VAL_0]][0, 0] : i64 from vector<2x3xi64>
+// CHECK:   %[[E00:.*]] = vector.extract %[[VAL_1]][0, 0] : i64 from vector<2x3xi64>
 // CHECK:   %[[R00:.*]] = call @__mlir_math_ipowi_i64(%[[B00]], %[[E00]]) : (i64, i64) -> i64
 // CHECK:   %[[TMP00:.*]] = vector.insert %[[R00]], %[[CST]] [0, 0] : i64 into vector<2x3xi64>
-// CHECK:   %[[B01:.*]] = vector.extract %[[VAL_0]][0, 1] : vector<2x3xi64>
-// CHECK:   %[[E01:.*]] = vector.extract %[[VAL_1]][0, 1] : vector<2x3xi64>
+// CHECK:   %[[B01:.*]] = vector.extract %[[VAL_0]][0, 1] : i64 from vector<2x3xi64>
+// CHECK:   %[[E01:.*]] = vector.extract %[[VAL_1]][0, 1] : i64 from vector<2x3xi64>
 // CHECK:   %[[R01:.*]] = call @__mlir_math_ipowi_i64(%[[B01]], %[[E01]]) : (i64, i64) -> i64
 // CHECK:   %[[TMP01:.*]] = vector.insert %[[R01]], %[[TMP00]] [0, 1] : i64 into vector<2x3xi64>
-// CHECK:   %[[B02:.*]] = vector.extract %[[VAL_0]][0, 2] : vector<2x3xi64>
-// CHECK:   %[[E02:.*]] = vector.extract %[[VAL_1]][0, 2] : vector<2x3xi64>
+// CHECK:   %[[B02:.*]] = vector.extract %[[VAL_0]][0, 2] : i64 from vector<2x3xi64>
+// CHECK:   %[[E02:.*]] = vector.extract %[[VAL_1]][0, 2] : i64 from vector<2x3xi64>
 // CHECK:   %[[R02:.*]] = call @__mlir_math_ipowi_i64(%[[B02]], %[[E02]]) : (i64, i64) -> i64
 // CHECK:   %[[TMP02:.*]] = vector.insert %[[R02]], %[[TMP01]] [0, 2] : i64 into vector<2x3xi64>
-// CHECK:   %[[B10:.*]] = vector.extract %[[VAL_0]][1, 0] : vector<2x3xi64>
-// CHECK:   %[[E10:.*]] = vector.extract %[[VAL_1]][1, 0] : vector<2x3xi64>
+// CHECK:   %[[B10:.*]] = vector.extract %[[VAL_0]][1, 0] : i64 from vector<2x3xi64>
+// CHECK:   %[[E10:.*]] = vector.extract %[[VAL_1]][1, 0] : i64 from vector<2x3xi64>
 // CHECK:   %[[R10:.*]] = call @__mlir_math_ipowi_i64(%[[B10]], %[[E10]]) : (i64, i64) -> i64
 // CHECK:   %[[TMP10:.*]] = vector.insert %[[R10]], %[[TMP02]] [1, 0] : i64 into vector<2x3xi64>
-// CHECK:   %[[B11:.*]] = vector.extract %[[VAL_0]][1, 1] : vector<2x3xi64>
-// CHECK:   %[[E11:.*]] = vector.extract %[[VAL_1]][1, 1] : vector<2x3xi64>
+// CHECK:   %[[B11:.*]] = vector.extract %[[VAL_0]][1, 1] : i64 from vector<2x3xi64>
+// CHECK:   %[[E11:.*]] = vector.extract %[[VAL_1]][1, 1] : i64 from vector<2x3xi64>
 // CHECK:   %[[R11:.*]] = call @__mlir_math_ipowi_i64(%[[B11]], %[[E11]]) : (i64, i64) -> i64
 // CHECK:   %[[TMP11:.*]] = vector.insert %[[R11]], %[[TMP10]] [1, 1] : i64 into vector<2x3xi64>
-// CHECK:   %[[B12:.*]] = vector.extract %[[VAL_0]][1, 2] : vector<2x3xi64>
-// CHECK:   %[[E12:.*]] = vector.extract %[[VAL_1]][1, 2] : vector<2x3xi64>
+// CHECK:   %[[B12:.*]] = vector.extract %[[VAL_0]][1, 2] : i64 from vector<2x3xi64>
+// CHECK:   %[[E12:.*]] = vector.extract %[[VAL_1]][1, 2] : i64 from vector<2x3xi64>
 // CHECK:   %[[R12:.*]] = call @__mlir_math_ipowi_i64(%[[B12]], %[[E12]]) : (i64, i64) -> i64
 // CHECK:   %[[TMP12:.*]] = vector.insert %[[R12]], %[[TMP11]] [1, 2] : i64 into vector<2x3xi64>
 // CHECK:   return

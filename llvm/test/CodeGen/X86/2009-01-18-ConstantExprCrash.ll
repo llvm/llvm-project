@@ -25,7 +25,10 @@ bb4.i.i70:		; preds = %bb4.i.i70, %bb.i51
 	br i1 false, label %_ZN11xercesc_2_59XMLString9stringLenEPKt.exit.i73, label %bb4.i.i70
 
 _ZN11xercesc_2_59XMLString9stringLenEPKt.exit.i73:		; preds = %bb4.i.i70
-	%0 = load i16, ptr getelementptr ([7 x i16], ptr @_ZN11xercesc_2_5L17gIdeographicCharsE, i32 0, i32 add (i32 ashr (i32 sub (i32 ptrtoint (ptr getelementptr ([7 x i16], ptr @_ZN11xercesc_2_5L17gIdeographicCharsE, i32 0, i32 4) to i32), i32 ptrtoint (ptr @_ZN11xercesc_2_5L17gIdeographicCharsE to i32)), i32 1), i32 1)), align 4		; <i16> [#uses=0]
+	%ashr = ashr i32 sub (i32 ptrtoint (ptr getelementptr ([7 x i16], ptr @_ZN11xercesc_2_5L17gIdeographicCharsE, i32 0, i32 4) to i32), i32 ptrtoint (ptr @_ZN11xercesc_2_5L17gIdeographicCharsE to i32)), 1
+	%add = add i32 %ashr, 1
+	%gep = getelementptr [7 x i16], ptr @_ZN11xercesc_2_5L17gIdeographicCharsE, i32 0, i32 %add
+	%0 = load i16, ptr %gep, align 4
 	br label %bb4.i5.i141
 
 bb4.i5.i141:		; preds = %bb4.i5.i141, %_ZN11xercesc_2_59XMLString9stringLenEPKt.exit.i73

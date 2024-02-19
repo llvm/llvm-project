@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -443,9 +444,61 @@ OpFoldResult XOrOp::fold(FoldAdaptor adaptor) {
 // CastSOp
 //===----------------------------------------------------------------------===//
 
+static OpFoldResult
+foldCastOp(Attribute input, Type type,
+           function_ref<APInt(const APInt &, unsigned)> extFn,
+           function_ref<APInt(const APInt &, unsigned)> extOrTruncFn) {
+  auto attr = dyn_cast_if_present<IntegerAttr>(input);
+  if (!attr)
+    return {};
+  const APInt &value = attr.getValue();
+
+  if (isa<IndexType>(type)) {
+    // When casting to an index type, perform the cast assuming a 64-bit target.
+    // The result can be truncated to 32 bits as needed and always be correct.
+    // This is because `cast32(cast64(value)) == cast32(value)`.
+    APInt result = extOrTruncFn(value, 64);
+    return IntegerAttr::get(type, result);
+  }
+
+  // When casting from an index type, we must ensure the results respect
+  // `cast_t(value) == cast_t(trunc32(value))`.
+  auto intType = cast<IntegerType>(type);
+  unsigned width = intType.getWidth();
+
+  // If the result type is at most 32 bits, then the cast can always be folded
+  // because it is always a truncation.
+  if (width <= 32) {
+    APInt result = value.trunc(width);
+    return IntegerAttr::get(type, result);
+  }
+
+  // If the result type is at least 64 bits, then the cast is always a
+  // extension. The results will differ if `trunc32(value) != value)`.
+  if (width >= 64) {
+    if (extFn(value.trunc(32), 64) != value)
+      return {};
+    APInt result = extFn(value, width);
+    return IntegerAttr::get(type, result);
+  }
+
+  // Otherwise, we just have to check the property directly.
+  APInt result = value.trunc(width);
+  if (result != extFn(value.trunc(32), width))
+    return {};
+  return IntegerAttr::get(type, result);
+}
+
 bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
   return llvm::isa<IndexType>(lhsTypes.front()) !=
          llvm::isa<IndexType>(rhsTypes.front());
+}
+
+OpFoldResult CastSOp::fold(FoldAdaptor adaptor) {
+  return foldCastOp(
+      adaptor.getInput(), getType(),
+      [](const APInt &x, unsigned width) { return x.sext(width); },
+      [](const APInt &x, unsigned width) { return x.sextOrTrunc(width); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -455,6 +508,13 @@ bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
 bool CastUOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
   return llvm::isa<IndexType>(lhsTypes.front()) !=
          llvm::isa<IndexType>(rhsTypes.front());
+}
+
+OpFoldResult CastUOp::fold(FoldAdaptor adaptor) {
+  return foldCastOp(
+      adaptor.getInput(), getType(),
+      [](const APInt &x, unsigned width) { return x.zext(width); },
+      [](const APInt &x, unsigned width) { return x.zextOrTrunc(width); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -518,6 +578,24 @@ static std::optional<bool> foldCmpOfMaxOrMin(Operation *lhsOp,
                                 lhsRange, ConstantIntRanges::constant(cstB));
 }
 
+/// Return the result of `cmp(pred, x, x)`
+static bool compareSameArgs(IndexCmpPredicate pred) {
+  switch (pred) {
+  case IndexCmpPredicate::EQ:
+  case IndexCmpPredicate::SGE:
+  case IndexCmpPredicate::SLE:
+  case IndexCmpPredicate::UGE:
+  case IndexCmpPredicate::ULE:
+    return true;
+  case IndexCmpPredicate::NE:
+  case IndexCmpPredicate::SGT:
+  case IndexCmpPredicate::SLT:
+  case IndexCmpPredicate::UGT:
+  case IndexCmpPredicate::ULT:
+    return false;
+  }
+}
+
 OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
   // Attempt to fold if both inputs are constant.
   auto lhs = dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
@@ -546,7 +624,42 @@ OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
       return BoolAttr::get(getContext(), *result64);
   }
 
+  // Fold `cmp(x, x)`
+  if (getLhs() == getRhs())
+    return BoolAttr::get(getContext(), compareSameArgs(getPred()));
+
   return {};
+}
+
+/// Canonicalize
+/// `x - y cmp 0` to `x cmp y`. or `x - y cmp 0` to `x cmp y`.
+/// `0 cmp x - y` to `y cmp x`. or `0 cmp x - y` to `y cmp x`.
+LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
+  IntegerAttr cmpRhs;
+  IntegerAttr cmpLhs;
+
+  bool rhsIsZero = matchPattern(op.getRhs(), m_Constant(&cmpRhs)) &&
+                   cmpRhs.getValue().isZero();
+  bool lhsIsZero = matchPattern(op.getLhs(), m_Constant(&cmpLhs)) &&
+                   cmpLhs.getValue().isZero();
+  if (!rhsIsZero && !lhsIsZero)
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "cmp is not comparing something with 0");
+  SubOp subOp = rhsIsZero ? op.getLhs().getDefiningOp<index::SubOp>()
+                          : op.getRhs().getDefiningOp<index::SubOp>();
+  if (!subOp)
+    return rewriter.notifyMatchFailure(
+        op.getLoc(), "non-zero operand is not a result of subtraction");
+
+  index::CmpOp newCmp;
+  if (rhsIsZero)
+    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
+                                           subOp.getLhs(), subOp.getRhs());
+  else
+    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
+                                           subOp.getRhs(), subOp.getLhs());
+  rewriter.replaceOp(op, newCmp);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

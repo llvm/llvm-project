@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: [{key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions, value: true}, {key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true}]}" --
+// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: {cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions: true, cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true}}" --
 
 // Don't warn on destructors without definitions, they might be defaulted in another TU.
 class DeclaresDestructor {

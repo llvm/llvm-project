@@ -115,6 +115,7 @@ TYPE_PARSER(construct<OmpDeviceTypeClause>(
 TYPE_PARSER(construct<OmpIfClause>(
     maybe(
         ("PARALLEL" >> pure(OmpIfClause::DirectiveNameModifier::Parallel) ||
+            "SIMD" >> pure(OmpIfClause::DirectiveNameModifier::Simd) ||
             "TARGET ENTER DATA" >>
                 pure(OmpIfClause::DirectiveNameModifier::TargetEnterData) ||
             "TARGET EXIT DATA" >>
@@ -125,7 +126,8 @@ TYPE_PARSER(construct<OmpIfClause>(
                 pure(OmpIfClause::DirectiveNameModifier::TargetUpdate) ||
             "TARGET" >> pure(OmpIfClause::DirectiveNameModifier::Target) ||
             "TASK"_id >> pure(OmpIfClause::DirectiveNameModifier::Task) ||
-            "TASKLOOP" >> pure(OmpIfClause::DirectiveNameModifier::Taskloop)) /
+            "TASKLOOP" >> pure(OmpIfClause::DirectiveNameModifier::Taskloop) ||
+            "TEAMS" >> pure(OmpIfClause::DirectiveNameModifier::Teams)) /
         ":"),
     scalarLogicalExpr))
 
@@ -257,6 +259,8 @@ TYPE_PARSER(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
+    "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
+                   parenthesized(Parser<OmpObjectList>{}))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
     "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
@@ -266,13 +270,16 @@ TYPE_PARSER(
                   parenthesized(Parser<OmpObjectList>{}))) ||
     "GRAINSIZE" >> construct<OmpClause>(construct<OmpClause::Grainsize>(
                        parenthesized(scalarIntExpr))) ||
+    "HAS_DEVICE_ADDR" >>
+        construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
+            parenthesized(Parser<OmpObjectList>{}))) ||
     "HINT" >> construct<OmpClause>(
                   construct<OmpClause::Hint>(parenthesized(constantExpr))) ||
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
-                           parenthesized(nonemptyList(name)))) ||
+                           parenthesized(Parser<OmpObjectList>{}))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
                          parenthesized(Parser<OmpObjectList>{}))) ||
     "LINEAR" >> construct<OmpClause>(construct<OmpClause::Linear>(
@@ -430,9 +437,9 @@ TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
 //                               acq_rel
 //                               relaxed
 TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
-    "SEQ_CST" >> pure(OmpAtomicDefaultMemOrderClause::Type::SeqCst) ||
-    "ACQ_REL" >> pure(OmpAtomicDefaultMemOrderClause::Type::AcqRel) ||
-    "RELAXED" >> pure(OmpAtomicDefaultMemOrderClause::Type::Relaxed)))
+    "SEQ_CST" >> pure(common::OmpAtomicDefaultMemOrderType::SeqCst) ||
+    "ACQ_REL" >> pure(common::OmpAtomicDefaultMemOrderType::AcqRel) ||
+    "RELAXED" >> pure(common::OmpAtomicDefaultMemOrderType::Relaxed)))
 
 // 2.17.7 Atomic construct
 //        atomic-clause -> memory-order-clause | HINT(hint-expression)
@@ -608,7 +615,7 @@ TYPE_PARSER(
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
-    verbatim("REQUIRES"_tok), some(Parser<OmpClause>{} / maybe(","_tok)))))
+    verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
 
 // 2.15.2 Threadprivate directive
 TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(

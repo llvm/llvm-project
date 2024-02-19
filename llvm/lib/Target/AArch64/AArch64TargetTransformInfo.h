@@ -77,6 +77,12 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
+  bool areTypesABICompatible(const Function *Caller, const Function *Callee,
+                             const ArrayRef<Type *> &Types) const;
+
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 
@@ -162,6 +168,8 @@ public:
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr);
+
+  bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst, Type *Src);
 
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
@@ -252,7 +260,8 @@ public:
       return false;
 
     // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors())
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
+        DataType->getPrimitiveSizeInBits() != 128)
       return false; // Fall back to scalarization of masked operations.
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
@@ -282,6 +291,7 @@ public:
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
+
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
@@ -385,6 +395,11 @@ public:
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = std::nullopt);
 
+  InstructionCost getScalarizationOverhead(VectorType *Ty,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind);
+
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.
@@ -397,6 +412,8 @@ public:
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 
+  bool shouldTreatInstructionLikeSelect(const Instruction *I);
+
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
     // We can vectorize store v4i8.
@@ -405,6 +422,8 @@ public:
 
     return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
   }
+
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 
 } // end namespace llvm

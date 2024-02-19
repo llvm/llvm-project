@@ -134,6 +134,13 @@ public:
       break;
     }
 
+    case COFF::IMAGE_REL_AMD64_SECTION: {
+      assert(static_cast<int16_t>(RE.SectionID) <= INT16_MAX && "Relocation overflow");
+      assert(static_cast<int16_t>(RE.SectionID) >= INT16_MIN && "Relocation underflow");
+      writeBytesUnaligned(RE.SectionID, Target, 2);
+      break;
+    }
+
     default:
       llvm_unreachable("Relocation type not implemented yet!");
       break;
@@ -219,7 +226,7 @@ public:
     unsigned TargetSectionID = 0;
     uint64_t TargetOffset = 0;
 
-    if (TargetName.startswith(getImportSymbolPrefix())) {
+    if (TargetName.starts_with(getImportSymbolPrefix())) {
       assert(IsExtern && "DLLImport not marked extern?");
       TargetSectionID = SectionID;
       TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName);

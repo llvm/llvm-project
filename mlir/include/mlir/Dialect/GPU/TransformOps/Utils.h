@@ -66,7 +66,7 @@ struct GpuIdBuilder {
 
   GpuIdBuilder() = default;
   GpuIdBuilder(MLIRContext *ctx, bool useLinearMapping,
-               MappingIdBuilderFnType builder);
+               const MappingIdBuilderFnType &builder);
 
   /// The mapping attributes targeted by this generator.
   SmallVector<DeviceMappingAttrInterface> mappingAttributes;

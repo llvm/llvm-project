@@ -108,7 +108,7 @@ private:
   uint64_t findOrAllocGOTEntry(const RelocationValueRef &Value,
                                unsigned GOTRelType);
 
-  // Resolve the relvative address of GOTOffset in Section ID and place
+  // Resolve the relative address of GOTOffset in Section ID and place
   // it at the given Offset
   void resolveGOTOffsetRelocation(unsigned SectionID, uint64_t Offset,
                                   uint64_t GOTOffset, uint32_t Type);
@@ -121,8 +121,8 @@ private:
   // Compute the address in memory where we can find the placeholder
   void *computePlaceholderAddress(unsigned SectionID, uint64_t Offset) const;
 
-  // Split out common case for createing the RelocationEntry for when the relocation requires
-  // no particular advanced processing.
+  // Split out common case for creating the RelocationEntry for when the
+  // relocation requires no particular advanced processing.
   void processSimpleRelocation(unsigned SectionID, uint64_t Offset, unsigned RelType, RelocationValueRef Value);
 
   // Return matching *LO16 relocation (Mips specific)

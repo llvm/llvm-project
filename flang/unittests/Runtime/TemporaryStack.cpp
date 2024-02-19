@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "tools.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"

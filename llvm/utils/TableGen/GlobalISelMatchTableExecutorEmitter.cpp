@@ -15,7 +15,7 @@ using namespace llvm::gi;
 void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
     raw_ostream &OS, ArrayRef<RuleMatcher> Rules) {
   SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
-                                                           OS);
+                                                           OS, &HwModes);
 
   // Separate subtarget features by how often they must be recomputed.
   SubtargetFeatureInfoMap ModuleFeatures;
@@ -33,7 +33,7 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
   SubtargetFeatureInfo::emitComputeAvailableFeatures(
       getTarget().getName(), getClassName(), "computeAvailableModuleFeatures",
-      ModuleFeatures, OS);
+      ModuleFeatures, OS, "", &HwModes);
 
   OS << "void " << getClassName()
      << "::setupGeneratedPerFunctionState(MachineFunction &MF) {\n"
@@ -49,24 +49,27 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
   // Emit a table containing the PredicateBitsets objects needed by the matcher
   // and an enum for the matcher to reference them with.
-  std::vector<std::vector<Record *>> FeatureBitsets;
+  std::vector<std::pair<std::vector<Record *>, int>> FeatureBitsets;
   FeatureBitsets.reserve(Rules.size());
   for (auto &Rule : Rules)
-    FeatureBitsets.push_back(Rule.getRequiredFeatures());
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
-    if (A.size() < B.size())
-      return true;
-    if (A.size() > B.size())
-      return false;
-    for (auto [First, Second] : zip(A, B)) {
-      if (First->getName() < Second->getName())
-        return true;
-      if (First->getName() > Second->getName())
-        return false;
-    }
-    return false;
-  });
+    FeatureBitsets.emplace_back(Rule.getRequiredFeatures(),
+                                Rule.getHwModeIdx());
+  llvm::sort(FeatureBitsets,
+             [&](const std::pair<std::vector<Record *>, int> &A,
+                 const std::pair<std::vector<Record *>, int> &B) {
+               if (A.first.size() < B.first.size())
+                 return true;
+               if (A.first.size() > B.first.size())
+                 return false;
+               for (auto [First, Second] : zip(A.first, B.first)) {
+                 if (First->getName() < Second->getName())
+                   return true;
+                 if (First->getName() > Second->getName())
+                   return false;
+               }
+
+               return (A.second < B.second);
+             });
   FeatureBitsets.erase(
       std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
       FeatureBitsets.end());
@@ -74,21 +77,27 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
      << "enum {\n"
      << "  GIFBS_Invalid,\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
+    if (FeatureBitset.first.empty() && FeatureBitset.second < 0)
       continue;
-    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
+    OS << "  "
+       << getNameForFeatureBitset(FeatureBitset.first, FeatureBitset.second)
+       << ",\n";
   }
   OS << "};\n"
-     << "const static PredicateBitset FeatureBitsets[] {\n"
+     << "constexpr static PredicateBitset FeatureBitsets[] {\n"
      << "  {}, // GIFBS_Invalid\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
+    if (FeatureBitset.first.empty() && FeatureBitset.second < 0)
       continue;
     OS << "  {";
-    for (const auto &Feature : FeatureBitset) {
+    for (const auto &Feature : FeatureBitset.first) {
       const auto &I = SubtargetFeatures.find(Feature);
       assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
       OS << I->second.getEnumBitName() << ", ";
+    }
+    // HwModeIdx
+    if (FeatureBitset.second >= 0) {
+      OS << "Feature_HwMode" << FeatureBitset.second << "Bit, ";
     }
     OS << "},\n";
   }
@@ -155,11 +164,14 @@ void GlobalISelMatchTableExecutorEmitter::emitTypeObjects(
 
 void GlobalISelMatchTableExecutorEmitter::emitMatchTable(
     raw_ostream &OS, const MatchTable &Table) {
-  OS << "const int64_t *" << getClassName() << "::getMatchTable() const {\n";
+  emitEncodingMacrosDef(OS);
+  OS << "const uint8_t *" << getClassName() << "::getMatchTable() const {\n";
   Table.emitDeclaration(OS);
   OS << "  return ";
   Table.emitUse(OS);
   OS << ";\n}\n";
+  emitEncodingMacrosUndef(OS);
+  OS << "\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
@@ -178,17 +190,19 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitCustomOperandRenderers(OS, CustomOperandRenderers);
   emitAdditionalImpl(OS);
   emitRunCustomAction(OS);
+
   emitMatchTable(OS, Table);
+
   OS << "#endif // ifdef " << IfDefName << "\n\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitPredicateBitset(
     raw_ostream &OS, StringRef IfDefName) {
+  unsigned Size = SubtargetFeatures.size() + HwModes.size();
   OS << "#ifdef " << IfDefName << "\n"
-     << "const unsigned MAX_SUBTARGET_PREDICATES = " << SubtargetFeatures.size()
-     << ";\n"
+     << "const unsigned MAX_SUBTARGET_PREDICATES = " << Size << ";\n"
      << "using PredicateBitset = "
-        "llvm::PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;\n"
+        "llvm::Bitset<MAX_SUBTARGET_PREDICATES>;\n"
      << "#endif // ifdef " << IfDefName << "\n\n";
 }
 
@@ -217,12 +231,13 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
         "const override;\n"
      << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
         "&Imm) const override;\n"
-     << "  const int64_t *getMatchTable() const override;\n"
+     << "  const uint8_t *getMatchTable() const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
         "const override;\n"
      << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
-     << "  void runCustomAction(unsigned FnID, const MatcherState &State) "
+     << "  void runCustomAction(unsigned FnID, const MatcherState &State, "
+        "NewMIVector &OutMIs) "
         "const override;\n";
   emitAdditionalTemporariesDecl(OS, "  ");
   OS << "#endif // ifdef " << IfDefName << "\n\n";

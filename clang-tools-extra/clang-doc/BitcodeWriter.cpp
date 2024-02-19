@@ -551,7 +551,7 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
     emitRecord(*I.DefLoc, RECORD_DEFLOCATION);
   for (const auto &L : I.Loc)
     emitRecord(L, RECORD_LOCATION);
-  emitRecord(I.TagType, RECORD_TAG_TYPE);
+  emitRecord(llvm::to_underlying(I.TagType), RECORD_TAG_TYPE);
   emitRecord(I.IsTypeDef, RECORD_IS_TYPE_DEF);
   for (const auto &N : I.Members)
     emitBlock(N);
@@ -578,7 +578,7 @@ void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
   emitRecord(I.USR, BASE_RECORD_USR);
   emitRecord(I.Name, BASE_RECORD_NAME);
   emitRecord(I.Path, BASE_RECORD_PATH);
-  emitRecord(I.TagType, BASE_RECORD_TAG_TYPE);
+  emitRecord(llvm::to_underlying(I.TagType), BASE_RECORD_TAG_TYPE);
   emitRecord(I.IsVirtual, BASE_RECORD_IS_VIRTUAL);
   emitRecord(I.Access, BASE_RECORD_ACCESS);
   emitRecord(I.IsParent, BASE_RECORD_IS_PARENT);

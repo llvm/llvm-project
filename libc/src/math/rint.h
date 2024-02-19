@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_RINT_H
 #define LLVM_LIBC_SRC_MATH_RINT_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 double rint(double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_RINT_H

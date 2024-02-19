@@ -12,9 +12,9 @@ define void @f(<1 x float> %a, i64 %b) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    bfi x9, x0, #2, #1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    bfi x9, x0, #2, #1
 ; CHECK-NEXT:    str d1, [sp]
 ; CHECK-NEXT:    ldr s1, [x9]
 ; CHECK-NEXT:    mov v1.s[1], v0.s[0]

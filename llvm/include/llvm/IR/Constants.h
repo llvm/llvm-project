@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -170,10 +171,9 @@ public:
   /// Determine if this constant's value is same as an unsigned char.
   bool equalsInt(uint64_t V) const { return Val == V; }
 
-  /// getType - Specialize the getType() method to always return an IntegerType,
-  /// which reduces the amount of casting needed in parts of the compiler.
-  ///
-  inline IntegerType *getType() const {
+  /// Variant of the getType() method to always return an IntegerType, which
+  /// reduces the amount of casting needed in parts of the compiler.
+  inline IntegerType *getIntegerType() const {
     return cast<IntegerType>(Value::getType());
   }
 
@@ -975,6 +975,11 @@ public:
     return cast<GlobalValue>(Op<0>().get());
   }
 
+  /// NoCFIValue is always a pointer.
+  PointerType *getType() const {
+    return cast<PointerType>(Value::getType());
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == NoCFIValueVal;
@@ -1035,24 +1040,10 @@ public:
                           bool HasNSW = false);
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getAnd(Constant *C1, Constant *C2);
-  static Constant *getOr(Constant *C1, Constant *C2);
   static Constant *getXor(Constant *C1, Constant *C2);
   static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getLShr(Constant *C1, Constant *C2, bool isExact = false);
-  static Constant *getAShr(Constant *C1, Constant *C2, bool isExact = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getSExt(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getZExt(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPTrunc(Constant *C, Type *Ty,
-                              bool OnlyIfReduced = false);
-  static Constant *getFPExtend(Constant *C, Type *Ty,
-                               bool OnlyIfReduced = false);
-  static Constant *getUIToFP(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getSIToFP(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPToUI(Constant *C, Type *Ty, bool OnlyIfReduced = false);
-  static Constant *getFPToSI(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
                                bool OnlyIfReduced = false);
   static Constant *getIntToPtr(Constant *C, Type *Ty,
@@ -1097,14 +1088,6 @@ public:
     return getShl(C1, C2, true, false);
   }
 
-  static Constant *getExactAShr(Constant *C1, Constant *C2) {
-    return getAShr(C1, C2, true);
-  }
-
-  static Constant *getExactLShr(Constant *C1, Constant *C2) {
-    return getLShr(C1, C2, true);
-  }
-
   /// If C is a scalar/fixed width vector of known powers of 2, then this
   /// function returns a new scalar/fixed width vector obtained from logBase2
   /// of C. Undef vector elements are set to zero.
@@ -1112,17 +1095,23 @@ public:
   static Constant *getExactLogBase2(Constant *C);
 
   /// Return the identity constant for a binary opcode.
-  /// The identity constant C is defined as X op C = X and C op X = X for every
-  /// X when the binary operation is commutative. If the binop is not
-  /// commutative, callers can acquire the operand 1 identity constant by
-  /// setting AllowRHSConstant to true. For example, any shift has a zero
-  /// identity constant for operand 1: X shift 0 = X.
-  /// If this is a fadd/fsub operation and we don't care about signed zeros,
-  /// then setting NSZ to true returns the identity +0.0 instead of -0.0.
-  /// Return nullptr if the operator does not have an identity constant.
+  /// If the binop is not commutative, callers can acquire the operand 1
+  /// identity constant by setting AllowRHSConstant to true. For example, any
+  /// shift has a zero identity constant for operand 1: X shift 0 = X. If this
+  /// is a fadd/fsub operation and we don't care about signed zeros, then
+  /// setting NSZ to true returns the identity +0.0 instead of -0.0. Return
+  /// nullptr if the operator does not have an identity constant.
   static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty,
                                     bool AllowRHSConstant = false,
                                     bool NSZ = false);
+
+  static Constant *getIntrinsicIdentity(Intrinsic::ID, Type *Ty);
+
+  /// Return the identity constant for a binary or intrinsic Instruction.
+  /// The identity constant C is defined as X op C = X and C op X = X where C
+  /// and X are the first two operands, and the operation is commutative.
+  static Constant *getIdentity(Instruction *I, Type *Ty,
+                               bool AllowRHSConstant = false, bool NSZ = false);
 
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
@@ -1142,28 +1131,11 @@ public:
   static Constant *getCast(unsigned ops, Constant *C, Type *Ty,
                            bool OnlyIfReduced = false);
 
-  // Create a ZExt or BitCast cast constant expression
-  static Constant *
-  getZExtOrBitCast(Constant *C, ///< The constant to zext or bitcast
-                   Type *Ty     ///< The type to zext or bitcast C to
-  );
-
-  // Create a SExt or BitCast cast constant expression
-  static Constant *
-  getSExtOrBitCast(Constant *C, ///< The constant to sext or bitcast
-                   Type *Ty     ///< The type to sext or bitcast C to
-  );
-
   // Create a Trunc or BitCast cast constant expression
   static Constant *
   getTruncOrBitCast(Constant *C, ///< The constant to trunc or bitcast
                     Type *Ty     ///< The type to trunc or bitcast C to
   );
-
-  /// Create either an sext, trunc or nothing, depending on whether Ty is
-  /// wider, narrower or the same as C->getType(). This only works with
-  /// integer or vector of integer types.
-  static Constant *getSExtOrTrunc(Constant *C, Type *Ty);
 
   /// Create a BitCast, AddrSpaceCast, or a PtrToInt cast constant
   /// expression.
@@ -1177,18 +1149,6 @@ public:
   static Constant *getPointerBitCastOrAddrSpaceCast(
       Constant *C, ///< The constant to addrspacecast or bitcast
       Type *Ty     ///< The type to bitcast or addrspacecast C to
-  );
-
-  /// Create a ZExt, Bitcast or Trunc for integer -> integer casts
-  static Constant *
-  getIntegerCast(Constant *C,  ///< The integer constant to be casted
-                 Type *Ty,     ///< The integer type to cast to
-                 bool IsSigned ///< Whether C should be treated as signed or not
-  );
-
-  /// Create a FPExt, Bitcast or FPTrunc for fp -> fp casts
-  static Constant *getFPCast(Constant *C, ///< The integer constant to be casted
-                             Type *Ty     ///< The integer type to cast to
   );
 
   /// Return true if this is a convert constant expression
@@ -1331,6 +1291,12 @@ public:
   /// Whether creating a constant expression for this binary operator is
   /// supported.
   static bool isSupportedBinOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this cast is desirable.
+  static bool isDesirableCastOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this cast is supported.
+  static bool isSupportedCastOp(unsigned Opcode);
 
   /// Whether creating a constant expression for this getelementptr type is
   /// supported.

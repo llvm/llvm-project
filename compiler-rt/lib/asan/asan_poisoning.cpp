@@ -446,8 +446,11 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   // https://github.com/google/sanitizers/issues/258.
   // if (d1 != d2)
   //  DCHECK_EQ(*(u8*)MemToShadow(d1), old_mid - d1);
-  if (a + granularity <= d1)
+  //
+  // NOTE: curly brackets for the "if" below to silence a MSVC warning.
+  if (a + granularity <= d1) {
     DCHECK_EQ(*(u8 *)MemToShadow(a), 0);
+  }
   // if (d2 + granularity <= c && c <= end)
   //   DCHECK_EQ(*(u8 *)MemToShadow(c - granularity),
   //            kAsanContiguousContainerOOBMagic);

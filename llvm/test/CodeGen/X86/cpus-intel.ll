@@ -32,6 +32,13 @@
 ; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=graniterapids 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 ; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=graniterapids-d 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 ; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=emeraldrapids 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=arrowlake 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=arrowlake-s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=arrowlake_s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=lunarlake 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=gracemont 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=pantherlake 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=clearwaterforest 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 
 ; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=nocona 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 ; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=core2 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
@@ -90,6 +97,13 @@
 ; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=grandridge 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 ; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=graniterapids 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 ; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=graniterapids-d 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=arrowlake 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=arrowlake-s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=arrowlake_s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=lunarlake 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=gracemont 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=pantherlake 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
+; RUN: llc < %s -o /dev/null -mtriple=x86_64-unknown-unknown -mcpu=clearwaterforest 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 
 define void @foo() {
   ret void

@@ -1,4 +1,4 @@
-// RUN: %clangxx_msan -fexceptions -fsanitize-memory-track-origins=2 -latomic -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SHADOW
+// RUN: %clangxx_msan -fexceptions -fsanitize-memory-track-origins=2 %libatomic -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SHADOW
 
 // PPC has no libatomic
 // UNSUPPORTED: powerpc64-target-arch

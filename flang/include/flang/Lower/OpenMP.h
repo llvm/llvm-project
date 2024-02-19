@@ -34,9 +34,15 @@ struct OmpEndLoopDirective;
 struct OmpClauseList;
 } // namespace parser
 
+namespace semantics {
+class Symbol;
+class SemanticsContext;
+} // namespace semantics
+
 namespace lower {
 
 class AbstractConverter;
+class SymMap;
 
 namespace pft {
 struct Evaluation;
@@ -44,17 +50,29 @@ struct Variable;
 } // namespace pft
 
 // Generate the OpenMP terminator for Operation at Location.
-void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
-                         mlir::Location);
+mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                                     mlir::Location);
 
-void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
+void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
+                        semantics::SemanticsContext &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
-void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
+void genOpenMPDeclarativeConstruct(AbstractConverter &,
+                                   Fortran::lower::SymMap &,
+                                   semantics::SemanticsContext &,
+                                   pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
+/// Symbols in OpenMP code can have flags (e.g. threadprivate directive)
+/// that require additional handling when lowering the corresponding
+/// variable. Perform such handling according to the flags on the symbol.
+/// The variable \p var is required to have a `Symbol`.
+void genOpenMPSymbolProperties(AbstractConverter &converter,
+                               const pft::Variable &var);
+
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 void genOpenMPReduction(AbstractConverter &,
+                        Fortran::semantics::SemanticsContext &,
                         const Fortran::parser::OmpClauseList &clauseList);
 
 mlir::Operation *findReductionChain(mlir::Value, mlir::Value * = nullptr);
@@ -62,6 +80,14 @@ fir::ConvertOp getConvertFromReductionOp(mlir::Operation *, mlir::Value);
 void updateReduction(mlir::Operation *, fir::FirOpBuilder &, mlir::Value,
                      mlir::Value, fir::ConvertOp * = nullptr);
 void removeStoreOp(mlir::Operation *, mlir::Value);
+
+bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
+bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
+                                 Fortran::semantics::SemanticsContext &,
+                                 Fortran::lower::pft::Evaluation &,
+                                 const parser::OpenMPDeclarativeConstruct &);
+void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
+
 } // namespace lower
 } // namespace Fortran
 

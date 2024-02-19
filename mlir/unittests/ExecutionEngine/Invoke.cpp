@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-#include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -282,9 +281,9 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
   // Define any extra symbols so they're available at runtime.
   jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
-    symbolMap[interner("_mlir_ciface_callback")] =
-        { llvm::orc::ExecutorAddr::fromPtr(memrefMultiply),
-          llvm::JITSymbolFlags::Exported };
+    symbolMap[interner("_mlir_ciface_callback")] = {
+        llvm::orc::ExecutorAddr::fromPtr(memrefMultiply),
+        llvm::JITSymbolFlags::Exported};
     return symbolMap;
   });
 

@@ -204,7 +204,7 @@ private:
                         bool for_completion);
 
   lldb::addr_t GetCppObjectPointer(lldb::StackFrameSP frame,
-                                   ConstString &object_name, Status &err);
+                                   llvm::StringRef object_name, Status &err);
 
   /// Defines how the current expression should be wrapped.
   ClangExpressionSourceCode::WrapKind GetWrapKind() const;

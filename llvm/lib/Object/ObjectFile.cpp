@@ -79,7 +79,7 @@ uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }
 bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
   Expected<StringRef> NameOrErr = getSectionName(Sec);
   if (NameOrErr)
-    return *NameOrErr == ".llvmbc" || *NameOrErr == ".llvm.lto";
+    return *NameOrErr == ".llvm.lto";
   consumeError(NameOrErr.takeError());
   return false;
 }
@@ -111,6 +111,10 @@ Triple ObjectFile::makeTriple() const {
   auto Arch = getArch();
   TheTriple.setArch(Triple::ArchType(Arch));
 
+  auto OS = getOS();
+  if (OS != Triple::UnknownOS)
+    TheTriple.setOS(OS);
+
   // For ARM targets, try to use the build attributes to build determine
   // the build target. Target features are also added, but later during
   // disassembly.
@@ -129,10 +133,13 @@ Triple ObjectFile::makeTriple() const {
     // XCOFF implies AIX.
     TheTriple.setOS(Triple::AIX);
     TheTriple.setObjectFormat(Triple::XCOFF);
-  }
-  else if (isGOFF()) {
+  } else if (isGOFF()) {
     TheTriple.setOS(Triple::ZOS);
     TheTriple.setObjectFormat(Triple::GOFF);
+  } else if (TheTriple.isAMDGPU()) {
+    TheTriple.setVendor(Triple::AMD);
+  } else if (TheTriple.isNVPTX()) {
+    TheTriple.setVendor(Triple::NVIDIA);
   }
 
   return TheTriple;
@@ -148,6 +155,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   switch (Type) {
   case file_magic::unknown:
   case file_magic::bitcode:
+  case file_magic::clang_ast:
   case file_magic::coff_cl_gl_object:
   case file_magic::archive:
   case file_magic::macho_universal_binary:
@@ -158,6 +166,9 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::cuda_fatbinary:
   case file_magic::offload_binary:
   case file_magic::dxcontainer_object:
+  case file_magic::offload_bundle:
+  case file_magic::offload_bundle_compressed:
+  case file_magic::spirv_object:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::tapi_file:
     return errorCodeToError(object_error::invalid_file_type);

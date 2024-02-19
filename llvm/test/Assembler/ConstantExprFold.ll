@@ -11,9 +11,6 @@
 @add = global ptr inttoptr (i64 add (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X + 0 == X
 @sub = global ptr inttoptr (i64 sub (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X - 0 == X
 @mul = global ptr inttoptr (i64 mul (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X * 0 == 0
-@and1 = global ptr inttoptr (i64 and (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X & 0 == 0
-@and2 = global ptr inttoptr (i64 and (i64 ptrtoint (ptr @A to i64), i64 -1) to ptr) ; X & -1 == X
-@or = global i64 or (i64 ptrtoint (ptr @A to i64), i64 -1)  ; X | -1 == -1
 @xor = global ptr inttoptr (i64 xor (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X ^ 0 == X
 
 %Ty = type { i32, i32 }
@@ -28,12 +25,14 @@
 
 ; PR2206
 @cons = weak global i32 0, align 8              ; <ptr> [#uses=1]
-@and3 = global i64 and (i64 ptrtoint (ptr @cons to i64), i64 7)
 
 @gep1 = global <2 x ptr> getelementptr(i8, <2 x ptr> undef, <2 x i64> <i64 1, i64 1>)
 @gep2 = global <2 x ptr> getelementptr({ i8 }, <2 x ptr> undef, <2 x i64> <i64 1, i64 1>, <2 x i32> <i32 0, i32 0>)
 @gep3 = global <2 x ptr> getelementptr(i8, <2 x ptr> zeroinitializer, <2 x i64> <i64 0, i64 0>)
 @gep4 = global <2 x ptr> getelementptr({ i8 }, <2 x ptr> zeroinitializer, <2 x i64> <i64 0, i64 0>, <2 x i32> <i32 0, i32 0>)
+
+@bitcast1 = global <2 x i32> bitcast (<4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1> to <2 x i32>)
+@bitcast2 = global <4 x i16> bitcast (<2 x i32> <i32 -1, i32 -1> to <4 x i16>)
 
 
 ; Need a function to make update_test_checks.py work.
@@ -42,20 +41,18 @@
 ; CHECK: @[[ADD:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
 ; CHECK: @[[SUB:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
 ; CHECK: @[[MUL:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
-; CHECK: @[[AND1:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
-; CHECK: @[[AND2:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
-; CHECK: @[[OR:[a-zA-Z0-9_$"\\.-]+]] = global i64 -1
 ; CHECK: @[[XOR:[a-zA-Z0-9_$"\\.-]+]] = global ptr @A
 ; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = external global [[TY:%.*]]
 ; CHECK: @[[ICMP_ULT1:[a-zA-Z0-9_$"\\.-]+]] = global i1 icmp ugt (ptr getelementptr inbounds (i64, ptr @A, i64 1), ptr @A)
 ; CHECK: @[[ICMP_SLT:[a-zA-Z0-9_$"\\.-]+]] = global i1 false
 ; CHECK: @[[ICMP_ULT2:[a-zA-Z0-9_$"\\.-]+]] = global i1 icmp ugt (ptr getelementptr inbounds ([[TY:%.*]], ptr @B, i64 0, i32 1), ptr @B)
 ; CHECK: @[[CONS:[a-zA-Z0-9_$"\\.-]+]] = weak global i32 0, align 8
-; CHECK: @[[AND3:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
 ; CHECK: @[[GEP1:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> undef
 ; CHECK: @[[GEP2:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> undef
 ; CHECK: @[[GEP3:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> zeroinitializer
 ; CHECK: @[[GEP4:[a-zA-Z0-9_$"\\.-]+]] = global <2 x ptr> zeroinitializer
+; CHECK: @[[BITCAST1:[a-zA-Z0-9_$"\\.-]+]] = global <2 x i32> <i32 -1, i32 -1>
+; CHECK: @[[BITCAST2:[a-zA-Z0-9_$"\\.-]+]] = global <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
 ;.
 define void @dummy() {
 ; CHECK-LABEL: @dummy(

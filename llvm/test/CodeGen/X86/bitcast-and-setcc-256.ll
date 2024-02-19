@@ -950,7 +950,7 @@ define i8 @v4f64_concat_undef(<4 x double> %vec) {
 ; SSE2-SSSE3-NEXT:    xorpd %xmm3, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq

@@ -1,4 +1,4 @@
-//===- TFUtils.h - utilities for tensorflow C API ---------------*- C++ -*-===//
+//===- TFUtils.h - utilities for TFLite -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,7 +93,7 @@ public:
     return static_cast<T *>(getUntypedInput(Index));
   }
 
-  /// Returns true if the tensorflow model was loaded successfully, false
+  /// Returns true if the model was loaded successfully, false
   /// otherwise.
   bool isValid() const { return !!Impl; }
 

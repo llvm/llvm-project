@@ -6,3 +6,8 @@ RUN: dsymutil -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs 
 
 Check that the remark file in the bundle does not exist:
 RUN: not cat %t/basic.macho.remarks.empty.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.empty.x86_64 2>&1
+
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.empty.x86_64
+
+Check that the remark file in the bundle does not exist:
+RUN: not cat %t/basic.macho.remarks.empty.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.empty.x86_64 2>&1

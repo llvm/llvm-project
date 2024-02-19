@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 let Predicates = [IsRV64, HasVendorXVentanaCondOps], hasSideEffects = 0,
-  mayLoad = 0, mayStore = 0, isCodeGenOnly = 0, DecoderNamespace = "Ventana" in
+    mayLoad = 0, mayStore = 0, isCodeGenOnly = 0, DecoderNamespace = "XVentana" in
 class VTMaskedMove<bits<3> funct3, string opcodestr>
     : RVInstR<0b0000000, funct3, OPC_CUSTOM_3, (outs GPR:$rd),
               (ins GPR:$rs1, GPR:$rs2), opcodestr,
@@ -29,8 +29,17 @@ def VT_MASKCN : VTMaskedMove<0b111, "vt.maskcn">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 let Predicates = [IsRV64, HasVendorXVentanaCondOps] in {
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
+def : Pat<(i64 (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
           (VT_MASKC GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
+def : Pat<(i64 (riscv_czero_nez GPR:$rs1, GPR:$rc)),
           (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+
+def : Pat<(i64 (riscv_czero_eqz GPR:$rs1, (riscv_setne (i64 GPR:$rc)))),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
+def : Pat<(i64 (riscv_czero_eqz GPR:$rs1, (riscv_seteq (i64 GPR:$rc)))),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+def : Pat<(i64 (riscv_czero_nez GPR:$rs1, (riscv_setne (i64 GPR:$rc)))),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+def : Pat<(i64 (riscv_czero_nez GPR:$rs1, (riscv_seteq (i64 GPR:$rc)))),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
 } // Predicates = [IsRV64, HasVendorXVentanaCondOps]

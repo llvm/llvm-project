@@ -49,7 +49,7 @@ RocmInstallationDetector::findSPACKPackage(const Candidate &Cand,
                                      FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (FileName.startswith(Prefix)) {
+    if (FileName.starts_with(Prefix)) {
       SubDirs.push_back(FileName);
       if (SubDirs.size() > 1)
         break;
@@ -84,13 +84,13 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
        !EC && LI != LE; LI = LI.increment(EC)) {
     StringRef FilePath = LI->path();
     StringRef FileName = llvm::sys::path::filename(FilePath);
-    if (!FileName.endswith(Suffix))
+    if (!FileName.ends_with(Suffix))
       continue;
 
     StringRef BaseName;
-    if (FileName.endswith(Suffix2))
+    if (FileName.ends_with(Suffix2))
       BaseName = FileName.drop_back(Suffix2.size());
-    else if (FileName.endswith(Suffix))
+    else if (FileName.ends_with(Suffix))
       BaseName = FileName.drop_back(Suffix.size());
 
     const StringRef ABIVersionPrefix = "oclc_abi_version_";
@@ -124,7 +124,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       WavefrontSize64.On = FilePath;
     } else if (BaseName == "oclc_wavefrontsize64_off") {
       WavefrontSize64.Off = FilePath;
-    } else if (BaseName.startswith(ABIVersionPrefix)) {
+    } else if (BaseName.starts_with(ABIVersionPrefix)) {
       unsigned ABIVersionNumber;
       if (BaseName.drop_front(ABIVersionPrefix.size())
               .getAsInteger(/*Redex=*/0, ABIVersionNumber))
@@ -134,7 +134,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       // Process all bitcode filenames that look like
       // ocl_isa_version_XXX.amdgcn.bc
       const StringRef DeviceLibPrefix = "oclc_isa_version_";
-      if (!BaseName.startswith(DeviceLibPrefix))
+      if (!BaseName.starts_with(DeviceLibPrefix))
         continue;
 
       StringRef IsaVersionNumber =
@@ -230,7 +230,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     // <rocm_root>/llvm-amdgpu-<rocm_release_string>-<hash>/bin directory.
     // We only consider the parent directory of llvm-amdgpu package as ROCm
     // installation candidate for SPACK.
-    if (ParentName.startswith("llvm-amdgpu-")) {
+    if (ParentName.starts_with("llvm-amdgpu-")) {
       auto SPACKPostfix =
           ParentName.drop_front(strlen("llvm-amdgpu-")).split('-');
       auto SPACKReleaseStr = SPACKPostfix.first;
@@ -243,7 +243,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.startswith("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
       ParentDir = llvm::sys::path::parent_path(ParentDir);
 
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
@@ -292,7 +292,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
            FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (!FileName.startswith("rocm-"))
+    if (!FileName.starts_with("rocm-"))
       continue;
     if (LatestROCm.empty()) {
       LatestROCm = FileName.str();
@@ -329,6 +329,20 @@ RocmInstallationDetector::RocmInstallationDetector(
   RocmDeviceLibPathArg =
       Args.getAllArgValues(clang::driver::options::OPT_rocm_device_lib_path_EQ);
   HIPPathArg = Args.getLastArgValue(clang::driver::options::OPT_hip_path_EQ);
+  HIPStdParPathArg =
+    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_path_EQ);
+  HasHIPStdParLibrary =
+    !HIPStdParPathArg.empty() && D.getVFS().exists(HIPStdParPathArg +
+                                                   "/hipstdpar_lib.hpp");
+  HIPRocThrustPathArg =
+    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_thrust_path_EQ);
+  HasRocThrustLibrary = !HIPRocThrustPathArg.empty() &&
+                        D.getVFS().exists(HIPRocThrustPathArg + "/thrust");
+  HIPRocPrimPathArg =
+    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_prim_path_EQ);
+  HasRocPrimLibrary = !HIPRocPrimPathArg.empty() &&
+                      D.getVFS().exists(HIPRocPrimPathArg + "/rocprim");
+
   if (auto *A = Args.getLastArg(clang::driver::options::OPT_hip_version_EQ)) {
     HIPVersionArg = A->getValue();
     unsigned Major = ~0U;
@@ -472,10 +486,16 @@ void RocmInstallationDetector::detectHIPRuntime() {
       return newpath;
     };
     // If HIP version file can be found and parsed, use HIP version from there.
-    for (const auto &VersionFilePath :
-         {Append(SharePath, "hip", "version"),
-          Append(ParentSharePath, "hip", "version"),
-          Append(BinPath, ".hipVersion")}) {
+    std::vector<SmallString<0>> VersionFilePaths = {
+        Append(SharePath, "hip", "version"),
+        InstallPath != D.SysRoot + "/usr/local"
+            ? Append(ParentSharePath, "hip", "version")
+            : SmallString<0>(),
+        Append(BinPath, ".hipVersion")};
+
+    for (const auto &VersionFilePath : VersionFilePaths) {
+      if (VersionFilePath.empty())
+        continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
           FS.getBufferForFile(VersionFilePath);
       if (!VersionFile)
@@ -507,6 +527,7 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
   bool UsesRuntimeWrapper = VersionMajorMinor > llvm::VersionTuple(3, 5) &&
                             !DriverArgs.hasArg(options::OPT_nohipwrapperinc);
+  bool HasHipStdPar = DriverArgs.hasArg(options::OPT_hipstdpar);
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // HIP header includes standard library wrapper headers under clang
@@ -529,8 +550,54 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
+    StringRef Inc = getIncludePath();
+    auto &FS = D.getVFS();
+
+    if (!hasHIPStdParLibrary())
+      if (!HIPStdParPathArg.empty() ||
+          !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
+        D.Diag(diag::err_drv_no_hipstdpar_lib);
+        return;
+      }
+    if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
+      D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
+      return;
+    }
+    if (!HasRocPrimLibrary && !FS.exists(Inc + "/rocprim")) {
+      D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
+      return;
+    }
+    const char *ThrustPath;
+    if (HasRocThrustLibrary)
+      ThrustPath = DriverArgs.MakeArgString(HIPRocThrustPathArg);
+    else
+      ThrustPath = DriverArgs.MakeArgString(Inc + "/thrust");
+
+    const char *HIPStdParPath;
+    if (hasHIPStdParLibrary())
+      HIPStdParPath = DriverArgs.MakeArgString(HIPStdParPathArg);
+    else
+      HIPStdParPath = DriverArgs.MakeArgString(StringRef(ThrustPath) +
+                                               "/system/hip/hipstdpar");
+
+    const char *PrimPath;
+    if (HasRocPrimLibrary)
+      PrimPath = DriverArgs.MakeArgString(HIPRocPrimPathArg);
+    else
+      PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
+
+    CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
+                    "-idirafter", HIPStdParPath, "-include",
+                    "hipstdpar_lib.hpp"});
+  };
+
+  if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
+    if (HasHipStdPar)
+      HandleHipStdPar();
+
     return;
+  }
 
   if (!hasHIPRuntime()) {
     D.Diag(diag::err_drv_no_hip_runtime);
@@ -541,6 +608,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
   if (UsesRuntimeWrapper)
     CC1Args.append({"-include", "__clang_hip_runtime_wrapper.h"});
+  if (HasHipStdPar)
+    HandleHipStdPar();
 }
 
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -551,6 +620,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::string Linker = getToolChain().GetProgramPath(getShortName());
   ArgStringList CmdArgs;
+  CmdArgs.push_back("--no-undefined");
+  CmdArgs.push_back("-shared");
+
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
@@ -560,8 +632,6 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Args.hasArg(options::OPT_mcpu_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(std::make_unique<Command>(
@@ -759,6 +829,12 @@ void AMDGPUToolChain::addClangTargetOptions(
   }
 }
 
+void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  // AMDGPU does not support atomic lib call. Treat atomic alignment
+  // warnings as errors.
+  CC1Args.push_back("-Werror=atomic-alignment");
+}
+
 StringRef
 AMDGPUToolChain::getGPUArch(const llvm::opt::ArgList &DriverArgs) const {
   return getProcessorFromTargetID(
@@ -896,7 +972,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
 
   AddBCLib(getOCMLPath());
-  AddBCLib(getOCKLPath());
+  if (!isOpenMP)
+    AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));

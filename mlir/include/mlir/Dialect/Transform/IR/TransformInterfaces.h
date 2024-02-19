@@ -16,6 +16,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 namespace transform {
@@ -94,11 +95,23 @@ public:
     return *this;
   }
 
+  // Ensures that only a single top-level transform op is present in the IR.
+  TransformOptions &enableEnforceSingleToplevelTransformOp(bool enable = true) {
+    enforceSingleToplevelTransformOp = enable;
+    return *this;
+  }
+
   /// Returns true if the expensive checks are requested.
   bool getExpensiveChecksEnabled() const { return expensiveChecksEnabled; }
 
+  // Returns true if enforcing a single top-level transform op is requested.
+  bool getEnforceSingleToplevelTransformOp() const {
+    return enforceSingleToplevelTransformOp;
+  }
+
 private:
   bool expensiveChecksEnabled = true;
+  bool enforceSingleToplevelTransformOp = true;
 };
 
 /// Entry point to the Transform dialect infrastructure. Applies the
@@ -110,7 +123,8 @@ private:
 LogicalResult
 applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
                 const RaggedArray<MappedValue> &extraMapping = {},
-                const TransformOptions &options = TransformOptions());
+                const TransformOptions &options = TransformOptions(),
+                bool enforceToplevelTransformOp = true);
 
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
@@ -169,6 +183,12 @@ private:
   /// should be emitted when the value is used.
   using InvalidatedHandleMap = DenseMap<Value, std::function<void(Location)>>;
 
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// Debug only: A timestamp is associated with each transform IR value, so
+  /// that invalid iterator usage can be detected more reliably.
+  using TransformIRTimestampMapping = DenseMap<Value, int64_t>;
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
   /// The bidirectional mappings between transform IR values and payload IR
   /// operations, and the mapping between transform IR values and parameters.
   struct Mappings {
@@ -177,11 +197,16 @@ private:
     ParamMapping params;
     ValueMapping values;
     ValueMapping reverseValues;
+
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+    TransformIRTimestampMapping timestamps;
+    void incrementTimestamp(Value value) { ++timestamps[value]; }
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   };
 
   friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
                                        const RaggedArray<MappedValue> &,
-                                       const TransformOptions &);
+                                       const TransformOptions &, bool);
 
   friend TransformState
   detail::makeTransformStateForTesting(Region *region, Operation *payloadRoot);
@@ -206,19 +231,55 @@ public:
   /// not enumerated. This function is helpful for transformations that apply to
   /// a particular handle.
   auto getPayloadOps(Value value) const {
+    ArrayRef<Operation *> view = getPayloadOpsView(value);
+
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+    // Memorize the current timestamp and make sure that it has not changed
+    // when incrementing or dereferencing the iterator returned by this
+    // function. The timestamp is incremented when the "direct" mapping is
+    // resized; this would invalidate the iterator returned by this function.
+    int64_t currentTimestamp = getMapping(value).timestamps.lookup(value);
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
     // When ops are replaced/erased, they are replaced with nullptr (until
     // the data structure is compacted). Do not enumerate these ops.
-    return llvm::make_filter_range(getPayloadOpsView(value),
-                                   [](Operation *op) { return op != nullptr; });
+    return llvm::make_filter_range(view, [=](Operation *op) {
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+      [[maybe_unused]] bool sameTimestamp =
+          currentTimestamp == this->getMapping(value).timestamps.lookup(value);
+      assert(sameTimestamp && "iterator was invalidated during iteration");
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+      return op != nullptr;
+    });
   }
 
   /// Returns the list of parameters that the given transform IR value
   /// corresponds to.
   ArrayRef<Attribute> getParams(Value value) const;
 
-  /// Returns the list of payload IR values that the given transform IR value
-  /// corresponds to.
-  ArrayRef<Value> getPayloadValues(Value handleValue) const;
+  /// Returns an iterator that enumerates all payload IR values that the given
+  /// transform IR value corresponds to.
+  auto getPayloadValues(Value handleValue) const {
+    ArrayRef<Value> view = getPayloadValuesView(handleValue);
+
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+    // Memorize the current timestamp and make sure that it has not changed
+    // when incrementing or dereferencing the iterator returned by this
+    // function. The timestamp is incremented when the "values" mapping is
+    // resized; this would invalidate the iterator returned by this function.
+    int64_t currentTimestamp =
+        getMapping(handleValue).timestamps.lookup(handleValue);
+    return llvm::make_filter_range(view, [=](Value v) {
+      [[maybe_unused]] bool sameTimestamp =
+          currentTimestamp ==
+          this->getMapping(handleValue).timestamps.lookup(handleValue);
+      assert(sameTimestamp && "iterator was invalidated during iteration");
+      return true;
+    });
+#else
+    return llvm::make_range(view.begin(), view.end());
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  }
 
   /// Populates `handles` with all handles pointing to the given Payload IR op.
   /// Returns success if such handles exist, failure otherwise.
@@ -249,10 +310,8 @@ public:
   /// with the type of the handle value.
   LogicalResult mapBlockArguments(BlockArgument argument,
                                   ArrayRef<Operation *> operations) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(argument.getParentRegion() == regionStack.back() &&
+    assert(argument.getParentRegion() == regionStack.back()->region &&
            "mapping block arguments from a region other than the active one");
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
     return setPayloadOps(argument, operations);
   }
   LogicalResult mapBlockArgument(BlockArgument argument,
@@ -289,9 +348,7 @@ public:
           std::make_pair(&region, std::make_unique<Mappings>()));
       assert(res.second && "the region scope is already present");
       (void)res;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      state.regionStack.push_back(&region);
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+      state.regionStack.push_back(this);
     }
 
     /// Back-reference to the transform state.
@@ -300,7 +357,10 @@ public:
     /// The region this scope is associated with.
     Region *region;
 
-    friend RegionScope TransformState::make_region_scope(Region &);
+    /// The transform op within this region that is currently being applied.
+    TransformOpInterface currentTransform;
+
+    friend class transform::TransformState;
   };
   friend class RegionScope;
 
@@ -473,11 +533,14 @@ private:
   LogicalResult updateStateFromResults(const TransformResults &results,
                                        ResultRange opResults);
 
-  /// Returns a list of all ops that the given transform IR value corresponds to
-  /// at the time when this function is called. In case an op was erased, the
-  /// returned list contains nullptr. This function is helpful for
-  /// transformations that apply to a particular handle.
+  /// Returns a list of all ops that the given transform IR value corresponds
+  /// to. In case an op was erased, the returned list contains nullptr. This
+  /// function is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOpsView(Value value) const;
+
+  /// Returns a list of payload IR values that the given transform IR value
+  /// corresponds to.
+  ArrayRef<Value> getPayloadValuesView(Value handleValue) const;
 
   /// Sets the payload IR ops associated with the given transform IR value
   /// (handle). A payload op may be associated multiple handles as long as
@@ -566,7 +629,11 @@ private:
   /// Forgets the payload IR ops associated with the given transform IR value,
   /// as well as any association between value handles and the results of said
   /// payload IR op.
-  void forgetMapping(Value opHandle, ValueRange origOpFlatResults);
+  ///
+  /// If `allowOutOfScope` is set to "false", asserts that the handle is in
+  /// scope, based on the current stack of frames.
+  void forgetMapping(Value opHandle, ValueRange origOpFlatResults,
+                     bool allowOutOfScope = false);
 
   void forgetValueMapping(Value valueHandle,
                           ArrayRef<Operation *> payloadOperations);
@@ -716,24 +783,14 @@ private:
   /// location.
   InvalidatedHandleMap invalidatedHandles;
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.
   /// Each region must be an ancestor of the following regions in this list.
   /// These are also the keys for "mappings".
-  SmallVector<Region *> regionStack;
+  SmallVector<RegionScope *> regionStack;
 
-  /// This cache stores operation names for operations that are tracked in the
-  /// transform dialect state. It is used to detect missing memory side effects
-  /// and op tracking.
-  ///
-  /// All tracked ops are added to this cache before a transform op is applied.
-  /// After the application of the transform op, the names of all tracked ops
-  /// are compared with the names in the cache. If there is a mismatch (or a
-  /// crash), op tracking is missing somewhere. This is typically a missing
-  /// "consumesHandle" side effect or a pattern that removes an op without
-  /// notifying a TrackingListener.
-  DenseMap<Operation *, OperationName> cachedNames;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// The top-level region scope. The first (bottom) element of `regionStack`
+  /// is the top-level region scope object.
+  std::unique_ptr<RegionScope> topLevelRegionScope;
 };
 
 /// Local mapping between values defined by a specific op implementing the
@@ -746,7 +803,8 @@ public:
   /// corresponds to the given list of payload IR ops. Each result must be set
   /// by the transformation exactly once in case of transformation succeeding.
   /// The value must have a type implementing TransformHandleTypeInterface.
-  template <typename Range> void set(OpResult value, Range &&ops) {
+  template <typename Range>
+  void set(OpResult value, Range &&ops) {
     int64_t position = value.getResultNumber();
     assert(position < static_cast<int64_t>(operations.size()) &&
            "setting results for a non-existent handle");
@@ -777,7 +835,27 @@ public:
   /// set by the transformation exactly once in case of transformation
   /// succeeding. The value must have a type implementing
   /// TransformValueHandleTypeInterface.
-  void setValues(OpResult handle, ValueRange values);
+  template <typename Range>
+  void setValues(OpResult handle, Range &&values) {
+    int64_t position = handle.getResultNumber();
+    assert(position < static_cast<int64_t>(this->values.size()) &&
+           "setting values for a non-existent handle");
+    assert(this->values[position].data() == nullptr && "values already set");
+    assert(operations[position].data() == nullptr &&
+           "another kind of results already set");
+    assert(params[position].data() == nullptr &&
+           "another kind of results already set");
+    this->values.replace(position, std::forward<Range>(values));
+  }
+
+  /// Indicates that the result of the transform IR op at the given position
+  /// corresponds to the given range of payload IR values. Each result must be
+  /// set by the transformation exactly once in case of transformation
+  /// succeeding. The value must have a type implementing
+  /// TransformValueHandleTypeInterface.
+  void setValues(OpResult handle, std::initializer_list<Value> values) {
+    setValues(handle, ArrayRef<Value>(values));
+  }
 
   /// Indicates that the result of the transform IR op at the given position
   /// corresponds to the given range of mapped values. All mapped values are
@@ -849,8 +927,14 @@ TransformState::RegionScope TransformState::make_region_scope(Region &region) {
 class TrackingListener : public RewriterBase::Listener,
                          public TransformState::Extension {
 public:
+  /// A function that returns "true" for handles that do not have to be updated.
+  using SkipHandleFn = std::function<bool(Value)>;
+
   /// Create a new TrackingListener for usage in the specified transform op.
-  TrackingListener(TransformState &state, TransformOpInterface op);
+  /// Optionally, a function can be specified to identify handles that should
+  /// do not have to be updated.
+  TrackingListener(TransformState &state, TransformOpInterface op,
+                   SkipHandleFn skipHandleFn = nullptr);
 
 protected:
   /// Return a replacement payload op for the given op, which is going to be
@@ -901,21 +985,23 @@ protected:
   ///
   /// Derived classes may override `findReplacementOp` to specify custom
   /// replacement rules.
-  virtual FailureOr<Operation *> findReplacementOp(Operation *op,
-                                                   ValueRange newValues) const;
+  virtual DiagnosedSilenceableFailure
+  findReplacementOp(Operation *&result, Operation *op,
+                    ValueRange newValues) const;
 
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
   /// failure occurred.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
   /// This function is called when a tracked payload op is dropped because no
   /// replacement op was found. Derived classes can implement this function for
   /// custom error handling.
-  virtual void notifyPayloadReplacementNotFound(Operation *op,
-                                                ValueRange values) {}
+  virtual void
+  notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
+                                   DiagnosedSilenceableFailure &&diag) {}
 
   /// Return the single op that defines all given values (if any).
   static Operation *getCommonDefiningOp(ValueRange values);
@@ -936,6 +1022,10 @@ private:
 
   /// The handles that are consumed by the transform op.
   DenseSet<Value> consumedHandles;
+
+  /// Handles for which this function evaluates to "true" do not have to be
+  /// updated. These are typically dead or consumed handles.
+  SkipHandleFn skipHandleFn;
 };
 
 /// A specialized listener that keeps track of cases in which no replacement
@@ -955,8 +1045,9 @@ public:
   bool failed() const;
 
 protected:
-  void notifyPayloadReplacementNotFound(Operation *op,
-                                        ValueRange values) override;
+  void
+  notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
+                                   DiagnosedSilenceableFailure &&diag) override;
 
 private:
   /// The error state of this listener. "Success" indicates that no error
@@ -1155,6 +1246,11 @@ bool isHandleConsumed(Value handle, transform::TransformOpInterface transform);
 void modifiesPayload(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
 void onlyReadsPayload(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
 
+/// Checks whether the transform op modifies the payload.
+bool doesModifyPayload(transform::TransformOpInterface transform);
+/// Checks whether the transform op reads the payload.
+bool doesReadPayload(transform::TransformOpInterface transform);
+
 /// Populates `consumedArguments` with positions of `block` arguments that are
 /// consumed by the operations in the `block`.
 void getConsumedBlockArguments(
@@ -1186,9 +1282,9 @@ public:
   }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand
-/// single-result operations that use their operand without consuming and
-/// without modifying the Payload IR to produce a new handle.
+/// Trait implementing the MemoryEffectOpInterface for operations that use their
+/// operands without consuming and without modifying the Payload IR to
+/// potentially produce new handles.
 template <typename OpTy>
 class NavigationTransformOpTrait
     : public OpTrait::TraitBase<OpTy, NavigationTransformOpTrait> {
@@ -1198,15 +1294,16 @@ public:
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
     onlyReadsHandle(this->getOperation()->getOperands(), effects);
     producesHandle(this->getOperation()->getResults(), effects);
-    onlyReadsPayload(effects);
+    if (llvm::any_of(this->getOperation()->getOperandTypes(), [](Type t) {
+          return isa<TransformHandleTypeInterface,
+                     TransformValueHandleTypeInterface>(t);
+        })) {
+      onlyReadsPayload(effects);
+    }
   }
 
   /// Checks that the op matches the expectation of this trait.
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
-                  "expected single-operand op");
-    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
-                  "expected single-result op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
       op->emitError() << "NavigationTransformOpTrait should only be attached "
                          "to ops that implement MemoryEffectOpInterface";

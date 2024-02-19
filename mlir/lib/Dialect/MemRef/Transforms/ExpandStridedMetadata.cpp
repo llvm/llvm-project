@@ -50,7 +50,7 @@ struct StridedMetadata {
 /// \verbatim
 /// baseBuffer, baseOffset, baseSizes, baseStrides =
 ///     extract_strided_metadata(memref)
-/// strides#i = baseStrides#i * subSizes#i
+/// strides#i = baseStrides#i * subStrides#i
 /// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
 /// \endverbatim
@@ -69,6 +69,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
       rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
   auto [sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+#ifndef NDEBUG
+  auto [resultStrides, resultOffset] = getStridesAndOffset(subview.getType());
+#endif // NDEBUG
 
   // Compute the new strides and offset from the base strides and offset:
   // newStride#i = baseStride#i * subStride#i
@@ -111,6 +114,14 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Compute the offset.
   OpFoldResult finalOffset =
       makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
+#ifndef NDEBUG
+  // Assert that the computed offset matches the offset of the result type of
+  // the subview op (if both are static).
+  std::optional<int64_t> computedOffset = getConstantIntValue(finalOffset);
+  if (computedOffset && !ShapedType::isDynamic(resultOffset))
+    assert(*computedOffset == resultOffset &&
+           "mismatch between computed offset and result type offset");
+#endif // NDEBUG
 
   // The final result is  <baseBuffer, offset, sizes, strides>.
   // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all
@@ -133,12 +144,25 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   SmallVector<OpFoldResult> finalStrides;
   finalStrides.reserve(subRank);
 
+#ifndef NDEBUG
+  // Iteration variable for result dimensions of the subview op.
+  int64_t j = 0;
+#endif // NDEBUG
   for (unsigned i = 0; i < sourceRank; ++i) {
     if (droppedDims.test(i))
       continue;
 
     finalSizes.push_back(subSizes[i]);
     finalStrides.push_back(strides[i]);
+#ifndef NDEBUG
+    // Assert that the computed stride matches the stride of the result type of
+    // the subview op (if both are static).
+    std::optional<int64_t> computedStride = getConstantIntValue(strides[i]);
+    if (computedStride && !ShapedType::isDynamic(resultStrides[j]))
+      assert(*computedStride == resultStrides[j] &&
+             "mismatch between computed stride and result type stride");
+    ++j;
+#endif // NDEBUG
   }
   assert(finalSizes.size() == subRank &&
          "Should have populated all the values at this point");
@@ -687,13 +711,17 @@ public:
 
     auto baseBufferType = cast<MemRefType>(op.getBaseBuffer().getType());
     int64_t offset = 0;
-    if (allocLikeOp.getType() == baseBufferType)
-      results.push_back(allocLikeOp);
-    else
-      results.push_back(rewriter.create<memref::ReinterpretCastOp>(
-          loc, baseBufferType, allocLikeOp, offset,
-          /*sizes=*/ArrayRef<int64_t>(),
-          /*strides=*/ArrayRef<int64_t>()));
+    if (op.getBaseBuffer().use_empty()) {
+      results.push_back(nullptr);
+    } else {
+      if (allocLikeOp.getType() == baseBufferType)
+        results.push_back(allocLikeOp);
+      else
+        results.push_back(rewriter.create<memref::ReinterpretCastOp>(
+            loc, baseBufferType, allocLikeOp, offset,
+            /*sizes=*/ArrayRef<int64_t>(),
+            /*strides=*/ArrayRef<int64_t>()));
+    }
 
     // Offset.
     results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, offset));
@@ -793,7 +821,7 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
         extractOp.getSource().getDefiningOp<ViewLikeOpInterface>();
     if (!viewLikeOp)
       return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
-    rewriter.updateRootInPlace(extractOp, [&]() {
+    rewriter.modifyOpInPlace(extractOp, [&]() {
       extractOp.getSourceMutable().assign(viewLikeOp.getViewSource());
     });
     return success();
@@ -866,6 +894,92 @@ class ExtractStridedMetadataOpReinterpretCastFolder
   }
 };
 
+/// Replace `base, offset, sizes, strides =
+///              extract_strided_metadata(
+///                 cast(src) to dstTy)`
+/// With
+/// ```
+/// base, ... = extract_strided_metadata(src)
+/// offset = !dstTy.srcOffset.isDynamic()
+///            ? dstTy.srcOffset
+///            : extract_strided_metadata(src).offset
+/// sizes = for each srcSize in dstTy.srcSizes:
+///           !srcSize.isDynamic()
+///             ? srcSize
+//              : extract_strided_metadata(src).sizes[i]
+/// strides = for each srcStride in dstTy.srcStrides:
+///             !srcStrides.isDynamic()
+///               ? srcStrides
+///               : extract_strided_metadata(src).strides[i]
+/// ```
+///
+/// In other words, consume the `cast` and apply its effects
+/// on the offset, sizes, and strides or compute them directly from `src`.
+class ExtractStridedMetadataOpCastFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  PatternRewriter &rewriter) const override {
+    Value source = extractStridedMetadataOp.getSource();
+    auto castOp = source.getDefiningOp<memref::CastOp>();
+    if (!castOp)
+      return failure();
+
+    Location loc = extractStridedMetadataOp.getLoc();
+    // Check if the source is suitable for extract_strided_metadata.
+    SmallVector<Type> inferredReturnTypes;
+    if (failed(extractStridedMetadataOp.inferReturnTypes(
+            rewriter.getContext(), loc, {castOp.getSource()},
+            /*attributes=*/{}, /*properties=*/nullptr, /*regions=*/{},
+            inferredReturnTypes)))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "cast source's type is incompatible");
+
+    auto memrefType = cast<MemRefType>(source.getType());
+    unsigned rank = memrefType.getRank();
+    SmallVector<OpFoldResult> results;
+    results.resize_for_overwrite(rank * 2 + 2);
+
+    auto newExtractStridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc,
+                                                          castOp.getSource());
+
+    // Register the base_buffer.
+    results[0] = newExtractStridedMetadata.getBaseBuffer();
+
+    auto getConstantOrValue = [&rewriter](int64_t constant,
+                                          OpFoldResult ofr) -> OpFoldResult {
+      return !ShapedType::isDynamic(constant)
+                 ? OpFoldResult(rewriter.getIndexAttr(constant))
+                 : ofr;
+    };
+
+    auto [sourceStrides, sourceOffset] = getStridesAndOffset(memrefType);
+    assert(sourceStrides.size() == rank && "unexpected number of strides");
+
+    // Register the new offset.
+    results[1] =
+        getConstantOrValue(sourceOffset, newExtractStridedMetadata.getOffset());
+
+    const unsigned sizeStartIdx = 2;
+    const unsigned strideStartIdx = sizeStartIdx + rank;
+    ArrayRef<int64_t> sourceSizes = memrefType.getShape();
+
+    SmallVector<OpFoldResult> sizes = newExtractStridedMetadata.getSizes();
+    SmallVector<OpFoldResult> strides = newExtractStridedMetadata.getStrides();
+    for (unsigned i = 0; i < rank; ++i) {
+      results[sizeStartIdx + i] = getConstantOrValue(sourceSizes[i], sizes[i]);
+      results[strideStartIdx + i] =
+          getConstantOrValue(sourceStrides[i], strides[i]);
+    }
+    rewriter.replaceOp(extractStridedMetadataOp,
+                       getValueOrCreateConstantIndexOp(rewriter, loc, results));
+    return success();
+  }
+};
+
 /// Replace `base, offset =
 ///            extract_strided_metadata(extract_strided_metadata(src)#0)`
 /// With
@@ -907,6 +1021,7 @@ void memref::populateExpandStridedMetadataPatterns(
                ExtractStridedMetadataOpGetGlobalFolder,
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
                ExtractStridedMetadataOpReinterpretCastFolder,
+               ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }
@@ -919,6 +1034,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
                ExtractStridedMetadataOpSubviewFolder,
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
                ExtractStridedMetadataOpReinterpretCastFolder,
+               ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }

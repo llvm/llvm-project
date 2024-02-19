@@ -16,14 +16,17 @@
 #include <string>
 #include <unordered_map>
 
-#include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+
 #include "GlobalHandler.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -32,7 +35,7 @@
 
 // The ELF ID should be defined at compile-time by the build system.
 #ifndef TARGET_ELF_ID
-#define TARGET_ELF_ID 0
+#define TARGET_ELF_ID ELF::EM_NONE
 #endif
 
 namespace llvm {
@@ -49,14 +52,30 @@ using llvm::sys::DynamicLibrary;
 
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
-  /// Construct the kernel with a name, execution mode and a function.
-  GenELF64KernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode,
-                   void (*Func)(void))
-      : GenericKernelTy(Name, ExecutionMode), Func(Func) {}
+  /// Construct the kernel with a name and an execution mode.
+  GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the kernel.
-  Error initImpl(GenericDeviceTy &GenericDevice,
-                 DeviceImageTy &Image) override {
+  Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
+    // Functions have zero size.
+    GlobalTy Global(getName(), 0);
+
+    // Get the metadata (address) of the kernel function.
+    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+    if (auto Err = GHandler.getGlobalMetadataFromDevice(Device, Image, Global))
+      return Err;
+
+    // Check that the function pointer is valid.
+    if (!Global.getPtr())
+      return Plugin::error("Invalid function for kernel %s", getName());
+
+    // Save the function pointer.
+    Func = (void (*)())Global.getPtr();
+
+    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
+
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;
     return Plugin::success();
@@ -84,10 +103,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
-  /// Get the default number of blocks and threads for the kernel.
-  uint32_t getDefaultNumBlocks(GenericDeviceTy &) const override { return 1; }
-  uint32_t getDefaultNumThreads(GenericDeviceTy &) const override { return 1; }
-
 private:
   /// The kernel function to execute.
   void (*Func)(void);
@@ -96,8 +111,9 @@ private:
 /// Class implementing the GenELF64 device images properties.
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
-  GenELF64DeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), DynLib() {}
+  GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                        const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -122,24 +138,20 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Deinitialize the device, which is a no-op
   Error deinitImpl() override { return Plugin::success(); }
 
+  /// See GenericDeviceTy::getComputeUnitKind().
+  std::string getComputeUnitKind() const override { return "generic-64bit"; }
+
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) override {
-    GlobalTy Func(KernelEntry);
-
-    // Get the metadata (address) of the kernel function.
-    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-    if (auto Err = GHandler.getGlobalMetadataFromDevice(*this, Image, Func))
-      return std::move(Err);
-
-    // Allocate and create the kernel.
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+    // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel =
         Plugin::get().allocate<GenELF64KernelTy>();
-    new (GenELF64Kernel) GenELF64KernelTy(
-        KernelEntry.name, OMP_TGT_EXEC_MODE_GENERIC, (void (*)())Func.getPtr());
+    if (!GenELF64Kernel)
+      return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    return GenELF64Kernel;
+    new (GenELF64Kernel) GenELF64KernelTy(Name);
+
+    return *GenELF64Kernel;
   }
 
   /// Set the current context to this device, which is a no-op.
@@ -151,7 +163,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image =
         Plugin::get().allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
@@ -203,6 +215,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -299,8 +312,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  /// This plugin should not setup the device environment.
+  /// This plugin should not setup the device environment or memory pool.
   virtual bool shouldSetupDeviceEnvironment() const override { return false; };
+  virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
 
   /// Getters and setters for stack size and heap size not relevant.
   Error getDeviceStackSize(uint64_t &Value) override {
@@ -322,6 +336,7 @@ private:
       1, // GV_Slot_Size
       1, // GV_Warp_Size
       1, // GV_Max_Teams
+      1, // GV_Default_Num_Teams
       1, // GV_SimpleBufferSize
       1, // GV_Max_WG_Size
       1, // GV_Default_WG_Size
@@ -363,7 +378,18 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
 
   /// Initialize the plugin and return the number of devices.
-  Expected<int32_t> initImpl() override { return NUM_DEVICES; }
+  Expected<int32_t> initImpl() override {
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
+
+#ifdef USES_DYNAMIC_FFI
+    if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
+      return std::move(Err);
+#endif
+
+    return NUM_DEVICES;
+  }
 
   /// Deinitialize the plugin.
   Error deinitImpl() override { return Plugin::success(); }
@@ -377,9 +403,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
-    return true;
-  }
+  Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
   Triple::ArchType getTripleArch() const override {
     return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;

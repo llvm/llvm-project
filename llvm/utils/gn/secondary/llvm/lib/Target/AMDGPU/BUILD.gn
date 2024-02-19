@@ -27,7 +27,7 @@ tablegen("AMDGPUGenGlobalISel") {
 tablegen("AMDGPUGenPreLegalizeGICombiner") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AMDGPUPreLegalizerCombiner",
   ]
   td_file = "AMDGPUGISel.td"
@@ -36,7 +36,7 @@ tablegen("AMDGPUGenPreLegalizeGICombiner") {
 tablegen("AMDGPUGenPostLegalizeGICombiner") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AMDGPUPostLegalizerCombiner",
   ]
   td_file = "AMDGPUGISel.td"
@@ -45,7 +45,7 @@ tablegen("AMDGPUGenPostLegalizeGICombiner") {
 tablegen("AMDGPUGenRegBankGICombiner") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [
-    "-gen-global-isel-combiner-matchtable",
+    "-gen-global-isel-combiner",
     "-combiners=AMDGPURegBankCombiner",
   ]
   td_file = "AMDGPUGISel.td"
@@ -120,6 +120,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
+    "//llvm/lib/Transforms/HipStdPar",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",
@@ -140,12 +141,15 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUCtorDtorLowering.cpp",
     "AMDGPUExportClustering.cpp",
     "AMDGPUFrameLowering.cpp",
+    "AMDGPUGlobalISelDivergenceLowering.cpp",
     "AMDGPUGlobalISelUtils.cpp",
     "AMDGPUHSAMetadataStreamer.cpp",
     "AMDGPUIGroupLP.cpp",
     "AMDGPUISelDAGToDAG.cpp",
     "AMDGPUISelLowering.cpp",
+    "AMDGPUImageIntrinsicOptimizer.cpp",
     "AMDGPUInsertDelayAlu.cpp",
+    "AMDGPUInsertSingleUseVDST.cpp",
     "AMDGPUInstCombineIntrinsic.cpp",
     "AMDGPUInstrInfo.cpp",
     "AMDGPUInstructionSelector.cpp",
@@ -162,6 +166,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMachineFunction.cpp",
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
+    "AMDGPUMarkLastScratchLoad.cpp",
     "AMDGPUOpenCLEnqueuedBlockLowering.cpp",
     "AMDGPUPerfHintAnalysis.cpp",
     "AMDGPUPostLegalizerCombiner.cpp",

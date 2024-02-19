@@ -46,7 +46,9 @@ public:
   /// Get the human-readable name for the bank.
   StringRef getName() const { return TheDef.getValueAsString("Name"); }
   /// Get the name of the enumerator in the ID enumeration.
-  std::string getEnumeratorName() const { return (TheDef.getName() + "ID").str(); }
+  std::string getEnumeratorName() const {
+    return (TheDef.getName() + "ID").str();
+  }
 
   /// Get the name of the array holding the register class coverage data;
   std::string getCoverageArrayName() const {
@@ -212,8 +214,7 @@ static void visitRegisterBankClasses(
 }
 
 void RegisterBankEmitter::emitBaseClassImplementation(
-    raw_ostream &OS, StringRef TargetName,
-    std::vector<RegisterBank> &Banks) {
+    raw_ostream &OS, StringRef TargetName, std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
 
@@ -229,11 +230,10 @@ void RegisterBankEmitter::emitBaseClassImplementation(
     OS << "const uint32_t " << Bank.getCoverageArrayName() << "[] = {\n";
     unsigned LowestIdxInWord = 0;
     for (const auto &RCs : RCsGroupedByWord) {
-      OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31) << "\n";
+      OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31)
+         << "\n";
       for (const auto &RC : RCs) {
-        std::string QualifiedRegClassID =
-            (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
-        OS << "    (1u << (" << QualifiedRegClassID << " - "
+        OS << "    (1u << (" << RC->getQualifiedIdName() << " - "
            << LowestIdxInWord << ")) |\n";
       }
       OS << "    0,\n";
@@ -246,7 +246,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   for (const auto &Bank : Banks) {
     std::string QualifiedBankID =
         (TargetName + "::" + Bank.getEnumeratorName()).str();
-    OS << "const RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
+    OS << "constexpr RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
        << QualifiedBankID << ", /* Name */ \"" << Bank.getName() << "\", "
        << "/* CoveredRegClasses */ " << Bank.getCoverageArrayName()
        << ", /* NumRegClasses */ "

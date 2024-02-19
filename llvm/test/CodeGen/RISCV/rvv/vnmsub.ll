@@ -3,6 +3,7 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV64
+
 declare <vscale x 1 x i8> @llvm.riscv.vnmsub.nxv1i8.nxv1i8(
   <vscale x 1 x i8>,
   <vscale x 1 x i8>,

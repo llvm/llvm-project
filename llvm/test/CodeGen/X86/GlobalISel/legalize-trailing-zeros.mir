@@ -21,6 +21,7 @@ body:             |
     ; X64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738367
     ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[CTTZ_ZERO_UNDEF]], [[C1]]
     ; X64-NEXT: RET 0, implicit [[AND]](s64)
+    ;
     ; X86-LABEL: name: test_cttz35
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -34,8 +35,8 @@ body:             |
     ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[CTTZ_ZERO_UNDEF]], [[C2]]
     ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[C]], [[C]], [[UADDO1]]
     ; X86-NEXT: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
-    ; X86-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X86-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; X86-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X86-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
     ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_UNDEF1]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDE]], [[C]]
@@ -90,6 +91,7 @@ body:             |
     ; X64-NEXT: [[CTTZ:%[0-9]+]]:_(s64) = G_CTTZ [[DEF]](s64)
     ; X64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[CTTZ]](s64)
     ; X64-NEXT: RET 0, implicit [[COPY]](s64)
+    ;
     ; X86-LABEL: name: test_cttz64
     ; X86: [[DEF:%[0-9]+]]:_(s64) = IMPLICIT_DEF
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](s64)
@@ -100,8 +102,8 @@ body:             |
     ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[CTTZ]], [[C1]]
     ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[C]], [[C]], [[UADDO1]]
     ; X86-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV]](s32)
-    ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X86-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
+    ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; X86-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C2]]
     ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_UNDEF]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDE]], [[C]]

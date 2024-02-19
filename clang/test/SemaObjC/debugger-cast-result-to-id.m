@@ -10,7 +10,6 @@ void test_unknown_anytype_receiver(void) {
   id y = test1();
 }
 
-// rdar://10988847
 @class NSString; // expected-note {{forward declaration of class here}}
 
 void rdar10988847(void) {

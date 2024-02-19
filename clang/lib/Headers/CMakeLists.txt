@@ -10,10 +10,25 @@ set(core_files
   module.modulemap
   stdalign.h
   stdarg.h
+  __stdarg___gnuc_va_list.h
+  __stdarg___va_copy.h
+  __stdarg_va_arg.h
+  __stdarg_va_copy.h
+  __stdarg_va_list.h
   stdatomic.h
   stdbool.h
+  stdckdint.h
   stddef.h
   __stddef_max_align_t.h
+  __stddef_null.h
+  __stddef_nullptr_t.h
+  __stddef_offsetof.h
+  __stddef_ptrdiff_t.h
+  __stddef_rsize_t.h
+  __stddef_size_t.h
+  __stddef_unreachable.h
+  __stddef_wchar_t.h
+  __stddef_wint_t.h
   stdint.h
   stdnoreturn.h
   tgmath.h
@@ -78,6 +93,8 @@ set(hlsl_files
 
 set(loongarch_files
   larchintrin.h
+  lasxintrin.h
+  lsxintrin.h
   )
 
 set(mips_msa_files
@@ -99,10 +116,9 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  riscv_bitmanip.h
+  riscv_crypto.h
   riscv_ntlh.h
-  )
-
-set(sifive_files
   sifive_vector.h
   )
 
@@ -123,6 +139,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  adcintrin.h
   adxintrin.h
   ammintrin.h
   amxcomplexintrin.h
@@ -213,6 +230,7 @@ set(x86_files
   tmmintrin.h
   tsxldtrkintrin.h
   uintrintrin.h
+  usermsrintrin.h
   vaesintrin.h
   vpclmulqdqintrin.h
   waitpkgintrin.h
@@ -257,7 +275,6 @@ set(files
   ${ppc_files}
   ${ppc_htm_files}
   ${riscv_files}
-  ${sifive_files}
   ${systemz_files}
   ${ve_files}
   ${x86_files}
@@ -275,6 +292,8 @@ set(cuda_wrapper_files
 
 set(cuda_wrapper_bits_files
   cuda_wrappers/bits/shared_ptr_base.h
+  cuda_wrappers/bits/basic_string.h
+  cuda_wrappers/bits/basic_string.tcc
 )
 
 set(ppc_wrapper_files
@@ -285,6 +304,7 @@ set(ppc_wrapper_files
   ppc_wrappers/pmmintrin.h
   ppc_wrappers/tmmintrin.h
   ppc_wrappers/smmintrin.h
+  ppc_wrappers/nmmintrin.h
   ppc_wrappers/bmiintrin.h
   ppc_wrappers/bmi2intrin.h
   ppc_wrappers/immintrin.h
@@ -303,11 +323,13 @@ set(openmp_wrapper_files
 )
 
 set(llvm_libc_wrapper_files
+  llvm_libc_wrappers/assert.h
   llvm_libc_wrappers/stdio.h
   llvm_libc_wrappers/stdlib.h
   llvm_libc_wrappers/string.h
   llvm_libc_wrappers/ctype.h
   llvm_libc_wrappers/inttypes.h
+  llvm_libc_wrappers/time.h
 )
 
 include(GetClangResourceDir)
@@ -358,14 +380,16 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-fp16 arm_fp16.td arm_fp16.h)
   # Generate arm_sve.h
   clang_generate_header(-gen-arm-sve-header arm_sve.td arm_sve.h)
-  # Generate arm_sme_draft_spec_subject_to_change.h
-  clang_generate_header(-gen-arm-sme-header arm_sme.td arm_sme_draft_spec_subject_to_change.h)
+  # Generate arm_sme.h
+  clang_generate_header(-gen-arm-sme-header arm_sme.td arm_sme.h)
   # Generate arm_bf16.h
   clang_generate_header(-gen-arm-bf16 arm_bf16.td arm_bf16.h)
   # Generate arm_mve.h
   clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
   # Generate arm_cde.h
   clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
+  # Generate arm_vector_types.h
+  clang_generate_header(-gen-arm-vector-type arm_neon.td arm_vector_types.h)
 
   # Add headers to target specific lists
   list(APPEND arm_common_generated_files
@@ -380,8 +404,9 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
 
   list(APPEND aarch64_only_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/arm_sve.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/arm_sme_draft_spec_subject_to_change.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/arm_sme.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_bf16.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/arm_vector_types.h"
     )
 endif()
 if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)

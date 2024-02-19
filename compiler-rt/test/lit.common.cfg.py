@@ -268,6 +268,9 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 if config.have_zlib:
     config.available_features.add("zlib")
 
+if config.have_internal_symbolizer:
+    config.available_features.add("internal_symbolizer")
+
 # Use ugly construction to explicitly prohibit "clang", "clang++" etc.
 # in RUN lines.
 config.substitutions.append(
@@ -451,6 +454,9 @@ if not getattr(config, "sanitizer_uses_static_unwind", False):
 if config.has_lld:
     config.available_features.add("lld-available")
 
+if config.aarch64_sme:
+    config.available_features.add("aarch64-sme-available")
+
 if config.use_lld:
     config.available_features.add("lld")
 
@@ -626,7 +632,7 @@ if config.host_os == "Linux":
 
         ver = LooseVersion(ver_string)
         any_glibc = False
-        for required in ["2.19", "2.27", "2.30", "2.34", "2.37"]:
+        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37"]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
@@ -797,7 +803,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec"
+                r"-Wl,-z,origin -Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec"
                 + postfix,
             )
         )
@@ -806,7 +812,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-rpath,\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
@@ -814,7 +820,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-Wl,-R\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
+                r"-Wl,-R\$ORIGIN -L%T -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
@@ -929,6 +935,16 @@ if config.host_os == "Darwin":
 # related is likely to cause issues with sanitizer tests, because it may
 # preempt something we're looking to trap (e.g. _FORTIFY_SOURCE vs our ASAN).
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if config.has_compiler_rt_libatomic:
+  base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"
+                          % config.target_suffix)
+  if sys.platform in ['win32'] and execute_external:
+    # Don't pass dosish path separator to msys bash.exe.
+    base_lib = base_lib.replace('\\', '/')
+  config.substitutions.append(("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}"))
+else:
+  config.substitutions.append(("%libatomic", "-latomic"))
 
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)

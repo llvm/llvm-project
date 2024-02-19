@@ -37,6 +37,11 @@ static cl::opt<bool>
     EnableTrapUnreachable("trap-unreachable", cl::Hidden,
                           cl::desc("Enable generating trap for unreachable"));
 
+static cl::opt<bool> EnableNoTrapAfterNoreturn(
+    "no-trap-after-noreturn", cl::Hidden,
+    cl::desc("Do not emit a trap instruction for 'unreachable' IR instructions "
+             "after noreturn calls, even if --trap-unreachable is set."));
+
 void LLVMTargetMachine::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
   assert(MRI && "Unable to create reg info");
@@ -76,6 +81,8 @@ void LLVMTargetMachine::initAsmInfo() {
 
   TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
 
+  TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
+
   if (Options.ExceptionModel != ExceptionHandling::None)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
 
@@ -87,7 +94,7 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      const Triple &TT, StringRef CPU,
                                      StringRef FS, const TargetOptions &Options,
                                      Reloc::Model RM, CodeModel::Model CM,
-                                     CodeGenOpt::Level OL)
+                                     CodeGenOptLevel OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;
@@ -95,6 +102,8 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
 
   if (EnableTrapUnreachable)
     this->Options.TrapUnreachable = true;
+  if (EnableNoTrapAfterNoreturn)
+    this->Options.NoTrapAfterNoreturn = true;
 }
 
 TargetTransformInfo
@@ -156,7 +165,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
   std::unique_ptr<MCStreamer> AsmStreamer;
 
   switch (FileType) {
-  case CGFT_AssemblyFile: {
+  case CodeGenFileType::AssemblyFile: {
     MCInstPrinter *InstPrinter = getTarget().createMCInstPrinter(
         getTargetTriple(), MAI.getAssemblerDialect(), MAI, MII, MRI);
 
@@ -188,7 +197,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     AsmStreamer.reset(S);
     break;
   }
-  case CGFT_ObjectFile: {
+  case CodeGenFileType::ObjectFile: {
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
     MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, Context);
@@ -211,7 +220,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
         /*DWARFMustBeAtTheEnd*/ true));
     break;
   }
-  case CGFT_Null:
+  case CodeGenFileType::Null:
     // The Null output is intended for use for performance analysis and testing,
     // not real users.
     AsmStreamer.reset(getTarget().createNullStreamer(Context));
@@ -238,7 +247,7 @@ bool LLVMTargetMachine::addPassesToEmitFile(
       return true;
   } else {
     // MIR printing is redundant with -filetype=null.
-    if (FileType != CGFT_Null)
+    if (FileType != CodeGenFileType::Null)
       PM.add(createPrintMIRPass(Out));
   }
 

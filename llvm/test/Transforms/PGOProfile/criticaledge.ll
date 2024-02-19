@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; GEN: $__llvm_profile_raw_version = comdat any
 ; GEN: @__llvm_profile_raw_version = hidden constant i64 {{[0-9]+}}, comdat
 ; GEN: @__profn_test_criticalEdge = private constant [17 x i8] c"test_criticalEdge"
-; GEN: @__profn__stdin__bar = private constant [11 x i8] c"<stdin>:bar"
+; GEN: @__profn__stdin__bar = private constant [11 x i8] c"<stdin>;bar"
 
 define i32 @test_criticalEdge(i32 %i, i32 %j) {
 entry:
@@ -48,7 +48,7 @@ sw.bb:
 
 sw.bb1:
 ; GEN: sw.bb1:
-; GEN: call void @llvm.instrprof.increment(ptr @__profn_test_criticalEdge, i64 {{[0-9]+}}, i32 8, i32 4)
+; GEN: call void @llvm.instrprof.increment(ptr @__profn_test_criticalEdge, i64 {{[0-9]+}}, i32 8, i32 6)
   %call2 = call i32 @bar(i32 1024)
   br label %sw.epilog
 
@@ -75,7 +75,7 @@ if.end:
 
 sw.default:
 ; GEN: sw.default:
-; GEN-NOT: call void @llvm.instrprof.increment
+; GEN: call void @llvm.instrprof.increment(ptr @__profn_test_criticalEdge, i64 {{[0-9]+}}, i32 8, i32 4)
   %call6 = call i32 @bar(i32 32)
   %cmp7 = icmp sgt i32 %j, 10
   br i1 %cmp7, label %if.then8, label %if.end9
@@ -90,7 +90,7 @@ if.then8:
 
 if.end9:
 ; GEN: if.end9:
-; GEN: call void @llvm.instrprof.increment(ptr @__profn_test_criticalEdge, i64 {{[0-9]+}}, i32 8, i32 6)
+; GEN-NOT: call void @llvm.instrprof.increment
   %res.0 = phi i32 [ %add, %if.then8 ], [ %call6, %sw.default ]
   br label %sw.epilog
 

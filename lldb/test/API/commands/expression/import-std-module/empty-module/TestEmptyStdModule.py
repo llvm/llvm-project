@@ -38,5 +38,5 @@ class ImportStdModule(TestBase):
         # Try to access our mock std::vector. This should fail but not crash LLDB as the
         # std::vector template should be missing from the std module.
         self.expect(
-            "expr (size_t)v.size()", substrs=["Couldn't lookup symbols"], error=True
+            "expr (size_t)v.size()", substrs=["Couldn't look up symbols"], error=True
         )

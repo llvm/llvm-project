@@ -129,14 +129,48 @@ static SmallString<32> buildSuspendPrefixStr(CGCoroData &Coro, AwaitKind Kind) {
   return Prefix;
 }
 
-static bool memberCallExpressionCanThrow(const Expr *E) {
-  if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
-    if (const auto *Proto =
-            CE->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(Proto->getExceptionSpecType()) &&
-          Proto->canThrow() == CT_Cannot)
-        return false;
-  return true;
+// Check if function can throw based on prototype noexcept, also works for
+// destructors which are implicitly noexcept but can be marked noexcept(false).
+static bool FunctionCanThrow(const FunctionDecl *D) {
+  const auto *Proto = D->getType()->getAs<FunctionProtoType>();
+  if (!Proto) {
+    // Function proto is not found, we conservatively assume throwing.
+    return true;
+  }
+  return !isNoexceptExceptionSpec(Proto->getExceptionSpecType()) ||
+         Proto->canThrow() != CT_Cannot;
+}
+
+static bool ResumeStmtCanThrow(const Stmt *S) {
+  if (const auto *CE = dyn_cast<CallExpr>(S)) {
+    const auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      // We don't have direct callee. Conservatively assume throwing.
+      return true;
+
+    if (FunctionCanThrow(Callee))
+      return true;
+
+    // Fall through to visit the children.
+  }
+
+  if (const auto *TE = dyn_cast<CXXBindTemporaryExpr>(S)) {
+    // Special handling of CXXBindTemporaryExpr here as calling of Dtor of the
+    // temporary is not part of `children()` as covered in the fall through.
+    // We need to mark entire statement as throwing if the destructor of the
+    // temporary throws.
+    const auto *Dtor = TE->getTemporary()->getDestructor();
+    if (FunctionCanThrow(Dtor))
+      return true;
+
+    // Fall through to visit the children.
+  }
+
+  for (const auto *child : S->children())
+    if (ResumeStmtCanThrow(child))
+      return true;
+
+  return false;
 }
 
 // Emit suspend expression which roughly looks like:
@@ -201,6 +235,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CGF.CurCoro.InSuspendBlock = true;
   auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
   CGF.CurCoro.InSuspendBlock = false;
+
   if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
     // Veto suspension if requested by bool returning await_suspend.
     BasicBlock *RealSuspendBlock =
@@ -232,7 +267,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // is marked as 'noexcept', we avoid generating this additional IR.
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
-      memberCallExpressionCanThrow(S.getResumeExpr())) {
+      ResumeStmtCanThrow(S.getResumeExpr())) {
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
@@ -244,6 +279,15 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
                                          FPOptionsOverride(), Loc, Loc);
     TryStmt = CXXTryStmt::Create(CGF.getContext(), Loc, TryBody, Catch);
     CGF.EnterCXXTryStmt(*TryStmt);
+    CGF.EmitStmt(TryBody);
+    // We don't use EmitCXXTryStmt here. We need to store to ResumeEHVar that
+    // doesn't exist in the body.
+    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
+    CGF.ExitCXXTryStmt(*TryStmt);
+    LValueOrRValue Res;
+    // We are not supposed to obtain the value from init suspend await_resume().
+    Res.RV = RValue::getIgnored();
+    return Res;
   }
 
   LValueOrRValue Res;
@@ -251,11 +295,6 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     Res.LV = CGF.EmitLValue(S.getResumeExpr());
   else
     Res.RV = CGF.EmitAnyExpr(S.getResumeExpr(), aggSlot, ignoreResult);
-
-  if (TryStmt) {
-    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
-    CGF.ExitCXXTryStmt(*TryStmt);
-  }
 
   return Res;
 }
@@ -402,8 +441,11 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
     llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
     // See if we have a funclet bundle to associate coro.end with. (WinEH)
     auto Bundles = getBundlesForCoroEnd(CGF);
-    auto *CoroEnd = CGF.Builder.CreateCall(
-        CoroEndFn, {NullPtr, CGF.Builder.getTrue()}, Bundles);
+    auto *CoroEnd =
+      CGF.Builder.CreateCall(CoroEndFn,
+                             {NullPtr, CGF.Builder.getTrue(),
+                              llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
+                             Bundles);
     if (Bundles.empty()) {
       // Otherwise, (landingpad model), create a conditional branch that leads
       // either to a cleanup block or a block with EH resume instruction.
@@ -531,6 +573,11 @@ struct GetReturnObjectManager {
     Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
 
     GroEmission = CGF.EmitAutoVarAlloca(*GroVarDecl);
+    auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
+        GroEmission.getOriginalAllocatedAddress().getPointer());
+    assert(GroAlloca && "expected alloca to be emitted");
+    GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                           llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
 
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();
@@ -594,7 +641,7 @@ static void emitBodyAndFallthrough(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
-  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
+  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
 
@@ -754,7 +801,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   // Emit coro.end before getReturnStmt (and parameter destructors), since
   // resume and destroy parts of the coroutine should not include them.
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
-  Builder.CreateCall(CoroEnd, {NullPtr, Builder.getFalse()});
+  Builder.CreateCall(CoroEnd,
+                     {NullPtr, Builder.getFalse(),
+                      llvm::ConstantTokenNone::get(CoroEnd->getContext())});
 
   if (Stmt *Ret = S.getReturnStmt()) {
     // Since we already emitted the return value above, so we shouldn't
@@ -766,6 +815,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();
+
+  if (CXXRecordDecl *RD = FnRetTy->getAsCXXRecordDecl();
+      RD && RD->hasAttr<CoroOnlyDestroyWhenCompleteAttr>())
+    CurFn->setCoroDestroyOnlyWhenComplete();
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.
@@ -783,7 +836,7 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     }
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_begin "
                                 "has been used earlier in this function");
-    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
+    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
     return RValue::get(NullPtr);
   }
   case llvm::Intrinsic::coro_size: {
@@ -823,6 +876,10 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   }
   for (const Expr *Arg : E->arguments())
     Args.push_back(EmitScalarExpr(Arg));
+  // @llvm.coro.end takes a token parameter. Add token 'none' as the last
+  // argument.
+  if (IID == llvm::Intrinsic::coro_end)
+    Args.push_back(llvm::ConstantTokenNone::get(getLLVMContext()));
 
   llvm::Function *F = CGM.getIntrinsic(IID);
   llvm::CallInst *Call = Builder.CreateCall(F, Args);

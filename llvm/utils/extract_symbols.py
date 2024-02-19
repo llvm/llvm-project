@@ -22,6 +22,7 @@ import os
 import subprocess
 import multiprocessing
 import argparse
+import platform
 
 # Define a function which extracts a list of pairs of (symbols, is_def) from a
 # library using llvm-nm becuase it can work both with regular and bitcode files.
@@ -428,7 +429,12 @@ if __name__ == "__main__":
     # Extract symbols from libraries in parallel. This is a huge time saver when
     # doing a debug build, as there are hundreds of thousands of symbols in each
     # library.
-    pool = multiprocessing.Pool()
+    # FIXME: On AIX, the default pool size can be too big for a logical
+    #        partition's allocated memory, and can lead to an out of memory
+    #        IO error. We are setting the pool size to 8 to avoid such
+    #        errors at the moment, and will look for a graceful solution later.
+    pool = multiprocessing.Pool(8) if platform.system() == "AIX" \
+                                   else multiprocessing.Pool()
     try:
         # Only one argument can be passed to the mapping function, and we can't
         # use a lambda or local function definition as that doesn't work on

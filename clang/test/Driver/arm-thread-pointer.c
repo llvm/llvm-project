@@ -30,9 +30,9 @@
 // RUN: FileCheck -check-prefix=ARMv5_THREAD_POINTER_ASSEMBLER %s
 // ARMv5_THREAD_POINTER_ASSEMBLER-NOT: hardware TLS register is not supported for the armv5 sub-architecture
 
-// RUN: %clang --target=armv6-linux -mthumb -mtp=cp15 -### -S %s 2>&1 | \
+// RUN: not %clang --target=armv6-linux -mthumb -mtp=cp15 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=THUMBv6_THREAD_POINTER_UNSUPP %s
-// RUN: %clang --target=thumbv6-linux -mthumb -mtp=cp15 -### -S %s 2>&1 | \
+// RUN: not %clang --target=thumbv6-linux -mthumb -mtp=cp15 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=THUMBv6_THREAD_POINTER_UNSUPP %s
 // THUMBv6_THREAD_POINTER_UNSUPP: hardware TLS register is not supported for the thumbv6 sub-architecture
 

@@ -1373,6 +1373,13 @@ TEST_F(ConstantRangeTest, Shl) {
       ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
   EXPECT_EQ(One.shl(WrapNullMax), Full);
 
+  ConstantRange NegOne(APInt(16, 0xffff));
+  EXPECT_EQ(NegOne.shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xfff0), APInt(16, 0)));
+  EXPECT_EQ(ConstantRange(APInt(16, 0xfffe), APInt(16, 0))
+                .shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xffe0), APInt(16, 0)));
+
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shl(CR2);
@@ -2431,6 +2438,26 @@ TEST_F(ConstantRangeTest, Ctlz) {
       });
 }
 
+TEST_F(ConstantRangeTest, Cttz) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.cttz(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.countr_zero()); });
+
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.cttz(/*ZeroIsPoison=*/true); },
+      [](const APInt &N) -> std::optional<APInt> {
+        if (N.isZero())
+          return std::nullopt;
+        return APInt(N.getBitWidth(), N.countr_zero());
+      });
+}
+
+TEST_F(ConstantRangeTest, Ctpop) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.ctpop(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.popcount()); });
+}
+
 TEST_F(ConstantRangeTest, castOps) {
   ConstantRange A(APInt(16, 66), APInt(16, 128));
   ConstantRange FpToI8 = A.castOp(Instruction::FPToSI, 8);
@@ -2537,6 +2564,12 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_EQ(R16_35.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 64)));
   EXPECT_EQ(R16_35.binaryXor(R0_99), ConstantRange(APInt(8, 0), APInt(8, 128)));
   EXPECT_EQ(R0_99.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 128)));
+
+  // Treat xor A, B as sub nsw nuw A, B
+  ConstantRange R0_51(APInt(8, 0), APInt(8, 51));
+  ConstantRange R63(APInt(8, 63));
+  EXPECT_EQ(R0_51.binaryXor(R63), ConstantRange(APInt(8, 13), APInt(8, 64)));
+  EXPECT_EQ(R63.binaryXor(R0_51), ConstantRange(APInt(8, 13), APInt(8, 64)));
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {

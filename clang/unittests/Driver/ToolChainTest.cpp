@@ -19,10 +19,12 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -166,6 +168,201 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
             "Candidate multilib: .;@m32\n"
             "Selected multilib: .;@m32\n",
             S);
+}
+
+TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  const char *EmptyFiles[] = {
+      // Sort entries so the latest version doesn't come first.
+      "/usr/gcc/7/lib/gcc/sparcv9-sun-solaris2.11/7.5.0/32/crtbegin.o",
+      "/usr/gcc/7/lib/gcc/sparcv9-sun-solaris2.11/7.5.0/crtbegin.o",
+      "/usr/gcc/7/lib/gcc/x86_64-pc-solaris2.11/7.5.0/32/crtbegin.o",
+      "/usr/gcc/7/lib/gcc/x86_64-pc-solaris2.11/7.5.0/crtbegin.o",
+      "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0/crtbegin.o",
+      "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0/sparcv8plus/crtbegin.o",
+      "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0/32/crtbegin.o",
+      "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0/crtbegin.o",
+      "/usr/gcc/4.7/lib/gcc/i386-pc-solaris2.11/4.7.3/amd64/crtbegin.o",
+      "/usr/gcc/4.7/lib/gcc/i386-pc-solaris2.11/4.7.3/crtbegin.o",
+      "/usr/gcc/4.7/lib/gcc/sparc-sun-solaris2.11/4.7.3/crtbegin.o",
+      "/usr/gcc/4.7/lib/gcc/sparc-sun-solaris2.11/4.7.3/sparcv9/crtbegin.o",
+  };
+
+  for (const char *Path : EmptyFiles)
+    InMemoryFileSystem->addFile(Path, 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "i386-pc-solaris2.11", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(
+        TheDriver.BuildCompilation({"-v", "--gcc-toolchain=", "--sysroot="}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
+              "Selected GCC installation: "
+              "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
+              "Candidate multilib: .;@m64\n"
+              "Candidate multilib: 32;@m32\n"
+              "Selected multilib: 32;@m32\n",
+              S);
+  }
+
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "amd64-pc-solaris2.11", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(
+        TheDriver.BuildCompilation({"-v", "--gcc-toolchain=", "--sysroot="}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
+              "Selected GCC installation: "
+              "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
+              "Candidate multilib: .;@m64\n"
+              "Candidate multilib: 32;@m32\n"
+              "Selected multilib: .;@m64\n",
+              S);
+  }
+
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "x86_64-pc-solaris2.11", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(
+        TheDriver.BuildCompilation({"-v", "--gcc-toolchain=", "--sysroot="}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
+              "Selected GCC installation: "
+              "/usr/gcc/11/lib/gcc/x86_64-pc-solaris2.11/11.4.0\n"
+              "Candidate multilib: .;@m64\n"
+              "Candidate multilib: 32;@m32\n"
+              "Selected multilib: .;@m64\n",
+              S);
+  }
+
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "sparc-sun-solaris2.11", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(
+        TheDriver.BuildCompilation({"-v", "--gcc-toolchain=", "--sysroot="}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0\n"
+              "Selected GCC installation: "
+              "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0\n"
+              "Candidate multilib: .;@m64\n"
+              "Candidate multilib: sparcv8plus;@m32\n"
+              "Selected multilib: sparcv8plus;@m32\n",
+              S);
+  }
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "sparcv9-sun-solaris2.11", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(
+        TheDriver.BuildCompilation({"-v", "--gcc-toolchain=", "--sysroot="}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0\n"
+              "Selected GCC installation: "
+              "/usr/gcc/11/lib/gcc/sparcv9-sun-solaris2.11/11.4.0\n"
+              "Candidate multilib: .;@m64\n"
+              "Candidate multilib: sparcv8plus;@m32\n"
+              "Selected multilib: .;@m64\n",
+              S);
+  }
+}
+
+MATCHER_P(jobHasArgs, Substr, "") {
+  const driver::Command &C = arg;
+  std::string Args = "";
+  llvm::ListSeparator Sep(" ");
+  for (const char *Arg : C.getArguments()) {
+    Args += Sep;
+    Args += Arg;
+  }
+  if (is_style_windows(llvm::sys::path::Style::native))
+    std::replace(Args.begin(), Args.end(), '\\', '/');
+  if (llvm::StringRef(Args).contains(Substr))
+    return true;
+  *result_listener << "whose args are '" << Args << "'";
+  return false;
+}
+
+TEST(ToolChainTest, VFSGnuLibcxxPathNoSysroot) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  const char *EmptyFiles[] = {
+      "foo.cpp",
+      "/bin/clang",
+      "/usr/include/c++/v1/cstdio",
+  };
+
+  for (const char *Path : EmptyFiles)
+    InMemoryFileSystem->addFile(Path, 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+
+  {
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "x86_64-unknown-linux-gnu", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
+        {"/bin/clang", "-fsyntax-only", "-stdlib=libc++",
+         "--sysroot=", "foo.cpp"}));
+    ASSERT_TRUE(C);
+    EXPECT_THAT(C->getJobs(), testing::ElementsAre(jobHasArgs(
+                                  "-internal-isystem /usr/include/c++/v1")));
+  }
 }
 
 TEST(ToolChainTest, DefaultDriverMode) {
@@ -334,7 +531,7 @@ TEST(ToolChainTest, CommandOutput) {
   const auto &InFile = CmdCompile->getInputInfos().front().getFilename();
   EXPECT_STREQ(InFile, "foo.cpp");
   auto ObjFile = CmdCompile->getOutputFilenames().front();
-  EXPECT_TRUE(StringRef(ObjFile).endswith(".o"));
+  EXPECT_TRUE(StringRef(ObjFile).ends_with(".o"));
 
   const auto &CmdLink = Jobs.getJobs().back();
   const auto LinkInFile = CmdLink->getInputInfos().front().getFilename();

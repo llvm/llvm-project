@@ -5,8 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -247,7 +245,7 @@ static void test_valid_positive_integral_values() {
            "%r='00:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 AM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='12:00:00 '\t"
@@ -280,7 +278,7 @@ static void test_valid_positive_integral_values() {
            "%r='11:59:59'\t"
 #elif defined(_AIX)
            "%r='11:59:59 AM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='11:59:59 '\t"
@@ -313,7 +311,7 @@ static void test_valid_positive_integral_values() {
            "%r='12:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 PM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #else
            "%r='12:00:00 '\t"
@@ -344,7 +342,7 @@ static void test_valid_positive_integral_values() {
            "%T='23:59:59'\t"
 #if defined(_AIX)
            "%r='11:59:59 PM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #elif defined(_WIN32)
            "%r='23:59:59'\t"
@@ -379,7 +377,7 @@ static void test_valid_positive_integral_values() {
            "%r='00:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 AM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #elif defined(_WIN32)
            "%r='12:00:00'\t"
@@ -396,7 +394,7 @@ static void test_valid_positive_integral_values() {
         std::chrono::duration<int, std::ratio<86400>>(7));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -413,8 +411,12 @@ static void test_valid_positive_integral_values() {
 #  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='12:00:00 AM'\t"
+#    else
+           "%r='12:00:00 午前'\t"
+#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -449,8 +451,12 @@ static void test_valid_positive_integral_values() {
 #  endif
            "%R='11:59'\t"
            "%T='11:59:59'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='11:59:59 AM'\t"
+#    else
+           "%r='11:59:59 午前'\t"
+#    endif
            "%X='11時59分59秒'\t"
            "%EX='11時59分59秒'\t"
 #  elif defined(_WIN32)
@@ -485,8 +491,12 @@ static void test_valid_positive_integral_values() {
 #  endif
            "%R='12:00'\t"
            "%T='12:00:00'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='12:00:00 PM'\t"
+#    else
+           "%r='12:00:00 午後'\t"
+#    endif
            "%X='12時00分00秒'\t"
            "%EX='12時00分00秒'\t"
 #  else
@@ -521,8 +531,12 @@ static void test_valid_positive_integral_values() {
 #  endif
            "%R='23:59'\t"
            "%T='23:59:59'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='11:59:59 PM'\t"
+#    else
+           "%r='11:59:59 午後'\t"
+#    endif
            "%X='23時59分59秒'\t"
            "%EX='23時59分59秒'\t"
 #  else
@@ -557,8 +571,12 @@ static void test_valid_positive_integral_values() {
 #  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='12:00:00 AM'\t"
+#    else
+           "%r='12:00:00 午前'\t"
+#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -786,7 +804,7 @@ static void test_valid_negative_integral_values() {
            "%T='23:59:59'\t"
 #if defined(_AIX)
            "%r='11:59:59 PM'\t"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
            "%r=''\t"
 #elif defined(_WIN32)
            "%r='23:59:59'\t"
@@ -803,7 +821,7 @@ static void test_valid_negative_integral_values() {
         -(23h + 59min + 59s));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
   check(loc,
         SV("-%H='23'\t"
            "%OH='23'\t"
@@ -820,8 +838,12 @@ static void test_valid_negative_integral_values() {
 #  endif
            "%R='23:59'\t"
            "%T='23:59:59'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+#    if defined(__APPLE__)
            "%r='11:59:59 PM'\t"
+#    else
+           "%r='11:59:59 午後'\t"
+#    endif
            "%X='23時59分59秒'\t"
            "%EX='23時59分59秒'\t"
 #  elif defined(_WIN32)
@@ -839,7 +861,7 @@ static void test_valid_negative_integral_values() {
            "\n"),
         lfmt,
         -(23h + 59min + 59s));
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)|| defined(__FreeBSD__)
   check(loc,
         SV("-%H='23'\t"
            "%OH='二十三'\t"
@@ -861,7 +883,7 @@ static void test_valid_negative_integral_values() {
            "\n"),
         lfmt,
         -(23h + 59min + 59s));
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)|| defined(__FreeBSD__)
   std::locale::global(std::locale::classic());
 }
 
@@ -1014,7 +1036,8 @@ static void test_valid_fractional_values() {
   check(loc, SV("00.011"), SV("{:L%S}"), std::chrono::duration<double, std::milli>(11.123456789));
   check(loc, SV("01"), SV("{:L%S}"), std::chrono::duration<long double>(61.123456789));
 
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
+
   check(SV("00.000000001"), SV("{:%OS}"), 1ns);
   check(SV("00.000000501"), SV("{:%OS}"), 501ns);
   check(SV("00.000001000"), SV("{:%OS}"), 1000ns);
@@ -1030,7 +1053,8 @@ static void test_valid_fractional_values() {
   check(SV("00.001"), SV("{:%OS}"), std::chrono::duration<float, std::milli>(1.123456789));
   check(SV("00.011"), SV("{:%OS}"), std::chrono::duration<double, std::milli>(11.123456789));
   check(SV("01"), SV("{:%OS}"), std::chrono::duration<long double>(61.123456789));
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)|| defined(__FreeBSD__)
+
   check(loc, SV("〇.000000001"), SV("{:L%OS}"), 1ns);
   check(loc, SV("〇.000000501"), SV("{:L%OS}"), 501ns);
   check(loc, SV("〇.000001000"), SV("{:L%OS}"), 1000ns);
@@ -1046,7 +1070,7 @@ static void test_valid_fractional_values() {
   check(loc, SV("〇.001"), SV("{:L%OS}"), std::chrono::duration<float, std::milli>(1.123456789));
   check(loc, SV("〇.011"), SV("{:L%OS}"), std::chrono::duration<double, std::milli>(11.123456789));
   check(loc, SV("一"), SV("{:L%OS}"), std::chrono::duration<long double>(61.123456789));
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)|| defined(__FreeBSD__)
 
   check(loc, SV("01:05:06.000000001"), SV("{:L%T}"), 1h + 5min + 6s + 1ns);
   check(loc, SV("01:05:06.000000501"), SV("{:L%T}"), 1h + 5min + 6s + 501ns);
@@ -1152,7 +1176,7 @@ static void test() {
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0ms);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0ms);
 
-  // Make sure the the required values work, based on their minimum number of required bits per [time.syn].
+  // Make sure the required values work, based on their minimum number of required bits per [time.syn].
   check(SV("23:47:16.854775807"),
         SV("{:%T}"),
         std::chrono::nanoseconds{0x7fff'ffff'ffff'ffffll}); // 64 bit signed value max

@@ -11,10 +11,10 @@
 
 #include <time.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int nanosleep(const struct timespec *req, struct timespec *rem);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_NANOSLEEP_H

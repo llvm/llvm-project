@@ -18,7 +18,7 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -39,13 +39,6 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
     dialect. Since variables in module scope in SPIR-V dialect are of pointer
     type, this op returns a pointer type as well, and the type is the same as
     the variable referenced.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    spv-address-of-op ::= ssa-id `=` `spirv.mlir.addressof` symbol-ref-id
-                                     `:` spirv-pointer-type
-    ```
 
     #### Example:
 
@@ -257,8 +250,8 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 // -----
 
 def SPIRV_FuncOp : SPIRV_Op<"func", [
-    AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
-    FunctionOpInterface, InModuleScope, IsolatedFromAbove
+    AutomaticAllocationScope, FunctionOpInterface,
+    InModuleScope, IsolatedFromAbove
   ]> {
   let summary = "Declare or define a function";
 
@@ -274,6 +267,15 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
     This op itself takes no operands and generates no results. Its region
     can take zero or more arguments and return zero or one values.
 
+    From `SPV_KHR_physical_storage_buffer`:
+    If a parameter of function is
+    - a pointer (or contains a pointer) in the PhysicalStorageBuffer storage
+      class, the function parameter must be decorated with exactly one of
+      `Aliased` or `Restrict`.
+    - a pointer (or contains a pointer) and the type it points to is a pointer
+      in the PhysicalStorageBuffer storage class, the function parameter must
+      be decorated with exactly one of `AliasedPointer` or `RestrictPointer`.
+
     <!-- End of AutoGen section -->
 
     ```
@@ -287,6 +289,20 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
     ```mlir
     spirv.func @foo() -> () "None" { ... }
     spirv.func @bar() -> () "Inline|Pure" { ... }
+
+    spirv.func @aliased_pointer(%arg0: !spirv.ptr<i32, PhysicalStorageBuffer>,
+        { spirv.decoration = #spirv.decoration<Aliased> }) -> () "None" { ... }
+
+    spirv.func @restrict_pointer(%arg0: !spirv.ptr<i32, PhysicalStorageBuffer>,
+        { spirv.decoration = #spirv.decoration<Restrict> }) -> () "None" { ... }
+
+    spirv.func @aliased_pointee(%arg0: !spirv.ptr<!spirv.ptr<i32,
+        PhysicalStorageBuffer>, Generic> { spirv.decoration =
+        #spirv.decoration<AliasedPointer> }) -> () "None" { ... }
+
+    spirv.func @restrict_pointee(%arg0: !spirv.ptr<!spirv.ptr<i32,
+        PhysicalStorageBuffer>, Generic> { spirv.decoration =
+        #spirv.decoration<RestrictPointer> }) -> () "None" { ... }
     ```
   }];
 
@@ -315,12 +331,6 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
   let autogenSerialization = 0;
 
   let extraClassDeclaration = [{
-    /// Returns the argument types of this function.
-    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
-
-    /// Returns the result types of this function.
-    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
-
     /// Hook for FunctionOpInterface, called after verifying that the 'type'
     /// attribute is present and checks if it holds a function type. Ensures
     /// getType, getNumArguments, and getNumResults can be called safely
@@ -330,6 +340,19 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
     /// type and the presence of the (potentially empty) function body.
     /// Ensures SPIR-V specific semantics.
     LogicalResult verifyBody();
+
+    //===------------------------------------------------------------------===//
+    // FunctionOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    // CallableOpInterface
+    Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
   }];
 }
 
@@ -535,13 +558,6 @@ def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
     This operation has no corresponding SPIR-V instruction; it's merely used
     for modelling purpose in the SPIR-V dialect. This op's return type is
     the same as the specialization constant.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    spv-reference-of-op ::= ssa-id `=` `spirv.mlir.referenceof` symbol-ref-id
-                                       `:` spirv-scalar-type
-    ```
 
     #### Example:
 
@@ -778,11 +794,8 @@ def SPIRV_YieldOp : SPIRV_Op<"mlir.yield", [
     in its parent block (see SPIRV_SpecConstantOperation for further
     details). This op has no corresponding SPIR-V instruction.
 
-    ```
-    spirv.mlir.yield ::= `spirv.mlir.yield` ssa-id : spirv-type
-    ```
-
     #### Example:
+
     ```mlir
     %0 = ... (some op supported by SPIR-V OpSpecConstantOp)
     spirv.mlir.yield %0

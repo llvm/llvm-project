@@ -5,7 +5,7 @@ extern int x;
 #if foo   // expected-error {{'foo' is not defined, evaluates to 0}}
 #endif
 
-// expected-warning@+2 {{use of a '#elifdef' directive is a C2x extension}}
+// expected-warning@+2 {{use of a '#elifdef' directive is a C23 extension}}
 #ifdef foo
 #elifdef foo
 #endif
@@ -15,7 +15,7 @@ extern int x;
 
 
 // PR3938
-// expected-warning@+3 {{use of a '#elifdef' directive is a C2x extension}}
+// expected-warning@+3 {{use of a '#elifdef' directive is a C23 extension}}
 #if 0
 #ifdef D
 #elifdef D
@@ -23,7 +23,6 @@ extern int x;
 #endif
 #endif
 
-// rdar://9475098
 #if 0
 #else 1   // expected-warning {{extra tokens}}
 #endif

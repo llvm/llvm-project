@@ -9,7 +9,8 @@
 // This file implements a function pass that initializes undef vector value to
 // temporary pseudo instruction and remove it in expandpseudo pass to prevent
 // register allocation resulting in a constraint violated result for vector
-// instruction.
+// instruction.  It also rewrites the NoReg tied operand back to an
+// IMPLICIT_DEF.
 //
 // RISC-V vector instruction has register overlapping constraint for certain
 // instructions, and will cause illegal instruction trap if violated, we use
@@ -30,10 +31,18 @@
 //
 // See also: https://github.com/llvm/llvm-project/issues/50157
 //
+// Additionally, this pass rewrites tied operands of vector instructions
+// from NoReg to IMPLICIT_DEF.  (Not that this is a non-overlapping set of
+// operands to the above.)  We use NoReg to side step a MachineCSE
+// optimization quality problem but need to convert back before
+// TwoAddressInstruction.  See pr64282 for context.
+//
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;
@@ -49,12 +58,14 @@ class RISCVInitUndef : public MachineFunctionPass {
   const RISCVSubtarget *ST;
   const TargetRegisterInfo *TRI;
 
+  // Newly added vregs, assumed to be fully rewritten
+  SmallSet<Register, 8> NewRegs;
+  SmallVector<MachineInstr *, 8> DeadInsts;
+
 public:
   static char ID;
 
-  RISCVInitUndef() : MachineFunctionPass(ID) {
-    initializeRISCVInitUndefPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVInitUndef() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -67,13 +78,13 @@ public:
 private:
   bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
                          const DeadLaneDetector &DLD);
-  bool handleImplicitDef(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator &Inst);
   bool isVectorRegClass(const Register R);
   const TargetRegisterClass *
   getVRLargestSuperClass(const TargetRegisterClass *RC) const;
   bool handleSubReg(MachineFunction &MF, MachineInstr &MI,
                     const DeadLaneDetector &DLD);
+  bool fixupIllOperand(MachineInstr *MI, MachineOperand &MO);
+  bool handleReg(MachineInstr *MI);
 };
 
 } // end anonymous namespace
@@ -118,63 +129,36 @@ static unsigned getUndefInitOpcode(unsigned RegClassID) {
   }
 }
 
-bool RISCVInitUndef::handleImplicitDef(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator &Inst) {
-  const TargetRegisterInfo &TRI =
-      *MBB.getParent()->getSubtarget().getRegisterInfo();
-
-  assert(Inst->getOpcode() == TargetOpcode::IMPLICIT_DEF);
-
-  Register Reg = Inst->getOperand(0).getReg();
-  if (!Reg.isVirtual())
-    return false;
-
-  bool NeedPseudoInit = false;
-  SmallVector<MachineOperand *, 1> UseMOs;
-  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-    MachineInstr *UserMI = MO.getParent();
-
-    bool HasEarlyClobber = false;
-    bool TiedToDef = false;
-    for (MachineOperand &UserMO : UserMI->operands()) {
-      if (!UserMO.isReg())
-        continue;
-      if (UserMO.isEarlyClobber())
-        HasEarlyClobber = true;
-      if (UserMO.isUse() && UserMO.isTied() &&
-          TRI.regsOverlap(UserMO.getReg(), Reg))
-        TiedToDef = true;
-    }
-    if (HasEarlyClobber && !TiedToDef) {
-      NeedPseudoInit = true;
-      UseMOs.push_back(&MO);
-    }
-  }
-
-  if (!NeedPseudoInit)
-    return false;
-
-  LLVM_DEBUG(
-      dbgs() << "Emitting PseudoRVVInitUndef for implicit vector register "
-             << Reg << '\n');
-
-  unsigned RegClassID = getVRLargestSuperClass(MRI->getRegClass(Reg))->getID();
-  unsigned Opcode = getUndefInitOpcode(RegClassID);
-
-  BuildMI(MBB, Inst, Inst->getDebugLoc(), TII->get(Opcode), Reg);
-
-  Inst = MBB.erase(Inst);
-
-  for (auto MO : UseMOs)
-    MO->setIsUndef(false);
-
-  return true;
-}
-
 static bool isEarlyClobberMI(MachineInstr &MI) {
   return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
     return DefMO.isReg() && DefMO.isEarlyClobber();
   });
+}
+
+static bool findImplictDefMIFromReg(Register Reg, MachineRegisterInfo *MRI) {
+  for (auto &DefMI : MRI->def_instructions(Reg)) {
+    if (DefMI.getOpcode() == TargetOpcode::IMPLICIT_DEF)
+      return true;
+  }
+  return false;
+}
+
+bool RISCVInitUndef::handleReg(MachineInstr *MI) {
+  bool Changed = false;
+  for (auto &UseMO : MI->uses()) {
+    if (!UseMO.isReg())
+      continue;
+    if (UseMO.isTied())
+      continue;
+    if (!UseMO.getReg().isVirtual())
+      continue;
+    if (!isVectorRegClass(UseMO.getReg()))
+      continue;
+
+    if (UseMO.isUndef() || findImplictDefMIFromReg(UseMO.getReg(), MRI))
+      Changed |= fixupIllOperand(MI, UseMO);
+  }
+  return Changed;
 }
 
 bool RISCVInitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
@@ -186,8 +170,12 @@ bool RISCVInitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
       continue;
     if (!UseMO.getReg().isVirtual())
       continue;
+    if (UseMO.isTied())
+      continue;
 
     Register Reg = UseMO.getReg();
+    if (NewRegs.count(Reg))
+      continue;
     DeadLaneDetector::VRegInfo Info =
         DLD.getVRegInfo(Register::virtReg2Index(Reg));
 
@@ -235,18 +223,53 @@ bool RISCVInitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
   return Changed;
 }
 
+bool RISCVInitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
+
+  LLVM_DEBUG(
+      dbgs() << "Emitting PseudoRVVInitUndef for implicit vector register "
+             << MO.getReg() << '\n');
+
+  const TargetRegisterClass *TargetRegClass =
+      getVRLargestSuperClass(MRI->getRegClass(MO.getReg()));
+  unsigned Opcode = getUndefInitOpcode(TargetRegClass->getID());
+  Register NewReg = MRI->createVirtualRegister(TargetRegClass);
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(Opcode), NewReg);
+  MO.setReg(NewReg);
+  if (MO.isUndef())
+    MO.setIsUndef(false);
+  return true;
+}
+
 bool RISCVInitUndef::processBasicBlock(MachineFunction &MF,
                                        MachineBasicBlock &MBB,
                                        const DeadLaneDetector &DLD) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr &MI = *I;
-    if (ST->enableSubRegLiveness() && isEarlyClobberMI(MI))
-      Changed |= handleSubReg(MF, MI, DLD);
-    if (MI.isImplicitDef()) {
-      auto DstReg = MI.getOperand(0).getReg();
-      if (isVectorRegClass(DstReg))
-        Changed |= handleImplicitDef(MBB, I);
+
+    // If we used NoReg to represent the passthru, switch this back to being
+    // an IMPLICIT_DEF before TwoAddressInstructions.
+    unsigned UseOpIdx;
+    if (MI.getNumDefs() != 0 && MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+      MachineOperand &UseMO = MI.getOperand(UseOpIdx);
+      if (UseMO.getReg() == RISCV::NoRegister) {
+        const TargetRegisterClass *RC =
+          TII->getRegClass(MI.getDesc(), UseOpIdx, TRI, MF);
+        Register NewDest = MRI->createVirtualRegister(RC);
+        // We don't have a way to update dead lanes, so keep track of the
+        // new register so that we avoid querying it later.
+        NewRegs.insert(NewDest);
+        BuildMI(MBB, I, I->getDebugLoc(),
+                TII->get(TargetOpcode::IMPLICIT_DEF), NewDest);
+        UseMO.setReg(NewDest);
+        Changed = true;
+      }
+    }
+
+    if (isEarlyClobberMI(MI)) {
+      if (ST->enableSubRegLiveness())
+        Changed |= handleSubReg(MF, MI, DLD);
+      Changed |= handleReg(&MI);
     }
   }
   return Changed;
@@ -267,6 +290,10 @@ bool RISCVInitUndef::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &BB : MF)
     Changed |= processBasicBlock(MF, BB, DLD);
+
+  for (auto *DeadMI : DeadInsts)
+    DeadMI->eraseFromParent();
+  DeadInsts.clear();
 
   return Changed;
 }

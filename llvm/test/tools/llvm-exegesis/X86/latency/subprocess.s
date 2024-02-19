@@ -1,4 +1,4 @@
-# REQUIRES: exegesis-can-execute-in-subprocess, x86_64-linux
+# REQUIRES: exegesis-can-measure-latency, x86_64-linux
 
 # RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mode=latency -snippets-file=%s -execution-mode=subprocess | FileCheck %s
 

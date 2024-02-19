@@ -32,6 +32,7 @@ private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   PPCABI TargetABI;
   Endian Endianness = Endian::NOT_DETECTED;
+  mutable bool HasGlibcHWCAPAccess = false;
 
   mutable StringMap<std::unique_ptr<PPCSubtarget>> SubtargetMap;
 
@@ -39,7 +40,7 @@ public:
   PPCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
                    std::optional<Reloc::Model> RM,
-                   std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                   std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
 
   ~PPCTargetMachine() override;
@@ -64,6 +65,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   bool isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
+  bool hasGlibcHWCAPAccess() const { return HasGlibcHWCAPAccess; }
+  void setGlibcHWCAPAccess(bool Val = true) const { HasGlibcHWCAPAccess = Val; }
   bool isPPC64() const {
     const Triple &TT = getTargetTriple();
     return (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);

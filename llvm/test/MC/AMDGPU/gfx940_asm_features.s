@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx940 -show-encoding %s | FileCheck --check-prefix=GFX940 --strict-whitespace %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefixes=NOT-GFX940,GFX90A --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX940,GFX10 --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx940 -show-encoding %s | FileCheck --check-prefix=GFX940 --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefixes=NOT-GFX940,GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX940,GFX10 --implicit-check-not=error: %s
 
 // NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX940: global_load_dword v2, v[2:3], off sc0   ; encoding: [0x00,0x80,0x51,0xdc,0x02,0x00,0x7f,0x02]
@@ -651,8 +651,8 @@ v_cvt_pk_f32_bf8 v[2:3], v3
 v_cvt_pk_f32_bf8 v[2:3], s3 src0_sel:WORD_1
 
 // NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX940: v_cvt_pk_f32_bf8_dpp v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xae,0x00,0x7e,0x03,0x58,0x00,0xff]
-v_cvt_pk_f32_bf8 v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+// GFX940: v_cvt_pk_f32_bf8_dpp v[0:1], v3 row_newbcast:3 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xae,0x00,0x7e,0x03,0x53,0x01,0xff]
+v_cvt_pk_f32_bf8 v[0:1], v3 row_newbcast:3
 
 // NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX940: v_cvt_pk_f32_bf8_e64 v[2:3], s3 mul:2   ; encoding: [0x02,0x00,0x97,0xd1,0x03,0x00,0x00,0x08]
@@ -687,8 +687,8 @@ v_cvt_pk_f32_fp8 v[2:3], s3 src0_sel:WORD_1
 v_cvt_pk_f32_fp8 v[2:3], 3 src0_sel:WORD_1
 
 // NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-// GFX940: v_cvt_pk_f32_fp8_dpp v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xac,0x00,0x7e,0x03,0x58,0x00,0xff]
-v_cvt_pk_f32_fp8 v[0:1], v3 quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+// GFX940: v_cvt_pk_f32_fp8_dpp v[0:1], v3 row_newbcast:3 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xac,0x00,0x7e,0x03,0x53,0x01,0xff]
+v_cvt_pk_f32_fp8 v[0:1], v3 row_newbcast:3
 
 // NOT-GFX940: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX940: v_cvt_pk_f32_fp8_e64 v[2:3], s3 mul:2   ; encoding: [0x02,0x00,0x96,0xd1,0x03,0x00,0x00,0x08]

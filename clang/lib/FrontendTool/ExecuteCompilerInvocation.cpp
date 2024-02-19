@@ -71,6 +71,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case GenerateInterfaceStubs:
     return std::make_unique<GenerateInterfaceStubsAction>();
   case InitOnly:               return std::make_unique<InitOnlyAction>();
+  case InstallAPI:
+    return std::make_unique<InstallAPIAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
   case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
@@ -179,7 +181,7 @@ CreateFrontendAction(CompilerInstance &CI) {
 #endif
 
   // Wrap the base FE action in an extract api action to generate
-  // symbol graph as a biproduct of comilation ( enabled with
+  // symbol graph as a biproduct of compilation ( enabled with
   // --emit-symbol-graph option )
   if (!FEOpts.SymbolGraphOutputDir.empty()) {
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;
@@ -201,8 +203,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     driver::getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1 [options] file...",
         "LLVM 'Clang' Compiler: http://clang.llvm.org",
-        /*Include=*/driver::options::CC1Option,
-        /*Exclude=*/0, /*ShowAllAliases=*/false);
+        /*ShowHidden=*/false, /*ShowAllAliases=*/false,
+        llvm::opt::Visibility(driver::options::CC1Option));
     return true;
   }
 
@@ -233,7 +235,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!
 
-  AnalyzerOptions &AnOpts = *Clang->getAnalyzerOpts();
+  AnalyzerOptions &AnOpts = Clang->getAnalyzerOpts();
 
   // Honor -analyzer-checker-help and -analyzer-checker-help-hidden.
   if (AnOpts.ShowCheckerHelp || AnOpts.ShowCheckerHelpAlpha ||

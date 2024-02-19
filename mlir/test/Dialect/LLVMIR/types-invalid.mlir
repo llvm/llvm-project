@@ -68,6 +68,20 @@ func.func @struct_literal_opaque() {
 
 // -----
 
+func.func @top_level_struct_no_body() {
+  // expected-error @below {{struct without a body only allowed in a recursive struct}}
+  "some.op"() : () -> !llvm.struct<"a">
+}
+
+// -----
+
+func.func @nested_redefine_attempt() {
+  // expected-error @below {{identifier already used for an enclosing struct}}
+  "some.op"() : () -> !llvm.struct<"a", (struct<"a", ()>)>
+}
+
+// -----
+
 func.func @unexpected_type() {
   // expected-error @+1 {{unexpected type, expected keyword}}
   "some.op"() : () -> !llvm.tensor<*xf32>

@@ -193,7 +193,7 @@ static void patchI64(raw_pwrite_stream &Stream, uint64_t Value,
 }
 
 bool isDwoSection(const MCSection &Sec) {
-  return Sec.getName().endswith(".dwo");
+  return Sec.getName().ends_with(".dwo");
 }
 
 class WasmObjectWriter : public MCObjectWriter {
@@ -529,7 +529,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   const auto *SymA = cast<MCSymbolWasm>(&RefA->getSymbol());
 
   // The .init_array isn't translated as data, so don't do relocations in it.
-  if (FixupSection.getName().startswith(".init_array")) {
+  if (FixupSection.getName().starts_with(".init_array")) {
     SymA->setUsedInInitArray();
     return;
   }
@@ -550,7 +550,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       TargetObjectWriter->getRelocType(Target, Fixup, FixupSection, IsLocRel);
 
   // Absolute offset within a section or a function.
-  // Currently only supported for for metadata sections.
+  // Currently only supported for metadata sections.
   // See: test/MC/WebAssembly/blockaddress.ll
   if ((Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
        Type == wasm::R_WASM_FUNCTION_OFFSET_I64 ||
@@ -972,7 +972,9 @@ void WasmObjectWriter::writeTableSection(ArrayRef<wasm::WasmTable> Tables) {
 
   encodeULEB128(Tables.size(), W->OS);
   for (const wasm::WasmTable &Table : Tables) {
-    encodeULEB128(Table.Type.ElemType, W->OS);
+    assert(Table.Type.ElemType != wasm::ValType::OTHERREF &&
+           "Cannot encode general ref-typed tables");
+    encodeULEB128((uint32_t)Table.Type.ElemType, W->OS);
     encodeULEB128(Table.Type.Limits.Flags, W->OS);
     encodeULEB128(Table.Type.Limits.Minimum, W->OS);
     if (Table.Type.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
@@ -1438,12 +1440,12 @@ void WasmObjectWriter::prepareImports(
 
 uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
                                        const MCAsmLayout &Layout) {
-  support::endian::Writer MainWriter(*OS, support::little);
+  support::endian::Writer MainWriter(*OS, llvm::endianness::little);
   W = &MainWriter;
   if (IsSplitDwarf) {
     uint64_t TotalSize = writeOneObject(Asm, Layout, DwoMode::NonDwoOnly);
     assert(DwoOS);
-    support::endian::Writer DwoWriter(*DwoOS, support::little);
+    support::endian::Writer DwoWriter(*DwoOS, llvm::endianness::little);
     W = &DwoWriter;
     return TotalSize + writeOneObject(Asm, Layout, DwoMode::DwoOnly);
   } else {
@@ -1491,7 +1493,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
                       << Section.getGroup() << "\n";);
 
     // .init_array sections are handled specially elsewhere.
-    if (SectionName.startswith(".init_array"))
+    if (SectionName.starts_with(".init_array"))
       continue;
 
     // Code is handled separately
@@ -1526,8 +1528,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       StringRef Name = SectionName;
 
       // For user-defined custom sections, strip the prefix
-      if (Name.startswith(".custom_section."))
-        Name = Name.substr(strlen(".custom_section."));
+      Name.consume_front(".custom_section.");
 
       MCSymbol *Begin = Sec.getBeginSymbol();
       if (Begin) {
@@ -1851,9 +1852,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
   // Translate .init_array section contents into start functions.
   for (const MCSection &S : Asm) {
     const auto &WS = static_cast<const MCSectionWasm &>(S);
-    if (WS.getName().startswith(".fini_array"))
+    if (WS.getName().starts_with(".fini_array"))
       report_fatal_error(".fini_array sections are unsupported");
-    if (!WS.getName().startswith(".init_array"))
+    if (!WS.getName().starts_with(".init_array"))
       continue;
     if (WS.getFragmentList().empty())
       continue;

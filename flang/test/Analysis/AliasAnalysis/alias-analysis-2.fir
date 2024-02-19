@@ -11,8 +11,11 @@
 // p1.addr and p2.addr could both be wrapped inside boxes
 // CHECK-DAG: p1.addr#0 <-> boxp1.addr#0: MayAlias
 // CHECK-DAG: p2.addr#0 <-> boxp1.addr#0: MayAlias
-// CHECK-DAG: p1.addr#0 <-> arg2.addr#0: MayAlias
-// CHECK-DAG: p2.addr#0 <-> arg2.addr#0: MayAlias
+
+// TODO: To really see aliasing, we should be looking at a load of p1.addr
+// p1.addr is just a local address holding the address to the data 
+// CHECK-DAG: p1.addr#0 <-> arg2.addr#0: NoAlias
+// CHECK-DAG: p2.addr#0 <-> arg2.addr#0: NoAlias
 
 // p1.addr and p2.addr are the result of an allocation
 // They cannot physically alias with an argument
@@ -41,7 +44,7 @@
 // pointer arguments
 // CHECK-DAG: arg2.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: arg2.addr#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MayAlias
+// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MustAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
 
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
@@ -99,7 +102,7 @@ func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %a
 // CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
 // CHECK-DAG: func.region0#0 <-> func.region0#2: MayAlias
 
-func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>>, %arg2: !fir.ref<!fir.ptr<f32>> ) attributes {test.ptr = "func"} {
+func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>>, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
   return
 }
 
@@ -131,9 +134,14 @@ func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %
 // CHECK-DAG: p#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: p#0 <-> func.region0#1: NoAlias
 
-// FIXME: p and p1 are pointers, they cannot alias with a wrapped address.
-//        Only the addresses they wrap could alias with the address wrapped by the box
-// CHECK-DAG: p#0 <-> box.addr#0: MayAlias
+// p could be pointing to var2 
+// var2, being a target, could also be passed as argument arg0 
+
+// This was the wrong question to ask. We are asking if the address of box _QMpointersEp can 
+// alias with the wrapped scalar _QFEvar2. We meant box_addr of _QMpointersEp 
+// CHECK-DAG: p#0 <-> box.addr#0: NoAlias
+
+// TODO: Still need to handle more gracefully the difference between !fir.ref<!fir.box<>> and !fir.box<> 
 // CHECK-DAG: box.addr#0 <-> func.region0#0: MayAlias
 
 // var2, although it is a target, cannot alias with p
@@ -141,14 +149,14 @@ func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %
 // CHECK-DAG: var2#0 <-> p#0: NoAlias
 // It can alias with p1, if p1 is a pointer component
 // CHECK-DAG: var2#0 <-> func.region0#0: MayAlias
-// It can alias with a box.addr
-// CHECK-DAG: var2#0 <-> box.addr#0: MayAlias
+// It is the same as box.addr
+// CHECK-DAG: var2#0 <-> box.addr#0: MustAlias
 
 // A global may not alias with a dummy
 // CHECK-DAG: var2#0 <-> func.region0#1: NoAlias
 
-// FIXME: a pointer may only alias with a target but arg1 is a regular dummy
-// CHECK-DAG: box.addr#0 <-> func.region0#1: MayAlias
+// A pointer may only alias with a target but arg1 is a regular dummy
+// CHECK-DAG: box.addr#0 <-> func.region0#1: NoAlias
 
 // Dummy argument do not alias
 // CHECK-DAG: func.region0#0 <-> func.region0#1: NoAlias
@@ -169,5 +177,92 @@ func.func @_QFPtest3(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = 
   %5 = fir.address_of(@_QMpointersEp) {test.ptr = "p"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %6 = fir.embox %4 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
   %13 = fir.box_addr %6 {test.ptr = "box.addr"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "_QFPtest4"
+
+// Same as test3 but check that the alias analysis can follow (hl)fir.declare
+// operations
+
+// CHECK-DAG: p#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: p_fir#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: p_hlfir#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: p_hlfir#1 <-> func.region0#0: MayAlias
+
+// CHECK-DAG: p#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: p_fir#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: p_hlfir#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: p_hlfir#1 <-> func.region0#1: NoAlias
+
+// CHECK-DAG: var2#0 <-> p#0: NoAlias
+// CHECK-DAG: var2#0 <-> p_fir#0: NoAlias
+// CHECK-DAG: var2#0 <-> p_hlfir#0: NoAlias
+// CHECK-DAG: var2#0 <-> p_hlfir#1: NoAlias
+// CHECK-DAG: var2_fir#0 <-> p#0: NoAlias
+// CHECK-DAG: var2_fir#0 <-> p_fir#0: NoAlias
+// CHECK-DAG: var2_fir#0 <-> p_hlfir#0: NoAlias
+// CHECK-DAG: var2_fir#0 <-> p_hlfir#1: NoAlias
+// CHECK-DAG: var2_hlfir#0 <-> p#0: NoAlias
+// CHECK-DAG: var2_hlfir#0 <-> p_fir#0: NoAlias
+// CHECK-DAG: var2_hlfir#0 <-> p_hlfir#0: NoAlias
+// CHECK-DAG: var2_hlfir#0 <-> p_hlfir#1: NoAlias
+// CHECK-DAG: var2_hlfir#1 <-> p#0: NoAlias
+// CHECK-DAG: var2_hlfir#1 <-> p_fir#0: NoAlias
+// CHECK-DAG: var2_hlfir#1 <-> p_hlfir#0: NoAlias
+// CHECK-DAG: var2_hlfir#1 <-> p_hlfir#1: NoAlias
+
+// CHECK-DAG: var2#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: var2_fir#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: var2_hlfir#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: var2_hlfir#1 <-> func.region0#0: MayAlias
+
+// CHECK-DAG: var2#0 <-> box.addr#0: MustAlias
+// CHECK-DAG: var2#0 <-> box.addr_fir#0: MustAlias
+// CHECK-DAG: var2#0 <-> box.addr_hlfir#0: MustAlias
+// CHECK-DAG: var2#0 <-> box.addr_hlfir#1: MustAlias
+// CHECK-DAG: var2_fir#0 <-> box.addr#0: MustAlias
+// CHECK-DAG: var2_fir#0 <-> box.addr_fir#0: MustAlias
+// CHECK-DAG: var2_fir#0 <-> box.addr_hlfir#0: MustAlias
+// CHECK-DAG: var2_fir#0 <-> box.addr_hlfir#1: MustAlias
+// CHECK-DAG: var2_hlfir#0 <-> box.addr#0: MustAlias
+// CHECK-DAG: var2_hlfir#0 <-> box.addr_fir#0: MustAlias
+// CHECK-DAG: var2_hlfir#0 <-> box.addr_hlfir#0: MustAlias
+// CHECK-DAG: var2_hlfir#0 <-> box.addr_hlfir#1: MustAlias
+// CHECK-DAG: var2_hlfir#1 <-> box.addr#0: MustAlias
+// CHECK-DAG: var2_hlfir#1 <-> box.addr_fir#0: MustAlias
+// CHECK-DAG: var2_hlfir#1 <-> box.addr_hlfir#0: MustAlias
+// CHECK-DAG: var2_hlfir#1 <-> box.addr_hlfir#1: MustAlias
+
+// CHECK-DAG: var2#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: var2_fir#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: var2_hlfir#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: var2_hlfir#1 <-> func.region0#1: NoAlias
+
+// CHECK-DAG: func.region0#0 <-> func.region0#1: NoAlias
+
+fir.global @_QMpointersEp : !fir.box<!fir.ptr<f32>> {
+  %0 = fir.zero_bits !fir.ptr<f32>
+  %1 = fir.embox %0 : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
+  fir.has_value %1 : !fir.box<!fir.ptr<f32>>
+}
+
+fir.global internal @_QFEvar2 target : f32 {
+  %cst = arith.constant 2.000000e+00 : f32
+  fir.has_value %cst : f32
+}
+
+func.func @_QFPtest4(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg1: !fir.ref<f32>) attributes {test.ptr = "func"} {
+  %4 = fir.address_of(@_QFEvar2) {test.ptr = "var2"} : !fir.ref<f32>
+  %fir_decl_var2 = fir.declare %4 {uniq_name = "var2_fir", test.ptr = "var2_fir"}: (!fir.ref<f32>) -> !fir.ref<f32>
+  %hlfir_decl_var2:2 = hlfir.declare %4 {uniq_name = "var2_hlfir", test.ptr = "var2_hlfir"}: (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %5 = fir.address_of(@_QMpointersEp) {test.ptr = "p"} : !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %fir_decl_p = fir.declare %5 {uniq_name = "p_fir", test.ptr = "p_fir"}: (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %hlfir_decl_p:2 = hlfir.declare %5 {uniq_name = "p_hlfir", test.ptr = "p_hlfir"}: (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %13 = fir.convert %4 {test.ptr = "box.addr"} : (!fir.ref<f32>) -> !fir.ptr<f32>
+  %fir_decl_convert = fir.declare %13 {uniq_name = "box_addr_fir", test.ptr = "box.addr_fir"}: (!fir.ptr<f32>) -> !fir.ptr<f32>
+  %hlfir_decl_convert:2 = hlfir.declare %13 {uniq_name = "box_addr_hlfir", test.ptr = "box.addr_hlfir"}: (!fir.ptr<f32>) -> (!fir.ptr<f32>, !fir.ptr<f32>)
   return
 }

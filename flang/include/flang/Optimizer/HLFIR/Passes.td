@@ -13,11 +13,19 @@ include "mlir/Pass/PassBase.td"
 def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::mlir::ModuleOp"> {
   let summary = "Lower High-Level FIR to FIR";
   let constructor = "hlfir::createConvertHLFIRtoFIRPass()";
+  let dependentDialects = [
+    "mlir::func::FuncDialect",
+  ];
 }
 
 def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let summary = "Convert HLFIR operations operating on hlfir.expr into operations on memory";
   let constructor = "hlfir::createBufferizeHLFIRPass()";
+}
+
+def OptimizedBufferization : Pass<"opt-bufferization", "::mlir::func::FuncOp"> {
+  let summary = "Special cases for hlfir.expr bufferization where we can avoid a temporary which would be created by the generic bufferization pass";
+  let constructor = "hlfir::createOptimizedBufferizationPass()";
 }
 
 def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {

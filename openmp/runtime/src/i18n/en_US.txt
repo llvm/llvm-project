@@ -480,6 +480,8 @@ AffHWSubsetAllFiltered       "KMP_HW_SUBSET ignored: all hardware resources woul
 AffHWSubsetAttrsNonHybrid    "KMP_HW_SUBSET ignored: Too many attributes specified. This machine is not a hybrid architecutre."
 AffHWSubsetIgnoringAttr      "KMP_HW_SUBSET: ignoring %1$s attribute. This machine is not a hybrid architecutre."
 TargetMemNotAvailable        "Target memory not available, will use default allocator."
+AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid architecutre. Using \"%2$s\" instead."
+AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

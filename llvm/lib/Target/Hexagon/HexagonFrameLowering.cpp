@@ -381,7 +381,7 @@ static bool isRestoreCall(unsigned Opc) {
 
 static inline bool isOptNone(const MachineFunction &MF) {
     return MF.getFunction().hasOptNone() ||
-           MF.getTarget().getOptLevel() == CodeGenOpt::None;
+           MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 }
 
 static inline bool isOptSize(const MachineFunction &MF) {
@@ -1156,7 +1156,7 @@ bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
   // gdb can't break at the start of the function without it.  Will remove if
   // this turns out to be a gdb bug.
   //
-  if (MF.getTarget().getOptLevel() == CodeGenOpt::None)
+  if (MF.getTarget().getOptLevel() == CodeGenOptLevel::None)
     return true;
 
   // By default we want to use SP (since it's always there). FP requires
@@ -1269,7 +1269,7 @@ HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   int Offset = MFI.getObjectOffset(FI);
   bool HasAlloca = MFI.hasVarSizedObjects();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);
-  bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
+  bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   unsigned FrameSize = MFI.getStackSize();
@@ -2584,7 +2584,7 @@ bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
   if (!hasFP(MF))
     return true;
   if (!isOptSize(MF) && !isMinSize(MF))
-    if (MF.getTarget().getOptLevel() > CodeGenOpt::Default)
+    if (MF.getTarget().getOptLevel() > CodeGenOptLevel::Default)
       return true;
 
   // Check if CSI only has double registers, and if the registers form
@@ -2687,4 +2687,68 @@ bool HexagonFrameLowering::mayOverflowFrameOffset(MachineFunction &MF) const {
     return !isUInt<6>(StackSize >> MinLS);
 
   return false;
+}
+
+namespace {
+// Struct used by orderFrameObjects to help sort the stack objects.
+struct HexagonFrameSortingObject {
+  bool IsValid = false;
+  unsigned Index = 0; // Index of Object into MFI list.
+  unsigned Size = 0;
+  Align ObjectAlignment = Align(1); // Alignment of Object in bytes.
+};
+
+struct HexagonFrameSortingComparator {
+  inline bool operator()(const HexagonFrameSortingObject &A,
+                         const HexagonFrameSortingObject &B) const {
+    return std::make_tuple(!A.IsValid, A.ObjectAlignment, A.Size) <
+           std::make_tuple(!B.IsValid, B.ObjectAlignment, B.Size);
+  }
+};
+} // namespace
+
+// Sort objects on the stack by alignment value and then by size to minimize
+// padding.
+void HexagonFrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+
+  if (ObjectsToAllocate.empty())
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  int NObjects = ObjectsToAllocate.size();
+
+  // Create an array of all MFI objects.
+  SmallVector<HexagonFrameSortingObject> SortingObjects(
+      MFI.getObjectIndexEnd());
+
+  for (int i = 0, j = 0, e = MFI.getObjectIndexEnd(); i < e && j != NObjects;
+       ++i) {
+    if (i != ObjectsToAllocate[j])
+      continue;
+    j++;
+
+    // A variable size object has size equal to 0. Since Hexagon sets
+    // getUseLocalStackAllocationBlock() to true, a local block is allocated
+    // earlier. This case is not handled here for now.
+    int Size = MFI.getObjectSize(i);
+    if (Size == 0)
+      return;
+
+    SortingObjects[i].IsValid = true;
+    SortingObjects[i].Index = i;
+    SortingObjects[i].Size = Size;
+    SortingObjects[i].ObjectAlignment = MFI.getObjectAlign(i);
+  }
+
+  // Sort objects by alignment and then by size.
+  llvm::stable_sort(SortingObjects, HexagonFrameSortingComparator());
+
+  // Modify the original list to represent the final order.
+  int i = NObjects;
+  for (auto &Obj : SortingObjects) {
+    if (i == 0)
+      break;
+    ObjectsToAllocate[--i] = Obj.Index;
+  }
 }

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H
 
-#include "string_view.h"
 #include "span.h"
+#include "string_view.h"
 #include "type_traits.h"
 
 #include "src/__support/integer_to_string.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // This class is to be used to write simple strings into a user provided buffer
@@ -58,11 +58,8 @@ public:
   // Write the |val| as string.
   template <typename T, enable_if_t<is_integral_v<T>, int> = 0>
   StringStream &operator<<(T val) {
-    char buffer[IntegerToString::dec_bufsize<T>()];
-    auto int_to_str = IntegerToString::dec(val, buffer);
-    if (int_to_str)
-      return operator<<(*int_to_str);
-    return *this;
+    const IntegerToString<T> buffer(val);
+    return *this << buffer.view();
   }
 
   template <typename T, enable_if_t<is_floating_point_v<T>, int> = 0>
@@ -93,6 +90,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H

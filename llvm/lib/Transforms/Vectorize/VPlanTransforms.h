@@ -22,11 +22,9 @@ class InductionDescriptor;
 class Instruction;
 class PHINode;
 class ScalarEvolution;
-class Loop;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
-class VPRecipeBuilder;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
@@ -36,40 +34,6 @@ struct VPlanTransforms {
                             function_ref<const InductionDescriptor *(PHINode *)>
                                 GetIntOrFpInductionDescriptor,
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
-
-  /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
-  /// region block and remove the mask operand. Optimize the created regions by
-  /// iteratively sinking scalar operands into the region, followed by merging
-  /// regions until no improvements are remaining.
-  static void createAndOptimizeReplicateRegions(VPlan &Plan);
-
-  /// Remove redundant VPBasicBlocks by merging them into their predecessor if
-  /// the predecessor has a single successor.
-  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
-
-  /// Remove redundant casts of inductions.
-  ///
-  /// Such redundant casts are casts of induction variables that can be ignored,
-  /// because we already proved that the casted phi is equal to the uncasted phi
-  /// in the vectorized loop. There is no need to vectorize the cast - the same
-  /// value can be used for both the phi and casts in the vector loop.
-  static void removeRedundantInductionCasts(VPlan &Plan);
-
-  /// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
-  /// recipe, if it exists.
-  static void removeRedundantCanonicalIVs(VPlan &Plan);
-
-  static void removeDeadRecipes(VPlan &Plan);
-
-  /// If any user of a VPWidenIntOrFpInductionRecipe needs scalar values,
-  /// provide them by building scalar steps off of the canonical scalar IV and
-  /// update the original IV's users. This is an optional optimization to reduce
-  /// the needs of vector extracts.
-  static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE);
-
-  /// Remove redundant EpxandSCEVRecipes in \p Plan's entry block by replacing
-  /// them with already existing recipes expanding the same SCEV expression.
-  static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
 
   /// Sink users of fixed-order recurrences after the recipe defining their
   /// previous value. Then introduce FirstOrderRecurrenceSplice VPInstructions
@@ -89,6 +53,51 @@ struct VPlanTransforms {
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
+
+  /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
+  /// optimizations, dead recipe removal, replicate region optimizations and
+  /// block merging.
+  static void optimize(VPlan &Plan, ScalarEvolution &SE);
+
+  /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
+  /// region block and remove the mask operand. Optimize the created regions by
+  /// iteratively sinking scalar operands into the region, followed by merging
+  /// regions until no improvements are remaining.
+  static void createAndOptimizeReplicateRegions(VPlan &Plan);
+
+  /// Replace (ICMP_ULE, wide canonical IV, backedge-taken-count) checks with an
+  /// (active-lane-mask recipe, wide canonical IV, trip-count). If \p
+  /// UseActiveLaneMaskForControlFlow is true, introduce an
+  /// VPActiveLaneMaskPHIRecipe. If \p DataAndControlFlowWithoutRuntimeCheck is
+  /// true, no minimum-iteration runtime check will be created (during skeleton
+  /// creation) and instead it is handled using active-lane-mask. \p
+  /// DataAndControlFlowWithoutRuntimeCheck implies \p
+  /// UseActiveLaneMaskForControlFlow.
+  static void addActiveLaneMask(VPlan &Plan,
+                                bool UseActiveLaneMaskForControlFlow,
+                                bool DataAndControlFlowWithoutRuntimeCheck);
+
+  /// Insert truncates and extends for any truncated recipe. Redundant casts
+  /// will be folded later.
+  static void
+  truncateToMinimalBitwidths(VPlan &Plan,
+                             const MapVector<Instruction *, uint64_t> &MinBWs,
+                             LLVMContext &Ctx);
+
+  /// Drop poison flags from recipes that may generate a poison value that is
+  /// used after vectorization, even when their operands are not poison. Those
+  /// recipes meet the following conditions:
+  ///  * Contribute to the address computation of a recipe generating a widen
+  ///    memory load/store (VPWidenMemoryInstructionRecipe or
+  ///    VPInterleaveRecipe).
+  ///  * Such a widen memory load/store has at least one underlying Instruction
+  ///    that is in a basic block that needs predication and after vectorization
+  ///    the generated instruction won't be predicated.
+  /// Uses \p BlockNeedsPredication to check if a block needs predicating.
+  /// TODO: Replace BlockNeedsPredication callback with retrieving info from
+  ///       VPlan directly.
+  static void dropPoisonGeneratingRecipes(
+      VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
 };
 
 } // namespace llvm

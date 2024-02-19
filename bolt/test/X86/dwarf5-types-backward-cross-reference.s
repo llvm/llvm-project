@@ -26,7 +26,7 @@
 # POSTCHECK-SAME: version = 0x0005
 # POSTCHECK: DW_TAG_variable [9]
 # POSTCHECK: DW_TAG_variable [12]
-# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x0000000000000199 "Foo")
+# POSTCHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "Foo")
 
 
 # main.cpp

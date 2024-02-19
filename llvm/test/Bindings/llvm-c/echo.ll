@@ -90,12 +90,46 @@ define i32 @iops(i32 %a, i32 %b) {
   %21 = sdiv exact i32 %20, %2
   %22 = lshr exact i32 %21, %4
   %23 = ashr exact i32 %22, %14
-  ret i32 %23
+  %24 = zext i32 %23 to i64
+  %25 = zext nneg i32 %23 to i64
+  %26 = or disjoint i32 %23, %a
+  ret i32 %26
 }
 
 define i32 @call() {
   %1 = call i32 @iops(i32 23, i32 19)
   ret i32 %1
+}
+
+define i32 @tailcall() {
+  %1 = tail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @musttailcall() {
+  %1 = musttail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @notailcall() {
+  %1 = notail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @call_inline_asm(i32 %0) {
+	; Test Intel syntax
+	%2 = tail call i32 asm sideeffect inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0)
+	%3 = tail call i32 asm sideeffect inteldialect "lea $0, [$1+$2]", "=r,r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0, i32 %2)
+	%4 = tail call i32 asm inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %3)
+	%5 = tail call i32 asm inteldialect unwind "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %4)
+	%6 = tail call i32 asm alignstack inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %5)
+
+	; Test AT&T syntax
+	%7 = tail call i32 asm "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %6)
+	%8 = tail call i32 asm sideeffect "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %7)
+	%9 = tail call i32 asm alignstack "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %8)
+	%10 = tail call i32 asm alignstack unwind "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %9)
+	ret i32 %10
 }
 
 define i32 @cond(i32 %a, i32 %b) {
@@ -235,6 +269,17 @@ exit:
   ret void
 }
 
+define void @operandbundles() personality ptr @personalityFn {
+  call void @decl() [ "foo"(), "bar\00x"(i32 0, ptr null, token none) ]
+  invoke void @decl() [ "baz"(label %bar) ] to label %foo unwind label %bar
+foo:
+  ret void
+bar:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+  ret void
+}
+
 define void @with_debuginfo() !dbg !4 {
   ret void, !dbg !7
 }
@@ -251,6 +296,41 @@ entry:
   call void @llvm.lifetime.start.p0(i64 1, ptr %0)
   call void @llvm.lifetime.end.p0(i64 1, ptr %0)
   call void @llvm.stackrestore(ptr %sp)
+  ret void
+}
+
+define void @test_fast_math_flags(i1 %c, float %a, float %b) {
+entry:
+  %select.f.1 = select i1 %c, float %a, float %b
+  %select.f.2 = select nsz i1 %c, float %a, float %b
+  %select.f.3 = select fast i1 %c, float %a, float %b
+  %select.f.4 = select nnan arcp afn i1 %c, float %a, float %b
+
+  br i1 %c, label %choose_a, label %choose_b
+
+choose_a:
+  br label %final
+
+choose_b:
+  br label %final
+
+final:
+  %phi.f.1 = phi float  [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.2 = phi nsz float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.3 = phi fast float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.4 = phi nnan arcp afn float [ %a, %choose_a ], [ %b, %choose_b ]
+  ret void
+}
+
+define float @test_fast_math_flags_call_inner(float %a) {
+  ret float %a
+}
+
+define void @test_fast_math_flags_call_outer(float %a) {
+  %a.1 = call float @test_fast_math_flags_call_inner(float %a)
+  %a.2 = call nsz float @test_fast_math_flags_call_inner(float %a)
+  %a.3 = call fast float @test_fast_math_flags_call_inner(float %a)
+  %a.4 = call nnan arcp afn float @test_fast_math_flags_call_inner(float %a)
   ret void
 }
 

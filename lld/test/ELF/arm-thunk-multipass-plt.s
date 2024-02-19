@@ -77,25 +77,20 @@ preemptible2:
 
 // CHECK-PLT: Disassembly of section .plt:
 // CHECK-PLT-EMPTY:
-// CHECK-PLT-NEXT: 00d00020 <$a>:
+// CHECK-PLT-NEXT: 00d00020 <.plt>:
 // CHECK-PLT-NEXT:   d00020: str     lr, [sp, #-4]!
 // CHECK-PLT-NEXT:           add     lr, pc, #0, #12
 // CHECK-PLT-NEXT:           add     lr, lr, #32, #20
 // CHECK-PLT-NEXT:           ldr     pc, [lr, #148]!
-// CHECK-PLT:      00d00030 <$d>:
 // CHECK-PLT-NEXT:   d00030: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00034: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00038: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d0003c: d4 d4 d4 d4      .word   0xd4d4d4d4
-// CHECK-PLT:      00d00040 <$a>:
 // CHECK-PLT-NEXT:   d00040: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00044: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00048: ldr     pc, [r12, #124]!
-// CHECK-PLT:      00d0004c <$d>:
 // CHECK-PLT-NEXT:   d0004c: d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-PLT:      00d00050 <$a>:
 // CHECK-PLT-NEXT:   d00050: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00054: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00058: ldr     pc, [r12, #112]!
-// CHECK-PLT:      00d0005c <$d>:
 // CHECK-PLT-NEXT:   d0005c: d4 d4 d4 d4     .word   0xd4d4d4d4

@@ -41,6 +41,11 @@ getTwoUses(hlfir::ElementalOp elemental) {
     return std::nullopt;
   }
 
+  // If the ElementalOp must produce a temporary (e.g. for
+  // finalization purposes), then we cannot inline it.
+  if (hlfir::elementalOpMustProduceTemp(elemental))
+    return std::nullopt;
+
   hlfir::ApplyOp apply;
   hlfir::DestroyOp destroy;
   for (mlir::Operation *user : users)

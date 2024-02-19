@@ -33,3 +33,8 @@ Options
    files that match this regex as a suffix.  E.g., `foo/.*` disables
    insertion/removal for all headers under the directory `foo`. By default, no 
    headers will be ignored.
+
+.. option:: DeduplicateFindings
+
+   A boolean that controls whether the check should deduplicate findings for the
+   same symbol. Defaults to `true`.

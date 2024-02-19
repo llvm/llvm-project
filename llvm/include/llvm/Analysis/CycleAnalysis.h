@@ -21,11 +21,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-extern template class GenericCycleInfo<SSAContext>;
-extern template class GenericCycle<SSAContext>;
-
-using CycleInfo = GenericCycleInfo<SSAContext>;
-using Cycle = CycleInfo::CycleT;
 
 /// Legacy analysis pass which computes a \ref CycleInfo.
 class CycleInfoWrapperPass : public FunctionPass {
@@ -73,6 +68,8 @@ public:
   explicit CycleInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

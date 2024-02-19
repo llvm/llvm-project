@@ -124,7 +124,7 @@ union pr15134v2 {
     unsigned int u1;
     unsigned int u2;
   };
-  struct {  // expected-warning {{alignment of field '' (64 bits) does not match the alignment of the first field in transparent union; transparent_union attribute ignored}}
+  struct {  // expected-warning-re {{alignment of field 'struct pr15134v2::(anonymous at {{.+}})' (64 bits) does not match the alignment of the first field in transparent union; transparent_union attribute ignored}}
     unsigned int u3;
   } __attribute__((aligned(8)));
 } __attribute__((transparent_union));

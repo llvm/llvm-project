@@ -5,6 +5,7 @@
 
 ; Darwin always uses the same model.
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -code-model=large | FileCheck -check-prefix=DARWIN %s
 
 @external_gd = external thread_local global i32
 @internal_gd = internal thread_local global i32 42

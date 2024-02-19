@@ -17,9 +17,11 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"

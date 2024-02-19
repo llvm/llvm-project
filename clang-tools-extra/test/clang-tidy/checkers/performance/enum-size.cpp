@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s performance-enum-size %t -- \
-// RUN:   -config="{CheckOptions: [{key: performance-enum-size.EnumIgnoreList, value: '::IgnoredEnum;IgnoredSecondEnum'}]}"
+// RUN:   -config="{CheckOptions: {performance-enum-size.EnumIgnoreList: '::IgnoredEnum;IgnoredSecondEnum'}}"
 
 namespace std
 {
@@ -101,5 +101,8 @@ enum class IgnoredSecondEnum
     unused1 = 1,
     unused2 = 2
 };
+
+enum class EnumClassWithoutValues : int {};
+enum EnumWithoutValues {};
 
 }

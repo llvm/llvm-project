@@ -285,7 +285,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
       .setRelocationModel(triple.isOSBinFormatMachO() ? llvm::Reloc::PIC_
                                                       : llvm::Reloc::Static)
       .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
-      .setOptLevel(llvm::CodeGenOpt::Less);
+      .setOptLevel(llvm::CodeGenOptLevel::Less);
 
   llvm::StringRef mArch;
   llvm::StringRef mCPU;
@@ -419,7 +419,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   if (m_failed_lookups.size()) {
     StreamString ss;
 
-    ss.PutCString("Couldn't lookup symbols:\n");
+    ss.PutCString("Couldn't look up symbols:\n");
 
     bool emitNewLine = false;
 
@@ -537,7 +537,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       sect_type = lldb::eSectionTypeCode;
     else if (name.equals("__data") || name.equals(".data"))
       sect_type = lldb::eSectionTypeCode;
-    else if (name.startswith("__debug_") || name.startswith(".debug_")) {
+    else if (name.starts_with("__debug_") || name.starts_with(".debug_")) {
       const uint32_t name_idx = name[0] == '_' ? 8 : 7;
       llvm::StringRef dwarf_name(name.substr(name_idx));
       switch (dwarf_name[0]) {
@@ -596,7 +596,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       default:
         break;
       }
-    } else if (name.startswith("__apple_") || name.startswith(".apple_"))
+    } else if (name.starts_with("__apple_") || name.starts_with(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
     else if (name.equals("__objc_imageinfo"))
       sect_type = lldb::eSectionTypeOther;

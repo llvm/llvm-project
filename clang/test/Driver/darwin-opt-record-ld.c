@@ -39,6 +39,6 @@
 // PASS_REMARKS_WITH_FAT: "-arch" "x86_64"{{.*}}"-mllvm" "-lto-pass-remarks-output"
 // PASS_REMARKS_WITH_FAT-NEXT: "-arch" "x86_64h"{{.*}}"-mllvm" "-lto-pass-remarks-output"
 //
-// RUN: %clang -target x86_64-apple-darwin12 -arch x86_64 -arch x86_64h %t.o -foptimization-record-file=custom.opt.yaml -### -o foo/bar.out 2> %t.log
+// RUN: not %clang -target x86_64-apple-darwin12 -arch x86_64 -arch x86_64h %t.o -foptimization-record-file=custom.opt.yaml -### -o foo/bar.out 2> %t.log
 // RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_FILE_FAT %s < %t.log
 // PASS_REMARKS_WITH_FILE_FAT: error: cannot use '-foptimization-record-file' output with multiple -arch options

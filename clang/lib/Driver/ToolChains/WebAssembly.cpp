@@ -73,35 +73,47 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  Args.AddAllArgs(CmdArgs, options::OPT_u);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  const char *Crt1 = "crt1.o";
+  bool IsCommand = true;
+  const char *Crt1;
   const char *Entry = nullptr;
 
-  // If crt1-command.o exists, it supports new-style commands, so use it.
-  // Otherwise, use the old crt1.o. This is a temporary transition measure.
-  // Once WASI libc no longer needs to support LLVM versions which lack
-  // support for new-style command, it can make crt1.o the same as
-  // crt1-command.o. And once LLVM no longer needs to support WASI libc
-  // versions before that, it can switch to using crt1-command.o.
-  if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
-    Crt1 = "crt1-command.o";
+  // When -shared is specified, use the reactor exec model unless
+  // specified otherwise.
+  if (Args.hasArg(options::OPT_shared))
+    IsCommand = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_mexec_model_EQ)) {
     StringRef CM = A->getValue();
     if (CM == "command") {
-      // Use default values.
+      IsCommand = true;
     } else if (CM == "reactor") {
-      Crt1 = "crt1-reactor.o";
-      Entry = "_initialize";
+      IsCommand = false;
     } else {
       ToolChain.getDriver().Diag(diag::err_drv_invalid_argument_to_option)
           << CM << A->getOption().getName();
     }
   }
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles, options::OPT_shared))
+
+  if (IsCommand) {
+    // If crt1-command.o exists, it supports new-style commands, so use it.
+    // Otherwise, use the old crt1.o. This is a temporary transition measure.
+    // Once WASI libc no longer needs to support LLVM versions which lack
+    // support for new-style command, it can make crt1.o the same as
+    // crt1-command.o. And once LLVM no longer needs to support WASI libc
+    // versions before that, it can switch to using crt1-command.o.
+    Crt1 = "crt1.o";
+    if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+      Crt1 = "crt1-command.o";
+  } else {
+    Crt1 = "crt1-reactor.o";
+    Entry = "_initialize";
+  }
+
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(Crt1)));
   if (Entry) {
     CmdArgs.push_back(Args.MakeArgString("--entry"));
@@ -129,14 +141,25 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  // When optimizing, if wasm-opt is available, run it.
+  std::string WasmOptPath;
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
+    if (WasmOptPath == "wasm-opt") {
+      WasmOptPath = {};
+    }
+  }
+
+  if (!WasmOptPath.empty()) {
+    CmdArgs.push_back("--keep-section=target_features");
+  }
+
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
                                          Linker, CmdArgs, Inputs, Output));
 
-  // When optimizing, if wasm-opt is available, run it.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    auto WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
-    if (WasmOptPath != "wasm-opt") {
+    if (!WasmOptPath.empty()) {
       StringRef OOpt = "s";
       if (A->getOption().matches(options::OPT_O4) ||
           A->getOption().matches(options::OPT_Ofast))
@@ -148,13 +171,13 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (OOpt != "0") {
         const char *WasmOpt = Args.MakeArgString(WasmOptPath);
-        ArgStringList CmdArgs;
-        CmdArgs.push_back(Output.getFilename());
-        CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
-        CmdArgs.push_back("-o");
-        CmdArgs.push_back(Output.getFilename());
+        ArgStringList OptArgs;
+        OptArgs.push_back(Output.getFilename());
+        OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+        OptArgs.push_back("-o");
+        OptArgs.push_back(Output.getFilename());
         C.addCommand(std::make_unique<Command>(
-            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, CmdArgs,
+            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, OptArgs,
             Inputs, Output));
       }
     }
@@ -305,7 +328,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
     StringRef Opt = A->getValue(0);
-    if (Opt.startswith("-emscripten-cxx-exceptions-allowed")) {
+    if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
       // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
       // '-mllvm -enable-emscripten-cxx-exceptions'
       bool EmEHArgExists = false;
@@ -332,7 +355,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    if (Opt.startswith("-wasm-enable-sjlj")) {
+    if (Opt.starts_with("-wasm-enable-sjlj")) {
       // '-mllvm -wasm-enable-sjlj' is not compatible with
       // '-mno-exception-handling'
       if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,

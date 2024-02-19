@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-equals-default %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-equals-default.IgnoreMacros, value: false}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-equals-default.IgnoreMacros: false}}"
 
 #define STRUCT_WITH_DEFAULT(_base, _type) \
   struct _type {                          \

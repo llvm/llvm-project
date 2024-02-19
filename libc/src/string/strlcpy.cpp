@@ -11,7 +11,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(size_t, strlcpy,
                    (char *__restrict dst, const char *__restrict src,
@@ -19,4 +19,4 @@ LLVM_LIBC_FUNCTION(size_t, strlcpy,
   return internal::strlcpy(dst, src, size);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -61,13 +61,15 @@ enum ModuleKind {
 
 /// The input file info that has been loaded from an AST file.
 struct InputFileInfo {
+  std::string FilenameAsRequested;
   std::string Filename;
   uint64_t ContentHash;
   off_t StoredSize;
   time_t StoredTime;
   bool Overridden;
   bool Transient;
-  bool TopLevelModuleMap;
+  bool TopLevel;
+  bool ModuleMap;
 };
 
 /// The input file that has been loaded from this AST file, along with
@@ -102,7 +104,7 @@ public:
     return File;
   }
 
-  OptionalFileEntryRefDegradesToFileEntryPtr getFile() const {
+  OptionalFileEntryRef getFile() const {
     if (auto *P = Val.getPointer())
       return FileEntryRef(*P);
     return std::nullopt;
@@ -121,8 +123,8 @@ public:
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, unsigned Generation)
-      : Kind(Kind), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
+      : Kind(Kind), File(File), Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
@@ -174,7 +176,7 @@ public:
   bool DidReadTopLevelSubmodule = false;
 
   /// The file entry for the module file.
-  OptionalFileEntryRefDegradesToFileEntryPtr File;
+  FileEntryRef File;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.
@@ -186,6 +188,9 @@ public:
 
   /// The bit vector denoting usage of each header search entry (true = used).
   llvm::BitVector SearchPathUsage;
+
+  /// The bit vector denoting usage of each VFS entry (true = used).
+  llvm::BitVector VFSUsage;
 
   /// Whether this module has been directly imported by the
   /// user.
@@ -243,7 +248,10 @@ public:
   /// The cursor to the start of the input-files block.
   llvm::BitstreamCursor InputFilesCursor;
 
-  /// Offsets for all of the input file entries in the AST file.
+  /// Absolute offset of the start of the input-files block.
+  uint64_t InputFilesOffsetBase = 0;
+
+  /// Relative offsets for all of the input file entries in the AST file.
   const llvm::support::unaligned_uint64_t *InputFileOffsets = nullptr;
 
   /// The input files that have been loaded from this AST file.
@@ -286,9 +294,6 @@ public:
   /// Offsets for all of the source location entries in the
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
-
-  /// SLocEntries that we're going to preload.
-  SmallVector<uint64_t, 4> PreloadSLocEntries;
 
   /// Remapping table for source locations in this module.
   ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>

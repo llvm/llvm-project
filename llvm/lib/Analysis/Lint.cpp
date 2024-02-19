@@ -235,6 +235,10 @@ void Lint::visitCallBase(CallBase &I) {
             // If both arguments are readonly, they have no dependence.
             if (Formal->onlyReadsMemory() && I.onlyReadsMemory(ArgNo))
               continue;
+            // Skip readnone arguments since those are guaranteed not to be
+            // dereferenced anyway.
+            if (I.doesNotAccessMemory(ArgNo))
+              continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);
               Check(Result != AliasResult::MustAlias &&
@@ -653,11 +657,12 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
     BasicBlock::iterator BBI = L->getIterator();
     BasicBlock *BB = L->getParent();
     SmallPtrSet<BasicBlock *, 4> VisitedBlocks;
+    BatchAAResults BatchAA(*AA);
     for (;;) {
       if (!VisitedBlocks.insert(BB).second)
         break;
       if (Value *U =
-              FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, AA))
+              FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, &BatchAA))
         return findValueImpl(U, OffsetOk, Visited);
       if (BBI != BB->begin())
         break;

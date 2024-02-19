@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
-// rdar://15499111
 
 typedef struct __attribute__((objc_bridge_related(NSColor,colorWithCGColor:,CGColor))) CGColor *CGColorRefOk;
 typedef struct __attribute__((objc_bridge_related(NSColor,,CGColor))) CGColor *CGColorRef1Ok;

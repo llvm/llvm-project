@@ -770,12 +770,17 @@ constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs);
 
 template <typename T>
 constexpr bool operator==(const optional<T> &opt, nullopt_t);
+
+// C++20 and later do not define the following overloads because they are
+// provided by rewritten candidates instead.
+#if __cplusplus < 202002L
 template <typename T>
 constexpr bool operator==(nullopt_t, const optional<T> &opt);
 template <typename T>
 constexpr bool operator!=(const optional<T> &opt, nullopt_t);
 template <typename T>
 constexpr bool operator!=(nullopt_t, const optional<T> &opt);
+#endif  // __cplusplus < 202002L
 
 template <typename T, typename U>
 constexpr bool operator==(const optional<T> &opt, const U &value);
@@ -1280,9 +1285,24 @@ protected:
     ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"));
   }
 
+  void ExpectDiagnosticsForLambda(std::string SourceCode) {
+    ExpectDiagnosticsFor(
+        SourceCode, ast_matchers::hasDeclContext(
+                        ast_matchers::cxxRecordDecl(ast_matchers::isLambda())));
+  }
+
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode,
                             FuncDeclMatcher FuncMatcher) {
+    // Run in C++17 and C++20 mode to cover differences in the AST between modes
+    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode);
+  }
+
+  template <typename FuncDeclMatcher>
+  void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
+                            const char *CxxMode) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
@@ -1313,8 +1333,8 @@ protected:
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
             SourceCode, std::move(FuncMatcher),
-            [](ASTContext &Ctx, Environment &) {
-              return UncheckedOptionalAccessModel(Ctx);
+            [](ASTContext &Ctx, Environment &Env) {
+              return UncheckedOptionalAccessModel(Ctx, Env);
             })
             .withPostVisitCFG(
                 [&Diagnostics,
@@ -1322,12 +1342,11 @@ protected:
                     ASTContext &Ctx, const CFGElement &Elt,
                     const TransferStateForDiagnostics<NoopLattice>
                         &State) mutable {
-                  auto EltDiagnostics =
-                      Diagnoser.diagnose(Ctx, &Elt, State.Env);
+                  auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
                 })
             .withASTBuildArgs(
-                {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
+                {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(
                 tooling::FileContentMappings(Headers.begin(), Headers.end())),
         /*VerifyResults=*/[&Diagnostics](
@@ -2122,6 +2141,24 @@ TEST_P(UncheckedOptionalAccessTest, OptionalSwap) {
       opt1.value();
 
       opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+    
+    struct S {
+      $ns::$optional<float> x;
+    } s;
+    S getOptional() {
+      return s;
+    }
+
+    void target() {
+      getOptional().x = 0;
     }
   )");
 }
@@ -3212,6 +3249,137 @@ TEST_P(UncheckedOptionalAccessTest, Bitfield) {
       Dst d;
       if (v.has_value())
         d.n = v.value();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaParam) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      []($ns::$optional<int> opt) {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }(Make<$ns::$optional<int>>());
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByCopy) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [opt]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByReference) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [&opt]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureWithInitializer) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [opt2=opt]() {
+        if (opt2.has_value()) {
+          opt2.value();
+        } else {
+          opt2.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByCopyImplicit) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [=]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureByReferenceImplicit) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      [&]() {
+        if (opt.has_value()) {
+          opt.value();
+        } else {
+          opt.value(); // [[unsafe]]
+        }
+      }();
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureThis) {
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      $ns::$optional<int> opt;
+
+      void target() {
+        [this]() {
+          if (opt.has_value()) {
+            opt.value();
+          } else {
+            opt.value(); // [[unsafe]]
+          }
+        }();
+      }
+    };
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, LambdaCaptureStateNotPropagated) {
+  // We can't propagate information from the surrounding context.
+  ExpectDiagnosticsForLambda(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      if (opt.has_value()) {
+        [&opt]() {
+          opt.value(); // [[unsafe]]
+        }();
+      }
     }
   )");
 }

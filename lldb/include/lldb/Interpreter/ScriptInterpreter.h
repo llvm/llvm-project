@@ -18,12 +18,14 @@
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
-#include "lldb/Interpreter/ScriptedPlatformInterface.h"
-#include "lldb/Interpreter/ScriptedProcessInterface.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -149,10 +151,7 @@ public:
     eScriptReturnTypeOpaqueObject
   };
 
-  ScriptInterpreter(
-      Debugger &debugger, lldb::ScriptLanguage script_lang,
-      lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up =
-          std::make_unique<ScriptedPlatformInterface>());
+  ScriptInterpreter(Debugger &debugger, lldb::ScriptLanguage script_lang);
 
   virtual StructuredData::DictionarySP GetInterpreterInfo();
 
@@ -249,34 +248,6 @@ public:
       const StructuredData::ObjectSP &implementor,
       lldb::StackFrameSP frame_sp) {
     return lldb::ValueObjectListSP();
-  }
-
-  virtual StructuredData::GenericSP
-  OSPlugin_CreatePluginObject(const char *class_name,
-                              lldb::ProcessSP process_sp) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual StructuredData::DictionarySP
-  OSPlugin_RegisterInfo(StructuredData::ObjectSP os_plugin_object_sp) {
-    return StructuredData::DictionarySP();
-  }
-
-  virtual StructuredData::ArraySP
-  OSPlugin_ThreadsInfo(StructuredData::ObjectSP os_plugin_object_sp) {
-    return StructuredData::ArraySP();
-  }
-
-  virtual StructuredData::StringSP
-  OSPlugin_RegisterContextData(StructuredData::ObjectSP os_plugin_object_sp,
-                               lldb::tid_t thread_id) {
-    return StructuredData::StringSP();
-  }
-
-  virtual StructuredData::DictionarySP
-  OSPlugin_CreateThread(StructuredData::ObjectSP os_plugin_object_sp,
-                        lldb::tid_t tid, lldb::addr_t context) {
-    return StructuredData::DictionarySP();
   }
 
   virtual StructuredData::ObjectSP
@@ -502,6 +473,14 @@ public:
     return false;
   }
 
+  virtual bool RunScriptBasedParsedCommand(
+      StructuredData::GenericSP impl_obj_sp, Args& args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) {
+    return false;
+  }
+
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
@@ -546,6 +525,27 @@ public:
     dest.clear();
     return false;
   }
+  
+  virtual StructuredData::ObjectSP
+  GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
+    return {};
+  }
+
+  virtual StructuredData::ObjectSP
+  GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
+    return {};
+  }
+  
+  virtual bool SetOptionValueForCommandObject(
+      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx, 
+      llvm::StringRef long_option, llvm::StringRef value) {
+    return false;
+  }
+
+  virtual void OptionParsingStartedForCommandObject(
+      StructuredData::GenericSP cmd_obj_sp) {
+    return;
+  }
 
   virtual uint32_t
   GetFlagsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
@@ -585,11 +585,19 @@ public:
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
-    return std::make_unique<ScriptedProcessInterface>();
+    return {};
   }
 
-  ScriptedPlatformInterface &GetScriptedPlatformInterface() {
-    return *m_scripted_platform_interface_up;
+  virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
+    return {};
+  }
+
+  virtual lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedPlatformInterfaceUP GetScriptedPlatformInterface() {
+    return {};
   }
 
   virtual StructuredData::ObjectSP
@@ -617,7 +625,6 @@ public:
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
-  lldb::ScriptedPlatformInterfaceUP m_scripted_platform_interface_up;
 };
 
 } // namespace lldb_private

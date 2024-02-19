@@ -53,7 +53,6 @@ struct bar_dep *test3;   // expected-warning {{'bar_dep' is deprecated}}
 
 
 // These should not warn because the actually declaration itself is deprecated.
-// rdar://6756623
 foo_dep *test4 __attribute__((deprecated));
 struct bar_dep *test5 __attribute__((deprecated));
 
@@ -103,7 +102,6 @@ foo_dep test17, // expected-warning {{'foo_dep' is deprecated}}
         test18 __attribute__((deprecated)),
         test19;
 
-// rdar://problem/8518751
 enum __attribute__((deprecated)) Test20 { // expected-note 2 {{'Test20' has been explicitly marked deprecated here}}
   test20_a __attribute__((deprecated)), // expected-note {{'test20_a' has been explicitly marked deprecated here}}
   test20_b

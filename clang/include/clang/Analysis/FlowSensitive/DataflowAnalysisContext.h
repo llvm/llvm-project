@@ -58,6 +58,10 @@ using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
 /// Returns the set of all fields in the type.
 FieldSet getObjectFields(QualType Type);
 
+/// Returns whether `Fields` and `FieldLocs` contain the same fields.
+bool containsSameFields(const FieldSet &Fields,
+                        const RecordStorageLocation::FieldToLoc &FieldLocs);
+
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
   /// context-sensitive analysis entirely.
@@ -92,54 +96,60 @@ public:
                               /*Logger=*/nullptr});
   ~DataflowAnalysisContext();
 
+  /// Sets a callback that returns the names and types of the synthetic fields
+  /// to add to a `RecordStorageLocation` of a given type.
+  /// Typically, this is called from the constructor of a `DataflowAnalysis`
+  ///
+  /// The field types returned by the callback may not have reference type.
+  ///
+  /// To maintain the invariant that all `RecordStorageLocation`s of a given
+  /// type have the same fields:
+  /// *  The callback must always return the same result for a given type
+  /// *  `setSyntheticFieldCallback()` must be called before any
+  //     `RecordStorageLocation`s are created.
+  void setSyntheticFieldCallback(
+      std::function<llvm::StringMap<QualType>(QualType)> CB) {
+    assert(!RecordStorageLocationCreated);
+    SyntheticFieldCallback = CB;
+  }
+
   /// Returns a new storage location appropriate for `Type`.
   ///
   /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
 
+  /// Creates a `RecordStorageLocation` for the given type and with the given
+  /// fields.
+  ///
+  /// Requirements:
+  ///
+  ///  `FieldLocs` must contain exactly the fields returned by
+  ///  `getModeledFields(Type)`.
+  ///  `SyntheticFields` must contain exactly the fields returned by
+  ///  `getSyntheticFields(Type)`.
+  RecordStorageLocation &createRecordStorageLocation(
+      QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+      RecordStorageLocation::SyntheticFieldMap SyntheticFields);
+
   /// Returns a stable storage location for `D`.
-  StorageLocation &getStableStorageLocation(const VarDecl &D);
+  StorageLocation &getStableStorageLocation(const ValueDecl &D);
 
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);
-
-  /// Assigns `Loc` as the storage location of `D`.
-  ///
-  /// Requirements:
-  ///
-  ///  `D` must not be assigned a storage location.
-  void setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
-    assert(!DeclToLoc.contains(&D));
-    DeclToLoc[&D] = &Loc;
-  }
-
-  /// Returns the storage location assigned to `D` or null if `D` has no
-  /// assigned storage location.
-  StorageLocation *getStorageLocation(const ValueDecl &D) const {
-    return DeclToLoc.lookup(&D);
-  }
-
-  /// Assigns `Loc` as the storage location of `E`.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be assigned a storage location.
-  void setStorageLocation(const Expr &E, StorageLocation &Loc) {
-    const Expr &CanonE = ignoreCFGOmittedNodes(E);
-    assert(!ExprToLoc.contains(&CanonE));
-    ExprToLoc[&CanonE] = &Loc;
-  }
-
-  /// Returns the storage location assigned to `E` or null if `E` has no
-  /// assigned storage location.
-  StorageLocation *getStorageLocation(const Expr &E) const {
-    return ExprToLoc.lookup(&ignoreCFGOmittedNodes(E));
-  }
 
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
+
+  /// Adds `Constraint` to current and future flow conditions in this context.
+  ///
+  /// Invariants must contain only flow-insensitive information, i.e. facts that
+  /// are true on all paths through the program.
+  /// Information can be added eagerly (when analysis begins), or lazily (e.g.
+  /// when values are first used). The analysis must be careful that the same
+  /// information is added regardless of which order blocks are analyzed in.
+  void addInvariant(const Formula &Constraint);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
@@ -153,13 +163,17 @@ public:
   /// token.
   Atom joinFlowConditions(Atom FirstToken, Atom SecondToken);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` imply that `Val` is true.
-  bool flowConditionImplies(Atom Token, const Formula &);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` imply that `F` is true.
+  /// Returns false if the flow condition does not imply `F` or if the solver
+  /// times out.
+  bool flowConditionImplies(Atom Token, const Formula &F);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` are always true.
-  bool flowConditionIsTautology(Atom Token);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` still allow `F` to be true.
+  /// Returns false if the flow condition implies that `F` is false or if the
+  /// solver times out.
+  bool flowConditionAllows(Atom Token, const Formula &F);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and
@@ -189,6 +203,24 @@ public:
   /// context.
   FieldSet getModeledFields(QualType Type);
 
+  /// Returns the names and types of the synthetic fields for the given record
+  /// type.
+  llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
+    assert(Type->isRecordType());
+    if (SyntheticFieldCallback) {
+      llvm::StringMap<QualType> Result = SyntheticFieldCallback(Type);
+      // Synthetic fields are not allowed to have reference type.
+      assert([&Result] {
+        for (const auto &Entry : Result)
+          if (Entry.getValue()->isReferenceType())
+            return false;
+        return true;
+      }());
+      return Result;
+    }
+    return {};
+  }
+
 private:
   friend class Environment;
 
@@ -207,12 +239,17 @@ private:
   void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
-  /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
-  /// to track tokens of flow conditions that were already visited by recursive
-  /// calls.
-  void addTransitiveFlowConditionConstraints(
-      Atom Token, llvm::SetVector<const Formula *> &Constraints,
-      llvm::DenseSet<Atom> &VisitedTokens);
+  /// of its transitive dependencies to `Constraints`.
+  void
+  addTransitiveFlowConditionConstraints(Atom Token,
+                                        llvm::SetVector<const Formula *> &Out);
+
+  /// Returns true if the solver is able to prove that there is a satisfying
+  /// assignment for `Constraints`.
+  bool isSatisfiable(llvm::SetVector<const Formula *> Constraints) {
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Satisfiable;
+  }
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
@@ -257,6 +294,7 @@ private:
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
+  const Formula *Invariant = nullptr;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 
@@ -264,6 +302,11 @@ private:
   FieldSet ModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
+
+  std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
+
+  /// Has any `RecordStorageLocation` been created yet?
+  bool RecordStorageLocationCreated = false;
 };
 
 } // namespace dataflow

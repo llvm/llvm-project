@@ -75,10 +75,6 @@ E: andrea.dibiagio@sony.com
 E: andrea.dibiagio@gmail.com
 D: MCA, llvm-mca
 
-N: Duncan P. N. Exon Smith
-E: dexonsmith@apple.com
-D: Branch weights and BlockFrequencyInfo
-
 N: Hal Finkel
 E: hfinkel@anl.gov
 D: The loop reroller and alias analysis
@@ -92,7 +88,7 @@ E: llvm@sunfishcode.online
 D: WebAssembly Backend (lib/Target/WebAssembly/*)
 
 N: Renato Golin
-E: renato.golin@linaro.org
+E: rengolin@systemcall.eu
 D: ARM Linux support
 
 N: Venkatraman Govindaraju
@@ -119,6 +115,10 @@ N: Min-Yih Hsu
 E: min@myhsu.dev
 D: M68k Target (lib/Target/M68k/*)
 
+N: Cyndy Ishida
+E: cyndyishida@gmail.com
+D: TextAPI (lib/TextAPI/*) and related TAPI tools
+
 N: Teresa Johnson
 E: tejohnson@google.com
 D: Gold plugin (tools/gold/*) and IR Linker
@@ -134,6 +134,10 @@ D: Exception handling, Windows codegen, ARM EABI, MSP430 Target (lib/Target/MSP4
 N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: DWARF Parser
+
+N: Sundeep Kushwaha
+E: sundeepk@quicinc.com
+D: Hexagon Backend
 
 N: Florian Hahn
 E: flo@fhahn.com
@@ -175,10 +179,6 @@ D: AArch64 backend, misc ARM backend
 N: Diego Novillo
 E: dnovillo@google.com
 D: SampleProfile and related parts of ProfileData
-
-N: Krzysztof Parzyszek
-E: kparzysz@quicinc.com
-D: Hexagon Backend
 
 N: Nigel Perks
 E: nigelp@xmos.com

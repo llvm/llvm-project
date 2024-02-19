@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVMetadata.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/IR/IRBuilder.h"
@@ -58,15 +59,23 @@ class SPIRVEmitIntrinsics
   void preprocessCompositeConstants();
   void preprocessUndefs();
   CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
-                            Value *Arg, Value *Arg2) {
+                            Value *Arg, Value *Arg2,
+                            ArrayRef<Constant *> Imms) {
     ConstantAsMetadata *CM = ValueAsMetadata::getConstant(Arg);
     MDTuple *TyMD = MDNode::get(F->getContext(), CM);
     MetadataAsValue *VMD = MetadataAsValue::get(F->getContext(), TyMD);
-    return IRB->CreateIntrinsic(IntrID, {Types}, {Arg2, VMD});
+    SmallVector<Value *, 4> Args;
+    Args.push_back(Arg2);
+    Args.push_back(VMD);
+    for (auto *Imm : Imms)
+      Args.push_back(Imm);
+    return IRB->CreateIntrinsic(IntrID, {Types}, Args);
   }
   void replaceMemInstrUses(Instruction *Old, Instruction *New);
   void processInstrAfterVisit(Instruction *I);
+  void insertAssignPtrTypeIntrs(Instruction *I);
   void insertAssignTypeIntrs(Instruction *I);
+  void insertPtrCastInstr(Instruction *I);
   void processGlobalValue(GlobalVariable &GV);
 
 public:
@@ -121,6 +130,13 @@ static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
     B.SetInsertPoint(I);
 }
 
+static bool requireAssignPtrType(Instruction *I) {
+  if (isa<AllocaInst>(I) || isa<GetElementPtrInst>(I))
+    return true;
+
+  return false;
+}
+
 static bool requireAssignType(Instruction *I) {
   IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(I);
   if (Intr) {
@@ -131,6 +147,13 @@ static bool requireAssignType(Instruction *I) {
     }
   }
   return true;
+}
+
+static inline void reportFatalOnTokenType(const Instruction *I) {
+  if (I->getType()->isTokenTy())
+    report_fatal_error("A token is encountered but SPIR-V without extensions "
+                       "does not support token type",
+                       false);
 }
 
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
@@ -241,7 +264,19 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
-  SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
+  Value *Source = I.getOperand(0);
+
+  // SPIR-V, contrary to LLVM 17+ IR, supports bitcasts between pointers of
+  // varying element types. In case of IR coming from older versions of LLVM
+  // such bitcasts do not provide sufficient information, should be just skipped
+  // here, and handled in insertPtrCastInstr.
+  if (I.getType()->isPointerTy()) {
+    I.replaceAllUsesWith(Source);
+    I.eraseFromParent();
+    return nullptr;
+  }
+
+  SmallVector<Type *, 2> Types = {I.getType(), Source->getType()};
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
   auto *NewI = IRB->CreateIntrinsic(Intrinsic::spv_bitcast, {Types}, {Args});
   std::string InstName = I.hasName() ? I.getName().str() : "";
@@ -249,6 +284,134 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   I.eraseFromParent();
   NewI->setName(InstName);
   return NewI;
+}
+
+void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
+  Value *Pointer;
+  Type *ExpectedElementType;
+  unsigned OperandToReplace;
+  bool AllowCastingToChar = false;
+
+  StoreInst *SI = dyn_cast<StoreInst>(I);
+  if (SI && F->getCallingConv() == CallingConv::SPIR_KERNEL &&
+      SI->getValueOperand()->getType()->isPointerTy() &&
+      isa<Argument>(SI->getValueOperand())) {
+    Argument *Arg = cast<Argument>(SI->getValueOperand());
+    MDString *ArgType = getOCLKernelArgType(*Arg->getParent(), Arg->getArgNo());
+    if (!ArgType || ArgType->getString().starts_with("uchar*"))
+      return;
+
+    // Handle special case when StoreInst's value operand is a kernel argument
+    // of a pointer type. Since these arguments could have either a basic
+    // element type (e.g. float*) or OpenCL builtin type (sampler_t), bitcast
+    // the StoreInst's value operand to default pointer element type (i8).
+    Pointer = Arg;
+    ExpectedElementType = IntegerType::getInt8Ty(F->getContext());
+    OperandToReplace = 0;
+    AllowCastingToChar = true;
+  } else if (SI) {
+    Pointer = SI->getPointerOperand();
+    ExpectedElementType = SI->getValueOperand()->getType();
+    OperandToReplace = 1;
+  } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    Pointer = LI->getPointerOperand();
+    ExpectedElementType = LI->getType();
+    OperandToReplace = 0;
+  } else if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
+    Pointer = GEPI->getPointerOperand();
+    ExpectedElementType = GEPI->getSourceElementType();
+    OperandToReplace = 0;
+  } else {
+    return;
+  }
+
+  // If Pointer is the result of nop BitCastInst (ptr -> ptr), use the source
+  // pointer instead. The BitCastInst should be later removed when visited.
+  while (BitCastInst *BC = dyn_cast<BitCastInst>(Pointer))
+    Pointer = BC->getOperand(0);
+
+  // Do not emit spv_ptrcast if Pointer is a GlobalValue of expected type.
+  GlobalValue *GV = dyn_cast<GlobalValue>(Pointer);
+  if (GV && GV->getValueType() == ExpectedElementType)
+    return;
+
+  // Do not emit spv_ptrcast if Pointer is a result of alloca with expected
+  // type.
+  AllocaInst *A = dyn_cast<AllocaInst>(Pointer);
+  if (A && A->getAllocatedType() == ExpectedElementType)
+    return;
+
+  // Do not emit spv_ptrcast if Pointer is a result of GEP of expected type.
+  GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Pointer);
+  if (GEPI && GEPI->getResultElementType() == ExpectedElementType)
+    return;
+
+  setInsertPointSkippingPhis(*IRB, I);
+  Constant *ExpectedElementTypeConst =
+      Constant::getNullValue(ExpectedElementType);
+  ConstantAsMetadata *CM =
+      ValueAsMetadata::getConstant(ExpectedElementTypeConst);
+  MDTuple *TyMD = MDNode::get(F->getContext(), CM);
+  MetadataAsValue *VMD = MetadataAsValue::get(F->getContext(), TyMD);
+  unsigned AddressSpace = Pointer->getType()->getPointerAddressSpace();
+  bool FirstPtrCastOrAssignPtrType = true;
+
+  // Do not emit new spv_ptrcast if equivalent one already exists or when
+  // spv_assign_ptr_type already targets this pointer with the same element
+  // type.
+  for (auto User : Pointer->users()) {
+    auto *II = dyn_cast<IntrinsicInst>(User);
+    if (!II ||
+        (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
+         II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
+        II->getOperand(0) != Pointer)
+      continue;
+
+    // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
+    // pointer.
+    FirstPtrCastOrAssignPtrType = false;
+    if (II->getOperand(1) != VMD ||
+        dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
+            AddressSpace)
+      continue;
+
+    // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the same
+    // element type and address space.
+    if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
+      return;
+
+    // This must be a spv_ptrcast, do not emit new if this one has the same BB
+    // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
+    if (II->getParent() != I->getParent())
+      continue;
+
+    I->setOperand(OperandToReplace, II);
+    return;
+  }
+
+  // Do not emit spv_ptrcast if it would cast to the default pointer element
+  // type (i8) of the same address space.
+  if (ExpectedElementType->isIntegerTy(8) && !AllowCastingToChar)
+    return;
+
+  // If this would be the first spv_ptrcast, the pointer's defining instruction
+  // requires spv_assign_ptr_type and does not already have one, do not emit
+  // spv_ptrcast and emit spv_assign_ptr_type instead.
+  Instruction *PointerDefInst = dyn_cast<Instruction>(Pointer);
+  if (FirstPtrCastOrAssignPtrType && PointerDefInst &&
+      requireAssignPtrType(PointerDefInst)) {
+    buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {Pointer->getType()},
+                    ExpectedElementTypeConst, Pointer,
+                    {IRB->getInt32(AddressSpace)});
+    return;
+  } else {
+    SmallVector<Type *, 2> Types = {Pointer->getType(), Pointer->getType()};
+    SmallVector<Value *, 2> Args = {Pointer, VMD, IRB->getInt32(AddressSpace)};
+    auto *PtrCastI =
+        IRB->CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+    I->setOperand(OperandToReplace, PtrCastI);
+    return;
+  }
 }
 
 Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
@@ -387,9 +550,33 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV) {
     IRB->CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
+void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
+  if (I->getType()->isVoidTy() || !requireAssignPtrType(I))
+    return;
+
+  setInsertPointSkippingPhis(*IRB, I->getNextNode());
+
+  Constant *EltTyConst;
+  unsigned AddressSpace = 0;
+  if (auto *AI = dyn_cast<AllocaInst>(I)) {
+    EltTyConst = UndefValue::get(AI->getAllocatedType());
+    AddressSpace = AI->getAddressSpace();
+  } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    EltTyConst = UndefValue::get(GEP->getResultElementType());
+    AddressSpace = GEP->getPointerAddressSpace();
+  } else {
+    llvm_unreachable("Unexpected instruction!");
+  }
+
+  buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()}, EltTyConst, I,
+                  {IRB->getInt32(AddressSpace)});
+}
+
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   Type *Ty = I->getType();
-  if (!Ty->isVoidTy() && requireAssignType(I)) {
+  if (!Ty->isVoidTy() && requireAssignType(I) && !requireAssignPtrType(I)) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -400,8 +587,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
         TypeToAssign = t->second->getType();
       }
     }
-    Constant *Const = Constant::getNullValue(TypeToAssign);
-    buildIntrWithMD(Intrinsic::spv_assign_type, {Ty}, Const, I);
+    Constant *Const = UndefValue::get(TypeToAssign);
+    buildIntrWithMD(Intrinsic::spv_assign_type, {Ty}, Const, I, {});
   }
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
@@ -410,9 +597,10 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
       setInsertPointSkippingPhis(*IRB, I);
       if (isa<UndefValue>(Op) && Op->getType()->isAggregateType())
         buildIntrWithMD(Intrinsic::spv_assign_type, {IRB->getInt32Ty()}, Op,
-                        UndefValue::get(IRB->getInt32Ty()));
+                        UndefValue::get(IRB->getInt32Ty()), {});
       else
-        buildIntrWithMD(Intrinsic::spv_assign_type, {Op->getType()}, Op, Op);
+        buildIntrWithMD(Intrinsic::spv_assign_type, {Op->getType()}, Op, Op,
+                        {});
     }
   }
 }
@@ -425,8 +613,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
     Type *Ty = IRB->getInt32Ty();
     auto t = AggrConsts.find(I);
     assert(t != AggrConsts.end());
-    auto *NewOp =
-        buildIntrWithMD(Intrinsic::spv_track_constant, {Ty, Ty}, t->second, I);
+    auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant, {Ty, Ty},
+                                  t->second, I, {});
     I->replaceAllUsesWith(NewOp);
     NewOp->setArgOperand(0, I);
   }
@@ -441,11 +629,12 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
         continue;
       IRB->SetInsertPoint(I);
       auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
-                                    {Op->getType(), Op->getType()}, Op, Op);
+                                    {Op->getType(), Op->getType()}, Op, Op, {});
       I->setOperand(OpNo, NewOp);
     }
   }
   if (I->hasName()) {
+    reportFatalOnTokenType(I);
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     std::vector<Value *> Args = {I};
     addStringImm(I->getName(), *IRB, Args);
@@ -468,13 +657,11 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (!SI)
       continue;
     Type *ElTy = SI->getValueOperand()->getType();
-    PointerType *PTy = cast<PointerType>(SI->getOperand(1)->getType());
-    if (ElTy->isAggregateType() || ElTy->isVectorTy() ||
-        !PTy->isOpaqueOrPointeeTypeMatches(ElTy))
+    if (ElTy->isAggregateType() || ElTy->isVectorTy())
       AggrStores.insert(&I);
   }
 
-  IRB->SetInsertPoint(&Func.getEntryBlock().front());
+  IRB->SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV);
 
@@ -484,14 +671,21 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
 
-  for (auto &I : Worklist)
+  for (auto &I : Worklist) {
+    insertAssignPtrTypeIntrs(I);
     insertAssignTypeIntrs(I);
+    insertPtrCastInstr(I);
+  }
 
   for (auto *I : Worklist) {
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       IRB->SetInsertPoint(I->getNextNode());
+    // Visitors return either the original/newly created instruction for further
+    // processing, nullptr otherwise.
     I = visit(*I);
+    if (!I)
+      continue;
     processInstrAfterVisit(I);
   }
   return true;

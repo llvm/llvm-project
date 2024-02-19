@@ -1134,7 +1134,18 @@ TYPED_TEST(BitVectorTest, EmptyVector) {
   testEmpty(E);
 }
 
+/// Make sure calling getData() is legal even on an empty BitVector
+TYPED_TEST(BitVectorTest, EmptyVectorGetData) {
+  BitVector A;
+  testEmpty(A);
+  auto B = A.getData();
+  EXPECT_TRUE(B.empty());
+}
+
 TYPED_TEST(BitVectorTest, Iterators) {
+  TypeParam Singleton(1, true);
+  EXPECT_EQ(std::next(Singleton.set_bits_begin()), Singleton.set_bits_end());
+
   TypeParam Filled(10, true);
   EXPECT_NE(Filled.set_bits_begin(), Filled.set_bits_end());
   unsigned Counter = 0;

@@ -35,6 +35,13 @@ public:
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
 
+  /// Translates the LLVM DWARF expression metadata to MLIR.
+  DIExpressionAttr translateExpression(llvm::DIExpression *node);
+
+  /// Translates the LLVM DWARF global variable expression metadata to MLIR.
+  DIGlobalVariableExpressionAttr
+  translateGlobalVariableExpression(llvm::DIGlobalVariableExpression *node);
+
   /// Translates the debug information for the given function into a Location.
   /// Returns UnknownLoc if `func` has no debug information attached to it.
   Location translateFuncLocation(llvm::Function *func);
@@ -61,10 +68,12 @@ private:
   DILabelAttr translateImpl(llvm::DILabel *node);
   DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);
   DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
+  DIGlobalVariableAttr translateImpl(llvm::DIGlobalVariable *node);
   DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
+  DIModuleAttr translateImpl(llvm::DIModule *node);
+  DINamespaceAttr translateImpl(llvm::DINamespace *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);
   DISubprogramAttr translateImpl(llvm::DISubprogram *node);
-  DINamespaceAttr translateImpl(llvm::DINamespace *node);
   DISubrangeAttr translateImpl(llvm::DISubrange *node);
   DISubroutineTypeAttr translateImpl(llvm::DISubroutineType *node);
   DITypeAttr translateImpl(llvm::DIType *node);

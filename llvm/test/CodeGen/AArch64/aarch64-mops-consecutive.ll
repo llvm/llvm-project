@@ -14,23 +14,23 @@ define void @consecutive() {
 ; CHECK-MOPS-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-MOPS-NEXT:    .cfi_offset w30, -8
 ; CHECK-MOPS-NEXT:    .cfi_offset w29, -16
-; CHECK-MOPS-NEXT:    mov w8, #1000
+; CHECK-MOPS-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-MOPS-NEXT:    add x9, sp, #8
 ; CHECK-MOPS-NEXT:    adrp x10, .LCPI0_0
 ; CHECK-MOPS-NEXT:    adrp x11, .LCPI0_1
-; CHECK-MOPS-NEXT:    mov w12, #6424
-; CHECK-MOPS-NEXT:    mov w13, #7452
 ; CHECK-MOPS-NEXT:    setp [x9]!, x8!, xzr
 ; CHECK-MOPS-NEXT:    setm [x9]!, x8!, xzr
 ; CHECK-MOPS-NEXT:    sete [x9]!, x8!, xzr
-; CHECK-MOPS-NEXT:    movk w12, #6938, lsl #16
+; CHECK-MOPS-NEXT:    mov w12, #6424 // =0x1918
 ; CHECK-MOPS-NEXT:    ldr q0, [x10, :lo12:.LCPI0_0]
-; CHECK-MOPS-NEXT:    mov w8, #30
 ; CHECK-MOPS-NEXT:    ldr d1, [x11, :lo12:.LCPI0_1]
+; CHECK-MOPS-NEXT:    mov w8, #7452 // =0x1d1c
+; CHECK-MOPS-NEXT:    movk w12, #6938, lsl #16
+; CHECK-MOPS-NEXT:    strh w8, [sp, #1036]
+; CHECK-MOPS-NEXT:    mov w8, #30 // =0x1e
 ; CHECK-MOPS-NEXT:    add x0, sp, #1008
 ; CHECK-MOPS-NEXT:    add x1, sp, #8
 ; CHECK-MOPS-NEXT:    str w12, [sp, #1032]
-; CHECK-MOPS-NEXT:    strh w13, [sp, #1036]
 ; CHECK-MOPS-NEXT:    str q0, [sp, #1008]
 ; CHECK-MOPS-NEXT:    str d1, [sp, #1024]
 ; CHECK-MOPS-NEXT:    strb w8, [sp, #1038]

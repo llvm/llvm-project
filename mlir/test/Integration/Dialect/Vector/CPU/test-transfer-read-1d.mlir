@@ -111,6 +111,17 @@ func.func @transfer_read_1d_mask(
   return
 }
 
+// Non-contiguous, out-of-bounds, strided load.
+func.func @transfer_read_1d_out_of_bounds(
+    %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+  %fm42 = arith.constant -42.0: f32
+  %f = vector.transfer_read %A[%base1, %base2], %fm42
+      {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
+      : memref<?x?xf32>, vector<3xf32>
+  vector.print %f: vector<3xf32>
+  return
+}
+
 // Non-contiguous, strided load.
 func.func @transfer_read_1d_mask_in_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
@@ -149,6 +160,7 @@ func.func @entry() {
   %c1 = arith.constant 1: index
   %c2 = arith.constant 2: index
   %c3 = arith.constant 3: index
+  %c10 = arith.constant 10 : index
   %0 = memref.get_global @gv : memref<5x6xf32>
   %A = memref.cast %0 : memref<5x6xf32> to memref<?x?xf32>
 
@@ -168,6 +180,12 @@ func.func @entry() {
   //      Strides are non-static.
   call @transfer_read_1d_non_static_unit_stride(%A) : (memref<?x?xf32>) -> ()
   // CHECK: ( 31, 32, 33, 34 )
+
+  // 2.c. Read 1D vector from 2D memref with out-of-bounds transfer dim starting
+  //      point.
+  call @transfer_read_1d_out_of_bounds(%A, %c10, %c1)
+      : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( -42, -42, -42 )
 
   // 3. Read 1D vector from 2D memref with non-unit stride on second dim.
   call @transfer_read_1d_non_unit_stride(%A) : (memref<?x?xf32>) -> ()

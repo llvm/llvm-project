@@ -36,6 +36,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -173,7 +174,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
   const auto NameKind = Name.getNameKind();
   if (NameKind != DeclarationName::Identifier &&
-      NameKind != DeclarationName::CXXConstructorName)
+      NameKind != DeclarationName::CXXConstructorName &&
+      NameKind != DeclarationName::ObjCZeroArgSelector &&
+      NameKind != DeclarationName::ObjCOneArgSelector &&
+      NameKind != DeclarationName::ObjCMultiArgSelector)
     return false;
   const auto &AST = ND.getASTContext();
   const auto &SM = AST.getSourceManager();
@@ -181,8 +185,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   clang::Token Tok;
   if (clang::Lexer::getRawToken(Loc, Tok, SM, LO))
     return false;
-  auto StrName = Name.getAsString();
-  return clang::Lexer::getSpelling(Tok, SM, LO) == StrName;
+  auto TokSpelling = clang::Lexer::getSpelling(Tok, SM, LO);
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+    return TokSpelling == MD->getSelector().getNameForSlot(0);
+  return TokSpelling == Name.getAsString();
 }
 } // namespace
 
@@ -261,7 +267,7 @@ public:
     if (Canonical.empty())
       return "";
     // If we had a mapping, always use it.
-    assert(Canonical.startswith("<") || Canonical.startswith("\""));
+    assert(Canonical.starts_with("<") || Canonical.starts_with("\""));
     return Canonical;
   }
 
@@ -327,42 +333,33 @@ private:
   // <Foundation/Foundation_Private.h> instead of
   // <Foundation/NSObject_Private.h> which should be used instead of directly
   // importing the header.
-  std::optional<std::string> getFrameworkUmbrellaSpelling(
-      llvm::StringRef Framework, SrcMgr::CharacteristicKind HeadersDirKind,
-      const HeaderSearch &HS, FrameworkHeaderPath &HeaderPath) {
+  std::optional<std::string>
+  getFrameworkUmbrellaSpelling(llvm::StringRef Framework,
+                               const HeaderSearch &HS,
+                               FrameworkHeaderPath &HeaderPath) {
     auto Res = CacheFrameworkToUmbrellaHeaderSpelling.try_emplace(Framework);
     auto *CachedSpelling = &Res.first->second;
     if (!Res.second) {
       return HeaderPath.IsPrivateHeader ? CachedSpelling->PrivateHeader
                                         : CachedSpelling->PublicHeader;
     }
-    bool IsSystem = isSystem(HeadersDirKind);
     SmallString<256> UmbrellaPath(HeaderPath.HeadersParentDir);
     llvm::sys::path::append(UmbrellaPath, "Headers", Framework + ".h");
 
     llvm::vfs::Status Status;
     auto StatErr = HS.getFileMgr().getNoncachedStatValue(UmbrellaPath, Status);
-    if (!StatErr) {
-      if (IsSystem)
-        CachedSpelling->PublicHeader = llvm::formatv("<{0}/{0}.h>", Framework);
-      else
-        CachedSpelling->PublicHeader =
-            llvm::formatv("\"{0}/{0}.h\"", Framework);
-    }
+    if (!StatErr)
+      CachedSpelling->PublicHeader = llvm::formatv("<{0}/{0}.h>", Framework);
 
     UmbrellaPath = HeaderPath.HeadersParentDir;
     llvm::sys::path::append(UmbrellaPath, "PrivateHeaders",
                             Framework + "_Private.h");
 
     StatErr = HS.getFileMgr().getNoncachedStatValue(UmbrellaPath, Status);
-    if (!StatErr) {
-      if (IsSystem)
-        CachedSpelling->PrivateHeader =
-            llvm::formatv("<{0}/{0}_Private.h>", Framework);
-      else
-        CachedSpelling->PrivateHeader =
-            llvm::formatv("\"{0}/{0}_Private.h\"", Framework);
-    }
+    if (!StatErr)
+      CachedSpelling->PrivateHeader =
+          llvm::formatv("<{0}/{0}_Private.h>", Framework);
+
     return HeaderPath.IsPrivateHeader ? CachedSpelling->PrivateHeader
                                       : CachedSpelling->PublicHeader;
   }
@@ -371,35 +368,29 @@ private:
   // named `Framework`, e.g. `NSObject.h` in framework `Foundation` would
   // give <Foundation/Foundation.h> if the umbrella header exists, otherwise
   // <Foundation/NSObject.h>.
-  std::optional<llvm::StringRef> getFrameworkHeaderIncludeSpelling(
-      const FileEntry *FE, llvm::StringRef Framework, HeaderSearch &HS) {
-    auto Res = CachePathToFrameworkSpelling.try_emplace(FE->getName());
+  std::optional<llvm::StringRef>
+  getFrameworkHeaderIncludeSpelling(FileEntryRef FE, llvm::StringRef Framework,
+                                    HeaderSearch &HS) {
+    auto Res = CachePathToFrameworkSpelling.try_emplace(FE.getName());
     auto *CachedHeaderSpelling = &Res.first->second;
     if (!Res.second)
       return llvm::StringRef(*CachedHeaderSpelling);
 
-    auto HeaderPath = splitFrameworkHeaderPath(FE->getName());
+    auto HeaderPath = splitFrameworkHeaderPath(FE.getName());
     if (!HeaderPath) {
       // Unexpected: must not be a proper framework header, don't cache the
       // failure.
       CachePathToFrameworkSpelling.erase(Res.first);
       return std::nullopt;
     }
-    auto DirKind = HS.getFileDirFlavor(FE);
     if (auto UmbrellaSpelling =
-            getFrameworkUmbrellaSpelling(Framework, DirKind, HS, *HeaderPath)) {
+            getFrameworkUmbrellaSpelling(Framework, HS, *HeaderPath)) {
       *CachedHeaderSpelling = *UmbrellaSpelling;
       return llvm::StringRef(*CachedHeaderSpelling);
     }
 
-    if (isSystem(DirKind))
-      *CachedHeaderSpelling =
-          llvm::formatv("<{0}/{1}>", Framework, HeaderPath->HeaderSubpath)
-              .str();
-    else
-      *CachedHeaderSpelling =
-          llvm::formatv("\"{0}/{1}\"", Framework, HeaderPath->HeaderSubpath)
-              .str();
+    *CachedHeaderSpelling =
+        llvm::formatv("<{0}/{1}>", Framework, HeaderPath->HeaderSubpath).str();
     return llvm::StringRef(*CachedHeaderSpelling);
   }
 
@@ -428,7 +419,7 @@ private:
                                         PP->getHeaderSearchInfo())) {
       // A .inc or .def file is often included into a real header to define
       // symbols (e.g. LLVM tablegen files).
-      if (Filename.endswith(".inc") || Filename.endswith(".def"))
+      if (Filename.ends_with(".inc") || Filename.ends_with(".def"))
         // Don't use cache reentrantly due to iterator invalidation.
         return getIncludeHeaderUncached(SM.getFileID(SM.getIncludeLoc(FID)));
       // Conservatively refuse to insert #includes to files without guards.
@@ -835,15 +826,33 @@ void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation DefLoc,
 
   // Use the expansion location to get the #include header since this is
   // where the symbol is exposed.
-  IncludeFiles[S.ID] = SM.getDecomposedExpansionLoc(DefLoc).first;
+  if (FileID FID = SM.getDecomposedExpansionLoc(DefLoc).first; FID.isValid())
+    IncludeFiles[S.ID] = FID;
 
-  auto [It, Inserted] = SymbolProviders.try_emplace(S.ID);
-  if (Inserted) {
-    auto Headers =
-        include_cleaner::headersForSymbol(Sym, SM, Opts.PragmaIncludes);
-    if (!Headers.empty())
-      It->second = Headers.front();
+  // We update providers for a symbol with each occurence, as SymbolCollector
+  // might run while parsing, rather than at the end of a translation unit.
+  // Hence we see more and more redecls over time.
+  SymbolProviders[S.ID] =
+      include_cleaner::headersForSymbol(Sym, SM, Opts.PragmaIncludes);
+}
+
+llvm::StringRef getStdHeader(const Symbol *S, const LangOptions &LangOpts) {
+  tooling::stdlib::Lang Lang = tooling::stdlib::Lang::CXX;
+  if (LangOpts.C11)
+    Lang = tooling::stdlib::Lang::C;
+  else if(!LangOpts.CPlusPlus)
+    return "";
+
+  if (S->Scope == "std::" && S->Name == "move") {
+    if (!S->Signature.contains(','))
+      return "<utility>";
+    return "<algorithm>";
   }
+
+  if (auto StdSym = tooling::stdlib::Symbol::named(S->Scope, S->Name, Lang))
+    if (auto Header = StdSym->header())
+      return Header->name();
+  return "";
 }
 
 void SymbolCollector::finish() {
@@ -872,20 +881,19 @@ void SymbolCollector::finish() {
   llvm::DenseMap<include_cleaner::Header, std::string> HeaderSpelling;
   // Fill in IncludeHeaders.
   // We delay this until end of TU so header guards are all resolved.
-  for (const auto &[SID, OptionalProvider] : SymbolProviders) {
+  for (const auto &[SID, Providers] : SymbolProviders) {
     const Symbol *S = Symbols.find(SID);
     if (!S)
       continue;
-    assert(IncludeFiles.find(SID) != IncludeFiles.end());
 
-    const auto FID = IncludeFiles.at(SID);
+    FileID FID = IncludeFiles.lookup(SID);
     // Determine if the FID is #include'd or #import'ed.
     Symbol::IncludeDirective Directives = Symbol::Invalid;
     auto CollectDirectives = shouldCollectIncludePath(S->SymInfo.Kind);
     if ((CollectDirectives & Symbol::Include) != 0)
       Directives |= Symbol::Include;
     // Only allow #import for symbols from ObjC-like files.
-    if ((CollectDirectives & Symbol::Import) != 0) {
+    if ((CollectDirectives & Symbol::Import) != 0 && FID.isValid()) {
       auto [It, Inserted] = FileToContainsImportsOrObjC.try_emplace(FID);
       if (Inserted)
         It->second = FilesWithObjCConstructs.contains(FID) ||
@@ -900,8 +908,11 @@ void SymbolCollector::finish() {
 
     // Use the include location-based logic for Objective-C symbols.
     if (Directives & Symbol::Import) {
-      if (auto IncludeHeader = HeaderFileURIs->getIncludeHeader(FID);
-          !IncludeHeader.empty()) {
+      llvm::StringRef IncludeHeader = getStdHeader(S, ASTCtx->getLangOpts());
+      if (IncludeHeader.empty())
+        IncludeHeader = HeaderFileURIs->getIncludeHeader(FID);
+
+      if (!IncludeHeader.empty()) {
         auto NewSym = *S;
         NewSym.IncludeHeaders.push_back({IncludeHeader, 1, Directives});
         Symbols.insert(NewSym);
@@ -911,9 +922,27 @@ void SymbolCollector::finish() {
       continue;
     }
 
-    assert(Directives == Symbol::Include);
     // For #include's, use the providers computed by the include-cleaner
     // library.
+    assert(Directives == Symbol::Include);
+    // Ignore providers that are not self-contained, this is especially
+    // important for symbols defined in the main-file. We want to prefer the
+    // header, if possible.
+    // TODO: Limit this to specifically ignore main file, when we're indexing a
+    // non-header file?
+    auto SelfContainedProvider =
+        [this](llvm::ArrayRef<include_cleaner::Header> Providers)
+        -> std::optional<include_cleaner::Header> {
+      for (const auto &H : Providers) {
+        if (H.kind() != include_cleaner::Header::Physical)
+          return H;
+        if (tooling::isSelfContainedHeader(H.physical(), PP->getSourceManager(),
+                                           PP->getHeaderSearchInfo()))
+          return H;
+      }
+      return std::nullopt;
+    };
+    const auto OptionalProvider = SelfContainedProvider(Providers);
     if (!OptionalProvider)
       continue;
     const auto &H = *OptionalProvider;
@@ -921,14 +950,18 @@ void SymbolCollector::finish() {
     if (Inserted) {
       auto &SM = ASTCtx->getSourceManager();
       if (H.kind() == include_cleaner::Header::Kind::Physical) {
+        // FIXME: Get rid of this once include-cleaner has support for system
+        // headers.
         if (auto Canonical =
-                HeaderFileURIs->mapCanonical(H.physical()->getName());
+                HeaderFileURIs->mapCanonical(H.physical().getName());
             !Canonical.empty())
           SpellingIt->second = Canonical;
+        // For physical files, prefer URIs as spellings might change
+        // depending on the translation unit.
         else if (tooling::isSelfContainedHeader(H.physical(), SM,
                                                 PP->getHeaderSearchInfo()))
           SpellingIt->second =
-              HeaderFileURIs->toURI(H.physical()->getLastRef());
+              HeaderFileURIs->toURI(H.physical());
       } else {
         SpellingIt->second = include_cleaner::spellHeader(
             {H, PP->getHeaderSearchInfo(),

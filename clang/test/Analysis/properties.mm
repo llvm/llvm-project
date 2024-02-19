@@ -87,7 +87,6 @@ void testConsistencyCustomCopy(CustomCopyWrapper *w) {
 @synthesize inner;
 @end
 
-// rdar://67416721
 void testNoDirectPropertyDecl(NoDirectPropertyDecl *w) {
   clang_analyzer_eval(w.inner.value == w.inner.value); // expected-warning{{TRUE}}
 

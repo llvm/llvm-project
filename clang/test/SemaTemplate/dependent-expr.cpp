@@ -43,9 +43,7 @@ namespace PR7198 {
 
 namespace PR7724 {
   template<typename OT> int myMethod()
-  { return 2 && sizeof(OT); } // expected-warning {{use of logical '&&' with constant operand}} \
-                              // expected-note {{use '&' for a bitwise operation}} \
-                              // expected-note {{remove constant to silence this warning}}
+  { return 2 && sizeof(OT); }
 }
 
 namespace test4 {
@@ -167,3 +165,18 @@ namespace BindingInStmtExpr {
   using U = decltype(num_bindings<T>()); // expected-note {{previous}}
   using U = N<3>; // expected-error-re {{type alias redefinition with different types ('N<3>' vs {{.*}}N<2>}}
 }
+
+namespace PR65153 {
+struct A{};
+
+template <const A& T>
+const A JoinStringViews = T;
+
+template <int V>
+class Builder {
+public:
+    static constexpr A Equal{};
+    // no crash here
+    static constexpr auto Val = JoinStringViews<Equal>;
+};
+} // namespace PR65153

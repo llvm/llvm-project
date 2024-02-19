@@ -1,0 +1,64 @@
+# REQUIRES: arm
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=armv7-linux-gnueabi a.s -o a.o
+
+## If we don't merge adjacent duplicate entries, __code_size will be negative and
+## . += __code_size will trigger a "move location counter backward" error.
+## LLD may report more errors further down, but there is only one "move location counter backward" error.
+# RUN: not ld.lld -z norelro -z max-page-size=4096 -T a.t a.o -o /dev/null --no-merge-exidx-entries 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+
+# ERR:      error: a.t:14: unable to move location counter (0x4104) backward to 0x4070 for section 'code.unused_space'
+# ERR-NEXT: error: section '.ARM.exidx' will not fit in region 'CODE': overflowed by 148 bytes
+# ERR-NEXT: error: section dummy1 at 0x1000 of size 0xFFFFFFFFFFFFFF6C exceeds available address space
+# ERR-NEXT: error: section dummy2 at 0x2000 of size 0xFFFFFFFFFFFFFF6C exceeds available address space
+# ERR-NEXT: error: section code.unused_space at 0x4104 of size 0xFFFFFFFFFFFFFF6C exceeds available address space
+
+## If we merge adjacent duplicate entries, we will have enough space. Don't report
+## a spurious error https://github.com/llvm/llvm-project/issues/66836
+# RUN: ld.lld -z norelro -z max-page-size=4096 -T a.t a.o -o a
+# RUN: llvm-readelf -S a | FileCheck %s
+
+# CHECK:       [Nr] Name              Type            Address  Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT:  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+# CHECK-NEXT:  [ 1] dummy1            NOBITS          00001000 001000 00000c 00   A  0   0  1
+# CHECK-NEXT:  [ 2] dummy2            NOBITS          00002000 001000 00000c 00   A  0   0  1
+# CHECK-NEXT:  [ 3] .text             PROGBITS        00004000 001000 000054 00  AX  0   0  4
+# CHECK-NEXT:  [ 4] .ARM.exidx        ARM_EXIDX       00004054 001054 000010 00  AL  3   0  4
+# CHECK-NEXT:  [ 5] code.unused_space NOBITS          00004064 001064 00000c 00   A  0   0  1
+
+#--- a.s
+.globl _start
+_start:
+  bx lr
+
+.macro A
+.section .text.f\@,"ax"
+.globl f\@
+f\@:
+.fnstart
+  bx lr
+.cantunwind
+.fnend
+.endm
+
+.rept 20
+  A
+.endr
+
+#--- a.t
+MEMORY {
+  DUMMY1 (RW) : ORIGIN = 0x1000, LENGTH = 0x70
+  DUMMY2 (RW) : ORIGIN = 0x2000, LENGTH = 0x70
+  CODE (RX) : ORIGIN = 0x4000, LENGTH = 0x70
+}
+code_end = ORIGIN(CODE) + LENGTH(CODE);
+
+SECTIONS {
+  dummy1 (NOLOAD) : { . += code_size; } > DUMMY1
+  dummy2 (NOLOAD) : { . += code_size; } > DUMMY2
+  .text : { *(.text .text.*) } > CODE
+  .ARM.exidx : { *(.ARM.exidx .ARM.exidx.*) } > CODE
+  code_size = code_end - .;
+  code.unused_space (NOLOAD) : { . += code_size; } > CODE
+}

@@ -19,6 +19,8 @@
 // RUN: cp %p/../Inputs/mismatch/1.o %t.dir/2.o
 // RUN: dsymutil --verbose -f -oso-prepend-path=%t.dir \
 // RUN:   -y %p/dummy-debug-map.map -o %t.bin 2>&1 | FileCheck %s
+// RUN: dsymutil --linker parallel --verbose -f -oso-prepend-path=%t.dir \
+// RUN:   -y %p/dummy-debug-map.map -o %t.bin 2>&1 | FileCheck %s
 
 @import mismatch;
 

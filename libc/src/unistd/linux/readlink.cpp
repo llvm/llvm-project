@@ -15,24 +15,25 @@
 #include <fcntl.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ssize_t, readlink,
                    (const char *__restrict path, char *__restrict buf,
                     size_t bufsize)) {
 #ifdef SYS_readlink
-  ssize_t ret = __llvm_libc::syscall_impl(SYS_readlink, path, buf, bufsize);
-#elif defined(SYS_readlinkat)
   ssize_t ret =
-      __llvm_libc::syscall_impl(SYS_readlinkat, AT_FDCWD, path, buf, bufsize);
+      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_readlink, path, buf, bufsize);
+#elif defined(SYS_readlinkat)
+  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_readlinkat, AT_FDCWD,
+                                                      path, buf, bufsize);
 #else
 #error "readlink or readlinkat syscalls not available."
 #endif
   if (ret < 0) {
-    libc_errno = -ret;
+    libc_errno = static_cast<int>(-ret);
     return -1;
   }
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

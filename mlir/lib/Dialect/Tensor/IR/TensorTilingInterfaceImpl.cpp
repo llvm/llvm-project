@@ -220,6 +220,32 @@ struct PackOpTiling
 
     return success();
   }
+
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    auto packOp = cast<PackOp>(op);
+    int64_t numTiles = packOp.getInnerDimsPos().size();
+
+    // tensor.pack op is fusible (as a producer) only if full inner tiles are
+    // iterated or inner dims are not tiled. Otherwise, it will generate a
+    // sequence of non-trivial ops (for partial tiles).
+    for (auto offset : offsets.take_back(numTiles))
+      if (!isConstantIntValue(offset, 0))
+        return failure();
+
+    for (auto iter :
+         llvm::zip_equal(packOp.getMixedTiles(), sizes.take_back(numTiles)))
+      if (!isEqualConstantIntOrValue(std::get<0>(iter), std::get<1>(iter)))
+        return failure();
+
+    FailureOr<TilingResult> tilingResult = getTiledImplementation(
+        op, b, offsets.drop_back(numTiles), sizes.drop_back(numTiles));
+    if (failed(tilingResult))
+      return failure();
+    return tilingResult.value();
+  }
 };
 
 struct UnpackTileDimInfo {

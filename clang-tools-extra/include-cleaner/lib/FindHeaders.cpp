@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
@@ -25,6 +26,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
+#include <queue>
+#include <set>
 #include <utility>
 
 namespace clang::include_cleaner {
@@ -48,8 +51,7 @@ llvm::SmallVector<Header> ranked(llvm::SmallVector<Hinted<Header>> Headers) {
 // name.
 llvm::StringRef basename(llvm::StringRef Header) {
   Header = Header.trim("<>\"");
-  if (auto LastSlash = Header.rfind('/'); LastSlash != Header.npos)
-    Header = Header.drop_front(LastSlash + 1);
+  Header = llvm::sys::path::filename(Header);
   // Drop everything after first `.` (dot).
   // foo.h -> foo
   // foo.cu.h -> foo
@@ -61,7 +63,7 @@ llvm::StringRef basename(llvm::StringRef Header) {
 bool nameMatch(llvm::StringRef DeclName, Header H) {
   switch (H.kind()) {
   case Header::Physical:
-    return basename(H.physical()->getName()).equals_insensitive(DeclName);
+    return basename(H.physical().getName()).equals_insensitive(DeclName);
   case Header::Standard:
     return basename(H.standard().name()).equals_insensitive(DeclName);
   case Header::Verbatim:
@@ -99,7 +101,7 @@ hintedHeadersForStdHeaders(llvm::ArrayRef<tooling::stdlib::Header> Headers,
     Results.emplace_back(H, Hints::PublicHeader | Hints::OriginHeader);
     if (!PI)
       continue;
-    for (const auto *Export : PI->getExporters(H, SM.getFileManager()))
+    for (FileEntryRef Export : PI->getExporters(H, SM.getFileManager()))
       Results.emplace_back(Header(Export), isPublicHeader(Export, *PI));
   }
   // StandardLibrary returns headers in preference order, so only mark the
@@ -115,6 +117,8 @@ std::optional<tooling::stdlib::Header>
 headerForAmbiguousStdSymbol(const NamedDecl *ND) {
   if (!ND->isInStdNamespace())
     return {};
+  if (auto* USD = llvm::dyn_cast<UsingShadowDecl>(ND))
+    ND = USD->getTargetDecl();
   const auto *FD = ND->getAsFunction();
   if (!FD)
     return std::nullopt;
@@ -123,8 +127,10 @@ headerForAmbiguousStdSymbol(const NamedDecl *ND) {
     if (FD->getNumParams() == 1)
       // move(T&& t)
       return tooling::stdlib::Header::named("<utility>");
-    if (FD->getNumParams() == 3)
+    if (FD->getNumParams() == 3 || FD->getNumParams() == 4)
       // move(InputIt first, InputIt last, OutputIt dest);
+      // move(ExecutionPolicy&& policy, ForwardIt1 first,
+      // ForwardIt1 last, ForwardIt2 d_first);
       return tooling::stdlib::Header::named("<algorithm>");
   } else if (FName == "remove") {
     if (FD->getNumParams() == 1)
@@ -182,32 +188,46 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
   switch (Loc.kind()) {
   case SymbolLocation::Physical: {
     FileID FID = SM.getFileID(SM.getExpansionLoc(Loc.physical()));
-    const FileEntry *FE = SM.getFileEntryForID(FID);
+    OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
     if (!FE)
       return {};
     if (!PI)
-      return {{FE, Hints::PublicHeader | Hints::OriginHeader}};
+      return {{*FE, Hints::PublicHeader | Hints::OriginHeader}};
     bool IsOrigin = true;
+    std::queue<FileEntryRef> Exporters;
     while (FE) {
-      Results.emplace_back(FE,
-                           isPublicHeader(FE, *PI) |
+      Results.emplace_back(*FE,
+                           isPublicHeader(*FE, *PI) |
                                (IsOrigin ? Hints::OriginHeader : Hints::None));
-      // FIXME: compute transitive exporter headers.
-      for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
-        Results.emplace_back(Export, isPublicHeader(Export, *PI));
+      for (FileEntryRef Export : PI->getExporters(*FE, SM.getFileManager()))
+        Exporters.push(Export);
 
-      if (auto Verbatim = PI->getPublic(FE); !Verbatim.empty()) {
+      if (auto Verbatim = PI->getPublic(*FE); !Verbatim.empty()) {
         Results.emplace_back(Verbatim,
                              Hints::PublicHeader | Hints::PreferredHeader);
         break;
       }
-      if (PI->isSelfContained(FE) || FID == SM.getMainFileID())
+      if (PI->isSelfContained(*FE) || FID == SM.getMainFileID())
         break;
 
       // Walkup the include stack for non self-contained headers.
       FID = SM.getDecomposedIncludedLoc(FID).first;
-      FE = SM.getFileEntryForID(FID);
+      FE = SM.getFileEntryRefForID(FID);
       IsOrigin = false;
+    }
+    // Now traverse provider trees rooted at exporters.
+    // Note that we only traverse export edges, and ignore private -> public
+    // mappings, as those pragmas apply to exporter, and not the main provider
+    // being exported in this header.
+    std::set<const FileEntry *> SeenExports;
+    while (!Exporters.empty()) {
+      FileEntryRef Export = Exporters.front();
+      Exporters.pop();
+      if (!SeenExports.insert(Export).second) // In case of cyclic exports
+        continue;
+      Results.emplace_back(Export, isPublicHeader(Export, *PI));
+      for (FileEntryRef Export : PI->getExporters(Export, SM.getFileManager()))
+        Exporters.push(Export);
     }
     return Results;
   }

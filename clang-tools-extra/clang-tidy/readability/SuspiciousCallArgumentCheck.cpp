@@ -239,7 +239,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   std::ptrdiff_t L = 0;
   for (std::ptrdiff_t I = 0; I < ParamLen; ++I) {
     if (ParamFlags[I] == 1) {
-      std::ptrdiff_t J;
+      std::ptrdiff_t J = 0;
       for (J = L; J < ArgLen; ++J)
         if (ArgFlags[J] == 1) {
           L = J + 1;

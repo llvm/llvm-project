@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
-#define LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
+#define LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 struct LShiftTableEntry {
@@ -334,13 +334,24 @@ public:
     if ((*numString | 32) == 'e') {
       ++numString;
       if (isdigit(*numString) || *numString == '+' || *numString == '-') {
-        int32_t add_to_exp = strtointeger<int32_t>(numString, 10);
-        if (add_to_exp > 100000) {
-          add_to_exp = 100000;
-        } else if (add_to_exp < -100000) {
-          add_to_exp = -100000;
+        auto result = strtointeger<int32_t>(numString, 10);
+        if (result.has_error()) {
+          // TODO: handle error
         }
-        this->decimal_point += add_to_exp;
+        int32_t add_to_exponent = result.value;
+
+        // Here we do this operation as int64 to avoid overflow.
+        int64_t temp_exponent = static_cast<int64_t>(this->decimal_point) +
+                                static_cast<int64_t>(add_to_exponent);
+
+        // Theoretically these numbers should be MAX_BIASED_EXPONENT for long
+        // double, but that should be ~16,000 which is much less than 1 << 30.
+        if (temp_exponent > (1 << 30)) {
+          temp_exponent = (1 << 30);
+        } else if (temp_exponent < -(1 << 30)) {
+          temp_exponent = -(1 << 30);
+        }
+        this->decimal_point = static_cast<int32_t>(temp_exponent);
       }
     }
 
@@ -400,6 +411,6 @@ public:
 };
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_SUPPORT_HIGH_PRECISION_DECIMAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H

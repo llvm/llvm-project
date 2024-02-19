@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
-// expected-no-diagnostics
 
 static constexpr int PRIMARY = 0;
 static constexpr int SPECIALIZATION_CONCEPT = 1;
@@ -227,7 +226,9 @@ namespace constrained_member_sfinae {
 
 template<int N> struct S {
   template<class T>
-  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) {
+  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) { // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                                                                                  expected-note {{value 4294967296 is outside the range of representable values of type 'int'}} \
+                                                                                                  expected-note {{while calculating associated constraint of template 'constrained_method' here}}
     return CONSTRAINED_METHOD_1;
   }
 
@@ -418,3 +419,183 @@ template<typename T> concept A = true;
 template<typename T> struct X { A<T> auto f(); };
 template<typename T> A<T> auto X<T>::f() {}
 }
+
+namespace GH65810 {
+template<typename Param>
+concept TrivialConcept =
+requires(Param param) {
+  (void)param;
+};
+
+template <typename T>
+struct Base {
+  class InnerClass;
+};
+
+template <typename T>
+class Base<T>::InnerClass {
+  template <typename Param>
+    requires TrivialConcept<Param>
+    int func(Param param) const;
+};
+
+template <typename T>
+template <typename Param>
+requires TrivialConcept<Param>
+int Base<T>::InnerClass::func(Param param) const {
+  return 0;
+}
+
+template<typename T>
+struct Outermost {
+  struct Middle {
+    template<typename U>
+    struct Innermost {
+      template <typename Param>
+        requires TrivialConcept<Param>
+        int func(Param param) const;
+    };
+  };
+};
+
+template <typename T>
+template <typename U>
+template <typename Param>
+requires TrivialConcept<Param>
+int Outermost<T>::Middle::Innermost<U>::func(Param param) const {
+  return 0;
+}
+
+} // namespace GH65810
+
+namespace GH61763 {
+template<typename T, typename U>
+concept same_as = true;
+
+template <class = void>
+struct Foo {
+      template <same_as<void> Param>
+            friend struct Bar;
+};
+
+template struct Foo<>;
+
+template <same_as<void> Param>
+struct Bar {
+};
+
+
+template<typename T>
+concept ok = true;
+
+struct outer {
+    template<typename T>
+        requires ok<T>
+          struct foo {};
+};
+
+template<typename U>
+struct bar {
+    template<typename T>
+        requires ok<T>
+          friend struct outer::foo;
+};
+
+bar<int> x;
+} // namespace GH61763
+
+
+namespace GH74314 {
+template <class T, class U> constexpr bool is_same_v = __is_same(T, U);
+template <class T, class U> constexpr bool is_not_same_v = !__is_same(T, U);
+
+template <class Result>
+concept something_interesting = requires {
+      true;
+      requires is_same_v<int, Result>;
+};
+
+template <class T>
+struct X {
+      void foo() requires requires { requires is_not_same_v<T, int>; };
+      void bar(decltype(requires { requires is_not_same_v<T, int>; }));
+};
+
+template <class T>
+void X<T>::foo() requires requires { requires something_interesting<T>; } {}
+// expected-error@-1{{definition of 'foo' does not match any declaration}}
+// expected-note@*{{}}
+
+template <class T>
+void X<T>::foo() requires requires { requires is_not_same_v<T, int>; } {} // ok
+
+template <class T>
+void X<T>::bar(decltype(requires { requires something_interesting<T>; })) {}
+// expected-error@-1{{definition of 'bar' does not match any declaration}}
+
+template <class T>
+void X<T>::bar(decltype(requires { requires is_not_same_v<T, int>; })) {}
+} // namespace GH74314
+
+namespace GH56482 {
+template <typename SlotMap>
+concept slot_map_has_reserve = true;
+
+template <typename T> struct Slot_map {
+  constexpr void reserve() const noexcept
+    requires slot_map_has_reserve<Slot_map>;
+
+  constexpr void reserve(int) const noexcept
+    requires slot_map_has_reserve<Slot_map<T>>;
+};
+
+template <typename T>
+constexpr void Slot_map<T>::reserve() const noexcept
+  requires slot_map_has_reserve<Slot_map<T>>
+{}
+
+template <typename T>
+constexpr void Slot_map<T>::reserve(int) const noexcept
+  requires slot_map_has_reserve<Slot_map>
+{}
+} // namespace GH56482
+
+namespace GH74447 {
+template <typename T> struct S {
+  template <typename... U, int V>
+  void test(T target, U... value)
+    requires requires {
+      target;
+      sizeof...(value) == 1;
+      V == 2;
+    };
+};
+
+template <typename T>
+template <typename... U, int V>
+void S<T>::test(T target, U... value)
+  requires requires {
+    target;
+    sizeof...(value) == 1;
+    V == 2;
+  }
+{}
+} // namespace GH74447
+
+namespace GH72557 {
+
+template <typename...>
+concept IsAnyOf = true;
+
+template <class... DerTs> struct DerivedCollection {
+  template <class DerT>
+    requires IsAnyOf<DerTs...>
+  unsigned long index();
+};
+
+template <class... DerTs>
+template <class DerT>
+  requires IsAnyOf<DerTs...>
+unsigned long DerivedCollection<DerTs...>::index() {}
+
+} // namespace GH72557

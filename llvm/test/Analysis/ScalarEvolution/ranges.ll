@@ -29,7 +29,7 @@ define i64 @ashr_global() {
 ; CHECK-LABEL: 'ashr_global'
 ; CHECK-NEXT:  Classifying expressions for: @ashr_global
 ; CHECK-NEXT:    %ashr = ashr i64 ptrtoint (ptr @G to i64), 63
-; CHECK-NEXT:    --> %ashr U: [-1,1) S: [-1,1)
+; CHECK-NEXT:    --> %ashr U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ashr_global
 ;
   %ashr = ashr i64 ptrtoint (ptr @G to i64), 63
@@ -140,7 +140,7 @@ define void @add_6(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -167,7 +167,7 @@ define void @add_7(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -194,7 +194,7 @@ define void @add_8(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((7 + %n) /u 8)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((7 + %n) /u 8)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -222,7 +222,7 @@ define void @add_9(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -250,7 +250,7 @@ define void @add_10(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -515,7 +515,7 @@ define void @truncate(i16 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

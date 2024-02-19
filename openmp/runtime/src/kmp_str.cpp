@@ -619,6 +619,21 @@ char *__kmp_str_token(
   return token;
 } // __kmp_str_token
 
+int __kmp_basic_str_to_int(char const *str) {
+  int result;
+  char const *t;
+
+  result = 0;
+
+  for (t = str; *t != '\0'; ++t) {
+    if (*t < '0' || *t > '9')
+      break;
+    result = (result * 10) + (*t - '0');
+  }
+
+  return result;
+}
+
 int __kmp_str_to_int(char const *str, char sentinel) {
   int result, factor;
   char const *t;

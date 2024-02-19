@@ -72,15 +72,9 @@ constexpr S InitList3(int a) { return a ? S{ a, a } : S{ a, ng }; }; // ok
 
 constexpr int LogicalAnd1(int n) { return n && (throw, 0); } // ok
 constexpr int LogicalAnd2(int n) { return 1 && (throw, 0); } // expected-error {{never produces}} expected-note {{subexpression}}
-                                                             // expected-warning@-1 {{use of logical '&&' with constant operand}}
-                                                             // expected-note@-2 {{use '&' for a bitwise operation}}
-                                                             // expected-note@-3 {{remove constant to silence this warning}}
 
 constexpr int LogicalOr1(int n) { return n || (throw, 0); } // ok
 constexpr int LogicalOr2(int n) { return 0 || (throw, 0); } // expected-error {{never produces}} expected-note {{subexpression}}
-                                                            // expected-warning@-1 {{use of logical '||' with constant operand}}
-                                                            // expected-note@-2 {{use '|' for a bitwise operation}}
-
 
 constexpr int Conditional1(bool b, int n) { return b ? n : ng; } // ok
 constexpr int Conditional2(bool b, int n) { return b ? n * ng : n + ng; } // expected-error {{never produces}} expected-note {{both arms of conditional operator are unable to produce a constant expression}}

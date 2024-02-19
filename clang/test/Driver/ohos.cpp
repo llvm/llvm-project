@@ -1,7 +1,7 @@
 // RUN: %clangxx %s -### -no-canonical-prefixes --target=arm-liteos -march=armv7-a \
 // RUN:     -ccc-install-dir %S/Inputs/ohos_native_tree/llvm/bin \
 // RUN:     -resource-dir=%S/Inputs/ohos_native_tree/llvm/lib/clang/x.y.z \
-// RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=lld 2>&1 | FileCheck %s
+// RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=ld 2>&1 | FileCheck %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
 // CHECK: "-triple" "armv7-unknown-liteos-ohos"
 // CHECK-NOT: "-fuse-init-array"
@@ -25,13 +25,12 @@
 // CHECK: clang_rt.crtend.o
 // CHECK: crtn.o
 
-// RUN: %clangxx %s -### --target=arm-unknown-liteos -stdlib=libstdc++ \
-// RUN:     -fuse-ld=lld 2>&1 \
+// RUN: not %clangxx %s -### --target=arm-unknown-liteos -stdlib=libstdc++ 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STDLIB
 // CHECK-STDLIB: error: invalid library name in argument '-stdlib=libstdc++'
 
 // RUN: %clangxx %s -### --target=arm-unknown-liteos -static-libstdc++ \
-// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
 // CHECK-STATIC-NOT: "--push-state"
 // CHECK-STATIC-NOT: "--as-needed"
@@ -43,7 +42,7 @@
 // CHECK-STATIC: "-lc"
 
 // RUN: %clangxx %s -### --target=arm-unknown-liteos -static \
-// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC1
 // CHECK-STATIC1-NOT: "-fuse-init-array"
 // CHECK-STATIC1: "-static"
@@ -54,7 +53,7 @@
 // CHECK-STATIC1: "-lc"
 
 // RUN: %clangxx %s -### --target=arm-unknown-liteos -march=armv7-a -mfloat-abi=soft -static -fPIE -fPIC -fpic -pie \
-// RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=lld 2>&1 \
+// RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC2
 // CHECK-STATIC2: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-STATIC2: {{.*}}ld.lld{{.*}}" "--sysroot=[[SYSROOT]]"
@@ -65,7 +64,7 @@
 // CHECK-STATIC2: "-lm"
 // CHECK-STATIC2: "-lc"
 
-// RUN: %clangxx %s -### --target=arm-liteos -nostdlib++ -fuse-ld=lld 2>&1 \
+// RUN: %clangxx %s -### --target=arm-liteos -nostdlib++ -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIBXX
 // CHECK-NOSTDLIBXX-NOT: "-lc++"
 // CHECK-NOSTDLIBXX: "-lm"

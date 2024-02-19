@@ -9,7 +9,7 @@ program bug47659
     !$acc parallel loop
     do j = 1, 10
       if (j == 2) then
-        exit label1
+        stop 1
       end if
     end do
   end do label1
@@ -75,4 +75,14 @@ subroutine acc_loop()
   end do
 ! CHECK: !$ACC LOOP GANG(STATIC:gangstatic,DIM:gangdim)
 
+end subroutine
+
+subroutine routine1()
+  !$acc routine bind("routine1_")
+! CHECK: !$ACC ROUTINE BIND("routine1_")
+end subroutine
+
+subroutine routine2()
+  !$acc routine(routine2) bind(routine2)
+! CHECK: !$ACC ROUTINE(routine2) BIND(routine2)
 end subroutine

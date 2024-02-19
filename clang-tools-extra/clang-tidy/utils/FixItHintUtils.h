@@ -42,11 +42,16 @@ enum class QualifierTarget {
 std::optional<FixItHint>
 addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
                       DeclSpec::TQ Qualifier,
-                      QualifierTarget CT = QualifierTarget::Pointee,
-                      QualifierPolicy CP = QualifierPolicy::Left);
+                      QualifierTarget QualTarget = QualifierTarget::Pointee,
+                      QualifierPolicy QualPolicy = QualifierPolicy::Left);
 
 // \brief Format a pointer to an expression
 std::string formatDereference(const Expr &ExprNode, const ASTContext &Context);
+
+// \brief Checks whatever a expression require extra () to be always used in
+// safe way in any other expression.
+bool areParensNeededForStatement(const Stmt &Node);
+
 } // namespace clang::tidy::utils::fixit
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FIXITHINTUTILS_H

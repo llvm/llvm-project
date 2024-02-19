@@ -113,8 +113,7 @@ class ModelAdaptorAnalysis
     : public DataflowAnalysis<ModelAdaptorAnalysis<Model>, NoopLattice> {
 public:
   explicit ModelAdaptorAnalysis(ASTContext &Context)
-      : DataflowAnalysis<ModelAdaptorAnalysis, NoopLattice>(
-            Context, /*ApplyBuiltinTransfer=*/true) {}
+      : DataflowAnalysis<ModelAdaptorAnalysis, NoopLattice>(Context) {}
 
   static NoopLattice initialElement() { return NoopLattice(); }
 
@@ -160,7 +159,7 @@ TEST(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
 
         auto *FooVal = cast<BoolValue>(Env.getValue(*FooDecl));
 
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal->formula()));
+        EXPECT_TRUE(Env.proves(FooVal->formula()));
       };
 
   std::string Code = R"(
@@ -191,7 +190,7 @@ TEST(ChromiumCheckModelTest, UnrelatedCheckIgnored) {
 
         auto *FooVal = cast<BoolValue>(Env.getValue(*FooDecl));
 
-        EXPECT_FALSE(Env.flowConditionImplies(FooVal->formula()));
+        EXPECT_FALSE(Env.proves(FooVal->formula()));
       };
 
   std::string Code = R"(

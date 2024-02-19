@@ -119,10 +119,7 @@ struct TestEachAtomicType {
     TestFunctor<UserAtomicType>()();
     /*
             Note: These aren't going to be lock-free,
-            so some libatomic.a is necessary. To handle
-            the case where the support functions are
-            missing, all tests that use this file should add:
-            XFAIL: !non-lockfree-atomics
+            so some libatomic.a is necessary.
         */
     TestFunctor<LargeUserAtomicType>()();
     /*

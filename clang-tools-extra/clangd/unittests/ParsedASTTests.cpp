@@ -12,7 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../clang-tidy/ClangTidyCheck.h"
+#include "../../clang-tidy/ClangTidyModule.h"
+#include "../../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
+#include "CompileCommands.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -25,9 +28,11 @@
 #include "TidyProvider.h"
 #include "support/Context.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -35,7 +40,9 @@
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -46,7 +53,6 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
-using ::testing::UnorderedElementsAreArray;
 
 MATCHER_P(declNamed, Name, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
@@ -465,10 +471,10 @@ std::string once(llvm::StringRef Code) {
 
 bool mainIsGuarded(const ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
-  const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+  OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
   return AST.getPreprocessor()
       .getHeaderSearchInfo()
-      .isFileMultipleIncludeGuarded(MainFE);
+      .isFileMultipleIncludeGuarded(*MainFE);
 }
 
 MATCHER_P(diag, Desc, "") {
@@ -729,6 +735,37 @@ TEST(ParsedASTTest, DiscoversPragmaMarks) {
   EXPECT_THAT(AST.getMarks(), ElementsAre(pragmaTrivia(" In Preamble"),
                                           pragmaTrivia(" - Something Impl"),
                                           pragmaTrivia(" End")));
+}
+
+TEST(ParsedASTTest, GracefulFailureOnAssemblyFile) {
+  std::string Filename = "TestTU.S";
+  std::string Code = R"S(
+main:
+    # test comment
+    bx lr
+  )S";
+
+  // The rest is a simplified version of TestTU::build().
+  // Don't call TestTU::build() itself because it would assert on
+  // failure to build an AST.
+  MockFS FS;
+  std::string FullFilename = testPath(Filename);
+  FS.Files[FullFilename] = Code;
+  ParseInputs Inputs;
+  auto &Argv = Inputs.CompileCommand.CommandLine;
+  Argv = {"clang"};
+  Argv.push_back(FullFilename);
+  Inputs.CompileCommand.Filename = FullFilename;
+  Inputs.CompileCommand.Directory = testRoot();
+  Inputs.Contents = Code;
+  Inputs.TFS = &FS;
+  StoreDiags Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  assert(CI && "Failed to build compilation invocation.");
+  auto AST = ParsedAST::build(FullFilename, Inputs, std::move(CI), {}, nullptr);
+
+  EXPECT_FALSE(AST.has_value())
+      << "Should not try to build AST for assembly source file";
 }
 
 } // namespace

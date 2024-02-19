@@ -27,8 +27,8 @@ TEST(LlvmLibcIsPunct, DefaultLocale) {
   // return a non-zero integer, and everything else returns zero.
   for (int ch = -255; ch < 255; ++ch) {
     if (is_punctuation_character(ch))
-      EXPECT_NE(__llvm_libc::ispunct(ch), 0);
+      EXPECT_NE(LIBC_NAMESPACE::ispunct(ch), 0);
     else
-      EXPECT_EQ(__llvm_libc::ispunct(ch), 0);
+      EXPECT_EQ(LIBC_NAMESPACE::ispunct(ch), 0);
   }
 }

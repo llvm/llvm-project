@@ -3,8 +3,8 @@
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/expand-modular-headers-ppcallbacks/* %t/
 // RUN: %check_clang_tidy -std=c++11 %s readability-identifier-naming %t/without-modules -- \
-// RUN:   -config="CheckOptions: [{ \
-// RUN:      key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }]" \
+// RUN:   -config="CheckOptions: { \
+// RUN:      readability-identifier-naming.MacroDefinitionCase: UPPER_CASE }" \
 // RUN:   -header-filter=.* --enable-module-headers-parsing \
 // RUN:   -- -I %t/
 //
@@ -12,8 +12,8 @@
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/expand-modular-headers-ppcallbacks/* %t/
 // RUN: %check_clang_tidy -std=c++17 %s readability-identifier-naming %t/without-modules -- \
-// RUN:   -config="CheckOptions: [{ \
-// RUN:      key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }]" \
+// RUN:   -config="CheckOptions: { \
+// RUN:      readability-identifier-naming.MacroDefinitionCase: UPPER_CASE }" \
 // RUN:   -header-filter=.* --enable-module-headers-parsing \
 // RUN:   -- -I %t/
 //
@@ -23,8 +23,8 @@
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/expand-modular-headers-ppcallbacks/* %t/
 // RUN: %check_clang_tidy -std=c++11 %s readability-identifier-naming %t/with-modules -- \
-// RUN:   -config="CheckOptions: [{ \
-// RUN:      key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }]" \
+// RUN:   -config="CheckOptions: { \
+// RUN:      readability-identifier-naming.MacroDefinitionCase: UPPER_CASE }" \
 // RUN:   -header-filter=.* --enable-module-headers-parsing \
 // RUN:   -- -I %t/ \
 // RUN:   -fmodules -fimplicit-modules -fno-implicit-module-maps \
@@ -35,8 +35,8 @@
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/expand-modular-headers-ppcallbacks/* %t/
 // RUN: %check_clang_tidy -std=c++17 %s readability-identifier-naming %t/with-modules -- \
-// RUN:   -config="CheckOptions: [{ \
-// RUN:      key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }]" \
+// RUN:   -config="CheckOptions: { \
+// RUN:      readability-identifier-naming.MacroDefinitionCase: UPPER_CASE }" \
 // RUN:   -header-filter=.* --enable-module-headers-parsing \
 // RUN:   -- -I %t/ \
 // RUN:   -fmodules -fimplicit-modules -fno-implicit-module-maps \

@@ -32,7 +32,7 @@ define <16 x i8> @splatconstant_rotl_v16i8(<16 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $3, %xmm0, %xmm1
 ; GFNIAVX512-NEXT:    vpsrlw $5, %xmm0, %xmm0
-; GFNIAVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
+; GFNIAVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>)
   ret <16 x i8> %res
@@ -121,7 +121,7 @@ define <32 x i8> @splatconstant_rotl_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; GFNIAVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; GFNIAVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; GFNIAVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <32 x i8> @llvm.fshl.v32i8(<32 x i8> %a, <32 x i8> %a, <32 x i8> <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>)
   ret <32 x i8> %res
@@ -177,7 +177,7 @@ define <32 x i8> @splatconstant_rotr_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $2, %ymm0, %ymm1
 ; GFNIAVX512-NEXT:    vpsrlw $6, %ymm0, %ymm0
-; GFNIAVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; GFNIAVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a, <32 x i8> %a, <32 x i8> <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>)
   ret <32 x i8> %res
@@ -344,7 +344,7 @@ define <64 x i8> @splatconstant_rotr_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $6, %zmm0, %zmm1
 ; GFNIAVX512-NEXT:    vpsrlw $2, %zmm0, %zmm0
-; GFNIAVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
+; GFNIAVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a, <64 x i8> %a, <64 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>)
   ret <64 x i8> %res

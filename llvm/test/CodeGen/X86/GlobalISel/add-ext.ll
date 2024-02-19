@@ -205,8 +205,8 @@ define void @PR20134_zext(ptr %a, i32 %i) {
 ; CHECK-NEXT:    addq %rdi, %rcx
 ; CHECK-NEXT:    movl (%rcx), %ecx
 ; CHECK-NEXT:    addl (%rax), %ecx
-; CHECK-NEXT:    movl %esi, %esi
-; CHECK-NEXT:    imulq $4, %rsi, %rax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    imulq $4, %rax, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    movl %ecx, (%rax)
 ; CHECK-NEXT:    retq

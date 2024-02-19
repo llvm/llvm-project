@@ -1,13 +1,9 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
-declare_args() {
-  # If is_goma is true, the location of the goma client install.
-  # Set this to the output of `goma_ctl goma_dir`.
-  goma_dir = ""
-}
-
 assert(!use_goma || goma_dir != "",
        "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
+assert(!use_goma || compiler_wrapper == "",
+       "`use_goma` and `compiler_wrapper` are mutually exclusive")
 
 unix_copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
 
@@ -31,6 +27,9 @@ template("unix_toolchain") {
     if (use_goma) {
       cc = "$goma_dir/gomacc $cc"
       cxx = "$goma_dir/gomacc $cxx"
+    } else if (compiler_wrapper != "") {
+      cc = "$compiler_wrapper $cc"
+      cxx = "$compiler_wrapper $cxx"
     }
 
     tool("cc") {
@@ -219,10 +218,14 @@ stage2_unix_toolchain("stage2_unix") {
 }
 
 if (android_ndk_path != "") {
+  # Android compiler-rt libraries don't really work with per-target runtime
+  # directories yet so force it off.
+  # https://discourse.llvm.org/t/handling-version-numbers-in-per-target-runtime-directories/62717.
   stage2_unix_toolchain("stage2_android_aarch64") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm64"
+      clang_enable_per_target_runtime_dir = false
     }
   }
 
@@ -230,6 +233,7 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm"
+      clang_enable_per_target_runtime_dir = false
     }
   }
 
@@ -237,6 +241,7 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "x64"
+      clang_enable_per_target_runtime_dir = false
     }
   }
 
@@ -244,6 +249,7 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "x86"
+      clang_enable_per_target_runtime_dir = false
     }
   }
 }
@@ -297,6 +303,8 @@ template("win_toolchain") {
 
     if (use_goma) {
       cl = "$goma_dir/gomacc $cl"
+    } else if (compiler_wrapper != "") {
+      cl = "$compiler_wrapper $cl"
     }
 
     tool("cc") {

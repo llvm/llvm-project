@@ -52,7 +52,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
-#include <list>
 #include <map>
 #include <memory>
 #include <string>
@@ -264,6 +263,13 @@ static cl::opt<bool>
 static cl::opt<bool>
     LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
                      cl::desc("Save the IR before running optimizations"));
+
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false), cl::Hidden);
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -481,12 +487,11 @@ static void printMachOCPUOnly() {
 /// currently available via the gold plugin via -thinlto.
 static void createCombinedModuleSummaryIndex() {
   ModuleSummaryIndex CombinedIndex(/*HaveGVs=*/false);
-  uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
     std::unique_ptr<MemoryBuffer> MB =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
-    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex, NextModuleId++));
+    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex));
   }
   // In order to use this index for testing, specifically import testing, we
   // need to update any indirect call edges created from SamplePGO, so that they
@@ -528,7 +533,7 @@ static std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
     if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
       error(EC, "error creating the directory '" + ParentPath + "'");
   }
-  return std::string(NewPath.str());
+  return std::string(NewPath);
 }
 
 namespace thinlto {
@@ -938,6 +943,13 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format.
+  if (TryUseNewDbgInfoFormat) {
+    // Turn the new debug-info format on.
+    UseNewDbgInfoFormat = true;
+  }
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");

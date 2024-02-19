@@ -80,6 +80,7 @@ CAST_OPERATION(LValueToRValue)
 /// (possibly) adding qualifiers or removing noexcept.
 ///   int    -> int
 ///   char** -> const char * const *
+///   int[1] -> int[]
 ///   void () noexcept -> void ()
 CAST_OPERATION(NoOp)
 
@@ -359,6 +360,9 @@ CAST_OPERATION(AddressSpaceConversion)
 
 // Convert an integer initializer to an OpenCL sampler.
 CAST_OPERATION(IntToOCLSampler)
+
+// Truncate a vector type by dropping elements from the end (HLSL only).
+CAST_OPERATION(HLSLVectorTruncation)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.

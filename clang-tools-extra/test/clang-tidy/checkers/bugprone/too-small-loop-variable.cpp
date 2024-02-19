@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-too-small-loop-variable %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: bugprone-too-small-loop-variable.MagnitudeBitsUpperLimit, \
-// RUN:               value: 1024}]}" \
+// RUN:             {bugprone-too-small-loop-variable.MagnitudeBitsUpperLimit: 1024}}" \
 // RUN:   -- --target=x86_64-linux
 
 long size() { return 294967296l; }
@@ -91,6 +90,18 @@ void voidForLoopInstantiation() {
 void voidBadForLoopWithMacroBound() {
   for (short i = 0; i < SUSPICIOUS_SIZE; ++i) {
     // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: loop variable has narrower type 'short' than iteration's upper bound 'long' [bugprone-too-small-loop-variable]
+  }
+}
+
+unsigned int getVal() {
+    return 300;
+}
+
+// The iteration's upper bound has a function declaration.
+void voidBadForLoop8() {
+  const unsigned int l = getVal();
+  for (unsigned char i = 0; i < l; ++i) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: loop variable has narrower type 'unsigned char' than iteration's upper bound 'const unsigned int' [bugprone-too-small-loop-variable]
   }
 }
 

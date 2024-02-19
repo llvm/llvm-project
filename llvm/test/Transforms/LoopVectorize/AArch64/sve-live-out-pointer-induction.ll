@@ -23,6 +23,8 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 8
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP34:%.*]] = mul i64 [[TMP33]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_1]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
@@ -55,13 +57,11 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 8
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP29]], align 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP30]], 2
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 [[TMP31]]
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP32]], align 4
-; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP34:%.*]] = mul i64 [[TMP33]], 4
+; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP29]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP32]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP34]]
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -79,7 +79,7 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV_2]], align 4
+; CHECK-NEXT:    store i64 0, ptr [[IV_2]], align 8
 ; CHECK-NEXT:    [[IV_2_NEXT]] = getelementptr inbounds ptr, ptr [[IV_2]], i64 1
 ; CHECK-NEXT:    [[IV_1_NEXT]] = getelementptr inbounds ptr, ptr [[IV_1]], i64 1
 ; CHECK-NEXT:    [[CMP_I_I_NOT_I:%.*]] = icmp eq ptr [[IV_2_NEXT]], [[END]]

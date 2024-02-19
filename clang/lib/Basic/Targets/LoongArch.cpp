@@ -199,18 +199,19 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__loongarch_frlen", "0");
 
   // Define __loongarch_arch.
-  StringRef Arch = llvm::LoongArch::getArch();
-  if (Arch.empty())
-    Arch = llvm::LoongArch::getDefaultArch(GRLen == 64);
-  if (!Arch.empty())
-    Builder.defineMacro("__loongarch_arch", Arch);
+  StringRef ArchName = getCPU();
+  Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
 
   // Define __loongarch_tune.
-  StringRef TuneCPU = llvm::LoongArch::getTuneCPU();
+  StringRef TuneCPU = getTargetOpts().TuneCPU;
   if (TuneCPU.empty())
-    TuneCPU = Arch;
-  if (!TuneCPU.empty())
-    Builder.defineMacro("__loongarch_tune", TuneCPU);
+    TuneCPU = ArchName;
+  Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
+
+  if (HasFeatureLSX)
+    Builder.defineMacro("__loongarch_sx", Twine(1));
+  if (HasFeatureLASX)
+    Builder.defineMacro("__loongarch_asx", Twine(1));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -261,6 +262,8 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Case("loongarch64", Is64Bit)
       .Case("32bit", !Is64Bit)
       .Case("64bit", Is64Bit)
+      .Case("lsx", HasFeatureLSX)
+      .Case("lasx", HasFeatureLASX)
       .Default(false);
 }
 
@@ -278,16 +281,19 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       if (Feature == "+d") {
         HasFeatureD = true;
       }
-    }
+    } else if (Feature == "+lsx")
+      HasFeatureLSX = true;
+    else if (Feature == "+lasx")
+      HasFeatureLASX = true;
   }
   return true;
 }
 
-bool LoongArchTargetInfo::isValidTuneCPUName(StringRef Name) const {
-  return llvm::LoongArch::isValidTuneCPUName(Name);
+bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::LoongArch::isValidCPUName(Name);
 }
 
-void LoongArchTargetInfo::fillValidTuneCPUList(
+void LoongArchTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  llvm::LoongArch::fillValidTuneCPUList(Values);
+  llvm::LoongArch::fillValidCPUList(Values);
 }

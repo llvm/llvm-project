@@ -69,10 +69,6 @@ def yaml_input: Flag<["-", "--"], "y">,
   HelpText<"Treat the input file is a YAML debug map rather than a binary.">,
   Group<grp_general>;
 
-def papertrail: F<"papertrail">,
-  HelpText<"Embed warnings in the linked DWARF debug info.">,
-  Group<grp_general>;
-
 def assembly: Flag<["-", "--"], "S">,
   HelpText<"Output textual assembly instead of a binary dSYM companion file.">,
   Group<grp_general>;
@@ -202,6 +198,17 @@ def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'apple'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
+
+def build_variant_suffix: Separate<["--", "-"], "build-variant-suffix">,
+  MetaVarName<"<suffix=buildvariant>">,
+  HelpText<"Specify the build variant suffix used to build the executabe file.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "build-variant-suffix=">, Alias<build_variant_suffix>;
+
+def dsym_search_path: Separate<["-", "--"], "D">,
+  MetaVarName<"<path>">,
+  HelpText<"Specify a directory that contain dSYM files to search for.">,
+  Group<grp_general>;

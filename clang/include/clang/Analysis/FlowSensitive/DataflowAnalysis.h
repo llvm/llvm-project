@@ -25,9 +25,13 @@
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
-#include "llvm/ADT/Any.h"
+#include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -80,14 +84,6 @@ public:
   using Lattice = LatticeT;
 
   explicit DataflowAnalysis(ASTContext &Context) : Context(Context) {}
-
-  /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
-  explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis(
-            Context,
-            {ApplyBuiltinTransfer
-                 ? DataflowAnalysisContext::Options{}
-                 : std::optional<DataflowAnalysisContext::Options>()}) {}
 
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
@@ -190,6 +186,12 @@ template <typename LatticeT> struct DataflowAnalysisState {
 /// the dataflow analysis cannot be performed successfully. Otherwise, calls
 /// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
+///
+/// `MaxBlockVisits` caps the number of block visits during analysis. See
+/// `runTypeErasedDataflowAnalysis` for a full description. The default value is
+/// essentially arbitrary -- large enough to accommodate what seems like any
+/// reasonable CFG, but still small enough to limit the cost of hitting the
+/// limit.
 template <typename AnalysisT>
 llvm::Expected<std::vector<
     std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
@@ -198,7 +200,8 @@ runDataflowAnalysis(
     const Environment &InitEnv,
     std::function<void(const CFGElement &, const DataflowAnalysisState<
                                                typename AnalysisT::Lattice> &)>
-        PostVisitCFG = nullptr) {
+        PostVisitCFG = nullptr,
+    std::int32_t MaxBlockVisits = 20'000) {
   std::function<void(const CFGElement &,
                      const TypeErasedDataflowAnalysisState &)>
       PostVisitCFGClosure = nullptr;
@@ -216,7 +219,7 @@ runDataflowAnalysis(
   }
 
   auto TypeErasedBlockStates = runTypeErasedDataflowAnalysis(
-      CFCtx, Analysis, InitEnv, PostVisitCFGClosure);
+      CFCtx, Analysis, InitEnv, PostVisitCFGClosure, MaxBlockVisits);
   if (!TypeErasedBlockStates)
     return TypeErasedBlockStates.takeError();
 
@@ -236,6 +239,82 @@ runDataflowAnalysis(
             });
       });
   return std::move(BlockStates);
+}
+
+// Create an analysis class that is derived from `DataflowAnalysis`. This is an
+// SFINAE adapter that allows us to call two different variants of constructor
+// (either with or without the optional `Environment` parameter).
+// FIXME: Make all classes derived from `DataflowAnalysis` take an `Environment`
+// parameter in their constructor so that we can get rid of this abomination.
+template <typename AnalysisT>
+auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
+    -> decltype(AnalysisT(ASTCtx, Env)) {
+  return AnalysisT(ASTCtx, Env);
+}
+template <typename AnalysisT>
+auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
+    -> decltype(AnalysisT(ASTCtx)) {
+  return AnalysisT(ASTCtx);
+}
+
+/// Runs a dataflow analysis over the given function and then runs `Diagnoser`
+/// over the results. Returns a list of diagnostics for `FuncDecl` or an
+/// error. Currently, errors can occur (at least) because the analysis requires
+/// too many iterations over the CFG or the SAT solver times out.
+///
+/// The default value of `MaxSATIterations` was chosen based on the following
+/// observations:
+/// - Non-pathological calls to the solver typically require only a few hundred
+///   iterations.
+/// - This limit is still low enough to keep runtimes acceptable (on typical
+///   machines) in cases where we hit the limit.
+///
+/// `MaxBlockVisits` caps the number of block visits during analysis. See
+/// `runDataflowAnalysis` for a full description and explanation of the default
+/// value.
+template <typename AnalysisT, typename Diagnostic>
+llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
+    const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
+    llvm::function_ref<llvm::SmallVector<Diagnostic>(
+        const CFGElement &, ASTContext &,
+        const TransferStateForDiagnostics<typename AnalysisT::Lattice> &)>
+        Diagnoser,
+    std::int64_t MaxSATIterations = 1'000'000'000,
+    std::int32_t MaxBlockVisits = 20'000) {
+  llvm::Expected<ControlFlowContext> Context =
+      ControlFlowContext::build(FuncDecl);
+  if (!Context)
+    return Context.takeError();
+
+  auto OwnedSolver = std::make_unique<WatchedLiteralsSolver>(MaxSATIterations);
+  const WatchedLiteralsSolver *Solver = OwnedSolver.get();
+  DataflowAnalysisContext AnalysisContext(std::move(OwnedSolver));
+  Environment Env(AnalysisContext, FuncDecl);
+  AnalysisT Analysis = createAnalysis<AnalysisT>(ASTCtx, Env);
+  llvm::SmallVector<Diagnostic> Diagnostics;
+  if (llvm::Error Err =
+          runTypeErasedDataflowAnalysis(
+              *Context, Analysis, Env,
+              [&ASTCtx, &Diagnoser, &Diagnostics](
+                  const CFGElement &Elt,
+                  const TypeErasedDataflowAnalysisState &State) mutable {
+                auto EltDiagnostics = Diagnoser(
+                    Elt, ASTCtx,
+                    TransferStateForDiagnostics<typename AnalysisT::Lattice>(
+                        llvm::any_cast<const typename AnalysisT::Lattice &>(
+                            State.Lattice.Value),
+                        State.Env));
+                llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+              },
+              MaxBlockVisits)
+              .takeError())
+    return std::move(Err);
+
+  if (Solver->reachedLimit())
+    return llvm::createStringError(llvm::errc::interrupted,
+                                   "SAT solver timed out");
+
+  return Diagnostics;
 }
 
 /// Abstract base class for dataflow "models": reusable analysis components that

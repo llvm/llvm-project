@@ -11,8 +11,8 @@
 
 # POSTCHECK:          Version = 8
 # POSTCHECK:          CU list offset = 0x18, has 2 entries
-# POSTCHECK-NEXT:         0: Offset = 0x80, Length = 0x52
-# POSTCHECK-NEXT:         1: Offset = 0xd2, Length = 0x53
+# POSTCHECK-NEXT:         0: Offset = 0x80, Length = 0x55
+# POSTCHECK-NEXT:         1: Offset = 0xd5, Length = 0x56
 # POSTCHECK:          Types CU list offset = 0x38, has 2 entries
 # POSTCHECK-NEXT:       0: offset = 0x00000000, type_offset = 0x00000023, type_signature = 0x418503b8111e9a7b
 # POSTCHECK-NEXT:       1: offset = 0x00000040, type_offset = 0x00000023, type_signature = 0x00f6cca4e3a15118

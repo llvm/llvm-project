@@ -11,6 +11,15 @@ irdl.dialect @testd {
     irdl.parameters(%0)
   }
 
+  // CHECK: irdl.attribute @parametric_attr {
+  // CHECK:  %[[v0:[^ ]*]] = irdl.any
+  // CHECK:  irdl.parameters(%[[v0]])
+  // CHECK: }
+  irdl.attribute @parametric_attr {
+    %0 = irdl.any
+    irdl.parameters(%0)
+  }
+
   // CHECK: irdl.type @attr_in_type_out {
   // CHECK:   %[[v0:[^ ]*]] = irdl.any
   // CHECK:   irdl.parameters(%[[v0]])
@@ -66,15 +75,40 @@ irdl.dialect @testd {
     irdl.results(%0)
   }
 
-  // CHECK: irdl.operation @dynbase {
-  // CHECK:   %[[v0:[^ ]*]] = irdl.any
-  // CHECK:   %[[v1:[^ ]*]] = irdl.parametric @parametric<%[[v0]]>
+  // CHECK: irdl.operation @dyn_type_base {
+  // CHECK:   %[[v1:[^ ]*]] = irdl.base @parametric
   // CHECK:   irdl.results(%[[v1]])
   // CHECK: }
-  irdl.operation @dynbase {
-    %0 = irdl.any
-    %1 = irdl.parametric @parametric<%0>
-    irdl.results(%1)
+  irdl.operation @dyn_type_base {
+    %0 = irdl.base @parametric
+    irdl.results(%0)
+  }
+
+  // CHECK: irdl.operation @dyn_attr_base {
+  // CHECK:   %[[v1:[^ ]*]] = irdl.base @parametric_attr
+  // CHECK:   irdl.attributes {"attr1" = %[[v1]]}
+  // CHECK: }
+  irdl.operation @dyn_attr_base {
+    %0 = irdl.base @parametric_attr
+    irdl.attributes {"attr1" = %0}
+  }
+
+  // CHECK: irdl.operation @named_type_base {
+  // CHECK:   %[[v1:[^ ]*]] = irdl.base "!builtin.integer"
+  // CHECK:   irdl.results(%[[v1]])
+  // CHECK: }
+  irdl.operation @named_type_base {
+    %0 = irdl.base "!builtin.integer"
+    irdl.results(%0)
+  }
+
+  // CHECK: irdl.operation @named_attr_base {
+  // CHECK:   %[[v1:[^ ]*]] = irdl.base "#builtin.integer"
+  // CHECK:   irdl.attributes {"attr1" = %[[v1]]}
+  // CHECK: }
+  irdl.operation @named_attr_base {
+    %0 = irdl.base "#builtin.integer"
+    irdl.attributes {"attr1" = %0}
   }
 
   // CHECK: irdl.operation @dynparams {
@@ -118,5 +152,38 @@ irdl.dialect @testd {
       "attr1" = %0,
       "attr2" = %1
     }
+  }
+  // CHECK: irdl.operation @regions {
+  // CHECK:   %[[r0:[^ ]*]] = irdl.region
+  // CHECK:   %[[v0:[^ ]*]] = irdl.is i32
+  // CHECK:   %[[v1:[^ ]*]] = irdl.is i64
+  // CHECK:   %[[r1:[^ ]*]] = irdl.region(%[[v0]], %[[v1]])
+  // CHECK:   %[[r2:[^ ]*]] = irdl.region with size 3
+  // CHECK:   %[[r3:[^ ]*]] = irdl.region()
+  // CHECK:   irdl.regions(%[[r0]], %[[r1]], %[[r2]], %[[r3]])
+  // CHECK: }
+  irdl.operation @regions {
+    %r0 = irdl.region
+    %v0 = irdl.is i32
+    %v1 = irdl.is i64
+    %r1 = irdl.region(%v0, %v1)
+    %r2 = irdl.region with size 3
+    %r3 = irdl.region()
+
+    irdl.regions(%r0, %r1, %r2, %r3)
+  }
+
+  // CHECK: irdl.operation @region_and_operand {
+  // CHECK:   %[[v0:[^ ]*]] = irdl.any
+  // CHECK:   %[[r0:[^ ]*]] = irdl.region(%[[v0]])
+  // CHECK:   irdl.operands(%[[v0]])
+  // CHECK:   irdl.regions(%[[r0]])
+  // CHECK: }
+  irdl.operation @region_and_operand {
+    %v0 = irdl.any
+    %r0 = irdl.region(%v0)
+
+    irdl.operands(%v0)
+    irdl.regions(%r0)
   }
 }

@@ -10,6 +10,7 @@
 #define FORTRAN_RUNTIME_TOOLS_H_
 
 #include "freestanding-tools.h"
+#include "stat.h"
 #include "terminator.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -23,20 +24,20 @@ namespace Fortran::runtime {
 
 class Terminator;
 
-std::size_t TrimTrailingSpaces(const char *, std::size_t);
+RT_API_ATTRS std::size_t TrimTrailingSpaces(const char *, std::size_t);
 
-OwningPtr<char> SaveDefaultCharacter(
+RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *, std::size_t, const Terminator &);
 
 // For validating and recognizing default CHARACTER values in a
 // case-insensitive manner.  Returns the zero-based index into the
 // null-terminated array of upper-case possibilities when the value is valid,
 // or -1 when it has no match.
-int IdentifyValue(
+RT_API_ATTRS int IdentifyValue(
     const char *value, std::size_t length, const char *possibilities[]);
 
 // Truncates or pads as necessary
-void ToFortranDefaultCharacter(
+RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from);
 
 // Utility for dealing with elemental LOGICAL arguments
@@ -59,8 +60,8 @@ RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
 
 // Helper to store integer value in result[at].
 template <int KIND> struct StoreIntegerAt {
-  void operator()(const Fortran::runtime::Descriptor &result, std::size_t at,
-      std::int64_t value) const {
+  RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
+      std::size_t at, std::int64_t value) const {
     *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
         Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
   }
@@ -71,7 +72,8 @@ RT_API_ATTRS void CheckIntegerKind(
     Terminator &, int kind, const char *intrinsic);
 
 template <typename TO, typename FROM>
-inline void PutContiguousConverted(TO *to, FROM *from, std::size_t count) {
+inline RT_API_ATTRS void PutContiguousConverted(
+    TO *to, FROM *from, std::size_t count) {
   while (count-- > 0) {
     *to++ = *from++;
   }
@@ -93,8 +95,33 @@ static inline RT_API_ATTRS std::int64_t GetInt64(
   }
 }
 
+static inline RT_API_ATTRS std::optional<std::int64_t> GetInt64Safe(
+    const char *p, std::size_t bytes, Terminator &terminator) {
+  switch (bytes) {
+  case 1:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(p);
+  case 2:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 2> *>(p);
+  case 4:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 4> *>(p);
+  case 8:
+    return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(p);
+  case 16: {
+    using Int128 = CppTypeFor<TypeCategory::Integer, 16>;
+    auto n{*reinterpret_cast<const Int128 *>(p)};
+    std::int64_t result{static_cast<std::int64_t>(n)};
+    if (static_cast<Int128>(result) == n) {
+      return result;
+    }
+    return std::nullopt;
+  }
+  default:
+    terminator.Crash("GetInt64Safe: no case for %zd bytes", bytes);
+  }
+}
+
 template <typename INT>
-inline bool SetInteger(INT &x, int kind, std::int64_t value) {
+inline RT_API_ATTRS bool SetInteger(INT &x, int kind, std::int64_t value) {
   switch (kind) {
   case 1:
     reinterpret_cast<CppTypeFor<TypeCategory::Integer, 1> &>(x) = value;
@@ -131,7 +158,7 @@ inline RT_API_ATTRS RESULT ApplyType(
       return FUNC<TypeCategory::Integer, 4>{}(std::forward<A>(x)...);
     case 8:
       return FUNC<TypeCategory::Integer, 8>{}(std::forward<A>(x)...);
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
     case 16:
       return FUNC<TypeCategory::Integer, 16>{}(std::forward<A>(x)...);
 #endif
@@ -230,7 +257,7 @@ inline RT_API_ATTRS RESULT ApplyIntegerKind(
     return FUNC<4>{}(std::forward<A>(x)...);
   case 8:
     return FUNC<8>{}(std::forward<A>(x)...);
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
   case 16:
     return FUNC<16>{}(std::forward<A>(x)...);
 #endif
@@ -300,8 +327,8 @@ inline RT_API_ATTRS RESULT ApplyLogicalKind(
 }
 
 // Calculate result type of (X op Y) for *, //, DOT_PRODUCT, &c.
-std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
-    TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
+std::optional<std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
+GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
   int maxKind{std::max(xKind, yKind)};
   switch (xCat) {
   case TypeCategory::Integer:
@@ -310,6 +337,11 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
       return std::make_pair(TypeCategory::Integer, maxKind);
     case TypeCategory::Real:
     case TypeCategory::Complex:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (xKind == 16) {
+        break;
+      }
+#endif
       return std::make_pair(yCat, yKind);
     default:
       break;
@@ -318,6 +350,11 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
   case TypeCategory::Real:
     switch (yCat) {
     case TypeCategory::Integer:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (yKind == 16) {
+        break;
+      }
+#endif
       return std::make_pair(TypeCategory::Real, xKind);
     case TypeCategory::Real:
     case TypeCategory::Complex:
@@ -329,6 +366,11 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
   case TypeCategory::Complex:
     switch (yCat) {
     case TypeCategory::Integer:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (yKind == 16) {
+        break;
+      }
+#endif
       return std::make_pair(TypeCategory::Complex, xKind);
     case TypeCategory::Real:
     case TypeCategory::Complex:
@@ -364,7 +406,7 @@ using AccumulationType = CppTypeFor<CAT,
 
 // memchr() for any character type
 template <typename CHAR>
-static inline const CHAR *FindCharacter(
+static inline RT_API_ATTRS const CHAR *FindCharacter(
     const CHAR *data, CHAR ch, std::size_t chars) {
   const CHAR *end{data + chars};
   for (const CHAR *p{data}; p < end; ++p) {
@@ -376,9 +418,67 @@ static inline const CHAR *FindCharacter(
 }
 
 template <>
-inline const char *FindCharacter(const char *data, char ch, std::size_t chars) {
+inline RT_API_ATTRS const char *FindCharacter(
+    const char *data, char ch, std::size_t chars) {
   return reinterpret_cast<const char *>(
       std::memchr(data, static_cast<int>(ch), chars));
+}
+
+// Copy payload data from one allocated descriptor to another.
+// Assumes element counts and element sizes match, and that both
+// descriptors are allocated.
+RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from);
+RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
+    const Descriptor &to, const Descriptor &from);
+RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from);
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous);
+RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
+
+// Ensures that a character string is null-terminated, allocating a /p length +1
+// size memory for null-terminator if necessary. Returns the original or a newly
+// allocated null-terminated string (responsibility for deallocation is on the
+// caller).
+RT_API_ATTRS char *EnsureNullTerminated(
+    char *str, std::size_t length, Terminator &terminator);
+
+RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
+
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal);
+
+// Copy a null-terminated character array \p rawValue to descriptor \p value.
+// The copy starts at the given \p offset, if not present then start at 0.
+// If descriptor `errmsg` is provided, error messages will be stored to it.
+// Returns stats specified in standard.
+RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
+    const char *rawValue, std::size_t rawValueLength,
+    const Descriptor *errmsg = nullptr, std::size_t offset = 0);
+
+RT_API_ATTRS void StoreIntToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator);
+
+// Defines a utility function for copying and padding characters
+template <typename TO, typename FROM>
+RT_API_ATTRS void CopyAndPad(
+    TO *to, const FROM *from, std::size_t toChars, std::size_t fromChars) {
+  if constexpr (sizeof(TO) != sizeof(FROM)) {
+    std::size_t copyChars{std::min(toChars, fromChars)};
+    for (std::size_t j{0}; j < copyChars; ++j) {
+      to[j] = from[j];
+    }
+    for (std::size_t j{copyChars}; j < toChars; ++j) {
+      to[j] = static_cast<TO>(' ');
+    }
+  } else if (toChars <= fromChars) {
+    std::memcpy(to, from, toChars * sizeof(TO));
+  } else {
+    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    for (std::size_t j{fromChars}; j < toChars; ++j) {
+      to[j] = static_cast<TO>(' ');
+    }
+  }
 }
 
 } // namespace Fortran::runtime

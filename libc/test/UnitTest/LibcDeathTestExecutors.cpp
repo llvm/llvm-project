@@ -13,7 +13,7 @@
 
 #include <cassert>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
@@ -101,4 +101,4 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
 }
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

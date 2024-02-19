@@ -22,5 +22,8 @@ twice.
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM
 RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
 
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
+
 CHECK: DW_AT_call_return_pc  (0x0000000100000f72)
 CHECK: DW_AT_call_return_pc  (0x0000000100000f78)

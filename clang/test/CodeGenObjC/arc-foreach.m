@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin -O1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -emit-llvm %s -o - | FileCheck -check-prefix CHECK-LP64-OPT %s
-// rdar://9503326
-// rdar://9606600
 
 extern void use(id);
 extern void use_block(void (^)(void));
@@ -67,7 +65,7 @@ void test0(NSArray *array) {
 // CHECK-LP64-NEXT: call void @llvm.objc.storeStrong(ptr [[CAPTURED]], ptr null)
 // CHECK-LP64-NOT:  call void (...) @llvm.objc.clang.arc.use(
 
-// CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i64 0, i32 5
+// CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds i8, ptr [[BLOCK]], i64 32
 // CHECK-LP64-OPT: [[CAPTURE:%.*]] = load ptr, ptr [[D0]]
 // CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use(ptr [[CAPTURE]])
 
@@ -112,7 +110,6 @@ void test1(NSArray *array) {
 // CHECK-LP64-NEXT: call void @llvm.objc.destroyWeak(ptr [[T0]])
 // CHECK-LP64-NEXT: call void @llvm.objc.destroyWeak(ptr [[X]])
 
-// rdar://problem/9817306
 @interface Test2
 - (NSArray *) array;
 @end
@@ -192,7 +189,7 @@ NSArray *array4;
 // CHECK-LP64-OPT-LABEL: define internal void @"\01-[I1 foo2]"(
 // CHECK-LP64-OPT: ptr %self
 // CHECK-LP64-OPT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-// CHECK-LP64-OPT: [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i64 0, i32 5
+// CHECK-LP64-OPT: [[T0:%.*]] = getelementptr inbounds i8, ptr [[BLOCK]], i64 32
 
 // CHECK-LP64:         call void @llvm.objc.storeStrong(ptr [[BC]], ptr null)
 // CHECK-LP64-NOT:     call void (...) @llvm.objc.clang.arc.use(ptr [[BC]])

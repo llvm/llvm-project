@@ -25,7 +25,7 @@ using namespace ento;
 namespace {
 class ExprInspectionChecker
     : public Checker<eval::Call, check::DeadSymbols, check::EndAnalysis> {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Checking analyzer assumptions", "debug"};
 
   // These stats are per-analysis, not per-branch, hence they shouldn't
   // stay inside the program state.
@@ -176,11 +176,7 @@ ExprInspectionChecker::reportBug(llvm::StringRef Msg, BugReporter &BR,
                                  std::optional<SVal> ExprVal) const {
   if (!N)
     return nullptr;
-
-  if (!BT)
-    BT.reset(new BugType(this, "Checking analyzer assumptions", "debug"));
-
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
   if (ExprVal) {
     R->markInteresting(*ExprVal);
   }
@@ -325,12 +321,12 @@ void ExprInspectionChecker::analyzerDump(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerGetExtent(const CallExpr *CE,
                                               CheckerContext &C) const {
-  const MemRegion *MR = getArgRegion(CE, C);
-  if (!MR)
+  const Expr *Arg = getArgExpr(CE, C);
+  if (!Arg)
     return;
 
   ProgramStateRef State = C.getState();
-  DefinedOrUnknownSVal Size = getDynamicExtent(State, MR, C.getSValBuilder());
+  SVal Size = getDynamicExtentWithOffset(State, C.getSVal(Arg));
 
   State = State->BindExpr(CE, C.getLocationContext(), Size);
   C.addTransition(State);
@@ -338,12 +334,12 @@ void ExprInspectionChecker::analyzerGetExtent(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerDumpExtent(const CallExpr *CE,
                                                CheckerContext &C) const {
-  const MemRegion *MR = getArgRegion(CE, C);
-  if (!MR)
+  const Expr *Arg = getArgExpr(CE, C);
+  if (!Arg)
     return;
 
-  DefinedOrUnknownSVal Size =
-      getDynamicExtent(C.getState(), MR, C.getSValBuilder());
+  ProgramStateRef State = C.getState();
+  SVal Size = getDynamicExtentWithOffset(State, C.getSVal(Arg));
   printAndReport(C, Size);
 }
 
@@ -362,8 +358,8 @@ void ExprInspectionChecker::analyzerDumpElementCount(const CallExpr *CE,
 
   assert(!ElementTy->isPointerType());
 
-  DefinedOrUnknownSVal ElementCount =
-      getDynamicElementCount(C.getState(), MR, C.getSValBuilder(), ElementTy);
+  DefinedOrUnknownSVal ElementCount = getDynamicElementCountWithOffset(
+      C.getState(), C.getSVal(getArgExpr(CE, C)), ElementTy);
   printAndReport(C, ElementCount);
 }
 

@@ -6,13 +6,15 @@ typedef struct {
   float v[2];
 } S0;
 
-// CHECK: define{{.*}} float @f0([2 x float] %h.coerce)
+// CHECK-AAPCS:  define{{.*}} float @f0([2 x float] alignstack(8) %h.coerce)
+// CHECK-DARWIN: define{{.*}} float @f0([2 x float] %h.coerce)
 float f0(S0 h) {
   return h.v[0];
 }
 
 // CHECK: define{{.*}} float @f0_call()
-// CHECK: %call = call float @f0([2 x float] %0)
+// CHECK-AAPCS: %call = call float @f0([2 x float] alignstack(8) %0)
+// CHECK-DARWIN: %call = call float @f0([2 x float] %0)
 float f0_call(void) {
   S0 h = {1.0f, 2.0f};
   return f0(h);
@@ -20,14 +22,15 @@ float f0_call(void) {
 typedef struct {
   double v[2];
 } S1;
-
-// CHECK: define{{.*}} double @f1([2 x double] %h.coerce)
+// CHECK-AAPCS: define{{.*}} double @f1([2 x double] alignstack(8) %h.coerce)
+// CHECK-DARWIN: define{{.*}} double @f1([2 x double] %h.coerce)
 double f1(S1 h) {
   return h.v[0];
 }
 
 // CHECK: define{{.*}} double @f1_call()
-// CHECK: %call = call double @f1([2 x double] %0
+// CHECK-AAPCS: %call = call double @f1([2 x double] alignstack(8) %0
+// CHECK-DARWIN: %call = call double @f1([2 x double] %0
 double f1_call(void) {
   S1 h = {1.0, 2.0};
   return f1(h);

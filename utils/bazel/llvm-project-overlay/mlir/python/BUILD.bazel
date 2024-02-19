@@ -47,6 +47,13 @@ filegroup(
 )
 
 filegroup(
+    name = "ExtrasPyFiles",
+    srcs = glob([
+        "mlir/extras/*.py",
+    ]),
+)
+
+filegroup(
     name = "IRPyIFiles",
     srcs = [
         "mlir/_mlir_libs/_mlir/__init__.pyi",
@@ -80,6 +87,48 @@ filegroup(
     srcs = glob([
         "mlir/runtime/*.py",
     ]),
+)
+
+##---------------------------------------------------------------------------##
+# Affine dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AffineOpsPyTdFiles",
+    srcs = [
+        "mlir/dialects/AffineOps.td",
+    ],
+    deps = [
+        "//mlir:AffineOpsTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "AffineOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=affine",
+            ],
+            "mlir/dialects/_affine_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/AffineOps.td",
+    deps = [
+        ":AffineOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AffineOpsPyFiles",
+    srcs = [
+        "mlir/dialects/affine.py",
+        ":AffineOpsPyGen",
+    ],
 )
 
 ##---------------------------------------------------------------------------##
@@ -119,9 +168,55 @@ gentbl_filegroup(
 filegroup(
     name = "BuiltinOpsPyFiles",
     srcs = [
-        "mlir/dialects/_builtin_ops_ext.py",
         "mlir/dialects/builtin.py",
         ":BuiltinOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# AMDGPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AMDGPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:AMDGPUTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "AMDGPUOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=amdgpu",
+            ],
+            "mlir/dialects/_amdgpu_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=amdgpu",
+            ],
+            "mlir/dialects/_amdgpu_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/AMDGPUOps.td",
+    deps = [
+        ":AMDGPUOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AMDGPUOpsPyFiles",
+    srcs = [
+        "mlir/dialects/amdgpu.py",
+        ":AMDGPUOpsPyGen",
     ],
 )
 
@@ -146,6 +241,13 @@ gentbl_filegroup(
     tbl_outs = [
         (
             [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=linalg",
+            ],
+            "mlir/dialects/_linalg_enum_gen.py",
+        ),
+        (
+            [
                 "-gen-python-op-bindings",
                 "-bind-dialect=linalg",
             ],
@@ -162,7 +264,6 @@ gentbl_filegroup(
 filegroup(
     name = "LinalgOpsPyFiles",
     srcs = [
-        "mlir/dialects/_linalg_ops_ext.py",
         ":LinalgOpsPyGen",
     ],
 )
@@ -193,12 +294,57 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# LLVM dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "LLVMOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=llvm",
+            ],
+            "mlir/dialects/_llvm_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=llvm",
+            ],
+            "mlir/dialects/_llvm_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/LLVMOps.td",
+    deps = [
+        "//mlir:LLVMOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "LLVMOpsPyFiles",
+    srcs = [
+        "mlir/dialects/llvm.py",
+        ":LLVMOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Arith dialect.
 ##---------------------------------------------------------------------------##
 
 gentbl_filegroup(
     name = "ArithOpsPyGen",
     tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=arith",
+            ],
+            "mlir/dialects/_arith_enum_gen.py",
+        ),
         (
             [
                 "-gen-python-op-bindings",
@@ -218,7 +364,6 @@ gentbl_filegroup(
 filegroup(
     name = "ArithOpsPyFiles",
     srcs = [
-        "mlir/dialects/_arith_ops_ext.py",
         "mlir/dialects/arith.py",
         ":ArithOpsPyGen",
     ],
@@ -234,8 +379,27 @@ td_library(
     includes = ["../include"],
     deps = [
         "//mlir:BufferizableOpInterfaceTdFiles",
+        "//mlir:BufferizationEnumsTdFiles",
         "//mlir:BufferizationOpsTdFiles",
         "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "BufferizationEnumPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=bufferization",
+            ],
+            "mlir/dialects/_bufferization_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/BufferizationEnums.td",
+    deps = [
+        ":BufferizationOpsPyTdFiles",
     ],
 )
 
@@ -260,8 +424,8 @@ gentbl_filegroup(
 filegroup(
     name = "BufferizationOpsPyFiles",
     srcs = [
-        "mlir/dialects/_bufferization_ops_ext.py",
         "mlir/dialects/bufferization.py",
+        ":BufferizationEnumPyGen",
         ":BufferizationOpsPyGen",
     ],
 )
@@ -346,7 +510,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/MathOps.td",
     deps = [
-               "//mlir:MathOpsTdFiles",
+        "//mlir:MathOpsTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
 )
@@ -377,7 +541,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/MemRefOps.td",
     deps = [
-         "//mlir:MemRefOpsTdFiles",
+        "//mlir:MemRefOpsTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
 )
@@ -385,7 +549,6 @@ gentbl_filegroup(
 filegroup(
     name = "MemRefOpsPyFiles",
     srcs = [
-        "mlir/dialects/_memref_ops_ext.py",
         "mlir/dialects/memref.py",
         ":MemRefOpsPyGen",
     ],
@@ -409,7 +572,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/MLProgramOps.td",
     deps = [
-                "//mlir:MLProgramOpsTdFiles",
+        "//mlir:MLProgramOpsTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
 )
@@ -417,9 +580,39 @@ gentbl_filegroup(
 filegroup(
     name = "MLProgramOpsPyFiles",
     srcs = [
-        "mlir/dialects/_ml_program_ops_ext.py",
         "mlir/dialects/ml_program.py",
         ":MLProgramOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# OpenMP dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "OpenMPOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=omp",
+            ],
+            "mlir/dialects/_omp_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/OpenMPOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:OpenMPOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "OpenMPOpsPyFiles",
+    srcs = [
+        "mlir/dialects/openmp.py",
+        ":OpenMPOpsPyGen",
     ],
 )
 
@@ -441,7 +634,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/PDLOps.td",
     deps = [
-         "//mlir:OpBaseTdFiles",
+        "//mlir:OpBaseTdFiles",
         "//mlir:PDLDialectTdFiles",
     ],
 )
@@ -456,7 +649,6 @@ filegroup(
 filegroup(
     name = "PDLPyFiles",
     srcs = [
-        "mlir/dialects/_pdl_ops_ext.py",
         "mlir/dialects/pdl.py",
         ":PDLPyGen",
     ],
@@ -512,6 +704,196 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# GPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "GPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:GPUOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "GPUOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=gpu",
+            ],
+            "mlir/dialects/_gpu_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=gpu",
+            ],
+            "mlir/dialects/_gpu_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/GPUOps.td",
+    deps = [
+        ":GPUOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "GPUOpsPyFiles",
+    srcs = [
+        ":GPUOpsPyGen",
+    ],
+)
+
+filegroup(
+    name = "GPUOpsPackagePyFiles",
+    srcs = glob(["mlir/dialects/gpu/*.py"]),
+)
+
+filegroup(
+    name = "GPUOpsPackagePassesPyFiles",
+    srcs = glob(["mlir/dialects/gpu/passes/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
+# NVGPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "NVGPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:NVGPUTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "NVGPUOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=nvgpu",
+            ],
+            "mlir/dialects/_nvgpu_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=nvgpu",
+            ],
+            "mlir/dialects/_nvgpu_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/NVGPUOps.td",
+    deps = [
+        ":NVGPUOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "NVGPUOpsPyFiles",
+    srcs = [
+        "mlir/dialects/nvgpu.py",
+        ":NVGPUOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# NVVM dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "NVVMOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:NVVMOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "NVVMOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=nvvm",
+            ],
+            "mlir/dialects/_nvvm_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=nvvm",
+            ],
+            "mlir/dialects/_nvvm_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/NVVMOps.td",
+    deps = [
+        ":NVVMOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "NVVMOpsPyFiles",
+    srcs = [
+        "mlir/dialects/nvvm.py",
+        ":NVVMOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# ROCDL dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "ROCDLOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:ROCDLOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "ROCDLOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=rocdl",
+            ],
+            "mlir/dialects/_rocdl_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/ROCDLOps.td",
+    deps = [
+        ":ROCDLOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ROCDLOpsPyFiles",
+    srcs = [
+        "mlir/dialects/rocdl.py",
+        ":ROCDLOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # SCF dialect.
 ##---------------------------------------------------------------------------##
 
@@ -529,7 +911,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/SCFOps.td",
     deps = [
-          "//mlir:OpBaseTdFiles",
+        "//mlir:OpBaseTdFiles",
         "//mlir:SCFTdFiles",
     ],
 )
@@ -537,7 +919,6 @@ gentbl_filegroup(
 filegroup(
     name = "SCFPyFiles",
     srcs = [
-        "mlir/dialects/_scf_ops_ext.py",
         "mlir/dialects/scf.py",
         ":SCFPyGen",
     ],
@@ -561,7 +942,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/ShapeOps.td",
     deps = [
-         "//mlir:OpBaseTdFiles",
+        "//mlir:OpBaseTdFiles",
         "//mlir:ShapeOpsTdFiles",
     ],
 )
@@ -602,7 +983,7 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/FuncOps.td",
     deps = [
-               "//mlir:FuncTdFiles",
+        "//mlir:FuncTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
 )
@@ -610,7 +991,6 @@ gentbl_filegroup(
 filegroup(
     name = "FuncPyFiles",
     srcs = [
-        "mlir/dialects/_func_ops_ext.py",
         "mlir/dialects/func.py",
         ":FuncPyGen",
     ],
@@ -627,6 +1007,24 @@ td_library(
     deps = [
         "//mlir:OpBaseTdFiles",
         "//mlir:SparseTensorTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "SparseTensorEnumPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=sparse_tensor",
+            ],
+            "mlir/dialects/_sparse_tensor_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SparseTensorAttrDefs.td",
+    deps = [
+        ":SparseTensorOpsPyTdFiles",
     ],
 )
 
@@ -652,7 +1050,39 @@ filegroup(
     name = "SparseTensorOpsPyFiles",
     srcs = [
         "mlir/dialects/sparse_tensor.py",
+        ":SparseTensorEnumPyGen",
         ":SparseTensorOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# SPIRV dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "SPIRVOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=spirv",
+            ],
+            "mlir/dialects/_spirv_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SPIRVOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:SPIRVOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "SPIRVOpsPyFiles",
+    srcs = [
+        "mlir/dialects/spirv.py",
+        ":SPIRVOpsPyGen",
     ],
 )
 
@@ -691,7 +1121,6 @@ gentbl_filegroup(
 filegroup(
     name = "TensorOpsPyFiles",
     srcs = [
-        "mlir/dialects/_tensor_ops_ext.py",
         "mlir/dialects/tensor.py",
         ":TensorOpsPyGen",
     ],
@@ -733,6 +1162,27 @@ filegroup(
 ##---------------------------------------------------------------------------##
 
 gentbl_filegroup(
+    name = "TransformEnumPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=transform",
+            ],
+            "mlir/dialects/_transform_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TransformAttrs.td",
+    deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "TransformOpsPyGen",
     tbl_outs = [
         (
@@ -754,6 +1204,25 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "BufferizationTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=bufferization_transform",
+            ],
+            "mlir/dialects/_bufferization_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/BufferizationTransformOps.td",
+    deps = [
+        "//mlir:BufferizationTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "GPUTransformOpsPyGen",
     tbl_outs = [
         (
@@ -770,12 +1239,33 @@ gentbl_filegroup(
     deps = [
         "//mlir:CallInterfacesTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
-        "//mlir:OpBaseTdFiles",
         "//mlir:GPUTransformOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
         "//mlir:TransformDialectTdFiles",
     ],
 )
 
+gentbl_filegroup(
+    name = "StructureTransformEnumPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=transform",
+            ],
+            "mlir/dialects/_structured_transform_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/LinalgStructuredTransformEnums.td",
+    deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:LinalgTransformOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
 
 gentbl_filegroup(
     name = "StructuredTransformOpsPyGen",
@@ -794,9 +1284,9 @@ gentbl_filegroup(
     deps = [
         "//mlir:CallInterfacesTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:LinalgTransformOpsTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:TransformDialectTdFiles",
-        "//mlir:LinalgTransformOpsTdFiles",
     ],
 )
 
@@ -818,8 +1308,46 @@ gentbl_filegroup(
         "//mlir:CallInterfacesTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
-        "//mlir:TransformDialectTdFiles",
         "//mlir:SCFTransformOpsTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "MemRefTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=memref_transform",
+            ],
+            "mlir/dialects/_memref_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/MemRefTransformOps.td",
+    deps = [
+        "//mlir:MemRefTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "NVGPUTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=nvgpu_transform",
+            ],
+            "mlir/dialects/_nvgpu_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/NVGPUTransformOps.td",
+    deps = [
+        "//mlir:NVGPUTransformOpsTdFiles",
     ],
 )
 
@@ -846,25 +1374,113 @@ gentbl_filegroup(
     ],
 )
 
+gentbl_filegroup(
+    name = "SparseTensorTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=sparse_tensor_transform",
+            ],
+            "mlir/dialects/_sparse_tensor_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SparseTensorTransformOps.td",
+    deps = [
+        "//mlir:SparseTensorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TensorTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=tensor_transform",
+            ],
+            "mlir/dialects/_tensor_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TensorTransformOps.td",
+    deps = [
+        "//mlir:TensorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorTransformEnumPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=transform",
+            ],
+            "mlir/dialects/_vector_transform_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/VectorTransformsBase.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:VectorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=vector_transform",
+            ],
+            "mlir/dialects/_vector_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/VectorTransformOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:VectorTransformOpsTdFiles",
+    ],
+)
+
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
-        "mlir/dialects/_gpu_transform_ops_ext.py",
-        "mlir/dialects/_loop_transform_ops_ext.py",
-        "mlir/dialects/_structured_transform_ops_ext.py",
-        "mlir/dialects/_transform_ops_ext.py",
-        "mlir/dialects/_transform_pdl_extension_ops_ext.py",
+        ":BufferizationTransformOpsPyGen",
         ":GPUTransformOpsPyGen",
         ":LoopTransformOpsPyGen",
+        ":MemRefTransformOpsPyGen",
+        ":NVGPUTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
+        ":SparseTensorTransformOpsPyGen",
+        ":StructureTransformEnumPyGen",
         ":StructuredTransformOpsPyGen",
+        ":TensorTransformOpsPyGen",
+        ":TransformEnumPyGen",
         ":TransformOpsPyGen",
+        ":VectorTransformEnumPyGen",
+        ":VectorTransformOpsPyGen",
     ],
 )
 
 filegroup(
     name = "TransformOpsPackagePyFiles",
     srcs = glob(["mlir/dialects/transform/*.py"]),
+)
+
+filegroup(
+    name = "TransformExtrasPackagePyFiles",
+    srcs = glob(["mlir/dialects/transform/extras/*.py"]),
 )
 
 ##---------------------------------------------------------------------------##
@@ -885,6 +1501,27 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/VectorOps.td",
     deps = [
+        "//mlir:ArithOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:VectorOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorAttributesPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=vector",
+            ],
+            "mlir/dialects/_vector_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/VectorAttributes.td",
+    deps = [
+        "//mlir:ArithOpsTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:VectorOpsTdFiles",
     ],
@@ -894,6 +1531,7 @@ filegroup(
     name = "VectorOpsPyFiles",
     srcs = [
         "mlir/dialects/vector.py",
+        ":VectorAttributesPyGen",
         ":VectorOpsPyGen",
     ],
 )

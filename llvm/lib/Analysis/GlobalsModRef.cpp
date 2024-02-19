@@ -241,7 +241,7 @@ MemoryEffects GlobalsAAResult::getMemoryEffects(const Function *F) {
   if (FunctionInfo *FI = getFunctionInfo(F))
     return MemoryEffects(FI->getModRefInfo());
 
-  return AAResultBase::getMemoryEffects(F);
+  return MemoryEffects::unknown();
 }
 
 /// Returns the function info for the function, or null if we don't have
@@ -791,10 +791,7 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
 
     // FIXME: It would be good to handle other obvious no-alias cases here, but
     // it isn't clear how to do so reasonably without building a small version
-    // of BasicAA into this code. We could recurse into AAResultBase::alias
-    // here but that seems likely to go poorly as we're inside the
-    // implementation of such a query. Until then, just conservatively return
-    // false.
+    // of BasicAA into this code.
     return false;
   } while (!Inputs.empty());
 
@@ -892,7 +889,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     if ((GV1 || GV2) && GV1 != GV2)
       return AliasResult::NoAlias;
 
-  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+  return AliasResult::MayAlias;
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,

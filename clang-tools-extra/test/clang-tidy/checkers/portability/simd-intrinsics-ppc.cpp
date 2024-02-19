@@ -1,15 +1,15 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s portability-simd-intrinsics %t -- \
-// RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: false} \
-// RUN:  ]}' -- -target ppc64le -maltivec
+// RUN:  -config='{CheckOptions: {\
+// RUN:    portability-simd-intrinsics.Suggest: false \
+// RUN:  }}' -- -target ppc64le -maltivec
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s portability-simd-intrinsics -check-suffix=BEFORE-CXX20 %t -- \
-// RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: true} \
-// RUN:  ]}' -- -target ppc64le -maltivec
+// RUN:  -config='{CheckOptions: { \
+// RUN:    portability-simd-intrinsics.Suggest: true \
+// RUN:  }}' -- -target ppc64le -maltivec
 // RUN: %check_clang_tidy -std=c++20-or-later %s portability-simd-intrinsics -check-suffix=CXX20 %t -- \
-// RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: true} \
-// RUN:  ]}' -- -target ppc64le -maltivec
+// RUN:  -config='{CheckOptions: { \
+// RUN:    portability-simd-intrinsics.Suggest: true \
+// RUN:  }}' -- -target ppc64le -maltivec
 
 vector int vec_add(vector int, vector int);
 

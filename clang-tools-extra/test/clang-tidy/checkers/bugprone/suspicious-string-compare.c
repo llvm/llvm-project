@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-suspicious-string-compare %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: bugprone-suspicious-string-compare.WarnOnImplicitComparison, value: true}, \
-// RUN:   {key: bugprone-suspicious-string-compare.WarnOnLogicalNotComparison, value: true}]}' \
+// RUN:  {bugprone-suspicious-string-compare.WarnOnImplicitComparison: true, \
+// RUN:   bugprone-suspicious-string-compare.WarnOnLogicalNotComparison: true}}' \
 // RUN: -- -std=c99
 
 static const char A[] = "abc";

@@ -12,11 +12,11 @@ define void @test_sgt(i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ [[X]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i32 [[TMP]], [[IV]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label [[GUARDED]], label [[FAIL:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
@@ -57,11 +57,11 @@ define void @test_sge(i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ [[X]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp sge i32 [[TMP]], [[IV]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label [[GUARDED]], label [[FAIL:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
@@ -102,11 +102,11 @@ define void @test_ugt(i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ [[X]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp ugt i32 [[TMP]], [[IV]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label [[GUARDED]], label [[FAIL:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
@@ -148,11 +148,11 @@ define void @test_uge(i32 %x) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ [[X]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp uge i32 [[TMP]], [[IV]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label [[GUARDED]], label [[FAIL:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:

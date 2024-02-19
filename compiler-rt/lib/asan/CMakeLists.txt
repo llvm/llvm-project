@@ -46,7 +46,7 @@ set(ASAN_STATIC_SOURCES
   asan_rtl_static.cpp
   )
 
-if (ASAN_SUPPORTED_ARCH STREQUAL "x86_64" AND NOT WIN32 AND NOT APPLE)
+if ("x86_64" IN_LIST ASAN_SUPPORTED_ARCH AND NOT WIN32 AND NOT APPLE)
   list(APPEND ASAN_STATIC_SOURCES
     asan_rtl_x86_64.S
   )
@@ -71,7 +71,6 @@ SET(ASAN_HEADERS
   asan_interface.inc
   asan_interface_internal.h
   asan_internal.h
-  asan_lock.h
   asan_mapping.h
   asan_poisoning.h
   asan_premap_shadow.h
@@ -92,7 +91,7 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
 if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" ASAN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" ASAN_CFLAGS)
 endif()
 
 # Too many existing bugs, needs cleanup.
@@ -216,6 +215,7 @@ else()
     RTSanitizerCommonLibc
     RTSanitizerCommonCoverage
     RTSanitizerCommonSymbolizer
+    RTSanitizerCommonSymbolizerInternal
     RTLSanCommon
     RTUbsan)
 

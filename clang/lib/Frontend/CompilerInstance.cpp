@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
@@ -149,9 +150,6 @@ bool CompilerInstance::createTarget() {
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
   getTarget().adjust(getDiagnostics(), getLangOpts());
-
-  // Adjust target options based on codegen options.
-  getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
 
   if (auto *Aux = getAuxTarget())
     getTarget().setAuxTarget(Aux);
@@ -402,14 +400,8 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
   // Remap files in the source manager (with buffers).
   for (const auto &RB : InitOpts.RemappedFileBuffers) {
     // Create the file entry for the file that we're mapping from.
-    const FileEntry *FromFile =
-        FileMgr.getVirtualFile(RB.first, RB.second->getBufferSize(), 0);
-    if (!FromFile) {
-      Diags.Report(diag::err_fe_remap_missing_from_file) << RB.first;
-      if (!InitOpts.RetainRemappedFileBuffers)
-        delete RB.second;
-      continue;
-    }
+    FileEntryRef FromFile =
+        FileMgr.getVirtualFileRef(RB.first, RB.second->getBufferSize(), 0);
 
     // Override the contents of the "from" file with the contents of the
     // "to" file. If the caller owns the buffers, then pass a MemoryBufferRef;
@@ -478,7 +470,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Predefine macros and configure the preprocessor.
   InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
-                         getFrontendOpts());
+                         getFrontendOpts(), getCodeGenOpts());
 
   // Initialize the header search object.  In CUDA compilations, we use the aux
   // triple (the host triple) to initialize our header search, since we need to
@@ -551,7 +543,7 @@ std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   SmallString<256> SpecificModuleCache(getHeaderSearchOpts().ModuleCachePath);
   if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
-  return std::string(SpecificModuleCache.str());
+  return std::string(SpecificModuleCache);
 }
 
 // ASTContext
@@ -703,7 +695,7 @@ static bool EnableCodeCompletion(Preprocessor &PP,
                                  unsigned Column) {
   // Tell the source manager to chop off the given file at a specific
   // line and column.
-  auto Entry = PP.getFileManager().getFile(Filename);
+  auto Entry = PP.getFileManager().getOptionalFileRef(Filename);
   if (!Entry) {
     PP.getDiagnostics().Report(diag::err_fe_invalid_code_complete_file)
       << Filename;
@@ -755,10 +747,22 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // Set up API notes.
+  TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
     TheSema->addExternalSource(ExternalSemaSrc.get());
     ExternalSemaSrc->InitializeSema(*TheSema);
+  }
+
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto *currentModule = getPreprocessor().getCurrentModule()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+        currentModule, getLangOpts().APINotesModules,
+        getAPINotesOpts().ModuleSearchPaths);
   }
 }
 
@@ -1184,11 +1188,11 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                  });
 
   // If the original compiler invocation had -fmodule-name, pass it through.
-  Invocation->getLangOpts()->ModuleName =
-      ImportingInstance.getInvocation().getLangOpts()->ModuleName;
+  Invocation->getLangOpts().ModuleName =
+      ImportingInstance.getInvocation().getLangOpts().ModuleName;
 
   // Note the name of the module we're building.
-  Invocation->getLangOpts()->CurrentModule = std::string(ModuleName);
+  Invocation->getLangOpts().CurrentModule = std::string(ModuleName);
 
   // Make sure that the failed-module structure has been allocated in
   // the importing instance, and propagate the pointer to the newly-created
@@ -1216,7 +1220,9 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
 
-  Invocation->getDiagnosticOpts().VerifyDiagnostics = 0;
+  DiagnosticOptions &DiagOpts = Invocation->getDiagnosticOpts();
+
+  DiagOpts.VerifyDiagnostics = 0;
   assert(ImportingInstance.getInvocation().getModuleHash() ==
          Invocation->getModuleHash() && "Module hash mismatch!");
 
@@ -1232,6 +1238,9 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
                                    ImportingInstance.getDiagnosticClient()),
                              /*ShouldOwnClient=*/true);
+
+  if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
+    Instance.getDiagnostics().setSuppressSystemWarnings(false);
 
   if (FrontendOpts.ModulesShareFileManager) {
     Instance.setFileManager(&ImportingInstance.getFileManager());
@@ -1354,7 +1363,7 @@ static bool compileModule(CompilerInstance &ImportingInstance,
         [&](CompilerInstance &Instance) {
       std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
           llvm::MemoryBuffer::getMemBuffer(InferredModuleMapContent);
-      const FileEntry *ModuleMapFile = Instance.getFileManager().getVirtualFile(
+      FileEntryRef ModuleMapFile = Instance.getFileManager().getVirtualFileRef(
           FakeModuleMapFile, InferredModuleMapContent.size(), 0);
       Instance.getSourceManager().overrideFileContents(
           ModuleMapFile, std::move(ModuleMapBuffer));
@@ -1711,7 +1720,8 @@ void CompilerInstance::createASTReader() {
     Listener->attachToASTReader(*TheASTReader);
 }
 
-bool CompilerInstance::loadModuleFile(StringRef FileName) {
+bool CompilerInstance::loadModuleFile(
+    StringRef FileName, serialization::ModuleFile *&LoadedModuleFile) {
   llvm::Timer Timer;
   if (FrontendTimerGroup)
     Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
@@ -1737,7 +1747,8 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   // Try to load the module file.
   switch (TheASTReader->ReadAST(
       FileName, serialization::MK_ExplicitModule, SourceLocation(),
-      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0)) {
+      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0,
+      &LoadedModuleFile)) {
   case ASTReader::Success:
     // We successfully loaded the module file; remember the set of provided
     // modules so that we don't try to load implicit modules for them.
@@ -2117,7 +2128,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     // Check whether this module is available.
     if (Preprocessor::checkModuleIsAvailable(getLangOpts(), getTarget(),
-                                             getDiagnostics(), Module)) {
+                                             *Module, getDiagnostics())) {
       getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
         << SourceRange(Path.front().second, Path.back().second);
       LastModuleImportLoc = ImportLoc;
@@ -2169,7 +2180,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   FrontendInputFile Input(
       ModuleMapFileName,
-      InputKind(getLanguageFromOptions(*Invocation->getLangOpts()),
+      InputKind(getLanguageFromOptions(Invocation->getLangOpts()),
                 InputKind::ModuleMap, /*Preprocessed*/true));
 
   std::string NullTerminatedSource(Source.str());
@@ -2177,7 +2188,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   auto PreBuildStep = [&](CompilerInstance &Other) {
     // Create a virtual file containing our desired source.
     // FIXME: We shouldn't need to do this.
-    const FileEntry *ModuleMapFile = Other.getFileManager().getVirtualFile(
+    FileEntryRef ModuleMapFile = Other.getFileManager().getVirtualFileRef(
         ModuleMapFileName, NullTerminatedSource.size(), 0);
     Other.getSourceManager().overrideFileContents(
         ModuleMapFile, llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource));
@@ -2193,7 +2204,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   // Build the module, inheriting any modules that we've built locally.
   if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
                         ModuleFileName, PreBuildStep, PostBuildStep)) {
-    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName.str());
+    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName);
     llvm::sys::RemoveFileOnSignal(ModuleFileName);
   }
 }
@@ -2249,7 +2260,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {
       Module *TheModule = I->second;
-      const FileEntry *Entry = TheModule->getASTFile();
+      OptionalFileEntryRef Entry = TheModule->getASTFile();
       if (!Entry) {
         SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
         Path.push_back(std::make_pair(

@@ -16,7 +16,7 @@
  * Exclude the MSVC path as well as the MSVC header as of the 14.31.30818
  * explicitly disallows `stdatomic.h` in the C mode via an `#error`.  Fallback
  * to the clang resource header until that is fully supported.  The
- * `stdatomic.h` header requires C++ 23 or newer.
+ * `stdatomic.h` header requires C++23 or newer.
  */
 #if __STDC_HOSTED__ &&                                                         \
     __has_include_next(<stdatomic.h>) &&                                       \
@@ -45,16 +45,14 @@ extern "C" {
 #define ATOMIC_POINTER_LOCK_FREE    __CLANG_ATOMIC_POINTER_LOCK_FREE
 
 /* 7.17.2 Initialization */
-/* FIXME: This is using the placeholder dates Clang produces for these macros
-   in C2x mode; switch to the correct values once they've been published. */
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ < 202000L) ||               \
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ < 202311L) ||               \
     defined(__cplusplus)
-/* ATOMIC_VAR_INIT was removed in C2x, but still remains in C++23. */
+/* ATOMIC_VAR_INIT was removed in C23, but still remains in C++23. */
 #define ATOMIC_VAR_INIT(value) (value)
 #endif
 
 #if ((defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201710L &&              \
-      __STDC_VERSION__ < 202000L) ||                                           \
+      __STDC_VERSION__ < 202311L) ||                                           \
      (defined(__cplusplus) && __cplusplus >= 202002L)) &&                      \
     !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS)
 /* ATOMIC_VAR_INIT was deprecated in C17 and C++20. */

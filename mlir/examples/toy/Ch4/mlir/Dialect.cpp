@@ -13,11 +13,26 @@
 
 #include "toy/Dialect.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <string>
 
 using namespace mlir;
 using namespace mlir::toy;
@@ -59,8 +74,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator(toy.return) by replacing it with a new
   /// operation as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
@@ -298,27 +312,6 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
       getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
-/// Returns the region on the function operation that is callable.
-mlir::Region *FuncOp::getCallableRegion() { return &getBody(); }
-
-/// Returns the results types that the callable region produces when
-/// executed.
-llvm::ArrayRef<mlir::Type> FuncOp::getCallableResults() {
-  return getFunctionType().getResults();
-}
-
-/// Returns the argument attributes for all callable region arguments or
-/// null if there are none.
-ArrayAttr FuncOp::getCallableArgAttrs() {
-  return getArgAttrs().value_or(nullptr);
-}
-
-/// Returns the result attributes for all callable region results or
-/// null if there are none.
-ArrayAttr FuncOp::getCallableResAttrs() {
-  return getResAttrs().value_or(nullptr);
-}
-
 //===----------------------------------------------------------------------===//
 // GenericCallOp
 //===----------------------------------------------------------------------===//
@@ -347,6 +340,12 @@ void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 /// Get the argument operands to the called function, this is required by the
 /// call interface.
 Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
+
+/// Get the argument operands to the called function as a mutable range, this is
+/// required by the call interface.
+MutableOperandRange GenericCallOp::getArgOperandsMutable() {
+  return getInputsMutable();
+}
 
 //===----------------------------------------------------------------------===//
 // MulOp

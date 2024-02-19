@@ -96,6 +96,7 @@ struct CallableInfo {
   std::string UsageIdentifier;
   StringRef CaptureInitializer;
   const FunctionDecl *Decl = nullptr;
+  bool DoesReturn = false;
 };
 
 struct LambdaProperties {
@@ -364,9 +365,7 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
                                 llvm::raw_ostream &Stream) {
   StringRef Delimiter = "";
 
-  for (int I = 0, Size = Args.size(); I < Size; ++I) {
-    const BindArgument &B = Args[I];
-
+  for (const BindArgument &B : Args) {
     Stream << Delimiter;
 
     if (B.Kind == BK_Placeholder) {
@@ -556,6 +555,10 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
   LP.Callable.Materialization = getCallableMaterialization(Result);
   LP.Callable.Decl =
       getCallMethodDecl(Result, LP.Callable.Type, LP.Callable.Materialization);
+  if (LP.Callable.Decl)
+    if (const Type *ReturnType =
+            LP.Callable.Decl->getReturnType().getCanonicalType().getTypePtr())
+      LP.Callable.DoesReturn = !ReturnType->isVoidType();
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
     LP.Callable.CE = CE_Var;
@@ -674,23 +677,30 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
 
   addPlaceholderArgs(LP, Stream, PermissiveParameterList);
 
+  Stream << " { ";
+
+  if (LP.Callable.DoesReturn) {
+    Stream << "return ";
+  }
+
   if (LP.Callable.Type == CT_Function) {
     StringRef SourceTokens = LP.Callable.SourceTokens;
     SourceTokens.consume_front("&");
-    Stream << " { return " << SourceTokens;
+    Stream << SourceTokens;
   } else if (LP.Callable.Type == CT_MemberFunction) {
     const auto *MethodDecl = dyn_cast<CXXMethodDecl>(LP.Callable.Decl);
     const BindArgument &ObjPtr = FunctionCallArgs.front();
 
-    Stream << " { ";
-    if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
-      Stream << ObjPtr.UsageIdentifier;
-      Stream << "->";
+    if (MethodDecl->getOverloadedOperator() == OO_Call) {
+      Stream << "(*" << ObjPtr.UsageIdentifier << ')';
+    } else {
+      if (!isa<CXXThisExpr>(ignoreTemporariesAndPointers(ObjPtr.E))) {
+        Stream << ObjPtr.UsageIdentifier;
+        Stream << "->";
+      }
+      Stream << MethodDecl->getNameAsString();
     }
-
-    Stream << MethodDecl->getName();
   } else {
-    Stream << " { return ";
     switch (LP.Callable.CE) {
     case CE_Var:
       if (LP.Callable.UsageIdentifier != LP.Callable.CaptureIdentifier) {

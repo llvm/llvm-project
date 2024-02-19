@@ -273,7 +273,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
                                     comparePosDepth);
   PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.getName(), allPositions);
+      builder.getConstraint(op.getName(), allPositions, op.getIsNegated());
   predList.emplace_back(pos, pred);
 }
 
@@ -856,7 +856,7 @@ static void foldSwitchToBool(std::unique_ptr<MatcherNode> &node) {
     // If the node only contains one child, collapse it into a boolean predicate
     // node.
     if (children.size() == 1) {
-      auto childIt = children.begin();
+      auto *childIt = children.begin();
       node = std::make_unique<BoolNode>(
           node->getPosition(), node->getQuestion(), childIt->first,
           std::move(childIt->second), std::move(node->getFailureNode()));

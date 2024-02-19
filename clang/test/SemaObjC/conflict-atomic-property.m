@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
-// rdar://10260017
 
 @interface Foo 
 @property (nonatomic, assign, atomic) float dummy; // expected-error {{property attributes 'atomic' and 'nonatomic' are mutually exclusive}}

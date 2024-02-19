@@ -99,11 +99,6 @@ public:
   /// Test whether the two functions have equivalent behaviour.
   int compare();
 
-  /// Hash a function. Equivalent functions will have the same hash, and unequal
-  /// functions will have different hashes with high probability.
-  using FunctionHash = uint64_t;
-  static FunctionHash functionHash(Function &);
-
 protected:
   /// Start the comparison.
   void beginCompare() {

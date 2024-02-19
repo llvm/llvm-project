@@ -298,8 +298,7 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     SDValue SrcHi =
         DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i16, Op.getOperand(0),
                     DAG.getConstant(1, dl, MVT::i16));
-    uint64_t ShiftAmount =
-        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    uint64_t ShiftAmount = N->getConstantOperandVal(1);
     if (ShiftAmount == 16) {
       // Special case these two operations because they appear to be used by the
       // generic codegen parts to lower 32-bit numbers.
@@ -367,7 +366,7 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  uint64_t ShiftAmount = N->getConstantOperandVal(1);
   SDValue Victim = N->getOperand(0);
 
   switch (Op.getOpcode()) {
@@ -661,7 +660,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
   SDValue Cmp;
 
   if (LHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(RHS)) {
-    uint64_t Imm = cast<ConstantSDNode>(RHS)->getZExtValue();
+    uint64_t Imm = RHS->getAsZExtVal();
     // Generate a CPI/CPC pair if RHS is a 16-bit constant. Use the zero
     // register for the constant RHS if its lower or higher byte is zero.
     SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
@@ -681,7 +680,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
   } else if (RHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(LHS)) {
     // Generate a CPI/CPC pair if LHS is a 16-bit constant. Use the zero
     // register for the constant LHS if its lower or higher byte is zero.
-    uint64_t Imm = cast<ConstantSDNode>(LHS)->getZExtValue();
+    uint64_t Imm = LHS->getAsZExtVal();
     SDValue LHSlo = (Imm & 0xff) == 0
                         ? DAG.getRegister(Subtarget.getZeroRegister(), MVT::i8)
                         : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
@@ -976,7 +975,7 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
       Ops.push_back(Operand);
     }
   }
-  unsigned Flags = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
+  InlineAsm::Flag Flags(InlineAsm::Kind::RegUse, 1);
   Ops.push_back(DAG.getTargetConstant(Flags, dl, MVT::i32));
   Ops.push_back(ZeroReg);
   if (Glue) {
@@ -2440,6 +2439,11 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MF->insert(I, trueMBB);
   MF->insert(I, falseMBB);
 
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  trueMBB->setCallFrameSize(CallFrameSize);
+  falseMBB->setCallFrameSize(CallFrameSize);
+
   // Transfer remaining instructions and all successors of the current
   // block to the block which will contain the Phi node for the
   // select.
@@ -2516,13 +2520,13 @@ AVRTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-unsigned
+InlineAsm::ConstraintCode
 AVRTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
   // Not sure if this is actually the right thing to do, but we got to do
   // *something* [agnat]
   switch (ConstraintCode[0]) {
   case 'Q':
-    return InlineAsm::Constraint_Q;
+    return InlineAsm::ConstraintCode::Q;
   }
   return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }
@@ -2717,7 +2721,7 @@ AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 }
 
 void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                     std::string &Constraint,
+                                                     StringRef Constraint,
                                                      std::vector<SDValue> &Ops,
                                                      SelectionDAG &DAG) const {
   SDValue Result;
@@ -2725,7 +2729,7 @@ void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   EVT Ty = Op.getValueType();
 
   // Currently only support length 1 constraints.
-  if (Constraint.length() != 1) {
+  if (Constraint.size() != 1) {
     return;
   }
 

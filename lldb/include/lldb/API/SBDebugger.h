@@ -46,6 +46,7 @@ public:
       eBroadcastBitProgress = (1 << 0),
       eBroadcastBitWarning = (1 << 1),
       eBroadcastBitError = (1 << 2),
+      eBroadcastBitProgressCategory = (1 << 3),
   };
 
   SBDebugger();
@@ -380,8 +381,10 @@ public:
 
   void SetREPLLanguage(lldb::LanguageType repl_lang);
 
+  LLDB_DEPRECATED("SBDebugger::GetCloseInputOnEOF() is deprecated.")
   bool GetCloseInputOnEOF() const;
 
+  LLDB_DEPRECATED("SBDebugger::SetCloseInputOnEOF() is deprecated.")
   void SetCloseInputOnEOF(bool b);
 
   SBTypeCategory GetCategory(const char *category_name);
@@ -485,6 +488,7 @@ private:
   friend class SBProcess;
   friend class SBSourceManager;
   friend class SBStructuredData;
+  friend class SBPlatform;
   friend class SBTarget;
   friend class SBTrace;
 

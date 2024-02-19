@@ -396,8 +396,8 @@ define i64 @srshl_scalar_constant(ptr %A) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    srshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -492,8 +492,8 @@ define i64 @urshl_scalar_constant(ptr %A) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    urshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -805,8 +805,8 @@ define i64 @sqrshl_scalar_constant(ptr %A) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    sqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -914,8 +914,8 @@ define i64 @uqrshl_scalar_constant(ptr %A) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    uqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -2130,9 +2130,8 @@ define <4 x i32> @neon.ushll4s_neg_constant_shift(ptr %A) nounwind {
 ; CHECK-LABEL: neon.ushll4s_neg_constant_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    movi.2d v1, #0xffffffffffffffff
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushl.4s v0, v0, v1
+; CHECK-NEXT:    ushr.4s v0, v0, #1
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = zext <4 x i16> %tmp1 to <4 x i32>
@@ -2250,9 +2249,8 @@ define <16 x i8> @neon.sshl16b_non_splat_constant_shift(ptr %A) nounwind {
 define <16 x i8> @neon.sshl16b_neg_constant_shift(ptr %A) nounwind {
 ; CHECK-LABEL: neon.sshl16b_neg_constant_shift:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi.16b v1, #254
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    sshl.16b v0, v0, v1
+; CHECK-NEXT:    sshr.16b v0, v0, #2
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
   %tmp2 = call <16 x i8> @llvm.aarch64.neon.sshl.v16i8(<16 x i8> %tmp1, <16 x i8> <i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2, i8 -2>)
@@ -2300,9 +2298,8 @@ define <4 x i32> @neon.sshll4s_neg_constant_shift(ptr %A) nounwind {
 ; CHECK-LABEL: neon.sshll4s_neg_constant_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    movi.2d v1, #0xffffffffffffffff
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    sshl.4s v0, v0, v1
+; CHECK-NEXT:    sshr.4s v0, v0, #1
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
   %tmp2 = sext <4 x i16> %tmp1 to <4 x i32>
@@ -2377,10 +2374,8 @@ define i64 @neon.sshll_scalar_constant_shift_m1(ptr %A) nounwind {
 ; CHECK-LABEL: neon.sshll_scalar_constant_shift_m1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov x9, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    sshl d0, d0, d1
+; CHECK-NEXT:    sshr d0, d0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %tmp1 = load i32, ptr %A
@@ -3526,6 +3521,43 @@ entry:
   %vshlq_v2.i.i = tail call <2 x i64> @llvm.aarch64.neon.ushl.v2i64(<2 x i64> %vpaddq_v2.i.i, <2 x i64> zeroinitializer)
   store <2 x i64> %vshlq_v2.i.i, ptr %dst, align 8
   ret void
+}
+
+define <4 x i32> @sext_rshrn(<4 x i32> noundef %a) {
+; CHECK-LABEL: sext_rshrn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rshrn.4h v0, v0, #13
+; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    ret
+entry:
+  %vrshrn_n1 = tail call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> %a, i32 13)
+  %vmovl.i = sext <4 x i16> %vrshrn_n1 to <4 x i32>
+  ret <4 x i32> %vmovl.i
+}
+
+define <4 x i32> @zext_rshrn(<4 x i32> noundef %a) {
+; CHECK-LABEL: zext_rshrn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rshrn.4h v0, v0, #13
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ret
+entry:
+  %vrshrn_n1 = tail call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> %a, i32 13)
+  %vmovl.i = zext <4 x i16> %vrshrn_n1 to <4 x i32>
+  ret <4 x i32> %vmovl.i
+}
+
+define <4 x i16> @mul_rshrn(<4 x i32> noundef %a) {
+; CHECK-LABEL: mul_rshrn:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi.4s v1, #3
+; CHECK-NEXT:    add.4s v0, v0, v1
+; CHECK-NEXT:    rshrn.4h v0, v0, #13
+; CHECK-NEXT:    ret
+entry:
+  %b = add <4 x i32> %a, <i32 3, i32 3, i32 3, i32 3>
+  %vrshrn_n1 = tail call <4 x i16> @llvm.aarch64.neon.rshrn.v4i16(<4 x i32> %b, i32 13)
+  ret <4 x i16> %vrshrn_n1
 }
 
 declare <2 x i64> @llvm.aarch64.neon.addp.v2i64(<2 x i64>, <2 x i64>)

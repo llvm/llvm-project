@@ -23,6 +23,13 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
   }];
 
   let constructor = "createTosaLayerwiseConstantFoldPass()";
+
+  let options = [
+      Option<"aggressiveReduceConstant", "aggressive-reduce-constant", "bool",
+             /*default=*/"false",
+             "Always perform the reduce constant optimization"
+             "May add more tosa.const but would reduce runtime calculations">,
+   ];
 }
 
 def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
@@ -82,24 +89,40 @@ def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
   let cppNamespace = "mlir::tosa";
 }
 
-def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
+def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   let summary = "Validates TOSA dialect";
   let description = [{
     This pass validates if input TOSA operations match the specification for given
     criteria, e.g. TOSA profile.
   }];
-  let constructor = "createTosaValidationPass()";
 
   let options = [
-      Option<"profileName", "profile", "std::string",
-             /*default=*/"\"undefined\"",
-             "Validate if operations match for the given profile">,
+      Option<"profile", "profile", "mlir::tosa::TosaProfileEnum",
+             /*default=*/"mlir::tosa::TosaProfileEnum::Undefined",
+             "Validate if operations match for the given profile",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::tosa::TosaProfileEnum::BaseInference, "bi",
+                "Use Base Inference profile."),
+               clEnumValN(mlir::tosa::TosaProfileEnum::MainInference, "mi",
+                "Use Main Inference profile."),
+               clEnumValN(mlir::tosa::TosaProfileEnum::MainTraining, "mt",
+                "Use Main Training profile."),
+               clEnumValN(mlir::tosa::TosaProfileEnum::Undefined, "undefined",
+                "Do not define a profile.")
+              )}]>,
       Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
-      Option<"levelName", "level", "std::string",
-             /*default=*/"\"8k\"",
-             "Validate if operator parameters are within specfication for the given level">,
+      Option<"level", "level", "mlir::tosa::TosaLevelEnum",
+             /*default=*/"mlir::tosa::TosaLevelEnum::EightK",
+             "Validate if operator parameters are within specfication for the given level",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::tosa::TosaLevelEnum::EightK, "8k",
+                "Ranges are expected to be sufficient for applications with frame sizes up to 8K."),
+               clEnumValN(mlir::tosa::TosaLevelEnum::None, "none",
+                "Allows the full range of arguments specified by the operations according "
+                "to the operation data types.")
+              )}]>
    ];
 }
 

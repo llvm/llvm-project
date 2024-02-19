@@ -3,6 +3,7 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s
+
 declare iXLen @llvm.riscv.vcpop.iXLen.nxv1i1(
   <vscale x 1 x i1>,
   iXLen);

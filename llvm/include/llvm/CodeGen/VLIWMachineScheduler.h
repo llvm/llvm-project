@@ -165,8 +165,9 @@ protected:
       // a slightly different heuristic for small and large functions. For small
       // functions, it's important to use the height/depth of the instruction.
       // For large functions, prioritizing by height or depth increases spills.
-      CriticalPathLength = DAG->getBBSize() / SchedModel->getIssueWidth();
-      if (DAG->getBBSize() < 50)
+      const auto BBSize = DAG->getBBSize();
+      CriticalPathLength = BBSize / SchedModel->getIssueWidth();
+      if (BBSize < 50)
         // We divide by two as a cheap and simple heuristic to reduce the
         // critcal path length, which increases the priority of using the graph
         // height/depth in the scheduler's cost computation.

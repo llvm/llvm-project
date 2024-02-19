@@ -1,4 +1,7 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
 
 ; CHECK: %[[#i16_ty:]] = OpTypeInt 16 0
 ; CHECK: %[[#v4xi16_ty:]] = OpTypeVector %[[#i16_ty]] 4

@@ -157,7 +157,6 @@ NSString* f10(void) {
   return s; // no-warning
 }
 
-// Test case for regression reported in <rdar://problem/6452745>.
 // Essentially 's' should not be considered allocated on the false branch.
 // This exercises the 'EvalAssume' logic in GRTransferFuncs (CFRefCount.cpp).
 NSString* f11(CFDictionaryRef dict, const char* key) {
@@ -368,7 +367,7 @@ void test_objc_atomicCompareAndSwap_parameter_no_direct_release(NSString **old) 
 }
 
 
-// Test stringWithFormat (<rdar://problem/6815234>)
+// Test stringWithFormat
 void test_stringWithFormat(void) {  
   NSString *string = [[NSString stringWithFormat:@"%ld", (long) 100] retain];
   [string release];

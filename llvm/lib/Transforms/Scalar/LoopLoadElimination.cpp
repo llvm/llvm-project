@@ -195,7 +195,8 @@ public:
       Instruction *Source = Dep.getSource(LAI);
       Instruction *Destination = Dep.getDestination(LAI);
 
-      if (Dep.Type == MemoryDepChecker::Dependence::Unknown) {
+      if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
+          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
         if (isa<LoadInst>(Source))
           LoadsWithUnknownDepedence.insert(Source);
         if (isa<LoadInst>(Destination))
@@ -443,8 +444,8 @@ public:
         Cand.Load->getType(), InitialPtr, "load_initial",
         /* isVolatile */ false, Cand.Load->getAlign(), PH->getTerminator());
 
-    PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
-                                   &L->getHeader()->front());
+    PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded");
+    PHI->insertBefore(L->getHeader()->begin());
     PHI->addIncoming(Initial, PH);
 
     Type *LoadType = Initial->getType();

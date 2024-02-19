@@ -110,6 +110,16 @@ public:
   void print(raw_ostream &O) const;
 };
 
+inline FastMathFlags operator|(FastMathFlags LHS, FastMathFlags RHS) {
+  LHS |= RHS;
+  return LHS;
+}
+
+inline FastMathFlags operator&(FastMathFlags LHS, FastMathFlags RHS) {
+  LHS &= RHS;
+  return LHS;
+}
+
 inline raw_ostream &operator<<(raw_ostream &O, FastMathFlags FMF) {
   FMF.print(O);
   return O;

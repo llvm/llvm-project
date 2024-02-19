@@ -55,7 +55,7 @@ declare i8 @llvm.ctlz.i8(i8)
 define <2 x i64> @test_ctlz_v2i64(<2 x i64> %a) {
 ;
 ; CHECK-LABEL: 'test_ctlz_v2i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %ctlz
 ;
   %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
@@ -154,7 +154,7 @@ define <16 x i8> @test_ctlz_v16i8(<16 x i8> %a) {
 
 define <4 x i64> @test_ctlz_v4i64(<4 x i64> %a) {
 ; CHECK-LABEL: 'test_ctlz_v4i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %ctlz
 ;
   %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)

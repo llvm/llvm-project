@@ -14,10 +14,10 @@
 #include "WebAssemblyISelLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,6 +32,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -831,6 +832,30 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
   // Wasm doesn't support function addresses with offsets
   const GlobalValue *GV = GA->getGlobal();
   return isa<Function>(GV) ? false : TargetLowering::isOffsetFoldingLegal(GA);
+}
+
+bool WebAssemblyTargetLowering::shouldSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace llvm::PatternMatch;
+
+  if (!I->getType()->isVectorTy() || !I->isShift())
+    return false;
+
+  Value *V = I->getOperand(1);
+  // We dont need to sink constant splat.
+  if (dyn_cast<Constant>(V))
+    return false;
+
+  if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                         m_Value(), m_ZeroMask()))) {
+    // Sink insert
+    Ops.push_back(&cast<Instruction>(V)->getOperandUse(0));
+    // Sink shuffle
+    Ops.push_back(&I->getOperandUse(1));
+    return true;
+  }
+
+  return false;
 }
 
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -1699,8 +1724,11 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
     fail(DL, DAG, "Invalid address space for WebAssembly target");
 
   unsigned OperandFlags = 0;
-  if (isPositionIndependent()) {
-    const GlobalValue *GV = GA->getGlobal();
+  const GlobalValue *GV = GA->getGlobal();
+  // Since WebAssembly tables cannot yet be shared accross modules, we don't
+  // need special treatment for tables in PIC mode.
+  if (isPositionIndependent() &&
+      !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
     if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
@@ -1841,8 +1869,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     Ops[OpIdx++] = Op.getOperand(2);
     while (OpIdx < 18) {
       const SDValue &MaskIdx = Op.getOperand(OpIdx + 1);
-      if (MaskIdx.isUndef() ||
-          cast<ConstantSDNode>(MaskIdx.getNode())->getZExtValue() >= 32) {
+      if (MaskIdx.isUndef() || MaskIdx.getNode()->getAsZExtVal() >= 32) {
         bool isTarget = MaskIdx.getNode()->getOpcode() == ISD::TargetConstant;
         Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32, isTarget);
       } else {
@@ -1884,7 +1911,7 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
   const SDNode *Index = Extract.getOperand(1).getNode();
   if (!isa<ConstantSDNode>(Index))
     return SDValue();
-  unsigned IndexVal = cast<ConstantSDNode>(Index)->getZExtValue();
+  unsigned IndexVal = Index->getAsZExtVal();
   unsigned Scale =
       ExtractedVecT.getVectorNumElements() / VecT.getVectorNumElements();
   assert(Scale > 1);
@@ -2307,7 +2334,7 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
   if (isa<ConstantSDNode>(IdxNode)) {
     // Ensure the index type is i32 to match the tablegen patterns
-    uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
+    uint64_t Idx = IdxNode->getAsZExtVal();
     SmallVector<SDValue, 3> Ops(Op.getNode()->ops());
     Ops[Op.getNumOperands() - 1] =
         DAG.getConstant(Idx, SDLoc(IdxNode), MVT::i32);
@@ -2444,8 +2471,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (!N->getOperand(1).isUndef())
     return SDValue();
   SDValue CastOp = Bitcast.getOperand(0);
-  MVT SrcType = CastOp.getSimpleValueType();
-  MVT DstType = Bitcast.getSimpleValueType();
+  EVT SrcType = CastOp.getValueType();
+  EVT DstType = Bitcast.getValueType();
   if (!SrcType.is128BitVector() ||
       SrcType.getVectorNumElements() != DstType.getVectorNumElements())
     return SDValue();
@@ -2548,6 +2575,8 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     APInt SplatValue, SplatUndef;
     unsigned SplatBitSize;
     bool HasAnyUndefs;
+    // Endianness doesn't matter in this context because we are looking for
+    // an all-zero value.
     return Splat &&
            Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
                                   HasAnyUndefs) &&

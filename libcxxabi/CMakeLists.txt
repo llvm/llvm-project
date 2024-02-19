@@ -46,7 +46,10 @@ option(LIBCXXABI_ENABLE_EXCEPTIONS
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
-option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
+option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." ON)
+if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT "libunwind" IN_LIST LLVM_ENABLE_RUNTIMES)
+  message(FATAL_ERROR "LIBCXXABI_USE_LLVM_UNWINDER is set to ON, but libunwind is not specified in LLVM_ENABLE_RUNTIMES.")
+endif()
 option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF)
 option(LIBCXXABI_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
@@ -80,17 +83,12 @@ option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
 set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
 
-set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
+set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE STRING "Path to install the libc++abi headers at.")
 
 if(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXXABI_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
 else()
   set(LIBCXXABI_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
-endif()
-
-# TODO: Remove this after branching for LLVM 15
-if(LIBCXXABI_SYSROOT OR LIBCXXABI_TARGET_TRIPLE OR LIBCXXABI_GCC_TOOLCHAIN)
-  message(WARNING "LIBCXXABI_SYSROOT, LIBCXXABI_TARGET_TRIPLE and LIBCXXABI_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
 endif()
 
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
@@ -144,9 +142,7 @@ endif()
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-gcc.cfg.in")
-elseif(MINGW)
+if(MINGW)
   set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
 elseif(WIN32) # clang-cl
   if (LIBCXXABI_ENABLE_SHARED)
@@ -182,13 +178,13 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++abi runtime libraries should be installed.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
+  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXXABI_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
@@ -202,7 +198,7 @@ else()
     set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
     set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
   endif()
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
+  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
 endif()
 

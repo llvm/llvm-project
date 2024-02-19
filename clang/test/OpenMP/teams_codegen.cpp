@@ -2159,7 +2159,7 @@ void foo() {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l169
-// CHECK17-SAME: (ptr noundef [[THIS:%.*]], i64 noundef [[COMP:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK17-SAME: (ptr noundef [[THIS:%.*]], i64 noundef [[COMP:%.*]]) #[[ATTR1]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[COMP_ADDR:%.*]] = alloca i64, align 8
@@ -2193,7 +2193,7 @@ void foo() {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK17-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK17-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK17-NEXT:    ret void
@@ -2372,7 +2372,7 @@ void foo() {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l169
-// CHECK19-SAME: (ptr noundef [[THIS:%.*]], i32 noundef [[COMP:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK19-SAME: (ptr noundef [[THIS:%.*]], i32 noundef [[COMP:%.*]]) #[[ATTR1]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[COMP_ADDR:%.*]] = alloca i32, align 4
@@ -2406,16 +2406,18 @@ void foo() {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK19-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK19-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK19-NEXT:    ret void
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l216
-// CHECK25-SAME: (i64 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK25-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK25-NEXT:  entry:
+// CHECK25-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK25-NEXT:    [[ARGC_ADDR:%.*]] = alloca i64, align 8
+// CHECK25-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK25-NEXT:    store i64 [[ARGC]], ptr [[ARGC_ADDR]], align 8
 // CHECK25-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l216.omp_outlined, ptr [[ARGC_ADDR]])
 // CHECK25-NEXT:    ret void
@@ -2436,9 +2438,11 @@ void foo() {
 //
 //
 // CHECK25-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIPPcEiT__l209
-// CHECK25-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
+// CHECK25-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
 // CHECK25-NEXT:  entry:
+// CHECK25-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK25-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 8
+// CHECK25-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK25-NEXT:    store ptr [[ARGC]], ptr [[ARGC_ADDR]], align 8
 // CHECK25-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIPPcEiT__l209.omp_outlined, ptr [[ARGC_ADDR]])
 // CHECK25-NEXT:    ret void
@@ -2459,9 +2463,11 @@ void foo() {
 //
 //
 // CHECK27-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l216
-// CHECK27-SAME: (i32 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK27-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK27-NEXT:  entry:
+// CHECK27-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK27-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
+// CHECK27-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK27-NEXT:    store i32 [[ARGC]], ptr [[ARGC_ADDR]], align 4
 // CHECK27-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l216.omp_outlined, ptr [[ARGC_ADDR]])
 // CHECK27-NEXT:    ret void
@@ -2482,9 +2488,11 @@ void foo() {
 //
 //
 // CHECK27-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIPPcEiT__l209
-// CHECK27-SAME: (ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
+// CHECK27-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
 // CHECK27-NEXT:  entry:
+// CHECK27-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK27-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 4
+// CHECK27-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK27-NEXT:    store ptr [[ARGC]], ptr [[ARGC_ADDR]], align 4
 // CHECK27-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIPPcEiT__l209.omp_outlined, ptr [[ARGC_ADDR]])
 // CHECK27-NEXT:    ret void
@@ -2505,12 +2513,14 @@ void foo() {
 //
 //
 // CHECK33-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l265
-// CHECK33-SAME: (i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK33-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK33-NEXT:  entry:
+// CHECK33-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK33-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK33-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
 // CHECK33-NEXT:    [[ARGC_ADDR:%.*]] = alloca i64, align 8
 // CHECK33-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
+// CHECK33-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK33-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK33-NEXT:    store i64 [[B]], ptr [[B_ADDR]], align 8
 // CHECK33-NEXT:    store i64 [[ARGC]], ptr [[ARGC_ADDR]], align 8
@@ -2536,12 +2546,14 @@ void foo() {
 //
 //
 // CHECK33-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIPPcEiT__l254
-// CHECK33-SAME: (i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
+// CHECK33-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
 // CHECK33-NEXT:  entry:
+// CHECK33-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK33-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK33-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
 // CHECK33-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 8
 // CHECK33-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK33-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK33-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK33-NEXT:    store i64 [[B]], ptr [[B_ADDR]], align 8
 // CHECK33-NEXT:    store ptr [[ARGC]], ptr [[ARGC_ADDR]], align 8
@@ -2567,12 +2579,14 @@ void foo() {
 //
 //
 // CHECK35-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l265
-// CHECK35-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK35-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 noundef [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK35-NEXT:  entry:
+// CHECK35-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK35-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK35-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // CHECK35-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK35-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
+// CHECK35-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK35-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK35-NEXT:    store i32 [[B]], ptr [[B_ADDR]], align 4
 // CHECK35-NEXT:    store i32 [[ARGC]], ptr [[ARGC_ADDR]], align 4
@@ -2598,12 +2612,14 @@ void foo() {
 //
 //
 // CHECK35-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIPPcEiT__l254
-// CHECK35-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
+// CHECK35-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], ptr noundef [[ARGC:%.*]]) #[[ATTR0]] {
 // CHECK35-NEXT:  entry:
+// CHECK35-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK35-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK35-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // CHECK35-NEXT:    [[ARGC_ADDR:%.*]] = alloca ptr, align 4
 // CHECK35-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK35-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK35-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK35-NEXT:    store i32 [[B]], ptr [[B_ADDR]], align 4
 // CHECK35-NEXT:    store ptr [[ARGC]], ptr [[ARGC_ADDR]], align 4

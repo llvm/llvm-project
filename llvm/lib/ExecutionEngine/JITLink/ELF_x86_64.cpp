@@ -16,7 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Endian.h"
 
 #include "DefineExternalSectionStartAndEndSymbols.h"
 #include "EHFrameSupportImpl.h"
@@ -242,8 +241,10 @@ public:
                       std::unique_ptr<LinkGraph> G,
                       PassConfiguration PassConfig)
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
-    getPassConfig().PostAllocationPasses.push_back(
-        [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+
+    if (shouldAddDefaultTargetPasses(getGraph().getTargetTriple()))
+      getPassConfig().PostAllocationPasses.push_back(
+          [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
   }
 
 private:
@@ -348,11 +349,11 @@ identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
   constexpr StringRef EndSymbolPrefix = "__end";
 
   auto SymName = Sym.getName();
-  if (SymName.startswith(StartSymbolPrefix)) {
+  if (SymName.starts_with(StartSymbolPrefix)) {
     if (auto *Sec =
             G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
       return {*Sec, true};
-  } else if (SymName.startswith(EndSymbolPrefix)) {
+  } else if (SymName.starts_with(EndSymbolPrefix)) {
     if (auto *Sec =
             G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
       return {*Sec, false};

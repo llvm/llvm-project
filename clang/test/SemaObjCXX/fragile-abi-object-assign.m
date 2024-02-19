@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-runtime=macosx-fragile-10.5 -verify -Wno-objc-root-class %s
-// rdar://10731065
 
 @interface MyView {}
 @end

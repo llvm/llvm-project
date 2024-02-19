@@ -561,6 +561,33 @@ TEST(SelectionTest, CommonAncestor) {
         [[^using enum ns::A]];
         )cpp",
        "UsingEnumDecl"},
+
+      // concepts
+      {R"cpp(
+        template <class> concept C = true;
+        auto x = [[^C<int>]];
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        template <class> concept C = true;
+        [[^C]] auto x = 0;
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        template <class> concept C = true;
+        void foo([[^C]] auto x) {}
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        template <class> concept C = true;
+        template <[[^C]] x> int i = 0;
+      )cpp",
+       "ConceptReference"},
+      {R"cpp(
+        namespace ns { template <class> concept C = true; }
+        auto x = [[ns::^C<int>]];
+      )cpp",
+       "ConceptReference"},
   };
 
   for (const Case &C : Cases) {
@@ -851,6 +878,19 @@ TEST(SelectionTest, DeclContextIsLexical) {
                                          Test.point("2"), Test.point("2"));
     EXPECT_TRUE(ST.commonAncestor()->getDeclContext().isTranslationUnit());
   }
+}
+
+TEST(SelectionTest, DeclContextLambda) {
+  llvm::Annotations Test(R"cpp(
+    void foo();
+    auto lambda = [] {
+      return $1^foo();
+    };
+  )cpp");
+  auto AST = TestTU::withCode(Test.code()).build();
+  auto ST = SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
+                                       Test.point("1"), Test.point("1"));
+  EXPECT_TRUE(ST.commonAncestor()->getDeclContext().isFunctionOrMethod());
 }
 
 } // namespace

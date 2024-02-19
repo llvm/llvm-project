@@ -31,21 +31,21 @@
 ;	%E : size(E) = 270336*200000*8 = 432537600000 cast to double*
 ; 	%F : size(F) = 270336*8 = 2162688 cast to i64*
 ; CODEGEN: polly.start:
-; CODEGEN: %malloccall = tail call ptr @malloc(i64 2162688)
-; CODEGEN: %malloccall1 = tail call ptr @malloc(i64 432537600000)
-; CODEGEN: %malloccall2 = tail call ptr @malloc(i64 2162688)
+; CODEGEN: %D = tail call ptr @malloc(i64 2162688)
+; CODEGEN: %E = tail call ptr @malloc(i64 432537600000)
+; CODEGEN: %F = tail call ptr @malloc(i64 2162688)
 ;
 ; Check if there are the 3 expected malloc calls with the right parameters at polly.exiting.
 ; 	Cast to i8* before freeing because malloc give us a i8 and free is waiting for a i8*
 ; CODEGEN: polly.exiting:
-; CODEGEN: tail call void @free(ptr %malloccall)
-; CODEGEN: tail call void @free(ptr %malloccall1)
-; CODEGEN: tail call void @free(ptr %malloccall2)
+; CODEGEN: tail call void @free(ptr %D)
+; CODEGEN: tail call void @free(ptr %E)
+; CODEGEN: tail call void @free(ptr %F)
 ;
 ; Check if the new access for array E is present.
 ; CODEGEN: %polly.access.mul.{{.*}} = mul nsw i64 %polly.indvar, 200000
 ; CODEGEN: %polly.access.add.{{.*}} = add nsw i64 %polly.access.mul.{{.*}}, %
-; CODEGEN: %polly.access.{{.*}} = getelementptr double, ptr %malloccall1, i64 %polly.access.add.{{.*}}
+; CODEGEN: %polly.access.{{.*}} = getelementptr double, ptr %E, i64 %polly.access.add.{{.*}}
 ;
 ; ModuleID = 'create_arrays_heap.ll'
 ;
@@ -72,17 +72,17 @@ for.body6:                                        ; preds = %for.body6, %for.con
   %0 = load double, ptr %arrayidx8, align 8
   %mul = fmul double %0, %beta
   store double %mul, ptr %arrayidx12, align 8
-  %indvars.iv.next = or i64 %indvars.iv, 1
+  %indvars.iv.next = or disjoint i64 %indvars.iv, 1
   %arrayidx8.1 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next
   %1 = load double, ptr %arrayidx8.1, align 8
   %mul.1 = fmul double %1, %beta
   store double %mul.1, ptr %arrayidx12, align 8
-  %indvars.iv.next.1 = or i64 %indvars.iv, 2
+  %indvars.iv.next.1 = or disjoint i64 %indvars.iv, 2
   %arrayidx8.2 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.1
   %2 = load double, ptr %arrayidx8.2, align 8
   %mul.2 = fmul double %2, %beta
   store double %mul.2, ptr %arrayidx12, align 8
-  %indvars.iv.next.2 = or i64 %indvars.iv, 3
+  %indvars.iv.next.2 = or disjoint i64 %indvars.iv, 3
   %arrayidx8.3 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.2
   %3 = load double, ptr %arrayidx8.3, align 8
   %mul.3 = fmul double %3, %beta

@@ -29,10 +29,10 @@ define void @fptoui_v8f32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: fptoui_v8f32_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh0:
-; CHECK-NEXT:    adrp x9, lCPI0_0@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    adrp x8, lCPI0_0@PAGE
 ; CHECK-NEXT:  Lloh1:
-; CHECK-NEXT:    ldr q0, [x9, lCPI0_0@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI0_0@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #5
@@ -71,10 +71,10 @@ define void @fptoui_v8f32_to_v8i8_no_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: fptoui_v8f32_to_v8i8_no_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fcvtzs.4s v0, v0
 ; CHECK-NEXT:    fcvtzs.4s v1, v1
-; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    fcvtzs.4s v0, v0
 ; CHECK-NEXT:    xtn.4h v1, v1
+; CHECK-NEXT:    xtn.4h v0, v0
 ; CHECK-NEXT:    uzp1.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x1]
 ; CHECK-NEXT:    ret
@@ -109,22 +109,22 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-LABEL: fptoui_2x_v8f32_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh2:
-; CHECK-NEXT:    adrp x9, lCPI2_0@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    adrp x8, lCPI2_0@PAGE
 ; CHECK-NEXT:  Lloh3:
-; CHECK-NEXT:    ldr q0, [x9, lCPI2_0@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI2_0@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #5
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9
 ; CHECK-NEXT:    ldp q2, q1, [x10]
-; CHECK-NEXT:    ldp q4, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v17, v1
-; CHECK-NEXT:    fcvtzu.4s v16, v2
-; CHECK-NEXT:    fcvtzu.4s v19, v3
-; CHECK-NEXT:    fcvtzu.4s v18, v4
-; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
+; CHECK-NEXT:    fcvtzu.4s v5, v1
+; CHECK-NEXT:    ldp q1, q3, [x9]
+; CHECK-NEXT:    fcvtzu.4s v4, v2
+; CHECK-NEXT:    fcvtzu.4s v7, v3
+; CHECK-NEXT:    fcvtzu.4s v6, v1
+; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
 ; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
@@ -176,22 +176,22 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle(ptr %A, ptr %B, p
 ; CHECK-LABEL: fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh4:
-; CHECK-NEXT:    adrp x9, lCPI3_0@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    adrp x8, lCPI3_0@PAGE
 ; CHECK-NEXT:  Lloh5:
-; CHECK-NEXT:    ldr q0, [x9, lCPI3_0@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI3_0@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #5
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9
 ; CHECK-NEXT:    ldp q2, q1, [x10]
-; CHECK-NEXT:    ldp q4, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v17, v1
-; CHECK-NEXT:    fcvtzu.4s v16, v2
-; CHECK-NEXT:    fcvtzu.4s v19, v3
-; CHECK-NEXT:    fcvtzu.4s v18, v4
-; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
+; CHECK-NEXT:    fcvtzu.4s v5, v1
+; CHECK-NEXT:    ldp q1, q3, [x9]
+; CHECK-NEXT:    fcvtzu.4s v4, v2
+; CHECK-NEXT:    fcvtzu.4s v7, v3
+; CHECK-NEXT:    fcvtzu.4s v6, v1
+; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
 ; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
@@ -243,22 +243,22 @@ define void @fptoui_v16f32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: fptoui_v16f32_to_v16i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh6:
-; CHECK-NEXT:    adrp x9, lCPI4_0@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    adrp x8, lCPI4_0@PAGE
 ; CHECK-NEXT:  Lloh7:
-; CHECK-NEXT:    ldr q0, [x9, lCPI4_0@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI4_0@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #6
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    ldp q2, q1, [x9, #32]
-; CHECK-NEXT:    ldp q4, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v19, v1
-; CHECK-NEXT:    fcvtzu.4s v18, v2
-; CHECK-NEXT:    fcvtzu.4s v17, v3
-; CHECK-NEXT:    fcvtzu.4s v16, v4
-; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
+; CHECK-NEXT:    fcvtzu.4s v7, v1
+; CHECK-NEXT:    ldp q1, q3, [x9]
+; CHECK-NEXT:    fcvtzu.4s v6, v2
+; CHECK-NEXT:    fcvtzu.4s v5, v3
+; CHECK-NEXT:    fcvtzu.4s v4, v1
+; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
 ; CHECK-NEXT:    str q1, [x1], #32
 ; CHECK-NEXT:    b.eq LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
@@ -304,32 +304,32 @@ define void @fptoui_2x_v16f32_to_v16i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-LABEL: fptoui_2x_v16f32_to_v16i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh8:
-; CHECK-NEXT:    adrp x9, lCPI5_0@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    adrp x8, lCPI5_0@PAGE
 ; CHECK-NEXT:  Lloh9:
-; CHECK-NEXT:    ldr q0, [x9, lCPI5_0@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI5_0@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB5_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #6
-; CHECK-NEXT:    add x10, x0, x9
-; CHECK-NEXT:    add x9, x1, x9
-; CHECK-NEXT:    ldp q1, q2, [x10, #32]
+; CHECK-NEXT:    add x10, x1, x9
+; CHECK-NEXT:    add x9, x0, x9
+; CHECK-NEXT:    ldp q2, q1, [x10, #32]
 ; CHECK-NEXT:    ldp q3, q4, [x9, #32]
-; CHECK-NEXT:    fcvtzu.4s v24, v2
-; CHECK-NEXT:    fcvtzu.4s v23, v1
-; CHECK-NEXT:    ldp q5, q6, [x9]
-; CHECK-NEXT:    fcvtzu.4s v20, v4
+; CHECK-NEXT:    ldp q5, q6, [x10]
+; CHECK-NEXT:    fcvtzu.4s v19, v1
+; CHECK-NEXT:    fcvtzu.4s v18, v2
+; CHECK-NEXT:    ldp q2, q1, [x9]
+; CHECK-NEXT:    fcvtzu.4s v23, v4
+; CHECK-NEXT:    fcvtzu.4s v17, v6
 ; CHECK-NEXT:    add x9, x2, x8, lsl #5
-; CHECK-NEXT:    fcvtzu.4s v19, v3
+; CHECK-NEXT:    fcvtzu.4s v22, v3
+; CHECK-NEXT:    fcvtzu.4s v16, v5
 ; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    fcvtzu.4s v21, v1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    ldp q7, q16, [x10]
-; CHECK-NEXT:    fcvtzu.4s v18, v6
-; CHECK-NEXT:    fcvtzu.4s v17, v5
-; CHECK-NEXT:    fcvtzu.4s v22, v16
-; CHECK-NEXT:    fcvtzu.4s v21, v7
-; CHECK-NEXT:    tbl.16b v1, { v17, v18, v19, v20 }, v0
-; CHECK-NEXT:    tbl.16b v2, { v21, v22, v23, v24 }, v0
+; CHECK-NEXT:    fcvtzu.4s v20, v2
+; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
+; CHECK-NEXT:    tbl.16b v2, { v20, v21, v22, v23 }, v0
 ; CHECK-NEXT:    stp q2, q1, [x9]
 ; CHECK-NEXT:    b.eq LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
@@ -365,8 +365,8 @@ define void @fptoui_v8f32_to_v8i16_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #5
 ; CHECK-NEXT:    ldp q0, q1, [x9]
-; CHECK-NEXT:    fcvtzu.4s v0, v0
 ; CHECK-NEXT:    fcvtzu.4s v1, v1
+; CHECK-NEXT:    fcvtzu.4s v0, v0
 ; CHECK-NEXT:    uzp1.8h v0, v0, v1
 ; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
@@ -400,17 +400,17 @@ define void @fptoui_2x_v8f32_to_v8i16_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #5
 ; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x11, x1, x9
 ; CHECK-NEXT:    add x9, x2, x9
-; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    ldp q0, q1, [x10]
-; CHECK-NEXT:    fcvtzu.4s v0, v0
 ; CHECK-NEXT:    ldp q2, q3, [x11]
 ; CHECK-NEXT:    fcvtzu.4s v1, v1
+; CHECK-NEXT:    fcvtzu.4s v0, v0
+; CHECK-NEXT:    fcvtzu.4s v3, v3
 ; CHECK-NEXT:    fcvtzu.4s v2, v2
 ; CHECK-NEXT:    uzp1.8h v0, v0, v1
-; CHECK-NEXT:    fcvtzu.4s v3, v3
 ; CHECK-NEXT:    uzp1.8h v1, v2, v3
 ; CHECK-NEXT:    stp q0, q1, [x9]
 ; CHECK-NEXT:    b.eq LBB7_1
@@ -477,14 +477,14 @@ define void @uitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: uitofp_v8i8_to_v8f32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh10:
-; CHECK-NEXT:    adrp x9, lCPI8_0@PAGE
+; CHECK-NEXT:    adrp x8, lCPI8_0@PAGE
 ; CHECK-NEXT:  Lloh11:
-; CHECK-NEXT:    adrp x10, lCPI8_1@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    adrp x9, lCPI8_1@PAGE
 ; CHECK-NEXT:  Lloh12:
-; CHECK-NEXT:    ldr q0, [x9, lCPI8_0@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI8_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh13:
-; CHECK-NEXT:    ldr q1, [x10, lCPI8_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x9, lCPI8_1@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB8_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x0, x8, lsl #3]
@@ -592,22 +592,22 @@ define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: uitofp_v16i8_to_v16f32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh14:
-; CHECK-NEXT:    adrp x9, lCPI9_0@PAGE
+; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
 ; CHECK-NEXT:  Lloh15:
-; CHECK-NEXT:    adrp x10, lCPI9_1@PAGE
+; CHECK-NEXT:    adrp x9, lCPI9_1@PAGE
 ; CHECK-NEXT:  Lloh16:
-; CHECK-NEXT:    adrp x11, lCPI9_2@PAGE
+; CHECK-NEXT:    adrp x10, lCPI9_2@PAGE
 ; CHECK-NEXT:  Lloh17:
-; CHECK-NEXT:    adrp x12, lCPI9_3@PAGE
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    ldr q0, [x8, lCPI9_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh18:
-; CHECK-NEXT:    ldr q0, [x9, lCPI9_0@PAGEOFF]
+; CHECK-NEXT:    adrp x8, lCPI9_3@PAGE
 ; CHECK-NEXT:  Lloh19:
-; CHECK-NEXT:    ldr q1, [x10, lCPI9_1@PAGEOFF]
+; CHECK-NEXT:    ldr q1, [x9, lCPI9_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh20:
-; CHECK-NEXT:    ldr q2, [x11, lCPI9_2@PAGEOFF]
+; CHECK-NEXT:    ldr q2, [x10, lCPI9_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh21:
-; CHECK-NEXT:    ldr q3, [x12, lCPI9_3@PAGEOFF]
+; CHECK-NEXT:    ldr q3, [x8, lCPI9_3@PAGEOFF]
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB9_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q4, [x0, x8, lsl #4]
@@ -627,10 +627,11 @@ define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.eq LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh17, Lloh21
+; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh21
 ; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh20
 ; CHECK-NEXT:    .loh AdrpLdr Lloh15, Lloh19
-; CHECK-NEXT:    .loh AdrpLdr Lloh14, Lloh18
+; CHECK-NEXT:    .loh AdrpAdrp Lloh14, Lloh18
+; CHECK-NEXT:    .loh AdrpLdr Lloh14, Lloh17
 entry:
   br label %loop
 

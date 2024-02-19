@@ -13,7 +13,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setstacksize,
                    (pthread_attr_t *__restrict attr, size_t stacksize)) {
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setstacksize,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

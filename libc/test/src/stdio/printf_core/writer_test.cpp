@@ -13,9 +13,9 @@
 
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::string_view;
-using __llvm_libc::printf_core::WriteBuffer;
-using __llvm_libc::printf_core::Writer;
+using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::printf_core::WriteBuffer;
+using LIBC_NAMESPACE::printf_core::Writer;
 
 TEST(LlvmLibcPrintfWriterTest, Constructor) {
   char str[10];
@@ -200,8 +200,8 @@ int copy_to_out(string_view new_str, void *raw_out_buff) {
 
   OutBuff *out_buff = reinterpret_cast<OutBuff *>(raw_out_buff);
 
-  __llvm_libc::inline_memcpy(out_buff->out_str + out_buff->cur_pos,
-                             new_str.data(), new_str.size());
+  LIBC_NAMESPACE::inline_memcpy(out_buff->out_str + out_buff->cur_pos,
+                                new_str.data(), new_str.size());
 
   out_buff->cur_pos += new_str.size();
   return 0;

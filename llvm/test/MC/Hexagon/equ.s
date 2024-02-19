@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon %s 2> %t
+# RUN: not llvm-mc -triple=hexagon %s 2> %t
 # RUN: FileCheck < %t %s
 
 .equ   a, 0

@@ -169,6 +169,23 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
                          (thread_state_t)&m_state.context.gpr, &count);
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
+    DNBLogThreaded("thread_get_state signed regs "
+                   "\n   fp=%16.16llx"
+                   "\n   lr=%16.16llx"
+                   "\n   sp=%16.16llx"
+                   "\n   pc=%16.16llx",
+#if __has_feature(ptrauth_calls) && defined(__LP64__)
+                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp),
+                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr),
+                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp),
+                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc)
+#else
+                   m_state.context.gpr.__fp,
+                   m_state.context.gpr.__lr, 
+                   m_state.context.gpr.__sp,
+                   m_state.context.gpr.__pc
+#endif
+    );
 
 #if __has_feature(ptrauth_calls) && defined(__LP64__)
     uint64_t log_fp = clear_pac_bits(
@@ -823,6 +840,16 @@ uint32_t DNBArchMachARM64::EnableHardwareBreakpoint(nub_addr_t addr,
   return INVALID_NUB_HW_INDEX;
 }
 
+// This should be `std::bit_ceil(aligned_size)` but
+// that requires C++20.
+// Calculates the smallest integral power of two that is not smaller than x.
+static uint64_t bit_ceil(uint64_t input) {
+  if (input <= 1 || __builtin_popcount(input) == 1)
+    return input;
+
+  return 1ULL << (64 - __builtin_clzll(input));
+}
+
 std::vector<DNBArchMachARM64::WatchpointSpec>
 DNBArchMachARM64::AlignRequestedWatchpoint(nub_addr_t requested_addr,
                                            nub_size_t requested_size) {
@@ -835,18 +862,11 @@ DNBArchMachARM64::AlignRequestedWatchpoint(nub_addr_t requested_addr,
   constexpr nub_size_t min_watchpoint_alignment = 8;
   nub_size_t aligned_size = std::max(requested_size, min_watchpoint_alignment);
 
-  // AArch64 addresses are 8 bytes.
-  constexpr int addr_byte_size = 8;
-  constexpr int addr_bit_size = addr_byte_size * 8;
-
   /// Round up \a requested_size to the next power-of-2 size, at least 8
   /// bytes
   /// requested_size == 8   -> aligned_size == 8
   /// requested_size == 9   -> aligned_size == 16
-  /// requested_size == 15  -> aligned_size == 16
-  /// requested_size == 192 -> aligned_size == 256
-  /// Could be `std::bit_ceil(aligned_size)` when we build with C++20?
-  aligned_size = 1ULL << (addr_bit_size - __builtin_clzll(aligned_size - 1));
+  aligned_size = aligned_size = bit_ceil(aligned_size);
 
   nub_addr_t aligned_start = requested_addr & ~(aligned_size - 1);
   // Does this power-of-2 memory range, aligned to power-of-2, completely
@@ -2173,8 +2193,7 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
               reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
           break;
         case gpr_lr:
-          value->value.uint64 = clear_pac_bits(
-              reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr));
+          value->value.uint64 = arm_thread_state64_get_lr(m_state.context.gpr);
           break;
         case gpr_sp:
           value->value.uint64 = clear_pac_bits(

@@ -2,7 +2,7 @@
 // compilation.
 //
 //
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 -fsanitize=address %s 2>&1 | \
+// RUN: not %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 -fsanitize=address %s 2>&1 | \
 // RUN:   FileCheck %s
 
 // CHECK-NOT: error: unsupported option '-fsanitize=address'

@@ -304,10 +304,10 @@ class LinuxCoreTestCase(TestBase):
         values = {}
         values["x1"] = "0x000000000000002f"
         values["w1"] = "0x0000002f"
-        values["fp"] = "0x0000007fc5dd7f20"
-        values["lr"] = "0x0000000000400180"
-        values["sp"] = "0x0000007fc5dd7f00"
-        values["pc"] = "0x000000000040014c"
+        values["fp"] = "0x0000ffffdab7c770"
+        values["lr"] = "0x000000000040019c"
+        values["sp"] = "0x0000ffffdab7c750"
+        values["pc"] = "0x0000000000400168"
         values[
             "v0"
         ] = "{0x00 0x00 0x00 0x00 0x00 0x00 0xe0 0x3f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}"
@@ -366,6 +366,7 @@ class LinuxCoreTestCase(TestBase):
         values["d31"] = "1.3980432860952889E-76"
         values["fpsr"] = "0x00000000"
         values["fpcr"] = "0x00000000"
+        values["tpidr"] = "0x1122334455667788"
 
         for regname, value in values.items():
             self.expect(
@@ -573,6 +574,15 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+        # Register field information should work with core files as it does a live process.
+        # The N/Z/C/V bits are always present so just check for those.
+        self.expect("register read cpsr", substrs=["= (N = 0, Z = 0, C = 0, V = 0"])
+        self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
+        # AHP/DN/FZ/RMode always present, others may vary.
+        self.expect(
+            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = 0"]
+        )
+
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_pac_regs(self):
         # Test AArch64/Linux Pointer Authentication register read
@@ -622,6 +632,17 @@ class LinuxCoreTestCase(TestBase):
             )
 
         self.expect("register read --all")
+
+    def test_get_core_file_api(self):
+        """
+        Test SBProcess::GetCoreFile() API can successfully get the core file.
+        """
+        core_file_name = "linux-x86_64.core"
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore(core_file_name)
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
+        self.dbg.DeleteTarget(target)
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

@@ -23,8 +23,6 @@ define void @addstx(ptr %res, ptr %a,  ptr %b, ptr %c, ptr %d) {
   %cr = fadd <4 x float> %cl, %dl
   %dr = fadd <4 x float> %dl, %al
 
-; The sizes below are conservative.  AArch64TargetLowering
-; conservatively assumes the entire vector is stored.
   tail call void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float> %ar, <4 x float> %br, ptr %res)
 ; CHECK: ST2Twov4s {{.*}} :: (store (s256) {{.*}})
   tail call void @llvm.aarch64.neon.st3.v4f32.p0(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, ptr %res)
@@ -46,8 +44,6 @@ define void @addst1x(ptr %res, ptr %a,  ptr %b, ptr %c, ptr %d) {
   %cr = fadd <4 x float> %cl, %dl
   %dr = fadd <4 x float> %dl, %al
 
-; The sizes below are conservative.  AArch64TargetLowering
-; conservatively assumes the entire vector is stored.
   tail call void @llvm.aarch64.neon.st1x2.v4f32.p0(<4 x float> %ar, <4 x float> %br, ptr %res)
 ; CHECK: ST1Twov4s {{.*}} :: (store (s256) {{.*}})
   tail call void @llvm.aarch64.neon.st1x3.v4f32.p0(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, ptr %res)
@@ -69,14 +65,12 @@ define void @addstxlane(ptr %res, ptr %a,  ptr %b, ptr %c, ptr %d) {
   %cr = fadd <4 x float> %cl, %dl
   %dr = fadd <4 x float> %dl, %al
 
-; The sizes below are conservative.  AArch64TargetLowering
-; conservatively assumes the entire vector is stored.
   tail call void @llvm.aarch64.neon.st2lane.v4f32.p0(<4 x float> %ar, <4 x float> %br, i64 1, ptr %res)
-; CHECK: ST2i32 {{.*}} :: (store (s256) {{.*}})
+; CHECK: ST2i32 {{.*}} :: (store (s64) {{.*}})
   tail call void @llvm.aarch64.neon.st3lane.v4f32.p0(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, i64 1, ptr %res)
-; CHECK: ST3i32 {{.*}} :: (store (s384) {{.*}})
+; CHECK: ST3i32 {{.*}} :: (store (s96) {{.*}})
   tail call void @llvm.aarch64.neon.st4lane.v4f32.p0(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, <4 x float> %dr, i64 1, ptr %res)
-; CHECK: ST4i32 {{.*}} :: (store (s512) {{.*}})
+; CHECK: ST4i32 {{.*}} :: (store (s128) {{.*}})
 
   ret void
 }

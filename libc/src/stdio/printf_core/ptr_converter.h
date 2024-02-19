@@ -9,31 +9,32 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 
-#include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
-#include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/int_converter.h"
+#include "src/stdio/printf_core/string_converter.h"
 #include "src/stdio/printf_core/writer.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 LIBC_INLINE int convert_pointer(Writer *writer, const FormatSection &to_conv) {
-  if (to_conv.conv_val_ptr == (void *)(nullptr)) {
-    RET_IF_RESULT_NEGATIVE(writer->write("(nullptr)"));
-  } else {
-    FormatSection hex_conv;
-    hex_conv.has_conv = true;
-    hex_conv.conv_name = 'x';
-    hex_conv.flags = FormatFlags::ALTERNATE_FORM;
-    hex_conv.conv_val_raw = reinterpret_cast<uintptr_t>(to_conv.conv_val_ptr);
-    return convert_int(writer, hex_conv);
+  FormatSection new_conv = to_conv;
+
+  if (to_conv.conv_val_ptr == nullptr) {
+    constexpr char NULLPTR_STR[] = "(nullptr)";
+    new_conv.conv_name = 's';
+    new_conv.conv_val_ptr = const_cast<char *>(NULLPTR_STR);
+    return convert_string(writer, new_conv);
   }
-  return WRITE_OK;
+  new_conv.conv_name = 'x';
+  new_conv.flags =
+      static_cast<FormatFlags>(to_conv.flags | FormatFlags::ALTERNATE_FORM);
+  new_conv.length_modifier = LengthModifier::t;
+  new_conv.conv_val_raw = reinterpret_cast<uintptr_t>(to_conv.conv_val_ptr);
+  return convert_int(writer, new_conv);
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H

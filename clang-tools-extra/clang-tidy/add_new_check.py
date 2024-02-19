@@ -131,7 +131,6 @@ def write_implementation(module_path, module, namespace, check_name_camel):
 //===----------------------------------------------------------------------===//
 
 #include "%(check_name)s.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -146,7 +145,7 @@ void %(check_name)s::registerMatchers(MatchFinder *Finder) {
 void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
   // FIXME: Add callback implementation.
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().startswith("awesome_"))
+  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().starts_with("awesome_"))
     return;
   diag(MatchedDecl->getLocation(), "function %%0 is insufficiently awesome")
       << MatchedDecl
@@ -483,8 +482,8 @@ def update_checks_list(clang_tidy_path):
 
     def format_link(doc_file):
         check_name, match = process_doc(doc_file)
-        if not match and check_name:
-            return "   `%(check_name)s <%(module)s/%(check)s.html>`_,%(autofix)s\n" % {
+        if not match and check_name and not check_name.startswith("clang-analyzer-"):
+            return "   :doc:`%(check_name)s <%(module)s/%(check)s>`,%(autofix)s\n" % {
                 "check_name": check_name,
                 "module": doc_file[0],
                 "check": doc_file[1].replace(".rst", ""),
@@ -495,32 +494,50 @@ def update_checks_list(clang_tidy_path):
 
     def format_link_alias(doc_file):
         check_name, match = process_doc(doc_file)
-        if match and check_name:
+        if (match or (check_name.startswith("clang-analyzer-"))) and check_name:
             module = doc_file[0]
             check_file = doc_file[1].replace(".rst", "")
-            if match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers":
+            if not match or match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers":
                 title = "Clang Static Analyzer " + check_file
                 # Preserve the anchor in checkers.html from group 2.
-                target = match.group(1) + ".html" + match.group(2)
+                target = "" if not match else match.group(1) + ".html" + match.group(2)
                 autofix = ""
+                ref_begin = ""
+                ref_end = "_"
             else:
                 redirect_parts = re.search("^\.\./([^/]*)/([^/]*)$", match.group(1))
                 title = redirect_parts[1] + "-" + redirect_parts[2]
-                target = redirect_parts[1] + "/" + redirect_parts[2] + ".html"
+                target = redirect_parts[1] + "/" + redirect_parts[2]
                 autofix = has_auto_fix(title)
+                ref_begin = ":doc:"
+                ref_end = ""
 
-            # The checker is just a redirect.
-            return (
-                "   `%(check_name)s <%(module)s/%(check_file)s.html>`_, `%(title)s <%(target)s>`_,%(autofix)s\n"
-                % {
-                    "check_name": check_name,
-                    "module": module,
-                    "check_file": check_file,
-                    "target": target,
-                    "title": title,
-                    "autofix": autofix,
-                }
-            )
+            if target:
+                # The checker is just a redirect.
+                return (
+                        "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(ref_begin)s`%(title)s <%(target)s>`%(ref_end)s,%(autofix)s\n"
+                    % {
+                        "check_name": check_name,
+                        "module": module,
+                        "check_file": check_file,
+                        "target": target,
+                        "title": title,
+                        "autofix": autofix,
+                        "ref_begin" : ref_begin,
+                        "ref_end" : ref_end
+                    })
+            else:
+                # The checker is just a alias without redirect.
+                return (
+                        "   :doc:`%(check_name)s <%(module)s/%(check_file)s>`, %(title)s,%(autofix)s\n"
+                    % {
+                        "check_name": check_name,
+                        "module": module,
+                        "check_file": check_file,
+                        "target": target,
+                        "title": title,
+                        "autofix": autofix,
+                    })
         return ""
 
     checks = map(format_link, doc_files)

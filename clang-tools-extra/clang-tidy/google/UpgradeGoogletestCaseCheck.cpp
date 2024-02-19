@@ -45,7 +45,7 @@ class UpgradeGoogletestCasePPCallback : public PPCallbacks {
 public:
   UpgradeGoogletestCasePPCallback(UpgradeGoogletestCaseCheck *Check,
                                   Preprocessor *PP)
-      : ReplacementFound(false), Check(Check), PP(PP) {}
+      : Check(Check), PP(PP) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *) override {
@@ -66,7 +66,7 @@ public:
       // recent enough version of Google Test.
       llvm::StringRef FileName = PP->getSourceManager().getFilename(
           MD->getMacroInfo()->getDefinitionLoc());
-      ReplacementFound = FileName.endswith("gtest/gtest-typed-test.h") &&
+      ReplacementFound = FileName.ends_with("gtest/gtest-typed-test.h") &&
                          PP->getSpelling(MacroNameTok) == "TYPED_TEST_SUITE";
     }
   }
@@ -102,7 +102,7 @@ private:
 
     llvm::StringRef FileName = PP->getSourceManager().getFilename(
         MD.getMacroInfo()->getDefinitionLoc());
-    if (!FileName.endswith("gtest/gtest-typed-test.h"))
+    if (!FileName.ends_with("gtest/gtest-typed-test.h"))
       return;
 
     DiagnosticBuilder Diag = Check->diag(Loc, RenameCaseToSuiteMessage);
@@ -112,7 +112,7 @@ private:
           CharSourceRange::getTokenRange(Loc, Loc), *Replacement);
   }
 
-  bool ReplacementFound;
+  bool ReplacementFound = false;
   UpgradeGoogletestCaseCheck *Check;
   Preprocessor *PP;
 };
@@ -267,8 +267,8 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method")) {
     ReplacementText = getNewMethodName(Method->getName());
 
-    bool IsInInstantiation;
-    bool IsInTemplate;
+    bool IsInInstantiation = false;
+    bool IsInTemplate = false;
     bool AddFix = true;
     if (const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call")) {
       const auto *Callee = llvm::cast<MemberExpr>(Call->getCallee());

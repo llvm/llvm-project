@@ -15,7 +15,7 @@
 #include "lldb/lldb-private.h"
 #include <map>
 
-enum class SVEState { Unknown, Disabled, FPSIMD, Full };
+enum class SVEState : uint8_t { Unknown, Disabled, FPSIMD, Full, Streaming };
 
 class RegisterInfoPOSIX_arm64
     : public lldb_private::RegisterInfoAndSetInterface {
@@ -26,9 +26,12 @@ public:
   enum {
     eRegsetMaskDefault = 0,
     eRegsetMaskSVE = 1,
-    eRegsetMaskPAuth = 2,
-    eRegsetMaskMTE = 4,
-    eRegsetMaskTLS = 8,
+    eRegsetMaskSSVE = 2,
+    eRegsetMaskPAuth = 4,
+    eRegsetMaskMTE = 8,
+    eRegsetMaskTLS = 16,
+    eRegsetMaskZA = 32,
+    eRegsetMaskZT = 64,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -103,9 +106,13 @@ public:
 
   void AddRegSetMTE();
 
-  void AddRegSetTLS();
+  void AddRegSetTLS(bool has_tpidr2);
 
-  uint32_t ConfigureVectorLength(uint32_t sve_vq);
+  void AddRegSetSME(bool has_zt);
+
+  uint32_t ConfigureVectorLengthSVE(uint32_t sve_vq);
+
+  void ConfigureVectorLengthZA(uint32_t za_vq);
 
   bool VectorSizeIsValid(uint32_t vq) {
     // coverity[unsigned_compare]
@@ -114,9 +121,13 @@ public:
     return false;
   }
 
-  bool IsSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
-  bool IsPAuthEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
-  bool IsMTEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
+  bool IsSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
+  bool IsSSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
+  bool IsZAPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZA); }
+  bool IsZTPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZT); }
+  bool IsPAuthPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
+  bool IsMTEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
+  bool IsTLSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
 
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
@@ -125,15 +136,20 @@ public:
   bool IsPAuthReg(unsigned reg) const;
   bool IsMTEReg(unsigned reg) const;
   bool IsTLSReg(unsigned reg) const;
+  bool IsSMEReg(unsigned reg) const;
+  bool IsSMERegZA(unsigned reg) const;
+  bool IsSMERegZT(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;
   uint32_t GetRegNumFPCR() const;
   uint32_t GetRegNumFPSR() const;
   uint32_t GetRegNumSVEVG() const;
+  uint32_t GetRegNumSMESVG() const;
   uint32_t GetPAuthOffset() const;
   uint32_t GetMTEOffset() const;
   uint32_t GetTLSOffset() const;
+  uint32_t GetSMEOffset() const;
 
 private:
   typedef std::map<uint32_t, std::vector<lldb_private::RegisterInfo>>
@@ -142,7 +158,10 @@ private:
   per_vq_register_infos m_per_vq_reg_infos;
 
   uint32_t m_vector_reg_vq = eVectorQuadwordAArch64;
+  uint32_t m_za_reg_vq = eVectorQuadwordAArch64;
 
+  // In normal operation this is const. Only when SVE or SME registers change
+  // size is it either replaced or the content modified.
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
 
@@ -161,6 +180,7 @@ private:
   std::vector<uint32_t> pauth_regnum_collection;
   std::vector<uint32_t> m_mte_regnum_collection;
   std::vector<uint32_t> m_tls_regnum_collection;
+  std::vector<uint32_t> m_sme_regnum_collection;
 };
 
 #endif

@@ -34,13 +34,13 @@
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=standard 2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON
 
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=bar 2>&1 | \
+// RUN: not %clang --target=arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=bar 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-BP-PROTECTION
 
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret+bti+b-key 2>&1 | \
+// RUN: not %clang --target=arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret+bti+b-key 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-B-KEY-COMBINATION
 
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret+bti+leaf 2>&1 | \
+// RUN: not %clang --target=arm-arm-none-eabi -march=armv8.1-m.main -c %s -### -mbranch-protection=pac-ret+bti+leaf 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-LEAF-COMBINATION
 
 // -mbranch-protection with supported architectures other than v8.1-m.main

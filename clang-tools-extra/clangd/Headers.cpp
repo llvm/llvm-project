@@ -12,6 +12,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -40,7 +41,8 @@ public:
                           OptionalFileEntryRef File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const clang::Module * /*Imported*/,
+                          const clang::Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
     auto MainFID = SM.getMainFileID();
     // If an include is part of the preamble patch, translate #line directives.
@@ -81,7 +83,7 @@ public:
     if (File) {
       auto IncludingFileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc));
       if (!IncludingFileEntry) {
-        assert(SM.getBufferName(HashLoc).startswith("<") &&
+        assert(SM.getBufferName(HashLoc).starts_with("<") &&
                "Expected #include location to be a file or <built-in>");
         // Treat as if included from the main file.
         IncludingFileEntry = SM.getFileEntryRefForID(MainFID);
@@ -130,7 +132,7 @@ private:
 };
 
 bool isLiteralInclude(llvm::StringRef Include) {
-  return Include.startswith("<") || Include.startswith("\"");
+  return Include.starts_with("<") || Include.starts_with("\"");
 }
 
 bool HeaderFile::valid() const {
@@ -178,6 +180,17 @@ void IncludeStructure::collect(const CompilerInstance &CI) {
   MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
   auto Collector = std::make_unique<RecordHeaders>(CI, this);
   CI.getPreprocessor().addPPCallbacks(std::move(Collector));
+
+  // If we're reusing a preamble, don't repopulate SearchPathsCanonical.
+  // The entries will be the same, but canonicalizing to find out is expensive!
+  if (SearchPathsCanonical.empty()) {
+    for (const auto &Dir :
+         CI.getPreprocessor().getHeaderSearchInfo().search_dir_range()) {
+      if (Dir.getLookupType() == DirectoryLookup::LT_NormalDir)
+        SearchPathsCanonical.emplace_back(
+            SM.getFileManager().getCanonicalName(*Dir.getDirRef()));
+    }
+  }
 }
 
 std::optional<IncludeStructure::HeaderID>
@@ -274,11 +287,11 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
-  bool IsSystem = false;
+  bool IsAngled = false;
   std::string Suggested;
   if (HeaderSearchInfo) {
     Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
-        InsertedHeader.File, BuildDir, IncludingFile, &IsSystem);
+        InsertedHeader.File, BuildDir, IncludingFile, &IsAngled);
   } else {
     // Calculate include relative to including file only.
     StringRef IncludingDir = llvm::sys::path::parent_path(IncludingFile);
@@ -291,7 +304,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   // FIXME: should we allow (some limited number of) "../header.h"?
   if (llvm::sys::path::is_absolute(Suggested))
     return std::nullopt;
-  if (IsSystem)
+  if (IsAngled)
     Suggested = "<" + Suggested + ">";
   else
     Suggested = "\"" + Suggested + "\"";
@@ -304,7 +317,7 @@ IncludeInserter::insert(llvm::StringRef VerbatimHeader,
   std::optional<TextEdit> Edit;
   if (auto Insertion =
           Inserter.insert(VerbatimHeader.trim("\"<>"),
-                          VerbatimHeader.startswith("<"), Directive))
+                          VerbatimHeader.starts_with("<"), Directive))
     Edit = replacementToEdit(Code, *Insertion);
   return Edit;
 }

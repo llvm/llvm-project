@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s portability-restrict-system-includes %t \
-// RUN:     -- -config="{CheckOptions: [{key: portability-restrict-system-includes.Includes, value: '-*,std*.h'}]}" \
+// RUN:     -- -config="{CheckOptions: {portability-restrict-system-includes.Includes: '-*,std*.h'}}" \
 // RUN:     -- -isystem %S/Inputs/restrict-system-includes/system
 
 // Test glob functionality: disallow all headers except those that match

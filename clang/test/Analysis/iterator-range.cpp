@@ -946,3 +946,14 @@ int uninit_var(int n) {
   // expected-warning@-1 {{The right operand of '-' is a garbage value}}
   // expected-note@-2 {{The right operand of '-' is a garbage value}}
 }
+
+namespace std {
+namespace ranges {
+  template <class InOutIter, class Sentinel>
+  InOutIter next(InOutIter, Sentinel);
+} // namespace ranges
+} // namespace std
+
+void gh65009__no_crash_on_ranges_next(int **begin, int **end) {
+  (void)std::ranges::next(begin, end); // no-crash
+}

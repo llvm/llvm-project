@@ -39,18 +39,34 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::opt;
 using namespace llvm::sys;
 using namespace llvm::wasm;
 
 namespace lld::wasm {
 Configuration *config;
+Ctx ctx;
+
+void Ctx::reset() {
+  objectFiles.clear();
+  stubFiles.clear();
+  sharedFiles.clear();
+  bitcodeFiles.clear();
+  syntheticFunctions.clear();
+  syntheticGlobals.clear();
+  syntheticTables.clear();
+  whyExtractRecords.clear();
+  isPic = false;
+  legacyFunctionTable = false;
+  emitBssSegments = false;
+}
 
 namespace {
 
 // Create enum with OPT_xxx values for each option in Options.td
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -78,6 +94,9 @@ private:
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
 
+  // True if we are in --start-lib and --end-lib.
+  bool inLib = false;
+
   std::vector<InputFile *> files;
 };
 } // anonymous namespace
@@ -88,6 +107,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   auto *ctx = new CommonLinkerContext;
 
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() { wasm::ctx.reset(); };
   ctx->e.logName = args::getFilenameWithoutExe(args[0]);
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
                                  "-error-limit=0 to see all errors)";
@@ -111,9 +131,13 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
@@ -212,19 +236,20 @@ static void readImportFile(StringRef filename) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef mb) {
+std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
+    MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
 
-  std::vector<MemoryBufferRef> v;
+  std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    v.push_back(mbref);
+    v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -250,10 +275,12 @@ void LinkerDriver::addFile(StringRef path) {
     if (fs::exists(importFile))
       readImportFile(importFile.str());
 
+    auto members = getArchiveMembers(mbref);
+
     // Handle -whole-archive.
     if (inWholeArchive) {
-      for (MemoryBufferRef &m : getArchiveMembers(mbref)) {
-        auto *object = createObjectFile(m, path);
+      for (const auto &[m, offset] : members) {
+        auto *object = createObjectFile(m, path, offset);
         // Mark object as live; object members are normally not
         // live by default but -whole-archive is designed to treat
         // them as such.
@@ -267,17 +294,20 @@ void LinkerDriver::addFile(StringRef path) {
     std::unique_ptr<Archive> file =
         CHECK(Archive::create(mbref), path + ": failed to parse archive");
 
-    if (!file->isEmpty() && !file->hasSymbolTable()) {
-      error(mbref.getBufferIdentifier() +
-            ": archive has no index; run ranlib to add one");
+    for (const auto &[m, offset] : members) {
+      auto magic = identify_magic(m.getBuffer());
+      if (magic == file_magic::wasm_object || magic == file_magic::bitcode)
+        files.push_back(createObjectFile(m, path, offset, true));
+      else
+        warn(path + ": archive member '" + m.getBufferIdentifier() +
+             "' is neither Wasm object file nor LLVM bitcode");
     }
 
-    files.push_back(make<ArchiveFile>(mbref));
     return;
   }
   case file_magic::bitcode:
   case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref));
+    files.push_back(createObjectFile(mbref, "", 0, inLib));
     break;
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
@@ -303,7 +333,7 @@ static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     // Currently we don't enable dynamic linking at all unless -shared or -pie
     // are used, so don't even look for .so files in that case..
-    if (config->isPic && !config->isStatic)
+    if (ctx.isPic && !config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
     if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
@@ -347,6 +377,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_no_whole_archive:
       inWholeArchive = false;
+      break;
+    case OPT_start_lib:
+      if (inLib)
+        error("nested --start-lib");
+      inLib = true;
+      break;
+    case OPT_end_lib:
+      if (!inLib)
+        error("stray --end-lib");
+      inLib = false;
       break;
     }
   }
@@ -453,6 +493,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   config->sharedMemory = args.hasArg(OPT_shared_memory);
+  config->soName = args.getLastArgValue(OPT_soname);
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
@@ -472,6 +513,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relocatable = args.hasArg(OPT_relocatable);
   config->gcSections =
       args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !config->relocatable);
+  for (auto *arg : args.filtered(OPT_keep_section))
+    config->keepSections.insert(arg->getValue());
   config->mergeDataSegments =
       args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
                    !config->relocatable);
@@ -494,8 +537,10 @@ static void readConfigs(opt::InputArgList &args) {
   errorHandler().verbose = args.hasArg(OPT_verbose);
   LLVM_DEBUG(errorHandler().verbose = true);
 
-  config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
+  config->tableBase = args::getInteger(args, OPT_table_base, 0);
   config->globalBase = args::getInteger(args, OPT_global_base, 0);
+  config->initialHeap = args::getInteger(args, OPT_initial_heap, 0);
+  config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
@@ -561,12 +606,23 @@ static void readConfigs(opt::InputArgList &args) {
 // This function initialize such members. See Config.h for the details
 // of these values.
 static void setConfigs() {
-  config->isPic = config->pie || config->shared;
+  ctx.isPic = config->pie || config->shared;
 
-  if (config->isPic) {
+  if (ctx.isPic) {
     if (config->exportTable)
       error("-shared/-pie is incompatible with --export-table");
     config->importTable = true;
+  } else {
+    // Default table base.  Defaults to 1, reserving 0 for the NULL function
+    // pointer.
+    if (!config->tableBase)
+      config->tableBase = 1;
+    // The default offset for static/global data, for when --global-base is
+    // not specified on the command line.  The precise value of 1024 is
+    // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
+    // emscripten used prior to wasm-ld).
+    if (!config->globalBase && !config->relocatable && !config->stackFirst)
+      config->globalBase = 1024;
   }
 
   if (config->relocatable) {
@@ -586,7 +642,6 @@ static void setConfigs() {
       config->memoryImport =
           std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
     }
-    config->importUndefined = true;
   }
 
   // If neither export-memory nor import-memory is specified, default to
@@ -660,8 +715,11 @@ static void checkOptions(opt::InputArgList &args) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
   }
 
-  if (config->globalBase && config->isPic) {
-    error("--global-base may not be used with -shared/-pie");
+  if (ctx.isPic) {
+    if (config->globalBase)
+      error("--global-base may not be used with -shared/-pie");
+    if (config->tableBase)
+      error("--table-base may not be used with -shared/-pie");
   }
 }
 
@@ -682,9 +740,9 @@ static Symbol *handleUndefined(StringRef name, const char *option) {
   sym->isUsedInRegularObj = true;
 
   if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
-    lazySym->fetch();
+    lazySym->extract();
     if (!config->whyExtract.empty())
-      config->whyExtractRecords.emplace_back(option, sym->getFile(), *sym);
+      ctx.whyExtractRecords.emplace_back(option, sym->getFile(), *sym);
   }
 
   return sym;
@@ -692,17 +750,10 @@ static Symbol *handleUndefined(StringRef name, const char *option) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab->find(name);
-  if (!sym)
-    return;
-
-  if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
-    MemoryBufferRef mb = lazySym->getMemberBuffer();
-    if (isBitcode(mb)) {
-      if (!config->whyExtract.empty())
-        config->whyExtractRecords.emplace_back("<libcall>", sym->getFile(),
-                                               *sym);
-      lazySym->fetch();
-    }
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->getFile())) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->getFile(), *sym);
+    cast<LazySymbol>(sym)->extract();
   }
 }
 
@@ -719,7 +770,7 @@ static void writeWhyExtract() {
   }
 
   os << "reference\textracted\tsymbol\n";
-  for (auto &entry : config->whyExtractRecords) {
+  for (auto &entry : ctx.whyExtractRecords) {
     os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
        << toString(std::get<2>(entry)) << '\n';
   }
@@ -788,7 +839,7 @@ static void createSyntheticSymbols() {
 
   bool is64 = config->is64.value_or(false);
 
-  if (config->isPic) {
+  if (ctx.isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.value_or(false)
                                                      ? &mutableGlobalTypeI64
@@ -827,7 +878,7 @@ static void createSyntheticSymbols() {
             "__wasm_init_tls"));
   }
 
-  if (config->isPic ||
+  if (ctx.isPic ||
       config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
     // For PIC code, or when dynamically importing addresses, we create
     // synthetic functions that apply relocations.  These get called from
@@ -848,7 +899,7 @@ static void createOptionalSymbols() {
   if (!config->shared)
     WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
-  if (!config->isPic) {
+  if (!ctx.isPic) {
     WasmSym::stackLow = symtab->addOptionalDataSymbol("__stack_low");
     WasmSym::stackHigh = symtab->addOptionalDataSymbol("__stack_high");
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
@@ -876,7 +927,7 @@ static void createOptionalSymbols() {
 
 static void processStubLibrariesPreLTO() {
   log("-- processStubLibrariesPreLTO");
-  for (auto &stub_file : symtab->stubFiles) {
+  for (auto &stub_file : ctx.stubFiles) {
     LLVM_DEBUG(llvm::dbgs()
                << "processing stub file: " << stub_file->getName() << "\n");
     for (auto [name, deps]: stub_file->symbolDependencies) {
@@ -898,52 +949,61 @@ static void processStubLibrariesPreLTO() {
 
 static void processStubLibraries() {
   log("-- processStubLibraries");
-  for (auto &stub_file : symtab->stubFiles) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
-      if (!sym || !sym->isUndefined()) {
-        LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: " << name << "\n");
-        continue;
-      }
-      // The first stub library to define a given symbol sets this and
-      // definitions in later stub libraries are ignored.
-      if (sym->forceImport)
-        continue;  // Already handled
-      sym->forceImport = true;
-      if (sym->traced)
-        message(toString(stub_file) + ": importing " + name);
-      else
-        LLVM_DEBUG(llvm::dbgs()
-                   << toString(stub_file) << ": importing " << name << "\n");
-      for (const auto dep : deps) {
-        auto* needed = symtab->find(dep);
-        if (!needed) {
-          error(toString(stub_file) + ": undefined symbol: " + dep +
-                ". Required by " + toString(*sym));
-        } else if (needed->isUndefined()) {
-          error(toString(stub_file) +
-                ": undefined symbol: " + toString(*needed) +
-                ". Required by " + toString(*sym));
-        } else {
-          if (needed->traced)
-            message(toString(stub_file) + ": exported " + toString(*needed) +
-                    " due to import of " + name);
+  bool depsAdded = false;
+  do {
+    depsAdded = false;
+    for (auto &stub_file : ctx.stubFiles) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "processing stub file: " << stub_file->getName() << "\n");
+      for (auto [name, deps]: stub_file->symbolDependencies) {
+        auto* sym = symtab->find(name);
+        if (!sym || !sym->isUndefined()) {
+          if (sym && sym->traced)
+            message(toString(stub_file) + ": stub symbol not needed: " + name);
           else
-            LLVM_DEBUG(llvm::dbgs()
-                       << "force export: " << toString(*needed) << "\n");
-          needed->forceExport = true;
-          if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
-            lazy->fetch();
-            if (!config->whyExtract.empty())
-              config->whyExtractRecords.emplace_back(stub_file->getName(),
-                                                     sym->getFile(), *sym);
+            LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: `" << name << "`\n");
+          continue;
+        }
+        // The first stub library to define a given symbol sets this and
+        // definitions in later stub libraries are ignored.
+        if (sym->forceImport)
+          continue;  // Already handled
+        sym->forceImport = true;
+        if (sym->traced)
+          message(toString(stub_file) + ": importing " + name);
+        else
+          LLVM_DEBUG(llvm::dbgs()
+                     << toString(stub_file) << ": importing " << name << "\n");
+        for (const auto dep : deps) {
+          auto* needed = symtab->find(dep);
+          if (!needed) {
+            error(toString(stub_file) + ": undefined symbol: " + dep +
+                  ". Required by " + toString(*sym));
+          } else if (needed->isUndefined()) {
+            error(toString(stub_file) +
+                  ": undefined symbol: " + toString(*needed) +
+                  ". Required by " + toString(*sym));
+          } else {
+            if (needed->traced)
+              message(toString(stub_file) + ": exported " + toString(*needed) +
+                      " due to import of " + name);
+            else
+              LLVM_DEBUG(llvm::dbgs()
+                         << "force export: " << toString(*needed) << "\n");
+            needed->forceExport = true;
+            if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
+              depsAdded = true;
+              lazy->extract();
+              if (!config->whyExtract.empty())
+                ctx.whyExtractRecords.emplace_back(stub_file->getName(),
+                                                   sym->getFile(), *sym);
+            }
           }
         }
       }
     }
-  }
+  } while (depsAdded);
+
   log("-- done processStubLibraries");
 }
 
@@ -972,7 +1032,7 @@ static std::string createResponseFile(const opt::InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return std::string(data.str());
+  return std::string(data);
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
@@ -1043,7 +1103,7 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   }
 
   // Update pointers in input files.
-  parallelForEach(symtab->objectFiles, [&](InputFile *file) {
+  parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i)
       if (Symbol *s = map.lookup(syms[i]))
@@ -1059,7 +1119,7 @@ static void splitSections() {
   // splitIntoPieces needs to be called on each MergeInputChunk
   // before calling finalizeContents().
   LLVM_DEBUG(llvm::dbgs() << "splitSections\n");
-  parallelForEach(symtab->objectFiles, [](ObjFile *file) {
+  parallelForEach(ctx.objectFiles, [](ObjFile *file) {
     for (InputChunk *seg : file->segments) {
       if (auto *s = dyn_cast<MergeInputChunk>(seg))
         s->splitIntoPieces();
@@ -1231,7 +1291,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // We only need to add libcall symbols to the link before LTO if the symbol's
   // definition is in bitcode. Any other required libcall symbols will be added
   // to the link after LTO when we add the LTO object file to the link.
-  if (!symtab->bitcodeFiles.empty())
+  if (!ctx.bitcodeFiles.empty())
     for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
   if (errorCount())
@@ -1273,7 +1333,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       sym->forceExport = true;
   }
 
-  if (!config->relocatable && !config->isPic) {
+  if (!config->relocatable && !ctx.isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();

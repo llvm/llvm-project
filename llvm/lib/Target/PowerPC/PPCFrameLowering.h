@@ -173,6 +173,8 @@ public:
   /// function prologue/epilogue.
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
+
+  uint64_t getStackThreshold() const override;
 };
 } // End llvm namespace
 

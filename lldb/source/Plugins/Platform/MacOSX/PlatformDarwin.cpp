@@ -29,7 +29,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -42,6 +41,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
@@ -122,8 +122,8 @@ enum {
 
 class PlatformDarwinProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin");
     return g_setting_name;
   }
 
@@ -320,8 +320,8 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          FileSpec &sym_file) {
   sym_file = sym_spec.GetSymbolFileSpec();
   if (FileSystem::Instance().IsDirectory(sym_file)) {
-    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
-                                               sym_spec.GetArchitecturePtr());
+    sym_file = PluginManager::FindSymbolFileInBundle(
+        sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
   }
   return {};
 }
@@ -432,7 +432,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
     // Auto detect arm/thumb if it wasn't explicitly specified
     if (!bp_is_thumb) {
-      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
                       AddressClass::eCodeAlternateISA;
@@ -796,6 +796,9 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   case XcodeSDK::Type::AppleTVSimulator:
     sdks_spec.AppendPathComponent("AppleTVSimulator.platform");
     break;
+  case XcodeSDK::Type::XRSimulator:
+    sdks_spec.AppendPathComponent("XRSimulator.platform");
+    break;
   default:
     llvm_unreachable("unsupported sdk");
   }
@@ -988,7 +991,7 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
   StructuredData::DictionarySP dict_sp =
       std::make_shared<StructuredData::Dictionary>();
 
-  auto flatten_asi_dict = [&dict_sp](ConstString key,
+  auto flatten_asi_dict = [&dict_sp](llvm::StringRef key,
                                      StructuredData::Object *val) -> bool {
     if (!val)
       return false;
@@ -997,7 +1000,7 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
     if (!arr || !arr->GetSize())
       return false;
 
-    dict_sp->AddItem(key.AsCString(), arr->GetItemAtIndex(0));
+    dict_sp->AddItem(key, arr->GetItemAtIndex(0));
     return true;
   };
 
@@ -1032,6 +1035,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   case XcodeSDK::Type::watchOS:
     use_current_os_version = get_host_os() == llvm::Triple::WatchOS;
     break;
+  case XcodeSDK::Type::XROS:
+    use_current_os_version = get_host_os() == llvm::Triple::XROS;
+    break;
   default:
     break;
   }
@@ -1049,8 +1055,10 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         version = object_file->GetMinimumOSVersion();
     }
   }
-  // Only add the version-min options if we got a version from somewhere
-  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
+  // Only add the version-min options if we got a version from somewhere.
+  // clang has no version-min clang flag for XROS.
+  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
+      sdk_type != XcodeSDK::Type::XROS) {
 #define OPTION(PREFIX, NAME, VAR, ...)                                         \
   llvm::StringRef opt_##VAR = NAME;                                            \
   (void)opt_##VAR;
@@ -1079,6 +1087,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case XcodeSDK::Type::watchOS:
       minimum_version_option << opt_mwatchos_version_min_EQ;
       break;
+    case XcodeSDK::Type::XRSimulator:
+    case XcodeSDK::Type::XROS:
+      // FIXME: Pass the right argument once it exists.
     case XcodeSDK::Type::bridgeOS:
     case XcodeSDK::Type::Linux:
     case XcodeSDK::Type::unknown:
@@ -1095,8 +1106,21 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   }
 
   FileSpec sysroot_spec;
-  // Scope for mutex locker below
-  {
+
+  if (target) {
+    if (ModuleSP exe_module_sp = target->GetExecutableModule()) {
+      auto path_or_err = ResolveSDKPathFromDebugInfo(*exe_module_sp);
+      if (path_or_err) {
+        sysroot_spec = FileSpec(*path_or_err);
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
+                       path_or_err.takeError(),
+                       "Failed to resolve SDK path: {0}");
+      }
+    }
+  }
+
+  if (!FileSystem::Instance().IsDirectory(sysroot_spec.GetPath())) {
     std::lock_guard<std::mutex> guard(m_mutex);
     sysroot_spec = GetSDKDirectoryForModules(sdk_type);
   }
@@ -1330,8 +1354,60 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
   return llvm::Triple::TvOS;
 #elif TARGET_OS_BRIDGE
   return llvm::Triple::BridgeOS;
+#elif TARGET_OS_XR
+  return llvm::Triple::XROS;
 #else
 #error "LLDB being compiled for an unrecognized Darwin OS"
 #endif
 #endif // __APPLE__
+}
+
+llvm::Expected<std::pair<XcodeSDK, bool>>
+PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module.GetFileSpec().GetFilename().AsCString("")));
+
+  bool found_public_sdk = false;
+  bool found_internal_sdk = false;
+  XcodeSDK merged_sdk;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
+      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
+      bool is_internal_sdk = cu_sdk.IsAppleInternalSDK();
+      found_public_sdk |= !is_internal_sdk;
+      found_internal_sdk |= is_internal_sdk;
+
+      merged_sdk.Merge(cu_sdk);
+    }
+  }
+
+  const bool found_mismatch = found_internal_sdk && found_public_sdk;
+
+  return std::pair{std::move(merged_sdk), found_mismatch};
+}
+
+llvm::Expected<std::string>
+PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
+                      llvm::toString(sdk_or_err.takeError())));
+
+  auto [sdk, _] = std::move(*sdk_or_err);
+
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!path_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
+                      sdk.GetString(),
+                      llvm::toString(path_or_err.takeError())));
+
+  return path_or_err->str();
 }

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -fblocks -fobjc-runtime-has-weak -Wexplicit-ownership-type  -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -fblocks -fobjc-runtime-has-weak -Wexplicit-ownership-type -verify -Wno-objc-root-class %s
-// rdar://10244607
 
 typedef const struct __CFString * CFStringRef;
 @class NSString;
@@ -33,7 +32,6 @@ typedef __autoreleasing NSString * AUTORELEASEPNSString;
 }
 @end
 
-// rdar://problem/10711456
 __strong I *__strong test1; // expected-error {{the type 'I *__strong' is already explicitly ownership-qualified}}
 __strong I *(__strong test2); // expected-error {{the type 'I *__strong' is already explicitly ownership-qualified}}
 __strong I *(__strong (test3)); // expected-error {{the type 'I *__strong' is already explicitly ownership-qualified}}
@@ -41,7 +39,6 @@ __unsafe_unretained __typeof__(test3) test4;
 typedef __strong I *strong_I;
 __unsafe_unretained strong_I test5;
 
-// rdar://10907090
 typedef void (^T) (void);
 @interface NSObject @end
 @protocol P;
@@ -57,7 +54,6 @@ typedef void (^T) (void);
 - (void) BLOCK : (T*) arg0 : (T)arg  : (__strong T*) arg1 {} // expected-warning-re {{method parameter of type '__autoreleasing T *' (aka 'void (^__autoreleasing *)({{(void)?}})') with no explicit ownership}}
 @end
 
-// rdar://12280826
 @class NSMutableDictionary, NSError;
 @interface Radar12280826
 - (void)createInferiorTransportAndSetEnvironment:(NSMutableDictionary*)environment error:(__autoreleasing NSError**)error;
@@ -67,7 +63,6 @@ typedef void (^T) (void);
 - (void)createInferiorTransportAndSetEnvironment:(NSMutableDictionary*)environment error:(__autoreleasing NSError**)error {}
 @end
 
-// <rdar://problem/12367446>
 typedef __strong id strong_id;
 typedef NSObject *NSObject_ptr;
 typedef __strong NSObject *strong_NSObject_ptr;
@@ -86,7 +81,6 @@ strong_id f6(void);
 strong_NSObject_ptr f7(void);
 typedef __strong id (^block_ptr)(int);
 
-// rdar://10127067
 void test8_a(void) {
   __weak id *(^myBlock)(void);
   __weak id *var = myBlock();

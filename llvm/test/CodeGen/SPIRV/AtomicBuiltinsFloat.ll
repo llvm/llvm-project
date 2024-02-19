@@ -3,7 +3,7 @@
 ;; Types:
 ; CHECK:         %[[#F32:]] = OpTypeFloat 32
 ;; Constants:
-; CHECK:         %[[#CONST:]] = OpConstant %[[#F32]] 1065353216
+; CHECK:         %[[#CONST:]] = OpConstant %[[#F32]] 1
 ;; Atomic instructions:
 ; CHECK:         OpStore %[[#]] %[[#CONST]]
 ; CHECK-COUNT-3: OpAtomicStore

@@ -1,15 +1,9 @@
 // RUN: %check_clang_tidy -std=c++23 %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [ \
-// RUN:              { \
-// RUN:               key: modernize-use-std-print.PrintfLikeFunctions, \
-// RUN:               value: 'unqualified_printf;::myprintf; mynamespace::myprintf2' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-print.FprintfLikeFunctions, \
-// RUN:               value: '::myfprintf; mynamespace::myfprintf2' \
-// RUN:              } \
-// RUN:             ] \
+// RUN:             { \
+// RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2', \
+// RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2' \
+// RUN:             } \
 // RUN:            }" \
 // RUN:   -- -isystem %clang_tidy_headers
 

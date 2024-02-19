@@ -8,6 +8,12 @@
 
 #include "GDBRemoteRegisterContext.h"
 
+#include "ProcessGDBRemote.h"
+#include "ProcessGDBRemoteLog.h"
+#include "ThreadGDBRemote.h"
+#include "Utility/ARM_DWARF_Registers.h"
+#include "Utility/ARM_ehframe_Registers.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -15,11 +21,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
-#include "ProcessGDBRemote.h"
-#include "ProcessGDBRemoteLog.h"
-#include "ThreadGDBRemote.h"
-#include "Utility/ARM_DWARF_Registers.h"
-#include "Utility/ARM_ehframe_Registers.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include <memory>
@@ -227,7 +228,9 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
           SetAllRegisterValid(true);
           return true;
         } else if (buffer_sp->GetByteSize() > 0) {
-          for (auto x : llvm::enumerate(m_reg_info_sp->registers())) {
+          for (auto x : llvm::enumerate(
+                   m_reg_info_sp->registers<
+                       DynamicRegisterInfo::reg_collection_const_range>())) {
             const struct RegisterInfo &reginfo = x.value();
             m_reg_valid[x.index()] =
                 (reginfo.byte_offset + reginfo.byte_size <=
@@ -373,14 +376,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
   if (dst == nullptr)
     return false;
 
-  // Code below is specific to AArch64 target in SVE state
-  // If vector granule (vg) register is being written then thread's
-  // register context reconfiguration is triggered on success.
-  bool do_reconfigure_arm64_sve = false;
-  const ArchSpec &arch = process->GetTarget().GetArchitecture();
-  if (arch.IsValid() && arch.GetTriple().isAArch64())
-    if (strcmp(reg_info->name, "vg") == 0)
-      do_reconfigure_arm64_sve = true;
+  const bool should_reconfigure_registers =
+      RegisterWriteCausesReconfigure(reg_info->name);
 
   if (data.CopyByteOrderedData(data_offset,                // src offset
                                reg_info->byte_size,        // src length
@@ -400,10 +397,10 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
                 {m_reg_data.GetDataStart(), size_t(m_reg_data.GetByteSize())}))
 
         {
-          SetAllRegisterValid(false);
+          if (should_reconfigure_registers)
+            ReconfigureRegisterInfo();
 
-          if (do_reconfigure_arm64_sve)
-            AArch64SVEReconfigure();
+          InvalidateAllRegisters();
 
           return true;
         }
@@ -434,9 +431,6 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         } else {
           // This is an actual register, write it
           success = SetPrimordialRegister(reg_info, gdb_comm);
-
-          if (success && do_reconfigure_arm64_sve)
-            AArch64SVEReconfigure();
         }
 
         // Check if writing this register will invalidate any other register
@@ -449,6 +443,10 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
                                    eRegisterKindLLDB, reg),
                                false);
         }
+
+        if (success && should_reconfigure_registers &&
+            ReconfigureRegisterInfo())
+          InvalidateAllRegisters();
 
         return success;
       }
@@ -760,58 +758,20 @@ uint32_t GDBRemoteRegisterContext::ConvertRegisterKindToRegisterNumber(
   return m_reg_info_sp->ConvertRegisterKindToRegisterNumber(kind, num);
 }
 
-bool GDBRemoteRegisterContext::AArch64SVEReconfigure() {
-  if (!m_reg_info_sp)
-    return false;
-
-  const RegisterInfo *reg_info = m_reg_info_sp->GetRegisterInfo("vg");
-  if (!reg_info)
-    return false;
-
-  uint64_t fail_value = LLDB_INVALID_ADDRESS;
-  uint32_t vg_reg_num = reg_info->kinds[eRegisterKindLLDB];
-  uint64_t vg_reg_value = ReadRegisterAsUnsigned(vg_reg_num, fail_value);
-
-  if (vg_reg_value != fail_value && vg_reg_value <= 32) {
-    const RegisterInfo *reg_info = m_reg_info_sp->GetRegisterInfo("p0");
-    if (!reg_info || vg_reg_value == reg_info->byte_size)
-      return false;
-
-    if (m_reg_info_sp->UpdateARM64SVERegistersInfos(vg_reg_value)) {
-      // Make a heap based buffer that is big enough to store all registers
-      m_reg_data.SetData(std::make_shared<DataBufferHeap>(
-          m_reg_info_sp->GetRegisterDataByteSize(), 0));
-      m_reg_data.SetByteOrder(GetByteOrder());
-
-      InvalidateAllRegisters();
-
-      return true;
-    }
-  }
-
-  return false;
+bool GDBRemoteRegisterContext::RegisterWriteCausesReconfigure(
+    const llvm::StringRef name) {
+  ExecutionContext exe_ctx(CalculateThread());
+  const Architecture *architecture =
+      exe_ctx.GetProcessRef().GetTarget().GetArchitecturePlugin();
+  return architecture && architecture->RegisterWriteCausesReconfigure(name);
 }
 
-bool GDBRemoteDynamicRegisterInfo::UpdateARM64SVERegistersInfos(uint64_t vg) {
-  // SVE Z register size is vg x 8 bytes.
-  uint32_t z_reg_byte_size = vg * 8;
-
-  // SVE vector length has changed, accordingly set size of Z, P and FFR
-  // registers. Also invalidate register offsets it will be recalculated
-  // after SVE register size update.
-  for (auto &reg : m_regs) {
-    if (reg.value_regs == nullptr) {
-      if (reg.name[0] == 'z' && isdigit(reg.name[1]))
-        reg.byte_size = z_reg_byte_size;
-      else if (reg.name[0] == 'p' && isdigit(reg.name[1]))
-        reg.byte_size = vg;
-      else if (strcmp(reg.name, "ffr") == 0)
-        reg.byte_size = vg;
-    }
-    reg.byte_offset = LLDB_INVALID_INDEX32;
-  }
-
-  // Re-calculate register offsets
-  ConfigureOffsets();
-  return true;
+bool GDBRemoteRegisterContext::ReconfigureRegisterInfo() {
+  ExecutionContext exe_ctx(CalculateThread());
+  const Architecture *architecture =
+      exe_ctx.GetProcessRef().GetTarget().GetArchitecturePlugin();
+  if (architecture)
+    return architecture->ReconfigureRegisterInfo(*(m_reg_info_sp.get()),
+                                                 m_reg_data, *this);
+  return false;
 }

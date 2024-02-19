@@ -17,8 +17,8 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -1242,6 +1242,17 @@ lldb::SBProcessInfo SBProcess::GetProcessInfo() {
     sb_proc_info.SetProcessInfo(proc_info);
   }
   return sb_proc_info;
+}
+
+lldb::SBFileSpec SBProcess::GetCoreFile() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ProcessSP process_sp(GetSP());
+  FileSpec core_file;
+  if (process_sp) {
+    core_file = process_sp->GetCoreFile();
+  }
+  return SBFileSpec(core_file);
 }
 
 lldb::addr_t SBProcess::AllocateMemory(size_t size, uint32_t permissions,

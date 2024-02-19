@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_DETACH_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_DETACH_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_DETACH_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_DETACH_H
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_detach(pthread_t thread);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_DETACH_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_DETACH_H

@@ -6,13 +6,7 @@
 define i1 @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9007199254740990
-; CHECK-NEXT:    movk x8, #65503, lsl #16
-; CHECK-NEXT:    movk x8, #65407, lsl #32
-; CHECK-NEXT:    cmp x8, x8
-; CHECK-NEXT:    csel x9, x8, x8, gt
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
   %1 = select i1 false, i64 0, i64 9006649496829950
   %2 = call i64 @llvm.smax.i64(i64 %1, i64 9006649496829950)

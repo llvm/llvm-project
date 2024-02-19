@@ -1,0 +1,30 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-inlined-subroutine-lowpc-0-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-addr main.exe.bolt > log.txt
+; RUN: llvm-dwarfdump --debug-info --verbose --show-form main.dwo.dwo >> log.txt
+; RUN: cat log.txt | FileCheck -check-prefix=BOLT-MAIN %s
+
+; Tests whether BOLT handles correctly DW_TAG_inlined_subroutine when DW_AT_low_pc is 0,
+; and split dwarf is enabled.
+
+; BOLT-MAIN: 0x
+; BOLT-MAIN: 0x
+; BOLT-MAIN: 0x
+; BOLT-MAIN: 0x0000000000000000
+; BOLT-MAIN: DW_TAG_inlined_subroutine
+; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]
+; BOLT-MAIN-SAME: (cu + 0x0043 => {0x00000043} "_Z7doStuffi")
+; BOLT-MAIN: DW_AT_low_pc [DW_FORM_GNU_addr_index]
+; BOLT-MAIN-SAME: (indexed (00000003) address = <unresolved>)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x00000015)
+; BOLT-MAIN: DW_TAG_inlined_subroutine
+; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]
+; BOLT-MAIN-SAME: (cu + 0x005a => {0x0000005a} "_Z11doStuffSamei")
+; BOLT-MAIN: DW_AT_low_pc [DW_FORM_GNU_addr_index]
+; BOLT-MAIN-SAME: (indexed (00000003) address = <unresolved>)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x0000000f)

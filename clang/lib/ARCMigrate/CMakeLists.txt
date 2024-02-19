@@ -44,4 +44,5 @@ add_clang_library(clangARCMigrate
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

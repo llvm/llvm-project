@@ -8,17 +8,28 @@
 
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;
 
 //===----------------------------------------------------------------------===//
-// AbstractDenseDataFlowAnalysis
+// AbstractDenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-LogicalResult AbstractDenseDataFlowAnalysis::initialize(Operation *top) {
+LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
   processOperation(top);
   for (Region &region : top->getRegions()) {
@@ -32,7 +43,7 @@ LogicalResult AbstractDenseDataFlowAnalysis::initialize(Operation *top) {
   return success();
 }
 
-LogicalResult AbstractDenseDataFlowAnalysis::visit(ProgramPoint point) {
+LogicalResult AbstractDenseForwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
     processOperation(op);
   else if (auto *block = llvm::dyn_cast_if_present<Block *>(point))
@@ -42,13 +53,23 @@ LogicalResult AbstractDenseDataFlowAnalysis::visit(ProgramPoint point) {
   return success();
 }
 
-void AbstractDenseDataFlowAnalysis::visitCallOperation(
-    CallOpInterface call, AbstractDenseLattice *after) {
+void AbstractDenseForwardDataFlowAnalysis::visitCallOperation(
+    CallOpInterface call, const AbstractDenseLattice &before,
+    AbstractDenseLattice *after) {
+  // Allow for customizing the behavior of calls to external symbols, including
+  // when the analysis is explicitly marked as non-interprocedural.
+  auto callable =
+      dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
+  if (!getSolverConfig().isInterprocedural() ||
+      (callable && !callable.getCallableRegion())) {
+    return visitCallControlFlowTransfer(
+        call, CallControlFlowAction::ExternalCallee, before, after);
+  }
 
   const auto *predecessors =
       getOrCreateFor<PredecessorState>(call.getOperation(), call);
-  // If not all return sites are known, then conservatively assume we can't
-  // reason about the data-flow.
+  // Otherwise, if not all return sites are known, then conservatively assume we
+  // can't reason about the data-flow.
   if (!predecessors->allPredecessorsKnown())
     return setToEntryState(after);
 
@@ -74,7 +95,7 @@ void AbstractDenseDataFlowAnalysis::visitCallOperation(
   }
 }
 
-void AbstractDenseDataFlowAnalysis::processOperation(Operation *op) {
+void AbstractDenseForwardDataFlowAnalysis::processOperation(Operation *op) {
   // If the containing block is not executable, bail out.
   if (!getOrCreateFor<Executable>(op, op->getBlock())->isLive())
     return;
@@ -97,13 +118,13 @@ void AbstractDenseDataFlowAnalysis::processOperation(Operation *op) {
   // If this is a call operation, then join its lattices across known return
   // sites.
   if (auto call = dyn_cast<CallOpInterface>(op))
-    return visitCallOperation(call, after);
+    return visitCallOperation(call, *before, after);
 
   // Invoke the operation transfer function.
   visitOperationImpl(op, *before, after);
 }
 
-void AbstractDenseDataFlowAnalysis::visitBlock(Block *block) {
+void AbstractDenseForwardDataFlowAnalysis::visitBlock(Block *block) {
   // If the block is not executable, bail out.
   if (!getOrCreateFor<Executable>(block, block)->isLive())
     return;
@@ -119,8 +140,10 @@ void AbstractDenseDataFlowAnalysis::visitBlock(Block *block) {
     if (callable && callable.getCallableRegion() == block->getParent()) {
       const auto *callsites = getOrCreateFor<PredecessorState>(block, callable);
       // If not all callsites are known, conservatively mark all lattices as
-      // having reached their pessimistic fixpoints.
-      if (!callsites->allPredecessorsKnown())
+      // having reached their pessimistic fixpoints. Do the same if
+      // interprocedural analysis is not enabled.
+      if (!callsites->allPredecessorsKnown() ||
+          !getSolverConfig().isInterprocedural())
         return setToEntryState(after);
       for (Operation *callsite : callsites->getKnownPredecessors()) {
         // Get the dense lattice before the callsite.
@@ -160,7 +183,7 @@ void AbstractDenseDataFlowAnalysis::visitBlock(Block *block) {
   }
 }
 
-void AbstractDenseDataFlowAnalysis::visitRegionBranchOperation(
+void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
     ProgramPoint point, RegionBranchOpInterface branch,
     AbstractDenseLattice *after) {
   // Get the terminator predecessors.
@@ -199,8 +222,6 @@ void AbstractDenseDataFlowAnalysis::visitRegionBranchOperation(
         op == branch ? std::optional<unsigned>()
                      : op->getBlock()->getParent()->getRegionNumber();
     if (auto *toBlock = point.dyn_cast<Block *>()) {
-      assert(op == branch ||
-             toBlock->getParent() != op->getBlock()->getParent());
       unsigned regionTo = toBlock->getParent()->getRegionNumber();
       visitRegionBranchControlFlowTransfer(branch, regionFrom, regionTo,
                                            *before, after);
@@ -220,8 +241,8 @@ void AbstractDenseDataFlowAnalysis::visitRegionBranchOperation(
 }
 
 const AbstractDenseLattice *
-AbstractDenseDataFlowAnalysis::getLatticeFor(ProgramPoint dependent,
-                                             ProgramPoint point) {
+AbstractDenseForwardDataFlowAnalysis::getLatticeFor(ProgramPoint dependent,
+                                                    ProgramPoint point) {
   AbstractDenseLattice *state = getLattice(point);
   addDependency(state, dependent);
   return state;
@@ -258,18 +279,26 @@ LogicalResult AbstractDenseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
 }
 
 void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
-    CallOpInterface call, AbstractDenseLattice *before) {
+    CallOpInterface call, const AbstractDenseLattice &after,
+    AbstractDenseLattice *before) {
   // Find the callee.
   Operation *callee = call.resolveCallable(&symbolTable);
+
   auto callable = dyn_cast_or_null<CallableOpInterface>(callee);
+  // No region means the callee is only declared in this module.
+  // If that is the case or if the solver is not interprocedural,
+  // let the hook handle it.
+  if (!getSolverConfig().isInterprocedural() ||
+      (callable && (!callable.getCallableRegion() ||
+                    callable.getCallableRegion()->empty()))) {
+    return visitCallControlFlowTransfer(
+        call, CallControlFlowAction::ExternalCallee, after, before);
+  }
+
   if (!callable)
     return setToExitState(before);
 
-  // No region means the callee is only declared in this module and we shouldn't
-  // assume anything about it.
   Region *region = callable.getCallableRegion();
-  if (!region || region->empty())
-    return setToExitState(before);
 
   // Call-level control flow specifies the data flow here.
   //
@@ -312,9 +341,10 @@ void AbstractDenseBackwardDataFlowAnalysis::processOperation(Operation *op) {
 
   // Special cases where control flow may dictate data flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op))
-    return visitRegionBranchOperation(op, branch, std::nullopt, before);
+    return visitRegionBranchOperation(op, branch, RegionBranchPoint::parent(),
+                                      before);
   if (auto call = dyn_cast<CallOpInterface>(op))
-    return visitCallOperation(call, before);
+    return visitCallOperation(call, *after, before);
 
   // Invoke the operation transfer function.
   visitOperationImpl(op, *after, before);
@@ -337,9 +367,8 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // There may be a weird case where a terminator may be transferring control
     // either to the parent or to another block, so exit blocks and successors
     // are not mutually exclusive.
-    Operation *terminator = b->getTerminator();
-    return terminator && (terminator->hasTrait<OpTrait::ReturnLike>() ||
-                          isa<RegionBranchTerminatorOpInterface>(terminator));
+    return isa_and_nonnull<RegionBranchTerminatorOpInterface>(
+        b->getTerminator());
   };
   if (isExitBlock(block)) {
     // If this block is exiting from a callable, the successors of exiting from
@@ -350,8 +379,10 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
       const auto *callsites = getOrCreateFor<PredecessorState>(block, callable);
       // If not all call sites are known, conservative mark all lattices as
       // having reached their pessimistic fix points.
-      if (!callsites->allPredecessorsKnown())
+      if (!callsites->allPredecessorsKnown() ||
+          !getSolverConfig().isInterprocedural()) {
         return setToExitState(before);
+      }
 
       for (Operation *callsite : callsites->getKnownPredecessors()) {
         const AbstractDenseLattice *after;
@@ -369,8 +400,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // If this block is exiting from an operation with region-based control
     // flow, propagate the lattice back along the control flow edge.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      visitRegionBranchOperation(block, branch,
-                                 block->getParent()->getRegionNumber(), before);
+      visitRegionBranchOperation(block, branch, block->getParent(), before);
       return;
     }
 
@@ -397,13 +427,13 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
 
 void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
     ProgramPoint point, RegionBranchOpInterface branch,
-    std::optional<unsigned> regionNo, AbstractDenseLattice *before) {
+    RegionBranchPoint branchPoint, AbstractDenseLattice *before) {
 
   // The successors of the operation may be either the first operation of the
   // entry block of each possible successor region, or the next operation when
   // the branch is a successor of itself.
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(regionNo, successors);
+  branch.getSuccessorRegions(branchPoint, successors);
   for (const RegionSuccessor &successor : successors) {
     const AbstractDenseLattice *after;
     if (successor.isParent() || successor.getSuccessor()->empty()) {
@@ -424,10 +454,8 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
       else
         after = getLatticeFor(point, &successorBlock->front());
     }
-    std::optional<unsigned> successorNo =
-        successor.isParent() ? std::optional<unsigned>()
-                             : successor.getSuccessor()->getRegionNumber();
-    visitRegionBranchControlFlowTransfer(branch, regionNo, successorNo, *after,
+
+    visitRegionBranchControlFlowTransfer(branch, branchPoint, successor, *after,
                                          before);
   }
 }

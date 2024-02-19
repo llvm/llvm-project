@@ -1,16 +1,17 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s
-// RUN: %clang_cc1 -target-cpu gfx900 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
+// RUN: %clang_cc1 -target-cpu gfx900 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple nvptx64 -fopenmp-targets=nvptx64 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=NVIDIA
 // expected-no-diagnostics
 
 
 // Check that the target attributes are set on the generated kernel
 void func() {
-  // CHECK: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l15() #0
-  // CHECK: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l17()
-  // CHECK: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l19() #4
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l16(ptr {{[^,]+}}) #0
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l18(ptr {{[^,]+}})
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l20(ptr {{[^,]+}}) #4
 
   #pragma omp target ompx_attribute([[clang::amdgpu_flat_work_group_size(10, 20)]])
   {}
@@ -21,11 +22,20 @@ void func() {
   {}
 }
 
-// CHECK: attributes #0
-// CHECK-SAME: "amdgpu-flat-work-group-size"="10,20"
-// CHECK: attributes #4
-// CHECK-SAME: "amdgpu-flat-work-group-size"="3,17"
-// CHECK-SAME: "amdgpu-waves-per-eu"="3,7"
+// AMD: attributes #0
+// AMD-SAME: "amdgpu-flat-work-group-size"="10,20"
+// AMD-SAME: "omp_target_thread_limit"="20"
+// AMD: "omp_target_thread_limit"="45"
+// AMD: attributes #4
+// AMD-SAME: "amdgpu-flat-work-group-size"="3,17"
+// AMD-SAME: "amdgpu-waves-per-eu"="3,7"
+// AMD-SAME: "omp_target_thread_limit"="17"
 
-// CHECK: !{ptr @__omp_offloading[[HASH]]_l17, !"maxntidx", i32 45}
-// CHECK: !{ptr @__omp_offloading[[HASH]]_l17, !"minctasm", i32 90}
+// It is unclear if we should use the AMD annotations for other targets, we do for now.
+// NVIDIA: "omp_target_thread_limit"="20"
+// NVIDIA: "omp_target_thread_limit"="45"
+// NVIDIA: "omp_target_thread_limit"="17"
+// NVIDIA: !{ptr @__omp_offloading[[HASH1:.*]]_l16, !"maxntidx", i32 20}
+// NVIDIA: !{ptr @__omp_offloading[[HASH2:.*]]_l18, !"minctasm", i32 90}
+// NVIDIA: !{ptr @__omp_offloading[[HASH2]]_l18, !"maxntidx", i32 45}
+// NVIDIA: !{ptr @__omp_offloading[[HASH3:.*]]_l20, !"maxntidx", i32 17}

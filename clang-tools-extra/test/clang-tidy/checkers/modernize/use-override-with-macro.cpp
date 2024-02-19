@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-override %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-override.OverrideSpelling, value: 'OVERRIDE'},{key: modernize-use-override.FinalSpelling, value: 'FINAL'}]}"
+// RUN:   -config="{CheckOptions: {modernize-use-override.OverrideSpelling: 'OVERRIDE',modernize-use-override.FinalSpelling: 'FINAL'}}"
 
 #define ABSTRACT = 0
 

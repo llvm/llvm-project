@@ -85,7 +85,6 @@ __attribute__((objc_arc_weak_reference_unavailable))
 }
 @end
 
-// rdar://10532449
 @interface rdar10532449
 @property (strong) id assign_prop;
 @property (strong, readonly) id  strong_readonly_prop;

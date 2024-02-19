@@ -229,7 +229,8 @@ public:
   }
   bool shouldTrackSubRegLiveness(Register VReg) const {
     assert(VReg.isVirtual() && "Must pass a VReg");
-    return shouldTrackSubRegLiveness(*getRegClass(VReg));
+    const TargetRegisterClass *RC = getRegClassOrNull(VReg);
+    return LLVM_LIKELY(RC) ? shouldTrackSubRegLiveness(*RC) : false;
   }
   bool subRegLivenessEnabled() const {
     return TracksSubRegLiveness;
@@ -750,6 +751,24 @@ public:
   /// function with the specified register class.
   Register createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
+
+  /// All attributes(register class or bank and low-level type) a virtual
+  /// register can have.
+  struct VRegAttrs {
+    RegClassOrRegBank RCOrRB;
+    LLT Ty;
+  };
+
+  /// Returns register class or bank and low level type of \p Reg. Always safe
+  /// to use. Special values are returned when \p Reg does not have some of the
+  /// attributes.
+  VRegAttrs getVRegAttrs(Register Reg) {
+    return {getRegClassOrRegBank(Reg), getType(Reg)};
+  }
+
+  /// Create and return a new virtual register in the function with the
+  /// specified register attributes(register class or bank and low level type).
+  Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
 
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.

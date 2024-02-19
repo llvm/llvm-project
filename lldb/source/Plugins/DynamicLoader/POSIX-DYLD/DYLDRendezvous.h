@@ -21,6 +21,7 @@
 using lldb_private::LoadedModuleInfoList;
 
 namespace lldb_private {
+class Log;
 class Process;
 }
 
@@ -28,9 +29,81 @@ class Process;
 /// Interface to the runtime linker.
 ///
 /// A structure is present in a processes memory space which is updated by the
-/// runtime liker each time a module is loaded or unloaded.  This class
+/// dynamic linker each time a module is loaded or unloaded.  This class
 /// provides an interface to this structure and maintains a consistent
 /// snapshot of the currently loaded modules.
+///
+/// In the dynamic loader sources, this structure has a type of "r_debug" and
+/// the name of the structure us "_r_debug". The structure looks like:
+///
+/// struct r_debug {
+///     // Version number for this protocol.
+///     int r_version;
+///     // Head of the chain of loaded objects.
+///     struct link_map *r_map;
+///     // The address the debugger should set a breakpoint at in order to get
+///     // notified when shared libraries are added or removed
+///     uintptr_t r_brk;
+///     // This state value describes the mapping change taking place when the
+///     // 'r_brk' address is called.
+///     enum {
+///       RT_CONSISTENT, // Mapping change is complete.
+///       RT_ADD,        // Beginning to add a new object.
+///       RT_DELETE,     // Beginning to remove an object mapping.
+///     } r_state;
+///     // Base address the linker is loaded at.
+///     uintptr_t r_ldbase;
+///   };
+///
+/// The dynamic linker then defines a global variable using this type named
+/// "_r_debug":
+///
+///   r_debug _r_debug;
+///
+/// The DYLDRendezvous class defines a local version of this structure named
+/// DYLDRendezvous::Rendezvous. See the definition inside the class definition
+/// for DYLDRendezvous.
+///
+/// This structure can be located by looking through the .dynamic section in
+/// the main executable and finding the DT_DEBUG tag entry. This value starts
+/// out with a value of zero when the program first is initially loaded, but
+/// the address of the "_r_debug" structure from ld.so is filled in by the
+/// dynamic loader during program initialization code in ld.so prior to loading
+/// or unloading and shared libraries.
+///
+/// The dynamic loader will update this structure as shared libraries are
+/// loaded and will call a specific function that LLDB knows to set a
+/// breakpoint on (from _r_debug.r_brk) so LLDB will find out when shared
+/// libraries are loaded or unloaded. Each time this breakpoint is hit, LLDB
+/// looks at the contents of this structure and the contents tell LLDB what
+/// needs to be done.
+///
+/// Currently we expect the "state" in this structure to change as things
+/// happen.
+///
+/// When any shared libraries are loaded the following happens:
+/// - _r_debug.r_map is updated with the new shared libraries. This is a
+///   doubly linked list of "link_map *" entries.
+/// - _r_debug.r_state is set to RT_ADD and the debugger notification
+///   function is called notifying the debugger that shared libraries are
+///   about to be added, but are not yet ready for use.
+/// - Once the the shared libraries are fully loaded, _r_debug.r_state is set
+///   to RT_CONSISTENT and the debugger notification function is called again
+///   notifying the debugger that shared libraries are ready for use.
+///   DYLDRendezvous must remember that the previous state was RT_ADD when it
+///   receives a RT_CONSISTENT in order to know to add libraries
+///
+/// When any shared libraries are unloaded the following happens:
+/// - _r_debug.r_map is updated and the unloaded libraries are removed.
+/// - _r_debug.r_state is set to RT_DELETE and the debugger notification
+///   function is called notifying the debugger that shared libraries are
+///   about to be removed.
+/// - Once the the shared libraries are removed _r_debug.r_state is set to
+///   RT_CONSISTENT and the debugger notification function is called again
+///   notifying the debugger that shared libraries have been removed.
+///   DYLDRendezvous must remember that the previous state was RT_DELETE when
+///   it receives a RT_CONSISTENT in order to know to remove libraries
+///
 class DYLDRendezvous {
 
   // This structure is used to hold the contents of the debug rendezvous
@@ -45,6 +118,8 @@ class DYLDRendezvous {
     lldb::addr_t ldbase = 0;
 
     Rendezvous() = default;
+
+    void DumpToLog(lldb_private::Log *log, const char *label);
   };
 
   /// Locates the address of the rendezvous structure.  It updates
@@ -126,8 +201,15 @@ public:
 
   /// Constants describing the state of the rendezvous.
   ///
+  /// These values are defined to match the r_debug.r_state enum from the
+  /// actual dynamic loader sources.
+  ///
   /// \see GetState().
-  enum RendezvousState { eConsistent, eAdd, eDelete };
+  enum RendezvousState {
+    eConsistent, // RT_CONSISTENT
+    eAdd,        // RT_ADD
+    eDelete      // RT_DELETE
+  };
 
   /// Structure representing the shared objects currently loaded into the
   /// inferior process.
@@ -275,6 +357,9 @@ protected:
     eAddModules,
     eRemoveModules
   };
+
+  static const char *StateToCStr(RendezvousState state);
+  static const char *ActionToCStr(RendezvousAction action);
 
   /// Returns the current action to be taken given the current and previous
   /// state

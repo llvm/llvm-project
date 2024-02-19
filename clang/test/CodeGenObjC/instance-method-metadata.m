@@ -1,8 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -S %s -o - | FileCheck %s
 
-// rdar://9072317
-
 /** The problem looks like clang getting confused when a single translation unit 
     contains a protocol with a property and two classes that implement that protocol 
     and synthesize the property.

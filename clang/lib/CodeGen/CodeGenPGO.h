@@ -16,6 +16,7 @@
 #include "CGBuilder.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
+#include "MCDCState.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>
@@ -35,8 +36,11 @@ private:
   unsigned NumRegionCounters;
   uint64_t FunctionHash;
   std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
+  std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionMCDCBitmapMap;
+  std::unique_ptr<llvm::DenseMap<const Stmt *, int16_t>> RegionCondIDMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
+  std::unique_ptr<MCDC::State> RegionMCDCState;
   std::vector<uint64_t> RegionCounts;
   uint64_t CurrentRegionCount;
 
@@ -103,10 +107,18 @@ private:
                         bool IsInMainFile);
   bool skipRegionMappingForDecl(const Decl *D);
   void emitCounterRegionMapping(const Decl *D);
+  bool canEmitMCDCCoverage(const CGBuilderTy &Builder);
 
 public:
   void emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
                             llvm::Value *StepV);
+  void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
+                                      Address MCDCCondBitmapAddr);
+  void emitMCDCParameters(CGBuilderTy &Builder);
+  void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
+                               Address MCDCCondBitmapAddr);
+  void emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
+                                Address MCDCCondBitmapAddr, llvm::Value *Val);
 
   /// Return the region count for the counter at the given index.
   uint64_t getRegionCount(const Stmt *S) {

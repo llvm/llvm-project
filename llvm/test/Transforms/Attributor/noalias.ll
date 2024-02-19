@@ -737,7 +737,7 @@ define internal void @test16_sub(ptr noalias %p, i32 %c1, i32 %c2) {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14]]
+; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly align 4 [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:

@@ -1,6 +1,5 @@
 llvm_canonicalize_cmake_booleans(
   BUILD_SHARED_LIBS
-  LLVM_HAVE_LIBXAR
   HAVE_OCAMLOPT
   LLVM_ENABLE_DIA_SDK
   LLVM_ENABLE_FFI
@@ -25,6 +24,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_REVERSE_ITERATION
   LLVM_INCLUDE_DXIL_TESTS
   LLVM_TOOL_LLVM_DRIVER_BUILD
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
 
 configure_lit_site_cfg(
@@ -120,7 +120,6 @@ set(LLVM_TEST_DEPENDS
           llvm-readobj
           llvm-readelf
           llvm-reduce
-          llvm-remark-size-diff
           llvm-remarkutil
           llvm-rtdyld
           llvm-sim
@@ -131,7 +130,7 @@ set(LLVM_TEST_DEPENDS
           llvm-strip
           llvm-symbolizer
           llvm-tblgen
-          llvm-tapi-diff
+          llvm-readtapi
           llvm-tli-checker
           llvm-undname
           llvm-windres
@@ -210,6 +209,7 @@ if(TARGET ocaml_llvm)
           ocaml_llvm_executionengine
           ocaml_llvm_irreader
           ocaml_llvm_linker
+          ocaml_llvm_passbuilder
           ocaml_llvm_target
           ocaml_llvm_transform_utils
         )
@@ -221,6 +221,11 @@ endif()
 
 if(LLVM_ENABLE_HTTPLIB)
   list(APPEND LLVM_TEST_DEPENDS llvm-debuginfod)
+endif()
+
+if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND LLVM_TEST_DEPENDS spirv-dis)
+  list(APPEND LLVM_TEST_DEPENDS spirv-val)
 endif()
 
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})

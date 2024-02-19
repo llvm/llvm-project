@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Optimizer/Builder/Complex.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Todo.h"
 
 #include <algorithm>
@@ -61,12 +62,24 @@ static mlir::Attribute convertToAttribute(
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
     return builder.getIntegerAttr(type, value.IsTrue());
   } else {
-    static_assert(TC == Fortran::common::TypeCategory::Real,
-                  "type values cannot be converted to attributes");
-    std::string str = value.DumpHexadecimal();
-    auto floatVal =
-        consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
-    return builder.getFloatAttr(type, floatVal);
+    auto getFloatAttr = [&](const auto &value, mlir::Type type) {
+      std::string str = value.DumpHexadecimal();
+      auto floatVal =
+          consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
+      return builder.getFloatAttr(type, floatVal);
+    };
+
+    if constexpr (TC == Fortran::common::TypeCategory::Real) {
+      return getFloatAttr(value, type);
+    } else {
+      static_assert(TC == Fortran::common::TypeCategory::Complex,
+                    "type values cannot be converted to attributes");
+      mlir::Type eleTy = mlir::cast<mlir::ComplexType>(type).getElementType();
+      llvm::SmallVector<mlir::Attribute, 2> attrs = {
+          getFloatAttr(value.REAL(), eleTy),
+          getFloatAttr(value.AIMAG(), eleTy)};
+      return builder.getArrayAttr(attrs);
+    }
   }
   return {};
 }
@@ -75,12 +88,11 @@ namespace {
 /// Helper class to lower an array constant to a global with an MLIR dense
 /// attribute.
 ///
-/// If we have an array of integer, real, or logical, then we can
+/// If we have an array of integer, real, complex, or logical, then we can
 /// create a global array with the dense attribute.
 ///
-/// The mlir tensor type can only handle integer, real, or logical. It
-/// does not currently support nested structures which is required for
-/// complex.
+/// The mlir tensor type can only handle integer, real, complex, or logical.
+/// It does not currently support nested structures.
 class DenseGlobalBuilder {
 public:
   static fir::GlobalOp tryCreating(fir::FirOpBuilder &builder,
@@ -98,6 +110,8 @@ public:
             [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeReal> &x) {
               globalBuilder.tryConvertingToAttributes(builder, x);
             },
+            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeComplex> &
+                    x) { globalBuilder.tryConvertingToAttributes(builder, x); },
             [](const auto &) {},
         },
         initExpr.u);
@@ -133,6 +147,9 @@ private:
                       : TC;
     attributeElementType = Fortran::lower::getFIRType(
         builder.getContext(), attrTc, KIND, std::nullopt);
+    if (auto firCTy = mlir::dyn_cast<fir::ComplexType>(attributeElementType))
+      attributeElementType =
+          mlir::ComplexType::get(firCTy.getEleType(builder.getKindMap()));
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -307,7 +324,8 @@ genScalarLit(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto size = builder.getKindMap().getCharacterBitsize(KIND) / 8 * value.size();
   llvm::StringRef strVal(reinterpret_cast<const char *>(value.c_str()), size);
-  std::string globalName = fir::factory::uniqueCGIdent("cl", strVal);
+  std::string globalName = fir::factory::uniqueCGIdent(
+      KIND == 1 ? "cl"s : "cl"s + std::to_string(KIND), strVal);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   fir::CharacterType type =
       fir::CharacterType::get(builder.getContext(), KIND, len);
@@ -330,6 +348,98 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
                  mlir::Location loc,
                  const Fortran::lower::SomeExpr &constantExpr);
 
+static mlir::Value genStructureComponentInit(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, const Fortran::lower::SomeExpr &expr,
+    mlir::Value res) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::RecordType recTy = mlir::cast<fir::RecordType>(res.getType());
+  std::string name = converter.getRecordTypeFieldName(sym);
+  mlir::Type componentTy = recTy.getType(name);
+  auto fieldTy = fir::FieldType::get(recTy.getContext());
+  assert(componentTy && "failed to retrieve component");
+  // FIXME: type parameters must come from the derived-type-spec
+  auto field = builder.create<fir::FieldIndexOp>(
+      loc, fieldTy, name, recTy,
+      /*typeParams=*/mlir::ValueRange{} /*TODO*/);
+
+  if (Fortran::semantics::IsAllocatable(sym)) {
+    if (!Fortran::evaluate::IsNullPointer(expr)) {
+      fir::emitFatalError(loc, "constant structure constructor with an "
+                               "allocatable component value that is not NULL");
+    } else {
+      // Handle NULL() initialization
+      mlir::Value componentValue{fir::factory::createUnallocatedBox(
+          builder, loc, componentTy, std::nullopt)};
+      componentValue = builder.createConvert(loc, componentTy, componentValue);
+
+      return builder.create<fir::InsertValueOp>(
+          loc, recTy, res, componentValue,
+          builder.getArrayAttr(field.getAttributes()));
+    }
+  }
+
+  if (Fortran::semantics::IsPointer(sym)) {
+    if (Fortran::semantics::IsProcedure(sym))
+      TODO(loc, "procedure pointer component initial value");
+    mlir::Value initialTarget =
+        Fortran::lower::genInitialDataTarget(converter, loc, componentTy, expr);
+    res = builder.create<fir::InsertValueOp>(
+        loc, recTy, res, initialTarget,
+        builder.getArrayAttr(field.getAttributes()));
+    return res;
+  }
+
+  if (Fortran::lower::isDerivedTypeWithLenParameters(sym))
+    TODO(loc, "component with length parameters in structure constructor");
+
+  // Special handling for scalar c_ptr/c_funptr constants. The array constant
+  // must fall through to genConstantValue() below.
+  if (Fortran::semantics::IsBuiltinCPtr(sym) && sym.Rank() == 0 &&
+      (Fortran::evaluate::GetLastSymbol(expr) ||
+       Fortran::evaluate::IsNullPointer(expr))) {
+    // Builtin c_ptr and c_funptr have special handling because designators
+    // and NULL() are handled as initial values for them as an extension
+    // (otherwise only c_ptr_null/c_funptr_null are allowed and these are
+    // replaced by structure constructors by semantics, so GetLastSymbol
+    // returns nothing).
+
+    // The Ev::Expr is an initializer that is a pointer target (e.g., 'x' or
+    // NULL()) that must be inserted into an intermediate cptr record value's
+    // address field, which ought to be an intptr_t on the target.
+    mlir::Value addr = fir::getBase(
+        Fortran::lower::genExtAddrInInitializer(converter, loc, expr));
+    if (addr.getType().isa<fir::BoxProcType>())
+      addr = builder.create<fir::BoxAddrOp>(loc, addr);
+    assert((fir::isa_ref_type(addr.getType()) ||
+            addr.getType().isa<mlir::FunctionType>()) &&
+           "expect reference type for address field");
+    assert(fir::isa_derived(componentTy) &&
+           "expect C_PTR, C_FUNPTR to be a record");
+    auto cPtrRecTy = componentTy.cast<fir::RecordType>();
+    llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
+    mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
+    auto addrField = builder.create<fir::FieldIndexOp>(
+        loc, fieldTy, addrFieldName, componentTy,
+        /*typeParams=*/mlir::ValueRange{});
+    mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
+    auto undef = builder.create<fir::UndefOp>(loc, componentTy);
+    addr = builder.create<fir::InsertValueOp>(
+        loc, componentTy, undef, castAddr,
+        builder.getArrayAttr(addrField.getAttributes()));
+    res = builder.create<fir::InsertValueOp>(
+        loc, recTy, res, addr, builder.getArrayAttr(field.getAttributes()));
+    return res;
+  }
+
+  mlir::Value val = fir::getBase(genConstantValue(converter, loc, expr));
+  assert(!fir::isa_ref_type(val.getType()) && "expecting a constant value");
+  mlir::Value castVal = builder.createConvert(loc, componentTy, val);
+  res = builder.create<fir::InsertValueOp>(
+      loc, recTy, res, castVal, builder.getArrayAttr(field.getAttributes()));
+  return res;
+}
+
 // Generate a StructureConstructor inlined (returns raw fir.type<T> value,
 // not the address of a global constant).
 static mlir::Value genInlinedStructureCtorLitImpl(
@@ -337,82 +447,72 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     const Fortran::evaluate::StructureConstructor &ctor, mlir::Type type) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto recTy = type.cast<fir::RecordType>();
-  auto fieldTy = fir::FieldType::get(type.getContext());
-  mlir::Value res = builder.create<fir::UndefOp>(loc, recTy);
 
-  for (const auto &[sym, expr] : ctor.values()) {
-    // Parent components need more work because they do not appear in the
-    // fir.rec type.
-    if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
-      TODO(loc, "parent component in structure constructor");
-
-    llvm::StringRef name = toStringRef(sym->name());
-    mlir::Type componentTy = recTy.getType(name);
-    // FIXME: type parameters must come from the derived-type-spec
-    auto field = builder.create<fir::FieldIndexOp>(
-        loc, fieldTy, name, type,
-        /*typeParams=*/mlir::ValueRange{} /*TODO*/);
-
-    if (Fortran::semantics::IsAllocatable(sym))
-      TODO(loc, "allocatable component in structure constructor");
-
-    if (Fortran::semantics::IsPointer(sym)) {
-      mlir::Value initialTarget = Fortran::lower::genInitialDataTarget(
-          converter, loc, componentTy, expr.value());
-      res = builder.create<fir::InsertValueOp>(
-          loc, recTy, res, initialTarget,
-          builder.getArrayAttr(field.getAttributes()));
-      continue;
+  if (!converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    mlir::Value res = builder.create<fir::UndefOp>(loc, recTy);
+    for (const auto &[sym, expr] : ctor.values()) {
+      // Parent components need more work because they do not appear in the
+      // fir.rec type.
+      if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
+        TODO(loc, "parent component in structure constructor");
+      res = genStructureComponentInit(converter, loc, sym, expr.value(), res);
     }
-
-    if (Fortran::lower::isDerivedTypeWithLenParameters(sym))
-      TODO(loc, "component with length parameters in structure constructor");
-
-    // Special handling for scalar c_ptr/c_funptr constants. The array constant
-    // must fall through to genConstantValue() below.
-    if (Fortran::semantics::IsBuiltinCPtr(sym) && sym->Rank() == 0) {
-      // Builtin c_ptr and c_funptr have special handling because initial
-      // values are handled for them as an extension.
-      mlir::Value addr = fir::getBase(Fortran::lower::genExtAddrInInitializer(
-          converter, loc, expr.value()));
-      if (addr.getType() == componentTy) {
-        // Do nothing. The Ev::Expr was returned as a value that can be
-        // inserted directly to the component without an intermediary.
-      } else {
-        // The Ev::Expr returned is an initializer that is a pointer (e.g.,
-        // null) that must be inserted into an intermediate cptr record
-        // value's address field, which ought to be an intptr_t on the target.
-        if (addr.getType().isa<fir::BoxProcType>())
-          addr = builder.create<fir::BoxAddrOp>(loc, addr);
-        assert((fir::isa_ref_type(addr.getType()) ||
-                addr.getType().isa<mlir::FunctionType>()) &&
-               "expect reference type for address field");
-        assert(fir::isa_derived(componentTy) &&
-               "expect C_PTR, C_FUNPTR to be a record");
-        auto cPtrRecTy = componentTy.cast<fir::RecordType>();
-        llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
-        mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
-        auto addrField = builder.create<fir::FieldIndexOp>(
-            loc, fieldTy, addrFieldName, componentTy,
-            /*typeParams=*/mlir::ValueRange{});
-        mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
-        auto undef = builder.create<fir::UndefOp>(loc, componentTy);
-        addr = builder.create<fir::InsertValueOp>(
-            loc, componentTy, undef, castAddr,
-            builder.getArrayAttr(addrField.getAttributes()));
-      }
-      res = builder.create<fir::InsertValueOp>(
-          loc, recTy, res, addr, builder.getArrayAttr(field.getAttributes()));
-      continue;
-    }
-
-    mlir::Value val =
-        fir::getBase(genConstantValue(converter, loc, expr.value()));
-    assert(!fir::isa_ref_type(val.getType()) && "expecting a constant value");
-    mlir::Value castVal = builder.createConvert(loc, componentTy, val);
-    res = builder.create<fir::InsertValueOp>(
-        loc, recTy, res, castVal, builder.getArrayAttr(field.getAttributes()));
+    return res;
   }
+
+  auto fieldTy = fir::FieldType::get(recTy.getContext());
+  mlir::Value res{};
+  // When the first structure component values belong to some parent type PT
+  // and the next values belong to a type extension ET, a new undef for ET must
+  // be created and the previous PT value inserted into it. There may
+  // be empty parent types in between ET and PT, hence the list and while loop.
+  auto insertParentValueIntoExtension = [&](mlir::Type typeExtension) {
+    assert(res && "res must be set");
+    llvm::SmallVector<mlir::Type> parentTypes = {typeExtension};
+    while (true) {
+      fir::RecordType last = mlir::cast<fir::RecordType>(parentTypes.back());
+      mlir::Type next =
+          last.getType(0); // parent components are first in HLFIR.
+      if (next != res.getType())
+        parentTypes.push_back(next);
+      else
+        break;
+    }
+    for (mlir::Type parentType : llvm::reverse(parentTypes)) {
+      auto undef = builder.create<fir::UndefOp>(loc, parentType);
+      fir::RecordType parentRecTy = mlir::cast<fir::RecordType>(parentType);
+      auto field = builder.create<fir::FieldIndexOp>(
+          loc, fieldTy, parentRecTy.getTypeList()[0].first, parentType,
+          /*typeParams=*/mlir::ValueRange{} /*TODO*/);
+      res = builder.create<fir::InsertValueOp>(
+          loc, parentRecTy, undef, res,
+          builder.getArrayAttr(field.getAttributes()));
+    }
+  };
+
+  const Fortran::semantics::DerivedTypeSpec *curentType = nullptr;
+  for (const auto &[sym, expr] : ctor.values()) {
+    const Fortran::semantics::DerivedTypeSpec *componentParentType =
+        sym->owner().derivedTypeSpec();
+    assert(componentParentType && "failed to retrieve component parent type");
+    if (!res) {
+      mlir::Type parentType = converter.genType(*componentParentType);
+      curentType = componentParentType;
+      res = builder.create<fir::UndefOp>(loc, parentType);
+    } else if (*componentParentType != *curentType) {
+      mlir::Type parentType = converter.genType(*componentParentType);
+      insertParentValueIntoExtension(parentType);
+      curentType = componentParentType;
+    }
+    res = genStructureComponentInit(converter, loc, sym, expr.value(), res);
+  }
+
+  if (!res) // structure constructor for empty type.
+    return builder.create<fir::UndefOp>(loc, recTy);
+
+  // The last component may belong to a parent type.
+  if (res.getType() != recTy)
+    insertParentValueIntoExtension(recTy);
   return res;
 }
 
@@ -544,7 +644,8 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
     // always possible.
     if constexpr (T::category == Fortran::common::TypeCategory::Logical ||
                   T::category == Fortran::common::TypeCategory::Integer ||
-                  T::category == Fortran::common::TypeCategory::Real) {
+                  T::category == Fortran::common::TypeCategory::Real ||
+                  T::category == Fortran::common::TypeCategory::Complex) {
       global = DenseGlobalBuilder::tryCreating(
           builder, loc, arrayTy, globalName, builder.createInternalLinkage(),
           true, constant);

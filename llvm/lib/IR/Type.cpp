@@ -58,6 +58,8 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
 }
 
 bool Type::isScalableTy() const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->isScalableTy();
   if (const auto *STy = dyn_cast<StructType>(this)) {
     SmallPtrSet<Type *, 4> Visited;
     return STy->containsScalableVectorType(&Visited);
@@ -139,16 +141,9 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
       Ty->getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
 
-  // At this point we have only various mismatches of the first class types
-  // remaining and ptr->ptr. Just select the lossless conversions. Everything
-  // else is not lossless. Conservatively assume we can't losslessly convert
-  // between pointers with different address spaces.
-  if (auto *PTy = dyn_cast<PointerType>(this)) {
-    if (auto *OtherPTy = dyn_cast<PointerType>(Ty))
-      return PTy->getAddressSpace() == OtherPTy->getAddressSpace();
-    return false;
-  }
-  return false;  // Other types have no identity values
+  // Conservatively assume we can't losslessly convert between pointers with
+  // different address spaces.
+  return false;
 }
 
 bool Type::isEmptyTy() const {
@@ -170,17 +165,26 @@ bool Type::isEmptyTy() const {
 
 TypeSize Type::getPrimitiveSizeInBits() const {
   switch (getTypeID()) {
-  case Type::HalfTyID: return TypeSize::Fixed(16);
-  case Type::BFloatTyID: return TypeSize::Fixed(16);
-  case Type::FloatTyID: return TypeSize::Fixed(32);
-  case Type::DoubleTyID: return TypeSize::Fixed(64);
-  case Type::X86_FP80TyID: return TypeSize::Fixed(80);
-  case Type::FP128TyID: return TypeSize::Fixed(128);
-  case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
-  case Type::X86_MMXTyID: return TypeSize::Fixed(64);
-  case Type::X86_AMXTyID: return TypeSize::Fixed(8192);
+  case Type::HalfTyID:
+    return TypeSize::getFixed(16);
+  case Type::BFloatTyID:
+    return TypeSize::getFixed(16);
+  case Type::FloatTyID:
+    return TypeSize::getFixed(32);
+  case Type::DoubleTyID:
+    return TypeSize::getFixed(64);
+  case Type::X86_FP80TyID:
+    return TypeSize::getFixed(80);
+  case Type::FP128TyID:
+    return TypeSize::getFixed(128);
+  case Type::PPC_FP128TyID:
+    return TypeSize::getFixed(128);
+  case Type::X86_MMXTyID:
+    return TypeSize::getFixed(64);
+  case Type::X86_AMXTyID:
+    return TypeSize::getFixed(8192);
   case Type::IntegerTyID:
-    return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
+    return TypeSize::getFixed(cast<IntegerType>(this)->getBitWidth());
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     const VectorType *VTy = cast<VectorType>(this);
@@ -189,7 +193,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     assert(!ETS.isScalable() && "Vector type should have fixed-width elements");
     return {ETS.getFixedValue() * EC.getKnownMinValue(), EC.isScalable()};
   }
-  default: return TypeSize::Fixed(0);
+  default:
+    return TypeSize::getFixed(0);
   }
 }
 
@@ -252,66 +257,6 @@ IntegerType *Type::getInt128Ty(LLVMContext &C) { return &C.pImpl->Int128Ty; }
 
 IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
-}
-
-PointerType *Type::getHalfPtrTy(LLVMContext &C, unsigned AS) {
-  return getHalfTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getBFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getBFloatTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getFloatTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getDoublePtrTy(LLVMContext &C, unsigned AS) {
-  return getDoubleTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_FP80PtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_FP80Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getFP128PtrTy(LLVMContext &C, unsigned AS) {
-  return getFP128Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getPPC_FP128PtrTy(LLVMContext &C, unsigned AS) {
-  return getPPC_FP128Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_MMXPtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_MMXTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_AMXPtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_AMXTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getIntNPtrTy(LLVMContext &C, unsigned N, unsigned AS) {
-  return getIntNTy(C, N)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt1PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt1Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt8PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt8Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt16PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt16Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt32PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt32Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt64PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt64Ty(C)->getPointerTo(AS);
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
@@ -714,8 +659,7 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 bool ArrayType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy() &&
-         !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy();
 }
 
 //===----------------------------------------------------------------------===//
@@ -890,13 +834,16 @@ struct TargetTypeInfo {
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name.startswith("spirv."))
-    return TargetTypeInfo(Type::getInt8PtrTy(C, 0), TargetExtType::HasZeroInit,
+  if (Name.equals("spirv.Image"))
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal);
+  if (Name.starts_with("spirv."))
+    return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal);
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
-    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16));
+    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
+                          TargetExtType::HasZeroInit);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

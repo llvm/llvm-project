@@ -66,7 +66,7 @@ using ForwardSliceOptions = SliceOptions;
 ///
 /// Upon return to the root call, `forwardSlice` is filled with a
 /// postorder list of uses (i.e. a reverse topological order). To get a proper
-/// topological order, we just just reverse the order in `forwardSlice` before
+/// topological order, we just reverse the order in `forwardSlice` before
 /// returning.
 ///
 /// Example starting from node 0
@@ -93,12 +93,12 @@ using ForwardSliceOptions = SliceOptions;
 ///      {4, 3, 6, 2, 1, 5, 8, 7, 9}
 ///
 void getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
-                     ForwardSliceOptions options = {});
+                     const ForwardSliceOptions &options = {});
 
 /// Value-rooted version of `getForwardSlice`. Return the union of all forward
 /// slices for the uses of the value `root`.
 void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
-                     ForwardSliceOptions options = {});
+                     const ForwardSliceOptions &options = {});
 
 /// Fills `backwardSlice` with the computed backward slice (i.e.
 /// all the transitive defs of op), **without** including that operation.
@@ -135,12 +135,12 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 ///    {1, 2, 5, 3, 4, 6}
 ///
 void getBackwardSlice(Operation *op, SetVector<Operation *> *backwardSlice,
-                      BackwardSliceOptions options = {});
+                      const BackwardSliceOptions &options = {});
 
 /// Value-rooted version of `getBackwardSlice`. Return the union of all backward
 /// slices for the op defining or owning the value `root`.
 void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                      BackwardSliceOptions options = {});
+                      const BackwardSliceOptions &options = {});
 
 /// Iteratively computes backward slices and forward slices until
 /// a fixed point is reached. Returns an `SetVector<Operation *>` which
@@ -219,9 +219,9 @@ void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
 /// and keep things ordered but this is still hand-wavy and not worth the
 /// trouble for now: punt to a simple worklist-based solution.
 ///
-SetVector<Operation *> getSlice(Operation *op,
-                                BackwardSliceOptions backwardSliceOptions = {},
-                                ForwardSliceOptions forwardSliceOptions = {});
+SetVector<Operation *>
+getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions = {},
+         const ForwardSliceOptions &forwardSliceOptions = {});
 
 /// Multi-root DAG topological sort.
 /// Performs a topological sort of the Operation in the `toSort` SetVector.

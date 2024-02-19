@@ -78,6 +78,39 @@ entry:
   ret i1 %icmp
 }
 
+define i1 @icmpRI_AND_ne(i32 %x) {
+; CHECK-LABEL: icmpRI_AND_ne:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    btsti16 a0, 15
+; CHECK-NEXT:    mvc32 a0
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: icmpRI_AND_ne:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    lsli16 a3, a1, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    movi16 a2, 128
+; GENERIC-NEXT:    lsli16 a2, a2, 8
+; GENERIC-NEXT:    or16 a2, a3
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    and16 a2, a0
+; GENERIC-NEXT:    cmpnei16 a2, 0
+; GENERIC-NEXT:    mvcv16 a1
+; GENERIC-NEXT:    movi16 a0, 1
+; GENERIC-NEXT:    subu16 a0, a1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %and = and i32 %x, 32768
+  %icmp = icmp ne i32 %and, 0
+  ret i1 %icmp
+}
+
 define i1 @ICMP_LONG_eq(i64 %x, i64 %y) {
 ; CHECK-LABEL: ICMP_LONG_eq:
 ; CHECK:       # %bb.0: # %entry
@@ -708,10 +741,10 @@ define i1 @ICMP_LONG_ugt(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB25_2
+; GENERIC-NEXT:    bt16 .LBB26_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    mov16 a0, l0
-; GENERIC-NEXT:  .LBB25_2: # %entry
+; GENERIC-NEXT:  .LBB26_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -743,11 +776,11 @@ define i1 @ICMP_LONG_I_ugt(i64 %x) {
 ; GENERIC-NEXT:    cmphs16 a2, a0
 ; GENERIC-NEXT:    mvcv16 a0
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB26_2
+; GENERIC-NEXT:    bt16 .LBB27_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    subu16 a2, a1
 ; GENERIC-NEXT:    mov16 a0, a2
-; GENERIC-NEXT:  .LBB26_2: # %entry
+; GENERIC-NEXT:  .LBB27_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -1046,13 +1079,13 @@ define i1 @ICMP_LONG_uge(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB36_2
+; GENERIC-NEXT:    bt16 .LBB37_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    subu16 a0, l1
-; GENERIC-NEXT:    br32 .LBB36_3
-; GENERIC-NEXT:  .LBB36_2:
+; GENERIC-NEXT:    br32 .LBB37_3
+; GENERIC-NEXT:  .LBB37_2:
 ; GENERIC-NEXT:    subu16 a0, a2
-; GENERIC-NEXT:  .LBB36_3: # %entry
+; GENERIC-NEXT:  .LBB37_3: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
 ; GENERIC-NEXT:    ld16.w l1, (sp, 4) # 4-byte Folded Reload
@@ -1366,10 +1399,10 @@ define i1 @ICMP_LONG_ult(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB47_2
+; GENERIC-NEXT:    bt16 .LBB48_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    mov16 a0, l0
-; GENERIC-NEXT:  .LBB47_2: # %entry
+; GENERIC-NEXT:  .LBB48_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -1688,13 +1721,13 @@ define i1 @ICMP_LONG_ule(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB58_2
+; GENERIC-NEXT:    bt16 .LBB59_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    subu16 a0, l1
-; GENERIC-NEXT:    br32 .LBB58_3
-; GENERIC-NEXT:  .LBB58_2:
+; GENERIC-NEXT:    br32 .LBB59_3
+; GENERIC-NEXT:  .LBB59_2:
 ; GENERIC-NEXT:    subu16 a0, a2
-; GENERIC-NEXT:  .LBB58_3: # %entry
+; GENERIC-NEXT:  .LBB59_3: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
 ; GENERIC-NEXT:    ld16.w l1, (sp, 4) # 4-byte Folded Reload
@@ -1733,10 +1766,10 @@ define i1 @ICMP_LONG_I_ule(i64 %x) {
 ; GENERIC-NEXT:    cmpnei16 a1, 0
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB59_2
+; GENERIC-NEXT:    bt16 .LBB60_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    movi16 a0, 0
-; GENERIC-NEXT:  .LBB59_2: # %entry
+; GENERIC-NEXT:  .LBB60_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -2030,11 +2063,11 @@ define i1 @ICMP_LONG_sgt(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB69_2
+; GENERIC-NEXT:    bt16 .LBB70_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    subu16 a0, l0
-; GENERIC-NEXT:  .LBB69_2: # %entry
+; GENERIC-NEXT:  .LBB70_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -2083,11 +2116,11 @@ define i1 @ICMP_LONG_I_sgt(i64 %x) {
 ; GENERIC-NEXT:    cmpnei16 a1, 0
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB70_2
+; GENERIC-NEXT:    bt16 .LBB71_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    subu16 a3, a2
 ; GENERIC-NEXT:    mov16 a0, a3
-; GENERIC-NEXT:  .LBB70_2: # %entry
+; GENERIC-NEXT:  .LBB71_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -2360,11 +2393,11 @@ define i1 @ICMP_LONG_sge(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bf16 .LBB80_2
+; GENERIC-NEXT:    bf16 .LBB81_2
 ; GENERIC-NEXT:  # %bb.1:
 ; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    subu16 a0, a2
-; GENERIC-NEXT:  .LBB80_2: # %entry
+; GENERIC-NEXT:  .LBB81_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -2415,12 +2448,12 @@ define i1 @ICMP_LONG_I_sge(i64 %x) {
 ; GENERIC-NEXT:    cmpnei16 a1, 0
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB81_2
+; GENERIC-NEXT:    bt16 .LBB82_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    subu16 a0, a3
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
-; GENERIC-NEXT:  .LBB81_2:
+; GENERIC-NEXT:  .LBB82_2:
 ; GENERIC-NEXT:    subu16 a0, a2
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
@@ -2694,11 +2727,11 @@ define i1 @ICMP_LONG_slt(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB91_2
+; GENERIC-NEXT:    bt16 .LBB92_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    subu16 a0, l0
-; GENERIC-NEXT:  .LBB91_2: # %entry
+; GENERIC-NEXT:  .LBB92_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -2745,11 +2778,11 @@ define i1 @ICMP_LONG_I_slt(i64 %x) {
 ; GENERIC-NEXT:    cmpnei16 a1, 0
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB92_2
+; GENERIC-NEXT:    bt16 .LBB93_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    subu16 a0, a2
-; GENERIC-NEXT:  .LBB92_2: # %entry
+; GENERIC-NEXT:  .LBB93_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -3018,11 +3051,11 @@ define i1 @ICMP_LONG_sle(i64 %x, i64 %y) {
 ; GENERIC-NEXT:    cmpne16 a3, a1
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bf16 .LBB102_2
+; GENERIC-NEXT:    bf16 .LBB103_2
 ; GENERIC-NEXT:  # %bb.1:
 ; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    subu16 a0, a2
-; GENERIC-NEXT:  .LBB102_2: # %entry
+; GENERIC-NEXT:  .LBB103_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -3067,11 +3100,11 @@ define i1 @ICMP_LONG_I_sle(i64 %x) {
 ; GENERIC-NEXT:    cmpnei16 a1, 0
 ; GENERIC-NEXT:    mvcv16 a1
 ; GENERIC-NEXT:    btsti16 a1, 0
-; GENERIC-NEXT:    bt16 .LBB103_2
+; GENERIC-NEXT:    bt16 .LBB104_2
 ; GENERIC-NEXT:  # %bb.1: # %entry
 ; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    subu16 a0, a2
-; GENERIC-NEXT:  .LBB103_2: # %entry
+; GENERIC-NEXT:  .LBB104_2: # %entry
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:

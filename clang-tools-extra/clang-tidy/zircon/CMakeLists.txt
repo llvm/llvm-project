@@ -13,6 +13,7 @@ add_clang_library(clangTidyZirconModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyZirconModule

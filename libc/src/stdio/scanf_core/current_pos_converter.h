@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_CURRENT_POS_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_CURRENT_POS_CONVERTER_H
 
-#include "src/__support/common.h"
 #include "src/stdio/scanf_core/converter_utils.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 LIBC_INLINE int convert_current_pos(Reader *reader,
@@ -26,6 +25,6 @@ LIBC_INLINE int convert_current_pos(Reader *reader,
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_CURRENT_POS_CONVERTER_H

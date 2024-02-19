@@ -29,6 +29,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -58,6 +59,9 @@ struct PfmCountersInfo {
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
 
+  const std::pair<ValidationEvent, const char *> *ValidationEvents;
+  unsigned NumValidationEvents;
+
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;
 };
@@ -70,12 +74,15 @@ struct CpuAndPfmCounters {
 
 class ExegesisTarget {
 public:
-  explicit ExegesisTarget(ArrayRef<CpuAndPfmCounters> CpuPfmCounters)
-      : CpuPfmCounters(CpuPfmCounters) {}
+  typedef bool (*OpcodeAvailabilityChecker)(unsigned, const FeatureBitset &);
+  ExegesisTarget(ArrayRef<CpuAndPfmCounters> CpuPfmCounters,
+                 OpcodeAvailabilityChecker IsOpcodeAvailable)
+      : CpuPfmCounters(CpuPfmCounters), IsOpcodeAvailable(IsOpcodeAvailable) {}
 
   // Targets can use this to create target-specific perf counters.
-  virtual Expected<std::unique_ptr<pfm::Counter>>
+  virtual Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
+                ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID = 0) const;
 
   // Targets can use this to add target-specific passes in assembleToStream();
@@ -137,6 +144,12 @@ public:
   virtual std::vector<MCInst> generateMemoryInitialSetup() const {
     report_fatal_error("generateMemoryInitialSetup is not supported on the "
                        "current architecture\n");
+  }
+
+  // Returns true if all features are available that are required by Opcode.
+  virtual bool isOpcodeAvailable(unsigned Opcode,
+                                 const FeatureBitset &Features) const {
+    return IsOpcodeAvailable(Opcode, Features);
   }
 
   // Sets the stack register to the auxiliary memory so that operations
@@ -253,6 +266,8 @@ public:
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       BenchmarkRunner::ExecutionModeE ExecutionMode,
+      unsigned BenchmarkRepeatCount,
+      ArrayRef<ValidationEvent> ValidationCounters,
       Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
@@ -296,14 +311,18 @@ private:
       const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,
-      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      ArrayRef<ValidationEvent> ValidationCounters,
+      unsigned BenchmarkRepeatCount) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,
-      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      ArrayRef<ValidationEvent> ValidationCounters) const;
 
   const ExegesisTarget *Next = nullptr;
   const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;
+  const OpcodeAvailabilityChecker IsOpcodeAvailable;
 };
 
 } // namespace exegesis

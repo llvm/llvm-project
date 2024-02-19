@@ -2,9 +2,6 @@
 Provides definitions for various lldb test categories
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-
 # System modules
 import sys
 
@@ -34,7 +31,7 @@ all_categories = {
     "libc++": "Test for libc++ data formatters",
     "libstdcxx": "Test for libstdcxx data formatters",
     "lldb-server": "Tests related to lldb-server",
-    "lldb-vscode": "Visual Studio Code debug adaptor tests",
+    "lldb-dap": "Tests for the Debug Adaptor Protocol with lldb-dap",
     "llgs": "Tests for the gdb-server functionality of lldb-server",
     "objc": "Tests related to the Objective-C programming language support",
     "pyapi": "Tests related to the Python API",

@@ -630,8 +630,8 @@ define i1 @test_lanex_4xi1(<vscale x 4 x i1> %a, i32 %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    whilels p0.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p0, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb w8, p1, z0.s
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 4 x i1> %a, i32 %x

@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
-#include "Program.h"
 #include "Opcode.h"
+#include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -19,11 +20,12 @@ Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO)
+                   bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
       ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
-      HasRVO(HasRVO) {}
+      HasRVO(HasRVO), Variadic(F->isVariadic()),
+      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -43,7 +45,7 @@ SourceInfo Function::getSource(CodePtr PC) const {
 }
 
 bool Function::isVirtual() const {
-  if (auto *M = dyn_cast<CXXMethodDecl>(F))
+  if (const auto *M = dyn_cast<CXXMethodDecl>(F))
     return M->isVirtual();
   return false;
 }

@@ -102,7 +102,7 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
     bool ArgDump = false;
     StringRef CurFmt = Fmt.substr(PrevFmtSpecifierIdx,
                                   CurFmtSpecifierIdx - PrevFmtSpecifierIdx);
-    size_t pTag = CurFmt.find_last_of("%");
+    size_t pTag = CurFmt.find_last_of('%');
     if (pTag != StringRef::npos) {
       ArgDump = true;
       while (pTag && CurFmt[--pTag] == '%') {
@@ -439,7 +439,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
 
   for (auto &U : PrintfFunction->uses()) {
     if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
-      if (CI->isCallee(&U))
+      if (CI->isCallee(&U) && !CI->isNoBuiltin())
         Printfs.push_back(CI);
     }
   }

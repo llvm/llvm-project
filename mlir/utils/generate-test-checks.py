@@ -72,7 +72,7 @@ class VariableNamer:
         self.variable_names = [name.upper() for name in variable_names.split(',')]
         self.used_variable_names = set()
 
-    # Generate the following 'n' variable names in the parent scope. 
+    # Generate the following 'n' variable names in the parent scope.
     def generate_in_parent_scope(self, n):
         self.generate_in_parent_scope_left = n
 
@@ -112,9 +112,10 @@ class VariableNamer:
     def num_scopes(self):
         return len(self.scopes)
 
-    # Reset the counter.
-    def clear_counter(self):
+    # Reset the counter and used variable names.
+    def clear_names(self):
         self.name_counter = 0
+        self.used_variable_names = set()
 
 class AttributeNamer:
 
@@ -123,7 +124,7 @@ class AttributeNamer:
         self.attribute_names = [name.upper() for name in attribute_names.split(',')]
         self.map = {}
         self.used_attribute_names = set()
-    
+
     # Generate a substitution name for the given attribute name.
     def generate_name(self, source_attribute_name):
 
@@ -342,7 +343,7 @@ def main():
             variable_namer.push_name_scope()
             if cur_level == args.starts_from_scope:
                 output_segments.append([])
-           
+
             # Result SSA values must still be pushed to parent scope
             num_ssa_results = get_num_ssa_results(input_line)
             variable_namer.generate_in_parent_scope(num_ssa_results)
@@ -352,7 +353,7 @@ def main():
             continue
 
         if len(output_segments[-1]) == 0:
-            variable_namer.clear_counter()
+            variable_namer.clear_names()
 
         # Preprocess the input to remove any sequences that may be problematic with
         # FileCheck.

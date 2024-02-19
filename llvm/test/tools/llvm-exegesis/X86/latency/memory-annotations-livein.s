@@ -1,4 +1,4 @@
-# REQUIRES: exegesis-can-execute-in-subprocess, x86_64-linux
+# REQUIRES: exegesis-can-measure-latency, x86_64-linux
 
 # Test that we can use the subprocess executor mode with memory annotations
 # while having live-ins still work as expected.

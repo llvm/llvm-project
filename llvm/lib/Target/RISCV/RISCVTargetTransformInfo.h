@@ -48,8 +48,8 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// actual target hardware.
   unsigned getEstimatedVLFor(VectorType *Ty);
 
-  /// Return the cost of LMUL. The larger the LMUL, the higher the cost.
-  InstructionCost getLMULCost(MVT VT);
+  InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
+                                          TTI::TargetCostKind CostKind);
 
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.
@@ -123,8 +123,6 @@ public:
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
 
-  InstructionCost getVRGatherVVCost(MVT VT);
-
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
@@ -140,6 +138,12 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I);
+
+  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
@@ -174,6 +178,9 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr);
 
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
+
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
@@ -201,7 +208,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
+    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
@@ -226,7 +233,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
+    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
@@ -247,6 +254,11 @@ public:
   bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) {
     // Scalarize masked scatter for RV64 if EEW=64 indices aren't supported.
     return ST->is64Bit() && !ST->hasVInstructionsI64();
+  }
+
+  bool isLegalStridedLoadStore(Type *DataType, Align Alignment) {
+    EVT DataTypeVT = TLI->getValueType(DL, DataType);
+    return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
@@ -288,9 +300,9 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
-    case RecurKind::SelectICmp:
-    case RecurKind::SelectFCmp:
     case RecurKind::FMulAdd:
+    case RecurKind::IAnyOf:
+    case RecurKind::FAnyOf:
       return true;
     default:
       return false;
@@ -336,7 +348,7 @@ public:
       return RISCVRegisterClass::GPRRC;
 
     Type *ScalarTy = Ty->getScalarType();
-    if ((ScalarTy->isHalfTy() && ST->hasStdExtZfhOrZfhmin()) ||
+    if ((ScalarTy->isHalfTy() && ST->hasStdExtZfhmin()) ||
         (ScalarTy->isFloatTy() && ST->hasStdExtF()) ||
         (ScalarTy->isDoubleTy() && ST->hasStdExtD())) {
       return RISCVRegisterClass::FPRRC;
@@ -359,6 +371,10 @@ public:
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
+
+  bool shouldFoldTerminatingConditionAfterLSR() const {
+    return true;
+  }
 };
 
 } // end namespace llvm

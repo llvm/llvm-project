@@ -973,22 +973,22 @@ define <4 x i32> @fshr_v4i32_shift_by_bitwidth(<4 x i32> %x, <4 x i32> %y) nounw
 }
 
 %struct.S = type { [11 x i8], i8 }
-define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
+define void @PR45265(i32 %0, ptr nocapture readonly %1) nounwind {
 ; X86-SSE2-LABEL: PR45265:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    leal (%eax,%eax,2), %edx
-; X86-SSE2-NEXT:    movzwl 8(%ecx,%edx,4), %esi
-; X86-SSE2-NEXT:    movl 4(%ecx,%edx,4), %edi
-; X86-SSE2-NEXT:    shrdl $8, %esi, %edi
+; X86-SSE2-NEXT:    leal (%eax,%eax,2), %esi
+; X86-SSE2-NEXT:    movzwl 8(%ecx,%esi,4), %edx
+; X86-SSE2-NEXT:    movl 4(%ecx,%esi,4), %edi
+; X86-SSE2-NEXT:    shrdl $8, %edx, %edi
 ; X86-SSE2-NEXT:    xorl %eax, %edi
 ; X86-SSE2-NEXT:    sarl $31, %eax
-; X86-SSE2-NEXT:    movzbl 10(%ecx,%edx,4), %ecx
+; X86-SSE2-NEXT:    movzbl 10(%ecx,%esi,4), %ecx
 ; X86-SSE2-NEXT:    shll $16, %ecx
-; X86-SSE2-NEXT:    orl %esi, %ecx
+; X86-SSE2-NEXT:    orl %edx, %ecx
 ; X86-SSE2-NEXT:    shll $8, %ecx
 ; X86-SSE2-NEXT:    movl %ecx, %edx
 ; X86-SSE2-NEXT:    sarl $8, %edx
@@ -1021,9 +1021,9 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X64-AVX2-NEXT:  # %bb.1:
 ; X64-AVX2-NEXT:    retq
   %3 = sext i32 %0 to i64
-  %4 = getelementptr inbounds %struct.S, %struct.S* %1, i64 %3
-  %5 = bitcast %struct.S* %4 to i88*
-  %6 = load i88, i88* %5, align 1
+  %4 = getelementptr inbounds %struct.S, ptr %1, i64 %3
+  %5 = bitcast ptr %4 to ptr
+  %6 = load i88, ptr %5, align 1
   %7 = ashr i88 %6, 40
   %8 = trunc i88 %7 to i64
   %9 = icmp eq i64 %8, %3

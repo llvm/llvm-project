@@ -14,12 +14,12 @@
 #include "WebAssemblyTargetMachine.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
@@ -46,6 +46,12 @@ static cl::opt<bool> WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
+    cl::init(false));
+
+static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
+    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
+    cl::desc("webassembly: disables the fix "
+             " irreducible control flow optimization pass"),
     cl::init(false));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
@@ -107,7 +113,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
-    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(
           T,
           TT.isArch64Bit()
@@ -127,6 +133,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
   // 'unreachable' instructions which is meant for that case.
   this->Options.TrapUnreachable = true;
+  this->Options.NoTrapAfterNoreturn = false;
 
   // WebAssembly treats each function as an independent unit. Force
   // -ffunction-sections, effectively, so that we can emit them independently.
@@ -193,7 +200,8 @@ public:
   bool runOnModule(Module &M) override {
     FeatureBitset Features = coalesceFeatures(M);
 
-    std::string FeatureStr = getFeatureString(Features);
+    std::string FeatureStr =
+        getFeatureString(Features, WasmTM->getTargetFeatureString());
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -231,12 +239,17 @@ private:
     return Features;
   }
 
-  std::string getFeatureString(const FeatureBitset &Features) {
+  static std::string getFeatureString(const FeatureBitset &Features,
+                                      StringRef TargetFS) {
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
         Ret += (StringRef("+") + KV.Key + ",").str();
     }
+    SubtargetFeatures TF{TargetFS};
+    for (std::string const &F : TF.getFeatures())
+      if (!SubtargetFeatures::isEnabled(F))
+        Ret += F + ",";
     return Ret;
   }
 
@@ -368,7 +381,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   // to TargetOptions and MCAsmInfo. But when clang compiles bitcode directly,
   // clang's LangOptions is not used and thus the exception model info is not
   // correctly transferred to TargetOptions and MCAsmInfo, so we make sure we
-  // have the correct exception model in in WebAssemblyMCAsmInfo constructor.
+  // have the correct exception model in WebAssemblyMCAsmInfo constructor.
   // But in this case TargetOptions is still not updated, so we make sure they
   // are the same.
   TM->Options.ExceptionModel = TM->getMCAsmInfo()->getExceptionHandlingType();
@@ -390,7 +403,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
       TM->Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error(
         "-exception-model=wasm only allowed with at least one of "
-        "-wasm-enable-eh or -wasm-enable-sjj");
+        "-wasm-enable-eh or -wasm-enable-sjlj");
 
   // You can't enable two modes of EH at the same time
   if (WasmEnableEmEH && WasmEnableEH)
@@ -426,7 +439,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   addPass(createWebAssemblyFixFunctionBitcasts());
 
   // Optimize "returned" function attributes.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturned());
 
   basicCheckForEHAndSjLj(TM);
@@ -503,7 +516,7 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
   // usually not used for production builds.
   // TODO Investigate why RegisterCoalesce degrades debug info quality and fix
   // it properly
-  if (getOptLevel() == CodeGenOpt::Less)
+  if (getOptLevel() == CodeGenOptLevel::Less)
     disablePass(&RegisterCoalescerID);
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -537,7 +550,8 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyNullifyDebugValueLists());
 
   // Eliminate multiple-entry loops.
-  addPass(createWebAssemblyFixIrreducibleControlFlow());
+  if (!WasmDisableFixIrreducibleControlFlowPass)
+    addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
@@ -550,7 +564,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyReplacePhysRegs());
 
   // Preparations and optimizations related to register stackification.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
     addPass(createWebAssemblyOptimizeLiveIntervals());
 
@@ -585,7 +599,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyLowerBrUnless());
 
   // Perform the very last peephole optimizations on the code.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyPeephole());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.

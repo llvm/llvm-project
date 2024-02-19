@@ -119,8 +119,8 @@ const Type *HeuristicResolver::getPointeeType(const Type *T) const {
 
 std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
     const CXXDependentScopeMemberExpr *ME) const {
-  // If the expression has a qualifier, first try resolving the member
-  // inside the qualifier's type.
+  // If the expression has a qualifier, try resolving the member inside the
+  // qualifier's type.
   // Note that we cannot use a NonStaticFilter in either case, for a couple
   // of reasons:
   //   1. It's valid to access a static member using instance member syntax,
@@ -137,10 +137,15 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveMemberExpr(
       if (!Decls.empty())
         return Decls;
     }
+
+    // Do not proceed to try resolving the member in the expression's base type
+    // without regard to the qualifier, as that could produce incorrect results.
+    // For example, `void foo() { this->Base::foo(); }` shouldn't resolve to
+    // foo() itself!
+    return {};
   }
 
-  // If that didn't yield any results, try resolving the member inside
-  // the expression's base type.
+  // Try resolving the member inside the expression's base type.
   const Type *BaseType = ME->getBaseType().getTypePtrOrNull();
   if (ME->isArrow()) {
     BaseType = getPointeeType(BaseType);

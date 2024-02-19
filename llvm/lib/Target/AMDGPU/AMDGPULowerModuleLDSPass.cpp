@@ -177,6 +177,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"
@@ -184,8 +185,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -204,7 +205,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <tuple>
 #include <vector>
 
 #include <cstdio>
@@ -252,7 +252,8 @@ template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
   return {std::move(V)};
 }
 
-class AMDGPULowerModuleLDS : public ModulePass {
+class AMDGPULowerModuleLDS {
+  const AMDGPUTargetMachine &TM;
 
   static void
   removeLocalVarsFromUsedLists(Module &M,
@@ -291,7 +292,8 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // equivalent target specific intrinsic which lasts until immediately after
     // codegen would suffice for that, but one would still need to ensure that
     // the variables are allocated in the anticpated order.
-    IRBuilder<> Builder(Func->getEntryBlock().getFirstNonPHI());
+    BasicBlock *Entry = &Func->getEntryBlock();
+    IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
     Function *Decl =
         Intrinsic::getDeclaration(Func->getParent(), Intrinsic::donothing, {});
@@ -326,11 +328,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
   }
 
 public:
-  static char ID;
-
-  AMDGPULowerModuleLDS() : ModulePass(ID) {
-    initializeAMDGPULowerModuleLDSPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerModuleLDS(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
 
   using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 
@@ -854,7 +852,7 @@ public:
     appendToCompilerUsed(M, {static_cast<GlobalValue *>(
                                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
                                     cast<Constant>(ModuleScopeReplacement.SGV),
-                                    Type::getInt8PtrTy(Ctx)))});
+                                    PointerType::getUnqual(Ctx)))});
 
     // module.lds will be allocated at zero in any kernel that allocates it
     recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);
@@ -1028,6 +1026,51 @@ public:
     return N;
   }
 
+  /// Strip "amdgpu-no-lds-kernel-id" from any functions where we may have
+  /// introduced its use. If AMDGPUAttributor ran prior to the pass, we inferred
+  /// the lack of llvm.amdgcn.lds.kernel.id calls.
+  void removeNoLdsKernelIdFromReachable(CallGraph &CG, Function *KernelRoot) {
+    KernelRoot->removeFnAttr("amdgpu-no-lds-kernel-id");
+
+    SmallVector<Function *> Tmp({CG[KernelRoot]->getFunction()});
+    if (!Tmp.back())
+      return;
+
+    SmallPtrSet<Function *, 8> Visited;
+    bool SeenUnknownCall = false;
+
+    do {
+      Function *F = Tmp.pop_back_val();
+
+      for (auto &N : *CG[F]) {
+        if (!N.second)
+          continue;
+
+        Function *Callee = N.second->getFunction();
+        if (!Callee) {
+          if (!SeenUnknownCall) {
+            SeenUnknownCall = true;
+
+            // If we see any indirect calls, assume nothing about potential
+            // targets.
+            // TODO: This could be refined to possible LDS global users.
+            for (auto &N : *CG.getExternalCallingNode()) {
+              Function *PotentialCallee = N.second->getFunction();
+              if (!isKernelLDS(PotentialCallee))
+                PotentialCallee->removeFnAttr("amdgpu-no-lds-kernel-id");
+            }
+
+            continue;
+          }
+        }
+
+        Callee->removeFnAttr("amdgpu-no-lds-kernel-id");
+        if (Visited.insert(Callee).second)
+          Tmp.push_back(Callee);
+      }
+    } while (!Tmp.empty());
+  }
+
   DenseMap<Function *, GlobalVariable *> lowerDynamicLDSVariables(
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       DenseSet<Function *> const &KernelsThatIndirectlyAllocateDynamicLDS,
@@ -1089,7 +1132,7 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
-  bool runOnModule(Module &M) override {
+  bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
@@ -1177,6 +1220,13 @@ public:
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
       replaceUsesInInstructionsWithTableLookup(M, TableLookupVariablesOrdered,
                                                LookupTable);
+
+      // Strip amdgpu-no-lds-kernel-id from all functions reachable from the
+      // kernel. We may have inferred this wasn't used prior to the pass.
+      //
+      // TODO: We could filter out subgraphs that do not access LDS globals.
+      for (Function *F : KernelsThatAllocateTableLDS)
+        removeNoLdsKernelIdFromReachable(CG, F);
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =
@@ -1241,6 +1291,7 @@ public:
         }
 
         if (Offset != 0) {
+          (void)TM; // TODO: Account for target maximum LDS
           std::string Buffer;
           raw_string_ostream SS{Buffer};
           SS << format("%u", Offset);
@@ -1367,9 +1418,9 @@ private:
 
           Type *ATy = ArrayType::get(Type::getInt8Ty(Ctx), Padding);
           LocalVars.push_back(new GlobalVariable(
-              M, ATy, false, GlobalValue::InternalLinkage, UndefValue::get(ATy),
-              "", nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
-              false));
+              M, ATy, false, GlobalValue::InternalLinkage,
+              PoisonValue::get(ATy), "", nullptr, GlobalValue::NotThreadLocal,
+              AMDGPUAS::LOCAL_ADDRESS, false));
           IsPaddingField.push_back(true);
           CurrentOffset += Padding;
         }
@@ -1391,7 +1442,7 @@ private:
     Align StructAlign = AMDGPU::getAlign(DL, LocalVars[0]);
 
     GlobalVariable *SGV = new GlobalVariable(
-        M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
+        M, LDSTy, false, GlobalValue::InternalLinkage, PoisonValue::get(LDSTy),
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
     SGV->setAlignment(StructAlign);
@@ -1530,21 +1581,51 @@ private:
   }
 };
 
+class AMDGPULowerModuleLDSLegacy : public ModulePass {
+public:
+  const AMDGPUTargetMachine *TM;
+  static char ID;
+
+  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM_ = nullptr)
+      : ModulePass(ID), TM(TM_) {
+    initializeAMDGPULowerModuleLDSLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (!TM)
+      AU.addRequired<TargetPassConfig>();
+  }
+
+  bool runOnModule(Module &M) override {
+    if (!TM) {
+      auto &TPC = getAnalysis<TargetPassConfig>();
+      TM = &TPC.getTM<AMDGPUTargetMachine>();
+    }
+
+    return AMDGPULowerModuleLDS(*TM).runOnModule(M);
+  }
+};
+
 } // namespace
-char AMDGPULowerModuleLDS::ID = 0;
+char AMDGPULowerModuleLDSLegacy::ID = 0;
 
-char &llvm::AMDGPULowerModuleLDSID = AMDGPULowerModuleLDS::ID;
+char &llvm::AMDGPULowerModuleLDSLegacyPassID = AMDGPULowerModuleLDSLegacy::ID;
 
-INITIALIZE_PASS(AMDGPULowerModuleLDS, DEBUG_TYPE,
-                "Lower uses of LDS variables from non-kernel functions", false,
-                false)
+INITIALIZE_PASS_BEGIN(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                      "Lower uses of LDS variables from non-kernel functions",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                    "Lower uses of LDS variables from non-kernel functions",
+                    false, false)
 
-ModulePass *llvm::createAMDGPULowerModuleLDSPass() {
-  return new AMDGPULowerModuleLDS();
+ModulePass *
+llvm::createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM) {
+  return new AMDGPULowerModuleLDSLegacy(TM);
 }
 
 PreservedAnalyses AMDGPULowerModuleLDSPass::run(Module &M,
                                                 ModuleAnalysisManager &) {
-  return AMDGPULowerModuleLDS().runOnModule(M) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return AMDGPULowerModuleLDS(TM).runOnModule(M) ? PreservedAnalyses::none()
+                                                 : PreservedAnalyses::all();
 }

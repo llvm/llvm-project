@@ -16,7 +16,6 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -95,16 +94,11 @@ SBError SBWatchpoint::GetError() {
 int32_t SBWatchpoint::GetHardwareIndex() {
   LLDB_INSTRUMENT_VA(this);
 
-  int32_t hw_index = -1;
-
-  lldb::WatchpointSP watchpoint_sp(GetSP());
-  if (watchpoint_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        watchpoint_sp->GetTarget().GetAPIMutex());
-    hw_index = watchpoint_sp->GetHardwareIndex();
-  }
-
-  return hw_index;
+  // For processes using gdb remote protocol,
+  // we cannot determine the hardware breakpoint
+  // index reliably; providing possibly correct
+  // guesses is not useful to anyone.
+  return -1;
 }
 
 addr_t SBWatchpoint::GetWatchAddress() {
@@ -148,9 +142,9 @@ void SBWatchpoint::SetEnabled(bool enabled) {
     const bool notify = true;
     if (process_sp) {
       if (enabled)
-        process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->EnableWatchpoint(watchpoint_sp, notify);
       else
-        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->DisableWatchpoint(watchpoint_sp, notify);
     } else {
       watchpoint_sp->SetEnabled(enabled, notify);
     }
@@ -355,7 +349,8 @@ bool SBWatchpoint::IsWatchingWrites() {
     std::lock_guard<std::recursive_mutex> guard(
         watchpoint_sp->GetTarget().GetAPIMutex());
 
-    return watchpoint_sp->WatchpointWrite();
+    return watchpoint_sp->WatchpointWrite() ||
+           watchpoint_sp->WatchpointModify();
   }
 
   return false;

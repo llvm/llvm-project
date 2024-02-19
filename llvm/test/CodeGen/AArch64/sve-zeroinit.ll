@@ -86,3 +86,10 @@ define <vscale x 16 x i1> @test_zeroinit_16xi1() {
 ; CHECK-NEXT:  ret
   ret <vscale x 16 x i1> zeroinitializer
 }
+
+define target("aarch64.svcount") @test_zeroinit_svcount() "target-features"="+sme2" {
+; CHECK-LABEL: test_zeroinit_svcount
+; CHECK:       pfalse p0.b
+; CHECK-NEXT:  ret
+  ret target("aarch64.svcount") zeroinitializer
+}

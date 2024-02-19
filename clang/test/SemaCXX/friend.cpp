@@ -162,7 +162,7 @@ namespace test9 {
   class C {
   };
   struct A {
-    friend void C::f(int, int, int) {}  // expected-error {{friend function definition cannot be qualified with 'C::'}}
+    friend void C::f(int, int, int) {}  // expected-error {{friend declaration of 'f' does not match any declaration in 'test9::C'}}
   };
 }
 

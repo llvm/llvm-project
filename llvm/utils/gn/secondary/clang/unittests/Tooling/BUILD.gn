@@ -44,6 +44,7 @@ unittest("ToolingTests") {
     "RecursiveASTVisitorTestPostOrderVisitor.cpp",
     "RecursiveASTVisitorTestTypeLocVisitor.cpp",
     "RecursiveASTVisitorTests/Attr.cpp",
+    "RecursiveASTVisitorTests/BitfieldInitializer.cpp",
     "RecursiveASTVisitorTests/CXXBoolLiteralExpr.cpp",
     "RecursiveASTVisitorTests/CXXMemberCall.cpp",
     "RecursiveASTVisitorTests/CXXMethodDecl.cpp",

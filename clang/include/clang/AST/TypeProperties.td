@@ -323,6 +323,9 @@ let Class = FunctionProtoType in {
                     ? node->getExtParameterInfos()
                     : llvm::ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
   }
+  def : Property<"AArch64SMEAttributes", UInt32> {
+    let Read = [{ node->getAArch64SMEAttributes() }];
+  }
 
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
@@ -338,6 +341,7 @@ let Class = FunctionProtoType in {
     epi.ExceptionSpec = exceptionSpecifier;
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
+    epi.AArch64SMEAttributes = AArch64SMEAttributes;
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
 }
@@ -428,6 +432,20 @@ let Class = DecltypeType in {
     return ctx.getDecltypeType(expression, underlyingType);
   }]>;
 }
+
+let Class = PackIndexingType in {
+  def : Property<"pattern", QualType> {
+    let Read = [{ node->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ node->getIndexExpr() }];
+  }
+
+  def : Creator<[{
+    return ctx.getPackIndexingType(pattern, indexExpression);
+  }]>;
+}
+
 
 let Class = UnaryTransformType in {
   def : Property<"baseType", QualType> {

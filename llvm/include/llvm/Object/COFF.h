@@ -745,12 +745,18 @@ struct chpe_metadata {
   support::ulittle32_t AuxiliaryIATCopy;
 };
 
+enum chpe_range_type { Arm64 = 0, Arm64EC = 1, Amd64 = 2 };
+
 struct chpe_range_entry {
   support::ulittle32_t StartOffset;
   support::ulittle32_t Length;
-};
 
-enum chpe_range_type { CHPE_RANGE_ARM64, CHPE_RANGE_ARM64EC, CHPE_RANGE_AMD64 };
+  // The two low bits of StartOffset contain a range type.
+  static constexpr uint32_t TypeMask = 3;
+
+  uint32_t getStart() const { return StartOffset & ~TypeMask; }
+  uint16_t getType() const { return StartOffset & TypeMask; }
+};
 
 struct chpe_code_range_entry {
   support::ulittle32_t StartRva;
@@ -1292,7 +1298,8 @@ private:
 class ResourceSectionRef {
 public:
   ResourceSectionRef() = default;
-  explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
+  explicit ResourceSectionRef(StringRef Ref)
+      : BBS(Ref, llvm::endianness::little) {}
 
   Error load(const COFFObjectFile *O);
   Error load(const COFFObjectFile *O, const SectionRef &S);
@@ -1354,6 +1361,47 @@ class SectionStrippedError
 public:
   SectionStrippedError() { setErrorCode(object_error::section_stripped); }
 };
+
+inline std::optional<std::string>
+getArm64ECMangledFunctionName(StringRef Name) {
+  bool IsCppFn = Name[0] == '?';
+  if (IsCppFn && Name.find("$$h") != std::string::npos)
+    return std::nullopt;
+  if (!IsCppFn && Name[0] == '#')
+    return std::nullopt;
+
+  StringRef Prefix = "$$h";
+  size_t InsertIdx = 0;
+  if (IsCppFn) {
+    InsertIdx = Name.find("@@");
+    size_t ThreeAtSignsIdx = Name.find("@@@");
+    if (InsertIdx != std::string::npos && InsertIdx != ThreeAtSignsIdx) {
+      InsertIdx += 2;
+    } else {
+      InsertIdx = Name.find("@");
+      if (InsertIdx != std::string::npos)
+        InsertIdx++;
+    }
+  } else {
+    Prefix = "#";
+  }
+
+  return std::optional<std::string>(
+      (Name.substr(0, InsertIdx) + Prefix + Name.substr(InsertIdx)).str());
+}
+
+inline std::optional<std::string>
+getArm64ECDemangledFunctionName(StringRef Name) {
+  if (Name[0] == '#')
+    return std::string(Name.substr(1));
+  if (Name[0] != '?')
+    return std::nullopt;
+
+  std::pair<StringRef, StringRef> Pair = Name.split("$$h");
+  if (Pair.second.empty())
+    return std::nullopt;
+  return (Pair.first + Pair.second).str();
+}
 
 } // end namespace object
 

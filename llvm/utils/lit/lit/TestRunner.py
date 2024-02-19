@@ -8,9 +8,12 @@ import re
 import stat
 import pathlib
 import platform
+import shlex
 import shutil
 import tempfile
 import threading
+import typing
+from typing import Optional, Tuple
 
 import io
 
@@ -31,6 +34,17 @@ class InternalShellError(Exception):
     def __init__(self, command, message):
         self.command = command
         self.message = message
+
+
+class ScriptFatal(Exception):
+    """
+    A script had a fatal error such that there's no point in retrying.  The
+    message has not been emitted on stdout or stderr but is instead included in
+    this exception.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
 
 
 kIsWindows = platform.system() == "Windows"
@@ -54,7 +68,15 @@ kDevNull = "/dev/null"
 #
 # COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
 # empty as a result of conditinal substitution.
-kPdbgRegex = "%dbg\\(([^)'\"]*)\\)(.*)"
+kPdbgRegex = "%dbg\\(([^)'\"]*)\\)((?:.|\\n)*)"
+
+
+def buildPdbgCommand(msg, cmd):
+    res = f"%dbg({msg}) {cmd}"
+    assert re.fullmatch(
+        kPdbgRegex, res
+    ), f"kPdbgRegex expected to match actual %dbg usage: {res}"
+    return res
 
 
 class ShellEnvironment(object):
@@ -74,7 +96,7 @@ class ShellEnvironment(object):
         if os.path.isabs(newdir):
             self.cwd = newdir
         else:
-            self.cwd = os.path.realpath(os.path.join(self.cwd, newdir))
+            self.cwd = lit.util.abs_path_preserve_drive(os.path.join(self.cwd, newdir))
 
 
 class TimeoutHelper(object):
@@ -202,7 +224,7 @@ def expand_glob_expressions(args, cwd):
 
 
 def quote_windows_command(seq):
-    """
+    r"""
     Reimplement Python's private subprocess.list2cmdline for MSys compatibility
 
     Based on CPython implementation here:
@@ -340,12 +362,12 @@ def executeBuiltinExport(cmd, shenv):
 
 
 def executeBuiltinEcho(cmd, shenv):
-    """Interpret a redirected echo command"""
+    """Interpret a redirected echo or @echo command"""
     opened_files = []
     stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
     if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
         raise InternalShellError(
-            cmd, "stdin and stderr redirects not supported for echo"
+            cmd, f"stdin and stderr redirects not supported for {cmd.args[0]}"
         )
 
     # Some tests have un-redirected echo commands to help debug test failures.
@@ -427,7 +449,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
         dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(dir):
-            dir = os.path.realpath(os.path.join(cwd, dir))
+            dir = lit.util.abs_path_preserve_drive(os.path.join(cwd, dir))
         if parent:
             lit.util.mkdir_p(dir)
         else:
@@ -473,7 +495,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
         path = to_unicode(path) if kIsWindows else to_bytes(path)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
-            path = os.path.realpath(os.path.join(cwd, path))
+            path = lit.util.abs_path_preserve_drive(os.path.join(cwd, path))
         if force and not os.path.exists(path):
             continue
         try:
@@ -692,6 +714,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "cd": executeBuiltinCd,
         "export": executeBuiltinExport,
         "echo": executeBuiltinEcho,
+        "@echo": executeBuiltinEcho,
         "mkdir": executeBuiltinMkdir,
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
@@ -919,7 +942,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
         if proc_not_counts[i] % 2:
-            res = not res
+            res = 1 if res == 0 else 0
         elif proc_not_counts[i] > 1:
             res = 1 if res != 0 else 0
 
@@ -982,19 +1005,63 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     return exitCode
 
 
-def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
+def formatOutput(title, data, limit=None):
+    if not data.strip():
+        return ""
+    if not limit is None and len(data) > limit:
+        data = data[:limit] + "\n...\n"
+        msg = "data was truncated"
+    else:
+        msg = ""
+    ndashes = 30
+    # fmt: off
+    out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
+    out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
+    # fmt: on
+    return out
+
+
+# Always either returns the tuple (out, err, exitCode, timeoutInfo) or raises a
+# ScriptFatal exception.
+#
+# If debug is True (the normal lit behavior), err is empty, and out contains an
+# execution trace, including stdout and stderr shown per command executed.
+#
+# If debug is False (set by some custom lit test formats that call this
+# function), out contains only stdout from the script, err contains only stderr
+# from the script, and there is no execution trace.
+def executeScriptInternal(
+    test, litConfig, tmpBase, commands, cwd, debug=True
+) -> Tuple[str, str, int, Optional[str]]:
     cmds = []
     for i, ln in enumerate(commands):
-        match = re.match(kPdbgRegex, ln)
+        # Within lit, we try to always add '%dbg(...)' to command lines in order
+        # to maximize debuggability.  However, custom lit test formats might not
+        # always add it, so add a generic debug message in that case.
+        match = re.fullmatch(kPdbgRegex, ln)
         if match:
+            dbg = match.group(1)
             command = match.group(2)
-            ln = commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
+        else:
+            dbg = "command line"
+            command = ln
+        if debug:
+            ln = f"@echo '# {dbg}' "
+            if command:
+                ln += f"&& @echo {shlex.quote(command.lstrip())} && {command}"
+            else:
+                ln += "has no command after substitutions"
+        else:
+            ln = command
         try:
             cmds.append(
                 ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse()
             )
         except:
-            return lit.Test.Result(Test.FAIL, "shell parser error on: %r" % ln)
+            raise ScriptFatal(
+                f"shell parser error on {dbg}: {command.lstrip()}\n"
+            ) from None
 
     cmd = cmds[0]
     for c in cmds[1:]:
@@ -1014,8 +1081,42 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 
     out = err = ""
     for i, result in enumerate(results):
-        # Write the command line run.
-        out += "$ %s\n" % (" ".join('"%s"' % s for s in result.command.args),)
+        if not debug:
+            out += result.stdout
+            err += result.stderr
+            continue
+
+        # The purpose of an "@echo" command is merely to add a debugging message
+        # directly to lit's output.  It is used internally by lit's internal
+        # shell and is not currently documented for use in lit tests.  However,
+        # if someone misuses it (e.g., both "echo" and "@echo" complain about
+        # stdin redirection), produce the normal execution trace to facilitate
+        # debugging.
+        if (
+            result.command.args[0] == "@echo"
+            and result.exitCode == 0
+            and not result.stderr
+            and not result.outputFiles
+            and not result.timeoutReached
+        ):
+            out += result.stdout
+            continue
+
+        # Write the command line that was run.  Properly quote it.  Leading
+        # "!" commands should not be quoted as that would indicate they are not
+        # the builtins.
+        out += "# executed command: "
+        nLeadingBangs = next(
+            (i for i, cmd in enumerate(result.command.args) if cmd != "!"),
+            len(result.command.args),
+        )
+        out += "! " * nLeadingBangs
+        out += " ".join(
+            shlex.quote(str(s))
+            for i, s in enumerate(result.command.args)
+            if i >= nLeadingBangs
+        )
+        out += "\n"
 
         # If nothing interesting happened, move on.
         if (
@@ -1030,22 +1131,14 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 
         # Add the command output, if redirected.
         for (name, path, data) in result.outputFiles:
-            if data.strip():
-                out += "# redirected output from %r:\n" % (name,)
-                data = to_string(data.decode("utf-8", errors="replace"))
-                if len(data) > 1024:
-                    out += data[:1024] + "\n...\n"
-                    out += "note: data was truncated\n"
-                else:
-                    out += data
-                out += "\n"
-
+            data = to_string(data.decode("utf-8", errors="replace"))
+            out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
-            out += "# command output:\n%s\n" % (result.stdout,)
+            out += formatOutput("command stdout", result.stdout)
         if result.stderr.strip():
-            out += "# command stderr:\n%s\n" % (result.stderr,)
+            out += formatOutput("command stderr", result.stderr)
         if not result.stdout.strip() and not result.stderr.strip():
-            out += "note: command had no output on stdout or stderr\n"
+            out += "# note: command had no output on stdout or stderr\n"
 
         # Show the error conditions:
         if result.exitCode != 0:
@@ -1055,9 +1148,9 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
                 codeStr = hex(int(result.exitCode & 0xFFFFFFFF)).rstrip("L")
             else:
                 codeStr = str(result.exitCode)
-            out += "error: command failed with exit status: %s\n" % (codeStr,)
+            out += "# error: command failed with exit status: %s\n" % (codeStr,)
         if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
-            out += "error: command reached timeout: %s\n" % (
+            out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
 
@@ -1081,27 +1174,55 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
                 command = match.group(2)
                 commands[i] = match.expand(
                     "echo '\\1' > nul && " if command else "echo '\\1' > nul"
                 )
-        if litConfig.echo_all_commands:
-            f.write("@echo on\n")
-        else:
-            f.write("@echo off\n")
+        f.write("@echo on\n")
         f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
+                dbg = match.group(1)
                 command = match.group(2)
-                commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
+                # Echo the debugging diagnostic to stderr.
+                #
+                # For that echo command, use 'set' commands to suppress the
+                # shell's execution trace, which would just add noise.  Suppress
+                # the shell's execution trace for the 'set' commands by
+                # redirecting their stderr to /dev/null.
+                if command:
+                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                else:
+                    msg = f"'{dbg}' has no command after substitutions"
+                commands[i] = (
+                    f"{{ set +x; }} 2>/dev/null && "
+                    f"echo {msg} >&2 && "
+                    f"{{ set -x; }} 2>/dev/null"
+                )
+                # Execute the command, if any.
+                #
+                # 'command' might be something like:
+                #
+                #   subcmd & PID=$!
+                #
+                # In that case, we need something like:
+                #
+                #   echo_dbg && { subcmd & PID=$!; }
+                #
+                # Without the '{ ...; }' enclosing the original 'command', '&'
+                # would put all of 'echo_dbg && subcmd' in the background.  This
+                # would cause 'echo_dbg' to execute at the wrong time, and a
+                # later kill of $PID would target the wrong process. We have
+                # seen the latter manage to terminate the shell running lit.
+                if command:
+                    commands[i] += f" && {{ {command}; }}"
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
-        if litConfig.echo_all_commands:
-            f.write(b"set -x;" if mode == "wb" else "set -x;")
+        f.write(b"set -x;" if mode == "wb" else "set -x;")
         if sys.version_info > (3, 0) and mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
@@ -1228,17 +1349,9 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions.extend(test.config.substitutions)
     tmpName = tmpBase + ".tmp"
     baseName = os.path.basename(tmpBase)
-    substitutions.extend(
-        [
-            ("%s", sourcepath),
-            ("%S", sourcedir),
-            ("%p", sourcedir),
-            ("%{pathsep}", os.pathsep),
-            ("%t", tmpName),
-            ("%basename_t", baseName),
-            ("%T", tmpDir),
-        ]
-    )
+
+    substitutions.append(("%{pathsep}", os.pathsep))
+    substitutions.append(("%basename_t", baseName))
 
     substitutions.extend(
         [
@@ -1248,49 +1361,47 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         ]
     )
 
-    # "%/[STpst]" should be normalized.
-    substitutions.extend(
-        [
-            ("%/s", sourcepath.replace("\\", "/")),
-            ("%/S", sourcedir.replace("\\", "/")),
-            ("%/p", sourcedir.replace("\\", "/")),
-            ("%/t", tmpBase.replace("\\", "/") + ".tmp"),
-            ("%/T", tmpDir.replace("\\", "/")),
-            ("%/et", tmpName.replace("\\", "\\\\\\\\\\\\\\\\")),
-        ]
-    )
+    substitutions.append(("%/et", tmpName.replace("\\", "\\\\\\\\\\\\\\\\")))
 
-    # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're
-    # also in a regex replacement context of a s@@@ regex.
     def regex_escape(s):
         s = s.replace("@", r"\@")
         s = s.replace("&", r"\&")
         return s
 
-    substitutions.extend(
-        [
-            ("%{/s:regex_replacement}", regex_escape(sourcepath.replace("\\", "/"))),
-            ("%{/S:regex_replacement}", regex_escape(sourcedir.replace("\\", "/"))),
-            ("%{/p:regex_replacement}", regex_escape(sourcedir.replace("\\", "/"))),
-            (
-                "%{/t:regex_replacement}",
-                regex_escape(tmpBase.replace("\\", "/")) + ".tmp",
-            ),
-            ("%{/T:regex_replacement}", regex_escape(tmpDir.replace("\\", "/"))),
-        ]
-    )
+    path_substitutions = [
+        ("s", sourcepath), ("S", sourcedir), ("p", sourcedir),
+        ("t", tmpName), ("T", tmpDir)
+    ]
+    for path_substitution in path_substitutions:
+        letter = path_substitution[0]
+        path = path_substitution[1]
 
-    # "%:[STpst]" are normalized paths without colons and without a leading
-    # slash.
-    substitutions.extend(
-        [
-            ("%:s", colonNormalizePath(sourcepath)),
-            ("%:S", colonNormalizePath(sourcedir)),
-            ("%:p", colonNormalizePath(sourcedir)),
-            ("%:t", colonNormalizePath(tmpBase + ".tmp")),
-            ("%:T", colonNormalizePath(tmpDir)),
-        ]
-    )
+        # Original path variant
+        substitutions.append(("%" + letter, path))
+
+        # Normalized path separator variant
+        substitutions.append(("%/" + letter, path.replace("\\", "/")))
+
+        # realpath variants
+        # Windows paths with substitute drives are not expanded by default
+        # as they are used to avoid MAX_PATH issues, but sometimes we do
+        # need the fully expanded path.
+        real_path = os.path.realpath(path)
+        substitutions.append(("%{" + letter + ":real}", real_path))
+        substitutions.append(("%{/" + letter + ":real}",
+            real_path.replace("\\", "/")))
+
+        # "%{/[STpst]:regex_replacement}" should be normalized like
+        # "%/[STpst]" but we're also in a regex replacement context
+        # of a s@@@ regex.
+        substitutions.append(
+            ("%{/" + letter + ":regex_replacement}",
+            regex_escape(path.replace("\\", "/"))))
+
+        # "%:[STpst]" are normalized paths without colons and without
+        # a leading slash.
+        substitutions.append(("%:" + letter, colonNormalizePath(path)))
+
     return substitutions
 
 
@@ -1558,7 +1669,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             return cond, ln
 
         def tryParseElse(ln):
-            match = _caching_re_compile("^\s*%else\s*(%{)?").search(ln)
+            match = _caching_re_compile(r"^\s*%else\s*(%{)?").search(ln)
             if not match:
                 return False, ln
             if not match.group(1):
@@ -1684,6 +1795,7 @@ class ParserKind(object):
     TAG: A keyword taking no value. Ex 'END.'
     COMMAND: A keyword taking a list of shell commands. Ex 'RUN:'
     LIST: A keyword taking a comma-separated list of values.
+    SPACE_LIST: A keyword taking a space-separated list of values.
     BOOLEAN_EXPR: A keyword taking a comma-separated list of
         boolean expressions. Ex 'XFAIL:'
     INTEGER: A keyword taking a single integer. Ex 'ALLOW_RETRIES:'
@@ -1697,11 +1809,12 @@ class ParserKind(object):
     TAG = 0
     COMMAND = 1
     LIST = 2
-    BOOLEAN_EXPR = 3
-    INTEGER = 4
-    CUSTOM = 5
-    DEFINE = 6
-    REDEFINE = 7
+    SPACE_LIST = 3
+    BOOLEAN_EXPR = 4
+    INTEGER = 5
+    CUSTOM = 6
+    DEFINE = 7
+    REDEFINE = 8
 
     @staticmethod
     def allowedKeywordSuffixes(value):
@@ -1709,6 +1822,7 @@ class ParserKind(object):
             ParserKind.TAG: ["."],
             ParserKind.COMMAND: [":"],
             ParserKind.LIST: [":"],
+            ParserKind.SPACE_LIST: [":"],
             ParserKind.BOOLEAN_EXPR: [":"],
             ParserKind.INTEGER: [":"],
             ParserKind.CUSTOM: [":", "."],
@@ -1722,6 +1836,7 @@ class ParserKind(object):
             ParserKind.TAG: "TAG",
             ParserKind.COMMAND: "COMMAND",
             ParserKind.LIST: "LIST",
+            ParserKind.SPACE_LIST: "SPACE_LIST",
             ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
             ParserKind.INTEGER: "INTEGER",
             ParserKind.CUSTOM: "CUSTOM",
@@ -1770,6 +1885,8 @@ class IntegratedTestKeywordParser(object):
             )
         elif kind == ParserKind.LIST:
             self.parser = self._handleList
+        elif kind == ParserKind.SPACE_LIST:
+            self.parser = self._handleSpaceList
         elif kind == ParserKind.BOOLEAN_EXPR:
             self.parser = self._handleBooleanExpr
         elif kind == ParserKind.INTEGER:
@@ -1832,13 +1949,7 @@ class IntegratedTestKeywordParser(object):
         if not output or not output[-1].add_continuation(line_number, keyword, line):
             if output is None:
                 output = []
-            pdbg = "%dbg({keyword} at line {line_number})".format(
-                keyword=keyword, line_number=line_number
-            )
-            assert re.match(
-                kPdbgRegex + "$", pdbg
-            ), "kPdbgRegex expected to match actual %dbg usage"
-            line = "{pdbg} {real_command}".format(pdbg=pdbg, real_command=line)
+            line = buildPdbgCommand(f"{keyword} at line {line_number}", line)
             output.append(CommandDirective(line_number, line_number, keyword, line))
         return output
 
@@ -1848,6 +1959,14 @@ class IntegratedTestKeywordParser(object):
         if output is None:
             output = []
         output.extend([s.strip() for s in line.split(",")])
+        return output
+
+    @staticmethod
+    def _handleSpaceList(line_number, line, output):
+        """A parser for SPACE_LIST type keywords"""
+        if output is None:
+            output = []
+        output.extend([s.strip() for s in line.split(" ") if s.strip() != ""])
         return output
 
     @staticmethod
@@ -2041,14 +2160,47 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     return script
 
 
-def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
-    def runOnce(execdir):
-        if useExternalSh:
-            res = executeScript(test, litConfig, tmpBase, script, execdir)
-        else:
-            res = executeScriptInternal(test, litConfig, tmpBase, script, execdir)
-        if isinstance(res, lit.Test.Result):
-            return res
+def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
+    # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
+    def runOnce(
+        execdir,
+    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
+        # script is modified below (for litConfig.per_test_coverage, and for
+        # %dbg expansions).  runOnce can be called multiple times, but applying
+        # the modifications multiple times can corrupt script, so always modify
+        # a copy.
+        scriptCopy = script[:]
+        # Set unique LLVM_PROFILE_FILE for each run command
+        if litConfig.per_test_coverage:
+            # Extract the test case name from the test object, and remove the
+            # file extension.
+            test_case_name = test.path_in_suite[-1]
+            test_case_name = test_case_name.rsplit(".", 1)[0]
+            coverage_index = 0  # Counter for coverage file index
+            for i, ln in enumerate(scriptCopy):
+                match = re.fullmatch(kPdbgRegex, ln)
+                if match:
+                    dbg = match.group(1)
+                    command = match.group(2)
+                else:
+                    command = ln
+                profile = f"{test_case_name}{coverage_index}.profraw"
+                coverage_index += 1
+                command = f"export LLVM_PROFILE_FILE={profile}; {command}"
+                if match:
+                    command = buildPdbgCommand(dbg, command)
+                scriptCopy[i] = command
+
+        try:
+            if useExternalSh:
+                res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
+            else:
+                res = executeScriptInternal(
+                    test, litConfig, tmpBase, scriptCopy, execdir
+                )
+        except ScriptFatal as e:
+            out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
+            return out, "", 1, None, Test.UNRESOLVED
 
         out, err, exitCode, timeoutInfo = res
         if exitCode == 0:
@@ -2068,9 +2220,6 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     attempts = test.allowed_retries + 1
     for i in range(attempts):
         res = runOnce(execdir)
-        if isinstance(res, lit.Test.Result):
-            return res
-
         out, err, exitCode, timeoutInfo, status = res
         if status != Test.FAIL:
             break
@@ -2081,7 +2230,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
         status = Test.FLAKYPASS
 
     # Form the output log.
-    output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % ("\n".join(script), exitCode)
+    output = f"Exit Code: {exitCode}\n"
 
     if timeoutInfo is not None:
         output += """Timeout: %s\n""" % (timeoutInfo,)
@@ -2103,6 +2252,8 @@ def executeShTest(
         return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
 
     script = list(preamble_commands)
+    script = [buildPdbgCommand(f"preamble command line", ln) for ln in script]
+
     parsed = parseIntegratedTestScript(test, require_script=not script)
     if isinstance(parsed, lit.Test.Result):
         return parsed

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-loop-convert %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-loop-convert.NamingStyle, value: 'lower_case'}]}" \
+// RUN:   -config="{CheckOptions: {modernize-loop-convert.NamingStyle: 'lower_case'}}" \
 // RUN:   -- -I %S/Inputs/loop-convert
 
 #include "structures.h"

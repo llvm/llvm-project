@@ -8,7 +8,7 @@
 // RUN:   -Werror=ignored-attributes -mfunction-return=thunk-extern \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-EXTERN
 // RUN: %clang_cc1 -std=gnu2x -triple x86_64-linux-gnu %s -emit-llvm -o - \
-// RUN:  -mfunction-return=thunk-extern -coverage-data-file /dev/null \
+// RUN:  -mfunction-return=thunk-extern -coverage-data-file=/dev/null \
 // RUN:   | FileCheck %s --check-prefix=CHECK-GCOV
 // RUN: %clang_cc1 -std=gnu2x -triple x86_64-linux-gnu %s -emit-llvm -o - \
 // RUN:  -mfunction-return=thunk-extern -fsanitize=address \

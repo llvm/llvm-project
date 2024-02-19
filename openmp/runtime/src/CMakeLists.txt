@@ -12,6 +12,7 @@ include(ExtendPath)
 
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
 configure_file(${LIBOMP_INC_DIR}/omp.h.var omp.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/ompx.h.var ompx.h @ONLY)
 configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
   configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
@@ -107,7 +108,11 @@ else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+    if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+      libomp_append(LIBOMP_GNUASMFILES z_AIX_asm.S) # AIX assembly file
+    else()
+      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+    endif()
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
@@ -146,6 +151,10 @@ endif()
 if(UNIX)
   set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
 endif()
+
+# Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
+# avoid an unwanted dependency on libstdc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
 
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
@@ -301,6 +310,7 @@ if(WIN32)
         PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
         STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
     add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
+    add_dependencies(omp ${LIBOMP_IMP_LIB_TARGET})
   endif()
 endif()
 
@@ -393,6 +403,7 @@ endif()
 install(
   FILES
   ${CMAKE_CURRENT_BINARY_DIR}/omp.h
+  ${CMAKE_CURRENT_BINARY_DIR}/ompx.h
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})

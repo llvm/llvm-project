@@ -46,11 +46,14 @@ body:             |
   bb.0:
 
     ; %load1 || %load2 == %load1 is fine here, because the loads are invariant.
+    ; TODO: Loads need to be CSE'd for this to work.
 
     ; CHECK-LABEL: name: invariant_loads
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
+    ; CHECK-NEXT: %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
     ; CHECK-NEXT: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
-    ; CHECK-NEXT: G_STORE %load2(s32), %ptr(p0) :: (store (s32) into @g)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %load2, %load1
+    ; CHECK-NEXT: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
     %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)

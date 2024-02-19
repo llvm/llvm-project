@@ -72,6 +72,7 @@ class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
                                   clang::DiagnosticsEngine *, bool);
 
   friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
 
 public:
   enum TextDiagnosticFormat { Clang, MSVC, Vi, SARIF };
@@ -122,6 +123,10 @@ public:
   /// The prefixes for comment directives sought by -verify ("expected" by
   /// default).
   std::vector<std::string> VerifyPrefixes;
+
+  /// The list of -Wsystem-header-in-module=... options used to override
+  /// whether -Wsystem-headers is enabled on a per-module basis.
+  std::vector<std::string> SystemHeaderWarningsModules;
 
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.

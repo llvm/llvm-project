@@ -14,6 +14,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
@@ -94,6 +95,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Do finalize relaxation after collecting relaxation infos.
+  virtual void finalizeRelax(int passes) const {}
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
@@ -185,6 +188,7 @@ TargetInfo *getPPC64TargetInfo();
 TargetInfo *getPPCTargetInfo();
 TargetInfo *getRISCVTargetInfo();
 TargetInfo *getSPARCV9TargetInfo();
+TargetInfo *getSystemZTargetInfo();
 TargetInfo *getX86TargetInfo();
 TargetInfo *getX86_64TargetInfo();
 template <class ELFT> TargetInfo *getMipsTargetInfo();
@@ -207,6 +211,7 @@ void processArmCmseSymbols();
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
 
 unsigned getPPCDFormOp(unsigned secondaryOp);
+unsigned getPPCDSFormOp(unsigned secondaryOp);
 
 // In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first
 // is a global entry point (GEP) which typically is used to initialize the TOC
@@ -226,13 +231,15 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 template <typename ELFT> void writeARMCmseImportLib();
-uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc);
+uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections();
 void addArmInputSectionMappingSymbols();
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols();
 void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
+void initSymbolAnchors();
 
 LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
@@ -298,6 +305,16 @@ inline void write32(void *p, uint32_t v) {
 inline void write64(void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, config->endianness);
 }
+
+// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
+}
 } // namespace elf
 } // namespace lld
 
@@ -306,17 +323,17 @@ inline void write64(void *p, uint64_t v) {
 #endif
 #define invokeELFT(f, ...)                                                     \
   switch (config->ekind) {                                                     \
-  case ELF32LEKind:                                                            \
-    f<ELF32LE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF32LEKind:                                                  \
+    f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
     break;                                                                     \
-  case ELF32BEKind:                                                            \
-    f<ELF32BE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF32BEKind:                                                  \
+    f<llvm::object::ELF32BE>(__VA_ARGS__);                                     \
     break;                                                                     \
-  case ELF64LEKind:                                                            \
-    f<ELF64LE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF64LEKind:                                                  \
+    f<llvm::object::ELF64LE>(__VA_ARGS__);                                     \
     break;                                                                     \
-  case ELF64BEKind:                                                            \
-    f<ELF64BE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF64BEKind:                                                  \
+    f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
     break;                                                                     \
   default:                                                                     \
     llvm_unreachable("unknown config->ekind");                                 \

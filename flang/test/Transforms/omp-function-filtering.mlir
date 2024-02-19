@@ -1,12 +1,21 @@
 // RUN: fir-opt -split-input-file --omp-function-filtering %s | FileCheck %s
 
-// CHECK:     func.func @any
-// CHECK:     func.func @nohost
-// CHECK-NOT: func.func @host
-// CHECK-NOT: func.func @none
-// CHECK:     func.func @nohost_target
-// CHECK:     func.func @host_target
-// CHECK:     func.func @none_target
+// CHECK: func.func @any
+// CHECK: return
+// CHECK: func.func @nohost
+// CHECK: return
+// CHECK-NOT: func.func {{.*}}}} @host
+// CHECK-NOT: func.func {{.*}}}} @none
+// CHECK: func.func @nohost_target
+// CHECK: return
+// CHECK: func.func @host_target
+// CHECK: return
+// CHECK: func.func @none_target
+// CHECK: return
+// CHECK: func.func @host_target_call
+// CHECK-NOT: call @none_target
+// CHECK: %[[UNDEF:.*]] = fir.undefined i32
+// CHECK: return %[[UNDEF]] : i32
 module attributes {omp.is_target_device = true} {
   func.func @any() -> ()
       attributes {
@@ -48,21 +57,38 @@ module attributes {omp.is_target_device = true} {
     omp.target {}
     func.return
   }
-  func.func @none_target() -> () {
+  func.func @none_target() -> i32 {
     omp.target {}
-    func.return
+    %0 = arith.constant 25 : i32
+    func.return %0 : i32
+  }
+  func.func @host_target_call() -> i32
+      attributes {
+        omp.declare_target =
+          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+      } {
+    omp.target {}
+    %0 = call @none_target() : () -> i32
+    func.return %0 : i32
   }
 }
 
 // -----
 
-// CHECK:     func.func @any
-// CHECK-NOT: func.func @nohost
-// CHECK:     func.func @host
-// CHECK:     func.func @none
-// CHECK:     func.func @nohost_target
-// CHECK:     func.func @host_target
-// CHECK:     func.func @none_target
+// CHECK: func.func @any
+// CHECK: return
+// CHECK: func.func @nohost
+// CHECK: return
+// CHECK: func.func @host
+// CHECK: return
+// CHECK: func.func @none
+// CHECK: return
+// CHECK: func.func @nohost_target
+// CHECK: return
+// CHECK: func.func @host_target
+// CHECK: return
+// CHECK: func.func @none_target
+// CHECK: return
 module attributes {omp.is_target_device = false} {
   func.func @any() -> ()
       attributes {

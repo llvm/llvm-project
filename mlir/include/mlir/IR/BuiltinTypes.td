@@ -23,17 +23,18 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 // remove the definitions in OpBase.td, and repoint users to this file instead.
 
 // Base class for Builtin dialect types.
-class Builtin_Type<string name, list<Trait> traits = [],
+class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
     : TypeDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
+  let typeName = "builtin." # typeMnemonic;
 }
 
 //===----------------------------------------------------------------------===//
 // ComplexType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Complex : Builtin_Type<"Complex"> {
+def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
   let summary = "Complex number with a parameterized element type";
   let description = [{
     Syntax:
@@ -46,7 +47,7 @@ def Builtin_Complex : Builtin_Type<"Complex"> {
     element type, which is composed of a real and imaginary value of that
     element type. The element must be a floating point or integer scalar type.
 
-    Examples:
+    #### Example:
 
     ```mlir
     complex<f32>
@@ -68,8 +69,8 @@ def Builtin_Complex : Builtin_Type<"Complex"> {
 //===----------------------------------------------------------------------===//
 
 // Base class for Builtin dialect float types.
-class Builtin_FloatType<string name>
-    : Builtin_Type<name, /*traits=*/[], "::mlir::FloatType"> {
+class Builtin_FloatType<string name, string mnemonic>
+    : Builtin_Type<name, mnemonic, /*traits=*/[], "::mlir::FloatType"> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];
@@ -78,7 +79,7 @@ class Builtin_FloatType<string name>
 //===----------------------------------------------------------------------===//
 // Float8E5M2Type
 
-def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2"> {
+def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
   let summary = "8-bit floating point with 2 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 5 bits exponent and 2 bits
@@ -99,7 +100,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2"> {
 //===----------------------------------------------------------------------===//
 // Float8E4M3FNType
 
-def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN"> {
+def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN"> {
   let summary = "8-bit floating point with 3 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
@@ -121,7 +122,7 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN"> {
 //===----------------------------------------------------------------------===//
 // Float8E5M2FNUZType
 
-def Builtin_Float8E5M2FNUZ : Builtin_FloatType<"Float8E5M2FNUZ"> {
+def Builtin_Float8E5M2FNUZ : Builtin_FloatType<"Float8E5M2FNUZ", "f8E5M2FNUZ"> {
   let summary = "8-bit floating point with 2 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 5 bits exponent and 2 bits
@@ -143,7 +144,7 @@ def Builtin_Float8E5M2FNUZ : Builtin_FloatType<"Float8E5M2FNUZ"> {
 //===----------------------------------------------------------------------===//
 // Float8E4M3FNUZType
 
-def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ"> {
+def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ", "f8E4M3FNUZ"> {
   let summary = "8-bit floating point with 3 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
@@ -165,7 +166,7 @@ def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ"> {
 //===----------------------------------------------------------------------===//
 // Float8E4M3B11FNUZType
 
-def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ"> {
+def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ", "f8E4M3B11FNUZ"> {
   let summary = "8-bit floating point with 3 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
@@ -187,49 +188,49 @@ def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ"> {
 //===----------------------------------------------------------------------===//
 // BFloat16Type
 
-def Builtin_BFloat16 : Builtin_FloatType<"BFloat16"> {
+def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16"> {
   let summary = "bfloat16 floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float16Type
 
-def Builtin_Float16 : Builtin_FloatType<"Float16"> {
+def Builtin_Float16 : Builtin_FloatType<"Float16", "f16"> {
   let summary = "16-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // FloatTF32Type
 
-def Builtin_FloatTF32 : Builtin_FloatType<"FloatTF32"> {
+def Builtin_FloatTF32 : Builtin_FloatType<"FloatTF32", "tf32"> {
   let summary = "TF32 floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float32Type
 
-def Builtin_Float32 : Builtin_FloatType<"Float32"> {
+def Builtin_Float32 : Builtin_FloatType<"Float32", "f32"> {
   let summary = "32-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float64Type
 
-def Builtin_Float64 : Builtin_FloatType<"Float64"> {
+def Builtin_Float64 : Builtin_FloatType<"Float64", "f64"> {
   let summary = "64-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float80Type
 
-def Builtin_Float80 : Builtin_FloatType<"Float80"> {
+def Builtin_Float80 : Builtin_FloatType<"Float80", "f80"> {
   let summary = "80-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float128Type
 
-def Builtin_Float128 : Builtin_FloatType<"Float128"> {
+def Builtin_Float128 : Builtin_FloatType<"Float128", "f128"> {
   let summary = "128-bit floating-point type";
 }
 
@@ -237,7 +238,7 @@ def Builtin_Float128 : Builtin_FloatType<"Float128"> {
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Function : Builtin_Type<"Function"> {
+def Builtin_Function : Builtin_Type<"Function", "function"> {
   let summary = "Map from a list of inputs to a list of results";
   let description = [{
     Syntax:
@@ -250,6 +251,16 @@ def Builtin_Function : Builtin_Type<"Function"> {
 
     The function type can be thought of as a function signature. It consists of
     a list of formal parameter types and a list of formal result types.
+
+    #### Example:
+
+    ```mlir
+    func.func @add_one(%arg0 : i64) -> i64 {
+      %c1 = arith.constant 1 : i64
+      %0 = arith.addi %arg0, %c1 : i64
+      return %0 : i64
+    }
+    ```
   }];
   let parameters = (ins "ArrayRef<Type>":$inputs, "ArrayRef<Type>":$results);
   let builders = [
@@ -289,7 +300,7 @@ def Builtin_Function : Builtin_Type<"Function"> {
 // IndexType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Index : Builtin_Type<"Index"> {
+def Builtin_Index : Builtin_Type<"Index", "index"> {
   let summary = "Integer-like type with unknown platform-dependent bit width";
   let description = [{
     Syntax:
@@ -319,7 +330,7 @@ def Builtin_Index : Builtin_Type<"Index"> {
 // IntegerType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Integer : Builtin_Type<"Integer"> {
+def Builtin_Integer : Builtin_Type<"Integer", "integer"> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -383,7 +394,7 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 // MemRefType
 //===----------------------------------------------------------------------===//
 
-def Builtin_MemRef : Builtin_Type<"MemRef", [
+def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference to a region of memory";
@@ -391,10 +402,10 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     Syntax:
 
     ```
-    memref-type ::= `memref` `<` dimension-list-ranked type
-                    (`,` layout-specification)? (`,` memory-space)? `>`
     layout-specification ::= attribute-value
     memory-space ::= attribute-value
+    memref-type ::= `memref` `<` dimension-list-ranked type
+                    (`,` layout-specification)? (`,` memory-space)? `>`
     ```
 
     A `memref` type is a reference to a region of memory (similar to a buffer
@@ -663,11 +674,26 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
 // NoneType
 //===----------------------------------------------------------------------===//
 
-def Builtin_None : Builtin_Type<"None"> {
+def Builtin_None : Builtin_Type<"None", "none"> {
   let summary = "A unit type";
   let description = [{
+    Syntax:
+
+    ```
+    none-type ::= `none`
+    ```
+
     NoneType is a unit type, i.e. a type with exactly one possible value, where
     its value does not have a defined dynamic representation.
+
+    #### Example:
+
+    ```mlir
+    func.func @none_type() {
+      %none_val = "foo.unknown_op"() : () -> none
+      return
+    }
+    ```
   }];
   let extraClassDeclaration = [{
     static NoneType get(MLIRContext *context);
@@ -678,7 +704,7 @@ def Builtin_None : Builtin_Type<"None"> {
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Opaque : Builtin_Type<"Opaque"> {
+def Builtin_Opaque : Builtin_Type<"Opaque", "opaque"> {
   let summary = "Type of a non-registered dialect";
   let description = [{
     Syntax:
@@ -691,7 +717,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
     represented in their raw string form, and can only usefully be tested for
     type equality.
 
-    Examples:
+    #### Example:
 
     ```mlir
     opaque<"llvm", "struct<(i32, float)>">
@@ -718,7 +744,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
 // RankedTensorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
+def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
     ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with a fixed number of dimensions";
@@ -760,7 +786,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
     zero sizes are not allowed in some other types, such tensors should be
     optimized away before lowering tensors to vectors.
 
-    Examples:
+    #### Example:
 
     ```mlir
     // Known rank but unknown dimensions.
@@ -829,7 +855,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
 // TupleType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Tuple : Builtin_Type<"Tuple"> {
+def Builtin_Tuple : Builtin_Type<"Tuple", "tuple"> {
   let summary = "Fixed-sized collection of other types";
   let description = [{
     Syntax:
@@ -845,7 +871,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple"> {
     provides no standard operations for operating on `tuple` types
     ([rationale](../../Rationale/Rationale/#tuple-types)).
 
-    Examples:
+    #### Example:
 
     ```mlir
     // Empty tuple.
@@ -896,7 +922,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple"> {
 // UnrankedMemRefType
 //===----------------------------------------------------------------------===//
 
-def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
+def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
     ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference, with unknown rank, to a region of memory";
@@ -913,10 +939,10 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
     arguments of any rank without versioning the functions based on the rank.
     Other uses of this type are disallowed or will have undefined behavior.
 
-    See [MemRefType](#builtin_memref-memreftype) for more information on
+    See [MemRefType](#memreftype) for more information on
     memref types.
 
-    Examples:
+    #### Examples:
 
     ```mlir
     memref<*f32>
@@ -974,7 +1000,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
 // UnrankedTensorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
+def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
     ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with unknown dimensions";
@@ -986,10 +1012,10 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
     ```
 
     An unranked tensor is a type of tensor in which the set of dimensions have
-    unknown rank. See [RankedTensorType](#builtin_rankedtensor-rankedtensortype)
+    unknown rank. See [RankedTensorType](#rankedtensortype)
     for more information on tensor types.
 
-    Examples:
+    #### Examples:
 
     ```mlir
     tensor<*xf32>
@@ -1023,7 +1049,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
+def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
   let description = [{
     Syntax:
@@ -1050,7 +1076,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
     declarations, `vector<0x42xi32>` is invalid because it is interpreted as a
     2D vector with shape `(0, 42)` and zero shapes are not allowed.
 
-    Examples:
+    #### Examples:
 
     ```mlir
     // A 2D fixed-length vector of 3x42 i32 elements.

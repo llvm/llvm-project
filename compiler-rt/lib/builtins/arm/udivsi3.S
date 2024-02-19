@@ -204,7 +204,7 @@ LOCAL_LABEL(divby0):
 	LOCAL_LABEL(block_skip_##shift) :;                                           \
 	adcs r3, r3 // same as ((r3 << 1) | Carry). Carry is set if r0 >= r2.
 
-	// TODO: if current location counter is not not word aligned, we don't
+	// TODO: if current location counter is not word aligned, we don't
 	// need the .p2align and nop
 	// Label div0block must be word-aligned. First align block 31
 	.p2align 2

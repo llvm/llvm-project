@@ -43,7 +43,6 @@ _start:
 
 // CHECK: <__ARMv5LongLdrPcThunk_thumb_func>:
 // CHECK-NEXT: 21014: e51ff004        ldr     pc, [pc, #-4]
-// CHECK: <$d>:
 // CHECK-NEXT: 21018: 11 10 02 00     .word   0x00021011
 
 // CHECK-EB: <_start>:
@@ -57,7 +56,6 @@ _start:
 
 // CHECK-EB: <__ARMv5LongLdrPcThunk_thumb_func>:
 // CHECK-EB-NEXT: 21014: e51ff004        ldr     pc, [pc, #-4]
-// CHECK-EB: <$d>:
 // CHECK-EB-NEXT: 21018: 00 02 10 11     .word   0x00021011
 
 // CHECK-PI: <_start>:
@@ -73,7 +71,6 @@ _start:
 // CHECK-PI-NEXT: 11014: e59fc004        ldr     r12, [pc, #4]
 // CHECK-PI-NEXT: 11018: e08fc00c        add     r12, pc, r12
 // CHECK-PI-NEXT: 1101c: e12fff1c        bx      r12
-// CHECK-PI: <$d>:
 // CHECK-PI-NEXT: 11020: f1 ff ff ff     .word   0xfffffff1
 
 // CHECK-EB-PI: <_start>:
@@ -89,7 +86,6 @@ _start:
 // CHECK-EB-PI-NEXT: 11014: e59fc004        ldr     r12, [pc, #4]
 // CHECK-EB-PI-NEXT: 11018: e08fc00c        add     r12, pc, r12
 // CHECK-EB-PI-NEXT: 1101c: e12fff1c        bx      r12
-// CHECK-EB-PI: <$d>:
 // CHECK-EB-PI-NEXT: 11020: ff ff ff f1     .word   0xfffffff1
         .section .text.1, "ax", %progbits
         .thumb

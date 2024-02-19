@@ -155,8 +155,13 @@ public:
   /// Reads a TemplateArgumentLoc, advancing Idx.
   TemplateArgumentLoc readTemplateArgumentLoc();
 
+  void readTemplateArgumentListInfo(TemplateArgumentListInfo &Result);
+
   const ASTTemplateArgumentListInfo*
   readASTTemplateArgumentListInfo();
+
+  // Reads a concept reference from the given record.
+  ConceptReference *readConceptReference();
 
   /// Reads a declarator info from the given record, advancing Idx.
   TypeSourceInfo *readTypeSourceInfo();
@@ -364,10 +369,6 @@ private:
   llvm::BitstreamCursor &Cursor;
   uint64_t Offset;
 };
-
-inline void PCHValidator::Error(const char *Msg) {
-  Reader.Error(Msg);
-}
 
 } // namespace clang
 

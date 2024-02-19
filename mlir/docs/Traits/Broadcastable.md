@@ -69,17 +69,17 @@ Given the shapes of two ranked input operands, the result's shape is inferred by
 ```python
 InferShape(shape0, shape1):
 
-	# Equalize ranks
-	rank = max(GetRank(shape0), GetRank(shape1))
-	ExpandRank(shape0, rank)
-	ExpandRank(shape1, rank)
+  # Equalize ranks
+  rank = max(GetRank(shape0), GetRank(shape1))
+  ExpandRank(shape0, rank)
+  ExpandRank(shape1, rank)
 	
-	# Infer shape
-	inferredShape = []
-	for (dim0, dim1) in zip(shape0, shape1):
-		inferredDim = InferDim(dim0, dim1)
-        inferredShape.append(inferredDim)
-	return inferredShape
+  # Infer shape
+  inferredShape = []
+  for (dim0, dim1) in zip(shape0, shape1):
+    inferredDim = InferDim(dim0, dim1)
+    inferredShape.append(inferredDim)
+  return inferredShape
 ```
 	
 The result shape for an operation with an arbitrary number of input operands is then inferred by discarding unranked operands, applying shape inference on the first ranked operand pair, and updating the inferred shape with each additional ranked operand. If the operation has no ranked operands, the result shape cannot be inferred. If the operation has exactly one ranked operand, its shape is directly provided as the inferred result shape. Formally:
@@ -111,7 +111,7 @@ Once a rank match is guaranteed, each dimension of the inferred shape is compare
 | `inferredDim` | `actualDim` | Verification outcome |
 | ------------- | ----------- | -------------------- |
 | ? | ? | **OK** |
-| ? | static | **Error** <br> An inferred dimension being dynamic indicates that its size cannot be inferred at compile time from its input operands. The presence of a static dimension in the actual result is counterintuitive and is therefore not allowed. |
+| ? | static | **OK** <br> A failure to guarantee that the runtime dimension size of the result is equal to `actualDim` causes undefined behavior. While unusual, this implicit dynamic-to-static cast is convenient in certain scenarios, such as an intermediate state of a shape inference pass. Ultimately, a static dimension in the result implies that all input dimension sizes are also known at compile time and may therefore become static as well, preferably. |
 | static | ? | **OK** <br> The actual result dimension may be dynamic even when a static size can be inferred at compile time. The programmer may choose to relax the specificity of the result dimension for forward compatibility of the result type. |
 | static | static | **OK if equal** <br> When both the inferred and actual dimensions are static, they must be set to the same size. |
 
@@ -134,7 +134,6 @@ Verify(op):
 	
 	# Verify
 	for (inferredDim, actualDim) in zip(inferredShape, actualShape):
-		ERROR_IF(IsDynamic(inferredDim) and IsStatic(actualDim))
 		ERROR_IF(IsStatic(actualDim) and inferredDim != actualDim)
 ```
 		
@@ -195,3 +194,5 @@ The following are incorrect uses of broadcastable ops:
 // tensor<4xi32>. Broadcast semantics are not applicable for results.
 %result = "test.broadcastable"(%arg0, %arg1) : (tensor<1xi32>, tensor<1xi32) -> tensor<4xi32>
 ```
+
+

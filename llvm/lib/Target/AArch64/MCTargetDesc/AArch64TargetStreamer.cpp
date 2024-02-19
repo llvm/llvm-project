@@ -12,7 +12,6 @@
 
 #include "AArch64TargetStreamer.h"
 #include "AArch64MCAsmInfo.h"
-#include "AArch64Subtarget.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCContext.h"

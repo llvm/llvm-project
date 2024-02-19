@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_TCFLUSH_H
-#define LLVM_LIBC_SRC_UNISTD_TCFLUSH_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H
+#define LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H
 
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int tcflush(int fd, int queue_selector);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_UNISTD_TCFLUSH_H
+#endif // LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H

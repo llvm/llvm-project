@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-objc-root-class -verify %s
-// rdar://11618852
 
 @protocol TestProtocol 
 - (void)newProtocolMethod;

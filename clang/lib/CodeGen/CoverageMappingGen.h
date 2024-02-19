@@ -91,6 +91,10 @@ namespace CodeGen {
 
 class CodeGenModule;
 
+namespace MCDC {
+struct State;
+}
+
 /// Organizes the cross-function state that is used while generating
 /// code coverage mapping data.
 class CoverageMappingModuleGen {
@@ -104,7 +108,7 @@ class CoverageMappingModuleGen {
 
   CodeGenModule &CGM;
   CoverageSourceInfo &SourceInfo;
-  llvm::SmallDenseMap<const FileEntry *, unsigned, 8> FileEntries;
+  llvm::SmallDenseMap<FileEntryRef, unsigned, 8> FileEntries;
   std::vector<llvm::Constant *> FunctionNames;
   std::vector<FunctionInfo> FunctionRecords;
 
@@ -137,7 +141,7 @@ public:
 
   /// Return the coverage mapping translation unit file id
   /// for the given file.
-  unsigned getFileID(const FileEntry *File);
+  unsigned getFileID(FileEntryRef File);
 
   /// Return an interface into CodeGenModule.
   CodeGenModule &getCodeGenModule() { return CGM; }
@@ -150,16 +154,20 @@ class CoverageMappingGen {
   SourceManager &SM;
   const LangOptions &LangOpts;
   llvm::DenseMap<const Stmt *, unsigned> *CounterMap;
+  MCDC::State *MCDCState;
 
 public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts)
-      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(nullptr) {}
+      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(nullptr),
+        MCDCState(nullptr) {}
 
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts,
-                     llvm::DenseMap<const Stmt *, unsigned> *CounterMap)
-      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap) {}
+                     llvm::DenseMap<const Stmt *, unsigned> *CounterMap,
+                     MCDC::State *MCDCState)
+      : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
+        MCDCState(MCDCState) {}
 
   /// Emit the coverage mapping data which maps the regions of
   /// code to counters that will be used to find the execution

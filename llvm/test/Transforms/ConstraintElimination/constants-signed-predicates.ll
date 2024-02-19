@@ -4,14 +4,9 @@
 define i1 @test_slt() {
 ; CHECK-LABEL: @test_slt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 10, 11
-; CHECK-NEXT:    [[F_0:%.*]] = icmp slt i8 10, 10
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
-; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i8 10, 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
-; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i8 10, -10
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 10, 11
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
 ; CHECK-NEXT:    ret i1 [[RES_4]]
 ;
@@ -31,14 +26,9 @@ entry:
 define i1 @test_sgt() {
 ; CHECK-LABEL: @test_sgt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T_0:%.*]] = icmp sgt i8 11, 10
-; CHECK-NEXT:    [[F_0:%.*]] = icmp sgt i8 10, 10
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
-; CHECK-NEXT:    [[F_1:%.*]] = icmp sgt i8 9, 10
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
-; CHECK-NEXT:    [[F_2:%.*]] = icmp sgt i8 -10, 10
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
-; CHECK-NEXT:    [[T_1:%.*]] = icmp sgt i8 -1, -2
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
 ; CHECK-NEXT:    ret i1 [[RES_4]]
 ;
@@ -62,7 +52,6 @@ define i1 @test_slt_gep_1(ptr %base) {
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i8 1
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp slt ptr [[BASE]], [[GEP_1]]
 ; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i8 0
-; CHECK-NEXT:    [[F_0:%.*]] = icmp slt ptr [[BASE]], [[GEP_0]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_0]], false
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt ptr [[GEP_1]], [[BASE]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]

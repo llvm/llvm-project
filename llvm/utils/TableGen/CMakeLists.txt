@@ -59,8 +59,7 @@ add_tablegen(llvm-tblgen LLVM
   DXILEmitter.cpp
   ExegesisEmitter.cpp
   FastISelEmitter.cpp
-  GICombinerEmitter.cpp
-  GlobalISelCombinerMatchTableEmitter.cpp
+  GlobalISelCombinerEmitter.cpp
   GlobalISelEmitter.cpp
   GlobalISelMatchTable.cpp
   GlobalISelMatchTableExecutorEmitter.cpp
@@ -73,6 +72,7 @@ add_tablegen(llvm-tblgen LLVM
   PredicateExpander.cpp
   PseudoLoweringEmitter.cpp
   CompressInstEmitter.cpp
+  MacroFusionPredicatorEmitter.cpp
   RegisterBankEmitter.cpp
   RegisterInfoEmitter.cpp
   SearchableTableEmitter.cpp
@@ -82,7 +82,7 @@ add_tablegen(llvm-tblgen LLVM
   Types.cpp
   VarLenCodeEmitterGen.cpp
   X86DisassemblerTables.cpp
-  X86EVEX2VEXTablesEmitter.cpp
+  X86CompressEVEXTablesEmitter.cpp
   X86FoldTablesEmitter.cpp
   X86MnemonicTables.cpp
   X86ModRMFilters.cpp

@@ -17,11 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
-/// OpOperand vector that implicitly converts to a Value vector.
-struct OpOperandVector : public llvm::SmallVector<OpOperand *> {
-  operator SmallVector<Value>();
-};
-
 namespace detail {
 /// Verify that `op` conforms to the invariants of DestinationStyleOpInterface
 LogicalResult verifyDestinationStyleOpInterface(Operation *op);

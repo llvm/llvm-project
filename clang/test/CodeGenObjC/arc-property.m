@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-arc -emit-llvm %s -o - | FileCheck %s
 
-// rdar://problem/10290317
 @interface Test0
 - (void) setValue: (id) x;
 @end
@@ -36,7 +35,6 @@ struct S1 { Class isa; };
 // CHECK-NEXT: ret void
 
 
-// rdar://problem/12039404
 @interface Test2 {
 @private
   Class _theClass;
@@ -77,7 +75,6 @@ static Class theGlobalClass;
 // CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[T2]], ptr null) [[NUW]]
 // CHECK-NEXT: ret void
 
-// rdar://13115896
 @interface Test3
 @property id copyMachine;
 @end
@@ -119,7 +116,6 @@ void test3(Test3 *t) {
 - (void) setCopyMachine: (id) x {}
 @end
 
-// rdar://31579994
 // When synthesizing a property that's declared in multiple protocols, ensure
 // that the setter is emitted if any of these declarations is readwrite.
 @protocol ABC

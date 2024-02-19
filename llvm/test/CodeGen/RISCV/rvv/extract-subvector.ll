@@ -469,13 +469,14 @@ define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v13, v10, a0
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v9, a0
+; CHECK-NEXT:    vslidedown.vx v12, v9, a0
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v10, a0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
-; CHECK-NEXT:    vslidedown.vx v9, v10, a0
+; CHECK-NEXT:    vslideup.vx v12, v10, a0
+; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = call <vscale x 6 x half> @llvm.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half> %in, i64 6)
   ret <vscale x 6 x half> %res

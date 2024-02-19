@@ -37,11 +37,11 @@ unsigned i;
 // EXCLUDE: noprofile
 // EXCLUDE: @test1
 unsigned test1(void) {
-  // CHECK: %pgocount = load i64, ptr @__profc_test1
-  // FUNC: %pgocount = load i64, ptr @__profc_test1
-  // FILE: %pgocount = load i64, ptr @__profc_test1
-  // SECTION-NOT: %pgocount = load i64, ptr @__profc_test1
-  // EXCLUDE-NOT: %pgocount = load i64, ptr @__profc_test1
+  // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // FUNC: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // FILE: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // SECTION-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test1
+  // EXCLUDE-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test1
   return i + 1;
 }
 
@@ -56,10 +56,10 @@ unsigned test1(void) {
 // EXCLUDE-NOT: noprofile
 // EXCLUDE: @test2
 unsigned test2(void) {
-  // CHECK: %pgocount = load i64, ptr @__profc_test2
-  // FUNC-NOT: %pgocount = load i64, ptr @__profc_test2
-  // FILE: %pgocount = load i64, ptr @__profc_test2
-  // SECTION: %pgocount = load i64, ptr @__profc_test2
-  // EXCLUDE: %pgocount = load i64, ptr @__profc_test2
+  // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // FUNC-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // FILE: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // SECTION: %pgocount = load i64, ptr @__profc_{{_?}}test2
+  // EXCLUDE: %pgocount = load i64, ptr @__profc_{{_?}}test2
   return i - 1;
 }

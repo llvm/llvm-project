@@ -52,9 +52,9 @@ define dso_local void @test2(ptr %v, i32 signext %a) local_unnamed_addr #0 {
 ;
 ; AIX32-LABEL: test2:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    li r5, 0
 ; AIX32-NEXT:    stw r4, -4(r1)
-; AIX32-NEXT:    stw r5, -8(r1)
+; AIX32-NEXT:    li r4, 0
+; AIX32-NEXT:    stw r4, -8(r1)
 ; AIX32-NEXT:    lfd f0, -8(r1)
 ; AIX32-NEXT:    xxlor vs34, f0, f0
 ; AIX32-NEXT:    #APP
@@ -158,9 +158,9 @@ define dso_local void @test6(ptr %v, i32 zeroext %a) local_unnamed_addr #0 {
 ;
 ; AIX32-LABEL: test6:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    li r5, 0
 ; AIX32-NEXT:    stw r4, -4(r1)
-; AIX32-NEXT:    stw r5, -8(r1)
+; AIX32-NEXT:    li r4, 0
+; AIX32-NEXT:    stw r4, -8(r1)
 ; AIX32-NEXT:    lfd f0, -8(r1)
 ; AIX32-NEXT:    xxlor vs34, f0, f0
 ; AIX32-NEXT:    #APP
@@ -191,9 +191,9 @@ define dso_local void @test7(ptr %v, i16 zeroext %a) local_unnamed_addr #0 {
 ;
 ; AIX32-LABEL: test7:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    li r5, 0
 ; AIX32-NEXT:    stw r4, -4(r1)
-; AIX32-NEXT:    stw r5, -8(r1)
+; AIX32-NEXT:    li r4, 0
+; AIX32-NEXT:    stw r4, -8(r1)
 ; AIX32-NEXT:    lfd f0, -8(r1)
 ; AIX32-NEXT:    xxlor vs34, f0, f0
 ; AIX32-NEXT:    #APP
@@ -224,9 +224,9 @@ define dso_local void @test8(ptr %v, i8 zeroext %a) local_unnamed_addr #0 {
 ;
 ; AIX32-LABEL: test8:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    li r5, 0
 ; AIX32-NEXT:    stw r4, -4(r1)
-; AIX32-NEXT:    stw r5, -8(r1)
+; AIX32-NEXT:    li r4, 0
+; AIX32-NEXT:    stw r4, -8(r1)
 ; AIX32-NEXT:    lfd f0, -8(r1)
 ; AIX32-NEXT:    xxlor vs34, f0, f0
 ; AIX32-NEXT:    #APP

@@ -39,19 +39,19 @@ ret:
 define void @test_quiet_nan_strictfp() strictfp {
   %1 = alloca double, align 8
   store volatile double 0x7FF8000000000000, ptr %1, align 8
-  %2 = tail call i32 @feclearexcept(i32 noundef 61)
+  %2 = tail call i32 @feclearexcept(i32 noundef 61) strictfp
   %3 = load volatile double, ptr %1, align 8
-  %4 = call double @acos(double noundef %3)
+  %4 = call double @acos(double noundef %3) strictfp
 ; Generate constrained fcmp if function has strictfp attribute.
 ; That avoids raising fp exception with quiet nan input.
-; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[VALUE]], double 1.000000e+00, metadata !"ogt", metadata !"fpexcept.strict") #0
-; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[VALUE]], double -1.000000e+00, metadata !"olt", metadata !"fpexcept.strict") #0
-  %5 = call i32 @fetestexcept(i32 noundef 61)
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[VALUE]], double 1.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[VALUE]], double -1.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
+  %5 = call i32 @fetestexcept(i32 noundef 61) strictfp
   %6 = icmp ne i32 %5, 0
   br i1 %6, label %abort, label %ret
 
 abort:
-  call void @abort()
+  call void @abort() strictfp
   unreachable
 
 ret:

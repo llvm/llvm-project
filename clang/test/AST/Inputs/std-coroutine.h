@@ -55,9 +55,9 @@ template <typename Promise> struct coroutine_handle : coroutine_handle<> {
 };
 
 struct suspend_always {
-  bool await_ready() { return false; }
-  void await_suspend(coroutine_handle<>) {}
-  void await_resume() {}
+  bool await_ready() noexcept { return false; }
+  void await_suspend(coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
 };
 
 struct suspend_never {

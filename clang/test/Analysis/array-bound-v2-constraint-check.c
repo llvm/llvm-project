@@ -1,10 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,alpha.security.ArrayBoundV2,debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false -verify %s
 
 void clang_analyzer_eval(int);
 void clang_analyzer_printState(void);
 
-typedef unsigned long long size_t;
+typedef typeof(sizeof(int)) size_t;
 const char a[] = "abcd"; // extent: 5 bytes
 
 void symbolic_size_t_and_int0(size_t len) {
@@ -81,6 +81,18 @@ void symbolic_longlong_and_int0(long long len) {
   clang_analyzer_eval(-1 <= len && len <= 3); // expected-warning {{TRUE}}
   clang_analyzer_eval(0 <= len);              // expected-warning {{UNKNOWN}}
   clang_analyzer_eval(len <= 2);              // expected-warning {{UNKNOWN}}
+}
+
+void *malloc(size_t);
+void free(void *);
+void symbolic_longlong_and_int0_dynamic_extent(long long len) {
+  char *b = malloc(5);
+  (void)b[len + 1]; // no-warning
+  // len: [-1,3]
+  clang_analyzer_eval(-1 <= len && len <= 3); // expected-warning {{TRUE}}
+  clang_analyzer_eval(0 <= len);              // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(len <= 2);              // expected-warning {{UNKNOWN}}
+  free(b);
 }
 
 void symbolic_longlong_and_int1(long long len) {

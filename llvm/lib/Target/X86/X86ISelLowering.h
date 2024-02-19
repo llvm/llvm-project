@@ -966,6 +966,11 @@ namespace llvm {
     /// Check if Op is an operation that could be folded into a zero extend x86
     /// instruction.
     bool mayFoldIntoZeroExtend(SDValue Op);
+
+    /// True if the target supports the extended frame for async Swift
+    /// functions.
+    bool isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
+                                            const MachineFunction &MF);
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
@@ -1054,6 +1059,12 @@ namespace llvm {
 
     bool preferABDSToABSWithNSW(EVT VT) const override;
 
+    bool preferSextInRegOfTruncate(EVT TruncVT, EVT VT,
+                                   EVT ExtVT) const override;
+
+    bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode Cond,
+                                           EVT VT) const override;
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
@@ -1131,6 +1142,11 @@ namespace llvm {
         SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
         SelectionDAG &DAG) const override;
+
+    unsigned preferedOpcodeForCmpEqPiecesOfOperand(
+        EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
+        const APInt &ShiftOrRotateAmt,
+        const std::optional<APInt> &AndMask) const override;
 
     bool preferScalarizeSplat(SDNode *N) const override;
 
@@ -1260,23 +1276,22 @@ namespace llvm {
     /// Examine constraint string and operand type and determine a weight value.
     /// The operand object must already have been set up with the operand type.
     ConstraintWeight
-      getSingleConstraintMatchWeight(AsmOperandInfo &info,
-                                     const char *constraint) const override;
+      getSingleConstraintMatchWeight(AsmOperandInfo &Info,
+                                     const char *Constraint) const override;
 
     const char *LowerXConstraint(EVT ConstraintVT) const override;
 
     /// Lower the specified operand into the Ops vector. If it is invalid, don't
     /// add anything to Ops. If hasMemory is true it means one of the asm
     /// constraint of the inline asm instruction being processed is 'm'.
-    void LowerAsmOperandForConstraint(SDValue Op,
-                                      std::string &Constraint,
+    void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "v")
-        return InlineAsm::Constraint_v;
+        return InlineAsm::ConstraintCode::v;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
@@ -1556,9 +1571,8 @@ namespace llvm {
     bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
-    SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value,
-                                   SDValue Addr, SelectionDAG &DAG)
-                                   const override;
+    SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
+                                   int JTI, SelectionDAG &DAG) const override;
 
     Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
@@ -1631,8 +1645,8 @@ namespace llvm {
     SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
-    unsigned getGlobalWrapperKind(const GlobalValue *GV = nullptr,
-                                  const unsigned char OpFlags = 0) const;
+    unsigned getGlobalWrapperKind(const GlobalValue *GV,
+                                  const unsigned char OpFlags) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -1705,16 +1719,6 @@ namespace llvm {
       MachineBasicBlock *Entry,
       const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
-    bool splitValueIntoRegisterParts(
-        SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-        unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
-        const override;
-
-    SDValue joinRegisterPartsIntoValue(
-        SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
-        unsigned NumParts, MVT PartVT, EVT ValueVT,
-        std::optional<CallingConv::ID> CC) const override;
-
     bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
@@ -1744,12 +1748,7 @@ namespace llvm {
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
 
-    bool lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const override;
-    bool lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const override;
-
     bool needsCmpXchgNb(Type *MemType) const;
-
-    template<typename T> bool isSoftFP16(T VT) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;
@@ -1805,6 +1804,9 @@ namespace llvm {
                               const SDLoc &dl, SelectionDAG &DAG,
                               SDValue &X86CC) const;
 
+    bool optimizeFMulOrFDivAsShiftAddBitcast(SDNode *N, SDValue FPConst,
+                                             SDValue IntPow2) const override;
+
     /// Check if replacement of SQRT with RSQRT should be disabled.
     bool isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const override;
 
@@ -1822,6 +1824,9 @@ namespace llvm {
 
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                           SmallVectorImpl<SDNode *> &Created) const override;
+
+    SDValue getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT, SDValue V1,
+                    SDValue V2) const;
   };
 
   namespace X86 {

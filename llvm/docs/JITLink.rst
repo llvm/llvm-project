@@ -15,8 +15,8 @@ what a section, symbol, and relocation are you should find this document
 accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
-JITLink is a library for :ref:`jit_linking`. It was built to support the ORC JIT
-APIs and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
+JITLink is a library for :ref:`jit_linking`. It was built to support the :doc:`ORC JIT
+APIs<ORCv2>` and is most commonly accessed via ORC's ObjectLinkingLayer API. JITLink was
 developed with the aim of supporting the full set of features provided by each
 object format; including static initializers, exception handling, thread local
 variables, and language runtime registration. Supporting these features enables
@@ -466,7 +466,7 @@ finally transferring linked memory to the executing process.
 
       Calls the ``JITLinkContext``'s ``JITLinkMemoryManager`` to allocate both
       working and target memory for the graph. As part of this process the
-      ``JITLinkMemoryManager`` will update the the addresses of all nodes
+      ``JITLinkMemoryManager`` will update the addresses of all nodes
       defined in the graph to their assigned target address.
 
       Note: This step only updates the addresses of nodes defined in this graph.

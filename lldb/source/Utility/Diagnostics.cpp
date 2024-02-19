@@ -52,10 +52,8 @@ Diagnostics::CallbackID Diagnostics::AddCallback(Callback callback) {
 
 void Diagnostics::RemoveCallback(CallbackID id) {
   std::lock_guard<std::mutex> guard(m_callbacks_mutex);
-  m_callbacks.erase(
-      std::remove_if(m_callbacks.begin(), m_callbacks.end(),
-                     [id](const CallbackEntry &e) { return e.id == id; }),
-      m_callbacks.end());
+  llvm::erase_if(m_callbacks,
+                 [id](const CallbackEntry &e) { return e.id == id; });
 }
 
 bool Diagnostics::Dump(raw_ostream &stream) {

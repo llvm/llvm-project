@@ -1479,3 +1479,28 @@ func.func @extract_shapeof(%arg0 : tensor<?x?xf64>) -> index {
 // CHECK:        return %[[DIM]]
  return %result : index
 }
+
+
+// -----
+
+// CHECK-LABEL: @add_poison
+//       CHECK:   %[[P:.*]] = ub.poison : !shape.siz
+//       CHECK:   return %[[P]]
+func.func @add_poison() -> !shape.size {
+  %1 = shape.const_size 2
+  %2 = ub.poison : !shape.size
+  %result = shape.add %1, %2 : !shape.size, !shape.size -> !shape.size
+  return %result : !shape.size
+}
+
+// -----
+
+// CHECK-LABEL: func @shape_of_0d(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<f32>
+//       CHECK:   %[[const:.*]] = shape.const_shape [] : tensor<0xindex>
+//       CHECK:   %[[cast:.*]] = tensor.cast %[[const]] : tensor<0xindex> to tensor<?xindex>
+//       CHECK:   return %[[cast]]
+func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
+  %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
+  return %0 : tensor<?xindex>
+}

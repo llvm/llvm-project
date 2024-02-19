@@ -616,7 +616,7 @@ define <4 x i64> @neg_llegal_vector_type_2(<4 x i16> %a, <4 x i64> %b) {
 }
 
 ; COST-LABEL: neg_llegal_vector_type_3
-; COST-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %tmp0 = zext <3 x i34> %a to <3 x i68>
+; COST-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %tmp0 = zext <3 x i34> %a to <3 x i68>
 define <3 x i68> @neg_llegal_vector_type_3(<3 x i34> %a, <3 x i68> %b) {
   %tmp0 = zext <3 x i34> %a to <3 x i68>
   %tmp1 = add <3 x i68> %b, %tmp0

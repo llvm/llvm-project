@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -34,6 +33,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -694,7 +694,9 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
   // fallthrough.
   if ((!MBB.succ_empty() && !SimplifyMIR) || !canPredictProbs ||
       !canPredictSuccessors(MBB)) {
-    OS.indent(2) << "successors: ";
+    OS.indent(2) << "successors:";
+    if (!MBB.succ_empty())
+      OS << " ";
     for (auto I = MBB.succ_begin(), E = MBB.succ_end(); I != E; ++I) {
       if (I != MBB.succ_begin())
         OS << ", ";
@@ -726,11 +728,10 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     HasLineAttributes = true;
   }
 
-  if (HasLineAttributes)
+  if (HasLineAttributes && !MBB.empty())
     OS << "\n";
   bool IsInBundle = false;
-  for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; ++I) {
-    const MachineInstr &MI = *I;
+  for (const MachineInstr &MI : MBB.instrs()) {
     if (IsInBundle && !MI.isInsideBundle()) {
       OS.indent(2) << "}\n";
       IsInBundle = false;
@@ -803,6 +804,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nomerge ";
   if (MI.getFlag(MachineInstr::Unpredictable))
     OS << "unpredictable ";
+  if (MI.getFlag(MachineInstr::NoConvergent))
+    OS << "noconvergent ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
@@ -979,11 +982,29 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
+  // RemoveDIs: as there's no textual form for DPValues yet, print debug-info
+  // in dbg.value format.
+  bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
+    const_cast<Module &>(M).convertFromNewDbgValues();
+
   yaml::Output Out(OS);
   Out << const_cast<Module &>(M);
+
+  if (IsNewDbgInfoFormat)
+    const_cast<Module &>(M).convertToNewDbgValues();
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineFunction &MF) {
+  // RemoveDIs: as there's no textual form for DPValues yet, print debug-info
+  // in dbg.value format.
+  bool IsNewDbgInfoFormat = MF.getFunction().IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
+    const_cast<Function &>(MF.getFunction()).convertFromNewDbgValues();
+
   MIRPrinter Printer(OS);
   Printer.print(MF);
+
+  if (IsNewDbgInfoFormat)
+    const_cast<Function &>(MF.getFunction()).convertToNewDbgValues();
 }

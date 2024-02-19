@@ -87,12 +87,16 @@ struct DriverArgs {
   std::string Lang;
   std::string Sysroot;
   std::string ISysroot;
+  std::string Target;
+  std::string Stdlib;
+  llvm::SmallVector<std::string> Specs;
 
   bool operator==(const DriverArgs &RHS) const {
     return std::tie(Driver, StandardIncludes, StandardCXXIncludes, Lang,
-                    Sysroot, ISysroot) ==
+                    Sysroot, ISysroot, Target, Stdlib, Specs) ==
            std::tie(RHS.Driver, RHS.StandardIncludes, RHS.StandardCXXIncludes,
-                    RHS.Lang, RHS.Sysroot, ISysroot);
+                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target, RHS.Stdlib,
+                    RHS.Specs);
   }
 
   DriverArgs(const tooling::CompileCommand &Cmd, llvm::StringRef File) {
@@ -130,7 +134,40 @@ struct DriverArgs {
           ISysroot = Cmd.CommandLine[I + 1];
         else
           ISysroot = Arg.str();
+      } else if (Arg.consume_front("--target=")) {
+        Target = Arg.str();
+      } else if (Arg.consume_front("-target")) {
+        if (Arg.empty() && I + 1 < E)
+          Target = Cmd.CommandLine[I + 1];
+      } else if (Arg.consume_front("--stdlib")) {
+        if (Arg.consume_front("="))
+          Stdlib = Arg.str();
+        else if (Arg.empty() && I + 1 < E)
+          Stdlib = Cmd.CommandLine[I + 1];
+      } else if (Arg.consume_front("-stdlib=")) {
+        Stdlib = Arg.str();
+      } else if (Arg.starts_with("-specs=")) {
+        // clang requires a single token like `-specs=file` or `--specs=file`,
+        // but gcc will accept two tokens like `--specs file`. Since the
+        // compilation database is presumably correct, we just forward the flags
+        // as-is.
+        Specs.push_back(Arg.str());
+      } else if (Arg.starts_with("--specs=")) {
+        Specs.push_back(Arg.str());
+      } else if (Arg == "--specs" && I + 1 < E) {
+        Specs.push_back(Arg.str());
+        Specs.push_back(Cmd.CommandLine[I + 1]);
       }
+    }
+
+    // Downgrade objective-c++-header (used in clangd's fallback flags for .h
+    // files) to c++-header, as some drivers may fail to run the extraction
+    // command if it contains `-xobjective-c++-header` and objective-c++ support
+    // is not installed.
+    // In practice, we don't see different include paths for the two on
+    // clang+mac, which is the most common objectve-c compiler.
+    if (Lang == "objective-c++-header") {
+      Lang = "c++-header";
     }
 
     // If language is not explicit in the flags, infer from the file.
@@ -157,6 +194,15 @@ struct DriverArgs {
       Args.append({"--sysroot", Sysroot});
     if (!ISysroot.empty())
       Args.append({"-isysroot", ISysroot});
+    if (!Target.empty())
+      Args.append({"-target", Target});
+    if (!Stdlib.empty())
+      Args.append({"--stdlib", Stdlib});
+
+    for (llvm::StringRef Spec : Specs) {
+      Args.push_back(Spec);
+    }
+
     return Args;
   }
 
@@ -181,14 +227,21 @@ template <> struct DenseMapInfo<DriverArgs> {
     return Driver;
   }
   static unsigned getHashValue(const DriverArgs &Val) {
-    return llvm::hash_value(std::tuple{
+    unsigned FixedFieldsHash = llvm::hash_value(std::tuple{
         Val.Driver,
         Val.StandardIncludes,
         Val.StandardCXXIncludes,
         Val.Lang,
         Val.Sysroot,
         Val.ISysroot,
+        Val.Target,
+        Val.Stdlib,
     });
+
+    unsigned SpecsHash =
+        llvm::hash_combine_range(Val.Specs.begin(), Val.Specs.end());
+
+    return llvm::hash_combine(FixedFieldsHash, SpecsHash);
   }
   static bool isEqual(const DriverArgs &LHS, const DriverArgs &RHS) {
     return LHS == RHS;
@@ -229,7 +282,7 @@ std::optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
       if (!SeenIncludes && Line.trim() == SIS) {
         SeenIncludes = true;
         State = IncludesExtracting;
-      } else if (!SeenTarget && Line.trim().startswith(TS)) {
+      } else if (!SeenTarget && Line.trim().starts_with(TS)) {
         SeenTarget = true;
         llvm::StringRef TargetLine = Line.trim();
         TargetLine.consume_front(TS);
@@ -325,7 +378,13 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
   SPAN_ATTACH(Tracer, "driver", Driver);
   SPAN_ATTACH(Tracer, "lang", InputArgs.Lang);
 
-  if (!QueryDriverRegex.match(Driver)) {
+  // If driver was "../foo" then having to allowlist "/path/a/../foo" rather
+  // than "/path/foo" is absurd.
+  // Allow either to match the allowlist, then proceed with "/path/a/../foo".
+  // This was our historical behavior, and it *could* resolve to something else.
+  llvm::SmallString<256> NoDots(Driver);
+  llvm::sys::path::remove_dots(NoDots, /*remove_dot_dot=*/true);
+  if (!QueryDriverRegex.match(Driver) && !QueryDriverRegex.match(NoDots)) {
     vlog("System include extraction: not allowed driver {0}", Driver);
     return std::nullopt;
   }
@@ -352,8 +411,7 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
     auto Path = llvm::StringRef(*BuiltinHeaders).trim();
     if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
       auto Size = Info->SystemIncludes.size();
-      llvm::erase_if(Info->SystemIncludes,
-                     [&](llvm::StringRef Entry) { return Path == Entry; });
+      llvm::erase(Info->SystemIncludes, Path);
       vlog("System includes extractor: builtin headers {0} {1}", Path,
            (Info->SystemIncludes.size() != Size)
                ? "excluded"
@@ -390,7 +448,7 @@ tooling::CompileCommand &setTarget(tooling::CompileCommand &Cmd,
   if (!Target.empty()) {
     // We do not want to override existing target with extracted one.
     for (llvm::StringRef Arg : Cmd.CommandLine) {
-      if (Arg == "-target" || Arg.startswith("--target="))
+      if (Arg == "-target" || Arg.starts_with("--target="))
         return Cmd;
     }
     // Just append when `--` isn't present.

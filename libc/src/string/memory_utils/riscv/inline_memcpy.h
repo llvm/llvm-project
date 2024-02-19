@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_riscv(Ptr __restrict dst, CPtr __restrict src, size_t count) {
@@ -28,6 +28,6 @@ inline_memcpy_riscv(Ptr __restrict dst, CPtr __restrict src, size_t count) {
 #endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMCPY_H

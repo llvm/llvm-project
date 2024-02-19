@@ -45,7 +45,6 @@ def Tosa_Dialect : Dialect {
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -208,7 +207,7 @@ def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
   }]>;
 
 //===----------------------------------------------------------------------===//
-// TOSA Operator.
+// TOSA Operator Class.
 //===----------------------------------------------------------------------===//
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
@@ -221,6 +220,20 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
                                         ["inferReturnTypeComponents"]>,
               ResultsBroadcastableShape,
               Pure])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TOSA_OP_BASE

@@ -557,9 +557,9 @@ void MappingTraits<object::coff_load_config_code_integrity>::mapping(
 template <typename T, typename M>
 void mapLoadConfigMember(IO &IO, T &LoadConfig, const char *Name, M &Member) {
   // Map only members that match a specified size.
-  if (reinterpret_cast<char *>(&Member) -
-          reinterpret_cast<char *>(&LoadConfig) <
-      LoadConfig.Size)
+  ptrdiff_t dist =
+      reinterpret_cast<char *>(&Member) - reinterpret_cast<char *>(&LoadConfig);
+  if (dist < (ptrdiff_t)LoadConfig.Size)
     IO.mapOptional(Name, Member);
 }
 
@@ -689,11 +689,12 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
     return;
   }
 
-  // Uninitialized sections, such as .bss, typically have no data, but the size
-  // is carried in SizeOfRawData, even though PointerToRawData is zero.
-  if (Sec.SectionData.binary_size() == 0 && Sec.StructuredData.empty() &&
-      NC->Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
-    IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData);
+  IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData, 0U);
+
+  if (!Sec.StructuredData.empty() && Sec.Header.SizeOfRawData) {
+    IO.setError("StructuredData and SizeOfRawData can't be used together");
+    return;
+  }
 
   IO.mapOptional("Relocations", Sec.Relocations);
 }

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! Test that allocatable or pointer item from namelist are retrieved correctly
 ! if they are part of a common block as well.
@@ -18,7 +18,7 @@ contains
 end
 
 ! CHECK-LABEL: fir.global linkonce @_QFNt.list constant : !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>> {
-! CHECK: %[[CB_ADDR:.*]] = fir.address_of(@_QCc) : !fir.ref<!fir.array<56xi8>>
+! CHECK: %[[CB_ADDR:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<56xi8>>
 ! CHECK: %[[CB_CAST:.*]] = fir.convert %[[CB_ADDR]] : (!fir.ref<!fir.array<56xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK: %[[OFFSET:.*]] = arith.constant 8 : index
 ! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[CB_CAST]], %[[OFFSET]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

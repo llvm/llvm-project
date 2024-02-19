@@ -38,15 +38,18 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
       return true;
 
     // Match GlobalAddresses
-    if (auto *A = dyn_cast<GlobalAddressSDNode>(Base))
+    if (auto *A = dyn_cast<GlobalAddressSDNode>(Base)) {
       if (auto *B = dyn_cast<GlobalAddressSDNode>(Other.Base))
         if (A->getGlobal() == B->getGlobal()) {
           Off += B->getOffset() - A->getOffset();
           return true;
         }
 
+      return false;
+    }
+
     // Match Constants
-    if (auto *A = dyn_cast<ConstantPoolSDNode>(Base))
+    if (auto *A = dyn_cast<ConstantPoolSDNode>(Base)) {
       if (auto *B = dyn_cast<ConstantPoolSDNode>(Other.Base)) {
         bool IsMatch =
             A->isMachineConstantPoolEntry() == B->isMachineConstantPoolEntry();
@@ -62,7 +65,8 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         }
       }
 
-    const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+      return false;
+    }
 
     // Match FrameIndexes.
     if (auto *A = dyn_cast<FrameIndexSDNode>(Base))
@@ -73,6 +77,7 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         // Non-equal FrameIndexes - If both frame indices are fixed
         // we know their relative offsets and can compare them. Otherwise
         // we must be conservative.
+        const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
         if (MFI.isFixedObjectIndex(A->getIndex()) &&
             MFI.isFixedObjectIndex(B->getIndex())) {
           Off += MFI.getObjectOffset(B->getIndex()) -
@@ -81,6 +86,7 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         }
       }
   }
+
   return false;
 }
 
@@ -91,10 +97,13 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
                                       const SelectionDAG &DAG, bool &IsAlias) {
 
   BaseIndexOffset BasePtr0 = match(Op0, DAG);
-  BaseIndexOffset BasePtr1 = match(Op1, DAG);
-
-  if (!(BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()))
+  if (!BasePtr0.getBase().getNode())
     return false;
+
+  BaseIndexOffset BasePtr1 = match(Op1, DAG);
+  if (!BasePtr1.getBase().getNode())
+    return false;
+
   int64_t PtrDiff;
   if (NumBytes0 && NumBytes1 &&
       BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
@@ -130,7 +139,7 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
       MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
       // If the base are the same frame index but the we couldn't find a
       // constant offset, (indices are different) be conservative.
-      if (A != B && (!MFI.isFixedObjectIndex(A->getIndex()) ||
+      if (A->getIndex() != B->getIndex() && (!MFI.isFixedObjectIndex(A->getIndex()) ||
                      !MFI.isFixedObjectIndex(B->getIndex()))) {
         IsAlias = false;
         return true;

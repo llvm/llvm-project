@@ -9,10 +9,10 @@
 #include "lldb/Expression/REPL.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Thread.h"
@@ -497,7 +497,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 void REPL::IOHandlerComplete(IOHandler &io_handler,
                              CompletionRequest &request) {
   // Complete an LLDB command if the first character is a colon...
-  if (request.GetRawLine().startswith(":")) {
+  if (request.GetRawLine().starts_with(":")) {
     Debugger &debugger = m_target.GetDebugger();
 
     // auto complete LLDB commands
@@ -528,17 +528,15 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   current_code.append(m_code.CopyList());
 
   IOHandlerEditline &editline = static_cast<IOHandlerEditline &>(io_handler);
-  const StringList *current_lines = editline.GetCurrentLines();
-  if (current_lines) {
-    const uint32_t current_line_idx = editline.GetCurrentLineIndex();
+  StringList current_lines = editline.GetCurrentLines();
+  const uint32_t current_line_idx = editline.GetCurrentLineIndex();
 
-    if (current_line_idx < current_lines->GetSize()) {
-      for (uint32_t i = 0; i < current_line_idx; ++i) {
-        const char *line_cstr = current_lines->GetStringAtIndex(i);
-        if (line_cstr) {
-          current_code.append("\n");
-          current_code.append(line_cstr);
-        }
+  if (current_line_idx < current_lines.GetSize()) {
+    for (uint32_t i = 0; i < current_line_idx; ++i) {
+      const char *line_cstr = current_lines.GetStringAtIndex(i);
+      if (line_cstr) {
+        current_code.append("\n");
+        current_code.append(line_cstr);
       }
     }
   }

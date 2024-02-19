@@ -1,6 +1,6 @@
 ! Test lowering of character function dummy procedure. The length must be
 ! passed along the function address.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test passing a character function as dummy procedure
@@ -195,7 +195,7 @@ subroutine call_explicit_length_with_iface(bar10)
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[COMPI:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[C0]] : index
 ! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_5]], %[[C0]] : index
-! CHECK:  %[[VAL_6:.*]] = fir.call @llvm.stacksave() {{.*}}: () -> !fir.ref<i8>
+! CHECK:  %[[VAL_6:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
 ! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.char<1,?>(%[[SELECT]] : index) {bindc_name = ".result"}
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>)
 ! CHECK:  fir.call %[[VAL_8]](%[[VAL_7]], %[[SELECT]], %[[VAL_1]]) {{.*}}: (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>

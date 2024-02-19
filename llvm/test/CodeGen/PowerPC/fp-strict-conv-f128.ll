@@ -496,8 +496,8 @@ define signext i32 @ppcq_to_i32(ppc_fp128 %m) #0 {
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    mffs f0
 ; NOVSX-NEXT:    mtfsb1 31
-; NOVSX-NEXT:    addi r3, r1, -4
 ; NOVSX-NEXT:    mtfsb0 30
+; NOVSX-NEXT:    addi r3, r1, -4
 ; NOVSX-NEXT:    fadd f1, f2, f1
 ; NOVSX-NEXT:    mtfsf 1, f0
 ; NOVSX-NEXT:    fctiwz f0, f1
@@ -616,11 +616,11 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P8-NEXT:    xxlxor f3, f3, f3
 ; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; P8-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
+; P8-NEXT:    fcmpo cr1, f2, f3
 ; P8-NEXT:    lis r3, -32768
-; P8-NEXT:    fcmpo cr0, f2, f3
-; P8-NEXT:    fcmpo cr1, f1, f0
-; P8-NEXT:    crand 4*cr5+lt, 4*cr1+eq, lt
-; P8-NEXT:    crandc 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
+; P8-NEXT:    fcmpo cr0, f1, f0
+; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
+; P8-NEXT:    crandc 4*cr5+gt, lt, eq
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r30, 0, r3, 4*cr5+lt
 ; P8-NEXT:    bc 12, 4*cr5+lt, .LBB13_2
@@ -689,22 +689,22 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; NOVSX-LABEL: ppcq_to_u32:
 ; NOVSX:       # %bb.0: # %entry
 ; NOVSX-NEXT:    mfocrf r12, 32
-; NOVSX-NEXT:    mflr r0
 ; NOVSX-NEXT:    stw r12, 8(r1)
+; NOVSX-NEXT:    mflr r0
 ; NOVSX-NEXT:    stdu r1, -48(r1)
 ; NOVSX-NEXT:    std r0, 64(r1)
 ; NOVSX-NEXT:    .cfi_def_cfa_offset 48
 ; NOVSX-NEXT:    .cfi_offset lr, 16
 ; NOVSX-NEXT:    .cfi_offset cr2, 8
 ; NOVSX-NEXT:    addis r3, r2, .LCPI13_0@toc@ha
-; NOVSX-NEXT:    addis r4, r2, .LCPI13_1@toc@ha
 ; NOVSX-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
-; NOVSX-NEXT:    lfs f4, .LCPI13_1@toc@l(r4)
+; NOVSX-NEXT:    addis r3, r2, .LCPI13_1@toc@ha
+; NOVSX-NEXT:    lfs f4, .LCPI13_1@toc@l(r3)
 ; NOVSX-NEXT:    fcmpo cr0, f1, f0
 ; NOVSX-NEXT:    fcmpo cr1, f2, f4
 ; NOVSX-NEXT:    fmr f3, f4
-; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; NOVSX-NEXT:    crandc 4*cr5+gt, lt, eq
+; NOVSX-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; NOVSX-NEXT:    cror 4*cr2+lt, 4*cr5+gt, 4*cr5+lt
 ; NOVSX-NEXT:    bc 12, 4*cr2+lt, .LBB13_2
 ; NOVSX-NEXT:  # %bb.1: # %entry
@@ -714,8 +714,8 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    mffs f0
 ; NOVSX-NEXT:    mtfsb1 31
-; NOVSX-NEXT:    addi r3, r1, 44
 ; NOVSX-NEXT:    mtfsb0 30
+; NOVSX-NEXT:    addi r3, r1, 44
 ; NOVSX-NEXT:    fadd f1, f2, f1
 ; NOVSX-NEXT:    mtfsf 1, f0
 ; NOVSX-NEXT:    fctiwz f0, f1
@@ -728,8 +728,8 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; NOVSX-NEXT:    addi r1, r1, 48
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    lwz r12, 8(r1)
-; NOVSX-NEXT:    mtocrf 32, r12
 ; NOVSX-NEXT:    mtlr r0
+; NOVSX-NEXT:    mtocrf 32, r12
 ; NOVSX-NEXT:    blr
 entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(ppc_fp128 %m, metadata !"fpexcept.strict") #0
@@ -831,10 +831,10 @@ define ppc_fp128 @i1_to_ppcq(i1 signext %m) #0 {
 ;
 ; NOVSX-LABEL: i1_to_ppcq:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwax f0, 0, r3
 ; NOVSX-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
-; NOVSX-NEXT:    lfiwax f0, 0, r4
 ; NOVSX-NEXT:    lfs f2, .LCPI16_0@toc@l(r3)
 ; NOVSX-NEXT:    fcfid f1, f0
 ; NOVSX-NEXT:    blr
@@ -860,10 +860,10 @@ define ppc_fp128 @u1_to_ppcq(i1 zeroext %m) #0 {
 ;
 ; NOVSX-LABEL: u1_to_ppcq:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    addi r4, r1, -4
 ; NOVSX-NEXT:    stw r3, -4(r1)
+; NOVSX-NEXT:    addi r3, r1, -4
+; NOVSX-NEXT:    lfiwax f0, 0, r3
 ; NOVSX-NEXT:    addis r3, r2, .LCPI17_0@toc@ha
-; NOVSX-NEXT:    lfiwax f0, 0, r4
 ; NOVSX-NEXT:    lfs f2, .LCPI17_0@toc@l(r3)
 ; NOVSX-NEXT:    fcfid f1, f0
 ; NOVSX-NEXT:    blr

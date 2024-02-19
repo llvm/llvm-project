@@ -82,6 +82,11 @@ Expr<SomeDerived> FoldOperation(
       } else {
         isConstant &= IsInitialDataTarget(expr);
       }
+    } else if (IsAllocatable(symbol)) {
+      // F2023: 10.1.12 (3)(a)
+      // If comp-spec is not null() for the allocatable component the
+      // structure constructor is not a constant expression.
+      isConstant &= IsNullPointer(expr);
     } else {
       isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
@@ -275,11 +280,15 @@ std::optional<Expr<SomeType>> FoldTransfer(
     if (totalBytes < std::size_t{1000000} &&
         (elements == 0 || totalBytes / elements == *sourceBytes)) {
       InitialImage image{*sourceBytes};
-      InitialImage::Result imageResult{
-          image.Add(0, *sourceBytes, *source, context)};
-      CHECK(imageResult == InitialImage::Ok);
-      return image.AsConstant(
-          context, *moldType, moldLength, *extents, true /*pad with 0*/);
+      auto status{image.Add(0, *sourceBytes, *source, context)};
+      if (status == InitialImage::Ok) {
+        return image.AsConstant(
+            context, *moldType, moldLength, *extents, true /*pad with 0*/);
+      } else {
+        // Can fail due to an allocatable or automatic component;
+        // a warning will also have been produced.
+        CHECK(status == InitialImage::NotAConstant);
+      }
     }
   }
   return std::nullopt;

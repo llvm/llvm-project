@@ -9,24 +9,23 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H
 
-#include "src/__support/CPP/limits.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 LIBC_INLINE int convert_write_int(Writer *writer,
                                   const FormatSection &to_conv) {
 
-  // This is an additional check added by LLVM-libc. The reason it returns -3 is
-  // because printf uses negative return values for errors, and -1 and -2 are
-  // already in use by the file_writer class for file errors.
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+  // This is an additional check added by LLVM-libc.
   if (to_conv.conv_val_ptr == nullptr)
     return NULLPTR_WRITE_ERROR;
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   int written = writer->get_chars_written();
 
@@ -42,10 +41,12 @@ LIBC_INLINE int convert_write_int(Writer *writer,
     *reinterpret_cast<long long *>(to_conv.conv_val_ptr) = written;
     break;
   case LengthModifier::h:
-    *reinterpret_cast<short *>(to_conv.conv_val_ptr) = written;
+    *reinterpret_cast<short *>(to_conv.conv_val_ptr) =
+        static_cast<short>(written);
     break;
   case LengthModifier::hh:
-    *reinterpret_cast<signed char *>(to_conv.conv_val_ptr) = written;
+    *reinterpret_cast<signed char *>(to_conv.conv_val_ptr) =
+        static_cast<signed char>(written);
     break;
   case LengthModifier::z:
     *reinterpret_cast<size_t *>(to_conv.conv_val_ptr) = written;
@@ -61,6 +62,6 @@ LIBC_INLINE int convert_write_int(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H

@@ -54,18 +54,6 @@ public:
     if (!clang_ast_context)
       return;
 
-    std::shared_ptr<ClangASTImporter> clang_ast_importer;
-    auto *state = target_sp->GetPersistentExpressionStateForLanguage(
-        lldb::eLanguageTypeC_plus_plus);
-    if (state) {
-      auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
-      clang_ast_importer = persistent_vars->GetClangASTImporter();
-    }
-
-    if (!clang_ast_importer) {
-      return;
-    }
-
     const char *const isa_name("__isa");
     const CompilerType isa_type =
         clang_ast_context->GetBasicType(lldb::eBasicTypeObjCClass);
@@ -148,7 +136,9 @@ public:
 
   // return true if this object is now safe to use forever without ever
   // updating again; the typical (and tested) answer here is 'false'
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   // maybe return false if the block pointer is, say, null
   bool MightHaveChildren() override { return true; }

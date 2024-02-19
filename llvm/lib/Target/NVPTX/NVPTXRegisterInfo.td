@@ -58,7 +58,7 @@ foreach i = 0...31 in {
 //===----------------------------------------------------------------------===//
 def Int1Regs : NVPTXRegClass<[i1], 8, (add (sequence "P%u", 0, 4))>;
 def Int16Regs : NVPTXRegClass<[i16, f16, bf16], 16, (add (sequence "RS%u", 0, 4))>;
-def Int32Regs : NVPTXRegClass<[i32, v2f16, v2bf16], 32,
+def Int32Regs : NVPTXRegClass<[i32, v2f16, v2bf16, v2i16, v4i8], 32,
                               (add (sequence "R%u", 0, 4),
                               VRFrame32, VRFrameLocal32)>;
 def Int64Regs : NVPTXRegClass<[i64], 64, (add (sequence "RL%u", 0, 4), VRFrame64, VRFrameLocal64)>;

@@ -5,19 +5,23 @@ module attributes {omp.is_target_device = false} {
     %0 = llvm.mlir.constant(20 : i32) : i32
     %1 = llvm.mlir.constant(10 : i32) : i32
     %2 = llvm.mlir.constant(1 : i64) : i64
-    %3 = llvm.alloca %2 x i32 {bindc_name = "a", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEa"} : (i64) -> !llvm.ptr<i32>
+    %3 = llvm.alloca %2 x i32 {bindc_name = "a", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEa"} : (i64) -> !llvm.ptr
     %4 = llvm.mlir.constant(1 : i64) : i64
-    %5 = llvm.alloca %4 x i32 {bindc_name = "b", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEb"} : (i64) -> !llvm.ptr<i32>
+    %5 = llvm.alloca %4 x i32 {bindc_name = "b", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEb"} : (i64) -> !llvm.ptr
     %6 = llvm.mlir.constant(1 : i64) : i64
-    %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr<i32>
-    llvm.store %1, %3 : !llvm.ptr<i32>
-    llvm.store %0, %5 : !llvm.ptr<i32>
-    omp.target {
+    %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr
+    llvm.store %1, %3 : i32, !llvm.ptr
+    llvm.store %0, %5 : i32, !llvm.ptr
+    %map1 = omp.map_info var_ptr(%3 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map2 = omp.map_info var_ptr(%5 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map3 = omp.map_info var_ptr(%7 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target map_entries( %map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr):
       omp.parallel {
-        %8 = llvm.load %3 : !llvm.ptr<i32>
-        %9 = llvm.load %5 : !llvm.ptr<i32>
+        %8 = llvm.load %arg0 : !llvm.ptr -> i32
+        %9 = llvm.load %arg1 : !llvm.ptr -> i32
         %10 = llvm.add %8, %9  : i32
-        llvm.store %10, %7 : !llvm.ptr<i32>
+        llvm.store %10, %arg2 : i32, !llvm.ptr
         omp.terminator
         }
       omp.terminator
@@ -35,7 +39,7 @@ module attributes {omp.is_target_device = false} {
 // CHECK: store ptr %[[ADDR_B]], ptr %[[GEP2]], align 8
 // CHECK: %[[GEP3:.*]] = getelementptr { ptr, ptr, ptr }, ptr %[[STRUCTARG]], i32 0, i32 2
 // CHECK: store ptr %[[ADDR_C]], ptr %[[GEP3]], align 8
-// CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]]..omp_par, ptr %[[STRUCTARG]])
+// CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @{{.*}}, i32 1, ptr @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]]..omp_par, ptr %[[STRUCTARG]])
 
 
 // CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]]..omp_par(ptr noalias %tid.addr, ptr noalias %zero.addr, ptr %[[STRUCTARG2:.*]]) #0 {

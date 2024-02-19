@@ -52,6 +52,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
@@ -103,8 +104,14 @@ void Ctx::reset() {
   nonPrevailingSyms.clear();
   whyExtractRecords.clear();
   backwardReferences.clear();
+  auxiliaryFiles.clear();
+  internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
+  hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
+  scriptSymOrderCounter = 1;
+  scriptSymOrder.clear();
+  ltoAllVtablesHaveTypeInfos = false;
 }
 
 llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
@@ -193,6 +200,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Case("msp430elf", {ELF32LEKind, EM_MSP430})
           .Case("elf64_amdgpu", {ELF64LEKind, EM_AMDGPU})
           .Case("elf64loongarch", {ELF64LEKind, EM_LOONGARCH})
+          .Case("elf64_s390", {ELF64BEKind, EM_S390})
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
@@ -239,6 +247,19 @@ static bool isBitcode(MemoryBufferRef mb) {
   return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
 }
 
+bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
+                                    uint64_t offsetInArchive, bool lazy) {
+  if (!config->fatLTOObjects)
+    return false;
+  Expected<MemoryBufferRef> fatLTOData =
+      IRObjectFile::findBitcodeInMemBuffer(mb);
+  if (errorToBool(fatLTOData.takeError()))
+    return false;
+  files.push_back(
+      make<BitcodeFile>(*fatLTOData, archiveName, offsetInArchive, lazy));
+  return true;
+}
+
 // Opens a file and create a file object. Path has to be resolved already.
 void LinkerDriver::addFile(StringRef path, bool withLOption) {
   using namespace sys::fs;
@@ -263,7 +284,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
           files.push_back(make<BitcodeFile>(p.first, path, p.second, false));
-        else
+        else if (!tryAddFatLTOFile(p.first, path, p.second, false))
           files.push_back(createObjFile(p.first, path));
       }
       return;
@@ -287,9 +308,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     InputFile::isInGroup = true;
     for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
       auto magic = identify_magic(p.first.getBuffer());
-      if (magic == file_magic::elf_relocatable)
-        files.push_back(createObjFile(p.first, path, true));
-      else if (magic == file_magic::bitcode)
+      if (magic == file_magic::elf_relocatable) {
+        if (!tryAddFatLTOFile(p.first, path, p.second, true))
+          files.push_back(createObjFile(p.first, path, true));
+      } else if (magic == file_magic::bitcode)
         files.push_back(make<BitcodeFile>(p.first, path, p.second, true));
       else
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
@@ -321,7 +343,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     files.push_back(make<BitcodeFile>(mbref, "", 0, inLib));
     break;
   case file_magic::elf_relocatable:
-    files.push_back(createObjFile(mbref, "", inLib));
+    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
+      files.push_back(createObjFile(mbref, "", inLib));
     break;
   default:
     error(path + ": unknown file type");
@@ -452,126 +475,95 @@ static const char *getReproduceOption(opt::InputArgList &args) {
 }
 
 static bool hasZOption(opt::InputArgList &args, StringRef key) {
+  bool ret = false;
   for (auto *arg : args.filtered(OPT_z))
-    if (key == arg->getValue())
-      return true;
-  return false;
+    if (key == arg->getValue()) {
+      ret = true;
+      arg->claim();
+    }
+  return ret;
 }
 
 static bool getZFlag(opt::InputArgList &args, StringRef k1, StringRef k2,
-                     bool Default) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
-    if (k1 == arg->getValue())
-      return true;
-    if (k2 == arg->getValue())
-      return false;
+                     bool defaultValue) {
+  for (auto *arg : args.filtered(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (k1 == v)
+      defaultValue = true;
+    else if (k2 == v)
+      defaultValue = false;
+    else
+      continue;
+    arg->claim();
   }
-  return Default;
+  return defaultValue;
 }
 
 static SeparateSegmentKind getZSeparate(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  auto ret = SeparateSegmentKind::None;
+  for (auto *arg : args.filtered(OPT_z)) {
     StringRef v = arg->getValue();
     if (v == "noseparate-code")
-      return SeparateSegmentKind::None;
-    if (v == "separate-code")
-      return SeparateSegmentKind::Code;
-    if (v == "separate-loadable-segments")
-      return SeparateSegmentKind::Loadable;
+      ret = SeparateSegmentKind::None;
+    else if (v == "separate-code")
+      ret = SeparateSegmentKind::Code;
+    else if (v == "separate-loadable-segments")
+      ret = SeparateSegmentKind::Loadable;
+    else
+      continue;
+    arg->claim();
   }
-  return SeparateSegmentKind::None;
+  return ret;
 }
 
 static GnuStackKind getZGnuStack(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
-    if (StringRef("execstack") == arg->getValue())
-      return GnuStackKind::Exec;
-    if (StringRef("noexecstack") == arg->getValue())
-      return GnuStackKind::NoExec;
-    if (StringRef("nognustack") == arg->getValue())
-      return GnuStackKind::None;
+  auto ret = GnuStackKind::NoExec;
+  for (auto *arg : args.filtered(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (v == "execstack")
+      ret = GnuStackKind::Exec;
+    else if (v == "noexecstack")
+      ret = GnuStackKind::NoExec;
+    else if (v == "nognustack")
+      ret = GnuStackKind::None;
+    else
+      continue;
+    arg->claim();
   }
-
-  return GnuStackKind::NoExec;
+  return ret;
 }
 
 static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  uint8_t ret = STV_PROTECTED;
+  for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first == "start-stop-visibility") {
+      arg->claim();
       if (kv.second == "default")
-        return STV_DEFAULT;
+        ret = STV_DEFAULT;
       else if (kv.second == "internal")
-        return STV_INTERNAL;
+        ret = STV_INTERNAL;
       else if (kv.second == "hidden")
-        return STV_HIDDEN;
+        ret = STV_HIDDEN;
       else if (kv.second == "protected")
-        return STV_PROTECTED;
-      error("unknown -z start-stop-visibility= value: " + StringRef(kv.second));
+        ret = STV_PROTECTED;
+      else
+        error("unknown -z start-stop-visibility= value: " +
+              StringRef(kv.second));
     }
   }
-  return STV_PROTECTED;
-}
-
-constexpr const char *knownZFlags[] = {
-    "combreloc",
-    "copyreloc",
-    "defs",
-    "execstack",
-    "force-bti",
-    "force-ibt",
-    "global",
-    "hazardplt",
-    "ifunc-noplt",
-    "initfirst",
-    "interpose",
-    "keep-text-section-prefix",
-    "lazy",
-    "muldefs",
-    "nocombreloc",
-    "nocopyreloc",
-    "nodefaultlib",
-    "nodelete",
-    "nodlopen",
-    "noexecstack",
-    "nognustack",
-    "nokeep-text-section-prefix",
-    "nopack-relative-relocs",
-    "norelro",
-    "noseparate-code",
-    "nostart-stop-gc",
-    "notext",
-    "now",
-    "origin",
-    "pac-plt",
-    "pack-relative-relocs",
-    "rel",
-    "rela",
-    "relro",
-    "retpolineplt",
-    "rodynamic",
-    "separate-code",
-    "separate-loadable-segments",
-    "shstk",
-    "start-stop-gc",
-    "text",
-    "undefs",
-    "wxneeded",
-};
-
-static bool isKnownZFlag(StringRef s) {
-  return llvm::is_contained(knownZFlags, s) ||
-         s.starts_with("common-page-size=") || s.starts_with("bti-report=") ||
-         s.starts_with("cet-report=") ||
-         s.starts_with("dead-reloc-in-nonalloc=") ||
-         s.starts_with("max-page-size=") || s.starts_with("stack-size=") ||
-         s.starts_with("start-stop-visibility=");
+  return ret;
 }
 
 // Report a warning for an unknown -z option.
 static void checkZOptions(opt::InputArgList &args) {
+  // This function is called before getTarget(), when certain options are not
+  // initialized yet. Claim them here.
+  args::getZOptionValue(args, OPT_z, "max-page-size", 0);
+  args::getZOptionValue(args, OPT_z, "common-page-size", 0);
+  getZFlag(args, "rel", "rela", false);
   for (auto *arg : args.filtered(OPT_z))
-    if (!isKnownZFlag(arg->getValue()))
+    if (!arg->isClaimed())
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
@@ -589,7 +581,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
   errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
-  checkZOptions(args);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -632,6 +623,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   readConfigs(args);
+  checkZOptions(args);
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -713,6 +705,9 @@ static void setUnresolvedSymbolPolicy(opt::InputArgList &args) {
         diagRegular = true;
       else if (StringRef(arg->getValue()) == "undefs")
         diagRegular = false;
+      else
+        break;
+      arg->claim();
       break;
     case OPT_allow_shlib_undefined:
       diagShlib = false;
@@ -783,13 +778,6 @@ static int getMemtagMode(opt::InputArgList &args) {
     else if (config->androidMemtagHeap)
       warn("--android-memtag-mode is unspecified, leaving "
            "--android-memtag-heap a no-op");
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-  }
-
-  if (!config->androidMemtagHeap && !config->androidMemtagStack) {
-    error("when using --android-memtag-mode, at least one of "
-          "--android-memtag-heap or "
-          "--android-memtag-stack is required");
     return ELF::NT_MEMTAG_LEVEL_NONE;
   }
 
@@ -1023,6 +1011,78 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
   }
 }
 
+template <class ELFT>
+static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
+  DenseSet<StringRef> typeInfoSymbols;
+  SmallSetVector<StringRef, 0> vtableSymbols;
+  auto processVtableAndTypeInfoSymbols = [&](StringRef name) {
+    if (name.consume_front("_ZTI"))
+      typeInfoSymbols.insert(name);
+    else if (name.consume_front("_ZTV"))
+      vtableSymbols.insert(name);
+  };
+
+  // Examine all native symbol tables.
+  for (ELFFileBase *f : ctx.objectFiles) {
+    using Elf_Sym = typename ELFT::Sym;
+    for (const Elf_Sym &s : f->template getGlobalELFSyms<ELFT>()) {
+      if (s.st_shndx != SHN_UNDEF) {
+        StringRef name = check(s.getName(f->getStringTable()));
+        processVtableAndTypeInfoSymbols(name);
+      }
+    }
+  }
+
+  for (SharedFile *f : ctx.sharedFiles) {
+    using Elf_Sym = typename ELFT::Sym;
+    for (const Elf_Sym &s : f->template getELFSyms<ELFT>()) {
+      if (s.st_shndx != SHN_UNDEF) {
+        StringRef name = check(s.getName(f->getStringTable()));
+        processVtableAndTypeInfoSymbols(name);
+      }
+    }
+  }
+
+  SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
+  for (StringRef s : vtableSymbols)
+    if (!typeInfoSymbols.count(s))
+      vtableSymbolsWithNoRTTI.insert(s);
+
+  // Remove known safe symbols.
+  for (auto *arg : args.filtered(OPT_lto_known_safe_vtables)) {
+    StringRef knownSafeName = arg->getValue();
+    if (!knownSafeName.consume_front("_ZTV"))
+      error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
+            "but got " +
+            knownSafeName);
+    Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
+    if (!pat)
+      error("--lto-known-safe-vtables=: " + toString(pat.takeError()));
+    vtableSymbolsWithNoRTTI.remove_if(
+        [&](StringRef s) { return pat->match(s); });
+  }
+
+  ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
+  // Check for unmatched RTTI symbols
+  for (StringRef s : vtableSymbolsWithNoRTTI) {
+    message(
+        "--lto-validate-all-vtables-have-type-infos: RTTI missing for vtable "
+        "_ZTV" +
+        s + ", --lto-whole-program-visibility disabled");
+  }
+}
+
+static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
+  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "cdsort");
+  if (s == "hfsort")
+    return CGProfileSortKind::Hfsort;
+  if (s == "cdsort")
+    return CGProfileSortKind::Cdsort;
+  if (s != "none")
+    error("unknown --call-graph-profile-sort= value: " + s);
+  return CGProfileSortKind::None;
+}
+
 static DebugCompressionType getCompressionType(StringRef s, StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
                                   .Case("zlib", DebugCompressionType::Zlib)
@@ -1076,20 +1136,22 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
 }
 
 static bool getIsRela(opt::InputArgList &args) {
+  // The psABI specifies the default relocation entry format.
+  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
+                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
+                           config->emachine);
   // If -z rel or -z rela is specified, use the last option.
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
     if (s == "rel")
-      return false;
-    if (s == "rela")
-      return true;
+      rela = false;
+    else if (s == "rela")
+      rela = true;
+    else
+      continue;
+    arg->claim();
   }
-
-  // Otherwise use the psABI defined relocation entry format.
-  uint16_t m = config->emachine;
-  return m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON ||
-         m == EM_LOONGARCH || m == EM_PPC || m == EM_PPC64 || m == EM_RISCV ||
-         m == EM_X86_64;
+  return rela;
 }
 
 static void parseClangOption(StringRef opt, const Twine &msg) {
@@ -1121,7 +1183,7 @@ static bool remapInputs(StringRef line, const Twine &location) {
   else if (Expected<GlobPattern> pat = GlobPattern::create(fields[0]))
     config->remapInputsWildcards.emplace_back(std::move(*pat), fields[1]);
   else {
-    error(location + ": " + toString(pat.takeError()));
+    error(location + ": " + toString(pat.takeError()) + ": " + fields[0]);
     return true;
   }
   return false;
@@ -1134,26 +1196,31 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
   config->allowMultipleDefinition =
+      hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
-                   OPT_no_allow_multiple_definition, false) ||
-      hasZOption(args, "muldefs");
+                   OPT_no_allow_multiple_definition, false);
   config->androidMemtagHeap =
       args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
   config->androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
                                             OPT_no_android_memtag_stack, false);
+  config->fatLTOObjects =
+      args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
   config->androidMemtagMode = getMemtagMode(args);
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
   config->armBe8 = args.hasArg(OPT_be8);
-  if (opt::Arg *arg =
-          args.getLastArg(OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
-                          OPT_Bsymbolic_functions, OPT_Bsymbolic)) {
+  if (opt::Arg *arg = args.getLastArg(
+          OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
+          OPT_Bsymbolic_functions, OPT_Bsymbolic_non_weak, OPT_Bsymbolic)) {
     if (arg->getOption().matches(OPT_Bsymbolic_non_weak_functions))
       config->bsymbolic = BsymbolicKind::NonWeakFunctions;
     else if (arg->getOption().matches(OPT_Bsymbolic_functions))
       config->bsymbolic = BsymbolicKind::Functions;
+    else if (arg->getOption().matches(OPT_Bsymbolic_non_weak))
+      config->bsymbolic = BsymbolicKind::NonWeak;
     else if (arg->getOption().matches(OPT_Bsymbolic))
       config->bsymbolic = BsymbolicKind::All;
   }
+  config->callGraphProfileSort = getCGProfileSortKind(args);
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
@@ -1174,8 +1241,6 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
   config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
-  config->callGraphProfileSort = args.hasFlag(
-      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   config->entry = args.getLastArgValue(OPT_entry);
@@ -1219,6 +1284,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoWholeProgramVisibility =
       args.hasFlag(OPT_lto_whole_program_visibility,
                    OPT_no_lto_whole_program_visibility, false);
+  config->ltoValidateAllVtablesHaveTypeInfos =
+      args.hasFlag(OPT_lto_validate_all_vtables_have_type_infos,
+                   OPT_no_lto_validate_all_vtables_have_type_infos, false);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (config->ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(config->ltoo));
@@ -1231,6 +1299,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+  config->ltoBBAddrMap =
+      args.hasFlag(OPT_lto_basic_block_address_map,
+                   OPT_no_lto_basic_block_address_map, false);
   config->ltoBasicBlockSections =
       args.getLastArgValue(OPT_lto_basic_block_sections);
   config->ltoUniqueBasicBlockSectionNames =
@@ -1422,7 +1493,7 @@ static void readConfigs(opt::InputArgList &args) {
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       config->shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
     else
-      error(errPrefix + toString(pat.takeError()));
+      error(errPrefix + toString(pat.takeError()) + ": " + kv.first);
   }
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
@@ -1433,6 +1504,7 @@ static void readConfigs(opt::InputArgList &args) {
     for (auto reportArg : reports) {
       if (option.first != reportArg.first)
         continue;
+      arg->claim();
       if (!isValidReportString(option.second)) {
         error(Twine("-z ") + reportArg.first + "= parameter " + option.second +
               " is not recognized");
@@ -1447,6 +1519,7 @@ static void readConfigs(opt::InputArgList &args) {
         StringRef(arg->getValue()).split('=');
     if (option.first != "dead-reloc-in-nonalloc")
       continue;
+    arg->claim();
     constexpr StringRef errPrefix = "-z dead-reloc-in-nonalloc=: ";
     std::pair<StringRef, StringRef> kv = option.second.split('=');
     if (kv.first.empty() || kv.second.empty()) {
@@ -1460,7 +1533,7 @@ static void readConfigs(opt::InputArgList &args) {
     else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
       config->deadRelocInNonAlloc.emplace_back(std::move(*pat), v);
     else
-      error(errPrefix + toString(pat.takeError()));
+      error(errPrefix + toString(pat.takeError()) + ": " + kv.first);
   }
 
   cl::ResetAllOptionOccurrences();
@@ -1569,8 +1642,8 @@ static void readConfigs(opt::InputArgList &args) {
 
   // Page alignment can be disabled by the -n (--nmagic) and -N (--omagic).
   // As PT_GNU_RELRO relies on Paging, do not create it when we have disabled
-  // it.
-  if (config->nmagic || config->omagic)
+  // it. Also disable RELRO for -r.
+  if (config->nmagic || config->omagic || config->relocatable)
     config->zRelro = false;
 
   std::tie(config->buildId, config->buildIdVector) = getBuildId(args);
@@ -1591,7 +1664,7 @@ static void readConfigs(opt::InputArgList &args) {
       config->symbolOrderingFile = getSymbolOrderingFile(*buffer);
       // Also need to disable CallGraphProfileSort to prevent
       // LLD order symbols with CGProfile
-      config->callGraphProfileSort = false;
+      config->callGraphProfileSort = CGProfileSortKind::None;
     }
   }
 
@@ -1617,7 +1690,8 @@ static void readConfigs(opt::InputArgList &args) {
     if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
       config->warnBackrefsExclude.push_back(std::move(*pat));
     else
-      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      error(arg->getSpelling() + ": " + toString(pat.takeError()) + ": " +
+            pattern);
   }
 
   // For -no-pie and -pie, --export-dynamic-symbol specifies defined symbols
@@ -1691,14 +1765,10 @@ static void setConfigs(opt::InputArgList &args) {
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !config->isRela;
   // Validation of dynamic relocation addends is on by default for assertions
-  // builds (for supported targets) and disabled otherwise. Ideally we would
-  // enable the debug checks for all targets, but currently not all targets
-  // have support for reading Elf_Rel addends, so we only enable for a subset.
+  // builds and disabled otherwise. This check is enabled when writeAddends is
+  // true.
 #ifndef NDEBUG
-  bool checkDynamicRelocsDefault = m == EM_AARCH64 || m == EM_ARM ||
-                                   m == EM_386 || m == EM_LOONGARCH ||
-                                   m == EM_MIPS || m == EM_RISCV ||
-                                   m == EM_X86_64;
+  bool checkDynamicRelocsDefault = true;
 #else
   bool checkDynamicRelocsDefault = false;
 #endif
@@ -1975,7 +2045,7 @@ static void handleUndefined(Symbol *sym, const char *option) {
 static void handleUndefinedGlob(StringRef arg) {
   Expected<GlobPattern> pat = GlobPattern::create(arg);
   if (!pat) {
-    error("--undefined-glob: " + toString(pat.takeError()));
+    error("--undefined-glob: " + toString(pat.takeError()) + ": " + arg);
     return;
   }
 
@@ -1992,13 +2062,7 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (!sym || !sym->isLazy())
-    return;
-
-  MemoryBufferRef mb;
-  mb = cast<LazyObject>(sym)->file->mb;
-
-  if (isBitcode(mb))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
     sym->extract();
 }
 
@@ -2163,24 +2227,6 @@ static void replaceCommonSymbols() {
   }
 }
 
-// If all references to a DSO happen to be weak, the DSO is not added to
-// DT_NEEDED. If that happens, replace ShardSymbol with Undefined to avoid
-// dangling references to an unneeded DSO. Use a weak binding to avoid
-// --no-allow-shlib-undefined diagnostics. Similarly, demote lazy symbols.
-static void demoteSharedAndLazySymbols() {
-  llvm::TimeTraceScope timeScope("Demote shared and lazy symbols");
-  for (Symbol *sym : symtab.getSymbols()) {
-    auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
-      continue;
-
-    uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-    Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
-        .overwrite(*sym);
-    sym->versionId = VER_NDX_GLOBAL;
-  }
-}
-
 // The section referred to by `s` is considered address-significant. Set the
 // keepUnique flag on the section if appropriate.
 static void markAddrsig(Symbol *s) {
@@ -2229,7 +2275,7 @@ static void findKeepUniqueSections(opt::InputArgList &args) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err;
+        const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(f) + ": could not decode addrsig section: " + err);
@@ -2297,7 +2343,8 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
 
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
+  return symtab.addSymbol(
+      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2656,6 +2703,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   for (auto *arg : args.filtered(OPT_trace_symbol))
     symtab.insert(arg->getValue())->traced = true;
 
+  ctx.internalFile = createInternalFile("<internal>");
+
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
@@ -2801,6 +2850,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
                                 config->ltoEmitAsm ||
                                 !config->thinLTOModulesToCompile.empty();
 
+  // Handle --lto-validate-all-vtables-have-type-infos.
+  if (config->ltoValidateAllVtablesHaveTypeInfos)
+    invokeELFT(ltoValidateAllVtablesHaveTypeInfos, args);
+
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
   //
@@ -2934,11 +2987,15 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   invokeELFT(markLive,);
-  demoteSharedAndLazySymbols();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
   copySectionsIntoPartitions();
+
+  if (canHaveMemtagGlobals()) {
+    llvm::TimeTraceScope timeScope("Process memory tagged symbols");
+    createTaggedSymbols(ctx.objectFiles);
+  }
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
@@ -2987,7 +3044,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   // Read the callgraph now that we know what was gced or icfed
-  if (config->callGraphProfileSort) {
+  if (config->callGraphProfileSort != CGProfileSortKind::None) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);

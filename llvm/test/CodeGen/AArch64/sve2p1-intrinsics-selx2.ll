@@ -8,10 +8,10 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @sel_x2_i8(target("aarch64.svc
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.b, z1.b }, pn8, { z6.b, z7.b }, { z4.b, z5.b }
@@ -28,10 +28,10 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @sel_x2_i16(target("aarch64.sv
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.h, z1.h }, pn8, { z6.h, z7.h }, { z4.h, z5.h }
@@ -48,10 +48,10 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @sel_x2_f16(target("aarch64.
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.h, z1.h }, pn8, { z6.h, z7.h }, { z4.h, z5.h }
@@ -68,10 +68,10 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @sel_x2_bf16(target("aar
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.h, z1.h }, pn8, { z6.h, z7.h }, { z4.h, z5.h }
@@ -88,10 +88,10 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @sel_x2_i32(target("aarch64.sv
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.s, z1.s }, pn8, { z6.s, z7.s }, { z4.s, z5.s }
@@ -108,10 +108,10 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @sel_x2_f32(target("aarch6
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.s, z1.s }, pn8, { z6.s, z7.s }, { z4.s, z5.s }
@@ -128,10 +128,10 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @sel_x2_i64(target("aarch64.sv
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.d, z1.d }, pn8, { z6.d, z7.d }, { z4.d, z5.d }
@@ -148,10 +148,10 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @sel_x2_f64(target("aarc
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z7.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sel { z0.d, z1.d }, pn8, { z6.d, z7.d }, { z4.d, z5.d }

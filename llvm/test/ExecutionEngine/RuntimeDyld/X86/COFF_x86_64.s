@@ -4,6 +4,15 @@
 # RUN:   -dummy-extern external_data=0x2 -verify -check=%s %t/COFF_x86_64.o
 
 
+	.section section,"rx"
+section:
+	.long 0
+Lreloc:
+	.long 0
+# rtdyld-check: *{2}Lreloc = 1
+	.reloc 4, secidx, section+4
+
+
         .text
 	.def	 F;
 	.scl	2;

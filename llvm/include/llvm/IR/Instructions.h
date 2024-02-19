@@ -49,6 +49,7 @@ class DataLayout;
 class StringRef;
 class Type;
 class Value;
+class UnreachableInst;
 
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class
@@ -317,17 +318,25 @@ protected:
 public:
   StoreInst(Value *Val, Value *Ptr, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, BasicBlock::iterator InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Instruction *InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
+            BasicBlock::iterator InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             BasicBlock *InsertAtEnd);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
+            BasicBlock::iterator InsertBefore);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
+            AtomicOrdering Order, SyncScope::ID SSID,
+            BasicBlock::iterator InsertBefore);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, 2); }
@@ -1603,42 +1612,6 @@ public:
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
 
-  /// Generate the IR for a call to malloc:
-  /// 1. Compute the malloc call's argument as the specified type's size,
-  ///    possibly multiplied by the array size if the array size is not
-  ///    constant 1.
-  /// 2. Call malloc with that argument.
-  /// 3. Bitcast the result of the malloc call to the specified type.
-  static Instruction *CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *
-  CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy, Type *AllocTy,
-               Value *AllocSize, Value *ArraySize = nullptr,
-               ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-               Function *MallocF = nullptr, const Twine &Name = "");
-  static Instruction *
-  CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy, Type *AllocTy,
-               Value *AllocSize, Value *ArraySize = nullptr,
-               ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-               Function *MallocF = nullptr, const Twine &Name = "");
-  /// Generate the IR for a call to the builtin free function.
-  static Instruction *CreateFree(Value *Source, Instruction *InsertBefore);
-  static Instruction *CreateFree(Value *Source, BasicBlock *InsertAtEnd);
-  static Instruction *CreateFree(Value *Source,
-                                 ArrayRef<OperandBundleDef> Bundles,
-                                 Instruction *InsertBefore);
-  static Instruction *CreateFree(Value *Source,
-                                 ArrayRef<OperandBundleDef> Bundles,
-                                 BasicBlock *InsertAtEnd);
-
   // Note that 'musttail' implies 'tail'.
   enum TailCallKind : unsigned {
     TCK_None = 0,
@@ -2104,13 +2077,14 @@ public:
   /// Return true if this shuffle mask chooses elements from exactly one source
   /// vector.
   /// Example: <7,5,undef,7>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isSingleSourceMask(ArrayRef<int> Mask);
-  static bool isSingleSourceMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSingleSourceMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isSingleSourceMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSingleSourceMask(MaskAsInts);
+    return isSingleSourceMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from exactly one source
@@ -2118,7 +2092,8 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
   /// TODO: Optionally allow length-changing shuffles.
   bool isSingleSource() const {
-    return !changesLength() && isSingleSourceMask(ShuffleMask);
+    return !changesLength() &&
+           isSingleSourceMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask chooses elements from exactly one source
@@ -2126,8 +2101,8 @@ public:
   /// necessarily a no-op because it may change the number of elements from its
   /// input vectors or it may provide demanded bits knowledge via undef lanes.
   /// Example: <undef,undef,2,3>
-  static bool isIdentityMask(ArrayRef<int> Mask);
-  static bool isIdentityMask(const Constant *Mask) {
+  static bool isIdentityMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isIdentityMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
 
     // Not possible to express a shuffle mask for a scalable vector for this
@@ -2137,7 +2112,7 @@ public:
 
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isIdentityMask(MaskAsInts);
+    return isIdentityMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from exactly one source
@@ -2150,7 +2125,7 @@ public:
     if (isa<ScalableVectorType>(getType()))
       return false;
 
-    return !changesLength() && isIdentityMask(ShuffleMask);
+    return !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle lengthens exactly one source vector with
@@ -2174,12 +2149,12 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// This assumes that vector operands are the same length as the mask
   /// (a length-changing shuffle can never be equivalent to a vector select).
-  static bool isSelectMask(ArrayRef<int> Mask);
-  static bool isSelectMask(const Constant *Mask) {
+  static bool isSelectMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isSelectMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSelectMask(MaskAsInts);
+    return isSelectMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from its source vectors
@@ -2191,19 +2166,20 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// TODO: Optionally allow length-changing shuffles.
   bool isSelect() const {
-    return !changesLength() && isSelectMask(ShuffleMask);
+    return !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask swaps the order of elements from exactly
   /// one source vector.
   /// Example: <7,6,undef,4>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isReverseMask(ArrayRef<int> Mask);
-  static bool isReverseMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isReverseMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isReverseMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isReverseMask(MaskAsInts);
+    return isReverseMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle swaps the order of elements from exactly
@@ -2211,19 +2187,20 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
   /// TODO: Optionally allow length-changing shuffles.
   bool isReverse() const {
-    return !changesLength() && isReverseMask(ShuffleMask);
+    return !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask chooses all elements with the same value
   /// as the first element of exactly one source vector.
   /// Example: <4,undef,undef,4>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isZeroEltSplatMask(ArrayRef<int> Mask);
-  static bool isZeroEltSplatMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isZeroEltSplatMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isZeroEltSplatMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isZeroEltSplatMask(MaskAsInts);
+    return isZeroEltSplatMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if all elements of this shuffle are the same value as the
@@ -2233,7 +2210,8 @@ public:
   /// TODO: Optionally allow length-changing shuffles.
   /// TODO: Optionally allow splats from other elements.
   bool isZeroEltSplat() const {
-    return !changesLength() && isZeroEltSplatMask(ShuffleMask);
+    return !changesLength() &&
+           isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask is a transpose mask.
@@ -2268,12 +2246,12 @@ public:
   ///   ; Transposed matrix
   ///   t0 = < a, e, c, g > = shufflevector m0, m1 < 0, 4, 2, 6 >
   ///   t1 = < b, f, d, h > = shufflevector m0, m1 < 1, 5, 3, 7 >
-  static bool isTransposeMask(ArrayRef<int> Mask);
-  static bool isTransposeMask(const Constant *Mask) {
+  static bool isTransposeMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isTransposeMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isTransposeMask(MaskAsInts);
+    return isTransposeMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle transposes the elements of its inputs without
@@ -2282,19 +2260,21 @@ public:
   /// exact specification.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
   bool isTranspose() const {
-    return !changesLength() && isTransposeMask(ShuffleMask);
+    return !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask is a splice mask, concatenating the two
   /// inputs together and then extracts an original width vector starting from
   /// the splice index.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
-  static bool isSpliceMask(ArrayRef<int> Mask, int &Index);
-  static bool isSpliceMask(const Constant *Mask, int &Index) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts, int &Index);
+  static bool isSpliceMask(const Constant *Mask, int NumSrcElts, int &Index) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSpliceMask(MaskAsInts, Index);
+    return isSpliceMask(MaskAsInts, NumSrcElts, Index);
   }
 
   /// Return true if this shuffle splices two inputs without changing the length
@@ -2302,7 +2282,8 @@ public:
   /// then extracts an original width vector starting from the splice index.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   bool isSplice(int &Index) const {
-    return !changesLength() && isSpliceMask(ShuffleMask, Index);
+    return !changesLength() &&
+           isSpliceMask(ShuffleMask, ShuffleMask.size(), Index);
   }
 
   /// Return true if this shuffle mask is an extract subvector mask.
@@ -2336,7 +2317,7 @@ public:
 
   /// Return true if this shuffle mask is an insert subvector mask.
   /// A valid insert subvector mask inserts the lowest elements of a second
-  /// source operand into an in-place first source operand operand.
+  /// source operand into an in-place first source operand.
   /// Both the sub vector width and the insertion index is returned.
   static bool isInsertSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
                                     int &NumSubElts, int &Index);
@@ -2443,6 +2424,21 @@ public:
     SmallVector<unsigned, 8> StartIndexes;
     return isInterleaveMask(Mask, Factor, NumInputElts, StartIndexes);
   }
+
+  /// Checks if the shuffle is a bit rotation of the first operand across
+  /// multiple subelements, e.g:
+  ///
+  /// shuffle <8 x i8> %a, <8 x i8> poison, <8 x i32> <1, 0, 3, 2, 5, 4, 7, 6>
+  ///
+  /// could be expressed as
+  ///
+  /// rotl <4 x i16> %a, 8
+  ///
+  /// If it can be expressed as a rotation, returns the number of subelements to
+  /// group by in NumSubElts and the number of bits to rotate left in RotateAmt.
+  static bool isBitRotateMask(ArrayRef<int> Mask, unsigned EltSizeInBits,
+                              unsigned MinSubElts, unsigned MaxSubElts,
+                              unsigned &NumSubElts, unsigned &RotateAmt);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -2889,6 +2885,11 @@ public:
     assert(Idx >= 0 && "Invalid basic block argument to remove!");
     return removeIncomingValue(Idx, DeletePHIIfEmpty);
   }
+
+  /// Remove all incoming values for which the predicate returns true.
+  /// The predicate accepts the incoming value index.
+  void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
+                             bool DeletePHIIfEmpty = true);
 
   /// Return the first index of the specified basic
   /// block in the value list for this PHI.  Returns -1 if no instance.
@@ -3505,6 +3506,12 @@ public:
     return cast<BasicBlock>(getOperand(1));
   }
 
+  /// Returns true if the default branch must result in immediate undefined
+  /// behavior, false otherwise.
+  bool defaultDestUndefined() const {
+    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
+  }
+
   void setDefaultDest(BasicBlock *DefaultCase) {
     setOperand(1, reinterpret_cast<Value*>(DefaultCase));
   }
@@ -3669,7 +3676,7 @@ public:
 
   /// Delegate the call to the underlying SwitchInst::eraseFromParent() and mark
   /// this object to not touch the underlying SwitchInst in destructor.
-  SymbolTableList<Instruction>::iterator eraseFromParent();
+  Instruction::InstListType::iterator eraseFromParent();
 
   void setSuccessorWeight(unsigned idx, CaseWeightOpt W);
   CaseWeightOpt getSuccessorWeight(unsigned idx);

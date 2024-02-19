@@ -1,10 +1,8 @@
 // RUN: mlir-opt %s \
-// RUN:   --pass-pipeline="builtin.module(test-transform-dialect-interpreter{ \
-// RUN:        bind-first-extra-to-ops=linalg.matmul \
-// RUN:        bind-second-extra-to-ops=linalg.elemwise_binary \
-// RUN:        enable-expensive-checks},canonicalize,cse,symbol-dce)" \
+// RUN:   --pass-pipeline="builtin.module(transform-interpreter{ \
+// RUN:        debug-bind-trailing-args=linalg.matmul,linalg.elemwise_binary},\
+// RUN:        canonicalize,cse,symbol-dce)" \
 // RUN:   --split-input-file --verify-diagnostics
-
 // ****************************** IMPORTANT NOTE ******************************
 //
 // If you are changing this file, you may also need to change
@@ -45,10 +43,11 @@ func.func private @microkernel(
     %init: tensor<4x4xf32>,
     %output: tensor<4x4xf32>) -> tensor<4x4xf32>
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op,
-     %arg1: !transform.op<"linalg.matmul">,
-     %arg2: !transform.op<"linalg.elemwise_binary">):
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0: !transform.any_op,
+      %arg1: !transform.op<"linalg.matmul">,
+      %arg2: !transform.op<"linalg.elemwise_binary">) {
   // Since the %arg2 handle is associated with both elementwise operations,
   // we need to split it into two handles so we can target only the second
   // elementwise operation.
@@ -57,7 +56,7 @@ transform.sequence failures(propagate) {
 
   // The actual tiling transformation takes tile sizes as attributes. It produces a
   // handle to the loop generated during tiling.
-  %loop, %tiled = transform.structured.tile_to_forall_op %max tile_sizes [8, 32]
+  %tiled, %loop = transform.structured.tile_using_forall %max tile_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // We can now fuse the other operations into the loop. Here, we fuse
@@ -76,7 +75,7 @@ transform.sequence failures(propagate) {
   // "max" operation. This illustrates the precise targeting with the transform
   // dialect. Otherwise, it is difficult to differentiate "add" and "max", both
   // of which having the same kind.
-  %loop_second, %tiled_second = transform.structured.tile_to_forall_op %add_fused tile_sizes [4, 4]
+  %tiled_second, %loop_second = transform.structured.tile_using_forall %add_fused tile_sizes [4, 4]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)   
   %matmul_fused_2, %loop_second_2 = 
       transform.structured.fuse_into_containing_op %matmul_fused into %loop_second
@@ -85,7 +84,7 @@ transform.sequence failures(propagate) {
   // Since outlining is currently only implemented for region-holding operations
   // such as loops, use tiling to size 1 to materialize the outer loop that is
   // going to be outlined.
-  %loop_third, %_0 = transform.structured.tile_to_forall_op %tiled_second tile_sizes [1]
+  %_0, %loop_third = transform.structured.tile_using_forall %tiled_second tile_sizes [1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   // expected-note @below {{handle to invalidated ops}}
   %f, %outline_target = transform.structured.fuse_into_containing_op %matmul_fused_2 into %loop_third
@@ -96,7 +95,8 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
 
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
-  transform.test_print_remark_at_operand %f, "fused" : !transform.any_op
+  transform.debug.emit_remark_at %f, "fused" : !transform.any_op
 
   transform.yield
+  }
 }

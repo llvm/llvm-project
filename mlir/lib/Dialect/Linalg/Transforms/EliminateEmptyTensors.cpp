@@ -22,17 +22,17 @@ using namespace mlir::linalg;
 /// Get an output operand that matches the given input operand and can be used
 /// to eliminate a tensor.empty op.
 static OpOperand *getUnusedOutOperand(LinalgOp op, OpOperand *in) {
-  for (OpOperand *operand : op.getDpsInitOperands()) {
+  for (OpOperand &operand : op.getDpsInitsMutable()) {
     // Operand must be unused.
-    if (op.payloadUsesValueFromOperand(operand))
+    if (op.payloadUsesValueFromOperand(&operand))
       continue;
     // Types must match.
-    if (operand->get().getType() != in->get().getType())
+    if (operand.get().getType() != in->get().getType())
       continue;
     // Indexing maps must match.
-    if (op.getMatchingIndexingMap(operand) != op.getMatchingIndexingMap(in))
+    if (op.getMatchingIndexingMap(&operand) != op.getMatchingIndexingMap(in))
       continue;
-    return operand;
+    return &operand;
   }
   return nullptr;
 }
@@ -60,7 +60,10 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       config.alwaysIncludeLeaves = false;
       SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
           in->get(), /*condition=*/
-          [&](Value val) { return val.getDefiningOp<tensor::EmptyOp>(); },
+          [&](Value val) {
+            return val.getDefiningOp<tensor::EmptyOp>() &&
+                   val.getType() == in->get().getType();
+          },
           config);
       if (emptyTensors.empty())
         continue;
@@ -84,7 +87,7 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       }
 
       // Turn the "in" into an "out".
-      rewriter.updateRootInPlace(op, [&]() {
+      rewriter.modifyOpInPlace(op, [&]() {
         out->set(in->get());
         // The original "in" could be removed entirely here (because it will no
         // longer have any uses in the payload), but we delegate this to

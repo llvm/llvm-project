@@ -59,6 +59,8 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+- We can define type aliases via new keyword ``deftype``.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
@@ -67,9 +69,6 @@ Changes to the AArch64 Backend
 
 Changes to the AMDGPU Backend
 -----------------------------
-
-* `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
-  for raw instruction access.
 
 Changes to the ARM Backend
 --------------------------
@@ -95,6 +94,16 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Added full support for the experimental Zabha (Byte and
+  Halfword Atomic Memory Operations) extension.
+* Added assembler/disassembler support for the experimenatl Zalasr
+  (Load-Acquire and Store-Release) extension.
+* The names of the majority of the S-prefixed (supervisor-level) extension
+  names in the RISC-V profiles specification are now recognised.
+* Codegen support was added for the Zimop (May-Be-Operations) extension.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssqosid extension is supported.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -110,11 +119,11 @@ Changes to the OCaml bindings
 Changes to the Python bindings
 ------------------------------
 
-* The python bindings have been removed.
-
-
 Changes to the C API
 --------------------
+
+* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
+  functions for accessing the values in a blockaddress constant.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -127,18 +136,23 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
+* llvm-nm and llvm-objdump can now print symbol information from linked
+  WebAssembly binaries, using information from exports or the "name"
+  section for functions, globals and data segments. Symbol addresses and sizes
+  are printed as offsets in the file, allowing for binary size analysis. Wasm
+  files using reference types and GC are also supported (but also only for
+  functions, globals, and data, and only for listing symbols and names).
 
 Changes to LLDB
 ---------------------------------
 
 Changes to Sanitizers
 ---------------------
-* HWASan now defaults to detecting use-after-scope bugs.
 
 Other Changes
 -------------
 
-External Open Source Projects Using LLVM 15
+External Open Source Projects Using LLVM 19
 ===========================================
 
 * A project...

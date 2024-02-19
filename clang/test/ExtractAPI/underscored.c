@@ -85,6 +85,10 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
         {
           "kind": "identifier",
           "spelling": "exposed_global"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -97,8 +101,8 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 5
+          "character": 4,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -151,8 +155,8 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
       },
       "location": {
         "position": {
-          "character": 8,
-          "line": 12
+          "character": 7,
+          "line": 11
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -190,6 +194,10 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
         {
           "kind": "identifier",
           "spelling": "a"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -202,8 +210,8 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 13
+          "character": 6,
+          "line": 12
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -253,8 +261,8 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 23
+          "character": 8,
+          "line": 22
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -316,8 +324,8 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
       },
       "location": {
         "position": {
-          "character": 13,
-          "line": 18
+          "character": 12,
+          "line": 17
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -380,8 +388,8 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
       },
       "location": {
         "position": {
-          "character": 24,
-          "line": 19
+          "character": 23,
+          "line": 18
         },
         "uri": "file://INPUT_DIR/input.h"
       },

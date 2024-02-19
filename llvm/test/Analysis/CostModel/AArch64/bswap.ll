@@ -44,7 +44,7 @@ define void @neon() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i64 = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i32 = call <3 x i32> @llvm.bswap.v3i32(<3 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v4i48 = call <4 x i48> @llvm.bswap.v4i48(<4 x i48> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v4i48 = call <4 x i48> @llvm.bswap.v4i48(<4 x i48> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v4i16 = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> undef)

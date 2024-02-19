@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMRegisterInfo.h"
+#include "ARMMCTargetDesc.h"
 #include "ARMUnwindOpAsm.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -897,6 +898,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV9_2A:
   case ARM::ArchKind::ARMV9_3A:
   case ARM::ArchKind::ARMV9_4A:
+  case ARM::ArchKind::ARMV9_5A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);

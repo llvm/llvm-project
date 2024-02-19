@@ -75,8 +75,9 @@ enum class SchedGroupMask {
   DS = 1u << 7,
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
+  TRANS = 1u << 10,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE,
+        DS_READ | DS_WRITE | TRANS,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -345,13 +346,13 @@ class PipelineSolver {
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
                std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
-  // Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
-  // returns the cost (in terms of missed pipeline edges), and tracks the edges
-  // added in \p AddedEdges
+  /// Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
+  /// returns the cost (in terms of missed pipeline edges), and tracks the edges
+  /// added in \p AddedEdges
   template <typename T>
   int linkSUnit(SUnit *SU, int SGID,
                 std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
-  // Remove the edges passed via \p AddedEdges
+  /// Remove the edges passed via \p AddedEdges
   void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Convert the passed in maps to arrays for bidirectional iterators
   void convertSyncMapsToArrays();
@@ -593,11 +594,10 @@ void PipelineSolver::populateReadyList(
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     if (UseCostHeur) {
       if (Match->isFull()) {
@@ -739,11 +739,10 @@ void PipelineSolver::greedyFind(
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
                       << (int)Match->getMask() << "\n");
@@ -849,10 +848,11 @@ protected:
   const SIInstrInfo *TII;
 
 public:
-  // Add SchedGroups to \p Pipeline to implement this Strategy.
+  /// Add SchedGroups to \p SyncedSchedGroups to implement this Strategy.
   virtual void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) = 0;
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      bool IsReentry) = 0;
 
   // Returns true if this strategy should be applied to a ScheduleDAG.
   virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) = 0;
@@ -870,7 +870,8 @@ private:
 public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) override;
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      bool IsReentry) override;
 
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
@@ -882,7 +883,8 @@ public:
 
 void MFMASmallGemmOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    bool IsReentry) {
   // Count the number of MFMA instructions.
   unsigned MFMACount = 0;
   for (const MachineInstr &I : *DAG)
@@ -964,11 +966,10 @@ private:
 
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ
-      return std::any_of(Cache->begin(), Cache->end(), [&SU](SUnit *Elt) {
-        return std::any_of(SU->Succs.begin(), SU->Succs.end(),
-                           [&Elt](const SDep &ThisSucc) {
-                             return ThisSucc.getSUnit() == Elt;
-                           });
+      return llvm::any_of(*Cache, [&SU](SUnit *Elt) {
+        return llvm::any_of(SU->Succs, [&Elt](const SDep &ThisSucc) {
+          return ThisSucc.getSUnit() == Elt;
+        });
       });
     }
 
@@ -1045,8 +1046,8 @@ private:
         : InstructionRule(TII, SGID, NeedsCache) {}
   };
 
-  // Whether the SU shares a V_PERM predecessor with any SU in the SchedGroup
-  // that is /p Distance steps away
+  /// Whether the SU shares a V_PERM predecessor with any SU in the SchedGroup
+  /// that is \p Distance steps away
   class SharesPredWithPrevNthGroup final : public InstructionRule {
   private:
     unsigned Distance = 1;
@@ -1078,16 +1079,18 @@ private:
               Cache->push_back(Pred.getSUnit());
           }
         }
+
+        // If the other group has no PERM preds, then this group won't share any
+        if (!Cache->size())
+          return false;
       }
 
-      assert(Cache->size());
       auto DAG = SyncPipe[0].DAG;
       // Does the previous DS_WRITE share a V_PERM predecessor with this
       // VMEM_READ
-      return (
-          std::any_of(Cache->begin(), Cache->end(), [&SU, &DAG](SUnit *Elt) {
-            return DAG->IsReachable(const_cast<SUnit *>(SU), Elt);
-          }));
+      return llvm::any_of(*Cache, [&SU, &DAG](SUnit *Elt) {
+        return DAG->IsReachable(const_cast<SUnit *>(SU), Elt);
+      });
     }
     SharesPredWithPrevNthGroup(unsigned Distance, const SIInstrInfo *TII,
                                unsigned SGID, bool NeedsCache = false)
@@ -1097,7 +1100,8 @@ private:
 public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) override;
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      bool IsReentry) override;
 
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
@@ -1107,14 +1111,20 @@ public:
   }
 };
 
+static unsigned DSWCount = 0;
+static unsigned DSWWithPermCount = 0;
+static unsigned DSWWithSharedVMEMCount = 0;
+
 void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    bool IsReentry) {
   unsigned MFMACount = 0;
-  unsigned DSWCount = 0;
-  unsigned DSWWithPermCount = 0;
-  unsigned DSWWithSharedVMEMCount = 0;
   unsigned DSRCount = 0;
+
+  assert((IsReentry || (DSWCount == 0 && DSWWithPermCount == 0 &&
+                        DSWWithSharedVMEMCount == 0)) &&
+         "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
     auto I = SU.getInstr();
@@ -1123,7 +1133,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     else if (TII->isDS(*I)) {
       if (I->mayLoad())
         ++DSRCount;
-      else if (I->mayStore()) {
+      else if (I->mayStore() && !IsReentry) {
         ++DSWCount;
         for (auto Pred : SU.Preds) {
           if (Pred.getSUnit()->getInstr()->getOpcode() ==
@@ -1135,57 +1145,59 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
       }
     }
   }
-  DSWWithPermCount = DSWithPerms.size();
-  auto I = DSWithPerms.begin();
-  auto E = DSWithPerms.end();
 
-  // Get the count of DS_WRITES with V_PERM predecessors which
-  // have loop carried dependencies (WAR) on the same VMEM_READs.
-  // We consider partial overlap as a miss -- in other words,
-  // for a given DS_W, we only consider another DS_W as matching
-  // if there is a corresponding (in terms of the VMEM_R it uses) V_PERM pred
-  // for every V_PERM pred of this DS_W.
-  DenseMap<MachineInstr *, SUnit *> VMEMLookup;
-  SmallVector<SUnit *, 6> Counted;
-  for (; I != E; I++) {
-    SUnit *Cand = nullptr;
-    bool MissedAny = false;
-    for (auto &Pred : (*I)->Preds) {
-      if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
-        continue;
+  if (!IsReentry) {
+    DSWWithPermCount = DSWithPerms.size();
+    auto I = DSWithPerms.begin();
+    auto E = DSWithPerms.end();
 
-      if (Cand &&
-          std::find(Counted.begin(), Counted.end(), Cand) != Counted.end())
-        break;
-
-      for (auto &Succ : Pred.getSUnit()->Succs) {
-        auto MI = Succ.getSUnit()->getInstr();
-        if (!TII->isVMEM(*MI) || !MI->mayLoad())
+    // Get the count of DS_WRITES with V_PERM predecessors which
+    // have loop carried dependencies (WAR) on the same VMEM_READs.
+    // We consider partial overlap as a miss -- in other words,
+    // for a given DS_W, we only consider another DS_W as matching
+    // if there is a corresponding (in terms of the VMEM_R it uses) V_PERM pred
+    // for every V_PERM pred of this DS_W.
+    DenseMap<MachineInstr *, SUnit *> VMEMLookup;
+    SmallVector<SUnit *, 6> Counted;
+    for (; I != E; I++) {
+      SUnit *Cand = nullptr;
+      bool MissedAny = false;
+      for (auto &Pred : (*I)->Preds) {
+        if (Pred.getSUnit()->getInstr()->getOpcode() != AMDGPU::V_PERM_B32_e64)
           continue;
 
-        if (MissedAny || !VMEMLookup.size()) {
-          MissedAny = true;
-          VMEMLookup[MI] = *I;
-          continue;
-        }
-
-        if (!VMEMLookup.contains(MI)) {
-          MissedAny = true;
-          VMEMLookup[MI] = *I;
-          continue;
-        }
-
-        Cand = VMEMLookup[MI];
-        if (std::find(Counted.begin(), Counted.end(), Cand) != Counted.end()) {
-          MissedAny = true;
+        if (Cand && llvm::is_contained(Counted, Cand))
           break;
+
+        for (auto &Succ : Pred.getSUnit()->Succs) {
+          auto MI = Succ.getSUnit()->getInstr();
+          if (!TII->isVMEM(*MI) || !MI->mayLoad())
+            continue;
+
+          if (MissedAny || !VMEMLookup.size()) {
+            MissedAny = true;
+            VMEMLookup[MI] = *I;
+            continue;
+          }
+
+          if (!VMEMLookup.contains(MI)) {
+            MissedAny = true;
+            VMEMLookup[MI] = *I;
+            continue;
+          }
+
+          Cand = VMEMLookup[MI];
+          if (llvm::is_contained(Counted, Cand)) {
+            MissedAny = true;
+            break;
+          }
         }
       }
-    }
-    if (!MissedAny && Cand) {
-      DSWWithSharedVMEMCount += 2;
-      Counted.push_back(Cand);
-      Counted.push_back(*I);
+      if (!MissedAny && Cand) {
+        DSWWithSharedVMEMCount += 2;
+        Counted.push_back(Cand);
+        Counted.push_back(*I);
+      }
     }
   }
 
@@ -1401,7 +1413,11 @@ public:
   // first created SchedGroup first.
   bool IsBottomUp = 1;
 
+  // Whether or not this is a reentry into the IGroupLPDAGMutation.
+  bool IsReentry = false;
+
   IGroupLPDAGMutation() = default;
+  IGroupLPDAGMutation(bool IsReentry) : IsReentry(IsReentry) {}
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -1420,11 +1436,12 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = false;
 
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
-           (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI)))
+           (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
+            TII->isTRANS(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI))
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
@@ -1459,6 +1476,10 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 
   else if (((SGMask & SchedGroupMask::DS_WRITE) != SchedGroupMask::NONE) &&
            MI.mayStore() && TII->isDS(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::TRANS) != SchedGroupMask::NONE) &&
+           TII->isTRANS(MI))
     Result = true;
 
   LLVM_DEBUG(
@@ -1620,10 +1641,13 @@ void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   // Remove all existing edges from the SCHED_BARRIER that were added due to the
   // instruction having side effects.
   resetEdges(SchedBarrier, DAG);
+  LLVM_DEBUG(dbgs() << "Building SchedGroup for SchedBarrier with Mask: "
+                    << MI.getOperand(0).getImm() << "\n");
   auto InvertedMask =
       invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
   SchedGroup SG(InvertedMask, std::nullopt, DAG, TII);
   SG.initSchedGroup();
+
   // Preserve original instruction ordering relative to the SCHED_BARRIER.
   SG.link(
       SchedBarrier,
@@ -1637,14 +1661,15 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
-  // ALU implies VALU, SALU, MFMA.
+  // ALU implies VALU, SALU, MFMA, TRANS.
   if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
-    InvertedMask &=
-        ~SchedGroupMask::VALU & ~SchedGroupMask::SALU & ~SchedGroupMask::MFMA;
-  // VALU, SALU, MFMA implies ALU.
+    InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
+                    ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS;
+  // VALU, SALU, MFMA, TRANS implies ALU.
   else if ((InvertedMask & SchedGroupMask::VALU) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::SALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE)
+           (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::ALU;
 
   // VMEM implies VMEM_READ, VMEM_WRITE.
@@ -1662,6 +1687,9 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::DS;
+
+  LLVM_DEBUG(dbgs() << "After Inverting, SchedGroup Mask: " << (int)InvertedMask
+                    << "\n");
 
   return InvertedMask;
 }
@@ -1689,7 +1717,7 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
   if (S->shouldApplyStrategy(DAG)) {
     IsBottomUp = S->IsBottomUp;
-    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups);
+    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups, IsReentry);
   }
 }
 
@@ -1697,8 +1725,13 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation() {
-  return std::make_unique<IGroupLPDAGMutation>();
+/// \p IsReentry specifes whether or not this is a reentry into the
+/// IGroupLPDAGMutation. Since there may be multiple scheduling passes on the
+/// same scheduling region (e.g. pre and post-RA scheduling / multiple
+/// scheduling "phases"), we can reenter this mutation framework more than once
+/// for a given region.
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsReentry) {
+  return std::make_unique<IGroupLPDAGMutation>(IsReentry);
 }
 
 } // end namespace llvm

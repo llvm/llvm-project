@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMTransformUtils
   CountVisits.cpp
   Debugify.cpp
   DemoteRegToStack.cpp
+  DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
   EscapeEnumerator.cpp
   Evaluator.cpp
@@ -37,6 +38,7 @@ add_llvm_component_library(LLVMTransformUtils
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
   Local.cpp
+  LoopConstrainer.cpp
   LoopPeel.cpp
   LoopRotationUtils.cpp
   LoopSimplify.cpp

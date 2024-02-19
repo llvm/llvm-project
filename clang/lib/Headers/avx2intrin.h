@@ -15,8 +15,12 @@
 #define __AVX2INTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS256 __attribute__((__always_inline__, __nodebug__, __target__("avx2"), __min_vector_width__(256)))
-#define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx2"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx2,no-evex512"), __min_vector_width__(256)))
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx2,no-evex512"), __min_vector_width__(128)))
 
 /* SSE4 Multiple Packed Sums of Absolute Difference.  */
 /// Computes sixteen sum of absolute difference (SAD) operations on sets of
@@ -2979,7 +2983,7 @@ _mm256_xor_si256(__m256i __a, __m256i __b)
 ///    A pointer to the 32-byte aligned memory containing the vector to load.
 /// \returns A 256-bit integer vector loaded from memory.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_stream_load_si256(__m256i const *__V)
+_mm256_stream_load_si256(const void *__V)
 {
   typedef __v4di __v4di_aligned __attribute__((aligned(32)));
   return (__m256i)__builtin_nontemporal_load((const __v4di_aligned *)__V);

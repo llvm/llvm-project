@@ -161,6 +161,10 @@ public:
       ProvenanceRange def, ProvenanceRange use, const std::string &expansion);
   ProvenanceRange AddCompilerInsertion(std::string);
 
+  // If provenance is in an expanded macro, return the starting provenance of
+  // the replaced macro. Otherwise, return the input provenance.
+  Provenance GetReplacedProvenance(Provenance) const;
+
   bool IsValid(Provenance at) const { return range_.Contains(at); }
   bool IsValid(ProvenanceRange range) const {
     return range.size() > 0 && range_.Contains(range);
@@ -225,6 +229,8 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
+  explicit CookedSource(AllSources &allSources) : allSources_{allSources} {};
+
   int number() const { return number_; }
   void set_number(int n) { number_ = n; }
 
@@ -256,6 +262,7 @@ public:
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  AllSources &allSources_;
   int number_{0}; // for sorting purposes
   CharBuffer buffer_; // before Marshal()
   std::string data_; // all of it, prescanned and preprocessed
@@ -296,18 +303,6 @@ private:
   AllSources &allSources_;
   std::list<CookedSource> cooked_; // owns all CookedSource instances
   std::map<CharBlock, const CookedSource &, CharBlockPointerComparator> index_;
-};
-
-// For use as a Comparator for maps, sets, sorting, &c.
-class CharBlockComparator {
-public:
-  explicit CharBlockComparator(const AllCookedSources &all) : all_{all} {}
-  bool operator()(CharBlock x, CharBlock y) const {
-    return all_.Precedes(x, y);
-  }
-
-private:
-  const AllCookedSources &all_;
 };
 
 } // namespace Fortran::parser

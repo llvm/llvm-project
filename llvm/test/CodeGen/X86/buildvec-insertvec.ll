@@ -8,22 +8,18 @@ define void @foo(<3 x float> %in, ptr nocapture %out) nounwind {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    shll $8, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movl $65280, %eax # imm = 0xFF00
-; SSE2-NEXT:    orl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE2-NEXT:    movd %xmm0, (%rdi)
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
+; SSE2-NEXT:    movl %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: foo:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    packusdw %xmm0, %xmm0
+; SSE41-NEXT:    packuswb %xmm0, %xmm0
 ; SSE41-NEXT:    movl $255, %eax
 ; SSE41-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE41-NEXT:    movd %xmm0, (%rdi)
@@ -32,7 +28,8 @@ define void @foo(<3 x float> %in, ptr nocapture %out) nounwind {
 ; AVX-LABEL: foo:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    movl $255, %eax
 ; AVX-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
@@ -53,7 +50,7 @@ define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
@@ -802,9 +799,8 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
 ;
 ; SSE41-LABEL: PR46586:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movzbl 3(%rdi), %eax
 ; SSE41-NEXT:    extractps $3, %xmm0, %ecx
-; SSE41-NEXT:    pextrb $3, %xmm1, %eax
 ; SSE41-NEXT:    xorl %edx, %edx
 ; SSE41-NEXT:    divl %ecx
 ; SSE41-NEXT:    movl %edx, %eax
@@ -812,9 +808,8 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
 ;
 ; AVX-LABEL: PR46586:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    movzbl 3(%rdi), %eax
 ; AVX-NEXT:    vextractps $3, %xmm0, %ecx
-; AVX-NEXT:    vpextrb $3, %xmm1, %eax
 ; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    divl %ecx
 ; AVX-NEXT:    movl %edx, %eax
@@ -835,7 +830,7 @@ define void @pr59781(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    movzbl 2(%rdi), %ecx
-; CHECK-NEXT:    shlq $16, %rcx
+; CHECK-NEXT:    shll $16, %ecx
 ; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    movq %rcx, (%rsi)
 ; CHECK-NEXT:    retq

@@ -14,7 +14,7 @@
 // Here the float ABI is calculated as "hard" and FP registers are
 // calculated to not be available. Since the float ABI wasn't specified
 // explicitly, the warning should not be emitted.
-// RUN: %clang -target thumbv5-windows -mcpu=arm10tdmi -### -c %s -o /dev/null 2>&1 \
+// RUN: not %clang --target=thumbv5-windows -mcpu=arm10tdmi -### -c %s -o /dev/null 2>&1 \
 // RUN:   | FileCheck -check-prefix=NOWARN %s
 
 // CHECK: warning: '-mfloat-abi=hard': selected processor lacks floating point registers

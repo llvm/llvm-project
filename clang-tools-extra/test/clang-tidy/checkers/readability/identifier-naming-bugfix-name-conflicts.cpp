@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: readability-identifier-naming.ParameterCase, value: lower_case} \
-// RUN:   ]}'
+// RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.ParameterCase: lower_case \
+// RUN:   }}'
 
 int func(int Break) {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for parameter 'Break'; cannot be fixed because 'break' would conflict with a keyword

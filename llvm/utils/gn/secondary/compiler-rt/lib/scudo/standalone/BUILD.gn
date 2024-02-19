@@ -10,6 +10,7 @@ source_set("sources") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   cflags = scudo_cflags
   sources = [
+    "allocator_common.h",
     "allocator_config.h",
     "atomic_helpers.h",
     "bytemap.h",
@@ -19,6 +20,10 @@ source_set("sources") {
     "combined.h",
     "common.cpp",
     "common.h",
+    "condition_variable.h",
+    "condition_variable_base.h",
+    "condition_variable_linux.cpp",
+    "condition_variable_linux.h",
     "crc32_hw.cpp",
     "flags.cpp",
     "flags.h",
@@ -37,6 +42,8 @@ source_set("sources") {
     "mem_map_base.h",
     "mem_map_fuchsia.cpp",
     "mem_map_fuchsia.h",
+    "mem_map_linux.cpp",
+    "mem_map_linux.h",
     "memtag.h",
     "mutex.h",
     "options.h",
@@ -48,8 +55,8 @@ source_set("sources") {
     "release.h",
     "report.cpp",
     "report.h",
-    "rss_limit_checker.cpp",
-    "rss_limit_checker.h",
+    "report_linux.cpp",
+    "report_linux.h",
     "secondary.h",
     "size_class_map.h",
     "stack_depot.h",

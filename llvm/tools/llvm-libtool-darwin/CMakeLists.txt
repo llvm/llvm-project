@@ -18,6 +18,7 @@ add_llvm_tool(llvm-libtool-darwin
 
   DEPENDS
   LibtoolDarwinOptsTableGen
+  GENERATE_DRIVER
 )
 
 if(LLVM_INSTALL_CCTOOLS_SYMLINKS)

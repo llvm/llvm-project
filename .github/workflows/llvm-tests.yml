@@ -6,7 +6,6 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -14,7 +13,6 @@ on:
       - '.github/workflows/llvm-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
   pull_request:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -29,31 +27,13 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  check_all:
+  check-all:
     if: github.repository_owner == 'llvm'
-    name: Test llvm,clang,libclc
+    name: Build and Test
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-all
-      projects: clang;libclc
-
-  # These need to be separate from the check_all job, becuase there is not enough disk
-  # space to build all these projects on Windows.
-  build_lldb:
-    if: github.repository_owner == 'llvm'
-    name: Build lldb
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: ''
-      projects: clang;lldb
-
-  check_lld:
-    if: github.repository_owner == 'llvm'
-    name: Test lld
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-lld
-      projects: lld
+      projects: clang;lld;libclc;lldb
 
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
@@ -67,7 +47,7 @@ jobs:
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.LLVM_VERSION_PATCH }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 250
 
@@ -78,12 +58,16 @@ jobs:
       - name: Setup Variables
         id: vars
         run: |
-          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 -o ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
-            echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))" >> $GITHUB_OUTPUT
-            echo "ABI_HEADERS=llvm-c" >> $GITHUB_OUTPUT
+          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 ] || [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+            {
+              echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))"
+              echo "ABI_HEADERS=llvm-c"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}" >> $GITHUB_OUTPUT
-            echo "ABI_HEADERS=." >> $GITHUB_OUTPUT
+            {
+              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}"
+              echo "ABI_HEADERS=."
+            } >> "$GITHUB_OUTPUT"
           fi
 
   abi-dump:
@@ -125,7 +109,7 @@ jobs:
       - name: Configure
         run: |
           mkdir install
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=$(pwd)/install llvm
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
         # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
         run: |
@@ -168,14 +152,17 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-baseline
+          path: build-baseline
       - name: Download latest
         uses: actions/download-artifact@v3
         with:
           name: build-latest
+          path: build-latest
       - name: Download symbol list
         uses: actions/download-artifact@v3
         with:
           name: symbol-list
+          path: symbol-list
 
       - name: Install abi-compliance-checker
         run: sudo apt-get install abi-compliance-checker

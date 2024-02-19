@@ -1071,7 +1071,7 @@
 // CHECK-FOPENMP:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -fopenmp=libfoo results an error.
-// RUN: %clang %s 2>&1 -### \
+// RUN: not %clang %s 2>&1 -### \
 // RUN:        --target=powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:        -fopenmp=libfoo \

@@ -36,30 +36,26 @@ def RnumArg : AsmOperandClass {
   let DiagnosticType = "InvalidRnumArg";
 }
 
-def rnum : Operand<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
+def rnum : RISCVOp<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
   let ParserMatchClass = RnumArg;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_RVKRNUM";
-  let OperandNamespace = "RISCVOp";
 }
 
-def byteselect : Operand<i32>, TImmLeaf<i32, [{return isUInt<2>(Imm);}]> {
+def byteselect : RISCVOp<i32>, TImmLeaf<i32, [{return isUInt<2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2>;
   let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_UIMM2";
-  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVKUnary<bits<12> imm12_in, bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-              opcodestr, "$rd, $rs1">{
-  let imm12 = imm12_in;
-}
+class RVKUnary<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKByteSelect<bits<5> funct5, string opcodestr>
@@ -72,12 +68,12 @@ class RVKByteSelect<bits<5> funct5, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKUnary_rnum<bits<7> funct7, bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1, rnum:$rnum),
-              opcodestr, "$rd, $rs1, $rnum">{
-    bits<4> rnum;
-    let Inst{31-25} = funct7;
-    let Inst{24} = 1;
-    let Inst{23-20} = rnum;
+    : RVInstIBase<funct3, OPC_OP_IMM, (outs GPR:$rd),
+                  (ins GPR:$rs1, rnum:$rnum), opcodestr, "$rd, $rs1, $rnum"> {
+  bits<4> rnum;
+  let Inst{31-25} = funct7;
+  let Inst{24} = 0b1;
+  let Inst{23-20} = rnum;
 }
 
 //===----------------------------------------------------------------------===//

@@ -19,7 +19,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
@@ -353,7 +352,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
 
 TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(Context);
-  PointerType *IntPtrPtrTy = IntPtrTy->getPointerTo();
+  PointerType *IntPtrPtrTy = PointerType::getUnqual(Context);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {IntPtrTy, IntPtrTy}, false);
@@ -678,7 +677,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
 
   Type *I64Ty = Type::getInt64Ty(Context);
   Type *I8Ty = Type::getInt8Ty(Context);
-  Type *I8PtrTy = Type::getInt8PtrTy(Context);
+  Type *I8PtrTy = PointerType::getUnqual(Context);
   Value *Accum = Constant::getNullValue(I8PtrTy);
   int Iters = 20;
   for (int i = 0; i < Iters; i++) {
@@ -741,7 +740,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   NIM.setDataLayout(DataLayout);
 
   Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
+  Type *T_pint64 = PointerType::get(Context, 10);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
@@ -839,7 +838,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   NIM.setDataLayout(DataLayout);
 
   Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
+  Type *T_pint64 = PointerType::get(Context, 10);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);

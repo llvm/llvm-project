@@ -22,7 +22,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__is_nothrow_constructible)
+// GCC is disabled due to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106611
+#if __has_builtin(__is_nothrow_constructible) && !defined(_LIBCPP_COMPILER_GCC)
 
 template < class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
@@ -41,7 +42,7 @@ void __implicit_conversion_to(_Tp) noexcept {}
 
 template <class _Tp, class _Arg>
 struct __libcpp_is_nothrow_constructible</*is constructible*/ true, /*is reference*/ true, _Tp, _Arg>
-    : public integral_constant<bool, noexcept(_VSTD::__implicit_conversion_to<_Tp>(std::declval<_Arg>()))> {};
+    : public integral_constant<bool, noexcept(std::__implicit_conversion_to<_Tp>(std::declval<_Arg>()))> {};
 
 template <class _Tp, bool _IsReference, class... _Args>
 struct __libcpp_is_nothrow_constructible</*is constructible*/ false, _IsReference, _Tp, _Args...> : public false_type {

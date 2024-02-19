@@ -76,37 +76,15 @@ void test() {
 
   (xs[2] && (a = 0)) + a; // cxx11-warning {{unsequenced modification and access to 'a'}}
                           // cxx17-warning@-1 {{unsequenced modification and access to 'a'}}
-
-  (0 && (a = 0)) + a; // cxx11-warning {{use of logical '&&' with constant operand}}
-                      // cxx11-note@-1 {{use '&' for a bitwise operation}}
-                      // cxx11-note@-2 {{remove constant to silence this warning}}
-                      // cxx17-warning@-3 {{use of logical '&&' with constant operand}}
-                      // cxx17-note@-4 {{use '&' for a bitwise operation}}
-                      // cxx17-note@-5 {{remove constant to silence this warning}}
-
+  (0 && (a = 0)) + a; // ok
   (1 && (a = 0)) + a; // cxx11-warning {{unsequenced modification and access to 'a'}}
                       // cxx17-warning@-1 {{unsequenced modification and access to 'a'}}
-                      // cxx11-warning@-2 {{use of logical '&&' with constant operand}}
-                      // cxx11-note@-3 {{use '&' for a bitwise operation}}
-                      // cxx11-note@-4 {{remove constant to silence this warning}}
-                      // cxx17-warning@-5 {{use of logical '&&' with constant operand}}
-                      // cxx17-note@-6 {{use '&' for a bitwise operation}}
-                      // cxx17-note@-7 {{remove constant to silence this warning}}
-
 
   (xs[3] || (a = 0)) + a; // cxx11-warning {{unsequenced modification and access to 'a'}}
                           // cxx17-warning@-1 {{unsequenced modification and access to 'a'}}
   (0 || (a = 0)) + a; // cxx11-warning {{unsequenced modification and access to 'a'}}
                       // cxx17-warning@-1 {{unsequenced modification and access to 'a'}}
-                      // cxx11-warning@-2 {{use of logical '||' with constant operand}}
-                      // cxx11-note@-3 {{use '|' for a bitwise operation}}
-                      // cxx17-warning@-4 {{use of logical '||' with constant operand}}
-                      // cxx17-note@-5 {{use '|' for a bitwise operation}}
-  (1 || (a = 0)) + a; // cxx11-warning {{use of logical '||' with constant operand}}
-                      // cxx11-note@-1 {{use '|' for a bitwise operation}}
-                      // cxx17-warning@-2 {{use of logical '||' with constant operand}}
-                      // cxx17-note@-3 {{use '|' for a bitwise operation}}
-
+  (1 || (a = 0)) + a; // ok
 
   (xs[4] ? a : ++a) + a; // cxx11-warning {{unsequenced modification and access to 'a'}}
                          // cxx17-warning@-1 {{unsequenced modification and access to 'a'}}

@@ -33,6 +33,7 @@ unwind_sources = [
   "Unwind-EHABI.h",
   "Unwind-seh.cpp",
   "Unwind-sjlj.c",
+  "Unwind-wasm.c",
   "UnwindCursor.hpp",
   "UnwindLevel1-gcc-ext.c",
   "UnwindLevel1.c",
@@ -57,7 +58,7 @@ if (current_os == "android") {
   } else if (current_cpu == "x64") {
     unwind_output_dir = "$crt_current_out_dir/x86_64"
   } else if (current_cpu == "x86") {
-    unwind_output_dir = "$crt_current_out_dir/i686"
+    unwind_output_dir = "$crt_current_out_dir/i386"
   }
 } else {
   unwind_output_dir = runtimes_dir

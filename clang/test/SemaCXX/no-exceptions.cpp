@@ -5,7 +5,6 @@
 typedef __SIZE_TYPE__ size_t;
 
 namespace test0 {
-  // rdar://problem/7878149
   class Foo {
   public:
     void* operator new(size_t x);

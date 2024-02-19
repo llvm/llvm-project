@@ -510,21 +510,25 @@ void test_cubema(global float* out, float a, float b, float c) {
 }
 
 // CHECK-LABEL: @test_read_exec(
-// CHECK: call i64 @llvm.read_register.i64(metadata ![[$EXEC:[0-9]+]]) #[[$READ_EXEC_ATTRS:[0-9]+]]
+// CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)
 void test_read_exec(global ulong* out) {
   *out = __builtin_amdgcn_read_exec();
 }
 
-// CHECK: declare i64 @llvm.read_register.i64(metadata) #[[$NOUNWIND_READONLY:[0-9]+]]
+// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1) #[[$NOUNWIND_READONLY:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_lo(
-// CHECK: call i32 @llvm.read_register.i32(metadata ![[$EXEC_LO:[0-9]+]]) #[[$READ_EXEC_ATTRS]]
+// CHECK: call i32 @llvm.amdgcn.ballot.i32(i1 true)
 void test_read_exec_lo(global uint* out) {
   *out = __builtin_amdgcn_read_exec_lo();
 }
 
+// CHECK: declare i32 @llvm.amdgcn.ballot.i32(i1) #[[$NOUNWIND_READONLY:[0-9]+]]
+
 // CHECK-LABEL: @test_read_exec_hi(
-// CHECK: call i32 @llvm.read_register.i32(metadata ![[$EXEC_HI:[0-9]+]]) #[[$READ_EXEC_ATTRS]]
+// CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)
+// CHECK: lshr i64 [[A:%.*]], 32
+// CHECK: trunc i64 [[B:%.*]] to i32
 void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
@@ -597,13 +601,13 @@ void test_get_local_id(int d, global int *out)
 }
 
 // CHECK-LABEL: @test_get_workgroup_size(
-// CHECK: call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 4
+// CHECK: call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 12
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 6
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 14
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 8
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 16
+// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 8, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 void test_get_workgroup_size(int d, global int *out)
 {
 	switch (d) {
@@ -828,10 +832,13 @@ void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
   res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
 }
 
+// CHECK-LABEL test_wavefrontsize(
+unsigned test_wavefrontsize() {
+
+  // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
+  return __builtin_amdgcn_wavefrontsize();
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
-// CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(read) }
-// CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }
-// CHECK-DAG: ![[$EXEC]] = !{!"exec"}
-// CHECK-DAG: ![[$EXEC_LO]] = !{!"exec_lo"}
-// CHECK-DAG: ![[$EXEC_HI]] = !{!"exec_hi"}
+// CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }

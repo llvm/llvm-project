@@ -36,8 +36,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -282,12 +280,10 @@ T getWithDefaultOverride(const cl::opt<T> &ClOption,
 
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
-  ScalarizerVisitor(unsigned ParallelLoopAccessMDKind, DominatorTree *DT,
-                    ScalarizerPassOptions Options)
-      : ParallelLoopAccessMDKind(ParallelLoopAccessMDKind), DT(DT),
-        ScalarizeVariableInsertExtract(
-            getWithDefaultOverride(ClScalarizeVariableInsertExtract,
-                                   Options.ScalarizeVariableInsertExtract)),
+  ScalarizerVisitor(DominatorTree *DT, ScalarizerPassOptions Options)
+      : DT(DT), ScalarizeVariableInsertExtract(getWithDefaultOverride(
+                    ClScalarizeVariableInsertExtract,
+                    Options.ScalarizeVariableInsertExtract)),
         ScalarizeLoadStore(getWithDefaultOverride(ClScalarizeLoadStore,
                                                   Options.ScalarizeLoadStore)),
         ScalarizeMinBits(getWithDefaultOverride(ClScalarizeMinBits,
@@ -337,8 +333,6 @@ private:
 
   SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
 
-  unsigned ParallelLoopAccessMDKind;
-
   DominatorTree *DT;
 
   const bool ScalarizeVariableInsertExtract;
@@ -346,30 +340,7 @@ private:
   const unsigned ScalarizeMinBits;
 };
 
-class ScalarizerLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  ScalarizerLegacyPass() : FunctionPass(ID) {
-    initializeScalarizerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage& AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-};
-
 } // end anonymous namespace
-
-char ScalarizerLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
-                      "Scalarize vector operations", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
-                    "Scalarize vector operations", false, false)
 
 Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
                      const VectorSplit &VS, ValueVector *cachePtr)
@@ -441,22 +412,6 @@ Value *Scatterer::operator[](unsigned Frag) {
   }
 
   return CV[Frag];
-}
-
-bool ScalarizerLegacyPass::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  Module &M = *F.getParent();
-  unsigned ParallelLoopAccessMDKind =
-      M.getContext().getMDKindID("llvm.mem.parallel_loop_access");
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  ScalarizerVisitor Impl(ParallelLoopAccessMDKind, DT, ScalarizerPassOptions());
-  return Impl.visit(F);
-}
-
-FunctionPass *llvm::createScalarizerPass() {
-  return new ScalarizerLegacyPass();
 }
 
 bool ScalarizerVisitor::visit(Function &F) {
@@ -558,7 +513,7 @@ bool ScalarizerVisitor::canTransferMetadata(unsigned Tag) {
           || Tag == LLVMContext::MD_invariant_load
           || Tag == LLVMContext::MD_alias_scope
           || Tag == LLVMContext::MD_noalias
-          || Tag == ParallelLoopAccessMDKind
+          || Tag == LLVMContext::MD_mem_parallel_loop_access
           || Tag == LLVMContext::MD_access_group);
 }
 
@@ -730,7 +685,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   // vector type, which is true for all current intrinsics.
   for (unsigned I = 0; I != NumArgs; ++I) {
     Value *OpI = CI.getOperand(I);
-    if (auto *OpVecTy = dyn_cast<FixedVectorType>(OpI->getType())) {
+    if ([[maybe_unused]] auto *OpVecTy =
+            dyn_cast<FixedVectorType>(OpI->getType())) {
       assert(OpVecTy->getNumElements() == VS->VecTy->getNumElements());
       std::optional<VectorSplit> OpVS = getVectorSplit(OpI->getType());
       if (!OpVS || OpVS->NumPacked != VS->NumPacked) {
@@ -1253,11 +1209,8 @@ bool ScalarizerVisitor::finish() {
 }
 
 PreservedAnalyses ScalarizerPass::run(Function &F, FunctionAnalysisManager &AM) {
-  Module &M = *F.getParent();
-  unsigned ParallelLoopAccessMDKind =
-      M.getContext().getMDKindID("llvm.mem.parallel_loop_access");
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  ScalarizerVisitor Impl(ParallelLoopAccessMDKind, DT, Options);
+  ScalarizerVisitor Impl(DT, Options);
   bool Changed = Impl.visit(F);
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();

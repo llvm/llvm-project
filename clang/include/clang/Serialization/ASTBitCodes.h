@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 27;
+const unsigned VERSION_MAJOR = 29;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -51,7 +51,7 @@ const unsigned VERSION_MAJOR = 27;
 /// for the previous version could still support reading the new
 /// version by ignoring new kinds of subblocks), this number
 /// should be increased.
-const unsigned VERSION_MINOR = 0;
+const unsigned VERSION_MINOR = 1;
 
 /// An ID number that refers to an identifier in an AST file.
 ///
@@ -405,6 +405,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the indices of used header search entries.
   HEADER_SEARCH_ENTRY_USAGE,
+
+  /// Record code for the indices of used VFSs.
+  VFS_USAGE,
 };
 
 /// Record code for extension blocks.
@@ -524,13 +527,7 @@ enum ASTRecordTypes {
   /// of source-location information.
   SOURCE_LOCATION_OFFSETS = 14,
 
-  /// Record code for the set of source location entries
-  /// that need to be preloaded by the AST reader.
-  ///
-  /// This set contains the source location entry for the
-  /// predefines buffer and for any file entries that need to be
-  /// preloaded.
-  SOURCE_LOCATION_PRELOADS = 15,
+  // ID 15 used to be for source location entry preloads.
 
   /// Record code for the set of ext_vector type names.
   EXT_VECTOR_DECLS = 16,
@@ -1107,7 +1104,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 500;
+const unsigned NUM_PREDEF_TYPE_IDS = 502;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1480,10 +1477,6 @@ enum DeclCode {
   /// A TemplateTemplateParmDecl record that stores an expanded
   /// template template parameter pack.
   DECL_EXPANDED_TEMPLATE_TEMPLATE_PARM_PACK,
-
-  /// A ClassScopeFunctionSpecializationDecl record a class scope
-  /// function specialization. (Microsoft extension).
-  DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION,
 
   /// An ImportDecl recording a module import.
   DECL_IMPORT,
@@ -1905,6 +1898,7 @@ enum StmtCode {
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
   EXPR_PACK_EXPANSION,                    // PackExpansionExpr
+  EXPR_PACK_INDEXING,                     // PackIndexingExpr
   EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr
@@ -1995,6 +1989,7 @@ enum StmtCode {
   STMT_OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE,
   STMT_OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE,
   STMT_OMP_TARGET_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE,
+  STMT_OMP_SCOPE_DIRECTIVE,
   STMT_OMP_INTEROP_DIRECTIVE,
   STMT_OMP_DISPATCH_DIRECTIVE,
   STMT_OMP_MASKED_DIRECTIVE,
@@ -2023,6 +2018,9 @@ enum StmtCode {
 
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
+
+  // OpenACC Constructs
+  STMT_OPENACC_COMPUTE_CONSTRUCT,
 };
 
 /// The kinds of designators that can occur in a

@@ -18,8 +18,8 @@ define <vscale x 4 x half> @complex_mul_v4f16(<vscale x 4 x half> %a, <vscale x 
 ; CHECK-NEXT:    uzp1 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    movprfx z3, z2
 ; CHECK-NEXT:    fmul z3.h, p0/m, z3.h, z0.h
-; CHECK-NEXT:    fmla z3.h, p0/m, z1.h, z4.h
 ; CHECK-NEXT:    fmul z2.h, p0/m, z2.h, z4.h
+; CHECK-NEXT:    fmla z3.h, p0/m, z1.h, z4.h
 ; CHECK-NEXT:    fnmsb z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    zip2 z1.d, z0.d, z3.d
 ; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
@@ -46,8 +46,8 @@ entry:
 define <vscale x 8 x half> @complex_mul_v8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: complex_mul_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z2.h, #0 // =0x0
 ; CHECK-NEXT:    fcmla z2.h, p0/m, z1.h, z0.h, #0
 ; CHECK-NEXT:    fcmla z2.h, p0/m, z1.h, z0.h, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
@@ -72,15 +72,15 @@ entry:
 define <vscale x 16 x half> @complex_mul_v16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b) {
 ; CHECK-LABEL: complex_mul_v16f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.h, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z4.h, #0 // =0x0
 ; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    fcmla z4.h, p0/m, z3.h, z1.h, #0
 ; CHECK-NEXT:    fcmla z5.h, p0/m, z2.h, z0.h, #0
-; CHECK-NEXT:    fcmla z4.h, p0/m, z3.h, z1.h, #90
+; CHECK-NEXT:    fcmla z4.h, p0/m, z3.h, z1.h, #0
 ; CHECK-NEXT:    fcmla z5.h, p0/m, z2.h, z0.h, #90
-; CHECK-NEXT:    mov z1.d, z4.d
+; CHECK-NEXT:    fcmla z4.h, p0/m, z3.h, z1.h, #90
 ; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.experimental.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %a)
@@ -103,8 +103,8 @@ entry:
 define <vscale x 32 x half> @complex_mul_v32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b) {
 ; CHECK-LABEL: complex_mul_v32f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.h, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z24.h, #0 // =0x0
 ; CHECK-NEXT:    mov z25.d, z24.d
 ; CHECK-NEXT:    mov z26.d, z24.d
 ; CHECK-NEXT:    mov z27.d, z24.d

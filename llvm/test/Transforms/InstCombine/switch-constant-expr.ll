@@ -6,7 +6,7 @@
 ; PR30486
 define i32 @single_case() {
 ; CHECK-LABEL: @single_case(
-; CHECK-NEXT:    switch i32 ptrtoint (ptr @g to i32), label [[X:%.*]] [
+; CHECK-NEXT:    switch i32 add (i32 ptrtoint (ptr @g to i32), i32 -1), label [[X:%.*]] [
 ; CHECK-NEXT:    ]
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 0
@@ -18,9 +18,9 @@ x:
 
 define i32 @multiple_cases() {
 ; CHECK-LABEL: @multiple_cases(
-; CHECK-NEXT:    switch i32 ptrtoint (ptr @g to i32), label [[X:%.*]] [
-; CHECK-NEXT:    i32 2, label [[ONE:%.*]]
-; CHECK-NEXT:    i32 3, label [[TWO:%.*]]
+; CHECK-NEXT:    switch i32 add (i32 ptrtoint (ptr @g to i32), i32 -1), label [[X:%.*]] [
+; CHECK-NEXT:    i32 1, label [[ONE:%.*]]
+; CHECK-NEXT:    i32 2, label [[TWO:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 0

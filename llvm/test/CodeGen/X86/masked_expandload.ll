@@ -104,13 +104,12 @@ define <4 x double> @expandload_v4f64_v4i64(ptr %base, <4 x double> %src0, <4 x 
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,0,3,2]
-; SSE2-NEXT:    pand %xmm3, %xmm5
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    packssdw %xmm5, %xmm3
-; SSE2-NEXT:    movmskps %xmm3, %eax
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm3[1,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-NEXT:    andps %xmm4, %xmm2
+; SSE2-NEXT:    movmskps %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB1_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
@@ -1009,21 +1008,11 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512F-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
 ; AVX512F-NEXT:    kmovw %k2, %eax
 ; AVX512F-NEXT:    movzbl %al, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl %ecx
-; AVX512F-NEXT:    andl $-43, %ecx
-; AVX512F-NEXT:    subl %ecx, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512F-NEXT:    shrl $2, %eax
-; AVX512F-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512F-NEXT:    addl %ecx, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $4, %ecx
-; AVX512F-NEXT:    addl %eax, %ecx
-; AVX512F-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512F-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512F-NEXT:    shrl $24, %eax
+; AVX512F-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512F-NEXT:    shrl $3, %eax
+; AVX512F-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512F-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512F-NEXT:    shrl $28, %eax
 ; AVX512F-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
 ; AVX512F-NEXT:    retq
 ;
@@ -1033,21 +1022,11 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512VLDQ-NEXT:    vptestnmd %ymm3, %ymm3, %k1
 ; AVX512VLDQ-NEXT:    vptestnmd %ymm2, %ymm2, %k2
 ; AVX512VLDQ-NEXT:    kmovb %k2, %eax
-; AVX512VLDQ-NEXT:    movl %eax, %ecx
-; AVX512VLDQ-NEXT:    shrl %ecx
-; AVX512VLDQ-NEXT:    andl $-43, %ecx
-; AVX512VLDQ-NEXT:    subl %ecx, %eax
-; AVX512VLDQ-NEXT:    movl %eax, %ecx
-; AVX512VLDQ-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512VLDQ-NEXT:    shrl $2, %eax
-; AVX512VLDQ-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512VLDQ-NEXT:    addl %ecx, %eax
-; AVX512VLDQ-NEXT:    movl %eax, %ecx
-; AVX512VLDQ-NEXT:    shrl $4, %ecx
-; AVX512VLDQ-NEXT:    addl %eax, %ecx
-; AVX512VLDQ-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512VLDQ-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512VLDQ-NEXT:    shrl $24, %eax
+; AVX512VLDQ-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VLDQ-NEXT:    shrl $3, %eax
+; AVX512VLDQ-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VLDQ-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VLDQ-NEXT:    shrl $28, %eax
 ; AVX512VLDQ-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
 ; AVX512VLDQ-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
 ; AVX512VLDQ-NEXT:    retq
@@ -1060,21 +1039,11 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512VLBW-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
 ; AVX512VLBW-NEXT:    kmovd %k2, %eax
 ; AVX512VLBW-NEXT:    movzbl %al, %eax
-; AVX512VLBW-NEXT:    movl %eax, %ecx
-; AVX512VLBW-NEXT:    shrl %ecx
-; AVX512VLBW-NEXT:    andl $-43, %ecx
-; AVX512VLBW-NEXT:    subl %ecx, %eax
-; AVX512VLBW-NEXT:    movl %eax, %ecx
-; AVX512VLBW-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512VLBW-NEXT:    shrl $2, %eax
-; AVX512VLBW-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512VLBW-NEXT:    addl %ecx, %eax
-; AVX512VLBW-NEXT:    movl %eax, %ecx
-; AVX512VLBW-NEXT:    shrl $4, %ecx
-; AVX512VLBW-NEXT:    addl %eax, %ecx
-; AVX512VLBW-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512VLBW-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512VLBW-NEXT:    shrl $24, %eax
+; AVX512VLBW-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VLBW-NEXT:    shrl $3, %eax
+; AVX512VLBW-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VLBW-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VLBW-NEXT:    shrl $28, %eax
 ; AVX512VLBW-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer

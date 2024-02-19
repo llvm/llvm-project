@@ -34,7 +34,8 @@ uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
 
 template <typename Ty>
 Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_add(Address, Val, Ordering);
+  return __scoped_atomic_fetch_add(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
@@ -56,25 +57,28 @@ template <typename Ty> Ty atomicLoad(Ty *Address, atomic::OrderingTy Ordering) {
 
 template <typename Ty>
 void atomicStore(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  __atomic_store_n(Address, Val, Ordering);
+  __scoped_atomic_store_n(Address, Val, Ordering, __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 bool atomicCAS(Ty *Address, Ty ExpectedV, Ty DesiredV,
                atomic::OrderingTy OrderingSucc,
                atomic::OrderingTy OrderingFail) {
-  return __atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
-                                   OrderingSucc, OrderingFail);
+  return __scoped_atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
+                                          OrderingSucc, OrderingFail,
+                                          __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicMin(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_min(Address, Val, Ordering);
+  return __scoped_atomic_fetch_min(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicMax(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_max(Address, Val, Ordering);
+  return __scoped_atomic_fetch_max(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
@@ -94,23 +98,26 @@ Ty atomicMaxFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
 
 template <typename Ty>
 Ty atomicOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_or(Address, Val, Ordering);
+  return __scoped_atomic_fetch_or(Address, Val, Ordering,
+                                  __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicAnd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_and(Address, Val, Ordering);
+  return __scoped_atomic_fetch_and(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicXOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_xor(Address, Val, Ordering);
+  return __scoped_atomic_fetch_xor(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
                         atomic::OrderingTy Ordering) {
   uint32_t R;
-  __atomic_exchange(Address, &Val, &R, Ordering);
+  __scoped_atomic_exchange(Address, &Val, &R, Ordering, __MEMORY_SCOPE_DEVICE);
   return R;
 }
 ///}
@@ -272,7 +279,9 @@ void fenceSystem(atomic::OrderingTy Ordering) {
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {
-  // AMDGCN doesn't need to sync threads in a warp
+  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
+  // to enforce convergent behaviour between control flow graphs.
+  __builtin_amdgcn_wave_barrier();
 }
 
 void syncThreads(atomic::OrderingTy Ordering) {
@@ -336,10 +345,7 @@ void namedBarrier() {
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.
   constexpr int BarrierNo = 7;
-  asm volatile("barrier.sync %0, %1;"
-               :
-               : "r"(BarrierNo), "r"(NumThreads)
-               : "memory");
+  __nvvm_barrier_sync_cnt(BarrierNo, NumThreads);
 }
 
 void fenceTeam(atomic::OrderingTy) { __nvvm_membar_cta(); }
@@ -352,7 +358,7 @@ void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
 
 void syncThreads(atomic::OrderingTy Ordering) {
   constexpr int BarrierNo = 8;
-  asm volatile("barrier.sync %0;" : : "r"(BarrierNo) : "memory");
+  __nvvm_barrier_sync(BarrierNo);
 }
 
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
@@ -385,7 +391,7 @@ void setLock(omp_lock_t *Lock) {
     for (;;) {
       now = __nvvm_read_ptx_sreg_clock();
       int32_t cycles = now > start ? now - start : now + (0xffffffff - start);
-      if (cycles >= OMP_SPIN * mapping::getBlockId()) {
+      if (cycles >= OMP_SPIN * mapping::getBlockIdInKernel()) {
         break;
       }
     }
@@ -504,18 +510,16 @@ void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 void setCriticalLock(omp_lock_t *Lock) { impl::setLock(Lock); }
 
 extern "C" {
-void __kmpc_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_ordered(IdentTy *Loc, int32_t TId) {}
 
-void __kmpc_end_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_end_ordered(IdentTy *Loc, int32_t TId) {}
 
 int32_t __kmpc_cancel_barrier(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   __kmpc_barrier(Loc, TId);
   return 0;
 }
 
 void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   if (mapping::isMainThreadInGenericMode())
     return __kmpc_flush(Loc);
 
@@ -525,64 +529,46 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
   impl::namedBarrier();
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
-                                                          int32_t TId) {
-  FunctionTracingRAII();
+[[clang::noinline]] void __kmpc_barrier_simple_spmd(IdentTy *Loc, int32_t TId) {
   synchronize::threadsAligned(atomic::OrderingTy::seq_cst);
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
-                                                             int32_t TId) {
-  FunctionTracingRAII();
+[[clang::noinline]] void __kmpc_barrier_simple_generic(IdentTy *Loc,
+                                                       int32_t TId) {
   synchronize::threads(atomic::OrderingTy::seq_cst);
 }
 
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   return omp_get_thread_num() == 0;
 }
 
-void __kmpc_end_master(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_end_master(IdentTy *Loc, int32_t TId) {}
 
 int32_t __kmpc_masked(IdentTy *Loc, int32_t TId, int32_t Filter) {
-  FunctionTracingRAII();
   return omp_get_thread_num() == Filter;
 }
 
-void __kmpc_end_masked(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_end_masked(IdentTy *Loc, int32_t TId) {}
 
 int32_t __kmpc_single(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   return __kmpc_master(Loc, TId);
 }
 
 void __kmpc_end_single(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   // The barrier is explicitly called.
 }
 
-void __kmpc_flush(IdentTy *Loc) {
-  FunctionTracingRAII();
-  fence::kernel(atomic::seq_cst);
-}
+void __kmpc_flush(IdentTy *Loc) { fence::kernel(atomic::seq_cst); }
 
-uint64_t __kmpc_warp_active_thread_mask(void) {
-  FunctionTracingRAII();
-  return mapping::activemask();
-}
+uint64_t __kmpc_warp_active_thread_mask(void) { return mapping::activemask(); }
 
-void __kmpc_syncwarp(uint64_t Mask) {
-  FunctionTracingRAII();
-  synchronize::warp(Mask);
-}
+void __kmpc_syncwarp(uint64_t Mask) { synchronize::warp(Mask); }
 
 void __kmpc_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
-  FunctionTracingRAII();
   impl::setCriticalLock(reinterpret_cast<omp_lock_t *>(Name));
 }
 
 void __kmpc_end_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
-  FunctionTracingRAII();
   impl::unsetCriticalLock(reinterpret_cast<omp_lock_t *>(Name));
 }
 
@@ -595,6 +581,16 @@ void omp_set_lock(omp_lock_t *Lock) { impl::setLock(Lock); }
 void omp_unset_lock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 
 int omp_test_lock(omp_lock_t *Lock) { return impl::testLock(Lock); }
+
+void ompx_sync_block(int Ordering) {
+  impl::syncThreadsAligned(atomic::OrderingTy(Ordering));
+}
+void ompx_sync_block_acq_rel() {
+  impl::syncThreadsAligned(atomic::OrderingTy::acq_rel);
+}
+void ompx_sync_block_divergent(int Ordering) {
+  impl::syncThreads(atomic::OrderingTy(Ordering));
+}
 } // extern "C"
 
 #pragma omp end declare target

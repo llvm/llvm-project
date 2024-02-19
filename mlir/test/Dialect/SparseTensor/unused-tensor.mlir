@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 //
 // A contrived example where the sparse tensor B is only
@@ -7,7 +7,7 @@
 // compiler still generates the correct loop nest for this case.
 //
 
-#SM = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#SM = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 #trait = {
   indexing_maps = [
@@ -21,7 +21,7 @@
 
 // CHECK-LABEL:   func.func @b_ununsed(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<2x4xf64>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<8x4xf64, #sparse_tensor.encoding<{{.*}}>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<8x4xf64, #sparse{{[0-9]*}}>,
 // CHECK-SAME:      %[[VAL_2:.*]]: tensor<2x4xf64>) -> tensor<2x4xf64> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 8 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index

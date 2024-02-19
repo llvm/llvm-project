@@ -9,7 +9,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -69,6 +68,16 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy).getCallee());
     EXPECT_FALSE(isLibFunc(F, LF));
+  }
+
+  // i64 @labs(i32)
+  {
+    auto *InvalidLabsFTy = FunctionType::get(Type::getInt64Ty(Context),
+                                             {Type::getInt32Ty(Context)},
+                                             /*isVarArg=*/false);
+    auto *F = cast<Function>(
+        M->getOrInsertFunction("labs", InvalidLabsFTy).getCallee());
+    EXPECT_FALSE(isLibFunc(F, LibFunc_labs));
   }
 }
 
@@ -611,4 +620,39 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     Function *F = M->getFunction(TLI.getName(LF));
     EXPECT_TRUE(isLibFunc(F, LF));
   }
+}
+
+namespace {
+
+/// Creates TLI for AArch64 and uses it to get the LibFunc names for the given
+/// Instruction opcode and Type.
+class TLITestAarch64 : public ::testing::Test {
+private:
+  const Triple TargetTriple;
+
+protected:
+  LLVMContext Ctx;
+  std::unique_ptr<TargetLibraryInfoImpl> TLII;
+  std::unique_ptr<TargetLibraryInfo> TLI;
+
+  /// Create TLI for AArch64
+  TLITestAarch64() : TargetTriple(Triple("aarch64-unknown-linux-gnu")) {
+    TLII = std::make_unique<TargetLibraryInfoImpl>(
+        TargetLibraryInfoImpl(TargetTriple));
+    TLI = std::make_unique<TargetLibraryInfo>(TargetLibraryInfo(*TLII));
+  }
+
+  /// Returns the TLI function name for the given \p Opcode and type \p Ty.
+  StringRef getScalarName(unsigned int Opcode, Type *Ty) {
+    LibFunc Func;
+    if (!TLI->getLibFunc(Opcode, Ty, Func))
+      return "";
+    return TLI->getName(Func);
+  }
+};
+} // end anonymous namespace
+
+TEST_F(TLITestAarch64, TestFrem) {
+  EXPECT_EQ(getScalarName(Instruction::FRem, Type::getDoubleTy(Ctx)), "fmod");
+  EXPECT_EQ(getScalarName(Instruction::FRem, Type::getFloatTy(Ctx)), "fmodf");
 }

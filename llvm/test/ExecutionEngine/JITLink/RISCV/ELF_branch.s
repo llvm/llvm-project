@@ -1,7 +1,7 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=riscv64 -filetype=obj \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj -riscv-asm-relax-branches=0 \
 # RUN:     -o %t/elf_riscv64_branch.o %s
-# RUN: llvm-mc -triple=riscv32 -filetype=obj \
+# RUN: llvm-mc -triple=riscv32 -filetype=obj -riscv-asm-relax-branches=0 \
 # RUN:     -o %t/elf_riscv32_branch.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00ff4 -slab-page-size 4096 \

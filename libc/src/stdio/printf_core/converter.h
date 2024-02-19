@@ -14,7 +14,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // convert will call a conversion function to convert the FormatSection into
@@ -23,6 +23,6 @@ namespace printf_core {
 int convert(Writer *writer, const FormatSection &to_conv);
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_H

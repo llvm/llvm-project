@@ -17,9 +17,9 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,6 +35,7 @@ extern cl::opt<bool> DisableGISelLegalityCheck;
 class MachineFunction;
 class raw_ostream;
 class LegalizerHelper;
+class LostDebugLocObserver;
 class MachineInstr;
 class MachineRegisterInfo;
 class MCInstrInfo;
@@ -222,6 +223,11 @@ struct TypePairAndMemDesc {
            MemTy.getSizeInBits() == Other.MemTy.getSizeInBits();
   }
 };
+
+/// True iff P is false.
+template <typename Predicate> Predicate predNot(Predicate P) {
+  return [=](const LegalityQuery &Query) { return !P(Query); };
+}
 
 /// True iff P0 and P1 are true.
 template<typename Predicate>
@@ -709,7 +715,7 @@ public:
     using namespace LegalityPredicates;
     return actionForCartesianProduct(LegalizeAction::Lower, Types0, Types1);
   }
-  /// The instruction is lowered when when type indexes 0, 1, and 2 are all in
+  /// The instruction is lowered when type indexes 0, 1, and 2 are all in
   /// their respective lists.
   LegalizeRuleSet &lowerForCartesianProduct(std::initializer_list<LLT> Types0,
                                             std::initializer_list<LLT> Types1,
@@ -857,7 +863,7 @@ public:
                             std::initializer_list<LLT> Types1) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
   }
-  /// The instruction is custom when when type indexes 0, 1, and 2 are all in
+  /// The instruction is custom when type indexes 0, 1, and 2 are all in
   /// their respective lists.
   LegalizeRuleSet &
   customForCartesianProduct(std::initializer_list<LLT> Types0,
@@ -1078,7 +1084,7 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT T = Query.Types[LargeTypeIdx];
-          if (T.isVector() && T.getElementType().isPointer())
+          if (T.isPointerVector())
             T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
           return std::make_pair(TypeIdx, T);
         });
@@ -1288,8 +1294,8 @@ public:
                        const MachineRegisterInfo &MRI) const;
 
   /// Called for instructions with the Custom LegalizationAction.
-  virtual bool legalizeCustom(LegalizerHelper &Helper,
-                              MachineInstr &MI) const {
+  virtual bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                              LostDebugLocObserver &LocObserver) const {
     llvm_unreachable("must implement this if custom action is used");
   }
 

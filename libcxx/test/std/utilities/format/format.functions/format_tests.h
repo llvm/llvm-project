@@ -2990,7 +2990,7 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
 
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_test_handle(TestFunction check, ExceptionTest check_exception) {
-  // *** Valid permuatations ***
+  // *** Valid permutations ***
   check(SV("answer is '0xaaaa'"), SV("answer is '{}'"), status::foo);
   check(SV("answer is '0xaaaa'"), SV("answer is '{:x}'"), status::foo);
   check(SV("answer is '0XAAAA'"), SV("answer is '{:X}'"), status::foo);
@@ -3145,7 +3145,12 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("{:"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);
+
+  check_exception("The argument index should end with a ':' or a '}'", SV("{0"));
+  check_exception("The argument index value is too large for the number of arguments supplied", SV("{0:"));
+  check_exception("The replacement field misses a terminating '}'", SV("{0:"), 42);
 
   check_exception("The format string contains an invalid escape sequence", SV("}"));
   check_exception("The format string contains an invalid escape sequence", SV("{:}-}"), 42);
@@ -3234,7 +3239,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   if constexpr (modus == execution_modus::full)
     format_test_floating_point<CharT>(check, check_exception);
 
-  // *** Test pointer formater argument ***
+  // *** Test pointer formatter argument ***
   check(SV("hello 0x0"), SV("hello {}"), nullptr);
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<void*>(0x42));
   check(SV("hello 0x42"), SV("hello {}"), reinterpret_cast<const void*>(0x42));
@@ -3244,7 +3249,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test handle formatter argument ***
   format_test_handle<CharT>(check, check_exception);
 
-  // *** Test the interal buffer optimizations ***
+  // *** Test the internal buffer optimizations ***
   if constexpr (modus == execution_modus::full)
     format_test_buffer_optimizations<CharT>(check);
 }

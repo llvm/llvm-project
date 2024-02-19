@@ -28,4 +28,5 @@ add_clang_library(clangIndex
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

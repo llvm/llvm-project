@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_setspecific,
                    (pthread_key_t key, const void *data)) {
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, pthread_setspecific,
     return EINVAL;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

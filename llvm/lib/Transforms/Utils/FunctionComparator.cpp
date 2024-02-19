@@ -160,10 +160,23 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
 int FunctionComparator::cmpMetadata(const Metadata *L,
                                     const Metadata *R) const {
   // TODO: the following routine coerce the metadata contents into constants
-  // before comparison.
+  // or MDStrings before comparison.
   // It ignores any other cases, so that the metadata nodes are considered
   // equal even though this is not correct.
   // We should structurally compare the metadata nodes to be perfect here.
+
+  auto *MDStringL = dyn_cast<MDString>(L);
+  auto *MDStringR = dyn_cast<MDString>(R);
+  if (MDStringL && MDStringR) {
+    if (MDStringL == MDStringR)
+      return 0;
+    return MDStringL->getString().compare(MDStringR->getString());
+  }
+  if (MDStringR)
+    return -1;
+  if (MDStringL)
+    return 1;
+
   auto *CL = dyn_cast<ConstantAsMetadata>(L);
   auto *CR = dyn_cast<ConstantAsMetadata>(R);
   if (CL == CR)
@@ -392,6 +405,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::ConstantExprVal: {
     const ConstantExpr *LE = cast<ConstantExpr>(L);
     const ConstantExpr *RE = cast<ConstantExpr>(R);
+    if (int Res = cmpNumbers(LE->getOpcode(), RE->getOpcode()))
+      return Res;
     unsigned NumOperandsL = LE->getNumOperands();
     unsigned NumOperandsR = RE->getNumOperands();
     if (int Res = cmpNumbers(NumOperandsL, NumOperandsR))
@@ -399,6 +414,29 @@ int FunctionComparator::cmpConstants(const Constant *L,
     for (unsigned i = 0; i < NumOperandsL; ++i) {
       if (int Res = cmpConstants(cast<Constant>(LE->getOperand(i)),
                                  cast<Constant>(RE->getOperand(i))))
+        return Res;
+    }
+    if (LE->isCompare())
+      if (int Res = cmpNumbers(LE->getPredicate(), RE->getPredicate()))
+        return Res;
+    if (auto *GEPL = dyn_cast<GEPOperator>(LE)) {
+      auto *GEPR = cast<GEPOperator>(RE);
+      if (int Res = cmpTypes(GEPL->getSourceElementType(),
+                             GEPR->getSourceElementType()))
+        return Res;
+      if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
+        return Res;
+      if (int Res = cmpNumbers(GEPL->getInRangeIndex().value_or(unsigned(-1)),
+                               GEPR->getInRangeIndex().value_or(unsigned(-1))))
+        return Res;
+    }
+    if (auto *OBOL = dyn_cast<OverflowingBinaryOperator>(LE)) {
+      auto *OBOR = cast<OverflowingBinaryOperator>(RE);
+      if (int Res =
+              cmpNumbers(OBOL->hasNoUnsignedWrap(), OBOR->hasNoUnsignedWrap()))
+        return Res;
+      if (int Res =
+              cmpNumbers(OBOL->hasNoSignedWrap(), OBOR->hasNoSignedWrap()))
         return Res;
     }
     return 0;
@@ -820,6 +858,21 @@ int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   if (ConstR)
     return -1;
 
+  const MetadataAsValue *MetadataValueL = dyn_cast<MetadataAsValue>(L);
+  const MetadataAsValue *MetadataValueR = dyn_cast<MetadataAsValue>(R);
+  if (MetadataValueL && MetadataValueR) {
+    if (MetadataValueL == MetadataValueR)
+      return 0;
+
+    return cmpMetadata(MetadataValueL->getMetadata(),
+                       MetadataValueR->getMetadata());
+  }
+
+  if (MetadataValueL)
+    return 1;
+  if (MetadataValueR)
+    return -1;
+
   const InlineAsm *InlineAsmL = dyn_cast<InlineAsm>(L);
   const InlineAsm *InlineAsmR = dyn_cast<InlineAsm>(R);
 
@@ -957,68 +1010,4 @@ int FunctionComparator::compare() {
     }
   }
   return 0;
-}
-
-namespace {
-
-// Accumulate the hash of a sequence of 64-bit integers. This is similar to a
-// hash of a sequence of 64bit ints, but the entire input does not need to be
-// available at once. This interface is necessary for functionHash because it
-// needs to accumulate the hash as the structure of the function is traversed
-// without saving these values to an intermediate buffer. This form of hashing
-// is not often needed, as usually the object to hash is just read from a
-// buffer.
-class HashAccumulator64 {
-  uint64_t Hash;
-
-public:
-  // Initialize to random constant, so the state isn't zero.
-  HashAccumulator64() { Hash = 0x6acaa36bef8325c5ULL; }
-
-  void add(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
-
-  // No finishing is required, because the entire hash value is used.
-  uint64_t getHash() { return Hash; }
-};
-
-} // end anonymous namespace
-
-// A function hash is calculated by considering only the number of arguments and
-// whether a function is varargs, the order of basic blocks (given by the
-// successors of each basic block in depth first order), and the order of
-// opcodes of each instruction within each of these basic blocks. This mirrors
-// the strategy compare() uses to compare functions by walking the BBs in depth
-// first order and comparing each instruction in sequence. Because this hash
-// does not look at the operands, it is insensitive to things such as the
-// target of calls and the constants used in the function, which makes it useful
-// when possibly merging functions which are the same modulo constants and call
-// targets.
-FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
-  HashAccumulator64 H;
-  H.add(F.isVarArg());
-  H.add(F.arg_size());
-
-  SmallVector<const BasicBlock *, 8> BBs;
-  SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
-
-  // Walk the blocks in the same order as FunctionComparator::cmpBasicBlocks(),
-  // accumulating the hash of the function "structure." (BB and opcode sequence)
-  BBs.push_back(&F.getEntryBlock());
-  VisitedBBs.insert(BBs[0]);
-  while (!BBs.empty()) {
-    const BasicBlock *BB = BBs.pop_back_val();
-    // This random value acts as a block header, as otherwise the partition of
-    // opcodes into BBs wouldn't affect the hash, only the order of the opcodes
-    H.add(45798);
-    for (const auto &Inst : *BB) {
-      H.add(Inst.getOpcode());
-    }
-    const Instruction *Term = BB->getTerminator();
-    for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
-      if (!VisitedBBs.insert(Term->getSuccessor(i)).second)
-        continue;
-      BBs.push_back(Term->getSuccessor(i));
-    }
-  }
-  return H.getHash();
 }

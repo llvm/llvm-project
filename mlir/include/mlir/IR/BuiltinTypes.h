@@ -11,6 +11,7 @@
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/Support/ADTExtras.h"
 
 namespace llvm {
 class BitVector;
@@ -67,6 +68,7 @@ public:
   unsigned getWidth();
 
   /// Return the width of the mantissa of this type.
+  /// The width includes the integer bit.
   unsigned getFPMantissaWidth();
 
   /// Get or create a new FloatType with bitwidth scaled by `scale`.
@@ -273,20 +275,14 @@ public:
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    storage.erase(storage.begin() + pos);
-    shape = {storage.data(), storage.size()};
+    shape.erase(pos);
     return *this;
   }
 
   /// Insert a val into shape @pos.
   Builder &insertDim(int64_t val, unsigned pos) {
     assert(pos <= shape.size() && "overflow");
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    storage.insert(storage.begin() + pos, val);
-    shape = {storage.data(), storage.size()};
+    shape.insert(pos, val);
     return *this;
   }
 
@@ -295,9 +291,7 @@ public:
   }
 
 private:
-  ArrayRef<int64_t> shape;
-  // Owning shape data for copy-on-write operations.
-  SmallVector<int64_t> storage;
+  CopyOnWriteArrayRef<int64_t> shape;
   Type elementType;
   Attribute encoding;
 };
@@ -312,27 +306,18 @@ class VectorType::Builder {
 public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
-      : shape(other.getShape()), elementType(other.getElementType()),
+      : elementType(other.getElementType()), shape(other.getShape()),
         scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          unsigned numScalableDims = 0, ArrayRef<bool> scalableDims = {})
-      : shape(shape), elementType(elementType) {
-    if (scalableDims.empty())
-      scalableDims = SmallVector<bool>(shape.size(), false);
-    else
-      this->scalableDims = scalableDims;
-  }
+          ArrayRef<bool> scalableDims = {})
+      : elementType(elementType), shape(shape), scalableDims(scalableDims) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape,
                     ArrayRef<bool> newIsScalableDim = {}) {
-    if (newIsScalableDim.empty())
-      scalableDims = SmallVector<bool>(shape.size(), false);
-    else
-      scalableDims = newIsScalableDim;
-
     shape = newShape;
+    scalableDims = newIsScalableDim;
     return *this;
   }
 
@@ -344,35 +329,27 @@ public:
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    if (storageScalableDims.empty())
-      storageScalableDims.append(scalableDims.begin(), scalableDims.end());
-    storage.erase(storage.begin() + pos);
-    storageScalableDims.erase(storageScalableDims.begin() + pos);
-    shape = {storage.data(), storage.size()};
-    scalableDims =
-        ArrayRef<bool>(storageScalableDims.data(), storageScalableDims.size());
+    shape.erase(pos);
+    if (!scalableDims.empty())
+      scalableDims.erase(pos);
     return *this;
   }
 
-  /// In the particular case where the vector has a single dimension that we
-  /// drop, return the scalar element type.
-  // TODO: unify once we have a VectorType that supports 0-D.
-  operator Type() {
-    if (shape.empty())
-      return elementType;
+  /// Set a dim in shape @pos to val.
+  Builder &setDim(unsigned pos, int64_t val) {
+    assert(pos < shape.size() && "overflow");
+    shape.set(pos, val);
+    return *this;
+  }
+
+  operator VectorType() {
     return VectorType::get(shape, elementType, scalableDims);
   }
 
 private:
-  ArrayRef<int64_t> shape;
-  // Owning shape data for copy-on-write operations.
-  SmallVector<int64_t> storage;
   Type elementType;
-  ArrayRef<bool> scalableDims;
-  // Owning scalableDims data for copy-on-write operations.
-  SmallVector<bool> storageScalableDims;
+  CopyOnWriteArrayRef<int64_t> shape;
+  CopyOnWriteArrayRef<bool> scalableDims;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of
@@ -515,7 +492,7 @@ MemRefType canonicalizeStridedLayout(MemRefType t);
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
 /// once a dynamic dimension is encountered, all canonical strides become
 /// dynamic and need to be encoded with a different symbol.
-/// For canonical strides expressions, the offset is always 0 and and fastest
+/// For canonical strides expressions, the offset is always 0 and the fastest
 /// varying stride is always `1`.
 ///
 /// Examples:
@@ -540,6 +517,16 @@ bool isStrided(MemRefType t);
 /// Return "true" if the last dimension of the given type has a static unit
 /// stride. Also return "true" for types with no strides.
 bool isLastMemrefDimUnitStride(MemRefType type);
+
+/// Return "true" if the last N dimensions of the given type are contiguous.
+///
+/// Examples:
+///   - memref<5x4x3x2xi8, strided<[24, 6, 2, 1]> is contiguous when
+///   considering both _all_ and _only_ the trailing 3 dims,
+///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
+///   considering the trailing 3 dims.
+///
+bool trailingNDimsContiguous(MemRefType type, int64_t n);
 
 } // namespace mlir
 

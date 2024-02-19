@@ -19,8 +19,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 100, 100
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_1:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT_1:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 100, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
@@ -58,7 +57,7 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label [[VECTOR_BODY7:%.*]]
-; CHECK:       vector.body7:
+; CHECK:       vector.body6:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i32 [ 0, [[VECTOR_PH4]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY7]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX8]] to i8
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i8 [[OFFSET_IDX]], 0

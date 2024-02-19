@@ -13,6 +13,8 @@
 #include "gtest/gtest.h"
 #include <optional>
 
+#include "../../test/lib/Dialect/Test/TestDialect.h"
+
 using namespace mlir;
 using namespace mlir::detail;
 
@@ -432,7 +434,7 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   auto zeroStringValue =
       cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
-  EXPECT_TRUE(zeroStringValue.getValue().empty());
+  EXPECT_TRUE(zeroStringValue.empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 
@@ -459,4 +461,44 @@ TEST(SubElementTest, Nested) {
             ArrayRef<Attribute>(
                 {strAttr, trueAttr, falseAttr, boolArrayAttr, dictAttr}));
 }
+
+// Test how many times we call copy-ctor when building an attribute.
+TEST(CopyCountAttr, CopyCount) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  test::TestCopyCountAttr::get(&context, std::move(copyCount));
+  int counter1 = test::CopyCount::counter;
+  test::CopyCount::counter = 0;
+  test::TestCopyCountAttr::get(&context, std::move(copyCount));
+#ifndef NDEBUG
+  // One verification enabled only in assert-mode requires a copy.
+  EXPECT_EQ(counter1, 1);
+  EXPECT_EQ(test::CopyCount::counter, 1);
+#else
+  EXPECT_EQ(counter1, 0);
+  EXPECT_EQ(test::CopyCount::counter, 0);
+#endif
+}
+
+// Test stripped printing using test dialect attribute.
+TEST(CopyCountAttr, PrintStripped) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  // Doesn't matter which dialect attribute is used, just chose TestCopyCount
+  // given proximity.
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  Attribute res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << "|" << res << "|";
+  res.printStripped(os << "[");
+  os << "]";
+  EXPECT_EQ(os.str(), "|#test.copy_count<hello>|[copy_count<hello>]");
+}
+
 } // namespace

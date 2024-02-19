@@ -89,24 +89,20 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
                          PatternRewriter &rewriter) {
   if (index == -1)
     return val;
-  Type lowType = VectorType::Builder(type).dropDim(0);
+
   // At extraction dimension?
-  if (index == 0) {
-    auto posAttr = rewriter.getI64ArrayAttr(pos);
-    return rewriter.create<vector::ExtractOp>(loc, lowType, val, posAttr);
-  }
+  if (index == 0)
+    return rewriter.create<vector::ExtractOp>(loc, val, pos);
+
   // Unroll leading dimensions.
-  VectorType vType = cast<VectorType>(lowType);
-  Type resType = VectorType::Builder(type).dropDim(index);
-  auto resVectorType = cast<VectorType>(resType);
+  VectorType vType = VectorType::Builder(type).dropDim(0);
+  VectorType resType = VectorType::Builder(type).dropDim(index);
   Value result = rewriter.create<arith::ConstantOp>(
-      loc, resVectorType, rewriter.getZeroAttr(resVectorType));
-  for (int64_t d = 0, e = resVectorType.getDimSize(0); d < e; d++) {
-    auto posAttr = rewriter.getI64ArrayAttr(d);
-    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, posAttr);
+      loc, resType, rewriter.getZeroAttr(resType));
+  for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
+    Value ext = rewriter.create<vector::ExtractOp>(loc, val, d);
     Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
-    result = rewriter.create<vector::InsertOp>(loc, resVectorType, load, result,
-                                               posAttr);
+    result = rewriter.create<vector::InsertOp>(loc, load, result, d);
   }
   return result;
 }
@@ -120,20 +116,16 @@ static Value reshapeStore(Location loc, Value val, Value result,
   if (index == -1)
     return val;
   // At insertion dimension?
-  if (index == 0) {
-    auto posAttr = rewriter.getI64ArrayAttr(pos);
-    return rewriter.create<vector::InsertOp>(loc, type, val, result, posAttr);
-  }
+  if (index == 0)
+    return rewriter.create<vector::InsertOp>(loc, val, result, pos);
+
   // Unroll leading dimensions.
-  Type lowType = VectorType::Builder(type).dropDim(0);
-  VectorType vType = cast<VectorType>(lowType);
-  Type insType = VectorType::Builder(vType).dropDim(0);
+  VectorType vType = VectorType::Builder(type).dropDim(0);
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
-    auto posAttr = rewriter.getI64ArrayAttr(d);
-    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, result, posAttr);
-    Value ins = rewriter.create<vector::ExtractOp>(loc, insType, val, posAttr);
+    Value ext = rewriter.create<vector::ExtractOp>(loc, result, d);
+    Value ins = rewriter.create<vector::ExtractOp>(loc, val, d);
     Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
-    result = rewriter.create<vector::InsertOp>(loc, type, sto, result, posAttr);
+    result = rewriter.create<vector::InsertOp>(loc, sto, result, d);
   }
   return result;
 }
@@ -147,7 +139,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   Value mul;
 
   if (isInt) {
-    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
+    if (kind == CombiningKind::MINNUMF || kind == CombiningKind::MAXNUMF ||
+        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
       // Only valid for floating point types.
       return std::nullopt;
     mul = rewriter.create<arith::MulIOp>(loc, x, y);
@@ -174,7 +167,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   if (!acc)
     return std::optional<Value>(mul);
 
-  return makeArithReduction(rewriter, loc, kind, mul, acc, mask);
+  return makeArithReduction(rewriter, loc, kind, mul, acc,
+                            /*fastmath=*/nullptr, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -425,15 +419,15 @@ struct UnrolledOuterProductGenerator
       return v;
     Type promotedType = dstElementType;
     if (vecType)
-      promotedType = VectorType::get(vecType.getShape(), promotedType);
+      promotedType = vecType.clone(promotedType);
     if (isa<FloatType>(dstElementType))
       return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
     return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
   }
 
-  FailureOr<Value> outerProd(Value lhs, Value rhs, Value res, int reductionSize,
+  FailureOr<Value> outerProd(Value lhs, Value rhs, Value res,
+                             VectorType lhsType, int reductionSize,
                              std::optional<Value> maybeMask = std::nullopt) {
-    assert(reductionSize > 0);
     // Incremental support for masking.
     if (mask && !maybeMask.has_value())
       return failure();
@@ -456,6 +450,20 @@ struct UnrolledOuterProductGenerator
     return res;
   }
 
+  /// Helper function for `matmat`, `matvec`, `tmatvec`. Returns the size of
+  /// dimension `reductionDim`. If the dimension is a scalable dimension,
+  /// returns "nullopt".
+  std::optional<int64_t> getReductionSize(VectorType vecType,
+                                          int64_t reductionDim) {
+    // Cannot unroll scalable dimension.
+    if (vecType.getScalableDims()[reductionDim])
+      return std::nullopt;
+    int64_t reductionSize = vecType.getDimSize(reductionDim);
+    assert(reductionSize > 0 &&
+           "Reduction dim must be a known static size to allow unrolling");
+    return reductionSize;
+  }
+
   /// Two outer parallel, one inner reduction (matmat flavor).
   FailureOr<Value> matmat() {
     if (!iters({Par(), Par(), Red()}))
@@ -463,38 +471,80 @@ struct UnrolledOuterProductGenerator
     // Set up the parallel/reduction structure in the right form.
     AffineExpr m, n, k;
     bindDims(rewriter.getContext(), m, n, k);
+
     // Classical row-major matmul:  Just permute the lhs.
-    if (layout({{m, k}, {k, n}, {m, n}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1),
-                       t(mask, {2, 0, 1}));
+    if (layout({{m, k}, {k, n}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        // Note: `t` creates new IR. It must be nested within this `if` check
+        // so that no IR is created when then pattern returns "failure".
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tLhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {m, n}})) {
-      Value tlhs = t(lhs);
-      return outerProd(tlhs, t(rhs), res, lhsType.getDimSize(1));
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tLhs, tRhs, res, lhsType, *reductionSize, tMask);
+      }
     }
     // No need to permute anything.
-    if (layout({{k, m}, {k, n}, {m, n}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0));
+    if (layout({{k, m}, {k, n}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Just permute the rhs.
-    if (layout({{k, m}, {n, k}, {m, n}}))
-      return outerProd(lhs, t(rhs), res, lhsType.getDimSize(0));
+    if (layout({{k, m}, {n, k}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(lhs, tRhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Transposed output: swap RHS and LHS.
     // Classical row-major matmul: permute the lhs.
-    if (layout({{m, k}, {k, n}, {n, m}}))
-      return outerProd(rhs, t(lhs), res, lhsType.getDimSize(1));
+    if (layout({{m, k}, {k, n}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(rhs, tLhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {n, m}})) {
-      Value trhs = t(rhs);
-      return outerProd(trhs, t(lhs), res, lhsType.getDimSize(1));
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tRhs = t(rhs);
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tRhs, tLhs, res, lhsType, *reductionSize, tMask);
+      }
     }
-    if (layout({{k, m}, {k, n}, {n, m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0));
-    if (layout({{k, m}, {n, k}, {n, m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0));
+    if (layout({{k, m}, {k, n}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{k, m}, {n, k}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tRhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     return failure();
   }
 
-  /// One outer parallel, one inner reduction (matvec flavor)
+  //
+  // One outer parallel, one inner reduction (matvec flavor).
+  // Mask needs to be transposed everywhere to turn the reduction dimension
+  // outermost as required by outerproduct.
+  //
   FailureOr<Value> matvec() {
     if (!iters({Par(), Red()}))
       return failure();
@@ -502,22 +552,41 @@ struct UnrolledOuterProductGenerator
     bindDims(rewriter.getContext(), m, k);
 
     // Case mat-vec: transpose.
-    if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), t(mask));
+    if (layout({{m, k}, {k}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tMask = t(mask);
+        return outerProd(tLhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Case mat-trans-vec: ready to go.
-    if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0));
+    if (layout({{k, m}, {k}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask);
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Case vec-mat: swap and transpose.
-    if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0));
+    if (layout({{k}, {m, k}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask);
+        return outerProd(tRhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Case vec-mat-trans: swap and ready to go.
-    if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0));
+    if (layout({{k}, {k, m}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask);
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     return failure();
   }
 
   //
-  // One outer reduction, one inner parallel (tmatvec flavor)
+  // One outer reduction, one inner parallel (tmatvec flavor).
+  // Mask already has the shape of the outer product.
   //
   FailureOr<Value> tmatvec() {
     if (!iters({Red(), Par()}))
@@ -527,16 +596,20 @@ struct UnrolledOuterProductGenerator
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1));
+      if (auto reductionSize = getReductionSize(lhsType, 1))
+        return outerProd(t(lhs), rhs, res, lhsType, *reductionSize, mask);
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType.getDimSize(0));
+      if (auto reductionSize = getReductionSize(lhsType, 0))
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, mask);
     // Case vec-mat: swap and transpose.
     if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType.getDimSize(0));
+      if (auto reductionSize = getReductionSize(lhsType, 0))
+        return outerProd(t(rhs), lhs, res, lhsType, *reductionSize, mask);
     // Case vec-mat-trans: swap and ready to go.
     if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType.getDimSize(0));
+      if (auto reductionSize = getReductionSize(lhsType, 0))
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, mask);
     return failure();
   }
 
@@ -622,7 +695,9 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   Value lhs = op.getLhs(), rhs = op.getRhs();
 
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+  auto infer = [&](MapList m) {
+    return AffineMap::inferFromExprList(m, op.getContext());
+  };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
   SmallVector<AffineMap> maps = op.getIndexingMapsArray();
@@ -823,10 +898,8 @@ struct ContractOpToElementwise
     newRhs = rewriter.create<vector::TransposeOp>(loc, newRhs, rhsTranspose);
     SmallVector<int64_t> lhsOffsets(lhsReductionDims.size(), 0);
     SmallVector<int64_t> rhsOffsets(rhsReductionDims.size(), 0);
-    newLhs = rewriter.create<vector::ExtractOp>(
-        loc, newLhs, rewriter.getI64ArrayAttr(lhsOffsets));
-    newRhs = rewriter.create<vector::ExtractOp>(
-        loc, newRhs, rewriter.getI64ArrayAttr(rhsOffsets));
+    newLhs = rewriter.create<vector::ExtractOp>(loc, newLhs, lhsOffsets);
+    newRhs = rewriter.create<vector::ExtractOp>(loc, newRhs, rhsOffsets);
     std::optional<Value> result =
         createContractArithOp(loc, newLhs, newRhs, contractOp.getAcc(),
                               contractOp.getKind(), rewriter, isInt);
@@ -981,9 +1054,19 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
         diag << "expected lhsIndex=" << lhsIndex << " and rhsIndex=" << rhsIndex
              << " to map to the same dimension";
       });
+    if (lhsType.getScalableDims()[lhsIndex])
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "Unrolling scalable dimension (lhsIndex=" << lhsIndex
+             << ") is not supported yet";
+      });
     dimSize = lhsType.getDimSize(lhsIndex);
   } else if (rhsIndex >= 0) {
     iterIndex = iMap[1].getDimPosition(rhsIndex);
+    if (rhsType.getScalableDims()[rhsIndex])
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "Unrolling scalable dimension (rhsIndex=" << rhsIndex
+             << ") is not supported yet";
+      });
     dimSize = rhsType.getDimSize(rhsIndex);
   }
   if (iterIndex < 0)
@@ -1130,14 +1213,17 @@ public:
 
   LogicalResult matchAndRewrite(vector::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
+    VectorType resType = op.getResultVectorType();
+    if ((resType.getShape().size() >= 2) && resType.allDimsScalable())
+      return failure();
+
     auto loc = op.getLoc();
 
     VectorType lhsType = op.getOperandVectorTypeLHS();
     VectorType rhsType = dyn_cast<VectorType>(op.getOperandTypeRHS());
-    VectorType resType = op.getResultVectorType();
     Type eltType = resType.getElementType();
     bool isInt = isa<IntegerType, IndexType>(eltType);
-    Value acc = (op.getAcc().empty()) ? nullptr : op.getAcc()[0];
+    Value acc = op.getAcc();
     vector::CombiningKind kind = op.getKind();
 
     // Vector mask setup.
@@ -1167,21 +1253,20 @@ public:
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resType, rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
-      auto pos = rewriter.getI64ArrayAttr(d);
-      Value x = rewriter.create<vector::ExtractOp>(loc, op.getLhs(), pos);
+      Value x = rewriter.create<vector::ExtractOp>(loc, op.getLhs(), d);
       Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
       Value r = nullptr;
       if (acc)
-        r = rewriter.create<vector::ExtractOp>(loc, acc, pos);
+        r = rewriter.create<vector::ExtractOp>(loc, acc, d);
       Value extrMask;
       if (mask)
-        extrMask = rewriter.create<vector::ExtractOp>(loc, mask, pos);
+        extrMask = rewriter.create<vector::ExtractOp>(loc, mask, d);
 
       std::optional<Value> m = createContractArithOp(
           loc, a, op.getRhs(), r, kind, rewriter, isInt, extrMask);
       if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
+      result = rewriter.create<vector::InsertOp>(loc, *m, result, d);
     }
 
     rewriter.replaceOp(rootOp, result);

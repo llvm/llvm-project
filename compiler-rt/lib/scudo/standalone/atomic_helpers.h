@@ -133,10 +133,10 @@ inline void atomic_store_relaxed(volatile T *A, typename T::Type V) {
 }
 
 template <typename T>
-inline typename T::Type atomic_compare_exchange(volatile T *A,
-                                                typename T::Type Cmp,
-                                                typename T::Type Xchg) {
-  atomic_compare_exchange_strong(A, &Cmp, Xchg, memory_order_acquire);
+inline typename T::Type
+atomic_compare_exchange_strong(volatile T *A, typename T::Type Cmp,
+                               typename T::Type Xchg, memory_order MO) {
+  atomic_compare_exchange_strong(A, &Cmp, Xchg, MO);
   return Cmp;
 }
 

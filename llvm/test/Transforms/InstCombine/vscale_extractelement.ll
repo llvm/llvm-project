@@ -56,7 +56,7 @@ define i8 @extractelement_bitcast_useless_insert(<vscale x 2 x i32> %a, i32 %x) 
 define i32 @extractelement_shuffle_maybe_out_of_range(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_maybe_out_of_range(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[V:%.*]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i64 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -69,7 +69,7 @@ define i32 @extractelement_shuffle_maybe_out_of_range(i32 %v) {
 define i32 @extractelement_shuffle_invalid_index(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_invalid_index(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[V:%.*]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i64 4294967295
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -217,12 +217,12 @@ entry:
   ret i64 %1
 }
 
-; Check that undef is returned when the extracted element has wrapped.
+; Check that poison is returned when the extracted element has wrapped.
 
 define i8 @ext_lane256_from_stepvec() {
 ; CHECK-LABEL: @ext_lane256_from_stepvec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
 entry:
   %0 = call <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()

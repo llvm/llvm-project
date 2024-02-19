@@ -22,64 +22,62 @@
 
 #include "test_macros.h"
 
-template<class C>
-TEST_CONSTEXPR_CXX20 void test()
-{
-    { // N3644 testing
-        typename C::iterator ii1{}, ii2{};
-        typename C::iterator ii4 = ii1;
-        typename C::const_iterator cii{};
+template <class C>
+TEST_CONSTEXPR_CXX20 void test() {
+  { // N3644 testing
+    typename C::iterator ii1{}, ii2{};
+    typename C::iterator ii4 = ii1;
+    typename C::const_iterator cii{};
 
-        assert ( ii1 == ii2 );
-        assert ( ii1 == ii4 );
+    assert(ii1 == ii2);
+    assert(ii1 == ii4);
 
-        assert (!(ii1 != ii2 ));
+    assert(!(ii1 != ii2));
 
-        assert ( (ii1 == cii ));
-        assert ( (cii == ii1 ));
-        assert (!(ii1 != cii ));
-        assert (!(cii != ii1 ));
-        assert (!(ii1 <  cii ));
-        assert (!(cii <  ii1 ));
-        assert ( (ii1 <= cii ));
-        assert ( (cii <= ii1 ));
-        assert (!(ii1 >  cii ));
-        assert (!(cii >  ii1 ));
-        assert ( (ii1 >= cii ));
-        assert ( (cii >= ii1 ));
-        assert (cii - ii1 == 0);
-        assert (ii1 - cii == 0);
-    }
-    {
-        C a;
-        typename C::iterator i1 = a.begin();
-        typename C::iterator i2;
-        i2 = i1;
-        assert ( i1 == i2 );
-    }
+    assert((ii1 == cii));
+    assert((cii == ii1));
+    assert(!(ii1 != cii));
+    assert(!(cii != ii1));
+    assert(!(ii1 < cii));
+    assert(!(cii < ii1));
+    assert((ii1 <= cii));
+    assert((cii <= ii1));
+    assert(!(ii1 > cii));
+    assert(!(cii > ii1));
+    assert((ii1 >= cii));
+    assert((cii >= ii1));
+    assert(cii - ii1 == 0);
+    assert(ii1 - cii == 0);
+  }
+  {
+    C a;
+    typename C::iterator i1 = a.begin();
+    typename C::iterator i2;
+    i2 = i1;
+    assert(i1 == i2);
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
-    test<std::string>();
+  test<std::string>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<std::wstring>();
+  test<std::wstring>();
 #endif
 
 #ifndef TEST_HAS_NO_CHAR8_T
-    test<std::u8string>();
+  test<std::u8string>();
 #endif
 
-    test<std::u16string>();
-    test<std::u32string>();
+  test<std::u16string>();
+  test<std::u32string>();
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    test();
+int main(int, char**) {
+  test();
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
-    return 0;
+  return 0;
 }

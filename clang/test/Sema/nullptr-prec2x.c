@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-int nullptr; // expected-warning {{'nullptr' is a keyword in C2x}}
+int nullptr; // expected-warning {{'nullptr' is a keyword in C23}}
 
 nullptr_t val; // expected-error {{unknown type name 'nullptr_t'}}
 

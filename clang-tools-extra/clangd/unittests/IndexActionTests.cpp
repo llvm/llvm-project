@@ -8,11 +8,15 @@
 
 #include "Headers.h"
 #include "TestFS.h"
+#include "URI.h"
 #include "index/IndexAction.h"
 #include "index/Serialization.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -38,6 +42,11 @@ MATCHER(hasSameURI, "") {
   llvm::StringRef URI = ::testing::get<0>(arg);
   const std::string &Path = ::testing::get<1>(arg);
   return toUri(Path) == URI;
+}
+
+MATCHER_P(includeHeader, P, "") {
+  return (arg.IncludeHeaders.size() == 1) &&
+         (arg.IncludeHeaders.begin()->IncludeHeader == P);
 }
 
 ::testing::Matcher<const IncludeGraphNode &>
@@ -271,7 +280,7 @@ TEST_F(IndexActionTest, SkipFiles) {
     auto unskippable2() { return S(); }
   )cpp");
   Opts.FileFilter = [](const SourceManager &SM, FileID F) {
-    return !SM.getFileEntryRefForID(F)->getName().endswith("bad.h");
+    return !SM.getFileEntryRefForID(F)->getName().ends_with("bad.h");
   };
   IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
   EXPECT_THAT(*IndexFile.Symbols,
@@ -311,6 +320,56 @@ TEST_F(IndexActionTest, SkipNestedSymbols) {
   EXPECT_THAT(*IndexFile.Symbols, testing::Contains(hasName("foo")));
   EXPECT_THAT(*IndexFile.Symbols, testing::Contains(hasName("Bar")));
   EXPECT_THAT(*IndexFile.Symbols, Not(testing::Contains(hasName("Baz"))));
+}
+
+TEST_F(IndexActionTest, SymbolFromCC) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+ #include "main.h"
+ void foo() {}
+ )cpp");
+  addFile(testPath("main.h"), R"cpp(
+ #pragma once
+ void foo();
+ )cpp");
+  Opts.FileFilter = [](const SourceManager &SM, FileID F) {
+    return !SM.getFileEntryRefForID(F)->getName().ends_with("main.h");
+  };
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
+  EXPECT_THAT(*IndexFile.Symbols,
+              UnorderedElementsAre(AllOf(
+                  hasName("foo"),
+                  includeHeader(URI::create(testPath("main.h")).toString()))));
+}
+
+TEST_F(IndexActionTest, IncludeHeaderForwardDecls) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+#include "fwd.h"
+#include "full.h"
+ )cpp");
+  addFile(testPath("fwd.h"), R"cpp(
+#ifndef _FWD_H_
+#define _FWD_H_
+struct Foo;
+#endif
+ )cpp");
+  addFile(testPath("full.h"), R"cpp(
+#ifndef _FULL_H_
+#define _FULL_H_
+struct Foo {};
+
+// This decl is important, as otherwise we detect control macro for the file,
+// before handling definition of Foo.
+void other();
+#endif
+ )cpp");
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath);
+  EXPECT_THAT(*IndexFile.Symbols,
+              testing::Contains(AllOf(
+                  hasName("Foo"),
+                  includeHeader(URI::create(testPath("full.h")).toString()))))
+      << *IndexFile.Symbols->begin();
 }
 } // namespace
 } // namespace clangd

@@ -62,7 +62,7 @@
 ; CHECK-20: cgscc(inline<only-mandatory>,inline),cgscc(inline)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='scc-oz-module-inliner' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-21
-; CHECK-21: require<globals-aa>,function(invalidate<aa>),require<profile-summary>,cgscc(devirt<4>(inline<only-mandatory>,inline,{{.*}},instcombine{{.*}}))
+; CHECK-21: require<globals-aa>,function(invalidate<aa>),require<profile-summary>,cgscc(devirt<4>(inline,{{.*}},instcombine{{.*}}))
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<eager-inv>(no-op-function)),function<eager-inv>(no-op-function)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-22
 ; CHECK-22: cgscc(function<eager-inv>(no-op-function)),function<eager-inv>(no-op-function)
@@ -95,12 +95,12 @@
 ; CHECK-27: function(separate-const-offset-from-gep<lower-gep>)
 
 ;; Test InstCombine options - the first pass checks default settings, and the second checks customized options.
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(instcombine,instcombine<use-loop-info;max-iterations=42>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-28
-; CHECK-28: function(instcombine<max-iterations=1000;no-use-loop-info>,instcombine<max-iterations=42;use-loop-info>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(instcombine,instcombine<use-loop-info;no-verify-fixpoint;max-iterations=42>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-28
+; CHECK-28: function(instcombine<max-iterations=1;no-use-loop-info;verify-fixpoint>,instcombine<max-iterations=42;use-loop-info;no-verify-fixpoint>)
 
 ;; Test function-attrs
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function-attrs<skip-non-recursive>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-29
-; CHECK-29: cgscc(function-attrs<skip-non-recursive>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function-attrs<skip-non-recursive-function-attrs>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-29
+; CHECK-29: cgscc(function-attrs<skip-non-recursive-function-attrs>)
 
 ;; Test cgscc -> function adaptor
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<eager-inv;no-rerun>(no-op-function))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-30
@@ -120,3 +120,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-35
 ; CHECK-35: globaldce<vfe-linkage-unit-visibility>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='speculative-execution<only-if-divergent-target>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-36
+; CHECK-36: function(speculative-execution<only-if-divergent-target>)

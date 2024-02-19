@@ -51,9 +51,9 @@ define <vscale x 16 x float> @complex_add_v16f32(<vscale x 16 x float> %a, <vsca
 ; CHECK-LABEL: complex_add_v16f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcadd z6.s, p0/m, z6.s, z2.s, #90
 ; CHECK-NEXT:    fcadd z4.s, p0/m, z4.s, z0.s, #90
 ; CHECK-NEXT:    fcadd z5.s, p0/m, z5.s, z1.s, #90
+; CHECK-NEXT:    fcadd z6.s, p0/m, z6.s, z2.s, #90
 ; CHECK-NEXT:    fcadd z7.s, p0/m, z7.s, z3.s, #90
 ; CHECK-NEXT:    mov z0.d, z4.d
 ; CHECK-NEXT:    mov z1.d, z5.d

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-msc32-c %t -- -config="{CheckOptions: [{key: cert-msc32-c.DisallowedSeedTypes, value: 'some_type,time_t'}]}" -- -std=c99
+// RUN: %check_clang_tidy %s cert-msc32-c %t -- -config="{CheckOptions: {cert-msc32-c.DisallowedSeedTypes: 'some_type,time_t'}}" -- -std=c99
 
 void srand(int seed);
 typedef int time_t;

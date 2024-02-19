@@ -66,7 +66,6 @@ def get_tools_directory():
 def get_tool_names():
     """Returns a list of expected DExTer Tools"""
     return [
-        "clang-opt-bisect",
         "help",
         "list-debuggers",
         "no-tool-",
@@ -193,9 +192,7 @@ class Context(object):
 
 
 def main() -> ReturnCode:
-
     context = Context()
-
     with PrettyOutput() as context.o:
         context.logger = Logger(context.o)
         try:

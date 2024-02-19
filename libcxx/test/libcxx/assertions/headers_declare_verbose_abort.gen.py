@@ -10,11 +10,11 @@
 # is required for users to be able to include any public header and then override
 # the function using a strong definition.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
     # Skip C compatibility headers.

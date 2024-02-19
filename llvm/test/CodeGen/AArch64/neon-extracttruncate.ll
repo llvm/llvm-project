@@ -206,8 +206,8 @@ define <16 x i8> @extract_4_mixed(<4 x i16> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; CHECK-LABEL: extract_4_mixed:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    xtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    mov v2.d[1], v3.d[0]
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
@@ -267,11 +267,11 @@ entry:
 define <16 x i8> @extract_4_v4i32_badindex(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: extract_4_v4i32_badindex:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
 ; CHECK-NEXT:    ret

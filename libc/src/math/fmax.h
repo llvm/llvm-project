@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMAX_H
 #define LLVM_LIBC_SRC_MATH_FMAX_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 double fmax(double x, double y);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FMAX_H

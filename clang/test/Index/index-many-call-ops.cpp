@@ -1,6 +1,5 @@
 // RUN: c-index-test -index-file %s | FileCheck %s
 
-// rdar://11289247
 // Check that we don't get stack overflow trying to index a huge number of
 // call operators.
 

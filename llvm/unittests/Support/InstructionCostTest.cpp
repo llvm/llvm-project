@@ -8,7 +8,6 @@
 
 #include "llvm/Support/InstructionCost.h"
 #include "gtest/gtest.h"
-#include <limits>
 
 using namespace llvm;
 

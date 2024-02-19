@@ -81,6 +81,8 @@ struct ucontext_t {
 #define PTHREAD_ABI_BASE  "GLIBC_2.17"
 #elif SANITIZER_LOONGARCH64
 #define PTHREAD_ABI_BASE  "GLIBC_2.36"
+#elif SANITIZER_RISCV64
+#  define PTHREAD_ABI_BASE "GLIBC_2.27"
 #endif
 
 extern "C" int pthread_attr_init(void *attr);
@@ -1378,6 +1380,22 @@ TSAN_INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   return res;
 }
 
+#if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
+                 __sanitizer_clockid_t clock, void *abstime) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_mutex_clocklock, m, clock, abstime);
+  MutexPreLock(thr, pc, (uptr)m);
+  int res = REAL(pthread_mutex_clocklock)(m, clock, abstime);
+  if (res == errno_EOWNERDEAD)
+    MutexRepair(thr, pc, (uptr)m);
+  if (res == 0 || res == errno_EOWNERDEAD)
+    MutexPostLock(thr, pc, (uptr)m);
+  if (res == errno_EINVAL)
+    MutexInvalidAccess(thr, pc, (uptr)m);
+  return res;
+}
+#endif
+
 #if SANITIZER_GLIBC
 #  if !__GLIBC_PREREQ(2, 34)
 // glibc 2.34 applies a non-default version for the two functions. They are no
@@ -2565,7 +2583,7 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
     // Copy act into sigactions[sig].
     // Can't use struct copy, because compiler can emit call to memcpy.
     // Can't use internal_memcpy, because it copies byte-by-byte,
-    // and signal handler reads the handler concurrently. It it can read
+    // and signal handler reads the handler concurrently. It can read
     // some bytes from old value and some bytes from new value.
     // Use volatile to prevent insertion of memcpy.
     sigactions[sig].handler =
@@ -2900,6 +2918,9 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_mutex_trylock);
   TSAN_INTERCEPT(pthread_mutex_timedlock);
   TSAN_INTERCEPT(pthread_mutex_unlock);
+#if SANITIZER_LINUX
+  TSAN_INTERCEPT(pthread_mutex_clocklock);
+#endif
 #if SANITIZER_GLIBC
 #  if !__GLIBC_PREREQ(2, 34)
   TSAN_INTERCEPT(__pthread_mutex_lock);

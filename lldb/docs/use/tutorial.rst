@@ -5,9 +5,6 @@ Here's a short precis of how to run lldb if you are familiar with the gdb
 command set. We will start with some details on lldb command structure and
 syntax to help orient you.
 
-.. contents::
-   :local:
-
 Command Structure
 -----------------
 
@@ -363,7 +360,7 @@ That is better, but suffers from the problem that when new breakpoints get
 added, they don't pick up these modifications, and the options only exist in
 the context of actual breakpoints, so they are hard to store & reuse.
 
-A even better solution is to make a fully configured breakpoint name:
+An even better solution is to make a fully configured breakpoint name:
 
 ::
 
@@ -434,7 +431,7 @@ a variable called 'global' for write operation, but only stop if the condition
    Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
       declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
       condition = '(global==5)'
-      hw_index = 0  hit_count = 5     ignore_count = 0
+      hit_count = 5     ignore_count = 0
    (lldb)
 
 Starting or Attaching to Your Program

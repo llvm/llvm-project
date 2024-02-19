@@ -5,11 +5,11 @@
 // The same CUID is generated for the same file with the same options.
 
 // RUN: %clang -### -x hip --target=x86_64-unknown-linux-gnu \
-// RUN:   --offload-arch=gfx906 -c -nogpulib -fuse-cuid=hash \
+// RUN:   --offload-arch=gfx906 -c -nogpuinc -nogpulib -fuse-cuid=hash \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu >%t.out 2>&1
 
 // RUN: %clang -### -x hip --target=x86_64-unknown-linux-gnu \
-// RUN:   --offload-arch=gfx906 -c -nogpulib -fuse-cuid=hash \
+// RUN:   --offload-arch=gfx906 -c -nogpuinc -nogpulib -fuse-cuid=hash \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu >>%t.out 2>&1
 
 // RUN: FileCheck %s -check-prefixes=SAME -input-file %t.out
@@ -18,11 +18,11 @@
 // Different CUID's are generated for the same file with different options.
 
 // RUN: %clang -### -x hip --target=x86_64-unknown-linux-gnu -DX=1 \
-// RUN:   --offload-arch=gfx906 -c -nogpulib -fuse-cuid=hash \
+// RUN:   --offload-arch=gfx906 -c -nogpuinc -nogpulib -fuse-cuid=hash \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu >%t.out 2>&1
 
 // RUN: %clang -### -x hip --target=x86_64-unknown-linux-gnu -DX=2 \
-// RUN:   --offload-arch=gfx906 -c -nogpulib -fuse-cuid=hash \
+// RUN:   --offload-arch=gfx906 -c -nogpuinc -nogpulib -fuse-cuid=hash \
 // RUN:   %S/Inputs/../Inputs/hip_multiple_inputs/a.cu >>%t.out 2>&1
 
 // RUN: FileCheck %s -check-prefixes=DIFF -input-file %t.out

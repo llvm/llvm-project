@@ -376,7 +376,7 @@ The ``offset`` specifier indicates the starting position for thread assignment.
     granularity down to group since that is the largest granularity allowed by the OS.
 
 KMP_HIDDEN_HELPER_AFFINITY (Windows, Linux)
-"""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""
 
 Enables run-time library to bind hidden helper threads to physical processing units.
 This environment variable has the same syntax and semantics as ``KMP_AFFINIY`` but only
@@ -409,17 +409,17 @@ threads in the team was reduced, but the program will continue execution.
 KMP_BLOCKTIME
 """""""""""""
 
-Sets the time, in milliseconds, that a thread should wait, after completing
-the execution of a parallel region, before sleeping.
+Sets the time that a thread should wait, after completing the
+execution of a parallel region, before sleeping.
 
-Use the optional character suffixes: ``s`` (seconds), ``m`` (minutes),
-``h`` (hours), or ``d`` (days) to specify the units.
+Use the optional suffixes: ``ms`` (milliseconds), or ``us`` (microseconds) to
+specify/change the units. Defaults units is milliseconds.
 
-Specify infinite for an unlimited wait time.
+Specify ``infinite`` for an unlimited wait time.
 
 | **Default:** 200 milliseconds
 | **Related Environment Variable:** ``KMP_LIBRARY``
-| **Example:** ``KMP_BLOCKTIME=1s``
+| **Example:** ``KMP_BLOCKTIME=1ms``
 
 KMP_CPUINFO_FILE
 """"""""""""""""
@@ -708,6 +708,7 @@ variables is defined below.
 
     * ``LIBOMPTARGET_DEBUG=<Num>``
     * ``LIBOMPTARGET_PROFILE=<Filename>``
+    * ``LIBOMPTARGET_PROFILE_GRANULARITY=<Num> (default 500, in us)``
     * ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=<Num>``
     * ``LIBOMPTARGET_INFO=<Num>``
     * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
@@ -748,6 +749,12 @@ for time trace output. Note that this will turn ``libomp`` into a C++ library.
 .. _`Speedscope App`: https://www.speedscope.app/
 
 .. _`LLVM Support Library`: https://llvm.org/docs/SupportLibrary.html
+
+LIBOMPTARGET_PROFILE_GRANULARITY
+""""""""""""""""""""""""""""""""
+
+``LIBOMPTARGET_PROFILE_GRANULARITY`` allows to change the time profile
+granularity measured in `us`. Default is 500 (`us`).
 
 LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD
 """""""""""""""""""""""""""""""""""""
@@ -1016,9 +1023,9 @@ default. The solution is to add an explicit map clause in the target region.
 LIBOMPTARGET_STACK_SIZE
 """""""""""""""""""""""
 
-This environment variable sets the stack size in bytes for the CUDA plugin. This
-can be used to increase or decrease the standard amount of memory reserved for
-each thread's stack.
+This environment variable sets the stack size in bytes for the AMDGPU and CUDA
+plugins. This can be used to increase or decrease the standard amount of memory
+reserved for each thread's stack.
 
 LIBOMPTARGET_HEAP_SIZE
 """""""""""""""""""""""
@@ -1058,6 +1065,7 @@ value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
 The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
 of LLVM did not.
 
+.. _libomptarget_jit_opt_level:
 
 LIBOMPTARGET_JIT_OPT_LEVEL
 """"""""""""""""""""""""""
@@ -1083,6 +1091,8 @@ assembler in object format for the respective target. The JIT optimization
 pipeline and backend are skipped and only target specific post-processing is
 performed on the object file before it is loaded onto the device.
 
+.. _libomptarget_jit_replacement_module:
+
 LIBOMPTARGET_JIT_REPLACEMENT_MODULE
 """""""""""""""""""""""""""""""""""
 
@@ -1096,6 +1106,7 @@ llvm tools (llvm-objdump), or, simply, by setting the
 :ref:`LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE` or
 :ref:`LIBOMPTARGET_JIT_POST_OPT_IR_MODULE` environment variables.
 
+.. _libomptarget_jit_pre_opt_ir_module:
 
 LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE
 """"""""""""""""""""""""""""""""""
@@ -1107,6 +1118,7 @@ which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 :ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
 
+.. _libomptarget_jit_post_opt_ir_module:
 
 LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
 """""""""""""""""""""""""""""""""""
@@ -1125,8 +1137,8 @@ LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
 This environment variable defines a lower bound for the number of threads if a
 combined kernel, e.g., `target teams distribute parallel for`, has insufficient
 parallelism. Especially if the trip count of the loops is lower than the number
-of threads possible times the number of teams (aka. blocks) the device preferes
-(see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU), we will reduce the thread
+of threads possible times the number of teams (aka. blocks) the device prefers
+(see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU`), we will reduce the thread
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
 
@@ -1170,6 +1182,7 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS``
 * ``LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES``
 * ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE``
+* ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING``
 * ``LIBOMPTARGET_AMDGPU_TEAMS_PER_CU``
 * ``LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES``
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
@@ -1188,7 +1201,7 @@ throughout the execution if needed. A stream is a queue of asynchronous
 operations (e.g., kernel launches and memory copies) that are executed
 sequentially. Parallelism is achieved by featuring multiple streams. The
 ``libomptarget`` leverages streams to exploit parallelism between plugin
-operations. The default value is ``32``.
+operations. The default value is ``1``, more streams are created as needed.
 
 LIBOMPTARGET_NUM_INITIAL_EVENTS
 """""""""""""""""""""""""""""""
@@ -1196,7 +1209,8 @@ LIBOMPTARGET_NUM_INITIAL_EVENTS
 This environment variable sets the number of pre-created events in the
 plugin (if supported) at initialization. More events will be created
 dynamically throughout the execution if needed. An event is used to synchronize
-a stream with another efficiently. The default value is ``32``.
+a stream with another efficiently. The default value is ``1``, more events are
+created as needed.
 
 LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS
 """""""""""""""""""""""""""""""""""""
@@ -1224,6 +1238,19 @@ This environment variable controls the size of each HSA queue in the AMDGPU
 plugin. The size is the number of AQL packets an HSA queue is expected to hold.
 It is also the number of AQL packets that can be pushed into each queue without
 waiting the driver to process them. The default value is ``512``.
+
+LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING
+"""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable controls if idle HSA queues will be preferentially
+assigned to streams, for example when they are requested for a kernel launch.
+Should all queues be considered busy, a new queue is initialized and returned,
+until we reach the set maximum. Otherwise, we will select the least utilized
+queue. If this is disabled, each time a stream is requested a new HSA queue
+will be initialized, regardless of their utilization. Additionally, queues will
+be selected using round robin selection. The default value is ``true``.
+
+.. _libomptarget_amdgpu_teams_per_cu:
 
 LIBOMPTARGET_AMDGPU_TEAMS_PER_CU
 """"""""""""""""""""""""""""""""
@@ -1321,22 +1348,22 @@ This is the maximum amount of time the client will wait for a response from the 
 LLVM/OpenMP support for C library routines
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Support for calling standard C library routines on GPU targets is provided by 
-the `LLVM C Library <https://libc.llvm.org/gpu/>`_. This project provides two 
-static libraries, ``libcgpu.a`` and ``libllvmlibc_rpc_server.a``, which are used 
-by the OpenMP runtime to provide ``libc`` support. The ``libcgpu.a`` library 
-contains the GPU device code, while ``libllvmlibc_rpc_server.a`` provides the 
-interface to the RPC interface. More information on the RPC construction can be 
+Support for calling standard C library routines on GPU targets is provided by
+the `LLVM C Library <https://libc.llvm.org/gpu/>`_. This project provides two
+static libraries, ``libcgpu.a`` and ``libllvmlibc_rpc_server.a``, which are used
+by the OpenMP runtime to provide ``libc`` support. The ``libcgpu.a`` library
+contains the GPU device code, while ``libllvmlibc_rpc_server.a`` provides the
+interface to the RPC interface. More information on the RPC construction can be
 found in the `associated documentation <https://libc.llvm.org/gpu/rpc.html>`_.
 
-To provide host services, we run an RPC server inside of the runtime. This 
-allows the host to respond to requests made from the GPU asynchronously. For 
-``libc`` calls that require an RPC server, such as printing, an external handle 
-to the RPC client running on the GPU will be present in the GPU executable. If 
-we find this symbol, we will initialize a client and server and run it in the 
+To provide host services, we run an RPC server inside of the runtime. This
+allows the host to respond to requests made from the GPU asynchronously. For
+``libc`` calls that require an RPC server, such as printing, an external handle
+to the RPC client running on the GPU will be present in the GPU executable. If
+we find this symbol, we will initialize a client and server and run it in the
 background while the kernel is executing.
 
-For example, consider the following simple OpenMP offloading code. Here we will 
+For example, consider the following simple OpenMP offloading code. Here we will
 simply print a string to the user from the GPU.
 
 .. code-block:: c++
@@ -1348,11 +1375,11 @@ simply print a string to the user from the GPU.
       { fputs("Hello World!\n", stderr); }
    }
 
-We can compile this using the ``libcgpu.a`` library to resolve the symbols. 
-Because this function requires RPC support, this will also pull in an externally 
-visible symbol called ``__llvm_libc_rpc_client`` into the device image. When 
-loading the device image, the runtime will check for this symbol and initialize 
-an RPC interface if it is found. The following example shows the RPC server 
+We can compile this using the ``libcgpu.a`` library to resolve the symbols.
+Because this function requires RPC support, this will also pull in an externally
+visible symbol called ``__llvm_libc_rpc_client`` into the device image. When
+loading the device image, the runtime will check for this symbol and initialize
+an RPC interface if it is found. The following example shows the RPC server
 being used.
 
 .. code-block:: console
@@ -1444,34 +1471,5 @@ to selectively enable and disable different features.  Currently, the following
 debugging features are supported.
 
     * Enable debugging assertions in the device. ``0x01``
-    * Enable OpenMP runtime function traces in the device. ``0x2``
     * Enable diagnosing common problems during offloading . ``0x4``
-
-.. code-block:: c++
-
-    void copy(double *X, double *Y) {
-    #pragma omp target teams distribute parallel for
-      for (std::size_t i = 0; i < N; ++i)
-        Y[i] = X[i];
-    }
-
-Compiling this code targeting ``nvptx64`` with debugging enabled will
-provide the following output from the device runtime library.
-
-.. code-block:: console
-
-    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-target-debug=3
-    $ env LIBOMPTARGET_DEVICE_RTL_DEBUG=3 ./zaxpy
-
-.. code-block:: text
-
-    Kernel.cpp:70: Thread 0 Entering int32_t __kmpc_target_init()
-    Parallelism.cpp:196: Thread 0 Entering int32_t __kmpc_global_thread_num()
-    Mapping.cpp:239: Thread 0 Entering uint32_t __kmpc_get_hardware_num_threads_in_block()
-    Workshare.cpp:616: Thread 0 Entering void __kmpc_distribute_static_init_4()
-    Parallelism.cpp:85: Thread 0 Entering void __kmpc_parallel_51()
-      Parallelism.cpp:69: Thread 0 Entering <OpenMP Outlined Function>
-        Workshare.cpp:575: Thread 0 Entering void __kmpc_for_static_init_4()
-        Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
-    Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
-    Kernel.cpp:103: Thread 0 Entering void __kmpc_target_deinit()
+    * Enable device malloc statistics (amdgpu only). ``0x8``

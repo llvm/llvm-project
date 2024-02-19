@@ -40,7 +40,6 @@ VSBreakpoint = namedtuple("VSBreakpoint", "path, line, col, cond")
 class VisualStudio(
     DebuggerBase, metaclass=abc.ABCMeta
 ):  # pylint: disable=abstract-method
-
     # Constants for results of Debugger.CurrentMode
     # (https://msdn.microsoft.com/en-us/library/envdte.debugger.currentmode.aspx)
     dbgDesignMode = 1
@@ -277,6 +276,13 @@ class VisualStudio(
             project.Properties, "ActiveConfiguration"
         ).Object
         ActiveConfiguration.DebugSettings.CommandArguments = cmdline_str
+        ConfigurationName = ActiveConfiguration.ConfigurationName
+        SolConfig = self._fetch_property(
+            self._interface.Solution.SolutionBuild.SolutionConfigurations,
+            ConfigurationName,
+        )
+        for Context in SolConfig.SolutionContexts:
+            Context.ShouldBuild = False
 
         self.context.logger.note("Launching VS debugger...")
         self._fn_go(False)

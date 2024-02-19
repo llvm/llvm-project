@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -15,7 +15,7 @@
 // path weakly_canonical(const path& p);
 // path weakly_canonical(const path& p, error_code& ec);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <string>
 
 #include "assert_macros.h"
@@ -25,6 +25,7 @@
 #include "count_new.h"
 #include "filesystem_test_helper.h"
 #include "../../class.path/path_helper.h"
+namespace fs = std::filesystem;
 
 int main(int, char**) {
   static_test_env static_env;

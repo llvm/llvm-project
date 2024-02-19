@@ -1,3 +1,6 @@
+; Sometimes fails with an assert on many targets.
+; UNSUPPORTED: target={{.*}}
+
 ; RUN: llvm-as -o %t.bc %s
 
 ; RUN: llvm-reduce -j=1 --abort-on-invalid-reduction \

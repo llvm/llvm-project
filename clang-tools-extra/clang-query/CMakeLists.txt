@@ -10,6 +10,7 @@ add_clang_library(clangQuery
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangQuery

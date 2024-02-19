@@ -19,15 +19,14 @@
 #include <signal.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 constexpr size_t max_buff_size() {
   constexpr size_t base_str_len = sizeof("Real-time signal");
-  constexpr size_t max_num_len =
-      __llvm_libc::IntegerToString::dec_bufsize<int>();
   // the buffer should be able to hold "Real-time signal" + ' ' + num_str
-  return (base_str_len + 1 + max_num_len) * sizeof(char);
+  return (base_str_len + 1 + IntegerToString<int>::buffer_size()) *
+         sizeof(char);
 }
 
 // This is to hold signal strings that have to be custom built. It may be
@@ -54,7 +53,7 @@ cpp::string_view build_signal_string(int sig_num, cpp::span<char> buffer) {
   // if the buffer can't hold "Unknown signal" + ' ' + num_str, then just
   // return "Unknown signal".
   if (buffer.size() <
-      (base_str.size() + 1 + IntegerToString::dec_bufsize<int>()))
+      (base_str.size() + 1 + IntegerToString<int>::buffer_size()))
     return base_str;
 
   cpp::StringStream buffer_stream(
@@ -78,4 +77,4 @@ cpp::string_view get_signal_string(int sig_num, cpp::span<char> buffer) {
     return internal::build_signal_string(sig_num, buffer);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

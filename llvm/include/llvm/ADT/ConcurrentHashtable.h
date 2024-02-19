@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
@@ -154,7 +153,7 @@ public:
     MaxBucketSize = 1Ull << (std::min((size_t)31, LeadingZerosNumber));
 
     // Calculate mask for extended hash bits.
-    ExtHashMask = (NumberOfBuckets * MaxBucketSize) - 1;
+    ExtHashMask = (uint64_t)NumberOfBuckets * MaxBucketSize - 1;
   }
 
   virtual ~ConcurrentHashTableByPtr() {

@@ -31,7 +31,10 @@ namespace dataflow {
 /// values is stored in the environment.
 class StorageLocation {
 public:
-  enum class Kind { Scalar, Aggregate };
+  enum class Kind {
+    Scalar,
+    Record,
+  };
 
   StorageLocation(Kind LocKind, QualType Type) : LocKind(LocKind), Type(Type) {
     assert(Type.isNull() || !Type->isReferenceType());
@@ -66,11 +69,17 @@ public:
   }
 };
 
-/// A storage location which is subdivided into smaller storage locations that
-/// can be traced independently by abstract interpretation. For example: a
-/// struct with public members. The child map is flat, so when used for a struct
-/// or class type, all accessible members of base struct and class types are
-/// directly accesible as children of this location.
+/// A storage location for a record (struct, class, or union).
+///
+/// Contains storage locations for all modeled fields of the record (also
+/// referred to as "children"). The child map is flat, so accessible members of
+/// the base class are directly accessible as children of this location.
+///
+/// Record storage locations may also contain so-called synthetic fields. These
+/// are typically used to model the internal state of a class (e.g. the value
+/// stored in a `std::optional`) without having to depend on that class's
+/// implementation details. All `RecordStorageLocation`s of a given type should
+/// have the same synthetic fields.
 ///
 /// The storage location for a field of reference type may be null. This
 /// typically occurs in one of two situations:
@@ -82,16 +91,15 @@ public:
 /// FIXME: Currently, the storage location of unions is modelled the same way as
 /// that of structs or classes. Eventually, we need to change this modelling so
 /// that all of the members of a given union have the same storage location.
-class AggregateStorageLocation final : public StorageLocation {
+class RecordStorageLocation final : public StorageLocation {
 public:
   using FieldToLoc = llvm::DenseMap<const ValueDecl *, StorageLocation *>;
+  using SyntheticFieldMap = llvm::StringMap<StorageLocation *>;
 
-  explicit AggregateStorageLocation(QualType Type)
-      : AggregateStorageLocation(Type, FieldToLoc()) {}
-
-  AggregateStorageLocation(QualType Type, FieldToLoc TheChildren)
-      : StorageLocation(Kind::Aggregate, Type),
-        Children(std::move(TheChildren)) {
+  RecordStorageLocation(QualType Type, FieldToLoc TheChildren,
+                        SyntheticFieldMap TheSyntheticFields)
+      : StorageLocation(Kind::Record, Type), Children(std::move(TheChildren)),
+        SyntheticFields(std::move(TheSyntheticFields)) {
     assert(!Type.isNull());
     assert(Type->isRecordType());
     assert([this] {
@@ -104,7 +112,7 @@ public:
   }
 
   static bool classof(const StorageLocation *Loc) {
-    return Loc->getKind() == Kind::Aggregate;
+    return Loc->getKind() == Kind::Record;
   }
 
   /// Returns the child storage location for `D`.
@@ -131,9 +139,22 @@ public:
     return It->second;
   }
 
+  /// Returns the storage location for the synthetic field `Name`.
+  /// The synthetic field must exist.
+  StorageLocation &getSyntheticField(llvm::StringRef Name) const {
+    StorageLocation *Loc = SyntheticFields.lookup(Name);
+    assert(Loc != nullptr);
+    return *Loc;
+  }
+
+  llvm::iterator_range<SyntheticFieldMap::const_iterator>
+  synthetic_fields() const {
+    return {SyntheticFields.begin(), SyntheticFields.end()};
+  }
+
   /// Changes the child storage location for a field `D` of reference type.
   /// All other fields cannot change their storage location and always retain
-  /// the storage location passed to the `AggregateStorageLocation` constructor.
+  /// the storage location passed to the `RecordStorageLocation` constructor.
   ///
   /// Requirements:
   ///
@@ -149,6 +170,7 @@ public:
 
 private:
   FieldToLoc Children;
+  SyntheticFieldMap SyntheticFields;
 };
 
 } // namespace dataflow

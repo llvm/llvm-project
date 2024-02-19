@@ -26,7 +26,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
@@ -39,6 +38,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
@@ -158,6 +158,17 @@ public:
     return false;
   }
 
+  void logicAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
+    if (HasMacroID(B))
+      return;
+
+    unsigned DiagID = isAlwaysTrue
+                          ? diag::warn_tautological_negation_or_compare
+                          : diag::warn_tautological_negation_and_compare;
+    SourceRange DiagRange = B->getSourceRange();
+    S.Diag(B->getExprLoc(), DiagID) << DiagRange;
+  }
+
   void compareAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) override {
     if (HasMacroID(B))
       return;
@@ -188,7 +199,8 @@ public:
   static bool hasActiveDiagnostics(DiagnosticsEngine &Diags,
                                    SourceLocation Loc) {
     return !Diags.isIgnored(diag::warn_tautological_overlap_comparison, Loc) ||
-           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc);
+           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc) ||
+           !Diags.isIgnored(diag::warn_tautological_negation_and_compare, Loc);
   }
 };
 } // anonymous namespace
@@ -1247,7 +1259,7 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     tok::r_square, tok::r_square
   };
 
-  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C2x;
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C23;
 
   StringRef MacroName;
   if (PreferClangAttr)
@@ -1971,6 +1983,12 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
         case POK_PtPassByRef:
           DiagID = diag::warn_pt_guarded_pass_by_reference;
           break;
+        case POK_ReturnByRef:
+          DiagID = diag::warn_guarded_return_by_reference;
+          break;
+        case POK_PtReturnByRef:
+          DiagID = diag::warn_pt_guarded_return_by_reference;
+          break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
                                                        << D
@@ -2000,6 +2018,12 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
         case POK_PtPassByRef:
           DiagID = diag::warn_pt_guarded_pass_by_reference;
+          break;
+        case POK_ReturnByRef:
+          DiagID = diag::warn_guarded_return_by_reference;
+          break;
+        case POK_PtReturnByRef:
+          DiagID = diag::warn_pt_guarded_return_by_reference;
           break;
       }
       PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind
@@ -2163,12 +2187,47 @@ class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
   bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
 
+  // Lists as a string the names of variables in `VarGroupForVD` except for `VD`
+  // itself:
+  std::string listVariableGroupAsString(
+      const VarDecl *VD, const ArrayRef<const VarDecl *> &VarGroupForVD) const {
+    if (VarGroupForVD.size() <= 1)
+      return "";
+
+    std::vector<StringRef> VarNames;
+    auto PutInQuotes = [](StringRef S) -> std::string {
+      return "'" + S.str() + "'";
+    };
+
+    for (auto *V : VarGroupForVD) {
+      if (V == VD)
+        continue;
+      VarNames.push_back(V->getName());
+    }
+    if (VarNames.size() == 1) {
+      return PutInQuotes(VarNames[0]);
+    }
+    if (VarNames.size() == 2) {
+      return PutInQuotes(VarNames[0]) + " and " + PutInQuotes(VarNames[1]);
+    }
+    assert(VarGroupForVD.size() > 3);
+    const unsigned N = VarNames.size() -
+                       2; // need to print the last two names as "..., X, and Y"
+    std::string AllVars = "";
+
+    for (unsigned I = 0; I < N; ++I)
+      AllVars.append(PutInQuotes(VarNames[I]) + ", ");
+    AllVars.append(PutInQuotes(VarNames[N]) + ", and " +
+                   PutInQuotes(VarNames[N + 1]));
+    return AllVars;
+  }
+
 public:
   UnsafeBufferUsageReporter(Sema &S, bool SuggestSuggestions)
     : S(S), SuggestSuggestions(SuggestSuggestions) {}
 
-  void handleUnsafeOperation(const Stmt *Operation,
-                             bool IsRelatedToDecl) override {
+  void handleUnsafeOperation(const Stmt *Operation, bool IsRelatedToDecl,
+                             ASTContext &Ctx) override {
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
@@ -2197,11 +2256,29 @@ public:
         Range = UO->getSubExpr()->getSourceRange();
         MsgParam = 1;
       }
+    } else if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      S.Diag(CtorExpr->getLocation(),
+             diag::warn_unsafe_buffer_usage_in_container);
     } else {
       if (isa<CallExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
+      } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
+        QualType destType = ECE->getType();
+        if (!isa<PointerType>(destType))
+          return;
+
+        const uint64_t dSize =
+            Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
+
+        QualType srcType = ECE->getSubExpr()->getType();
+        const uint64_t sSize =
+            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+        if (sSize >= dSize)
+          return;
+
+        MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();
@@ -2219,67 +2296,61 @@ public:
   }
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                 const DefMapTy &VarGrpMap,
-                             FixItList &&Fixes) override {
+                                 const VariableGroupsManager &VarGrpMgr,
+                                 FixItList &&Fixes, const Decl *D,
+                                 const FixitStrategy &VarTargetTypes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
     if (!Fixes.empty()) {
-      const auto VarGroupForVD = VarGrpMap.find(Variable)->second;
-      unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
-      const auto &FD = S.Diag(Variable->getLocation(),
-                              diag::note_unsafe_buffer_variable_fixit_group);
+      assert(isa<NamedDecl>(D) &&
+             "Fix-its are generated only for `NamedDecl`s");
+      const NamedDecl *ND = cast<NamedDecl>(D);
+      bool BriefMsg = false;
+      // If the variable group involves parameters, the diagnostic message will
+      // NOT explain how the variables are grouped as the reason is non-trivial
+      // and irrelavant to users' experience:
+      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
+      unsigned FixItStrategy = 0;
+      switch (VarTargetTypes.lookup(Variable)) {
+      case clang::FixitStrategy::Kind::Span:
+        FixItStrategy = 0;
+        break;
+      case clang::FixitStrategy::Kind::Array:
+        FixItStrategy = 1;
+        break;
+      default:
+        assert(false && "We support only std::span and std::array");
+      };
+
+      const auto &FD =
+          S.Diag(Variable->getLocation(),
+                 BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together
+                          : diag::note_unsafe_buffer_variable_fixit_group);
 
       FD << Variable << FixItStrategy;
-      std::string AllVars = "";
-      if (VarGroupForVD.size() > 1) {
-        if (VarGroupForVD.size() == 2) {
-          if (VarGroupForVD[0] == Variable) {
-            AllVars.append("'" + VarGroupForVD[1]->getName().str() + "'");
-          } else {
-            AllVars.append("'" + VarGroupForVD[0]->getName().str() + "'");
-          }
-        } else {
-          bool first = false;
-          if (VarGroupForVD.size() == 3) {
-            for (const VarDecl * V : VarGroupForVD) {
-              if (V == Variable) {
-                continue;
-              }
-              if (!first) {
-                first = true;
-                AllVars.append("'" + V->getName().str() + "'" + " and ");
-              } else {
-                AllVars.append("'" + V->getName().str() + "'");
-              }
-            }
-          } else {
-            for (const VarDecl * V : VarGroupForVD) {
-              if (V == Variable) {
-                continue;
-              }
-              if (VarGroupForVD.back() != V) {
-                AllVars.append("'" + V->getName().str() + "'" + ", ");
-              } else {
-                AllVars.append("and '" + V->getName().str() + "'");
-              }
-            }
-          }
-        }
-        FD << AllVars << 1;
-      } else {
-        FD << "" << 0;
-      }
-
-      for (const auto &F : Fixes)
+      FD << listVariableGroupAsString(Variable, VarGroupForVD)
+         << (VarGroupForVD.size() > 1) << ND;
+      for (const auto &F : Fixes) {
         FD << F;
+      }
     }
+
+#ifndef NDEBUG
+    if (areDebugNotesRequested())
+      for (const DebugNote &Note: DebugNotesByVar[Variable])
+        S.Diag(Note.first, diag::note_safe_buffer_debug_mode) << Note.second;
+#endif
   }
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
+  }
+
+  bool ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
@@ -2446,6 +2517,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
                          Node->getBeginLoc()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
+                         Node->getBeginLoc()) ||
+        !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
                          Node->getBeginLoc())) {
       clang::checkUnsafeBufferUsage(Node, R,
                                     UnsafeBufferUsageShouldEmitSuggestions);
@@ -2456,7 +2529,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Emit per-function analysis-based warnings that require the whole-TU
   // reasoning. Check if any of them is enabled at all before scanning the AST:
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation())) {
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
+                       SourceLocation())) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

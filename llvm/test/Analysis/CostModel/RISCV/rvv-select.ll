@@ -130,7 +130,7 @@ define void @select() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %123 = select <vscale x 8 x i1> undef, <vscale x 8 x i64> undef, <vscale x 8 x i64> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %124 = select <vscale x 16 x i1> undef, <vscale x 16 x i64> undef, <vscale x 16 x i64> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %125 = select <vscale x 32 x i1> undef, <vscale x 32 x i64> undef, <vscale x 32 x i64> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   select i1 undef, i1 undef, i1 undef
   select i1 undef, <1 x i1> undef, <1 x i1> undef

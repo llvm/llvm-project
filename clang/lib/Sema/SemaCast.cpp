@@ -66,7 +66,7 @@ namespace {
       //   If a pr-value initially has the type cv-T, where T is a
       //   cv-unqualified non-class, non-array type, the type of the
       //   expression is adjusted to T prior to any further analysis.
-      // C2x 6.5.4p6:
+      // C23 6.5.4p6:
       //   Preceding an expression by a parenthesized type name converts the
       //   value of the expression to the unqualified, non-atomic version of
       //   the named type.
@@ -2682,11 +2682,11 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
 bool Sema::ShouldSplatAltivecScalarInCast(const VectorType *VecTy) {
   bool SrcCompatXL = this->getLangOpts().getAltivecSrcCompat() ==
                      LangOptions::AltivecSrcCompatKind::XL;
-  VectorType::VectorKind VKind = VecTy->getVectorKind();
+  VectorKind VKind = VecTy->getVectorKind();
 
-  if ((VKind == VectorType::AltiVecVector) ||
-      (SrcCompatXL && ((VKind == VectorType::AltiVecBool) ||
-                       (VKind == VectorType::AltiVecPixel)))) {
+  if ((VKind == VectorKind::AltiVecVector) ||
+      (SrcCompatXL && ((VKind == VectorKind::AltiVecBool) ||
+                       (VKind == VectorKind::AltiVecPixel)))) {
     return true;
   }
   return false;
@@ -3061,7 +3061,7 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  // C2x 6.5.4p4:
+  // C23 6.5.4p4:
   //   The type nullptr_t shall not be converted to any type other than void,
   //   bool, or a pointer type. No type other than nullptr_t shall be converted
   //   to nullptr_t.
@@ -3362,7 +3362,7 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   assert(LPLoc.isValid() && "List-initialization shouldn't get here.");
   CastOperation Op(*this, Type, CastExpr);
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
-  Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getEndLoc());
+  Op.OpRange = SourceRange(Op.DestRange.getBegin(), RPLoc);
 
   Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
   if (Op.SrcExpr.isInvalid())
@@ -3373,6 +3373,9 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
     SubExpr = BindExpr->getSubExpr();
   if (auto *ConstructExpr = dyn_cast<CXXConstructExpr>(SubExpr))
     ConstructExpr->setParenOrBraceRange(SourceRange(LPLoc, RPLoc));
+
+  // -Wcast-qual
+  DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
 
   return Op.complete(CXXFunctionalCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, CastTypeInfo, Op.Kind,

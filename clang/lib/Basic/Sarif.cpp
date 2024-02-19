@@ -20,7 +20,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
@@ -36,8 +35,8 @@ using namespace llvm;
 using clang::detail::SarifArtifact;
 using clang::detail::SarifArtifactLocation;
 
-static StringRef getFileName(const FileEntry &FE) {
-  StringRef Filename = FE.tryGetRealPathName();
+static StringRef getFileName(FileEntryRef FE) {
+  StringRef Filename = FE.getFileEntry().tryGetRealPathName();
   if (Filename.empty())
     Filename = FE.getName();
   return Filename;
@@ -58,8 +57,7 @@ static std::string percentEncodeURICharacter(char C) {
   // should be written out directly. Otherwise, percent
   // encode the character and write that out instead of the
   // reserved character.
-  if (llvm::isAlnum(C) ||
-      StringRef::npos != StringRef("-._~:@!$&'()*+,;=").find(C))
+  if (llvm::isAlnum(C) || StringRef("-._~:@!$&'()*+,;=").contains(C))
     return std::string(&C, 1);
   return "%" + llvm::toHex(StringRef(&C, 1));
 }
@@ -75,7 +73,7 @@ static std::string fileNameToURI(StringRef Filename) {
 
   // Get the root name to see if it has a URI authority.
   StringRef Root = sys::path::root_name(Filename);
-  if (Root.startswith("//")) {
+  if (Root.starts_with("//")) {
     // There is an authority, so add it to the URI.
     Ret += Root.drop_front(2).str();
   } else if (!Root.empty()) {
@@ -87,12 +85,12 @@ static std::string fileNameToURI(StringRef Filename) {
   assert(Iter != End && "Expected there to be a non-root path component.");
   // Add the rest of the path components, encoding any reserved characters;
   // we skip past the first path component, as it was handled it above.
-  std::for_each(++Iter, End, [&Ret](StringRef Component) {
+  for (StringRef Component : llvm::make_range(++Iter, End)) {
     // For reasons unknown to me, we may get a backslash with Windows native
     // paths for the initial backslash following the drive component, which
     // we need to ignore as a URI path part.
     if (Component == "\\")
-      return;
+      continue;
 
     // Add the separator between the previous path part and the one being
     // currently processed.
@@ -102,7 +100,7 @@ static std::string fileNameToURI(StringRef Filename) {
     for (char C : Component) {
       Ret += percentEncodeURICharacter(C);
     }
-  });
+  }
 
   return std::string(Ret);
 }
@@ -215,8 +213,8 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   assert(R.isCharRange() &&
          "Cannot create a physicalLocation from a token range!");
   FullSourceLoc Start{R.getBegin(), SourceMgr};
-  const FileEntry *FE = Start.getExpansionLoc().getFileEntry();
-  assert(FE != nullptr && "Diagnostic does not exist within a valid file!");
+  OptionalFileEntryRef FE = Start.getExpansionLoc().getFileEntryRef();
+  assert(FE && "Diagnostic does not exist within a valid file!");
 
   const std::string &FileURI = fileNameToURI(getFileName(*FE));
   auto I = CurrentArtifacts.find(FileURI);

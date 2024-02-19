@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-macosx10.10.0 -verify -fobjc-exceptions %s
 // RUN: not %clang_cc1 -fsyntax-only -triple x86_64-apple-macosx10.10.0 -fdiagnostics-parseable-fixits -fobjc-exceptions %s 2>&1 | FileCheck %s
 
-// rdar://19669565
-
 void bar(int x);
 
 void f(void) {

@@ -10,7 +10,7 @@
 /// the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib.
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie -mabi=lp64d \
-// RUN:   --target=loongarch64-unknown-linux-gnu --rtlib=platform \
+// RUN:   --target=loongarch64-unknown-linux-gnu --rtlib=platform --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_loongarch_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_loongarch_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck --check-prefix=LA64 %s

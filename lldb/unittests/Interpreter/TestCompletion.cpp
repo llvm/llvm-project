@@ -60,7 +60,7 @@ protected:
 
   void SetUp() override {
     // chdir back into the original working dir this test binary started with.
-    // A previous test may have have changed the working dir.
+    // A previous test may have changed the working dir.
     ASSERT_NO_ERROR(fs::set_current_path(OriginalWorkingDir));
 
     // Get the name of the current test. To prevent that by chance two tests

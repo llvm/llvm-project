@@ -4,25 +4,25 @@
 
 // Simple compilation case. Compile device-side to PTX assembly and make sure
 // we use it on the host side.
-// RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix NOLINK %s
 
 // Typical compilation + link case.
-// RUN: %clang -### -target x86_64-linux-gnu %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
 
 // Verify that --cuda-host-only disables device-side compilation, but doesn't
 // disable host-side compilation/linking.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
 // Verify that --cuda-device-only disables host-side compilation and linking.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
@@ -30,32 +30,32 @@
 // --cuda-device-only wins.
 
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:    --cuda-host-only %s 2>&1 \
+// RUN:    --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-compile-host-device \
-// RUN:    --cuda-host-only %s 2>&1 \
+// RUN:    --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-host-only \
 // RUN:    --cuda-device-only %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-compile-host-device \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-compile-host-device \
 // RUN:    --cuda-device-only %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-host-only \
 // RUN:   --cuda-compile-host-device %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
 
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-compile-host-device %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
@@ -63,14 +63,14 @@
 
 // Verify that --cuda-gpu-arch option passes the correct GPU architecture to
 // device compilation.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_30 -c %s 2>&1 \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-gpu-arch=sm_30 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix DEVICE-SM30 -check-prefix HOST \
 // RUN:    -check-prefix INCLUDES-DEVICE -check-prefix NOLINK %s
 
 // Verify that there is one device-side compilation per --cuda-gpu-arch args
 // and that all results are included on the host side.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,DEVICE2 \
 // RUN:             -check-prefixes DEVICE-SM30,DEVICE2-SM35 \
@@ -79,27 +79,27 @@
 
 // Verify that device-side results are passed to the correct tool when
 // -save-temps is used.
-// RUN: %clang -### -target x86_64-linux-gnu -save-temps -c %s 2>&1 \
+// RUN: not %clang -### --target=x86_64-linux-gnu -save-temps -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-SAVE \
 // RUN:    -check-prefix HOST -check-prefix HOST-SAVE -check-prefix NOLINK %s
 
 // Verify that device-side results are passed to the correct tool when
 // -fno-integrated-as is used.
-// RUN: %clang -### -target x86_64-linux-gnu -fno-integrated-as -c %s 2>&1 \
+// RUN: not %clang -### --target=x86_64-linux-gnu -fno-integrated-as -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix HOST-NOSAVE \
 // RUN:    -check-prefix HOST-AS -check-prefix NOLINK %s
 
 // Verify that --[no-]cuda-gpu-arch arguments are handled correctly.
 // a) --no-cuda-gpu-arch=X negates preceding --cuda-gpu-arch=X
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,NOARCH-SM50 %s
 
 // b) --no-cuda-gpu-arch=X negates more than one preceding --cuda-gpu-arch=X
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
@@ -107,21 +107,21 @@
 
 // c) if --no-cuda-gpu-arch=X negates all preceding --cuda-gpu-arch=X
 //    we default to sm_35 -- same as if no --cuda-gpu-arch were passed.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=sm_50 --no-cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes NOARCH-SM30,ARCH-SM35,NOARCH-SM50 %s
 
 // d) --no-cuda-gpu-arch=X is a no-op if there's no preceding --cuda-gpu-arch=X
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30\
 // RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes ARCH-SM30,ARCH-SM35,NOARCH-SM50 %s
 
 // e) --no-cuda-gpu-arch=X does not affect following --cuda-gpu-arch=X
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --no-cuda-gpu-arch=sm_50 --no-cuda-gpu-arch=sm_30 \
 // RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
@@ -132,11 +132,11 @@
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=all \
 // RUN:   --cuda-gpu-arch=sm_50 \
-// RUN:   -c %s 2>&1 \
+// RUN:   -c --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes NOARCH-SM30,NOARCH-SM35,ARCH-SM50 %s
 
 // g) There's no --cuda-gpu-arch=all
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN: not %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=all \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix ARCHALLERROR %s
@@ -144,39 +144,39 @@
 
 // Verify that --[no-]cuda-include-ptx arguments are handled correctly.
 // a) by default we're including PTX for all GPUs.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM35,PTX-SM30 %s
 
 // b) --no-cuda-include-ptx=all disables PTX inclusion for all GPUs
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-include-ptx=all \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,NOPTX-SM35,NOPTX-SM30 %s
 
 // c) --no-cuda-include-ptx=sm_XX disables PTX inclusion for that GPU only.
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-include-ptx=sm_35 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,NOPTX-SM35,PTX-SM30 %s
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-include-ptx=sm_30 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM35,NOPTX-SM30 %s
 
 // d) --cuda-include-ptx=all overrides preceding --no-cuda-include-ptx=all
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-include-ptx=all --cuda-include-ptx=all \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM35,PTX-SM30 %s
 
 // e) --cuda-include-ptx=all overrides preceding --no-cuda-include-ptx=sm_XX
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-include-ptx=sm_30 --cuda-include-ptx=all \
 // RUN:   -c %s 2>&1 \
@@ -185,7 +185,7 @@
 // Verify -flto=thin -fwhole-program-vtables handling. This should result in
 // both options being passed to the host compilation, with neither passed to
 // the device compilation.
-// RUN: %clang -### -target x86_64-linux-gnu -c -flto=thin -fwhole-program-vtables %s 2>&1 \
+// RUN: not %clang -### --target=x86_64-linux-gnu -c -flto=thin -fwhole-program-vtables %s 2>&1 \
 // RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,HOST,INCLUDES-DEVICE,NOLINK,THINLTOWPD %s
 // THINLTOWPD-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 

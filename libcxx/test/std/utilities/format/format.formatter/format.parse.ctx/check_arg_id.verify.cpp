@@ -22,6 +22,6 @@ constexpr bool test() {
 }
 
 void f() {
-  // expected-error-re@+1 {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
+  // expected-error@+1 {{static assertion expression is not an integral constant expression}}
   static_assert(test());
 }

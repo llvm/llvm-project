@@ -468,10 +468,10 @@ private:
       // URL = TokenText without the quotes.
       Reference.URL =
           Current->TokenText.substr(1, Current->TokenText.size() - 2);
-      if (Reference.URL.startswith("..")) {
+      if (Reference.URL.starts_with("..")) {
         Reference.Category =
             JsModuleReference::ReferenceCategory::RELATIVE_PARENT;
-      } else if (Reference.URL.startswith(".")) {
+      } else if (Reference.URL.starts_with(".")) {
         Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
       } else {
         Reference.Category = JsModuleReference::ReferenceCategory::ABSOLUTE;
@@ -530,7 +530,7 @@ private:
           nextToken();
           if (Current->is(tok::semi))
             return true;
-          if (!Current->is(tok::period))
+          if (Current->isNot(tok::period))
             return false;
           nextToken();
         }
@@ -548,10 +548,12 @@ private:
       nextToken();
       if (Current->is(tok::r_brace))
         break;
-      bool isTypeOnly =
-          Current->is(Keywords.kw_type) && Current->Next &&
-          Current->Next->isOneOf(tok::identifier, tok::kw_default);
-      if (!isTypeOnly && !Current->isOneOf(tok::identifier, tok::kw_default))
+      auto IsIdentifier = [](const auto *Tok) {
+        return Tok->isOneOf(tok::identifier, tok::kw_default, tok::kw_template);
+      };
+      bool isTypeOnly = Current->is(Keywords.kw_type) && Current->Next &&
+                        IsIdentifier(Current->Next);
+      if (!isTypeOnly && !IsIdentifier(Current))
         return false;
 
       JsImportedSymbol Symbol;
@@ -565,7 +567,7 @@ private:
 
       if (Current->is(Keywords.kw_as)) {
         nextToken();
-        if (!Current->isOneOf(tok::identifier, tok::kw_default))
+        if (!IsIdentifier(Current))
           return false;
         Symbol.Alias = Current->TokenText;
         nextToken();

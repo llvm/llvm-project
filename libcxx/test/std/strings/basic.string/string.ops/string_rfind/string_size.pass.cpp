@@ -17,28 +17,24 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s, const S& str, typename S::size_type pos, typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.rfind(str, pos));
-    assert(s.rfind(str, pos) == x);
-    if (x != S::npos)
-        assert(x <= pos && x + str.size() <= s.size());
+TEST_CONSTEXPR_CXX20 void test(const S& s, const S& str, typename S::size_type pos, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.rfind(str, pos));
+  assert(s.rfind(str, pos) == x);
+  if (x != S::npos)
+    assert(x <= pos && x + str.size() <= s.size());
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s, const S& str, typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.rfind(str));
-    assert(s.rfind(str) == x);
-    if (x != S::npos)
-        assert(0 <= x && x + str.size() <= s.size());
+TEST_CONSTEXPR_CXX20 void test(const S& s, const S& str, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.rfind(str));
+  assert(s.rfind(str) == x);
+  if (x != S::npos)
+    assert(0 <= x && x + str.size() <= s.size());
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test0()
-{
+TEST_CONSTEXPR_CXX20 void test_string() {
+  {
     test(S(""), S(""), 0, 0);
     test(S(""), S("abcde"), 0, S::npos);
     test(S(""), S("abcdeabcde"), 0, S::npos);
@@ -119,11 +115,8 @@ TEST_CONSTEXPR_CXX20 void test0()
     test(S("abcdeabcdeabcdeabcde"), S("abcde"), 21, 15);
     test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 21, 10);
     test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 21, 0);
-}
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test1()
-{
+  }
+  {
     test(S(""), S(""), 0);
     test(S(""), S("abcde"), S::npos);
     test(S(""), S("abcdeabcde"), S::npos);
@@ -140,23 +133,13 @@ TEST_CONSTEXPR_CXX20 void test1()
     test(S("abcdeabcdeabcdeabcde"), S("abcde"), 15);
     test(S("abcdeabcdeabcdeabcde"), S("abcdeabcde"), 10);
     test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 0);
+  }
 }
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-  }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-  }
-#endif
-
-#if TEST_STD_VER >= 11
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
   { // LWG 2946
     std::string s = " !";
     assert(s.rfind({"abc", 1}) == std::string::npos);
@@ -166,11 +149,10 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
-  test();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-  static_assert(test());
+  static_assert(tests());
 #endif
 
   return 0;

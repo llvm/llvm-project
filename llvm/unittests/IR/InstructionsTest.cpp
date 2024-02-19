@@ -635,7 +635,7 @@ TEST(InstructionsTest, isEliminableCastPair) {
   Type* Int16Ty = Type::getInt16Ty(C);
   Type* Int32Ty = Type::getInt32Ty(C);
   Type* Int64Ty = Type::getInt64Ty(C);
-  Type* Int64PtrTy = Type::getInt64PtrTy(C);
+  Type *Int64PtrTy = PointerType::get(C, 0);
 
   // Source and destination pointers have same size -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
@@ -680,8 +680,8 @@ TEST(InstructionsTest, isEliminableCastPair) {
                 "-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64"
                 "-v128:128:128-a:0:64-s:64:64-f80:128:128-n8:16:32:64-S128");
 
-  Type* Int64PtrTyAS1 = Type::getInt64PtrTy(C, 1);
-  Type* Int64PtrTyAS2 = Type::getInt64PtrTy(C, 2);
+  Type *Int64PtrTyAS1 = PointerType::get(C, 1);
+  Type *Int64PtrTyAS2 = PointerType::get(C, 2);
 
   IntegerType *Int16SizePtr = DL.getIntPtrType(C, 1);
   IntegerType *Int64SizePtr = DL.getIntPtrType(C, 2);
@@ -714,7 +714,7 @@ TEST(InstructionsTest, CloneCall) {
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   FunctionType *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {
     ConstantInt::get(Int32Ty, 1),
     ConstantInt::get(Int32Ty, 2),
@@ -748,7 +748,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
   std::unique_ptr<CallInst> Call(
@@ -775,7 +775,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
   std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
@@ -855,7 +855,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 
   {
-    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    Value *GEPBase = Constant::getNullValue(B.getPtrTy());
     auto *GI = cast<GetElementPtrInst>(
         B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
@@ -1024,71 +1024,141 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   Constant *C7 = ConstantInt::get(Int32Ty, 7);
 
   Constant *Identity = ConstantVector::get({C0, CU, C2, C3, C4});
-  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(Identity));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Identity)); // identity is distinguished from select
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Identity));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Identity)); // identity is always single source
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Identity));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Identity));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      Identity,
+      cast<FixedVectorType>(Identity->getType())
+          ->getNumElements())); // identity is distinguished from select
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      Identity, cast<FixedVectorType>(Identity->getType())
+                    ->getNumElements())); // identity is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      Identity, cast<FixedVectorType>(Identity->getType())->getNumElements()));
 
   Constant *Select = ConstantVector::get({CU, C1, C5});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Select));
-  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Select));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Select));
-  
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      Select, cast<FixedVectorType>(Select->getType())->getNumElements()));
+
   Constant *Reverse = ConstantVector::get({C3, C2, C1, CU});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Reverse));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Reverse));
-  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(Reverse));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Reverse)); // reverse is always single source
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Reverse));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Reverse));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())
+                   ->getNumElements())); // reverse is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      Reverse, cast<FixedVectorType>(Reverse->getType())->getNumElements()));
 
   Constant *SingleSource = ConstantVector::get({C2, C2, C0, CU});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(SingleSource));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(SingleSource));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      SingleSource,
+      cast<FixedVectorType>(SingleSource->getType())->getNumElements()));
 
   Constant *ZeroEltSplat = ConstantVector::get({C0, C0, CU, C0});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(ZeroEltSplat));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(ZeroEltSplat));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(ZeroEltSplat));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ZeroEltSplat)); // 0-splat is always single source
-  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ZeroEltSplat));
-  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      ZeroEltSplat, cast<FixedVectorType>(ZeroEltSplat->getType())
+                        ->getNumElements())); // 0-splat is always single source
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(
+      ZeroEltSplat,
+      cast<FixedVectorType>(ZeroEltSplat->getType())->getNumElements()));
 
   Constant *Transpose = ConstantVector::get({C0, C4, C2, C6});
-  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Transpose));
-  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Transpose));
-  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(
+      Transpose,
+      cast<FixedVectorType>(Transpose->getType())->getNumElements()));
 
   // More tests to make sure the logic is/stays correct...
-  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({CU, C1, CU, C3})));
-  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({C4, CU, C6, CU})));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(
+      ConstantVector::get({CU, C1, CU, C3}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(
+      ConstantVector::get({C4, CU, C6, CU}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({C4, C1, C6, CU})));
-  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({CU, C1, C6, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(
+      ConstantVector::get({C4, C1, C6, CU}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(
+      ConstantVector::get({CU, C1, C6, C3}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C7, C6, CU, C4})));
-  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C3, CU, C1, CU})));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(
+      ConstantVector::get({C7, C6, CU, C4}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(
+      ConstantVector::get({C3, CU, C1, CU}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C7, C5, CU, C7})));
-  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C3, C0, CU, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      ConstantVector::get({C7, C5, CU, C7}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(
+      ConstantVector::get({C3, C0, CU, C3}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({C4, CU, CU, C4})));
-  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({CU, C0, CU, C0})));
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(
+      ConstantVector::get({C4, CU, CU, C4}), 4));
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(
+      ConstantVector::get({CU, C0, CU, C0}), 4));
 
-  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C5, C3, C7})));
-  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(
+      ConstantVector::get({C1, C5, C3, C7}), 4));
+  EXPECT_TRUE(
+      ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3}), 2));
 
   // Nothing special about the values here - just re-using inputs to reduce code. 
   Constant *V0 = ConstantVector::get({C0, C1, C2, C3});
@@ -1431,50 +1501,51 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
 
   Type *ITy = Type::getInt32Ty(C);
   FunctionType *IFnTy = FunctionType::get(ITy, {});
-  Value *ICallee = Constant::getNullValue(IFnTy->getPointerTo());
+  PointerType *PtrTy = PointerType::getUnqual(C);
+  Value *ICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
   Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
-  Value *VICallee = Constant::getNullValue(VIFnTy->getPointerTo());
+  Value *VICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(VICall));
 
   Type *AITy = ArrayType::get(ITy, 2);
   FunctionType *AIFnTy = FunctionType::get(AITy, {});
-  Value *AICallee = Constant::getNullValue(AIFnTy->getPointerTo());
+  Value *AICallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AICall(CallInst::Create(AIFnTy, AICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(AICall));
 
   Type *FTy = Type::getFloatTy(C);
   FunctionType *FFnTy = FunctionType::get(FTy, {});
-  Value *FCallee = Constant::getNullValue(FFnTy->getPointerTo());
+  Value *FCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
   Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
-  Value *VFCallee = Constant::getNullValue(VFFnTy->getPointerTo());
+  Value *VFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(VFCall));
 
   Type *AFTy = ArrayType::get(FTy, 2);
   FunctionType *AFFnTy = FunctionType::get(AFTy, {});
-  Value *AFCallee = Constant::getNullValue(AFFnTy->getPointerTo());
+  Value *AFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AFCall(CallInst::Create(AFFnTy, AFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AFCall));
 
   Type *AVFTy = ArrayType::get(VFTy, 2);
   FunctionType *AVFFnTy = FunctionType::get(AVFTy, {});
-  Value *AVFCallee = Constant::getNullValue(AVFFnTy->getPointerTo());
+  Value *AVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AVFCall(
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
   Type *AAVFTy = ArrayType::get(AVFTy, 2);
   FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(AAVFFnTy->getPointerTo());
+  Value *AAVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> AAVFCall(
       CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));

@@ -1,16 +1,16 @@
 // UNSUPPORTED: asan
 // RUN: mlir-opt %s -test-transform-dialect-erase-schedule -linalg-bufferize -arith-bufferize \
-// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize -buffer-deallocation -convert-linalg-to-loops -convert-scf-to-cf \
-// RUN: -convert-linalg-to-llvm -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
+// RUN: -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule -linalg-bufferize \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -linalg-bufferize \
 // RUN: -scf-bufferize -arith-bufferize -tensor-bufferize \
 // RUN: -func-bufferize \
 // RUN: -finalizing-bufferize -convert-linalg-to-loops -convert-scf-to-cf -convert-scf-to-cf \
-// RUN: -convert-linalg-to-llvm -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN:  -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
@@ -36,10 +36,12 @@ func.func @main() {
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loops:3 = transform.structured.tile %0 [1, 2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loops:3 = transform.structured.tile_using_for %0 [1, 2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)

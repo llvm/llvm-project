@@ -126,6 +126,9 @@ public:
                       ArrayRef<OperandSegment> operandSegments = std::nullopt);
   MutableOperandRange(Operation *owner);
 
+  /// Construct a new mutable range for the given OpOperand.
+  MutableOperandRange(OpOperand &opOperand);
+
   /// Slice this range into a sub range, with the additional operand segment.
   MutableOperandRange
   slice(unsigned subStart, unsigned subLen,
@@ -155,6 +158,9 @@ public:
   /// Allow implicit conversion to an OperandRange.
   operator OperandRange() const;
 
+  /// Allow implicit conversion to a MutableArrayRef.
+  operator MutableArrayRef<OpOperand>() const;
+
   /// Returns the owning operation.
   Operation *getOwner() const { return owner; }
 
@@ -162,10 +168,12 @@ public:
   /// elements attribute, which contains the sizes of the sub ranges.
   MutableOperandRangeRange split(NamedAttribute segmentSizes) const;
 
-  /// Returns the value at the given index.
-  Value operator[](unsigned index) const {
-    return operator OperandRange()[index];
-  }
+  /// Returns the OpOperand at the given index.
+  OpOperand &operator[](unsigned index) const;
+
+  /// Iterators enumerate OpOperands.
+  MutableArrayRef<OpOperand>::iterator begin() const;
+  MutableArrayRef<OpOperand>::iterator end() const;
 
 private:
   /// Update the length of this range to the one provided.

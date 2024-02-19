@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s --dump-input=always
+// RUN: mlir-opt %s -convert-async-to-llvm | FileCheck %s --dump-input=always
 
 // CHECK-LABEL: @create_token
 func.func @create_token() {
@@ -9,7 +9,7 @@ func.func @create_token() {
 
 // CHECK-LABEL: @create_value
 func.func @create_value() {
-  // CHECK: %[[NULL:.*]] = llvm.mlir.null : !llvm.ptr
+  // CHECK: %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
   // CHECK: %[[OFFSET:.*]] = llvm.getelementptr %[[NULL]][1]
   // CHECK: %[[SIZE:.*]] = llvm.ptrtoint %[[OFFSET]]
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue(%[[SIZE]])

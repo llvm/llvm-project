@@ -113,7 +113,6 @@ extern char array2_gnuline[\
 _\
 _LINE__ == 52 ? 1: -1];  /* line marker is location of first _ */
 
-// rdar://11550996
 #line 0 "line-directive.c" // expected-warning {{#line directive with zero argument is a GNU extension}}
 undefined t; // expected-error {{unknown type name 'undefined'}}
 

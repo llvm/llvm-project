@@ -113,6 +113,10 @@ const char *IostatErrorString(int iostat) {
     return "Impermissible I/O statement on child I/O unit";
   case IostatBadNewUnit:
     return "NEWUNIT= without FILE= or STATUS='SCRATCH'";
+  case IostatBadListDirectedInputSeparator:
+    return "List-directed input value has trailing unused characters";
+  case IostatNonExternalDefinedUnformattedIo:
+    return "Defined unformatted I/O without an external unit";
   default:
     return nullptr;
   }

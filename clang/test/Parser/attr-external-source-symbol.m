@@ -95,6 +95,27 @@ __attribute__((external_source_symbol(USR=f27))); // expected-error {{expected s
 void f28(void)
 __attribute__((external_source_symbol(USR="")));
 
+void f29(void)
+__attribute__((external_source_symbol(language=L"Swift"))); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}}
+
+void f30(void)
+__attribute__((external_source_symbol(language="Swift", language=L"Swift"))); // expected-error {{duplicate 'language' clause in an 'external_source_symbol' attribute}} \
+                                                                              // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}}
+
+void f31(void)
+__attribute__((external_source_symbol(USR=u"foo"))); // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect}}
+
+void f32(void)
+__attribute__((external_source_symbol(USR="foo", USR=u"foo"))); // expected-error {{duplicate 'USR' clause in an 'external_source_symbol' attribute}} \
+                                                                // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect}}
+
+void f33(void)
+__attribute__((external_source_symbol(defined_in=U"module"))); // expected-warning {{encoding prefix 'U' on an unevaluated string literal has no effect}}
+
+void f34(void)
+__attribute__((external_source_symbol(defined_in="module", defined_in=U"module"))); // expected-error {{duplicate 'defined_in' clause in an 'external_source_symbol' attribute}} \
+                                                                                    // expected-warning {{encoding prefix 'U' on an unevaluated string literal has no effect}}
+
 #if __has_attribute(external_source_symbol) != 20230206
 # error "invalid __has_attribute version"
 #endif

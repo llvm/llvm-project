@@ -13,6 +13,8 @@
 #include <llvm-libc-macros/file-seek-macros.h>
 #include <llvm-libc-macros/stdio-macros.h>
 
+#include <stdarg.h>
+
 %%public_api()
 
 #endif // LLVM_LIBC_STDIO_H

@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
@@ -36,6 +35,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -188,10 +188,9 @@ private:
 public:
   ScheduleDAGRRList(MachineFunction &mf, bool needlatency,
                     SchedulingPriorityQueue *availqueue,
-                    CodeGenOpt::Level OptLevel)
-    : ScheduleDAGSDNodes(mf),
-      NeedLatency(needlatency), AvailableQueue(availqueue),
-      Topo(SUnits, nullptr) {
+                    CodeGenOptLevel OptLevel)
+      : ScheduleDAGSDNodes(mf), NeedLatency(needlatency),
+        AvailableQueue(availqueue), Topo(SUnits, nullptr) {
     const TargetSubtargetInfo &STI = mf.getSubtarget();
     if (DisableSchedCycles || !NeedLatency)
       HazardRec = new ScheduleHazardRecognizer();
@@ -332,7 +331,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
     unsigned Opcode = Node->getMachineOpcode();
     if (Opcode == TargetOpcode::REG_SEQUENCE) {
-      unsigned DstRCIdx = cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue();
+      unsigned DstRCIdx = Node->getConstantOperandVal(0);
       const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
       RegClass = RC->getID();
       Cost = RegSequenceCost;
@@ -987,11 +986,6 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
   if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
     return nullptr;
 
-  // unfolding an x86 DEC64m operation results in store, dec, load which
-  // can't be handled here so quit
-  if (NewNodes.size() == 3)
-    return nullptr;
-
   assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
   N = NewNodes[1];
@@ -1375,14 +1369,13 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
         --NumOps;  // Ignore the glue operand.
 
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-        unsigned Flags =
-          cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
-        unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+        unsigned Flags = Node->getConstantOperandVal(i);
+        const InlineAsm::Flag F(Flags);
+        unsigned NumVals = F.getNumOperandRegisters();
 
         ++i; // Skip the ID value.
-        if (InlineAsm::isRegDefKind(Flags) ||
-            InlineAsm::isRegDefEarlyClobberKind(Flags) ||
-            InlineAsm::isClobberKind(Flags)) {
+        if (F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
+            F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
             Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
@@ -2304,8 +2297,7 @@ void RegReductionPQBase::unscheduledNode(SUnit *SU) {
       continue;
     }
     if (POpc == TargetOpcode::REG_SEQUENCE) {
-      unsigned DstRCIdx =
-          cast<ConstantSDNode>(PN->getOperand(0))->getZExtValue();
+      unsigned DstRCIdx = PN->getConstantOperandVal(0);
       const TargetRegisterClass *RC = TRI->getRegClass(DstRCIdx);
       unsigned RCId = RC->getID();
       // REG_SEQUENCE is untyped, so getRepRegClassCostFor could not be used
@@ -3150,9 +3142,8 @@ void RegReductionPQBase::AddPseudoTwoAddrDeps() {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-ScheduleDAGSDNodes *
-llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
-                                 CodeGenOpt::Level OptLevel) {
+ScheduleDAGSDNodes *llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
+                                                     CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3166,7 +3157,7 @@ llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
 
 ScheduleDAGSDNodes *
 llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3180,7 +3171,7 @@ llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
 
 ScheduleDAGSDNodes *
 llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3194,9 +3185,8 @@ llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
   return SD;
 }
 
-ScheduleDAGSDNodes *
-llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
-                                CodeGenOpt::Level OptLevel) {
+ScheduleDAGSDNodes *llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
+                                                    CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();

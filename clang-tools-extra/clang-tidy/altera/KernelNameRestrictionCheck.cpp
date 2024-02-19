@@ -29,15 +29,16 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FileNameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;
 
 private:
-  /// Returns true if the name of the file with path FilePath is 'kernel.cl',
+  /// Returns true if the name of the file with path FileName is 'kernel.cl',
   /// 'verilog.cl', or 'vhdl.cl'. The file name check is case insensitive.
-  bool fileNameIsRestricted(StringRef FilePath);
+  bool fileNameIsRestricted(StringRef FileName);
 
   struct IncludeDirective {
     SourceLocation Loc; // Location in the include directive.
@@ -61,7 +62,7 @@ void KernelNameRestrictionCheck::registerPPCallbacks(const SourceManager &SM,
 void KernelNameRestrictionPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &, StringRef FileName, bool,
     CharSourceRange, OptionalFileEntryRef, StringRef, StringRef, const Module *,
-    SrcMgr::CharacteristicKind) {
+    bool, SrcMgr::CharacteristicKind) {
   IncludeDirective ID = {HashLoc, FileName};
   IncludeDirectives.push_back(std::move(ID));
 }
@@ -76,7 +77,7 @@ bool KernelNameRestrictionPPCallbacks::fileNameIsRestricted(
 void KernelNameRestrictionPPCallbacks::EndOfMainFile() {
 
   // Check main file for restricted names.
-  const FileEntry *Entry = SM.getFileEntryForID(SM.getMainFileID());
+  OptionalFileEntryRef Entry = SM.getFileEntryRefForID(SM.getMainFileID());
   StringRef FileName = llvm::sys::path::filename(Entry->getName());
   if (fileNameIsRestricted(FileName))
     Check.diag(SM.getLocForStartOfFile(SM.getMainFileID()),

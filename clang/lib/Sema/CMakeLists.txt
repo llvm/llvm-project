@@ -52,6 +52,7 @@ add_clang_library(clangSema
   SemaLookup.cpp
   SemaModule.cpp
   SemaObjCProperty.cpp
+  SemaOpenACC.cpp
   SemaOpenMP.cpp
   SemaOverload.cpp
   SemaPseudoObject.cpp
@@ -71,8 +72,10 @@ add_clang_library(clangSema
   DEPENDS
   ClangOpenCLBuiltinsImpl
   omp_gen
+  ClangDriverOptions
 
   LINK_LIBS
+  clangAPINotes
   clangAST
   clangAnalysis
   clangBasic

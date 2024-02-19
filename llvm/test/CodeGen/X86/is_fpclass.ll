@@ -986,7 +986,7 @@ define i1 @isnan_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    setge %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; "nan"
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp ; "nan"
   ret i1 %0
 }
 
@@ -1007,7 +1007,7 @@ define i1 @not_isnan_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    setl %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1020)  ; ~"nan"
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1020) strictfp ; ~"nan"
   ret i1 %0
 }
 
@@ -1028,7 +1028,7 @@ define i1 @isfinite_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    setl %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504) strictfp ; 0x1f8 = "finite"
   ret i1 %0
 }
 
@@ -1049,7 +1049,7 @@ define i1 @not_isfinite_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    setge %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = ~"finite"
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519) strictfp ; ~0x1f8 = ~"finite"
   ret i1 %0
 }
 
@@ -1067,7 +1067,7 @@ define i1 @iszero_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96) strictfp ; 0x60 = "zero"
   ret i1 %0
 }
 
@@ -1085,7 +1085,7 @@ define i1 @not_iszero_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    setne %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = ~"zero"
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927) strictfp ; ~0x60 = ~"zero"
   ret i1 %0
 }
 
@@ -1311,7 +1311,7 @@ define i1 @isnan_d_strictfp(double %x) strictfp {
 ; CHECK-64-NEXT:    setg %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; "nan"
+  %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 3) strictfp ; "nan"
   ret i1 %0
 }
 
@@ -1332,7 +1332,7 @@ define i1 @iszero_d_strictfp(double %x) strictfp {
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 96)  ; 0x60 = "zero"
+  %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 96) strictfp ; 0x60 = "zero"
   ret i1 %0
 }
 
@@ -1376,7 +1376,7 @@ define <1 x i1> @isnan_v1f_strictfp(<1 x float> %x) strictfp {
 ; CHECK-64-NEXT:    setge %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call <1 x i1> @llvm.is.fpclass.v1f32(<1 x float> %x, i32 3)  ; "nan"
+  %0 = tail call <1 x i1> @llvm.is.fpclass.v1f32(<1 x float> %x, i32 3) strictfp ; "nan"
   ret <1 x i1> %0
 }
 
@@ -1457,7 +1457,7 @@ define <2 x i1> @isnan_v2f_strictfp(<2 x float> %x) strictfp {
 ; CHECK-64-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 3)  ; "nan"
+  %0 = tail call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 3) strictfp ; "nan"
   ret <2 x i1> %0
 }
 
@@ -1548,7 +1548,7 @@ define <4 x i1> @isnan_v4f_strictfp(<4 x float> %x) strictfp {
 ; CHECK-64-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 3)  ; "nan"
+  %0 = tail call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 3) strictfp ; "nan"
   ret <4 x i1> %0
 }
 

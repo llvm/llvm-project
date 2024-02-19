@@ -13,12 +13,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALEMITTER_H
 #define LLVM_CLANG_AST_INTERP_EVALEMITTER_H
 
-#include "ByteCodeGenError.h"
-#include "Context.h"
-#include "InterpStack.h"
+#include "EvaluationResult.h"
 #include "InterpState.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "Source.h"
 #include "llvm/Support/Error.h"
 
@@ -26,9 +23,8 @@ namespace clang {
 namespace interp {
 class Context;
 class Function;
-class InterpState;
+class InterpStack;
 class Program;
-class SourceInfo;
 enum Opcode : uint32_t;
 
 /// An emitter which evaluates opcodes as they are emitted.
@@ -38,14 +34,17 @@ public:
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
 
-  llvm::Expected<bool> interpretExpr(const Expr *E);
-  llvm::Expected<bool> interpretDecl(const VarDecl *VD);
+  EvaluationResult interpretExpr(const Expr *E,
+                                 bool ConvertResultToRValue = false);
+  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+
+  InterpState &getState() { return S; }
 
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
               APValue &Result);
 
-  virtual ~EvalEmitter() {}
+  virtual ~EvalEmitter();
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -55,10 +54,6 @@ protected:
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E) = 0;
   virtual bool visitDecl(const VarDecl *VD) = 0;
-
-  bool bail(const Stmt *S) { return bail(S->getBeginLoc()); }
-  bool bail(const Decl *D) { return bail(D->getBeginLoc()); }
-  bool bail(const SourceLocation &Loc);
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
@@ -75,11 +70,11 @@ protected:
   }
 
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, unsigned> Params;
+  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
   /// Lambda captures.
-  /// Map from Decl* to [Offset, IsReference] pair.
-  llvm::DenseMap<const ValueDecl *, std::pair<unsigned, bool>> LambdaCaptures;
-  unsigned LambdaThisCapture;
+  llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
+  /// Offset of the This parameter in a lambda record.
+  unsigned LambdaThisCapture = 0;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 
@@ -91,7 +86,12 @@ private:
   /// Callee evaluation state.
   InterpState S;
   /// Location to write the result to.
-  APValue &Result;
+  EvaluationResult EvalResult;
+  /// Whether the result should be converted to an RValue.
+  bool ConvertResultToRValue = false;
+  /// Whether we should check if the result has been fully
+  /// initialized.
+  bool CheckFullyInitialized = false;
 
   /// Temporaries which require storage.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;
@@ -105,8 +105,6 @@ private:
   // The emitter always tracks the current instruction and sets OpPC to a token
   // value which is mapped to the location of the opcode being evaluated.
   CodePtr OpPC;
-  /// Location of a failure.
-  std::optional<SourceLocation> BailLocation;
   /// Location of the current instruction.
   SourceInfo CurrentSource;
 

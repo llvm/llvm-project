@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +33,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/RawMemProfReader.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -86,7 +86,7 @@ llvm::SmallVector<SegmentEntry> readSegmentEntries(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   llvm::SmallVector<SegmentEntry> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     Items.push_back(*reinterpret_cast<const SegmentEntry *>(
@@ -100,10 +100,11 @@ readMemInfoBlocks(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
-    const uint64_t Id = endian::readNext<uint64_t, little, unaligned>(Ptr);
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
     const MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
     Items.push_back({Id, MIB});
     // Only increment by size of MIB since readNext implicitly increments.
@@ -116,16 +117,19 @@ CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   CallStackMap Items;
 
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
-    const uint64_t StackId = endian::readNext<uint64_t, little, unaligned>(Ptr);
-    const uint64_t NumPCs = endian::readNext<uint64_t, little, unaligned>(Ptr);
+    const uint64_t StackId =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    const uint64_t NumPCs =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
     SmallVector<uint64_t> CallStack;
     for (uint64_t J = 0; J < NumPCs; J++) {
-      CallStack.push_back(endian::readNext<uint64_t, little, unaligned>(Ptr));
+      CallStack.push_back(
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr));
     }
 
     Items[StackId] = CallStack;
@@ -332,6 +336,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                                           inconvertibleErrorCode()),
                   FileName);
 
+  // Process the raw profile.
+  if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
+    return E;
+
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
   std::unique_ptr<DIContext> Context = DWARFContext::create(
       *Object, DWARFContext::ProcessDebugRelocations::Process);
@@ -340,16 +351,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
       Object, std::move(Context), /*UntagAddresses=*/false);
   if (!SOFOr)
     return report(SOFOr.takeError(), FileName);
-  Symbolizer = std::move(SOFOr.get());
+  auto Symbolizer = std::move(SOFOr.get());
 
-  // Process the raw profile.
-  if (Error E = readRawProfile(std::move(DataBuffer)))
-    return E;
-
-  if (Error E = setupForSymbolization())
-    return E;
-
-  if (Error E = symbolizeAndFilterStackFrames())
+  // The symbolizer ownership is moved into symbolizeAndFilterStackFrames so
+  // that it is freed automatically at the end, when it is no longer used. This
+  // reduces peak memory since it won't be live while also mapping the raw
+  // profile into records afterwards.
+  if (Error E = symbolizeAndFilterStackFrames(std::move(Symbolizer)))
     return E;
 
   return mapRawProfileToRecords();
@@ -465,7 +473,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   return Error::success();
 }
 
-Error RawMemProfReader::symbolizeAndFilterStackFrames() {
+Error RawMemProfReader::symbolizeAndFilterStackFrames(
+    std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer) {
   // The specifier to use when symbolization is requested.
   const DILineInfoSpecifier Specifier(
       DILineInfoSpecifier::FileLineInfoKind::RawValue,
@@ -507,12 +516,16 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
-        // Here we retain a mapping from the GUID to symbol name instead of
-        // adding it to the frame object directly to reduce memory overhead.
-        // This is because there can be many unique frames, particularly for
-        // callsite frames.
-        if (KeepSymbolName)
-          GuidToSymbolName.insert({Guid, DIFrame.FunctionName});
+        // Here we retain a mapping from the GUID to canonical symbol name
+        // instead of adding it to the frame object directly to reduce memory
+        // overhead. This is because there can be many unique frames,
+        // particularly for callsite frames.
+        if (KeepSymbolName) {
+          StringRef CanonicalName =
+              sampleprof::FunctionSamples::getCanonicalFnName(
+                  DIFrame.FunctionName);
+          GuidToSymbolName.insert({Guid, CanonicalName.str()});
+        }
 
         const FrameId Hash = F.hash();
         IdToFrame.insert({Hash, F});
@@ -640,13 +653,12 @@ RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
   return object::SectionedAddress{VirtualAddress};
 }
 
-Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
-  if (FunctionProfileData.empty())
-    return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
-
-  if (Iter == FunctionProfileData.end())
-    return make_error<InstrProfError>(instrprof_error::eof);
-
+Error RawMemProfReader::readNextRecord(
+    GuidMemProfRecordPair &GuidRecord,
+    std::function<const Frame(const FrameId)> Callback) {
+  // Create a new callback for the RawMemProfRecord iterator so that we can
+  // provide the symbol name if the reader was initialized with KeepSymbolName =
+  // true. This is useful for debugging and testing.
   auto IdToFrameCallback = [this](const FrameId Id) {
     Frame F = this->idToFrame(Id);
     if (!this->KeepSymbolName)
@@ -656,11 +668,7 @@ Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
     F.SymbolName = Iter->getSecond();
     return F;
   };
-
-  const IndexedMemProfRecord &IndexedRecord = Iter->second;
-  GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, IdToFrameCallback)};
-  Iter++;
-  return Error::success();
+  return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
 }
 } // namespace memprof
 } // namespace llvm

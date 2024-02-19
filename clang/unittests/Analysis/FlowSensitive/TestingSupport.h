@@ -33,7 +33,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -61,6 +61,11 @@ std::ostream &operator<<(std::ostream &OS,
 }
 
 namespace test {
+
+// Caps the number of block visits in any individual analysis. Given that test
+// code is typically quite small, we set a low number to help catch any problems
+// early. But, the choice is arbitrary.
+constexpr std::int32_t MaxBlockVisitsInAnalysis = 2'000;
 
 /// Returns the environment at the program point marked with `Annotation` from
 /// the mapping of annotated program points to analysis state.
@@ -240,12 +245,15 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     };
   }
 
-  for (const ast_matchers::BoundNodes &BN :
-       ast_matchers::match(ast_matchers::functionDecl(
-                               ast_matchers::hasBody(ast_matchers::stmt()),
-                               AI.TargetFuncMatcher)
-                               .bind("target"),
-                           Context)) {
+  SmallVector<ast_matchers::BoundNodes, 1> MatchResult = ast_matchers::match(
+      ast_matchers::functionDecl(ast_matchers::hasBody(ast_matchers::stmt()),
+                                 AI.TargetFuncMatcher)
+          .bind("target"),
+      Context);
+  if (MatchResult.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "didn't find any matching target functions");
+  for (const ast_matchers::BoundNodes &BN : MatchResult) {
     // Get the AST node of the target function.
     const FunctionDecl *Target = BN.getNodeAs<FunctionDecl>("target");
     if (Target == nullptr)
@@ -274,8 +282,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     // If successful, the dataflow analysis returns a mapping from block IDs to
     // the post-analysis states for the CFG blocks that have been evaluated.
     llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
-        MaybeBlockStates = runTypeErasedDataflowAnalysis(
-            CFCtx, Analysis, InitEnv, TypeErasedPostVisitCFG);
+        MaybeBlockStates =
+            runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
+                                          TypeErasedPostVisitCFG,
+                                          MaxBlockVisitsInAnalysis);
     if (!MaybeBlockStates) return MaybeBlockStates.takeError();
     AO.BlockStates = *MaybeBlockStates;
 
@@ -395,17 +405,31 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 
 using BuiltinOptions = DataflowAnalysisContext::Options;
 
-/// Runs dataflow on `Code` with a `NoopAnalysis` and calls `VerifyResults` to
-/// verify the results.
+/// Runs dataflow on function named `TargetFun` in `Code` with a `NoopAnalysis`
+/// and calls `VerifyResults` to verify the results.
 llvm::Error checkDataflowWithNoopAnalysis(
     llvm::StringRef Code,
     std::function<
         void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
              ASTContext &)>
-        VerifyResults,
-    DataflowAnalysisOptions Options,
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
     LangStandard::Kind Std = LangStandard::lang_cxx17,
     llvm::StringRef TargetFun = "target");
+
+/// Runs dataflow on function matched by `TargetFuncMatcher` in `Code` with a
+/// `NoopAnalysis` and calls `VerifyResults` to verify the results.
+llvm::Error checkDataflowWithNoopAnalysis(
+    llvm::StringRef Code,
+    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback =
+        {});
 
 /// Returns the `ValueDecl` for the given identifier.
 ///
@@ -453,27 +477,11 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
 
 /// Returns the value of a `Field` on the record referenced by `Loc.`
 /// Returns null if `Loc` is null.
-inline Value *getFieldValue(const AggregateStorageLocation *Loc,
+inline Value *getFieldValue(const RecordStorageLocation *Loc,
                             const ValueDecl &Field, const Environment &Env) {
   if (Loc == nullptr)
     return nullptr;
   StorageLocation *FieldLoc = Loc->getChild(Field);
-  if (FieldLoc == nullptr)
-    return nullptr;
-  return Env.getValue(*FieldLoc);
-}
-
-/// Returns the value of a `Field` on a `Struct.
-/// Returns null if `Struct` is null.
-///
-/// Note: This function currently does not use the `Env` parameter, but it will
-/// soon be needed to look up the `Value` when `setChild()` changes to return a
-/// `StorageLocation *`.
-inline Value *getFieldValue(const StructValue *Struct, const ValueDecl &Field,
-                            const Environment &Env) {
-  if (Struct == nullptr)
-    return nullptr;
-  StorageLocation *FieldLoc = Struct->getChild(Field);
   if (FieldLoc == nullptr)
     return nullptr;
   return Env.getValue(*FieldLoc);
@@ -493,6 +501,11 @@ public:
   // Returns a reference to a fresh atomic variable.
   const Formula *atom() {
     return &Formula::create(A, Formula::AtomRef, {}, NextAtom++);
+  }
+
+  // Returns a reference to a literal boolean value.
+  const Formula *literal(bool B) {
+    return &Formula::create(A, Formula::Literal, {}, B);
   }
 
   // Creates a boolean conjunction.
@@ -520,6 +533,10 @@ public:
     return make(Formula::Equal, {LHS, RHS});
   }
 };
+
+/// Parses a list of formulas, separated by newlines, and returns them.
+/// On parse errors, calls `ADD_FAILURE()` to fail the current test.
+std::vector<const Formula *> parseFormulas(Arena &A, StringRef Lines);
 
 } // namespace test
 } // namespace dataflow

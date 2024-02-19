@@ -1,15 +1,15 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zihintntl,+c -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zihintntl,+c -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zihintntl,+c -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zihintntl,+c -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zihintntl,+c < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zihintntl,+c -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zihintntl,+c < %s \
+# RUN:     | llvm-objdump --mattr=+zihintntl,+c -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zihintntl,+c < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zihintntl,+c -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zihintntl,+c < %s \
+# RUN:     | llvm-objdump --mattr=+zihintntl,+c -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: not llvm-mc %s -triple=riscv32 -mattr=+experimental-zihintntl 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
-# RUN: not llvm-mc %s -triple=riscv64 -mattr=+experimental-zihintntl 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
+# RUN: not llvm-mc %s -triple=riscv32 -mattr=+zihintntl 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
+# RUN: not llvm-mc %s -triple=riscv64 -mattr=+zihintntl 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
 
 # CHECK-ASM-AND-OBJ: ntl.p1
 # CHECK-ASM: encoding: [0x33,0x00,0x20,0x00]

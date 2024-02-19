@@ -87,16 +87,13 @@ class DefaultController(DebuggerControllerBase):
         self.step_collection.debugger = self.debugger.debugger_info
         self._break_point_all_lines()
         self.debugger.launch(cmdline)
-
         for command_obj in chain.from_iterable(self.step_collection.commands.values()):
             self.watches.update(command_obj.get_watches())
         early_exit_conditions = self._get_early_exit_conditions()
-
         timed_out = False
         total_timeout = Timeout(self.context.options.timeout_total)
         max_steps = self.context.options.max_steps
         for _ in range(max_steps):
-
             breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
             while self.debugger.is_running and not timed_out:
                 # Check to see whether we've timed out while we're waiting.

@@ -153,7 +153,6 @@ again:
 }
 
 //===----------------------------------------------------------------------===//
-// Reduced test case from <rdar://problem/7114618>.
 // Basically a null check is performed on the field value, which is then
 // assigned to a variable and then checked again.
 //===----------------------------------------------------------------------===//
@@ -182,7 +181,6 @@ void f(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7185607>
 // Bit-fields of a struct should be invalidated when blasting the entire
 // struct with an integer constant.
 //===----------------------------------------------------------------------===//
@@ -197,8 +195,7 @@ int rdar_test_7185607(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7242006> [RegionStore] compound literal assignment with
-//  floats not honored
+// [RegionStore] compound literal assignment with floats not honored
 // This test case is mirrored in misc-ps.m, but this case is a negative.
 //===----------------------------------------------------------------------===//
 typedef float CGFloat;
@@ -213,9 +210,8 @@ CGFloat rdar7242006_negative(CGFloat x) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7249340> - Allow binding of values to symbolic regions.
-// This test case shows how RegionStore tracks the value bound to 'x'
-// after the assignment.
+// Allow binding of values to symbolic regions. This test case shows how
+// RegionStore tracks the value bound to 'x' after the assignment.
 //===----------------------------------------------------------------------===//
 typedef int* ptr_rdar_7249340;
 void rdar_7249340(ptr_rdar_7249340 x) {
@@ -227,11 +223,11 @@ void rdar_7249340(ptr_rdar_7249340 x) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7249327> - This test case tests both value tracking of
-// array values and that we handle symbolic values that are casted
-// between different integer types.  Note the assignment 'n = *a++'; here
-// 'n' is and 'int' and '*a' is 'unsigned'.  Previously we got a false positive
-// at 'x += *b++' (undefined value) because we got a false path.
+// This test case tests both value tracking of array values and that we handle
+// symbolic values that are casted between different integer types. Note the
+// assignment 'n = *a++'; here 'n' is and 'int' and '*a' is 'unsigned'.
+// Previously we got a false positive at 'x += *b++' (undefined value) because
+// we got a false path.
 //===----------------------------------------------------------------------===//
 int rdar_7249327_aux(void);
 
@@ -259,8 +255,8 @@ void rdar_7249327(unsigned int A[2*32]) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6914474> - Check that 'x' is invalidated because its
-// address is passed in as a value to a struct.
+// Check that 'x' is invalidated because its address is passed in as a value to
+// a struct.
 //===----------------------------------------------------------------------===//
 struct doodad_6914474 { int *v; };
 extern void prod_6914474(struct doodad_6914474 *d);
@@ -304,8 +300,7 @@ int test_handle_array_wrapper(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7261075> [RegionStore] crash when 
-//   handling load: '*((unsigned int *)"????")'
+// [RegionStore] crash when handling load: '*((unsigned int *)"????")'
 //===----------------------------------------------------------------------===//
 
 int rdar_7261075(void) {
@@ -316,8 +311,7 @@ int rdar_7261075(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7275774> false path due to limited pointer 
-//                          arithmetic constraints
+// False path due to limited pointer arithmetic constraints.
 //===----------------------------------------------------------------------===//
 
 void rdar_7275774(void *data, unsigned n) {
@@ -335,8 +329,6 @@ void rdar_7275774(void *data, unsigned n) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7312221>
-//
 //  Test that Objective-C instance variables aren't prematurely pruned
 //  from the analysis state.
 //===----------------------------------------------------------------------===//
@@ -386,7 +378,7 @@ void doSomething_7312221_with_struct(struct rdar_7312221_container *Self) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7332673> - Just more tests cases for regions
+// Just more tests cases for regions
 //===----------------------------------------------------------------------===//
 
 void rdar_7332673_test1(void) {
@@ -400,11 +392,10 @@ void rdar_7332673_test2(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7347252>: Because of a bug in
-//   RegionStoreManager::RemoveDeadBindings(), the symbol for s->session->p
-//   would incorrectly be pruned from the state after the call to
-//   rdar7347252_malloc1(), and would incorrectly result in a warning about
-//   passing a null pointer to rdar7347252_memcpy().
+// Because of a bug in RegionStoreManager::RemoveDeadBindings(), the symbol for
+// s->session->p would incorrectly be pruned from the state after the call to
+// rdar7347252_malloc1(), and would incorrectly result in a warning about
+// passing a null pointer to rdar7347252_memcpy().
 //===----------------------------------------------------------------------===//
 
 struct rdar7347252_AA { char *p;};
@@ -485,8 +476,8 @@ int pr3135(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7403269> - Test that we handle compound initializers with
-// partially unspecified array values. Previously this caused a crash.
+// Test that we handle compound initializers with partially unspecified array
+// values. Previously this caused a crash.
 //===----------------------------------------------------------------------===//
 
 typedef struct RDar7403269 {
@@ -526,7 +517,6 @@ void rdar7403269_b_pos(void) {
 
 //===----------------------------------------------------------------------===//
 // Test that incrementing a non-null pointer results in a non-null pointer.
-// (<rdar://problem/7191542>)
 //===----------------------------------------------------------------------===//
 
 void test_increment_nonnull_rdar_7191542(const char *path) {
@@ -547,7 +537,7 @@ void test_increment_nonnull_rdar_7191542(const char *path) {
 
 //===----------------------------------------------------------------------===//
 // Test that the store (implicitly) tracks values for doubles/floats that are
-// uninitialized (<rdar://problem/6811085>)
+// uninitialized.
 //===----------------------------------------------------------------------===//
 
 double rdar_6811085(void) {
@@ -647,8 +637,8 @@ unsigned rdar7582031_static(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7462324> - Test that variables passed using __blocks
-//  are not treated as being uninitialized.
+// Test that variables passed using __blocks are not treated as being
+// uninitialized.
 //===----------------------------------------------------------------------===//
 
 typedef void (^RDar_7462324_Callback)(id obj);
@@ -682,8 +672,8 @@ typedef void (^RDar_7462324_Callback)(id obj);
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7468209> - Scanning for live variables within a block should
-//  not crash on variables passed by reference via __block.
+// Scanning for live variables within a block should not crash on variables
+// passed by reference via __block.
 //===----------------------------------------------------------------------===//
 
 int rdar7468209_aux(void);
@@ -742,7 +732,6 @@ void pr4358(struct pr4358 *pnt) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7526777>
 // Test handling fields of values returned from function calls or
 // message expressions.
 //===----------------------------------------------------------------------===//
@@ -767,8 +756,7 @@ int test_return_struct_2_rdar_7526777(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7527292> Assertion failed: (Op == BinaryOperator::Add || 
-//                                             Op == BinaryOperator::Sub)
+// Assertion failed: (Op == BinaryOperator::Add || Op == BinaryOperator::Sub)
 // This test case previously triggered an assertion failure due to a discrepancy
 // been the loaded/stored value in the array
 //===----------------------------------------------------------------------===//
@@ -787,8 +775,8 @@ void rdar_7527292(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7515938> - Handle initialization of incomplete arrays
-//  in structures using a compound value.  Previously this crashed.
+// Handle initialization of incomplete arrays in structures using a compound
+// value. Previously this crashed.
 //===----------------------------------------------------------------------===//
 
 struct rdar_7515938 {
@@ -876,8 +864,8 @@ int test_c_rev96062(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7242010> - The access to y[0] at the bottom previously
-//  was reported as an uninitialized value.
+// The access to y[0] at the bottom previously was reported as an uninitialized
+// value.
 //===----------------------------------------------------------------------===//
 
 char *rdar_7242010(int count, char **y) {
@@ -890,10 +878,6 @@ char *rdar_7242010(int count, char **y) {
   y = x;
   return y[0]; // no-warning
 }
-
-//===----------------------------------------------------------------------===//
-// <rdar://problem/7770737>
-//===----------------------------------------------------------------------===//
 
 struct rdar_7770737_s { intptr_t p; };
 void rdar_7770737_aux(struct rdar_7770737_s *p);
@@ -958,8 +942,8 @@ void pr6288_b(void) {
   *(px[0]) = 0; // no-warning
 }
 
-// <rdar://problem/7817800> - A bug in RemoveDeadBindings was causing instance variable bindings
-//  to get prematurely pruned from the state.
+// A bug in RemoveDeadBindings was causing instance variable bindings to get
+// prematurely pruned from the state.
 @interface Rdar7817800 {
   char *x;
 }
@@ -987,7 +971,7 @@ void u132monitk (struct pr6036_c *pr6036_d) {
   (void) ((struct pr6036_a *) (unsigned long (*)[0]) ((char *) pr6036_d - 1))->pr6036_b; // expected-warning{{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
 }
 
-// <rdar://problem/7813989> - ?-expressions used as a base of a member expression should be treated as an lvalue
+// ?-expressions used as a base of a member expression should be treated as an lvalue
 typedef struct rdar7813989_NestedVal { int w; } rdar7813989_NestedVal;
 typedef struct rdar7813989_Val { rdar7813989_NestedVal nv; } rdar7813989_Val;
 
@@ -1017,8 +1001,8 @@ void pr6854(void * arg) {
   float f = *(float*) a;
 }
 
-// <rdar://problem/8032791> False positive due to symbolic store not find
-//  value because of 'const' qualifier
+// False positive due to symbolic store not find value because of 'const'
+// qualifier
 double rdar_8032791_2(void);
 double rdar_8032791_1(void) {
    struct R8032791 { double x[2]; double y; }
@@ -1044,7 +1028,7 @@ void pr_7450(void) {
   pr_7450_aux(p + 8);
 }
 
-// <rdar://problem/8243408> - Symbolicate struct values returned by value.
+// Symbolicate struct values returned by value.
 struct s_rdar_8243408 { int x; };
 extern struct s_rdar_8243408 rdar_8243408_aux(void);
 void rdar_8243408(void) {
@@ -1060,7 +1044,6 @@ void rdar_8243408(void) {
   *p = 0xDEADBEEF; // expected-warning{{Dereference of null pointer}}
 }
 
-// <rdar://problem/8258814>
 int r8258814(void)
 {
   int foo;
@@ -1169,8 +1152,8 @@ void do_not_crash(int x) {
   }
 }
 
-// <rdar://problem/8424269> - Handle looking at the size of a VLA in
-// ArrayBoundChecker.  Nothing intelligent (yet); just don't crash.
+// Handle looking at the size of a VLA in ArrayBoundChecker. Nothing
+// intelligent (yet); just don't crash.
 typedef struct RDar8424269_A {
   int RDar8424269_C;
 } RDar8424269_A;
@@ -1194,7 +1177,7 @@ static void RDar8424269_B(RDar8424269_A *p, unsigned char *RDar8424269_D,
   tmp2 = tmp2t[2];
 }
 
-// <rdar://problem/8642434> - Handle transparent unions with the NonNullParamChecker.
+// Handle transparent unions with the NonNullParamChecker.
 typedef union {
   struct rdar_8642434_typeA *_dq;
 }
@@ -1209,10 +1192,9 @@ void rdar_8642434_funcB(struct rdar_8642434_typeA *x, struct rdar_8642434_typeA 
     rdar_8642434_funcA(y); // expected-warning{{Null pointer passed to 1st parameter expecting 'nonnull'}}
 }
 
-// <rdar://problem/8848957> - Handle loads and stores from a symbolic index
-// into array without warning about an uninitialized value being returned.
-// While RegionStore can't fully reason about this example, it shouldn't
-// warn here either.
+// Handle loads and stores from a symbolic index into array without warning
+// about an uninitialized value being returned. While RegionStore can't fully
+// reason about this example, it shouldn't warn here either.
 typedef struct s_test_rdar8848957 {
   int x, y, z;
 } s_test_rdar8848957;
@@ -1330,7 +1312,6 @@ void rdar9444714(void) {
 }
 
 // Test handling symbolic elements with field accesses.
-// <rdar://problem/11127008>
 typedef struct {
     unsigned value;
 } RDar11127008;

@@ -61,7 +61,7 @@ private:
 
   /// Lower a HOM_Prolog pseudo instruction into a helper call
   /// or a sequence of homogeneous stores.
-  /// When a a fp setup follows, it can be optimized.
+  /// When a fp setup follows, it can be optimized.
   bool lowerProlog(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    MachineBasicBlock::iterator &NextMBBI);
   /// Lower a HOM_Epilog pseudo instruction into a helper call
@@ -146,8 +146,11 @@ static std::string getFrameHelperName(SmallVectorImpl<unsigned> &Regs,
     break;
   }
 
-  for (auto Reg : Regs)
+  for (auto Reg : Regs) {
+    if (Reg == AArch64::NoRegister)
+      continue;
     RegStream << AArch64InstPrinter::getRegisterName(Reg);
+  }
 
   return RegStream.str();
 }
@@ -195,46 +198,82 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 }
 
 /// Emit a store-pair instruction for frame-setup.
+/// If Reg2 is AArch64::NoRegister, emit STR instead.
 static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator Pos,
                       const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
                       int Offset, bool IsPreDec) {
+  assert(Reg1 != AArch64::NoRegister);
+  const bool IsPaired = Reg2 != AArch64::NoRegister;
   bool IsFloat = AArch64::FPR64RegClass.contains(Reg1);
   assert(!(IsFloat ^ AArch64::FPR64RegClass.contains(Reg2)));
   unsigned Opc;
-  if (IsPreDec)
-    Opc = IsFloat ? AArch64::STPDpre : AArch64::STPXpre;
-  else
-    Opc = IsFloat ? AArch64::STPDi : AArch64::STPXi;
+  if (IsPreDec) {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::STPDpre : AArch64::STRDpre;
+    else
+      Opc = IsPaired ? AArch64::STPXpre : AArch64::STRXpre;
+  } else {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::STPDi : AArch64::STRDui;
+    else
+      Opc = IsPaired ? AArch64::STPXi : AArch64::STRXui;
+  }
+  // The implicit scale for Offset is 8.
+  TypeSize Scale(0U, false), Width(0U, false);
+  int64_t MinOffset, MaxOffset;
+  [[maybe_unused]] bool Success =
+      AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
+  assert(Success && "Invalid Opcode");
+  Offset *= (8 / (int)Scale);
 
   MachineInstrBuilder MIB = BuildMI(MBB, Pos, DebugLoc(), TII.get(Opc));
   if (IsPreDec)
     MIB.addDef(AArch64::SP);
-  MIB.addReg(Reg2)
-      .addReg(Reg1)
+  if (IsPaired)
+    MIB.addReg(Reg2);
+  MIB.addReg(Reg1)
       .addReg(AArch64::SP)
       .addImm(Offset)
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
 /// Emit a load-pair instruction for frame-destroy.
+/// If Reg2 is AArch64::NoRegister, emit LDR instead.
 static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator Pos,
                      const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
                      int Offset, bool IsPostDec) {
+  assert(Reg1 != AArch64::NoRegister);
+  const bool IsPaired = Reg2 != AArch64::NoRegister;
   bool IsFloat = AArch64::FPR64RegClass.contains(Reg1);
   assert(!(IsFloat ^ AArch64::FPR64RegClass.contains(Reg2)));
   unsigned Opc;
-  if (IsPostDec)
-    Opc = IsFloat ? AArch64::LDPDpost : AArch64::LDPXpost;
-  else
-    Opc = IsFloat ? AArch64::LDPDi : AArch64::LDPXi;
+  if (IsPostDec) {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::LDPDpost : AArch64::LDRDpost;
+    else
+      Opc = IsPaired ? AArch64::LDPXpost : AArch64::LDRXpost;
+  } else {
+    if (IsFloat)
+      Opc = IsPaired ? AArch64::LDPDi : AArch64::LDRDui;
+    else
+      Opc = IsPaired ? AArch64::LDPXi : AArch64::LDRXui;
+  }
+  // The implicit scale for Offset is 8.
+  TypeSize Scale(0U, false), Width(0U, false);
+  int64_t MinOffset, MaxOffset;
+  [[maybe_unused]] bool Success =
+      AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
+  assert(Success && "Invalid Opcode");
+  Offset *= (8 / (int)Scale);
 
   MachineInstrBuilder MIB = BuildMI(MBB, Pos, DebugLoc(), TII.get(Opc));
   if (IsPostDec)
     MIB.addDef(AArch64::SP);
-  MIB.addReg(Reg2, getDefRegState(true))
-      .addReg(Reg1, getDefRegState(true))
+  if (IsPaired)
+    MIB.addReg(Reg2, getDefRegState(true));
+  MIB.addReg(Reg1, getDefRegState(true))
       .addReg(AArch64::SP)
       .addImm(Offset)
       .setMIFlag(MachineInstr::FrameDestroy);
@@ -433,9 +472,18 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
 
   DebugLoc DL = MI.getDebugLoc();
   SmallVector<unsigned, 8> Regs;
+  bool HasUnpairedReg = false;
   for (auto &MO : MI.operands())
-    if (MO.isReg())
+    if (MO.isReg()) {
+      if (!MO.getReg().isValid()) {
+        // For now we are only expecting unpaired GP registers which should
+        // occur exactly once.
+        assert(!HasUnpairedReg);
+        HasUnpairedReg = true;
+      }
       Regs.push_back(MO.getReg());
+    }
+  (void)HasUnpairedReg;
   int Size = (int)Regs.size();
   if (Size == 0)
     return false;
@@ -507,17 +555,26 @@ bool AArch64LowerHomogeneousPE::lowerProlog(
 
   DebugLoc DL = MI.getDebugLoc();
   SmallVector<unsigned, 8> Regs;
+  bool HasUnpairedReg = false;
   int LRIdx = 0;
   std::optional<int> FpOffset;
   for (auto &MO : MI.operands()) {
     if (MO.isReg()) {
-      if (MO.getReg() == AArch64::LR)
-        LRIdx = Regs.size();
+      if (MO.getReg().isValid()) {
+        if (MO.getReg() == AArch64::LR)
+          LRIdx = Regs.size();
+      } else {
+        // For now we are only expecting unpaired GP registers which should
+        // occur exactly once.
+        assert(!HasUnpairedReg);
+        HasUnpairedReg = true;
+      }
       Regs.push_back(MO.getReg());
     } else if (MO.isImm()) {
       FpOffset = MO.getImm();
     }
   }
+  (void)HasUnpairedReg;
   int Size = (int)Regs.size();
   if (Size == 0)
     return false;

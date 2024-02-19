@@ -18,20 +18,16 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    typedef std::string S;
-    S s1;
-    S s2;
-    TEST_LIBCPP_ASSERT_FAILURE(s1.begin() - s2.begin(), "Attempted to subtract incompatible iterators");
-  }
+template <class S>
+void test() {
+  S s1;
+  S s2;
+  TEST_LIBCPP_ASSERT_FAILURE(s1.begin() - s2.begin(), "Attempted to subtract incompatible iterators");
+}
 
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-    S s1;
-    S s2;
-    TEST_LIBCPP_ASSERT_FAILURE(s1.begin() - s2.begin(), "Attempted to subtract incompatible iterators");
-  }
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 
   return 0;
 }

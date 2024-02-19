@@ -311,6 +311,14 @@ protected:
   /// An OpenMP-IR-Builder instance.
   llvm::OpenMPIRBuilder OMPBuilder;
 
+  /// Helper to determine the min/max number of threads/teams for \p D.
+  void computeMinAndMaxThreadsAndTeams(const OMPExecutableDirective &D,
+                                       CodeGenFunction &CGF,
+                                       int32_t &MinThreadsVal,
+                                       int32_t &MaxThreadsVal,
+                                       int32_t &MinTeamsVal,
+                                       int32_t &MaxTeamsVal);
+
   /// Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
   /// \param ParentName Name of the function that encloses the target region.
@@ -527,28 +535,6 @@ protected:
   /// Returns pointer to kmpc_micro type.
   llvm::Type *getKmpc_MicroPointerTy();
 
-  /// Returns __kmpc_for_static_init_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned. Will create a distribute call
-  /// __kmpc_distribute_static_init* if \a IsGPUDistribute is set.
-  llvm::FunctionCallee createForStaticInitFunction(unsigned IVSize,
-                                                   bool IVSigned,
-                                                   bool IsGPUDistribute);
-
-  /// Returns __kmpc_dispatch_init_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
-  llvm::FunctionCallee createDispatchInitFunction(unsigned IVSize,
-                                                  bool IVSigned);
-
-  /// Returns __kmpc_dispatch_next_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
-  llvm::FunctionCallee createDispatchNextFunction(unsigned IVSize,
-                                                  bool IVSigned);
-
-  /// Returns __kmpc_dispatch_fini_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
-  llvm::FunctionCallee createDispatchFiniFunction(unsigned IVSize,
-                                                  bool IVSigned);
-
   /// If the specified mangled name is not in the module, create and
   /// return threadprivate cache object. This object is a pointer's worth of
   /// storage that's reserved for use by the OpenMP runtime.
@@ -659,21 +645,23 @@ public:
   /// Otherwise, return nullptr.
   const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
                                                 const OMPExecutableDirective &D,
-                                                int32_t &DefaultVal);
+                                                int32_t &MinTeamsVal,
+                                                int32_t &MaxTeamsVal);
   llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
                                               const OMPExecutableDirective &D);
-  /// Emit the number of threads for a target directive.  Inspect the
-  /// thread_limit clause associated with a teams construct combined or closely
-  /// nested with the target directive.
-  ///
-  /// Emit the num_threads clause for directives such as 'target parallel' that
-  /// have no associated teams construct.
-  ///
-  /// Otherwise, return nullptr.
-  const Expr *
-  getNumThreadsExprForTargetDirective(CodeGenFunction &CGF,
-                                      const OMPExecutableDirective &D,
-                                      int32_t &DefaultVal);
+
+  /// Check for a number of threads upper bound constant value (stored in \p
+  /// UpperBound), or expression (returned). If the value is conditional (via an
+  /// if-clause), store the condition in \p CondExpr. Similarly, a potential
+  /// thread limit expression is stored in \p ThreadLimitExpr. If \p
+  /// UpperBoundOnly is true, no expression evaluation is perfomed.
+  const Expr *getNumThreadsExprForTargetDirective(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      int32_t &UpperBound, bool UpperBoundOnly,
+      llvm::Value **CondExpr = nullptr, const Expr **ThreadLimitExpr = nullptr);
+
+  /// Emit an expression that denotes the number of threads a target region
+  /// shall use. Will generate "i32 0" to allow the runtime to choose.
   llvm::Value *
   emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
                                    const OMPExecutableDirective &D);
@@ -1101,13 +1089,12 @@ public:
                                  SourceLocation Loc, bool PerformInit,
                                  CodeGenFunction *CGF = nullptr);
 
-  /// Emit a code for initialization of declare target variable.
-  /// \param VD Declare target variable.
-  /// \param Addr Address of the global variable \a VD.
+  /// Emit code for handling declare target functions in the runtime.
+  /// \param FD Declare target function.
+  /// \param Addr Address of the global \a FD.
   /// \param PerformInit true if initialization expression is not constant.
-  virtual bool emitDeclareTargetVarDefinition(const VarDecl *VD,
-                                              llvm::GlobalVariable *Addr,
-                                              bool PerformInit);
+  virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
+                                         llvm::GlobalValue *GV);
 
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
@@ -1448,6 +1435,14 @@ public:
   /// \param ThreadLimit An integer expression of threads.
   virtual void emitNumTeamsClause(CodeGenFunction &CGF, const Expr *NumTeams,
                                   const Expr *ThreadLimit, SourceLocation Loc);
+
+  /// Emits call to void __kmpc_set_thread_limit(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 thread_limit) to generate code for
+  /// thread_limit clause on target directive
+  /// \param ThreadLimit An integer expression of threads.
+  virtual void emitThreadLimitClause(CodeGenFunction &CGF,
+                                     const Expr *ThreadLimit,
+                                     SourceLocation Loc);
 
   /// Struct that keeps all the relevant information that should be kept
   /// throughout a 'target data' region.

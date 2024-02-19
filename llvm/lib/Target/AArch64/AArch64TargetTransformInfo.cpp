@@ -46,6 +46,18 @@ static cl::opt<unsigned>
     NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(10),
                                cl::Hidden);
 
+static cl::opt<unsigned> CallPenaltyChangeSM(
+    "call-penalty-sm-change", cl::init(5), cl::Hidden,
+    cl::desc(
+        "Penalty of calling a function that requires a change to PSTATE.SM"));
+
+static cl::opt<unsigned> InlineCallPenaltyChangeSM(
+    "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
+    cl::desc("Penalty of inlining a call that requires a change to PSTATE.SM"));
+
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -190,15 +202,54 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
+static bool isSMEABIRoutineCall(const CallInst &CI) {
+  const auto *F = CI.getCalledFunction();
+  return F && StringSwitch<bool>(F->getName())
+                  .Case("__arm_sme_state", true)
+                  .Case("__arm_tpidr2_save", true)
+                  .Case("__arm_tpidr2_restore", true)
+                  .Case("__arm_za_disable", true)
+                  .Default(false);
+}
+
+/// Returns true if the function has explicit operations that can only be
+/// lowered using incompatible instructions for the selected mode. This also
+/// returns true if the function F may use or modify ZA state.
+static bool hasPossibleIncompatibleOps(const Function *F) {
+  for (const BasicBlock &BB : *F) {
+    for (const Instruction &I : BB) {
+      // Be conservative for now and assume that any call to inline asm or to
+      // intrinsics could could result in non-streaming ops (e.g. calls to
+      // @llvm.aarch64.* or @llvm.gather/scatter intrinsics). We can assume that
+      // all native LLVM instructions can be lowered to compatible instructions.
+      if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
+          (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
+           isSMEABIRoutineCall(cast<CallInst>(I))))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  SMEAttrs CallerAttrs(*Caller);
-  SMEAttrs CalleeAttrs(*Callee);
-  if (CallerAttrs.requiresSMChange(CalleeAttrs,
-                                   /*BodyOverridesInterface=*/true) ||
-      CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CalleeAttrs.hasNewZAInterface())
+  SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
+
+  // When inlining, we should consider the body of the function, not the
+  // interface.
+  if (CalleeAttrs.hasStreamingBody()) {
+    CalleeAttrs.set(SMEAttrs::SM_Compatible, false);
+    CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
+  }
+
+  if (CalleeAttrs.isNewZA())
     return false;
+
+  if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CallerAttrs.requiresSMChange(CalleeAttrs)) {
+    if (hasPossibleIncompatibleOps(Callee))
+      return false;
+  }
 
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
@@ -210,6 +261,64 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   // Inline a callee if its target-features are a subset of the callers
   // target-features.
   return (CallerBits & CalleeBits) == CalleeBits;
+}
+
+bool AArch64TTIImpl::areTypesABICompatible(
+    const Function *Caller, const Function *Callee,
+    const ArrayRef<Type *> &Types) const {
+  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
+    return false;
+
+  // We need to ensure that argument promotion does not attempt to promote
+  // pointers to fixed-length vector types larger than 128 bits like
+  // <8 x float> (and pointers to aggregate types which have such fixed-length
+  // vector type members) into the values of the pointees. Such vector types
+  // are used for SVE VLS but there is no ABI for SVE VLS arguments and the
+  // backend cannot lower such value arguments. The 128-bit fixed-length SVE
+  // types can be safely treated as 128-bit NEON types and they cannot be
+  // distinguished in IR.
+  if (ST->useSVEForFixedLengthVectors() && llvm::any_of(Types, [](Type *Ty) {
+        auto FVTy = dyn_cast<FixedVectorType>(Ty);
+        return FVTy &&
+               FVTy->getScalarSizeInBits() * FVTy->getNumElements() > 128;
+      }))
+    return false;
+
+  return true;
+}
+
+unsigned
+AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                     unsigned DefaultCallPenalty) const {
+  // This function calculates a penalty for executing Call in F.
+  //
+  // There are two ways this function can be called:
+  // (1)  F:
+  //       call from F -> G (the call here is Call)
+  //
+  // For (1), Call.getCaller() == F, so it will always return a high cost if
+  // a streaming-mode change is required (thus promoting the need to inline the
+  // function)
+  //
+  // (2)  F:
+  //       call from F -> G (the call here is not Call)
+  //      G:
+  //       call from G -> H (the call here is Call)
+  //
+  // For (2), if after inlining the body of G into F the call to H requires a
+  // streaming-mode change, and the call to G from F would also require a
+  // streaming-mode change, then there is benefit to do the streaming-mode
+  // change only once and avoid inlining of G into F.
+  SMEAttrs FAttrs(*F);
+  SMEAttrs CalleeAttrs(Call);
+  if (FAttrs.requiresSMChange(CalleeAttrs)) {
+    if (F == Call.getCaller()) // (1)
+      return CallPenaltyChangeSM * DefaultCallPenalty;
+    if (FAttrs.requiresSMChange(SMEAttrs(*Call.getCaller()))) // (2)
+      return InlineCallPenaltyChangeSM * DefaultCallPenalty;
+  }
+
+  return DefaultCallPenalty;
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
@@ -798,10 +907,31 @@ instCombineConvertFromSVBool(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceInstUsesWith(II, EarliestReplacement);
 }
 
+static bool isAllActivePredicate(Value *Pred) {
+  // Look through convert.from.svbool(convert.to.svbool(...) chain.
+  Value *UncastedPred;
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
+                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                          m_Value(UncastedPred)))))
+    // If the predicate has the same or less lanes than the uncasted
+    // predicate then we know the casting has no effect.
+    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
+        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
+      Pred = UncastedPred;
+
+  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+}
+
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  auto Select = IC.Builder.CreateSelect(II.getOperand(0), II.getOperand(1),
-                                        II.getOperand(2));
+  // svsel(ptrue, x, y) => x
+  auto *OpPredicate = II.getOperand(0);
+  if (isAllActivePredicate(OpPredicate))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+
+  auto Select =
+      IC.Builder.CreateSelect(OpPredicate, II.getOperand(1), II.getOperand(2));
   return IC.replaceInstUsesWith(II, Select);
 }
 
@@ -1200,22 +1330,6 @@ instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
   return IC.replaceInstUsesWith(II, Res);
 }
 
-static bool isAllActivePredicate(Value *Pred) {
-  // Look through convert.from.svbool(convert.to.svbool(...) chain.
-  Value *UncastedPred;
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
-                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
-                          m_Value(UncastedPred)))))
-    // If the predicate has the same or less lanes than the uncasted
-    // predicate then we know the casting has no effect.
-    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
-        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
-      Pred = UncastedPred;
-
-  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                         m_ConstantInt<AArch64SVEPredPattern::all>()));
-}
-
 static std::optional<Instruction *>
 instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *Pred = II.getOperand(0);
@@ -1301,9 +1415,23 @@ static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
   return &II;
 }
 
+// Simplify operations where predicate has all inactive lanes or try to replace
+// with _u form when all lanes are active
+static std::optional<Instruction *>
+instCombineSVEAllOrNoActive(InstCombiner &IC, IntrinsicInst &II,
+                            Intrinsic::ID IID) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    //  llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
+    //  inactive for sv[func]_m
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+  }
+  return instCombineSVEAllActive(II, IID);
+}
+
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_add_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_add_u))
     return II_U;
   if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
                                                    Intrinsic::aarch64_sve_mla>(
@@ -1318,7 +1446,8 @@ static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
 
 static std::optional<Instruction *>
 instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fadd_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fadd_u))
     return II_U;
   if (auto FMLA =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
@@ -1360,7 +1489,8 @@ instCombineSVEVectorFAddU(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *>
 instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fsub_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fsub_u))
     return II_U;
   if (auto FMLS =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
@@ -1402,7 +1532,8 @@ instCombineSVEVectorFSubU(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (auto II_U = instCombineSVEAllActive(II, Intrinsic::aarch64_sve_sub_u))
+  if (auto II_U =
+          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sub_u))
     return II_U;
   if (auto MLS = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
                                                    Intrinsic::aarch64_sve_mls>(
@@ -1417,11 +1548,6 @@ static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
   auto *OpPredicate = II.getOperand(0);
   auto *OpMultiplicand = II.getOperand(1);
   auto *OpMultiplier = II.getOperand(2);
-
-  // Canonicalise a non _u intrinsic only.
-  if (II.getIntrinsicID() != IID)
-    if (auto II_U = instCombineSVEAllActive(II, IID))
-      return II_U;
 
   // Return true if a given instruction is a unit splat value, false otherwise.
   auto IsUnitSplat = [](auto *I) {
@@ -1502,6 +1628,36 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
 
   VectorSplat->takeName(&II);
   return IC.replaceInstUsesWith(II, VectorSplat);
+}
+
+static std::optional<Instruction *> instCombineSVEUzp1(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *A, *B;
+  Type *RetTy = II.getType();
+  constexpr Intrinsic::ID FromSVB = Intrinsic::aarch64_sve_convert_from_svbool;
+  constexpr Intrinsic::ID ToSVB = Intrinsic::aarch64_sve_convert_to_svbool;
+
+  // uzp1(to_svbool(A), to_svbool(B)) --> <A, B>
+  // uzp1(from_svbool(to_svbool(A)), from_svbool(to_svbool(B))) --> <A, B>
+  if ((match(II.getArgOperand(0),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(A)))) &&
+       match(II.getArgOperand(1),
+             m_Intrinsic<FromSVB>(m_Intrinsic<ToSVB>(m_Value(B))))) ||
+      (match(II.getArgOperand(0), m_Intrinsic<ToSVB>(m_Value(A))) &&
+       match(II.getArgOperand(1), m_Intrinsic<ToSVB>(m_Value(B))))) {
+    auto *TyA = cast<ScalableVectorType>(A->getType());
+    if (TyA == B->getType() &&
+        RetTy == ScalableVectorType::getDoubleElementsVectorType(TyA)) {
+      auto *SubVec = IC.Builder.CreateInsertVector(
+          RetTy, PoisonValue::get(RetTy), A, IC.Builder.getInt64(0));
+      auto *ConcatVec = IC.Builder.CreateInsertVector(
+          RetTy, SubVec, B, IC.Builder.getInt64(TyA->getMinNumElements()));
+      ConcatVec->takeName(&II);
+      return IC.replaceInstUsesWith(II, ConcatVec);
+    }
+  }
+
+  return std::nullopt;
 }
 
 static std::optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
@@ -1786,34 +1942,38 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ptest_last:
     return instCombineSVEPTest(IC, II);
   case Intrinsic::aarch64_sve_fabd:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fabd_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fabd_u);
   case Intrinsic::aarch64_sve_fadd:
     return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fadd_u:
     return instCombineSVEVectorFAddU(IC, II);
   case Intrinsic::aarch64_sve_fdiv:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fdiv_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fdiv_u);
   case Intrinsic::aarch64_sve_fmax:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmax_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmax_u);
   case Intrinsic::aarch64_sve_fmaxnm:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmaxnm_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmaxnm_u);
   case Intrinsic::aarch64_sve_fmin:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmin_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmin_u);
   case Intrinsic::aarch64_sve_fminnm:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fminnm_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fminnm_u);
   case Intrinsic::aarch64_sve_fmla:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmla_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmla_u);
   case Intrinsic::aarch64_sve_fmls:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmls_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmls_u);
   case Intrinsic::aarch64_sve_fmul:
+    if (auto II_U =
+            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmul_u))
+      return II_U;
+    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmulx:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fmulx_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmulx_u);
   case Intrinsic::aarch64_sve_fnmla:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fnmla_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmla_u);
   case Intrinsic::aarch64_sve_fnmls:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_fnmls_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmls_u);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorFSub(IC, II);
   case Intrinsic::aarch64_sve_fsub_u:
@@ -1825,20 +1985,24 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_mla:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_mla_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mla_u);
   case Intrinsic::aarch64_sve_mls:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_mls_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mls_u);
   case Intrinsic::aarch64_sve_mul:
+    if (auto II_U =
+            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mul_u))
+      return II_U;
+    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_mul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_sabd:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_sabd_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sabd_u);
   case Intrinsic::aarch64_sve_smax:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_smax_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smax_u);
   case Intrinsic::aarch64_sve_smin:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_smin_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smin_u);
   case Intrinsic::aarch64_sve_smulh:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_smulh_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smulh_u);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
@@ -1846,31 +2010,31 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                              Intrinsic::aarch64_sve_mls_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_uabd:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_uabd_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uabd_u);
   case Intrinsic::aarch64_sve_umax:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_umax_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umax_u);
   case Intrinsic::aarch64_sve_umin:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_umin_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umin_u);
   case Intrinsic::aarch64_sve_umulh:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_umulh_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umulh_u);
   case Intrinsic::aarch64_sve_asr:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_asr_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_asr_u);
   case Intrinsic::aarch64_sve_lsl:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_lsl_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsl_u);
   case Intrinsic::aarch64_sve_lsr:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_lsr_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsr_u);
   case Intrinsic::aarch64_sve_and:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_and_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_and_u);
   case Intrinsic::aarch64_sve_bic:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_bic_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_bic_u);
   case Intrinsic::aarch64_sve_eor:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_eor_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_eor_u);
   case Intrinsic::aarch64_sve_orr:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_orr_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_orr_u);
   case Intrinsic::aarch64_sve_sqsub:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_sqsub_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sqsub_u);
   case Intrinsic::aarch64_sve_uqsub:
-    return instCombineSVEAllActive(II, Intrinsic::aarch64_sve_uqsub_u);
+    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uqsub_u);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);
   case Intrinsic::aarch64_sve_uunpkhi:
@@ -1878,6 +2042,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
+  case Intrinsic::aarch64_sve_uzp1:
+    return instCombineSVEUzp1(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
@@ -1943,8 +2109,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
     return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if ((ST->isStreaming() || ST->isStreamingCompatible()) &&
-        !EnableScalableAutovecInStreamingMode)
+    if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
       return TypeSize::getScalable(0);
 
     return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
@@ -2044,6 +2209,54 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   return NumDstEls == NumSrcEls && 2 * SrcElTySize == DstEltSize;
 }
 
+// s/urhadd instructions implement the following pattern, making the
+// extends free:
+//   %x = add ((zext i8 -> i16), 1)
+//   %y = (zext i8 -> i16)
+//   trunc i16 (lshr (add %x, %y), 1) -> i8
+//
+bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
+                                        Type *Src) {
+  // The source should be a legal vector type.
+  if (!Src->isVectorTy() || !TLI->isTypeLegal(TLI->getValueType(DL, Src)) ||
+      (Src->isScalableTy() && !ST->hasSVE2()))
+    return false;
+
+  if (ExtUser->getOpcode() != Instruction::Add || !ExtUser->hasOneUse())
+    return false;
+
+  // Look for trunc/shl/add before trying to match the pattern.
+  const Instruction *Add = ExtUser;
+  auto *AddUser =
+      dyn_cast_or_null<Instruction>(Add->getUniqueUndroppableUser());
+  if (AddUser && AddUser->getOpcode() == Instruction::Add)
+    Add = AddUser;
+
+  auto *Shr = dyn_cast_or_null<Instruction>(Add->getUniqueUndroppableUser());
+  if (!Shr || Shr->getOpcode() != Instruction::LShr)
+    return false;
+
+  auto *Trunc = dyn_cast_or_null<Instruction>(Shr->getUniqueUndroppableUser());
+  if (!Trunc || Trunc->getOpcode() != Instruction::Trunc ||
+      Src->getScalarSizeInBits() !=
+          cast<CastInst>(Trunc)->getDestTy()->getScalarSizeInBits())
+    return false;
+
+  // Try to match the whole pattern. Ext could be either the first or second
+  // m_ZExtOrSExt matched.
+  Instruction *Ex1, *Ex2;
+  if (!(match(Add, m_c_Add(m_Instruction(Ex1),
+                           m_c_Add(m_Instruction(Ex2), m_SpecificInt(1))))))
+    return false;
+
+  // Ensure both extends are of the same type
+  if (match(Ex1, m_ZExtOrSExt(m_Value())) &&
+      Ex1->getOpcode() == Ex2->getOpcode())
+    return true;
+
+  return false;
+}
+
 InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  Type *Src,
                                                  TTI::CastContextHint CCH,
@@ -2068,6 +2281,11 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       } else // Others are free so long as isWideningInstruction returned true.
         return 0;
     }
+
+    // The cast will be free for the s/urhadd instructions
+    if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
+        isExtPartOfAvgExpr(SingleUser, Dst, Src))
+      return 0;
   }
 
   // TODO: Allow non-throughput costs that aren't binary.
@@ -2409,6 +2627,25 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      TLI->getTypeAction(Src->getContext(), SrcTy) ==
+          TargetLowering::TypePromoteInteger &&
+      TLI->getTypeAction(Dst->getContext(), DstTy) ==
+          TargetLowering::TypeSplitVector) {
+    // The standard behaviour in the backend for these cases is to split the
+    // extend up into two parts:
+    //  1. Perform an extending load or masked load up to the legal type.
+    //  2. Extend the loaded data to the final type.
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    Type *LegalTy = EVT(SrcLT.second).getTypeForEVT(Src->getContext());
+    InstructionCost Part1 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, LegalTy, Src, CCH, CostKind, I);
+    InstructionCost Part2 = AArch64TTIImpl::getCastInstrCost(
+        Opcode, Dst, LegalTy, TTI::CastContextHint::None, CostKind, I);
+    return Part1 + Part2;
+  }
+
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
@@ -2558,6 +2795,18 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index) {
   return getVectorInstrCostHelper(&I, Val, Index, true /* HasRealUse */);
+}
+
+InstructionCost AArch64TTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind) {
+  if (isa<ScalableVectorType>(Ty))
+    return InstructionCost::getInvalid();
+  if (Ty->getElementType()->isFloatingPointTy())
+    return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                           CostKind);
+  return DemandedElts.popcount() * (Insert + Extract) *
+         ST->getVectorInsertExtractBaseCost();
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
@@ -2850,6 +3099,7 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).
   Options.LoadSizes = {8, 4, 2, 1};
+  Options.AllowedTailExpansions = {3, 5, 6};
   return Options;
 }
 
@@ -2885,12 +3135,16 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-  if (useNeonVector(DataTy))
+  if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = getTypeLegalizationCost(DataTy);
   if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
+  if (!LT.second.isVector() ||
+      !isElementTypeLegalForScalableVector(VT->getElementType()))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors
@@ -2963,14 +3217,47 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (Ty->isPtrOrPtrVectorTy())
     return LT.first;
 
-  // Check truncating stores and extending loads.
-  if (useNeonVector(Ty) &&
-      Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
-    // v4i8 types are lowered to scalar a load/store and sshll/xtn.
-    if (VT == MVT::v4i8)
-      return 2;
-    // Otherwise we need to scalarize.
-    return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+  if (useNeonVector(Ty)) {
+    // Check truncating stores and extending loads.
+    if (Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
+      // v4i8 types are lowered to scalar a load/store and sshll/xtn.
+      if (VT == MVT::v4i8)
+        return 2;
+      // Otherwise we need to scalarize.
+      return cast<FixedVectorType>(Ty)->getNumElements() * 2;
+    }
+    EVT EltVT = VT.getVectorElementType();
+    unsigned EltSize = EltVT.getScalarSizeInBits();
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
+        VT.getVectorNumElements() >= (128 / EltSize) || !Alignment ||
+        *Alignment != Align(1))
+      return LT.first;
+    // FIXME: v3i8 lowering currently is very inefficient, due to automatic
+    // widening to v4i8, which produces suboptimal results.
+    if (VT.getVectorNumElements() == 3 && EltVT == MVT::i8)
+      return LT.first;
+
+    // Check non-power-of-2 loads/stores for legal vector element types with
+    // NEON. Non-power-of-2 memory ops will get broken down to a set of
+    // operations on smaller power-of-2 ops, including ld1/st1.
+    LLVMContext &C = Ty->getContext();
+    InstructionCost Cost(0);
+    SmallVector<EVT> TypeWorklist;
+    TypeWorklist.push_back(VT);
+    while (!TypeWorklist.empty()) {
+      EVT CurrVT = TypeWorklist.pop_back_val();
+      unsigned CurrNumElements = CurrVT.getVectorNumElements();
+      if (isPowerOf2_32(CurrNumElements)) {
+        Cost += 1;
+        continue;
+      }
+
+      unsigned PrevPow2 = NextPowerOf2(CurrNumElements) / 2;
+      TypeWorklist.push_back(EVT::getVectorVT(C, EltVT, PrevPow2));
+      TypeWorklist.push_back(
+          EVT::getVectorVT(C, EltVT, CurrNumElements - PrevPow2));
+    }
+    return Cost;
   }
 
   return LT.first;
@@ -3272,9 +3559,9 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::UMax:
   case RecurKind::FMin:
   case RecurKind::FMax:
-  case RecurKind::SelectICmp:
-  case RecurKind::SelectFCmp:
   case RecurKind::FMulAdd:
+  case RecurKind::IAnyOf:
+  case RecurKind::FAnyOf:
     return true;
   default:
     return false;
@@ -3494,11 +3781,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // into smaller vectors and sum the cost of each shuffle.
   if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
-      cast<FixedVectorType>(Tp)->getNumElements() >
-          LT.second.getVectorNumElements() &&
-      !Index && !SubTp) {
-    unsigned TpNumElts = cast<FixedVectorType>(Tp)->getNumElements();
-    assert(Mask.size() == TpNumElts && "Expected Mask and Tp size to match!");
+      Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
+    unsigned TpNumElts = Mask.size();
     unsigned LTNumElts = LT.second.getVectorNumElements();
     unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
     VectorType *NTp =
@@ -3556,7 +3840,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return Cost;
   }
 
-  Kind = improveShuffleKindFromMask(Kind, Mask);
+  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+  // Treat extractsubvector as single op permutation.
+  bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
+  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+    Kind = TTI::SK_PermuteSingleSrc;
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -3719,6 +4007,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
+  // Restore optimal kind.
+  if (IsExtractSubvector)
+    Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
@@ -3803,4 +4094,16 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
+}
+
+bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
+  // For the binary operators (e.g. or) we need to be more careful than
+  // selects, here we only transform them if they are already at a natural
+  // break point in the code - the end of a block with an unconditional
+  // terminator.
+  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
+      isa<BranchInst>(I->getNextNode()) &&
+      cast<BranchInst>(I->getNextNode())->isUnconditional())
+    return true;
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }

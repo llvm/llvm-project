@@ -131,7 +131,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
-    addFortranRuntimeLibs(TC, CmdArgs);
+    addFortranRuntimeLibs(TC, Args, CmdArgs);
 
     // Inform the MSVC linker that we're generating a console application, i.e.
     // one with `main` as the "user-defined" entry point. The `main` function is
@@ -302,7 +302,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (A.getOption().matches(options::OPT_l)) {
       StringRef Lib = A.getValue();
       const char *LinkLibArg;
-      if (Lib.endswith(".lib"))
+      if (Lib.ends_with(".lib"))
         LinkLibArg = Args.MakeArgString(Lib);
       else
         LinkLibArg = Args.MakeArgString(Lib + ".lib");
@@ -315,7 +315,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     A.renderAsInput(Args, CmdArgs);
   }
 
-  addHIPRuntimeLibArgs(TC, Args, CmdArgs);
+  addHIPRuntimeLibArgs(TC, C, Args, CmdArgs);
 
   TC.addProfileRTLibs(Args, CmdArgs);
 
@@ -495,24 +495,24 @@ bool MSVCToolChain::isPICDefaultForced() const {
 
 void MSVCToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
-  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+  CudaInstallation->AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                       ArgStringList &CC1Args) const {
-  RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
+  RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,
                                          ArgStringList &CmdArgs) const {
   CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
-                                     RocmInstallation.getLibPath()),
+                                     RocmInstallation->getLibPath()),
                   "amdhip64.lib"});
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
-  CudaInstallation.print(OS);
-  RocmInstallation.print(OS);
+  CudaInstallation->print(OS);
+  RocmInstallation->print(OS);
 }
 
 std::string
@@ -585,7 +585,7 @@ bool MSVCToolChain::getUniversalCRTLibraryPath(const ArgList &Args,
   llvm::SmallString<128> LibPath(UniversalCRTSdkPath);
   llvm::sys::path::append(LibPath, "Lib", UCRTVersion, "ucrt", ArchName);
 
-  Path = std::string(LibPath.str());
+  Path = std::string(LibPath);
   return true;
 }
 
@@ -787,11 +787,11 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   if (MSVT.empty() &&
       Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
                    IsWindowsMSVC)) {
-    // -fms-compatibility-version=19.20 is default, aka 2019, 16.x
+    // -fms-compatibility-version=19.33 is default, aka 2022, 17.3
     // NOTE: when changing this value, also update
     // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.rst
     // accordingly.
-    MSVT = VersionTuple(19, 20);
+    MSVT = VersionTuple(19, 33);
   }
   return MSVT;
 }

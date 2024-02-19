@@ -37,8 +37,7 @@ struct MutuallyExclusiveRegionsOp
   }
 
   // Regions have no successors.
-  void getSuccessorRegions(std::optional<unsigned> index,
-                           ArrayRef<Attribute> operands,
+  void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {}
 };
 
@@ -52,15 +51,13 @@ struct LoopRegionsOp
 
   static StringRef getOperationName() { return "cftest.loop_regions_op"; }
 
-  void getSuccessorRegions(std::optional<unsigned> index,
-                           ArrayRef<Attribute> operands,
+  void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (index) {
-      if (*index == 1)
+    if (Region *region = point.getRegionOrNull()) {
+      if (point == (*this)->getRegion(1))
         // This region also branches back to the parent.
         regions.push_back(RegionSuccessor());
-      regions.push_back(
-          RegionSuccessor(&getOperation()->getRegion(*index % kNumRegions)));
+      regions.push_back(RegionSuccessor(region));
     }
   }
 };
@@ -76,12 +73,11 @@ struct DoubleLoopRegionsOp
     return "cftest.double_loop_regions_op";
   }
 
-  void getSuccessorRegions(std::optional<unsigned> index,
-                           ArrayRef<Attribute> operands,
+  void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (index.has_value()) {
+    if (Region *region = point.getRegionOrNull()) {
       regions.push_back(RegionSuccessor());
-      regions.push_back(RegionSuccessor(&getOperation()->getRegion(*index)));
+      regions.push_back(RegionSuccessor(region));
     }
   }
 };
@@ -95,10 +91,9 @@ struct SequentialRegionsOp
   static StringRef getOperationName() { return "cftest.sequential_regions_op"; }
 
   // Region 0 has Region 1 as a successor.
-  void getSuccessorRegions(std::optional<unsigned> index,
-                           ArrayRef<Attribute> operands,
+  void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (index == 0u) {
+    if (point == (*this)->getRegion(0)) {
       Operation *thisOp = this->getOperation();
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }

@@ -23,7 +23,7 @@
 // RUN: %clang  -### -target msp430 %s -mhwmult=f5series 2>&1 | FileCheck --check-prefix=CHECK-F5 %s
 // CHECK-F5: "-target-feature" "+hwmultf5"
 
-// RUN: %clang  -### -target msp430 %s -mhwmult=rrr 2>&1 | FileCheck --check-prefix=INVL-ARG %s
+// RUN: not %clang  -### --target=msp430 %s -mhwmult=rrr 2>&1 | FileCheck --check-prefix=INVL-ARG %s
 // INVL-ARG: error: unsupported argument 'rrr' to option '-mhwmult='
 
 // RUN: %clang  -### -target msp430 %s -mhwmult=auto 2>&1 | FileCheck --check-prefix=WRN-NODEV %s

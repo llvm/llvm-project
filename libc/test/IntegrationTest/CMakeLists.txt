@@ -3,6 +3,7 @@ if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
     -emit-llvm # AMDGPU's intermediate object file format is bitcode.
     --target=${LIBC_GPU_TARGET_TRIPLE}
+    -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION} # Manually set the ABI.
   )
 elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   set(TEST_COMPILE_FLAGS
@@ -14,6 +15,7 @@ endif()
 
 add_object_library(
   test
+  NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
   SRCS
     test.cpp
   COMPILE_OPTIONS
@@ -22,5 +24,4 @@ add_object_library(
     test.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
-  NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
 )

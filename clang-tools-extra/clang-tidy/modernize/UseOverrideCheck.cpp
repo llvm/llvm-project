@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseOverrideCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -85,8 +86,7 @@ parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
 }
 
 static StringRef getText(const Token &Tok, const SourceManager &Sources) {
-  return StringRef(Sources.getCharacterData(Tok.getLocation()),
-                   Tok.getLength());
+  return {Sources.getCharacterData(Tok.getLocation()), Tok.getLength()};
 }
 
 void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
@@ -229,9 +229,14 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   if (HasVirtual) {
     for (Token Tok : Tokens) {
       if (Tok.is(tok::kw_virtual)) {
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            Tok.getLocation(), Tok.getLocation()));
-        break;
+        std::optional<Token> NextToken =
+            utils::lexer::findNextTokenIncludingComments(
+                Tok.getEndLoc(), Sources, getLangOpts());
+        if (NextToken.has_value()) {
+          Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+              Tok.getLocation(), NextToken->getLocation()));
+          break;
+        }
       }
     }
   }

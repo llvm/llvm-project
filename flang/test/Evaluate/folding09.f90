@@ -3,6 +3,14 @@
 
 module m
   real, target :: hosted(2)
+  integer, parameter :: cst(2,2) = reshape([1, 2, 3, 4], shape(cst))
+  integer, parameter :: empty_cst(2,0) = reshape([1], shape(empty_cst))
+  integer :: n
+  logical, parameter :: test_param1 = is_contiguous(cst(:,1))
+  logical, parameter :: test_param2 = is_contiguous(cst(1,:))
+  logical, parameter :: test_param3 = is_contiguous(cst(:,n))
+  logical, parameter :: test_param4 = .not. is_contiguous(cst(n,:))
+  logical, parameter :: test_param5 = is_contiguous(empty_cst(n,-1:n:2))
  contains
   function f()
     real, pointer, contiguous :: f(:)
@@ -47,5 +55,14 @@ module m
         integer(kind=merge(1,-1,.not. is_contiguous(x))) n
       end block
     end associate
+  end subroutine
+  subroutine test2(x, vec)
+    type t
+      integer :: i
+    end type
+    type(t) :: x(100)
+    integer(8) :: vec(10)
+    integer(kind=merge(1,-1, .not. is_contiguous(x(1:50:2)%i)))    t01
+    integer(kind=merge(1,-1, .not. is_contiguous(x(vec)%i)))       t02
   end subroutine
 end module

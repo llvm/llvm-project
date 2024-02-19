@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-no-malloc %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: cppcoreguidelines-no-malloc.Allocations, value: "::malloc;::align_malloc;::calloc"},\
-// RUN:   {key: cppcoreguidelines-no-malloc.Reallocations, value: "::realloc;::align_realloc"},\
-// RUN:   {key: cppcoreguidelines-no-malloc.Deallocations, value: "::free;::align_free"}]}' \
+// RUN:  {cppcoreguidelines-no-malloc.Allocations: "::malloc;::align_malloc;::calloc",\
+// RUN:   cppcoreguidelines-no-malloc.Reallocations: "::realloc;::align_realloc",\
+// RUN:   cppcoreguidelines-no-malloc.Deallocations: "::free;::align_free"}}' \
 // RUN: --
 
 using size_t = __SIZE_TYPE__;

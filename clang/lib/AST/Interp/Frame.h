@@ -33,7 +33,7 @@ public:
   virtual Frame *getCaller() const = 0;
 
   /// Returns the location of the call site.
-  virtual SourceLocation getCallLocation() const = 0;
+  virtual SourceRange getCallRange() const = 0;
 
   /// Returns the called function's declaration.
   virtual const FunctionDecl *getCallee() const = 0;

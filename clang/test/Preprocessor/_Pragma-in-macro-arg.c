@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -Wconversion
 
-// Don't crash (rdar://11168596)
+// Don't crash
 #define A(desc) _Pragma("clang diagnostic push")  _Pragma("clang diagnostic ignored \"-Wparentheses\"") _Pragma("clang diagnostic pop")
 #define B(desc) A(desc)
 B(_Pragma("clang diagnostic ignored \"-Wparentheses\""))

@@ -122,10 +122,10 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurPPLexer = TheLexer;
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = TheLexer->isDependencyDirectivesLexer()
-                       ? CLK_DependencyDirectivesLexer
-                       : CLK_Lexer;
+  if (CurLexerCallback != CLK_LexAfterModuleImport)
+    CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
+                           ? CLK_DependencyDirectivesLexer
+                           : CLK_Lexer;
 
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {
@@ -161,8 +161,8 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = CLK_TokenLexer;
+  if (CurLexerCallback != CLK_LexAfterModuleImport)
+    CurLexerCallback = CLK_TokenLexer;
 }
 
 /// EnterTokenStream - Add a "macro" context to the top of the include stack,
@@ -180,7 +180,7 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
 void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
                                     bool DisableMacroExpansion, bool OwnsTokens,
                                     bool IsReinject) {
-  if (CurLexerKind == CLK_CachingLexer) {
+  if (CurLexerCallback == CLK_CachingLexer) {
     if (CachedLexPos < CachedTokens.size()) {
       assert(IsReinject && "new tokens in the middle of cached stream");
       // We're entering tokens into the middle of our cached token stream. We
@@ -216,8 +216,8 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = CLK_TokenLexer;
+  if (CurLexerCallback != CLK_LexAfterModuleImport)
+    CurLexerCallback = CLK_TokenLexer;
 }
 
 /// Compute the relative path that names the given file relative to
@@ -366,8 +366,8 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     if (const IdentifierInfo *ControllingMacro =
           CurPPLexer->MIOpt.GetControllingMacroAtEndOfFile()) {
       // Okay, this has a controlling macro, remember in HeaderFileInfo.
-      if (const FileEntry *FE = CurPPLexer->getFileEntry()) {
-        HeaderInfo.SetFileControllingMacro(FE, ControllingMacro);
+      if (OptionalFileEntryRef FE = CurPPLexer->getFileEntry()) {
+        HeaderInfo.SetFileControllingMacro(*FE, ControllingMacro);
         if (MacroInfo *MI =
               getMacroInfo(const_cast<IdentifierInfo*>(ControllingMacro)))
           MI->setUsedForHeaderGuard(true);
@@ -541,7 +541,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   Result.startToken();
   CurLexer->BufferPtr = EndPos;
 
-  if (isIncrementalProcessingEnabled()) {
+  if (getLangOpts().IncrementalExtensions) {
     CurLexer->FormTokenWithChars(Result, EndPos, tok::annot_repl_input_end);
     Result.setAnnotationEndLoc(Result.getLocation());
     Result.setAnnotationValue(nullptr);

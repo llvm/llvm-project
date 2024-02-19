@@ -23,7 +23,7 @@ namespace detail {
 LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
                               ValueRange operands,
                               ArrayRef<NamedAttribute> targetAttrs,
-                              LLVMTypeConverter &typeConverter,
+                              const LLVMTypeConverter &typeConverter,
                               ConversionPatternRewriter &rewriter);
 
 } // namespace detail
@@ -37,14 +37,14 @@ LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
-                       LLVMTypeConverter &typeConverter,
+                       const LLVMTypeConverter &typeConverter,
                        PatternBenefit benefit = 1);
 
 protected:
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
-  LLVMTypeConverter *getTypeConverter() const;
+  const LLVMTypeConverter *getTypeConverter() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
@@ -64,10 +64,6 @@ protected:
   /// integer attribute.
   static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
                                        Type resultType, int64_t value);
-
-  /// Create an LLVM dialect operation defining the given index constant.
-  Value createIndexConstant(ConversionPatternRewriter &builder, Location loc,
-                            uint64_t value) const;
 
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
@@ -93,10 +89,10 @@ protected:
   /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
-  /// %nullptr     = llvm.mlir.null : !llvm.ptr<f32>
+  /// %nullptr     = llvm.mlir.zero : !llvm.ptr
   /// %gep         = llvm.getelementptr %nullptr[%size]
-  ///                  : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
-  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<f32> to i64
+  ///                  : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr to i64
   ///
   /// If `sizeInBytes = false`, memref<4x?xf32> emits:
   /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
@@ -144,7 +140,7 @@ class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
 
-  explicit ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
+  explicit ConvertOpToLLVMPattern(const LLVMTypeConverter &typeConverter,
                                   PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(SourceOp::getOperationName(),
                              &typeConverter.getContext(), typeConverter,
@@ -153,13 +149,8 @@ public:
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
-    if constexpr (SourceOp::hasProperties())
-      return rewrite(cast<SourceOp>(op),
-              OpAdaptor(operands, op->getDiscardableAttrDictionary(),
-                        cast<SourceOp>(op).getProperties()),
-              rewriter);
-    rewrite(cast<SourceOp>(op),
-            OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
+    rewrite(cast<SourceOp>(op), OpAdaptor(operands, cast<SourceOp>(op)),
+            rewriter);
   }
   LogicalResult match(Operation *op) const final {
     return match(cast<SourceOp>(op));
@@ -167,15 +158,8 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    if constexpr (SourceOp::hasProperties())
-      return matchAndRewrite(cast<SourceOp>(op),
-                             OpAdaptor(operands,
-                                       op->getDiscardableAttrDictionary(),
-                                       cast<SourceOp>(op).getProperties()),
-                             rewriter);
-    return matchAndRewrite(
-        cast<SourceOp>(op),
-        OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
+    return matchAndRewrite(cast<SourceOp>(op),
+                           OpAdaptor(operands, cast<SourceOp>(op)), rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be

@@ -59,7 +59,7 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=FIJI %s
 // FIJI: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx803"
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip \
 // RUN:   --offload-arch=gfx900:xnack- \
 // RUN:   --offload-arch=gfx900:xnack+ \

@@ -9,7 +9,7 @@
 #ifndef LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
 #define LLDB_INTERPRETER_COMMANDRETURNOBJECT_H
 
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StreamTee.h"
 #include "lldb/lldb-private.h"

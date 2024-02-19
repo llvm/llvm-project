@@ -1,5 +1,7 @@
 # RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -f -o - | llvm-dwarfdump - --debug-info | FileCheck %s
 
+# RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs -y %s -f -o - | llvm-dwarfdump - --debug-info | FileCheck %s
+
 # Compile with:
 #  echo -e ".global _foo;\nfoo:\nnop" | clang -x assembler -g - -c -o /tmp/label.o
 

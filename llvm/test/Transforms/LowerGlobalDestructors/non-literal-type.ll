@@ -32,5 +32,5 @@ declare void @dtor()
 ; CHECK-NEXT:    ret void
 ;
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ;.

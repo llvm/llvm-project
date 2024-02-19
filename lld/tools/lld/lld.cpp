@@ -30,11 +30,9 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
@@ -75,7 +73,6 @@ LLD_HAS_DRIVER(macho)
 LLD_HAS_DRIVER(wasm)
 
 int lld_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM x(argc, argv);
   sys::Process::UseANSIEscapeCodes(true);
 
   if (::getenv("FORCE_LLD_DIAGNOSTICS_CRASH")) {

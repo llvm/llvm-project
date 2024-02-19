@@ -19,8 +19,8 @@ endfunction()
 
 function(get_debugserver_codesign_identity result)
   string(CONCAT not_found_help
-    "This will cause failures in the test suite."
-    "Pass '-DLLDB_USE_SYSTEM_DEBUGSERVER=ON' to use the system one instead."
+    "This will cause failures in the test suite. "
+    "Pass '-DLLDB_USE_SYSTEM_DEBUGSERVER=ON' to use the system one instead. "
     "See 'Code Signing on macOS' in the documentation."
   )
 

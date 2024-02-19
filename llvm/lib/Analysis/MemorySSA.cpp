@@ -1976,8 +1976,7 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
       }
       // Verify def-uses for full verify.
       if (VL == VerificationLevel::Full) {
-        assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
-                                            pred_begin(&B), pred_end(&B))) &&
+        assert(Phi->getNumOperands() == pred_size(&B) &&
                "Incomplete MemoryPhi Node");
         for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
           verifyUseInDefs(Phi->getIncomingValue(I), Phi);
@@ -2389,6 +2388,10 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
     MemoryAccess *StartingAccess, const MemoryLocation &Loc,
     BatchAAResults &BAA, unsigned &UpwardWalkLimit) {
   assert(!isa<MemoryUse>(StartingAccess) && "Use cannot be defining access");
+
+  // If location is undefined, conservatively return starting access.
+  if (Loc.Ptr == nullptr)
+    return StartingAccess;
 
   Instruction *I = nullptr;
   if (auto *StartingUseOrDef = dyn_cast<MemoryUseOrDef>(StartingAccess)) {

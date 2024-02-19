@@ -8,7 +8,7 @@ invocation (with the appropriate flags enabling the interactive mode)
 
 Examples:
 test/Transforms/Inline/ML/interactive-mode.ll
-test/CodeGen/MLRegalloc/interactive-mode.ll
+test/CodeGen/MLRegAlloc/interactive-mode.ll
 """
 
 import ctypes

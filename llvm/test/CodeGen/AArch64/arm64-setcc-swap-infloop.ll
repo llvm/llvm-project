@@ -12,14 +12,14 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 define <16 x i1> @setcc_swap_infloop(ptr %arg) {
 ; CHECK-LABEL: setcc_swap_infloop:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov w9, #16 ; =0x10
 ; CHECK-NEXT:    movi.16b v1, #1
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    ldr q0, [x8]
+; CHECK-NEXT:    cmeq.16b v0, v0, #0
 ; CHECK-NEXT:    cmeq.16b v2, v1, #0
 ; CHECK-NEXT:    str q1, [x8]
-; CHECK-NEXT:    cmeq.16b v0, v0, #0
-; CHECK-NEXT:    str q1, [x9]
+; CHECK-NEXT:    mov w8, #16 ; =0x10
+; CHECK-NEXT:    str q1, [x8]
 ; CHECK-NEXT:    orr.16b v0, v0, v2
 ; CHECK-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr nonnull null, i8 1, i64 32, i1 false)

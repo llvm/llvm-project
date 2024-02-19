@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize | FileCheck %s
 
 // CHECK-LABEL: func.func @fuse_unary
 func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
@@ -15,11 +15,13 @@ func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<
   return %1 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1]}
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1]}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }
 
 // -----
@@ -43,12 +45,14 @@ func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<
   return %1 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1]}
-    : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
-  transform.loop.peel %loops#0 : (!transform.op<"scf.for">) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1]}
+      : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
+    transform.loop.peel %loops#0 : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -86,13 +90,15 @@ func.func @interchange_reduction(%input: tensor<12x7x25xf32>) -> tensor<12x25xf3
   func.return %0 : tensor<12x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [5, 0, 7], tile_interchange = [0, 2, 1]}
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-  %2, %loops_2 = transform.structured.tile %1 [0, 4]
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [5, 0, 7], tile_interchange = [0, 2, 1]}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %2, %loops_2 = transform.structured.tile_using_for %1 [0, 4]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }
 
 // -----
@@ -112,9 +118,63 @@ func.func @unpack_elemwise(%arg0: tensor<16x48x8x8xf32>, %arg1: tensor<128x384xf
   return %2 : tensor<128x384xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [16, 32], tile_interchange = [0, 1]}
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [16, 32], tile_interchange = [0, 1]}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @pack_elemwise
+// CHECK:         %[[RES:.*]] = scf.for
+// CHECK:           scf.for
+// CHECK:             tensor.pack
+// CHECK:             linalg.elemwise_unary
+// CHECK:         return %[[RES]]
+func.func @pack_elemwise(%arg0: tensor<128x384xf32>, %arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32> {
+  %0 = tensor.empty() : tensor<16x48x8x8xf32>
+  %1 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+      : tensor<128x384xf32> -> tensor<16x48x8x8xf32>
+  %2 = linalg.elemwise_unary ins(%1: tensor<16x48x8x8xf32>)
+                             outs(%arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32>
+  return %2 : tensor<16x48x8x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [3, 5, 0, 0]}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @nofuse_pack_elemwise
+// CHECK:         tensor.pack
+// CHECK:         %[[RES:.*]] = scf.for
+// CHECK:           scf.for
+// CHECK:             linalg.elemwise_unary
+// CHECK:         return %[[RES]]
+func.func @nofuse_pack_elemwise(%arg0: tensor<128x384xf32>, %arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32> {
+  %0 = tensor.empty() : tensor<16x48x8x8xf32>
+  %1 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+      : tensor<128x384xf32> -> tensor<16x48x8x8xf32>
+  %2 = linalg.elemwise_unary ins(%1: tensor<16x48x8x8xf32>)
+                             outs(%arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32>
+  return %2 : tensor<16x48x8x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:3 = transform.structured.fuse %0 {tile_sizes = [3, 5, 2, 0]}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }

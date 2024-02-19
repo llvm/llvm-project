@@ -53,7 +53,7 @@ enum class DataArgAction : unsigned char {
 
 // Fix up the fact that, when we're migrating from a general bugffer atomic
 // to a load or to a CAS, the number of openrands, and thus the number of
-// entries needed in operand_segment_sizes, needs to change. We use this method
+// entries needed in operandSegmentSizes, needs to change. We use this method
 // because we'd like to preserve unknown attributes on the atomic instead of
 // discarding them.
 static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
@@ -61,7 +61,7 @@ static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
                                      DataArgAction action) {
   newAttrs.reserve(attrs.size());
   for (NamedAttribute attr : attrs) {
-    if (attr.getName().getValue() != "operand_segment_sizes") {
+    if (attr.getName().getValue() != "operandSegmentSizes") {
       newAttrs.push_back(attr);
       continue;
     }
@@ -152,7 +152,7 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
   }
   // gfx9 has no to a very limited support for floating-point min and max.
   if (chipset.majorVersion == 9) {
-    if (chipset.minorVersion >= 0x0a) {
+    if (chipset.minorVersion >= 0x0a && chipset.minorVersion != 0x41) {
       // gfx90a supports f64 max (and min, but we don't have a min wrapper right
       // now) but all other types need to be emulated.
       target.addDynamicallyLegalOp<RawBufferAtomicFmaxOp>(
@@ -162,11 +162,19 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
     } else {
       target.addIllegalOp<RawBufferAtomicFmaxOp>();
     }
+    if (chipset.minorVersion == 0x41) {
+      // gfx941 requires non-CAS atomics to be implemented with CAS loops.
+      // The workaround here mirrors HIP and OpenMP.
+      target.addIllegalOp<RawBufferAtomicFaddOp, RawBufferAtomicFmaxOp,
+                          RawBufferAtomicSmaxOp, RawBufferAtomicUminOp>();
+    }
   }
-  patterns
-      .add<RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
-           RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaxFOp>>(
-          patterns.getContext());
+  patterns.add<
+      RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
+      RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaximumFOp>,
+      RawBufferAtomicByCasPattern<RawBufferAtomicSmaxOp, arith::MaxSIOp>,
+      RawBufferAtomicByCasPattern<RawBufferAtomicUminOp, arith::MinUIOp>>(
+      patterns.getContext());
 }
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {

@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include <functional>
-#include <vector>
 
 namespace llvm {
 class CodeGenTarget;
@@ -105,11 +104,12 @@ class GlobalISelMatchTableExecutorEmitter {
     if (!Predicates.empty()) {
       OS << "  switch (PredicateID) {\n";
       for (const auto &Pred : Predicates) {
-        const auto Code = GetPredCode(Pred);
+        // Ensure all code is indented.
+        const auto Code = join(split(GetPredCode(Pred).str(), "\n"), "\n    ");
         OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
            << GetPredEnumName(Pred) << ": {\n"
            << "    " << Code << "\n";
-        if (!StringRef(Code).ltrim().startswith("return")) {
+        if (!StringRef(Code).ltrim().starts_with("return")) {
           OS << "    llvm_unreachable(\"" << GetPredEnumName(Pred)
              << " should have returned\");\n";
         }
@@ -222,6 +222,8 @@ public:
 
   // Map of predicates to their subtarget features.
   SubtargetFeatureInfoMap SubtargetFeatures;
+
+  std::map<std::string, unsigned> HwModes;
 };
 } // namespace llvm
 

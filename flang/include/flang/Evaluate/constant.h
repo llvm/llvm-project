@@ -46,7 +46,8 @@ inline int GetRank(const ConstantSubscripts &s) {
   return static_cast<int>(s.size());
 }
 
-std::size_t TotalElementCount(const ConstantSubscripts &);
+// Returns the number of elements of shape, if no overflow occurs.
+std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape);
 
 // Validate dimension re-ordering like ORDER in RESHAPE.
 // On success, return a vector that can be used as dimOrder in
@@ -63,12 +64,23 @@ public:
   explicit ConstantBounds(ConstantSubscripts &&shape);
   ~ConstantBounds();
   const ConstantSubscripts &shape() const { return shape_; }
+  int Rank() const { return GetRank(shape_); }
+  Constant<SubscriptInteger> SHAPE() const;
+
+  // It is possible in this representation for a constant array to have
+  // lower bounds other than 1, which is of course not expressible in
+  // Fortran.  This case arises only from definitions of named constant
+  // arrays with such bounds, as in:
+  //   REAL, PARAMETER :: NAMED(0:1) = [1.,2.]
+  // Bundling the lower bounds of the named constant with its
+  // constant value allows folding of subscripted array element
+  // references, LBOUND, and UBOUND without having to thread the named
+  // constant or its bounds throughout folding.
   const ConstantSubscripts &lbounds() const { return lbounds_; }
   ConstantSubscripts ComputeUbounds(std::optional<int> dim) const;
   void set_lbounds(ConstantSubscripts &&);
   void SetLowerBoundsToOne();
-  int Rank() const { return GetRank(shape_); }
-  Constant<SubscriptInteger> SHAPE() const;
+  bool HasNonDefaultLowerBound() const;
 
   // If no optional dimension order argument is passed, increments a vector of
   // subscripts in Fortran array order (first dimension varying most quickly).
@@ -114,7 +126,8 @@ public:
   constexpr Result result() const { return result_; }
 
   constexpr DynamicType GetType() const { return result_.GetType(); }
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &,
+      const parser::CharBlock *derivedTypeRename = nullptr) const;
 
 protected:
   std::vector<Element> Reshape(const ConstantSubscripts &) const;

@@ -217,7 +217,7 @@ define i8 @or_and2_or2(i8 %x) {
 ; CHECK-NEXT:    [[X2:%.*]] = and i8 [[O2]], 66
 ; CHECK-NEXT:    call void @use(i8 [[X2]])
 ; CHECK-NEXT:    [[BITFIELD:%.*]] = and i8 [[X]], -8
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[BITFIELD]], 3
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[BITFIELD]], 3
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o1 = or i8 %x, 1
@@ -243,7 +243,7 @@ define <2 x i8> @or_and2_or2_splat(<2 x i8> %x) {
 ; CHECK-NEXT:    [[X2:%.*]] = and <2 x i8> [[O2]], <i8 66, i8 66>
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[X2]])
 ; CHECK-NEXT:    [[BITFIELD:%.*]] = and <2 x i8> [[X]], <i8 -8, i8 -8>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[BITFIELD]], <i8 3, i8 3>
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i8> [[BITFIELD]], <i8 3, i8 3>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %o1 = or <2 x i8> %x, <i8 1, i8 1>
@@ -318,6 +318,20 @@ define <2 x i8> @and_or_hoist_mask_commute_vec_splat(<2 x i8> %a, <2 x i8> %b) {
   ret <2 x i8> %and
 }
 
+@g = external global i32
+
+define i32 @pr64114_and_xor_hoist_mask_constexpr() {
+; CHECK-LABEL: @pr64114_and_xor_hoist_mask_constexpr(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 ptrtoint (ptr @g to i32), 8
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 1
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %lshr = lshr i32 ptrtoint (ptr @g to i32), 8
+  %xor = xor i32 %lshr, ptrtoint (ptr @g to i32)
+  %and = and i32 %xor, 1
+  ret i32 %and
+}
+
 ; Don't transform if the 'or' has multiple uses because that would increase instruction count.
 
 define i8 @and_or_do_not_hoist_mask(i8 %a, i8 %b) {
@@ -341,7 +355,7 @@ define i64 @or_or_and_complex(i64 %i) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[I]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP1]], 71777214294589695
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP2]], -71777214294589696
-; CHECK-NEXT:    [[OR27:%.*]] = or i64 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[OR27:%.*]] = or disjoint i64 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i64 [[OR27]]
 ;
   %1 = lshr i64 %i, 8

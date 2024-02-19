@@ -100,7 +100,7 @@ public:
   JITSymbolFlags(FlagNames Flags, TargetFlagsType TargetFlags)
       : TargetFlags(TargetFlags), Flags(Flags) {}
 
-  /// Implicitly convert to bool. Returs true if any flag is set.
+  /// Implicitly convert to bool. Returns true if any flag is set.
   explicit operator bool() const { return Flags != None || TargetFlags != 0; }
 
   /// Compare for equality.

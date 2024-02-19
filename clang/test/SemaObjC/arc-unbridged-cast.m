@@ -15,7 +15,6 @@ id CFBridgingRelease(CFTypeRef);
 
 extern Object *object;
 
-// rdar://9744349
 id test0(void) {
   id p1 = (id)[object property];
   id p2 = (__bridge_transfer id)[object property];
@@ -23,7 +22,6 @@ id test0(void) {
   return (id) object.property;
 }
 
-// rdar://10140692
 CFStringRef unauditedString(void);
 CFStringRef plusOneString(void) __attribute__((cf_returns_retained));
 
@@ -82,7 +80,6 @@ void test1(int cond) {
   x = (id) (cond ? kUserConst : [object newString]); // expected-error{{requires a bridged cast}} expected-note{{use __bridge to}} expected-note{{use CFBridgingRelease call to}}
 }
 
-// rdar://problem/10246264
 @interface CFTaker
 - (void) takeOrdinary: (CFStringRef) arg;
 - (void) takeVariadic: (int) n, ...;

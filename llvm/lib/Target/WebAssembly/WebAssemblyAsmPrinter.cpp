@@ -18,13 +18,13 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -76,7 +76,7 @@ std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
          "Unlowered physical register encountered during assembly printing");
   assert(!MFI->isVRegStackified(RegNo));
   unsigned WAReg = MFI->getWAReg(RegNo);
-  assert(WAReg != WebAssemblyFunctionInfo::UnusedReg);
+  assert(WAReg != WebAssembly::UnusedReg);
   return '$' + utostr(WAReg);
 }
 
@@ -104,7 +104,7 @@ WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
 static bool isEmscriptenInvokeName(StringRef Name) {
   if (Name.front() == '"' && Name.back() == '"')
     Name = Name.substr(1, Name.size() - 2);
-  return Name.startswith("__invoke_");
+  return Name.starts_with("__invoke_");
 }
 
 // Returns a character that represents the given wasm value type in invoke
@@ -125,8 +125,9 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
+  default:
+    llvm_unreachable("Unhandled wasm::ValType enum");
   }
-  llvm_unreachable("Unhandled wasm::ValType enum");
 }
 
 // Given the wasm signature, generate the invoke name in the format JS glue code
@@ -235,7 +236,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     return WasmSym;
   }
 
-  if (Name.startswith("GCC_except_table")) {
+  if (Name.starts_with("GCC_except_table")) {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_DATA);
     return WasmSym;
   }

@@ -13,7 +13,7 @@
 ; RUN: llvm-lto -thinlto-action=internalize %t.bc -thinlto-index=%t3.bc -exported-symbol=_linkoncefunc -o - | llvm-dis -o - | FileCheck %s --check-prefix=MOD1-INT
 ; RUN: llvm-lto -thinlto-action=promote %t2.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=MOD2
 ; When exported, we always preserve a linkonce
-; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - --exported-symbol=_linkonceodrfuncInSingleModule | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTED
+; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - --exported-symbol=_linkonceodrfuncInSingleModule --exported-symbol=_weakfuncInSingleModule | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTED
 
 ;; Now try this with the new LTO API
 ; RUN: llvm-lto2 run %t.bc %t2.bc -o %t3.out -save-temps \
@@ -21,6 +21,7 @@
 ; RUN:   -r %t.bc,_linkoncealias,pl \
 ; RUN:   -r %t.bc,_linkonceodrvarInSingleModule,pl \
 ; RUN:   -r %t.bc,_weakodrvarInSingleModule,pl \
+; RUN:   -r %t.bc,_weakvarInSingleModule,pl \
 ; RUN:   -r %t.bc,_linkonceodrfuncwithalias,pl \
 ; RUN:   -r %t.bc,_linkoncefuncwithalias,pl \
 ; RUN:   -r %t.bc,_linkonceodrfunc,pl \
@@ -28,6 +29,7 @@
 ; RUN:   -r %t.bc,_weakodrfunc,pl \
 ; RUN:   -r %t.bc,_weakfunc,pl \
 ; RUN:   -r %t.bc,_linkonceodrfuncInSingleModule,pl \
+; RUN:   -r %t.bc,_weakfuncInSingleModule,pl \
 ; RUN:   -r %t2.bc,_linkonceodrfuncwithalias,l \
 ; RUN:   -r %t2.bc,_linkoncefuncwithalias,l \
 ; RUN:   -r %t2.bc,_linkonceodrfunc,l \
@@ -55,8 +57,10 @@ target triple = "x86_64-apple-macosx10.11.0"
 ;; of whether they are const or *unnamed_addr.
 ; MOD1-INT: @linkonceodrvarInSingleModule = internal global
 ; MOD1-INT: @weakodrvarInSingleModule = internal global
+; MOD1-INT: @weakvarInSingleModule = internal global
 @linkonceodrvarInSingleModule = linkonce_odr dso_local global ptr null, align 8
 @weakodrvarInSingleModule = weak_odr dso_local global ptr null, align 8
+@weakvarInSingleModule = weak dso_local global ptr null, align 8
 
 ;; Function with an alias are resolved to weak_odr in prevailing module, but
 ;; not optimized in non-prevailing module (illegal to have an
@@ -112,6 +116,14 @@ entry:
 ; MOD1-INT: define internal void @linkonceodrfuncInSingleModule()
 ; EXPORTED: define weak_odr void @linkonceodrfuncInSingleModule()
 define linkonce_odr void @linkonceodrfuncInSingleModule() #0 {
+entry:
+  ret void
+}
+
+; MOD1: define weak void @weakfuncInSingleModule()
+; MOD1-INT: define internal void @weakfuncInSingleModule()
+; EXPORTED: define weak void @weakfuncInSingleModule()
+define weak void @weakfuncInSingleModule() {
 entry:
   ret void
 }

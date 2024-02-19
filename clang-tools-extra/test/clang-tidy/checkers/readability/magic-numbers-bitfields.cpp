@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-magic-numbers %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: readability-magic-numbers.IgnoredIntegerValues, value: "1;2;10;100;"}]}' \
+// RUN:  {readability-magic-numbers.IgnoredIntegerValues: "1;2;10;100;"}}' \
 // RUN: --
 
 struct HardwareGateway {

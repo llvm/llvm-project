@@ -76,7 +76,6 @@ static_library("Core") {
     "SourceLocationSpec.cpp",
     "SourceManager.cpp",
     "StreamAsynchronousIO.cpp",
-    "StreamFile.cpp",
     "ThreadedCommunication.cpp",
     "UserSettingsController.cpp",
     "Value.cpp",
@@ -93,6 +92,7 @@ static_library("Core") {
     "ValueObjectRegister.cpp",
     "ValueObjectSyntheticFilter.cpp",
     "ValueObjectUpdater.cpp",
+    "ValueObjectVTable.cpp",
     "ValueObjectVariable.cpp",
   ]
 }

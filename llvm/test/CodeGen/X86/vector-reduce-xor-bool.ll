@@ -342,17 +342,29 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) nounwind {
 }
 
 define i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
-; SSE-LABEL: trunc_v16i16_v16i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    psllw $7, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    xorb %ah, %al
-; SSE-NEXT:    setnp %al
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE2-LABEL: trunc_v16i16_v16i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-NEXT:    psllw $7, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    xorb %ah, %al
+; SSE2-NEXT:    setnp %al
+; SSE2-NEXT:    ret{{[l|q]}}
+;
+; SSE41-LABEL: trunc_v16i16_v16i1:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm2, %xmm1
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    psllw $7, %xmm0
+; SSE41-NEXT:    pmovmskb %xmm0, %eax
+; SSE41-NEXT:    xorb %ah, %al
+; SSE41-NEXT:    setnp %al
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_v16i16_v16i1:
 ; AVX1:       # %bb.0:
@@ -658,7 +670,7 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
 ;
 ; SSE41-LABEL: trunc_v16i32_v16i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm4 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm4, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
@@ -768,21 +780,37 @@ define i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-SSE-LABEL: trunc_v32i16_v32i1:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; X64-SSE-NEXT:    pand %xmm4, %xmm3
-; X64-SSE-NEXT:    pand %xmm4, %xmm2
-; X64-SSE-NEXT:    packuswb %xmm3, %xmm2
-; X64-SSE-NEXT:    pand %xmm4, %xmm1
-; X64-SSE-NEXT:    pand %xmm4, %xmm0
-; X64-SSE-NEXT:    packuswb %xmm1, %xmm0
-; X64-SSE-NEXT:    pxor %xmm2, %xmm0
-; X64-SSE-NEXT:    psllw $7, %xmm0
-; X64-SSE-NEXT:    pmovmskb %xmm0, %eax
-; X64-SSE-NEXT:    xorb %ah, %al
-; X64-SSE-NEXT:    setnp %al
-; X64-SSE-NEXT:    retq
+; X64-SSE2-LABEL: trunc_v32i16_v32i1:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; X64-SSE2-NEXT:    pand %xmm4, %xmm3
+; X64-SSE2-NEXT:    pand %xmm4, %xmm2
+; X64-SSE2-NEXT:    packuswb %xmm3, %xmm2
+; X64-SSE2-NEXT:    pand %xmm4, %xmm1
+; X64-SSE2-NEXT:    pand %xmm4, %xmm0
+; X64-SSE2-NEXT:    packuswb %xmm1, %xmm0
+; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
+; X64-SSE2-NEXT:    psllw $7, %xmm0
+; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
+; X64-SSE2-NEXT:    xorb %ah, %al
+; X64-SSE2-NEXT:    setnp %al
+; X64-SSE2-NEXT:    retq
+;
+; SSE41-LABEL: trunc_v32i16_v32i1:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm4, %xmm3
+; SSE41-NEXT:    pand %xmm4, %xmm2
+; SSE41-NEXT:    packuswb %xmm3, %xmm2
+; SSE41-NEXT:    pand %xmm4, %xmm1
+; SSE41-NEXT:    pand %xmm4, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    psllw $7, %xmm0
+; SSE41-NEXT:    pmovmskb %xmm0, %eax
+; SSE41-NEXT:    xorb %ah, %al
+; SSE41-NEXT:    setnp %al
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_v32i16_v32i1:
 ; AVX1:       # %bb.0:
@@ -1209,13 +1237,12 @@ define i1 @icmp0_v4i64_v4i1(<4 x i64>) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
-; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    packssdw %xmm3, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    setnp %al
 ; SSE2-NEXT:    ret{{[l|q]}}
@@ -2242,13 +2269,12 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) nounwind {
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; X86-SSE2-NEXT:    pand %xmm0, %xmm2
 ; X86-SSE2-NEXT:    pcmpeqd 8(%ebp), %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
-; X86-SSE2-NEXT:    pand %xmm1, %xmm0
-; X86-SSE2-NEXT:    packssdw %xmm0, %xmm2
-; X86-SSE2-NEXT:    movmskps %xmm2, %eax
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X86-SSE2-NEXT:    andps %xmm2, %xmm0
+; X86-SSE2-NEXT:    movmskps %xmm0, %eax
 ; X86-SSE2-NEXT:    testb %al, %al
 ; X86-SSE2-NEXT:    setnp %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
@@ -2258,13 +2284,12 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) nounwind {
 ; X64-SSE2-LABEL: icmp_v4i64_v4i1:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
-; X64-SSE2-NEXT:    pand %xmm1, %xmm3
 ; X64-SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; X64-SSE2-NEXT:    pand %xmm0, %xmm1
-; X64-SSE2-NEXT:    packssdw %xmm3, %xmm1
-; X64-SSE2-NEXT:    movmskps %xmm1, %eax
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; X64-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; X64-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-SSE2-NEXT:    andps %xmm2, %xmm0
+; X64-SSE2-NEXT:    movmskps %xmm0, %eax
 ; X64-SSE2-NEXT:    testb %al, %al
 ; X64-SSE2-NEXT:    setnp %al
 ; X64-SSE2-NEXT:    retq

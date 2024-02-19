@@ -60,11 +60,7 @@ public:
   // Constructors
   EventDataBytes();
 
-  EventDataBytes(const char *cstr);
-
   EventDataBytes(llvm::StringRef str);
-
-  EventDataBytes(const void *src, size_t src_len);
 
   ~EventDataBytes() override;
 
@@ -76,12 +72,6 @@ public:
   const void *GetBytes() const;
 
   size_t GetByteSize() const;
-
-  void SetBytes(const void *src, size_t src_len);
-
-  void SwapBytes(std::string &new_bytes);
-
-  void SetBytesFromCString(const char *cstr);
 
   // Static functions
   static const EventDataBytes *GetEventDataFromEvent(const Event *event_ptr);
@@ -176,7 +166,7 @@ private:
 };
 
 // lldb::Event
-class Event {
+class Event : public std::enable_shared_from_this<Event> {
   friend class Listener;
   friend class EventData;
   friend class Broadcaster::BroadcasterImpl;
@@ -226,6 +216,12 @@ public:
 
   void Clear() { m_data_sp.reset(); }
 
+  /// This is used by Broadcasters with Primary Listeners to store the other
+  /// Listeners till after the Event's DoOnRemoval has completed.
+  void AddPendingListener(lldb::ListenerSP pending_listener_sp) {
+    m_pending_listeners.push_back(pending_listener_sp);
+  };
+
 private:
   // This is only called by Listener when it pops an event off the queue for
   // the listener.  It calls the Event Data's DoOnRemoval() method, which is
@@ -244,6 +240,8 @@ private:
       m_broadcaster_wp;        // The broadcaster that sent this event
   uint32_t m_type;             // The bit describing this event
   lldb::EventDataSP m_data_sp; // User specific data for this event
+  std::vector<lldb::ListenerSP> m_pending_listeners;
+  std::mutex m_listeners_mutex;
 
   Event(const Event &) = delete;
   const Event &operator=(const Event &) = delete;

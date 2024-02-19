@@ -58,13 +58,15 @@ public:
       return rewriter.notifyMatchFailure(
           op, "0-D and 1-D vectors are handled separately");
 
+    if (dstType.getScalableDims().front())
+      return rewriter.notifyMatchFailure(
+          op, "Cannot unroll leading scalable dim in dstType");
+
     auto loc = op.getLoc();
-    auto eltType = dstType.getElementType();
     int64_t dim = dstType.getDimSize(0);
     Value idx = op.getOperand(0);
 
-    VectorType lowType =
-        VectorType::get(dstType.getShape().drop_front(), eltType);
+    VectorType lowType = VectorType::Builder(dstType).dropDim(0);
     Value trueVal = rewriter.create<vector::CreateMaskOp>(
         loc, lowType, op.getOperands().drop_front());
     Value falseVal = rewriter.create<arith::ConstantOp>(
@@ -77,9 +79,7 @@ public:
       Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  bnd, idx);
       Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
-      auto pos = rewriter.getI64ArrayAttr(d);
-      result =
-          rewriter.create<vector::InsertOp>(loc, dstType, sel, result, pos);
+      result = rewriter.create<vector::InsertOp>(loc, sel, result, d);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -105,7 +105,6 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto dstType = op.getType();
-    auto eltType = dstType.getElementType();
     auto dimSizes = op.getMaskDimSizes();
     int64_t rank = dstType.getRank();
 
@@ -115,47 +114,45 @@ public:
       bool value = cast<IntegerAttr>(dimSizes[0]).getInt() == 1;
       rewriter.replaceOpWithNewOp<arith::ConstantOp>(
           op, dstType,
-          DenseIntElementsAttr::get(
-              VectorType::get(ArrayRef<int64_t>{}, rewriter.getI1Type()),
-              ArrayRef<bool>{value}));
+          DenseIntElementsAttr::get(VectorType::get({}, rewriter.getI1Type()),
+                                    value));
       return success();
     }
 
-    // Scalable constant masks can only be lowered for the "none set" case.
-    if (cast<VectorType>(dstType).isScalable()) {
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-          op, DenseElementsAttr::get(dstType, false));
-      return success();
-    }
-
-    int64_t trueDim = std::min(dstType.getDimSize(0),
-                               cast<IntegerAttr>(dimSizes[0]).getInt());
+    int64_t trueDimSize = cast<IntegerAttr>(dimSizes[0]).getInt();
 
     if (rank == 1) {
-      // Express constant 1-D case in explicit vector form:
-      //   [T,..,T,F,..,F].
-      SmallVector<bool> values(dstType.getDimSize(0));
-      for (int64_t d = 0; d < trueDim; d++)
-        values[d] = true;
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-          op, dstType, rewriter.getBoolVectorAttr(values));
+      if (trueDimSize == 0 || trueDimSize == dstType.getDimSize(0)) {
+        // Use constant splat for 'all set' or 'none set' dims.
+        // This produces correct code for scalable dimensions (it will lower to
+        // a constant splat).
+        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+            op, DenseElementsAttr::get(dstType, trueDimSize != 0));
+      } else {
+        // Express constant 1-D case in explicit vector form:
+        //   [T,..,T,F,..,F].
+        // Note: The verifier would reject this case for scalable vectors.
+        SmallVector<bool> values(dstType.getDimSize(0), false);
+        for (int64_t d = 0; d < trueDimSize; d++)
+          values[d] = true;
+        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+            op, dstType, rewriter.getBoolVectorAttr(values));
+      }
       return success();
     }
 
-    VectorType lowType =
-        VectorType::get(dstType.getShape().drop_front(), eltType);
-    SmallVector<int64_t> newDimSizes;
-    for (int64_t r = 1; r < rank; r++)
-      newDimSizes.push_back(cast<IntegerAttr>(dimSizes[r]).getInt());
+    if (dstType.getScalableDims().front())
+      return rewriter.notifyMatchFailure(
+          op, "Cannot unroll leading scalable dim in dstType");
+
+    VectorType lowType = VectorType::Builder(dstType).dropDim(0);
     Value trueVal = rewriter.create<vector::ConstantMaskOp>(
-        loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
+        loc, lowType, rewriter.getArrayAttr(dimSizes.getValue().drop_front()));
     Value result = rewriter.create<arith::ConstantOp>(
         loc, dstType, rewriter.getZeroAttr(dstType));
-    for (int64_t d = 0; d < trueDim; d++) {
-      auto pos = rewriter.getI64ArrayAttr(d);
-      result =
-          rewriter.create<vector::InsertOp>(loc, dstType, trueVal, result, pos);
-    }
+    for (int64_t d = 0; d < trueDimSize; d++)
+      result = rewriter.create<vector::InsertOp>(loc, trueVal, result, d);
+
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -191,7 +188,9 @@ struct MaskOpRewritePattern : OpRewritePattern<MaskOp> {
 private:
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const final {
-    auto maskableOp = cast<MaskableOpInterface>(maskOp.getMaskableOp());
+    auto maskableOp = cast_or_null<MaskableOpInterface>(maskOp.getMaskableOp());
+    if (!maskableOp)
+      return failure();
     SourceOp sourceOp = dyn_cast<SourceOp>(maskableOp.getOperation());
     if (!sourceOp)
       return failure();
@@ -285,6 +284,7 @@ struct LowerVectorMaskPass
 
     RewritePatternSet loweringPatterns(context);
     populateVectorMaskLoweringPatternsForSideEffectingOps(loweringPatterns);
+    MaskOp::getCanonicalizationPatterns(loweringPatterns, context);
 
     if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();

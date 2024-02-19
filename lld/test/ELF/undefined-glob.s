@@ -52,7 +52,7 @@
 # RUN: not ld.lld -o /dev/null %t.o %t.a --undefined-glob '[' 2>&1 | \
 # RUN:   FileCheck -check-prefix=BAD-PATTERN %s
 
-# BAD-PATTERN: --undefined-glob: invalid glob pattern: [
+# BAD-PATTERN: --undefined-glob: invalid glob pattern, unmatched '[': [
 
 .globl _start
 _start:

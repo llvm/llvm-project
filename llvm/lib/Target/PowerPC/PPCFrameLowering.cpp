@@ -466,7 +466,7 @@ PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
       RS.enterBasicBlock(*MBB);
     } else {
       RS.enterBasicBlockEnd(*MBB);
-      RS.backward(std::prev(MBBI));
+      RS.backward(MBBI);
     }
   } else {
     // The scratch register will be used at the start of the block.
@@ -1441,8 +1441,11 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
       ProbeLoopBodyMBB->addSuccessor(ProbeLoopBodyMBB);
     }
     // Update liveins.
-    recomputeLiveIns(*ProbeLoopBodyMBB);
-    recomputeLiveIns(*ProbeExitMBB);
+    bool anyChange = false;
+    do {
+      anyChange = recomputeLiveIns(*ProbeExitMBB) ||
+                  recomputeLiveIns(*ProbeLoopBodyMBB);
+    } while (anyChange);
     return ProbeExitMBB;
   };
   // For case HasBP && MaxAlign > 1, we have to realign the SP by performing
@@ -1534,8 +1537,10 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
         buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
       }
       // Update liveins.
-      recomputeLiveIns(*LoopMBB);
-      recomputeLiveIns(*ExitMBB);
+      bool anyChange = false;
+      do {
+        anyChange = recomputeLiveIns(*ExitMBB) || recomputeLiveIns(*LoopMBB);
+      } while (anyChange);
     }
   }
   ++NumPrologProbed;
@@ -2334,24 +2339,16 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // In case of SPE we only have SuperRegs and CRs
     // in our CalleSaveInfo vector.
 
-    unsigned Idx = 0;
     for (auto &CalleeSaveReg : CSI) {
-      const MCPhysReg &Reg = CalleeSaveReg.getReg();
-      const MCPhysReg &Lower = RegInfo->getSubReg(Reg, 1);
-      const MCPhysReg &Higher = RegInfo->getSubReg(Reg, 2);
+      MCPhysReg Reg = CalleeSaveReg.getReg();
+      MCPhysReg Lower = RegInfo->getSubReg(Reg, 1);
+      MCPhysReg Higher = RegInfo->getSubReg(Reg, 2);
 
-      // Check only for SuperRegs.
-      if (Lower) {
-        if (MRI.isPhysRegModified(Higher)) {
-          Idx++;
-          continue;
-        } else {
+      if ( // Check only for SuperRegs.
+          Lower &&
           // Replace Reg if only lower-32 bits modified
-          CSI.erase(CSI.begin() + Idx);
-          CSI.insert(CSI.begin() + Idx, CalleeSavedInfo(Lower));
-        }
-      }
-      Idx++;
+          !MRI.isPhysRegModified(Higher))
+        CalleeSaveReg = CalleeSavedInfo(Lower);
     }
   }
 
@@ -2739,4 +2736,18 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   if (MF.getInfo<PPCFunctionInfo>()->shrinkWrapDisabled())
     return false;
   return !MF.getSubtarget<PPCSubtarget>().is32BitELFABI();
+}
+
+uint64_t PPCFrameLowering::getStackThreshold() const {
+  // On PPC64, we use `stux r1, r1, <scratch_reg>` to extend the stack;
+  // use `add r1, r1, <scratch_reg>` to release the stack frame.
+  // Scratch register contains a signed 64-bit number, which is negative
+  // when extending the stack and is positive when releasing the stack frame.
+  // To make `stux` and `add` paired, the absolute value of the number contained
+  // in the scratch register should be the same. Thus the maximum stack size
+  // is (2^63)-1, i.e., LONG_MAX.
+  if (Subtarget.isPPC64())
+    return LONG_MAX;
+
+  return TargetFrameLowering::getStackThreshold();
 }

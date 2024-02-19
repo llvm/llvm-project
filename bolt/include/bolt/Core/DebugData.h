@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -63,7 +64,7 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
                                           dwarf::Attribute Attr);
 
 // DWARF5 Header in order of encoding.
-// Types represent encodnig sizes.
+// Types represent encoding sizes.
 using UnitLengthType = uint32_t;
 using VersionType = uint16_t;
 using AddressSizeType = uint8_t;
@@ -95,6 +96,12 @@ static inline bool operator<(const DebugAddressRange &LHS,
   return std::tie(LHS.LowPC, LHS.HighPC) < std::tie(RHS.LowPC, RHS.HighPC);
 }
 
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DebugAddressRange &Range) {
+  OS << formatv("[{0:x}, {1:x})", Range.LowPC, Range.HighPC);
+  return OS;
+}
+
 /// DebugAddressRangesVector - represents a set of absolute address ranges.
 using DebugAddressRangesVector = SmallVector<DebugAddressRange, 2>;
 
@@ -105,6 +112,18 @@ struct DebugLocationEntry {
   uint64_t HighPC;
   SmallVector<uint8_t, 4> Expr;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DebugLocationEntry &Entry) {
+  OS << formatv("[{0:x}, {1:x}) : [", Entry.LowPC, Entry.HighPC);
+  const char *Sep = "";
+  for (unsigned Byte : Entry.Expr) {
+    OS << Sep << Byte;
+    Sep = ", ";
+  }
+  OS << "]";
+  return OS;
+}
 
 using DebugLocationsVector = SmallVector<DebugLocationEntry, 4>;
 
@@ -313,9 +332,6 @@ public:
   /// Adds Address to map.
   uint32_t getIndexFromAddress(uint64_t Address, DWARFUnit &CU);
 
-  /// Adds {\p Address, \p Index} to \p CU.
-  void addIndexAddress(uint64_t Address, uint32_t Index, DWARFUnit &CU);
-
   /// Write out entries in to .debug_addr section for CUs.
   virtual void update(DIEBuilder &DIEBlder, DWARFUnit &CUs);
 
@@ -356,13 +372,13 @@ protected:
     }
 
     /// Updates AddressToIndex Map.
-    /// Follows the same symantics as unordered map [].
+    /// Follows the same semantics as unordered map [].
     void updateAddressToIndex(uint64_t Address, uint32_t Index) {
       AddressToIndex[Address] = Index;
     }
 
     /// Updates IndexToAddress Map.
-    /// Follows the same symantics as unordered map [].
+    /// Follows the same semantics as unordered map [].
     void updateIndexToAddrss(uint64_t Address, uint32_t Index) {
       IndexToAddress[Index] = Address;
     }
@@ -420,10 +436,6 @@ public:
     StrOffsetsStream = std::make_unique<raw_svector_ostream>(*StrOffsetsBuffer);
   }
 
-  /// Initializes Buffer and Stream.
-  void initialize(const DWARFSection &StrOffsetsSection,
-                  const std::optional<StrOffsetsContributionDescriptor> Contr);
-
   /// Update Str offset in .debug_str in .debug_str_offsets.
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
@@ -439,12 +451,14 @@ public:
   }
 
 private:
+  /// Initializes Buffer and Stream.
+  void initialize(DWARFUnit &Unit);
+
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  std::vector<uint32_t> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
-  // Section size not including header.
-  uint32_t CurrentSectionSize{0};
   bool StrOffsetSectionWasModified = false;
 };
 
@@ -458,7 +472,7 @@ public:
   }
 
   /// Adds string to .debug_str.
-  /// On first invokation it initializes internal data stractures.
+  /// On first invocation it initializes internal data structures.
   uint32_t addString(StringRef Str);
 
   /// Returns False if no strings were added to .debug_str.
@@ -469,7 +483,7 @@ private:
   std::mutex WriterMutex;
   /// Initializes Buffer and Stream.
   void initialize();
-  /// Creats internal data stractures.
+  /// Creates internal data structures.
   void create();
   std::unique_ptr<DebugStrBufferVector> StrBuffer;
   std::unique_ptr<raw_svector_ostream> StrStream;
@@ -569,7 +583,7 @@ public:
   void finalize(DIEBuilder &DIEBldr, DIE &Die) override;
 
   /// Returns CU ID.
-  /// For Skelton CU it is a CU Offset.
+  /// For Skeleton CU it is a CU Offset.
   /// For DWO CU it is a DWO ID.
   uint64_t getCUID() const {
     return CU.isDWOUnit() ? *CU.getDWOId() : CU.getOffset();

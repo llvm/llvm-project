@@ -139,36 +139,74 @@ template <typename EffectT>
 class EffectInstance {
 public:
   EffectInstance(EffectT *effect, Resource *resource = DefaultResource::get())
-      : effect(effect), resource(resource) {}
+      : effect(effect), resource(resource), stage(0),
+        effectOnFullRegion(false) {}
+  EffectInstance(EffectT *effect, int stage, bool effectOnFullRegion,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), stage(stage),
+        effectOnFullRegion(effectOnFullRegion) {}
   EffectInstance(EffectT *effect, Value value,
                  Resource *resource = DefaultResource::get())
-      : effect(effect), resource(resource), value(value) {}
+      : effect(effect), resource(resource), value(value), stage(0),
+        effectOnFullRegion(false) {}
+  EffectInstance(EffectT *effect, Value value, int stage,
+                 bool effectOnFullRegion,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), value(value), stage(stage),
+        effectOnFullRegion(effectOnFullRegion) {}
   EffectInstance(EffectT *effect, SymbolRefAttr symbol,
                  Resource *resource = DefaultResource::get())
-      : effect(effect), resource(resource), value(symbol) {}
+      : effect(effect), resource(resource), value(symbol), stage(0),
+        effectOnFullRegion(false) {}
+  EffectInstance(EffectT *effect, SymbolRefAttr symbol, int stage,
+                 bool effectOnFullRegion,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), value(symbol), stage(stage),
+        effectOnFullRegion(effectOnFullRegion) {}
   EffectInstance(EffectT *effect, Attribute parameters,
                  Resource *resource = DefaultResource::get())
-      : effect(effect), resource(resource), parameters(parameters) {}
+      : effect(effect), resource(resource), parameters(parameters), stage(0),
+        effectOnFullRegion(false) {}
+  EffectInstance(EffectT *effect, Attribute parameters, int stage,
+                 bool effectOnFullRegion,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), parameters(parameters),
+        stage(stage), effectOnFullRegion(effectOnFullRegion) {}
   EffectInstance(EffectT *effect, Value value, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
-        parameters(parameters) {}
+        parameters(parameters), stage(0), effectOnFullRegion(false) {}
+  EffectInstance(EffectT *effect, Value value, Attribute parameters, int stage,
+                 bool effectOnFullRegion,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), value(value),
+        parameters(parameters), stage(stage),
+        effectOnFullRegion(effectOnFullRegion) {}
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol),
-        parameters(parameters) {}
+        parameters(parameters), stage(0), effectOnFullRegion(false) {}
+  EffectInstance(EffectT *effect, SymbolRefAttr symbol, Attribute parameters,
+                 int stage, bool effectOnFullRegion,
+                 Resource *resource = DefaultResource::get())
+      : effect(effect), resource(resource), value(symbol),
+        parameters(parameters), stage(stage),
+        effectOnFullRegion(effectOnFullRegion) {}
 
   /// Return the effect being applied.
   EffectT *getEffect() const { return effect; }
 
   /// Return the value the effect is applied on, or nullptr if there isn't a
   /// known value being affected.
-  Value getValue() const { return value ? llvm::dyn_cast_if_present<Value>(value) : Value(); }
+  Value getValue() const {
+    return value ? llvm::dyn_cast_if_present<Value>(value) : Value();
+  }
 
   /// Return the symbol reference the effect is applied on, or nullptr if there
   /// isn't a known smbol being affected.
   SymbolRefAttr getSymbolRef() const {
-    return value ? llvm::dyn_cast_if_present<SymbolRefAttr>(value) : SymbolRefAttr();
+    return value ? llvm::dyn_cast_if_present<SymbolRefAttr>(value)
+                 : SymbolRefAttr();
   }
 
   /// Return the resource that the effect applies to.
@@ -176,6 +214,12 @@ public:
 
   /// Return the parameters of the effect, if any.
   Attribute getParameters() const { return parameters; }
+
+  /// Return the effect happen stage.
+  int getStage() const { return stage; }
+
+  /// Return if this side effect act on every single value of resource.
+  bool getEffectOnFullRegion() const { return effectOnFullRegion; }
 
 private:
   /// The specific effect being applied.
@@ -191,6 +235,13 @@ private:
   /// type-safe structured storage and context-based uniquing. Concrete effects
   /// can use this at their convenience. This is optionally null.
   Attribute parameters;
+
+  // The stage side effect happen. Side effect with a lower stage
+  // number happen earlier than those with a higher stage number
+  int stage;
+
+  // Does this side effect act on every single value of resource.
+  bool effectOnFullRegion;
 };
 } // namespace SideEffects
 
@@ -331,6 +382,17 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// If the operation has both, then it is free of memory effects if both
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
+
+/// Returns the side effects of an operation. If the operation has
+/// RecursiveMemoryEffects, include all side effects of child operations.
+///
+/// std::nullopt indicates that an option did not have a memory effect interface
+/// and so no result could be obtained. An empty vector indicates that there
+/// were no memory effects found (but every operation implemented the memory
+/// effect interface or has RecursiveMemoryEffects). If the vector contains
+/// multiple effects, these effects may be duplicates.
+std::optional<llvm::SmallVector<MemoryEffects::EffectInstance>>
+getEffectsRecursively(Operation *rootOp);
 
 /// Returns true if the given operation is speculatable, i.e. has no undefined
 /// behavior or other side effects.

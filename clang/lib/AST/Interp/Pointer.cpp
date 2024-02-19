@@ -7,14 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "Pointer.h"
+#include "Boolean.h"
+#include "Context.h"
+#include "Floating.h"
 #include "Function.h"
+#include "Integral.h"
 #include "InterpBlock.h"
 #include "PrimType.h"
+#include "Record.h"
 
 using namespace clang;
 using namespace clang::interp;
 
-Pointer::Pointer(Block *Pointee) : Pointer(Pointee, 0, 0) {}
+Pointer::Pointer(Block *Pointee)
+    : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
+              Pointee->getDescriptor()->getMetadataSize()) {}
 
 Pointer::Pointer(Block *Pointee, unsigned BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
@@ -76,63 +83,48 @@ void Pointer::operator=(Pointer &&P) {
 }
 
 APValue Pointer::toAPValue() const {
-  APValue::LValueBase Base;
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
-  CharUnits Offset;
-  bool IsNullPtr;
-  bool IsOnePastEnd;
 
-  if (isZero()) {
-    Base = static_cast<const Expr *>(nullptr);
-    IsNullPtr = true;
-    IsOnePastEnd = false;
-    Offset = CharUnits::Zero();
-  } else {
-    // Build the lvalue base from the block.
-    Descriptor *Desc = getDeclDesc();
-    if (auto *VD = Desc->asValueDecl())
-      Base = VD;
-    else if (auto *E = Desc->asExpr())
-      Base = E;
-    else
-      llvm_unreachable("Invalid allocation type");
+  if (isZero())
+    return APValue(static_cast<const Expr *>(nullptr), CharUnits::Zero(), Path,
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
-    // Not a null pointer.
-    IsNullPtr = false;
+  // Build the lvalue base from the block.
+  const Descriptor *Desc = getDeclDesc();
+  APValue::LValueBase Base;
+  if (const auto *VD = Desc->asValueDecl())
+    Base = VD;
+  else if (const auto *E = Desc->asExpr())
+    Base = E;
+  else
+    llvm_unreachable("Invalid allocation type");
 
-    if (isUnknownSizeArray()) {
-      IsOnePastEnd = false;
-      Offset = CharUnits::Zero();
-    } else if (Desc->asExpr()) {
-      // Pointer pointing to a an expression.
-      IsOnePastEnd = false;
-      Offset = CharUnits::Zero();
+  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
+    return APValue(Base, CharUnits::Zero(), Path,
+                   /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+
+  // TODO: compute the offset into the object.
+  CharUnits Offset = CharUnits::Zero();
+  bool IsOnePastEnd = isOnePastEnd();
+
+  // Build the path into the object.
+  Pointer Ptr = *this;
+  while (Ptr.isField() || Ptr.isArrayElement()) {
+    if (Ptr.isArrayElement()) {
+      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
+      Ptr = Ptr.getArray();
     } else {
-      // TODO: compute the offset into the object.
-      Offset = CharUnits::Zero();
+      // TODO: figure out if base is virtual
+      bool IsVirtual = false;
 
-      // Build the path into the object.
-      Pointer Ptr = *this;
-      while (Ptr.isField() || Ptr.isArrayElement()) {
-        if (Ptr.isArrayElement()) {
-          Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
-          Ptr = Ptr.getArray();
-        } else {
-          // TODO: figure out if base is virtual
-          bool IsVirtual = false;
-
-          // Create a path entry for the field.
-          Descriptor *Desc = Ptr.getFieldDesc();
-          if (auto *BaseOrMember = Desc->asDecl()) {
-            Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
-            Ptr = Ptr.getBase();
-            continue;
-          }
-          llvm_unreachable("Invalid field type");
-        }
+      // Create a path entry for the field.
+      const Descriptor *Desc = Ptr.getFieldDesc();
+      if (const auto *BaseOrMember = Desc->asDecl()) {
+        Path.push_back(APValue::LValuePathEntry({BaseOrMember, IsVirtual}));
+        Ptr = Ptr.getBase();
+        continue;
       }
-
-      IsOnePastEnd = isOnePastEnd();
+      llvm_unreachable("Invalid field type");
     }
   }
 
@@ -142,7 +134,14 @@ APValue Pointer::toAPValue() const {
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, IsOnePastEnd, IsNullPtr);
+  return APValue(Base, Offset, Path, IsOnePastEnd, /*IsNullPtr=*/false);
+}
+
+std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
+  if (!Pointee)
+    return "nullptr";
+
+  return toAPValue().getAsString(Ctx, getType());
 }
 
 bool Pointer::isInitialized() const {
@@ -152,13 +151,16 @@ bool Pointer::isInitialized() const {
   if (Desc->isPrimitiveArray()) {
     if (isStatic() && Base == 0)
       return true;
-    // Primitive array field are stored in a bitset.
-    InitMap *Map = getInitMap();
-    if (!Map)
+
+    InitMapPtr &IM = getInitMap();
+
+    if (!IM)
       return false;
-    if (Map == (InitMap *)-1)
+
+    if (IM->first)
       return true;
-    return Map->isInitialized(getIndex());
+
+    return IM->second->isElementInitialized(getIndex());
   }
 
   // Field has its bit in an inline descriptor.
@@ -175,15 +177,20 @@ void Pointer::initialize() const {
     if (isStatic() && Base == 0)
       return;
 
-    // Primitive array initializer.
-    InitMap *&Map = getInitMap();
-    if (Map == (InitMap *)-1)
+    InitMapPtr &IM = getInitMap();
+    if (!IM)
+      IM =
+          std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
+
+    assert(IM);
+
+    // All initialized.
+    if (IM->first)
       return;
-    if (Map == nullptr)
-      Map = InitMap::allocate(Desc->getNumElems());
-    if (Map->initialize(getIndex())) {
-      free(Map);
-      Map = (InitMap *)-1;
+
+    if (IM->second->initializeElement(getIndex())) {
+      IM->first = true;
+      IM->second.reset();
     }
     return;
   }
@@ -209,4 +216,141 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
   return hasSameBase(A, B) && A.Base == B.Base && A.getFieldDesc()->IsArray;
+}
+
+std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
+  // Method to recursively traverse composites.
+  std::function<bool(QualType, const Pointer &, APValue &)> Composite;
+  Composite = [&Composite, &Ctx](QualType Ty, const Pointer &Ptr, APValue &R) {
+    if (const auto *AT = Ty->getAs<AtomicType>())
+      Ty = AT->getValueType();
+
+    // Invalid pointers.
+    if (Ptr.isDummy() || !Ptr.isLive() ||
+        (!Ptr.isUnknownSizeArray() && Ptr.isOnePastEnd()))
+      return false;
+
+    // Primitive values.
+    if (std::optional<PrimType> T = Ctx.classify(Ty)) {
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue());
+      return true;
+    }
+
+    if (const auto *RT = Ty->getAs<RecordType>()) {
+      const auto *Record = Ptr.getRecord();
+      assert(Record && "Missing record descriptor");
+
+      bool Ok = true;
+      if (RT->getDecl()->isUnion()) {
+        const FieldDecl *ActiveField = nullptr;
+        APValue Value;
+        for (const auto &F : Record->fields()) {
+          const Pointer &FP = Ptr.atField(F.Offset);
+          QualType FieldTy = F.Decl->getType();
+          if (FP.isActive()) {
+            if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
+              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue());
+            } else {
+              Ok &= Composite(FieldTy, FP, Value);
+            }
+            break;
+          }
+        }
+        R = APValue(ActiveField, Value);
+      } else {
+        unsigned NF = Record->getNumFields();
+        unsigned NB = Record->getNumBases();
+        unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
+
+        R = APValue(APValue::UninitStruct(), NB, NF);
+
+        for (unsigned I = 0; I < NF; ++I) {
+          const Record::Field *FD = Record->getField(I);
+          QualType FieldTy = FD->Decl->getType();
+          const Pointer &FP = Ptr.atField(FD->Offset);
+          APValue &Value = R.getStructField(I);
+
+          if (std::optional<PrimType> T = Ctx.classify(FieldTy)) {
+            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue());
+          } else {
+            Ok &= Composite(FieldTy, FP, Value);
+          }
+        }
+
+        for (unsigned I = 0; I < NB; ++I) {
+          const Record::Base *BD = Record->getBase(I);
+          QualType BaseTy = Ctx.getASTContext().getRecordType(BD->Decl);
+          const Pointer &BP = Ptr.atField(BD->Offset);
+          Ok &= Composite(BaseTy, BP, R.getStructBase(I));
+        }
+
+        for (unsigned I = 0; I < NV; ++I) {
+          const Record::Base *VD = Record->getVirtualBase(I);
+          QualType VirtBaseTy = Ctx.getASTContext().getRecordType(VD->Decl);
+          const Pointer &VP = Ptr.atField(VD->Offset);
+          Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
+        }
+      }
+      return Ok;
+    }
+
+    if (Ty->isIncompleteArrayType()) {
+      R = APValue(APValue::UninitArray(), 0, 0);
+      return true;
+    }
+
+    if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
+      const size_t NumElems = Ptr.getNumElems();
+      QualType ElemTy = AT->getElementType();
+      R = APValue(APValue::UninitArray{}, NumElems, NumElems);
+
+      bool Ok = true;
+      for (unsigned I = 0; I < NumElems; ++I) {
+        APValue &Slot = R.getArrayInitializedElt(I);
+        const Pointer &EP = Ptr.atIndex(I);
+        if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
+          TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue());
+        } else {
+          Ok &= Composite(ElemTy, EP.narrow(), Slot);
+        }
+      }
+      return Ok;
+    }
+
+    // Complex types.
+    if (const auto *CT = Ty->getAs<ComplexType>()) {
+      QualType ElemTy = CT->getElementType();
+      std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+      assert(ElemT);
+
+      if (ElemTy->isIntegerType()) {
+        INT_TYPE_SWITCH(*ElemT, {
+          auto V1 = Ptr.atIndex(0).deref<T>();
+          auto V2 = Ptr.atIndex(1).deref<T>();
+          R = APValue(V1.toAPSInt(), V2.toAPSInt());
+          return true;
+        });
+      } else if (ElemTy->isFloatingType()) {
+        R = APValue(Ptr.atIndex(0).deref<Floating>().getAPFloat(),
+                    Ptr.atIndex(1).deref<Floating>().getAPFloat());
+        return true;
+      }
+      return false;
+    }
+
+    llvm_unreachable("invalid value to return");
+  };
+
+  if (isZero())
+    return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {}, false,
+                   true);
+
+  if (isDummy() || !isLive())
+    return std::nullopt;
+
+  // Return the composite type.
+  APValue Result;
+  if (!Composite(getType(), *this, Result))
+    return std::nullopt;
+  return Result;
 }

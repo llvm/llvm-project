@@ -1,11 +1,11 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
-@lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] undef, align 1
-@lds.size.2.align.2 = internal unnamed_addr addrspace(3) global [2 x i8] undef, align 2
-@lds.size.4.align.4 = internal unnamed_addr addrspace(3) global [4 x i8] undef, align 4
-@lds.size.8.align.8 = internal unnamed_addr addrspace(3) global [8 x i8] undef, align 8
-@lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] undef, align 16
+@lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] poison, align 1
+@lds.size.2.align.2 = internal unnamed_addr addrspace(3) global [2 x i8] poison, align 2
+@lds.size.4.align.4 = internal unnamed_addr addrspace(3) global [4 x i8] poison, align 4
+@lds.size.8.align.8 = internal unnamed_addr addrspace(3) global [8 x i8] poison, align 8
+@lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] poison, align 16
 
 ; CHECK: %llvm.amdgcn.module.lds.t = type { [8 x i8], [1 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k0.lds.t = type { [16 x i8], [4 x i8], [2 x i8], [1 x i8] }
@@ -14,12 +14,12 @@
 ; CHECK: %llvm.amdgcn.kernel.k3.lds.t = type { [4 x i8] }
 
 ;.
-; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 8, !absolute_symbol !0
-; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
-; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t undef, align 16, !absolute_symbol !0
-; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t undef, align 16, !absolute_symbol !0
-; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t undef, align 2, !absolute_symbol !0
-; CHECK: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t undef, align 4, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 8, !absolute_symbol !0
+; CHECK: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
+; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t poison, align 16, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t poison, align 16, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t poison, align 2, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t poison, align 4, !absolute_symbol !0
 ;.
 define amdgpu_kernel void @k0() #0 {
 ; CHECK-LABEL: @k0() #0
@@ -99,4 +99,4 @@ define void @f0() {
 ; CHECK: attributes #3 = { "amdgpu-lds-size"="4" }
 ; CHECK: attributes #4 = { "amdgpu-lds-size"="9" }
 
-; CHECK: !0 = !{i64 0, i64 1}
+; CHECK: !0 = !{i32 0, i32 1}

@@ -188,21 +188,41 @@ private:
     Edge::Kind DeltaKind;
     Symbol *TargetSymbol;
     uint64_t Addend;
+
+    bool FixingFromSymbol = true;
     if (&BlockToFix == &FromSymbol->getAddressable()) {
+      if (LLVM_UNLIKELY(&BlockToFix == &ToSymbol->getAddressable())) {
+        // From and To are symbols in the same block. Decide direction by offset
+        // instead.
+        if (ToSymbol->getAddress() > FixupAddress)
+          FixingFromSymbol = true;
+        else if (FromSymbol->getAddress() > FixupAddress)
+          FixingFromSymbol = false;
+        else
+          FixingFromSymbol = FromSymbol->getAddress() >= ToSymbol->getAddress();
+      } else
+        FixingFromSymbol = true;
+    } else {
+      if (&BlockToFix == &ToSymbol->getAddressable())
+        FixingFromSymbol = false;
+      else {
+        // BlockToFix was neither FromSymbol nor ToSymbol.
+        return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
+                                        "either 'A' or 'B' (or a symbol in one "
+                                        "of their alt-entry groups)");
+      }
+    }
+
+    if (FixingFromSymbol) {
       TargetSymbol = ToSymbol;
       DeltaKind = (SubRI.r_length == 3) ? aarch64::Delta64 : aarch64::Delta32;
       Addend = FixupValue + (FixupAddress - FromSymbol->getAddress());
       // FIXME: handle extern 'from'.
-    } else if (&BlockToFix == &ToSymbol->getAddressable()) {
+    } else {
       TargetSymbol = &*FromSymbol;
       DeltaKind =
           (SubRI.r_length == 3) ? aarch64::NegDelta64 : aarch64::NegDelta32;
       Addend = FixupValue - (FixupAddress - ToSymbol->getAddress());
-    } else {
-      // BlockToFix was neither FromSymbol nor ToSymbol.
-      return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
-                                      "either 'A' or 'B' (or a symbol in one "
-                                      "of their alt-entry groups)");
     }
 
     return PairRelocInfo(DeltaKind, TargetSymbol, Addend);
@@ -292,10 +312,10 @@ private:
 
           Addend = SignExtend64(RI.r_symbolnum, 24);
 
+          ++RelItr;
           if (RelItr == RelEnd)
             return make_error<JITLinkError>("Unpaired Addend reloc at " +
                                             formatv("{0:x16}", FixupAddress));
-          ++RelItr;
           RI = getRelocationInfo(RelItr);
 
           MachORelocKind = getRelocationKind(RI);
@@ -567,7 +587,7 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(
         CompactUnwindSplitter("__LD,__compact_unwind"));
 
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     // FIXME: Prune eh-frames for which compact-unwind is available once
     // we support compact-unwind registration with libunwind.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());

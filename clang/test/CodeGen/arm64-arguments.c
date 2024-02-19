@@ -226,9 +226,9 @@ T_float32x2 f1_0(T_float32x2 a0) { return a0; }
 // CHECK: define{{.*}} <4 x float> @f1_1(<4 x float> noundef %{{.*}})
 T_float32x4 f1_1(T_float32x4 a0) { return a0; }
 // Vector with length bigger than 16-byte is illegal and is passed indirectly.
-// CHECK: define{{.*}} void @f1_2(ptr noalias sret(<8 x float>) align 16 %{{.*}}, ptr noundef %0)
+// CHECK: define{{.*}} void @f1_2(ptr dead_on_unwind noalias writable sret(<8 x float>) align 16 %{{.*}}, ptr noundef %0)
 T_float32x8 f1_2(T_float32x8 a0) { return a0; }
-// CHECK: define{{.*}} void @f1_3(ptr noalias sret(<16 x float>) align 16 %{{.*}}, ptr noundef %0)
+// CHECK: define{{.*}} void @f1_3(ptr dead_on_unwind noalias writable sret(<16 x float>) align 16 %{{.*}}, ptr noundef %0)
 T_float32x16 f1_3(T_float32x16 a0) { return a0; }
 
 // Testing alignment with aggregates: HFA, aggregates with size <= 16 bytes and
@@ -296,7 +296,6 @@ int32x4_t caller37() {
   return f37(3, g37, g37);
 }
 
-// rdar://problem/12648441
 // Test passing structs with size < 8, < 16 and > 16
 // with alignment of 16 and without
 
@@ -623,7 +622,6 @@ int caller43_stack() {
   return f43_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g43, g43_2);
 }
 
-// rdar://13668927
 // We should not split argument s1 between registers and stack.
 __attribute__ ((noinline))
 int f40_split(int i, int i2, int i3, int i4, int i5, int i6, int i7,

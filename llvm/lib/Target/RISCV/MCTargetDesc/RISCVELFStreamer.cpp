@@ -37,6 +37,13 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
   setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
                                           MAB.getTargetOptions().getABIName()));
+  // `j label` in `.option norelax; j label; .option relax; ...; label:` needs a
+  // relocation to ensure the jump target is correct after linking. This is due
+  // to a limitation that shouldForceRelocation has to make the decision upfront
+  // without knowing a possibly future .option relax. When RISCVAsmParser is used,
+  // its ParseInstruction may call setForceRelocs as well.
+  if (STI.hasFeature(RISCV::FeatureRelax))
+    static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 }
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
@@ -80,14 +87,14 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
   MCAssembler &MCA = getStreamer().getAssembler();
-  const FeatureBitset &Features = STI.getFeatureBits();
   RISCVABI::ABI ABI = getTargetABI();
 
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
-  if (Features[RISCV::FeatureStdExtC])
+  if (STI.hasFeature(RISCV::FeatureStdExtC) ||
+      STI.hasFeature(RISCV::FeatureStdExtZca))
     EFlags |= ELF::EF_RISCV_RVC;
-  if (Features[RISCV::FeatureStdExtZtso])
+  if (STI.hasFeature(RISCV::FeatureStdExtZtso))
     EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {
@@ -125,6 +132,65 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
 void RISCVELFStreamer::reset() {
   static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();
+  MappingSymbolCounter = 0;
+  LastMappingSymbols.clear();
+  LastEMS = EMS_None;
+}
+
+void RISCVELFStreamer::emitDataMappingSymbol() {
+  if (LastEMS == EMS_Data)
+    return;
+  emitMappingSymbol("$d");
+  LastEMS = EMS_Data;
+}
+
+void RISCVELFStreamer::emitInstructionsMappingSymbol() {
+  if (LastEMS == EMS_Instructions)
+    return;
+  emitMappingSymbol("$x");
+  LastEMS = EMS_Instructions;
+}
+
+void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
+  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+      Name + "." + Twine(MappingSymbolCounter++)));
+  emitLabel(Symbol);
+  Symbol->setType(ELF::STT_NOTYPE);
+  Symbol->setBinding(ELF::STB_LOCAL);
+}
+
+void RISCVELFStreamer::changeSection(MCSection *Section,
+                                     const MCExpr *Subsection) {
+  // We have to keep track of the mapping symbol state of any sections we
+  // use. Each one should start off as EMS_None, which is provided as the
+  // default constructor by DenseMap::lookup.
+  LastMappingSymbols[getPreviousSection().first] = LastEMS;
+  LastEMS = LastMappingSymbols.lookup(Section);
+
+  MCELFStreamer::changeSection(Section, Subsection);
+}
+
+void RISCVELFStreamer::emitInstruction(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI) {
+  emitInstructionsMappingSymbol();
+  MCELFStreamer::emitInstruction(Inst, STI);
+}
+
+void RISCVELFStreamer::emitBytes(StringRef Data) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitBytes(Data);
+}
+
+void RISCVELFStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                                SMLoc Loc) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitFill(NumBytes, FillValue, Loc);
+}
+
+void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+                                     SMLoc Loc) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitValueImpl(Value, Size, Loc);
 }
 
 namespace llvm {

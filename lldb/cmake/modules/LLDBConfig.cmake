@@ -17,12 +17,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-  # The Darwin linker doesn't understand --start-group/--end-group.
-  set(LLDB_LINKER_SUPPORTS_GROUPS ON)
-endif()
-
 macro(add_optional_dependency variable description package found)
   cmake_parse_arguments(ARG
     "QUIET"
@@ -56,7 +50,7 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
-add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 3)
+add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
@@ -128,13 +122,15 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-    "Causes lldb to export all symbols when building liblldb.")
-else()
-  # Windows doesn't support toggling this, so don't bother making it a
-  # cache variable.
-  set(LLDB_EXPORT_ALL_SYMBOLS 0)
+set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
+  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+
+set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
+  "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
+
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  set(LLDB_EXPORT_ALL_SYMBOLS_PLUGINS "" CACHE STRING
+    "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the plugins whose symbols should be exported.")
 endif()
 
 if ((NOT MSVC) OR MSVC12)
@@ -219,6 +215,7 @@ if( MSVC )
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
+    -wd4589 # Suppress 'warning C4589: Constructor of abstract class 'lldb_private::NativeRegisterContextDBReg_x86' ignores initializer for virtual base class 'lldb_private::NativeRegisterContextRegisterInfo''
   )
 endif()
 

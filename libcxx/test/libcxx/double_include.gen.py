@@ -8,11 +8,11 @@
 
 # Test that we can include each header in two TU's and link them together.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
   BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script

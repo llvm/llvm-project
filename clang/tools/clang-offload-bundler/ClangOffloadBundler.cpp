@@ -19,7 +19,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -131,11 +130,21 @@ int main(int argc, const char **argv) {
     BundleAlignment("bundle-align",
                     cl::desc("Alignment of bundle for binary files"),
                     cl::init(1), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> CheckInputArchive(
+      "check-input-archive",
+      cl::desc("Check if input heterogeneous archive is "
+               "valid in terms of TargetID rules.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool> HipOpenmpCompatible(
     "hip-openmp-compatible",
     cl::desc("Treat hip and hipv4 offload kinds as "
              "compatible with openmp kind, and vice versa.\n"),
     cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> Compress("compress",
+                         cl::desc("Compress output file when bundling.\n"),
+                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> Verbose("verbose", cl::desc("Print debug information.\n"),
+                        cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -158,11 +167,17 @@ int main(int argc, const char **argv) {
   // Avoid using cl::opt variables after these assignments when possible
   OffloadBundlerConfig BundlerConfig;
   BundlerConfig.AllowMissingBundles = AllowMissingBundles;
+  BundlerConfig.CheckInputArchive = CheckInputArchive;
   BundlerConfig.PrintExternalCommands = PrintExternalCommands;
   BundlerConfig.HipOpenmpCompatible = HipOpenmpCompatible;
   BundlerConfig.BundleAlignment = BundleAlignment;
   BundlerConfig.FilesType = FilesType;
   BundlerConfig.ObjcopyPath = "";
+  // Do not override the default value Compress and Verbose in BundlerConfig.
+  if (Compress.getNumOccurrences() > 0)
+    BundlerConfig.Compress = Compress;
+  if (Verbose.getNumOccurrences() > 0)
+    BundlerConfig.Verbose = Verbose;
 
   BundlerConfig.TargetNames = TargetNames;
   BundlerConfig.InputFileNames = InputFileNames;
@@ -263,6 +278,19 @@ int main(int argc, const char **argv) {
           InputFileNames.front(),
           BundlerConfig); });
     return 0;
+  }
+
+  if (BundlerConfig.CheckInputArchive) {
+    if (!Unbundle) {
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive cannot be used while "
+                                    "bundling"));
+    }
+    if (Unbundle && BundlerConfig.FilesType != "a") {
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive can only be used for "
+                                    "unbundling archives (-type=a)"));
+    }
   }
 
   if (OutputFileNames.size() == 0) {

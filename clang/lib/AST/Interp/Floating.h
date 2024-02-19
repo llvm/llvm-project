@@ -76,6 +76,12 @@ public:
     F.toString(Buffer);
     OS << Buffer;
   }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    print(OS);
+    return NameStr;
+  }
 
   unsigned bitWidth() const { return F.semanticsSizeInBits(F.getSemantics()); }
 
@@ -87,10 +93,27 @@ public:
   bool isMin() const { return F.isSmallest(); }
   bool isMinusOne() const { return F.isExactlyValue(-1.0); }
   bool isNan() const { return F.isNaN(); }
+  bool isSignaling() const { return F.isSignaling(); }
+  bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
+  bool isNormal() const { return F.isNormal(); }
+  bool isDenormal() const { return F.isDenormal(); }
+  llvm::FPClassTest classify() const { return F.classify(); }
+  APFloat::fltCategory getCategory() const { return F.getCategory(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
-    return Compare(F, RHS.F);
+    llvm::APFloatBase::cmpResult CmpRes = F.compare(RHS.F);
+    switch (CmpRes) {
+    case llvm::APFloatBase::cmpLessThan:
+      return ComparisonCategoryResult::Less;
+    case llvm::APFloatBase::cmpEqual:
+      return ComparisonCategoryResult::Equal;
+    case llvm::APFloatBase::cmpGreaterThan:
+      return ComparisonCategoryResult::Greater;
+    case llvm::APFloatBase::cmpUnordered:
+      return ComparisonCategoryResult::Unordered;
+    }
+    llvm_unreachable("Inavlid cmpResult value");
   }
 
   static APFloat::opStatus fromIntegral(APSInt Val,
@@ -101,6 +124,43 @@ public:
     APFloat::opStatus Status = F.convertFromAPInt(Val, Val.isSigned(), RM);
     Result = Floating(F);
     return Status;
+  }
+
+  static Floating bitcastFromMemory(const std::byte *Buff,
+                                    const llvm::fltSemantics &Sem) {
+    size_t Size = APFloat::semanticsSizeInBits(Sem);
+    llvm::APInt API(Size, true);
+    llvm::LoadIntFromMemory(API, (const uint8_t *)Buff, Size / 8);
+
+    return Floating(APFloat(Sem, API));
+  }
+
+  // === Serialization support ===
+  size_t bytesToSerialize() const {
+    return sizeof(llvm::fltSemantics *) +
+           (APFloat::semanticsSizeInBits(F.getSemantics()) / 8);
+  }
+
+  void serialize(std::byte *Buff) const {
+    // Semantics followed by an APInt.
+    *reinterpret_cast<const llvm::fltSemantics **>(Buff) = &F.getSemantics();
+
+    llvm::APInt API = F.bitcastToAPInt();
+    llvm::StoreIntToMemory(API, (uint8_t *)(Buff + sizeof(void *)),
+                           bitWidth() / 8);
+  }
+
+  static Floating deserialize(const std::byte *Buff) {
+    const llvm::fltSemantics *Sem;
+    std::memcpy((void *)&Sem, Buff, sizeof(void *));
+    return bitcastFromMemory(Buff + sizeof(void *), *Sem);
+  }
+
+  static Floating abs(const Floating &F) {
+    APFloat V = F.F;
+    if (V.isNegative())
+      V.changeSign();
+    return Floating(V);
   }
 
   // -------

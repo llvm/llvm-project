@@ -5,7 +5,7 @@
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-helper1.s -o %t1.o
 # RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-dwarf4-monolithic-helper2.s -o %t2.o
 # RUN: %clang %cflags -dwarf-5 %tmain.o %t0.o %t1.o %t2.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-bolt --always-convert-to-ranges %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe > %t_line.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
@@ -166,7 +166,6 @@
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR4:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR5:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR6:]]
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR7:]]
 
 # POSTCHECK: Addrs: [
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDRB:]]
@@ -186,35 +185,33 @@
 # POSTCHECK-NEXT: DW_AT_low_pc
 # POSTCHECK: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 0x7]]
-# POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x51]]
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x51]]
 # POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
 # POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
 # POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x0000000c)
 # POSTCHECK: DW_TAG_subprogram [2]
-# POSTCHECK: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist
 # POSTCHECK-NEXT: [0x[[#ADDR]], 0x[[#ADDR + 0x7]]
 # POSTCHECK: DW_TAG_subprogram [8]
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist = 0x00000029
-# POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x51]]
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x51]]
 # POSTCHECK: DW_TAG_formal_parameter [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000018
-# POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x22]]
-# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x22]], 0x[[#ADDR2 + 0x51]]
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x22]]
+# POSTCHECK-NEXT: [0x[[#ADDR1 + 0x22]], 0x[[#ADDR1 + 0x51]]
 # POSTCHECK: DW_TAG_formal_parameter [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000028
-# POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x27]]
-# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x27]], 0x[[#ADDR2 + 0x51]]
+# POSTCHECK-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x27]]
+# POSTCHECK-NEXT: [0x[[#ADDR1 + 0x27]], 0x[[#ADDR1 + 0x51]]
 # POSTCHECK: DW_TAG_variable
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x2) loclist = 0x00000038
-# POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 0x6]]
-# POSTCHECK-NEXT: [0x[[#ADDR3 + 0x6]], 0x[[#ADDR3 + 0x46]]
+# POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x6]]
+# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x6]], 0x[[#ADDR2 + 0x46]]
 # POSTCHECK: DW_TAG_inlined_subroutine [12]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x3) rangelist =  0x0000002d
-# POSTCHECK-NEXT: [0x[[#ADDR4]], 0x[[#ADDR4 + 0x4]]
-# POSTCHECK-NEXT: [0x[[#ADDR4 + 0x10]], 0x[[#ADDR4 + 0x16]]
+# POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 0x4]]
+# POSTCHECK-NEXT: [0x[[#ADDR3 + 0x10]], 0x[[#ADDR3 + 0x16]]
 
 # helper0.cpp
 # POSTCHECK: version = 0x0004
@@ -228,7 +225,6 @@
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK: DW_TAG_subprogram [22]
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK: DW_TAG_variable [24]
@@ -237,7 +233,6 @@
 # POSTCHECK-NEXT: [0x
 # POSTCHECK: DW_TAG_inlined_subroutine [25]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 
@@ -264,16 +259,14 @@
 # POSTCHECK-NEXT: DW_AT_decl_line
 # POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2)
 # POSTCHECK: DW_TAG_subprogram [29]
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1)
 # POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x4]]
 # POSTCHECK: DW_TAG_variable [10]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x3]]
 # POSTCHECK-NEXT: [0x[[#ADDRB + 0x3]], 0x[[#ADDRB + 0x4]]
-# POSTCHECK: DW_TAG_inlined_subroutine [31]
+# POSTCHECK: DW_TAG_inlined_subroutine
 # POSTCHECK-NEXT: DW_AT_abstract_origin
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist
 # POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x3]]
 
@@ -289,7 +282,6 @@
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK: DW_TAG_subprogram [22]
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK: DW_TAG_variable [24]
@@ -298,7 +290,6 @@
 # POSTCHECK-NEXT: [0x
 # POSTCHECK: DW_TAG_inlined_subroutine [25]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
-# POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 

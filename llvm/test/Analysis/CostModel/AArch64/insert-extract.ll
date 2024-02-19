@@ -11,38 +11,38 @@ target triple = "aarch64--linux-gnu"
 
 define void @vectorInstrCost() {
 ; CHECK-LABEL: 'vectorInstrCost'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ta0 = extractelement <8 x i1> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ta1 = extractelement <8 x i1> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t1 = extractelement <8 x i8> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t2 = extractelement <8 x i8> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t3 = extractelement <4 x i16> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t4 = extractelement <4 x i16> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t5 = extractelement <2 x i32> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t6 = extractelement <2 x i32> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t7 = extractelement <2 x i64> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t8 = extractelement <2 x i64> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ta0 = extractelement <8 x i1> undef, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ta1 = extractelement <8 x i1> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t1 = extractelement <8 x i8> undef, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = extractelement <8 x i8> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t3 = extractelement <4 x i16> undef, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t4 = extractelement <4 x i16> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t5 = extractelement <2 x i32> undef, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t6 = extractelement <2 x i32> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t7 = extractelement <2 x i64> undef, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t8 = extractelement <2 x i64> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t9 = extractelement <4 x half> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t10 = extractelement <4 x half> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t10 = extractelement <4 x half> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t11 = extractelement <2 x float> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t12 = extractelement <2 x float> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t12 = extractelement <2 x float> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t13 = extractelement <2 x double> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t14 = extractelement <2 x double> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t31 = insertelement <8 x i1> undef, i1 false, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t41 = insertelement <8 x i1> undef, i1 true, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t30 = insertelement <8 x i8> undef, i8 0, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t40 = insertelement <8 x i8> undef, i8 1, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t50 = insertelement <4 x i16> undef, i16 2, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t60 = insertelement <4 x i16> undef, i16 3, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t70 = insertelement <2 x i32> undef, i32 4, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t80 = insertelement <2 x i32> undef, i32 5, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t90 = insertelement <2 x i64> undef, i64 6, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t100 = insertelement <2 x i64> undef, i64 7, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t14 = extractelement <2 x double> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t31 = insertelement <8 x i1> undef, i1 false, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t41 = insertelement <8 x i1> undef, i1 true, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t30 = insertelement <8 x i8> undef, i8 0, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t40 = insertelement <8 x i8> undef, i8 1, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t50 = insertelement <4 x i16> undef, i16 2, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t60 = insertelement <4 x i16> undef, i16 3, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t70 = insertelement <2 x i32> undef, i32 4, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t80 = insertelement <2 x i32> undef, i32 5, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t90 = insertelement <2 x i64> undef, i64 6, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t100 = insertelement <2 x i64> undef, i64 7, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t110 = insertelement <4 x half> zeroinitializer, half 0xH0000, i64 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t120 = insertelement <4 x half> zeroinitializer, half 0xH0000, i64 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t120 = insertelement <4 x half> zeroinitializer, half 0xH0000, i64 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t130 = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t140 = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t140 = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t150 = insertelement <2 x double> zeroinitializer, double 0.000000e+00, i64 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t160 = insertelement <2 x double> zeroinitializer, double 0.000000e+00, i64 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t160 = insertelement <2 x double> zeroinitializer, double 0.000000e+00, i64 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; KRYO-LABEL: 'vectorInstrCost'
@@ -122,7 +122,7 @@ define void @vectorInstrCost() {
 define <8 x i8> @LD1_B(<8 x i8> %vec, ptr noundef %i) {
 ; CHECK-LABEL: 'LD1_B'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i8, ptr %i, align 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %v2
 ;
 ; KRYO-LABEL: 'LD1_B'
@@ -139,7 +139,7 @@ entry:
 define <4 x i16> @LD1_H(<4 x i16> %vec, ptr noundef %i) {
 ; CHECK-LABEL: 'LD1_H'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i16, ptr %i, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %v2
 ;
 ; KRYO-LABEL: 'LD1_H'
@@ -156,7 +156,7 @@ entry:
 define <4 x i32> @LD1_W(<4 x i32> %vec, ptr noundef %i) {
 ; CHECK-LABEL: 'LD1_W'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i32, ptr %i, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %v2
 ;
 ; KRYO-LABEL: 'LD1_W'
@@ -173,7 +173,7 @@ entry:
 define <2 x i64> @LD1_X(<2 x i64> %vec, ptr noundef %i) {
 ; CHECK-LABEL: 'LD1_X'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = load i64, ptr %i, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %v2
 ;
 ; KRYO-LABEL: 'LD1_X'

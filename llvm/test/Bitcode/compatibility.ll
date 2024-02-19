@@ -388,14 +388,14 @@ declare ghccc void @f.ghccc()
 ; CHECK: declare ghccc void @f.ghccc()
 declare cc11 void @f.cc11()
 ; CHECK: declare cc11 void @f.cc11()
-declare webkit_jscc void @f.webkit_jscc()
-; CHECK: declare webkit_jscc void @f.webkit_jscc()
 declare anyregcc void @f.anyregcc()
 ; CHECK: declare anyregcc void @f.anyregcc()
 declare preserve_mostcc void @f.preserve_mostcc()
 ; CHECK: declare preserve_mostcc void @f.preserve_mostcc()
 declare preserve_allcc void @f.preserve_allcc()
 ; CHECK: declare preserve_allcc void @f.preserve_allcc()
+declare preserve_nonecc void @f.preserve_nonecc()
+; CHECK: declare preserve_nonecc void @f.preserve_nonecc()
 declare swifttailcc void @f.swifttailcc()
 ; CHECK: declare swifttailcc void @f.swifttailcc()
 declare cc64 void @f.cc64()
@@ -1361,6 +1361,10 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   xor i8 %op1, %op2
   ; CHECK: xor i8 %op1, %op2
 
+  ; disjoint
+  or disjoint i8 %op1, %op2
+  ; CHECK: or disjoint i8 %op1, %op2
+
   ret void
 }
 
@@ -1709,9 +1713,9 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
 
   %stack = call ptr @llvm.stacksave()
-  ; CHECK: %stack = call ptr @llvm.stacksave()
+  ; CHECK: %stack = call ptr @llvm.stacksave.p0()
   call void @llvm.stackrestore(ptr %stack)
-  ; CHECK: call void @llvm.stackrestore(ptr %stack)
+  ; CHECK: call void @llvm.stackrestore.p0(ptr %stack)
 
   call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)
   ; CHECK: call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)

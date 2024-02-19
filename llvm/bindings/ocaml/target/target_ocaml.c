@@ -15,15 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "target_ocaml.h"
+#include "caml/alloc.h"
+#include "caml/callback.h"
+#include "caml/custom.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
+#include "llvm_ocaml.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
-#include "caml/alloc.h"
-#include "caml/fail.h"
-#include "caml/memory.h"
-#include "caml/custom.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
 
 void llvm_raise(value Prototype, char *Message);
 value llvm_string_of_message(char *Message);
@@ -210,8 +211,6 @@ value llvm_target_has_asm_backend(value Target) {
 
 /*===---- Target Machine --------------------------------------------------===*/
 
-#define TargetMachine_val(v) (*(LLVMTargetMachineRef *)(Data_custom_val(v)))
-
 static void llvm_finalize_target_machine(value Machine) {
   LLVMDisposeTargetMachine(TargetMachine_val(Machine));
 }
@@ -299,6 +298,35 @@ value llvm_targetmachine_data_layout(value Machine) {
 /* bool -> TargetMachine.t -> unit */
 value llvm_targetmachine_set_verbose_asm(value Verb, value Machine) {
   LLVMSetTargetMachineAsmVerbosity(TargetMachine_val(Machine), Bool_val(Verb));
+  return Val_unit;
+}
+
+/* bool -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_fast_isel(value Enable, value Machine) {
+  LLVMSetTargetMachineFastISel(TargetMachine_val(Machine), Bool_val(Enable));
+  return Val_unit;
+}
+
+/* bool -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_global_isel(value Enable, value Machine) {
+  LLVMSetTargetMachineGlobalISel(TargetMachine_val(Machine), Bool_val(Enable));
+  return Val_unit;
+}
+
+/* ?mode:GlobalISelAbortMode.t -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_global_isel_abort(value Mode, value Machine) {
+  LLVMGlobalISelAbortMode AbortModeEnum = LLVMGlobalISelAbortEnable;
+  if (Mode != Val_int(0))
+    AbortModeEnum = Int_val(Field(Mode, 0));
+  LLVMSetTargetMachineGlobalISelAbort(TargetMachine_val(Machine),
+                                      AbortModeEnum);
+  return Val_unit;
+}
+
+/* bool -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_machine_outliner(value Enable, value Machine) {
+  LLVMSetTargetMachineMachineOutliner(TargetMachine_val(Machine),
+                                      Bool_val(Enable));
   return Val_unit;
 }
 

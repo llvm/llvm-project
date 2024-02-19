@@ -7,6 +7,6 @@
 // expected-error@-1 {{second fatal}}
 
 
-//      CHECK: error: 'error' diagnostics expected but not seen:
+//      CHECK: error: 'expected-error' diagnostics expected but not seen:
 // CHECK-NEXT:   Line 6 (directive at {{.*}}verify-fatal.c:7): second fatal
 // CHECK-NEXT: 1 error generated.

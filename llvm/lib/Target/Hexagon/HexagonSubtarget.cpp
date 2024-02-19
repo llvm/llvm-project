@@ -116,13 +116,13 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   if (!llvm::count_if(Features.getFeatures(), IsQFloatFS)) {
     auto getHvxVersion = [&Features](StringRef FS) -> StringRef {
       for (StringRef F : llvm::reverse(Features.getFeatures())) {
-        if (F.startswith("+hvxv"))
+        if (F.starts_with("+hvxv"))
           return F;
       }
       for (StringRef F : llvm::reverse(Features.getFeatures())) {
         if (F == "-hvx")
           return StringRef();
-        if (F.startswith("+hvx") || F == "-hvx")
+        if (F.starts_with("+hvx") || F == "-hvx")
           return F.take_front(4);  // Return "+hvx" or "-hvx".
       }
       return StringRef();
@@ -130,7 +130,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
     bool AddQFloat = false;
     StringRef HvxVer = getHvxVersion(FS);
-    if (HvxVer.startswith("+hvxv")) {
+    if (HvxVer.starts_with("+hvxv")) {
       int Ver = 0;
       if (!HvxVer.drop_front(5).consumeInteger(10, Ver) && Ver >= 68)
         AddQFloat = true;
@@ -429,7 +429,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
 /// Enable use of alias analysis during code generation (during MI
 /// scheduling, DAGCombine, etc.).
 bool HexagonSubtarget::useAA() const {
-  if (OptLevel != CodeGenOpt::None)
+  if (OptLevel != CodeGenOptLevel::None)
     return true;
   return false;
 }
@@ -467,7 +467,7 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
   // default.
   if ((DstInst->isRegSequence() || DstInst->isCopy())) {
     Register DReg = DstInst->getOperand(0).getReg();
-    int DLatency = -1;
+    std::optional<unsigned> DLatency;
     for (const auto &DDep : Dst->Succs) {
       MachineInstr *DDst = DDep.getSUnit()->getInstr();
       int UseIdx = -1;
@@ -482,21 +482,21 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
       if (UseIdx == -1)
         continue;
 
-      int Latency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst, 0,
-                                                 *DDst, UseIdx));
+      std::optional<unsigned> Latency =
+          InstrInfo.getOperandLatency(&InstrItins, *SrcInst, 0, *DDst, UseIdx);
+
       // Set DLatency for the first time.
-      DLatency = (DLatency == -1) ? Latency : DLatency;
+      if (!DLatency)
+        DLatency = Latency;
 
       // For multiple uses, if the Latency is different across uses, reset
       // DLatency.
       if (DLatency != Latency) {
-        DLatency = -1;
+        DLatency = std::nullopt;
         break;
       }
     }
-
-    DLatency = std::max(DLatency, 0);
-    Dep.setLatency((unsigned)DLatency);
+    Dep.setLatency(DLatency ? *DLatency : 0);
   }
 
   // Try to schedule uses near definitions to generate .cur.
@@ -581,15 +581,16 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
     for (unsigned OpNum = 0; OpNum < DstI->getNumOperands(); OpNum++) {
       const MachineOperand &MO = DstI->getOperand(OpNum);
       if (MO.isReg() && MO.isUse() && MO.getReg() == DepR) {
-        int Latency = (InstrInfo.getOperandLatency(&InstrItins, *SrcI,
-                                                   DefIdx, *DstI, OpNum));
+        std::optional<unsigned> Latency = InstrInfo.getOperandLatency(
+            &InstrItins, *SrcI, DefIdx, *DstI, OpNum);
 
         // For some instructions (ex: COPY), we might end up with < 0 latency
         // as they don't have any Itinerary class associated with them.
-        Latency = std::max(Latency, 0);
+        if (!Latency)
+          Latency = 0;
         bool IsArtificial = I.isArtificial();
-        Latency = updateLatency(*SrcI, *DstI, IsArtificial, Latency);
-        I.setLatency(Latency);
+        Latency = updateLatency(*SrcI, *DstI, IsArtificial, *Latency);
+        I.setLatency(*Latency);
       }
     }
 

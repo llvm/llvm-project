@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Arith/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -55,7 +56,7 @@ private:
 
 } // namespace
 
-FailureOr<BoundType> parseBoundType(std::string type) {
+FailureOr<BoundType> parseBoundType(const std::string &type) {
   if (type == "EQ")
     return BoundType::EQ;
   if (type == "LB")
@@ -186,14 +187,26 @@ static LogicalResult testEquality(func::FuncOp funcOp) {
         op->emitOpError("invalid op");
         return WalkResult::skip();
       }
-      FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
-          op->getOperand(0), op->getOperand(1));
-      if (failed(equal)) {
-        op->emitError("could not determine equality");
-      } else if (*equal) {
-        op->emitRemark("equal");
+      if (op->hasAttr("compose")) {
+        FailureOr<int64_t> delta = affine::fullyComposeAndComputeConstantDelta(
+            op->getOperand(0), op->getOperand(1));
+        if (failed(delta)) {
+          op->emitError("could not determine equality");
+        } else if (*delta == 0) {
+          op->emitRemark("equal");
+        } else {
+          op->emitRemark("different");
+        }
       } else {
-        op->emitRemark("different");
+        FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
+            op->getOperand(0), op->getOperand(1));
+        if (failed(equal)) {
+          op->emitError("could not determine equality");
+        } else if (*equal) {
+          op->emitRemark("equal");
+        } else {
+          op->emitRemark("different");
+        }
       }
     }
     return WalkResult::advance();

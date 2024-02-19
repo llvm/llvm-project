@@ -726,8 +726,8 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
       FF = nullptr;
       break;
     }
-  } else if (Name.startswith("OSAtomicCompareAndSwap") ||
-             Name.startswith("objc_atomicCompareAndSwap")) {
+  } else if (Name.starts_with("OSAtomicCompareAndSwap") ||
+             Name.starts_with("objc_atomicCompareAndSwap")) {
     FF = create_OSAtomicCompareAndSwap;
   } else if (Name == "call_once" && D->getDeclContext()->isStdNamespace()) {
     FF = create_call_once;
@@ -806,7 +806,7 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
 
   if (!IVar) {
     Prop = MD->findPropertyDecl();
-    IVar = findBackingIvar(Prop);
+    IVar = Prop ? findBackingIvar(Prop) : nullptr;
   }
 
   if (!IVar || !Prop)

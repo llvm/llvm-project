@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYTargetStreamer.h"
-#include "CSKYSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCContext.h"

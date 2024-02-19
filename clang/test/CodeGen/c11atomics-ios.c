@@ -4,8 +4,6 @@
 // only deploy on processors with native atomics support, so it's a good
 // way to test those code-paths.
 
-// This work was done in pursuit of <rdar://13338582>.
-
 // CHECK-LABEL: define{{.*}} void @testFloat(ptr
 void testFloat(_Atomic(float) *fp) {
 // CHECK:      [[FP:%.*]] = alloca ptr
@@ -180,7 +178,7 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 }
 
 PS test_promoted_load(_Atomic(PS) *addr) {
-  // CHECK-LABEL: @test_promoted_load(ptr noalias sret(%struct.PS) align 2 %agg.result, ptr noundef %addr)
+  // CHECK-LABEL: @test_promoted_load(ptr dead_on_unwind noalias writable sret(%struct.PS) align 2 %agg.result, ptr noundef %addr)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[ATOMIC_RES:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   store ptr %addr, ptr [[ADDR_ARG]], align 4
@@ -211,7 +209,7 @@ void test_promoted_store(_Atomic(PS) *addr, PS *val) {
 }
 
 PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_exchange(ptr noalias sret(%struct.PS) align 2 %agg.result, ptr noundef %addr, ptr noundef %val)
+  // CHECK-LABEL: @test_promoted_exchange(ptr dead_on_unwind noalias writable sret(%struct.PS) align 2 %agg.result, ptr noundef %addr, ptr noundef %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2

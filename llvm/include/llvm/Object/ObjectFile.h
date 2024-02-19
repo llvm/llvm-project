@@ -337,6 +337,7 @@ public:
 
   virtual StringRef getFileFormatName() const = 0;
   virtual Triple::ArchType getArch() const = 0;
+  virtual Triple::OSType getOS() const { return Triple::UnknownOS; }
   virtual Expected<SubtargetFeatures> getFeatures() const = 0;
   virtual std::optional<StringRef> tryGetCPUName() const {
     return std::nullopt;
@@ -389,9 +390,9 @@ public:
   createELFObjectFile(MemoryBufferRef Object, bool InitContent = true);
 
   static Expected<std::unique_ptr<MachOObjectFile>>
-  createMachOObjectFile(MemoryBufferRef Object,
-                        uint32_t UniversalCputype = 0,
-                        uint32_t UniversalIndex = 0);
+  createMachOObjectFile(MemoryBufferRef Object, uint32_t UniversalCputype = 0,
+                        uint32_t UniversalIndex = 0,
+                        size_t MachOFilesetEntryOffset = 0);
 
   static Expected<std::unique_ptr<ObjectFile>>
   createGOFFObjectFile(MemoryBufferRef Object);

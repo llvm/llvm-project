@@ -43,6 +43,27 @@
 #endif /* !defined(RT_EXT_API_GROUP_END) */
 
 /*
+ * RT_OFFLOAD_API_GROUP_BEGIN/END pair is placed around definitions
+ * of functions that can be referenced in other modules of Flang
+ * runtime. For OpenMP offload, these functions are made "declare target"
+ * making sure they are compiled for the target even though direct
+ * references to them from other "declare target" functions may not
+ * be seen. Host-only functions should not be put in between these
+ * two macros.
+ */
+#define RT_OFFLOAD_API_GROUP_BEGIN RT_EXT_API_GROUP_BEGIN
+#define RT_OFFLOAD_API_GROUP_END RT_EXT_API_GROUP_END
+
+/*
+ * RT_OFFLOAD_VAR_GROUP_BEGIN/END pair is placed around definitions
+ * of variables (e.g. globals or static class members) that can be
+ * referenced in functions marked with RT_OFFLOAD_API_GROUP_BEGIN/END.
+ * For OpenMP offload, these variables are made "declare target".
+ */
+#define RT_OFFLOAD_VAR_GROUP_BEGIN RT_EXT_API_GROUP_BEGIN
+#define RT_OFFLOAD_VAR_GROUP_END RT_EXT_API_GROUP_END
+
+/*
  * RT_VAR_GROUP_BEGIN/END pair is placed around definitions
  * of module scope variables referenced by Flang runtime (directly
  * or indirectly).
@@ -87,5 +108,28 @@
 #define RT_CONST_VAR_ATTRS
 #endif
 #endif /* !defined(RT_CONST_VAR_ATTRS) */
+
+/*
+ * RT_DEVICE_COMPILATION is defined for any device compilation.
+ * Note that it can only be used reliably with compilers that perform
+ * separate host and device compilations.
+ */
+#if ((defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)) || \
+    (defined(_OPENMP) && (defined(__AMDGCN__) || defined(__NVPTX__)))
+#define RT_DEVICE_COMPILATION 1
+#else
+#undef RT_DEVICE_COMPILATION
+#endif
+
+#if defined(__CUDACC__)
+#define RT_DIAG_PUSH _Pragma("nv_diagnostic push")
+#define RT_DIAG_POP _Pragma("nv_diagnostic pop")
+#define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN \
+  _Pragma("nv_diag_suppress 20011") _Pragma("nv_diag_suppress 20014")
+#else /* !defined(__CUDACC__) */
+#define RT_DIAG_PUSH
+#define RT_DIAG_POP
+#define RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+#endif /* !defined(__CUDACC__) */
 
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

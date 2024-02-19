@@ -26,7 +26,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "MipsGenSubtargetInfo.inc"
@@ -228,7 +227,7 @@ public:
   /// This overrides the PostRAScheduler bit in the SchedModel for each CPU.
   bool enablePostRAScheduler() const override;
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
-  CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const override;
+  CodeGenOptLevel getOptLevelToEnablePostRAScheduler() const override;
 
   bool isABI_N64() const;
   bool isABI_N32() const;

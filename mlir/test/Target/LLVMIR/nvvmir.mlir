@@ -30,6 +30,39 @@ llvm.func @nvvm_special_regs() -> i32 {
   %13 = nvvm.read.ptx.sreg.warpsize : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.laneid()
   %14 = nvvm.read.ptx.sreg.laneid : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clusterid.x
+  %15 = nvvm.read.ptx.sreg.clusterid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clusterid.y
+  %16 = nvvm.read.ptx.sreg.clusterid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clusterid.z
+  %17 = nvvm.read.ptx.sreg.clusterid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nclusterid.x
+  %18 = nvvm.read.ptx.sreg.nclusterid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nclusterid.y
+  %19 = nvvm.read.ptx.sreg.nclusterid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nclusterid.z
+  %20 = nvvm.read.ptx.sreg.nclusterid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid
+  %21 = nvvm.read.ptx.sreg.cluster.ctaid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid
+  %22 = nvvm.read.ptx.sreg.cluster.ctaid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid
+  %23 = nvvm.read.ptx.sreg.cluster.ctaid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid
+  %24 = nvvm.read.ptx.sreg.cluster.nctaid.x : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid
+  %25 = nvvm.read.ptx.sreg.cluster.nctaid.y : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid
+  %26 = nvvm.read.ptx.sreg.cluster.nctaid.z : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank
+  %27 = nvvm.read.ptx.sreg.cluster.ctarank : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank
+  %28 = nvvm.read.ptx.sreg.cluster.nctarank : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock
+  %29 = nvvm.read.ptx.sreg.clock : i32
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
+  %30 = nvvm.read.ptx.sreg.clock64 : i64
+  
   llvm.return %1 : i32
 }
 
@@ -44,6 +77,45 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
 llvm.func @llvm_nvvm_barrier0() {
   // CHECK: call void @llvm.nvvm.barrier0()
   nvvm.barrier0
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_barrier(
+// CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
+llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
+  // CHECK: call void @llvm.nvvm.barrier0()
+  nvvm.barrier 
+  // CHECK: call void @llvm.nvvm.barrier.n(i32 %[[barId]])
+  nvvm.barrier id = %barID
+  // CHECK: call void @llvm.nvvm.barrier(i32 %[[barId]], i32 %[[numThreads]])
+  nvvm.barrier id = %barID number_of_threads = %numberOfThreads
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive
+llvm.func @llvm_nvvm_cluster_arrive() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
+  nvvm.cluster.arrive
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.aligned()
+  nvvm.cluster.arrive {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive_relaxed
+llvm.func @llvm_nvvm_cluster_arrive_relaxed() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+  nvvm.cluster.arrive.relaxed
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+  nvvm.cluster.arrive.relaxed {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_wait
+llvm.func @llvm_nvvm_cluster_wait() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait()
+  nvvm.cluster.wait
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait.aligned()
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 
@@ -239,11 +311,11 @@ llvm.func @nvvm_mma_m16n8k4_tf32_f32(%a0 : i32, %a1 : i32,
 // The test below checks the correct mapping of the nvvm.wmma.*.load.* op to the correct intrinsic
 // in the LLVM NVPTX backend.
 // CHECK-LABEL: @gpu_wmma_load_op
-llvm.func @gpu_wmma_load_op(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+llvm.func @gpu_wmma_load_op(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // CHECK: call { <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.nvvm.wmma.m16n16k16.load.a.row.stride.f16.p3(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
   %0 = nvvm.wmma.load %arg0, %arg1
     {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-    : (!llvm.ptr<i32, 3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+    : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 
   llvm.return
 }
@@ -251,13 +323,13 @@ llvm.func @gpu_wmma_load_op(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
 // The test below checks the correct mapping of the nvvm.wmma.*.store.* op to the correct intrinsic
 // in the LLVM NVPTX backend.
 // CHECK-LABEL: @gpu_wmma_store_op
-llvm.func @gpu_wmma_store_op(%arg0: !llvm.ptr<i32, 3>, %arg1: i32,
+llvm.func @gpu_wmma_store_op(%arg0: !llvm.ptr<3>, %arg1: i32,
                             %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
                             %arg4: vector<2 xf16>, %arg5: vector<2 x f16>) {
   // CHECK: call void @llvm.nvvm.wmma.m16n16k16.store.d.row.stride.f16.p3(ptr addrspace(3) %{{.*}}, <2 x half> {{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}}, i32 %{{.*}})
   nvvm.wmma.store %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
     {eltype = #nvvm.mma_type<f16>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-    : !llvm.ptr<i32, 3>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
+    : !llvm.ptr<3>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
   llvm.return
 }
 
@@ -286,11 +358,11 @@ llvm.func @gpu_wmma_mma_op(%arg0: vector<2 x f16>, %arg1: vector<2 x f16>,
 }
 
 // CHECK-LABEL: @nvvm_wmma_load_tf32
-llvm.func @nvvm_wmma_load_tf32(%arg0: !llvm.ptr<i32>, %arg1 : i32) {
+llvm.func @nvvm_wmma_load_tf32(%arg0: !llvm.ptr, %arg1 : i32) {
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.wmma.m16n16k8.load.a.row.stride.tf32.p0(ptr %{{.*}}, i32 %{{.*}})
   %0 = nvvm.wmma.load %arg0, %arg1
     {eltype = #nvvm.mma_type<tf32>, frag = #nvvm.mma_frag<a>, k = 8 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-    : (!llvm.ptr<i32>) -> !llvm.struct<(i32, i32, i32, i32)>
+    : (!llvm.ptr) -> !llvm.struct<(i32, i32, i32, i32)>
   llvm.return
 }
 
@@ -307,15 +379,15 @@ llvm.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
 }
 
 // CHECK-LABEL: @cp_async
-llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
+llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
 // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
 // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
 // CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
@@ -323,20 +395,62 @@ llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
   llvm.return
 }
 
+// CHECK-LABEL: @cp_async_mbarrier_arrive
+llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.ptr) {
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr %{{.*}})
+  nvvm.cp.async.mbarrier.arrive %bar_gen : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr %{{.*}})
+  nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.shared(ptr addrspace(3) %{{.*}})
+  nvvm.cp.async.mbarrier.arrive.shared %bar_shared : !llvm.ptr<3>
+  // CHECK: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared(ptr addrspace(3) %{{.*}})
+  nvvm.cp.async.mbarrier.arrive.shared %bar_shared {noinc = true} : !llvm.ptr<3>
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_setmaxregister
+llvm.func @llvm_nvvm_setmaxregister() {
+  // CHECK: call void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 256)
+  nvvm.setmaxregister increase 256
+  // CHECK: call void @llvm.nvvm.setmaxnreg.dec.sync.aligned.u32(i32 24)
+  nvvm.setmaxregister decrease 24
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cp_async_bulk_commit_group
+llvm.func @llvm_nvvm_cp_async_bulk_commit_group() {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.commit.group()
+  nvvm.cp.async.bulk.commit.group
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cp_async_bulk_wait_group
+llvm.func @llvm_nvvm_cp_async_bulk_wait_group() {
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group(i32 0)
+  nvvm.cp.async.bulk.wait_group 0
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group(i32 3)
+  nvvm.cp.async.bulk.wait_group 3
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 0)
+  nvvm.cp.async.bulk.wait_group 0 {read}
+  // CHECK: call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 3)
+  nvvm.cp.async.bulk.wait_group 3 {read}
+  llvm.return
+}
+
 // CHECK-LABEL: @ld_matrix
-llvm.func @ld_matrix(%arg0: !llvm.ptr<i32, 3>) {
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) %{{.*}})
-  %l1 = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> i32
+  %l1 = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
   // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.b16.p3(ptr addrspace(3) %{{.*}})
-  %l2 = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32)>
+  %l2 = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3(ptr addrspace(3) %{{.*}})
-  %l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32, i32, i32)>
+  %l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
    // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.trans.b16.p3(ptr addrspace(3) %{{.*}})
-  %l1t = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<i32, 3>) -> i32
+  %l1t = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<3>) -> i32
   // CHECK: call { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.trans.b16.p3(ptr addrspace(3) %{{.*}})
-  %l2t = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32)>
+  %l2t = nvvm.ldmatrix %arg0 {num = 2 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   // CHECK: call { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.trans.b16.p3(ptr addrspace(3) %{{.*}})
-  %l4t = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32, i32, i32)>
+  %l4t = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<col>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
   llvm.return
 }
 
@@ -352,7 +466,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
 
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
@@ -364,7 +478,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
@@ -396,7 +510,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
                                      nvvm.minctasm = 16, nvvm.maxnreg = 32} {
   llvm.return
 }
@@ -409,6 +523,13 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+
+// -----
+
+llvm.func @kernel_func(%numberOfThreads : i32) {
+  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
+  nvvm.barrier number_of_threads = %numberOfThreads
+}
 
 // -----
 // expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
@@ -426,13 +547,30 @@ nvvm.maxnreg = "boo"} {
 }
 // -----
 // expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [3,4,5,6]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 3, 4, 5, 6>} {
   llvm.return
 }
 
 // -----
 // expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [3,4,5,6]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4, 5, 6>} {
   llvm.return
 }
 
+// -----
+// CHECK: !nvvm.annotations =
+// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
+// CHECK: !2 = !{i32 1}
+// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}
+
+// -----
+// CHECK: !nvvm.annotations =
+// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
+// CHECK: !2 = !{i32 1, i32 3}
+// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
+llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
+  llvm.return
+}

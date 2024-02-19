@@ -14,7 +14,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -22,7 +22,6 @@ def Func_Dialect : Dialect {
   let name = "func";
   let cppNamespace = "::mlir::func";
   let hasConstantMaterializer = 1;
-  let usePropertiesForAttributes = 1;
 }
 
 // Base class for Func dialect ops.
@@ -81,6 +80,10 @@ def CallOp : Func_Op<"call",
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
     }
 
     operand_iterator arg_operand_begin() { return operand_begin(); }
@@ -152,6 +155,10 @@ def CallIndirectOp : Func_Op<"call_indirect", [
       return {arg_operand_begin(), arg_operand_end()};
     }
 
+    MutableOperandRange getArgOperandsMutable() {
+      return getCalleeOperandsMutable();
+    }
+
     operand_iterator arg_operand_begin() { return ++operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
@@ -217,7 +224,7 @@ def ConstantOp : Func_Op<"constant",
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Func_Op<"func", [
-  AffineScope, AutomaticAllocationScope, CallableOpInterface,
+  AffineScope, AutomaticAllocationScope,
   FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
@@ -239,8 +246,8 @@ def FuncOp : Func_Op<"func", [
 
     ```mlir
     // External function definitions.
-    func.func @abort()
-    func.func @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
+    func.func private @abort()
+    func.func private @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
 
     // A function that returns its argument twice:
     func.func @count(%x: i64) -> (i64, i64)
@@ -249,13 +256,13 @@ def FuncOp : Func_Op<"func", [
     }
 
     // A function with an argument attribute
-    func.func @example_fn_arg(%x: i32 {swift.self = unit})
+    func.func private @example_fn_arg(%x: i32 {swift.self = unit})
 
     // A function with a result attribute
-    func.func @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
+    func.func private @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
 
     // A function with an attribute
-    func.func @example_fn_attr() attributes {dialectName.attrName = false}
+    func.func private @example_fn_attr() attributes {dialectName.attrName = false}
     ```
   }];
 
@@ -297,33 +304,13 @@ def FuncOp : Func_Op<"func", [
     void cloneInto(FuncOp dest, IRMapping &mapper);
 
     //===------------------------------------------------------------------===//
-    // CallableOpInterface
+    // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
 
     /// Returns the region on the current operation that is callable. This may
     /// return null in the case of an external callable object, e.g. an external
     /// function.
     ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
-
-    /// Returns the results types that the callable region produces when
-    /// executed.
-    ArrayRef<Type> getCallableResults() { return getFunctionType().getResults(); }
-
-    /// Returns the argument attributes for all callable region arguments or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-
-    /// Returns the result attributes for all callable region results or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
-    }
-
-    //===------------------------------------------------------------------===//
-    // FunctionOpInterface Methods
-    //===------------------------------------------------------------------===//
 
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }

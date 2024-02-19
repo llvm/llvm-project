@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck %s
 
 # Check that we can disassemble opcodes w/o src2 with any op_sel_hi value for src2
 

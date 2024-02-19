@@ -28,8 +28,6 @@ typedef struct {} NSDecimal;
 @interface NSNetService : NSObject {} - (id)init; @end
 extern NSString * const NSUndoManagerCheckpointNotification;
 
-// Test case: <rdar://problem/6145427>
-
 int main (int argc, const char * argv[]) {
   NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
   id someUnintializedPointer = [someUnintializedPointer objectAtIndex:0]; // expected-warning{{Receiver in message expression is an uninitialized value}}

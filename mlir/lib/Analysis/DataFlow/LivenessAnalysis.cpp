@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/SymbolTable.h"
+#include <cassert>
 #include <mlir/Analysis/DataFlow/LivenessAnalysis.h>
 
 #include <mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h>
@@ -14,6 +16,7 @@
 #include <mlir/Analysis/DataFlowFramework.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
+#include <mlir/Interfaces/CallInterfaces.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
@@ -54,8 +57,9 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 ///
 /// A value "has memory effects" iff it:
 ///   (1.a) is an operand of an op with memory effects OR
-///   (1.b) is a non-forwarded branch operand and a block where its op could
-///   take the control has an op with memory effects.
+///   (1.b) is a non-forwarded branch operand and its branch op could take the
+///   control to a block that has an op with memory effects OR
+///   (1.c) is a non-forwarded call operand.
 ///
 /// A value `A` is said to be "used to compute" value `B` iff `B` cannot be
 /// computed in the absence of `A`. Thus, in this implementation, we say that
@@ -89,13 +93,13 @@ void LivenessAnalysis::visitOperation(Operation *op,
 
 void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // We know (at the moment) and assume (for the future) that `operand` is a
-  // non-forwarded branch operand of an op of type `RegionBranchOpInterface`,
-  // `BranchOpInterface`, or `RegionBranchTerminatorOpInterface`.
+  // non-forwarded branch operand of a `RegionBranchOpInterface`,
+  // `BranchOpInterface`, `RegionBranchTerminatorOpInterface` or return-like op.
   Operation *op = operand.getOwner();
   assert((isa<RegionBranchOpInterface>(op) || isa<BranchOpInterface>(op) ||
           isa<RegionBranchTerminatorOpInterface>(op)) &&
          "expected the op to be `RegionBranchOpInterface`, "
-         "`BranchOpInterface`, or `RegionBranchTerminatorOpInterface`");
+         "`BranchOpInterface` or `RegionBranchTerminatorOpInterface`");
 
   // The lattices of the non-forwarded branch operands don't get updated like
   // the forwarded branch operands or the non-branch operands. Thus they need
@@ -120,10 +124,14 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     // successors.
     blocks = op->getSuccessors();
   } else {
-    // When the op is a `RegionBranchTerminatorOpInterface`, like a
-    // `scf.condition` op, its branch operand controls the flow into this op's
-    // parent's (which is a `RegionBranchOpInterface`'s) regions.
-    for (Region &region : op->getParentOp()->getRegions()) {
+    // When the op is a `RegionBranchTerminatorOpInterface`, like an
+    // `scf.condition` op or return-like, like an `scf.yield` op, its branch
+    // operand controls the flow into this op's parent's (which is a
+    // `RegionBranchOpInterface`'s) regions.
+    Operation *parentOp = op->getParentOp();
+    assert(isa<RegionBranchOpInterface>(parentOp) &&
+           "expected parent op to implement `RegionBranchOpInterface`");
+    for (Region &region : parentOp->getRegions()) {
       for (Block &block : region)
         blocks.push_back(&block);
     }
@@ -145,8 +153,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // Now that we have checked for memory-effecting ops in the blocks of concern,
   // we will simply visit the op with this non-forwarded operand to potentially
   // mark it "live" due to type (1.a/3) liveness.
-  if (operand.getOperandNumber() > 0)
-    return;
   SmallVector<Liveness *, 4> operandLiveness;
   operandLiveness.push_back(getLatticeElement(operand.get()));
   SmallVector<const Liveness *, 4> resultsLiveness;
@@ -167,9 +173,25 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   visitOperation(parentOp, operandLiveness, parentResultsLiveness);
 }
 
+void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
+  // We know (at the moment) and assume (for the future) that `operand` is a
+  // non-forwarded call operand of an op implementing `CallOpInterface`.
+  assert(isa<CallOpInterface>(operand.getOwner()) &&
+         "expected the op to implement `CallOpInterface`");
+
+  // The lattices of the non-forwarded call operands don't get updated like the
+  // forwarded call operands or the non-call operands. Thus they need to be
+  // handled separately. This is where we handle them.
+
+  // This marks values of type (1.c) liveness as "live". A non-forwarded
+  // call operand is live.
+  Liveness *operandLiveness = getLatticeElement(operand.get());
+  propagateIfChanged(operandLiveness, operandLiveness->markLive());
+}
+
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
   // This marks values of type (2) liveness as "live".
-  lattice->markLive();
+  (void)lattice->markLive();
 }
 
 //===----------------------------------------------------------------------===//

@@ -136,7 +136,7 @@ class Scheduler : public HardwareUnit {
   /// Issue an instruction without updating the ready queue.
   void issueInstructionImpl(
       InstRef &IR,
-      SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes);
+      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Pipes);
 
   // Identify instructions that have finished executing, and remove them from
   // the IssuedSet. References to executed instructions are added to input
@@ -202,7 +202,7 @@ public:
   /// result of this event.
   void issueInstruction(
       InstRef &IR,
-      SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Used,
+      SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Used,
       SmallVectorImpl<InstRef> &Pending,
       SmallVectorImpl<InstRef> &Ready);
 

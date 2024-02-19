@@ -21,7 +21,6 @@
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstring>
@@ -45,6 +44,22 @@ Expected<uint16_t> readTargetMachineArch(StringRef Buffer) {
       }
     } else if (Data[ELF::EI_CLASS] == ELF::ELFCLASS32) {
       if (auto File = llvm::object::ELF32LEFile::create(Buffer)) {
+        return File->getHeader().e_machine;
+      } else {
+        return File.takeError();
+      }
+    }
+  }
+
+  if (Data[ELF::EI_DATA] == ELF::ELFDATA2MSB) {
+    if (Data[ELF::EI_CLASS] == ELF::ELFCLASS64) {
+      if (auto File = llvm::object::ELF64BEFile::create(Buffer)) {
+        return File->getHeader().e_machine;
+      } else {
+        return File.takeError();
+      }
+    } else if (Data[ELF::EI_CLASS] == ELF::ELFCLASS32) {
+      if (auto File = llvm::object::ELF32BEFile::create(Buffer)) {
         return File->getHeader().e_machine;
       } else {
         return File.takeError();

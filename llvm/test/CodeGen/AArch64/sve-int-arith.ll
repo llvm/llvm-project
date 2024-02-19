@@ -165,9 +165,9 @@ define <vscale x 8 x i64> @abs_nxv8i64(<vscale x 8 x i64> %a) {
 ; CHECK-LABEL: abs_nxv8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    abs z2.d, p0/m, z2.d
 ; CHECK-NEXT:    abs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    abs z1.d, p0/m, z1.d
+; CHECK-NEXT:    abs z2.d, p0/m, z2.d
 ; CHECK-NEXT:    abs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i64> @llvm.abs.nxv8i64(<vscale x 8 x i64> %a, i1 false)
@@ -425,7 +425,7 @@ define <vscale x 2 x i64> @mla_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b,
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8>* %p) {
+define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, ptr %p) {
 ; CHECK-LABEL: mla_i8_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
@@ -434,7 +434,7 @@ define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %prod = mul <vscale x 16 x i8> %a, %b
-  store <vscale x 16 x i8> %prod, <vscale x 16 x i8>* %p
+  store <vscale x 16 x i8> %prod, ptr %p
   %res = add <vscale x 16 x i8> %c, %prod
   ret <vscale x 16 x i8> %res
 }
@@ -748,8 +748,8 @@ define <vscale x 16 x i8> @mulsub_i8_negativeAddend(<vscale x 16 x i8> %a, <vsca
 define <vscale x 8 x i16> @multiple_fused_ops(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK-LABEL: multiple_fused_ops:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #200 // =0xc8
 ; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov w8, #200 // =0xc8
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    mla z2.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
@@ -770,11 +770,11 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-NEXT:    b.lt .LBB70_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w9, w3
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z0.s, #1 // =0x1
+; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntw x10
-; CHECK-NEXT:    mov z0.s, #1 // =0x1
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:  .LBB70_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x1, x8, lsl #2]

@@ -508,6 +508,7 @@ void LookupResult::resolveKind() {
   llvm::SmallDenseMap<QualType, unsigned, 16> UniqueTypes;
 
   bool Ambiguous = false;
+  bool ReferenceToPlaceHolderVariable = false;
   bool HasTag = false, HasFunction = false;
   bool HasFunctionTemplate = false, HasUnresolved = false;
   const NamedDecl *HasNonFunction = nullptr;
@@ -537,7 +538,7 @@ void LookupResult::resolveKind() {
     if (HideTags && isa<TagDecl>(D)) {
       bool Hidden = false;
       for (auto *OtherDecl : Decls) {
-        if (canHideTag(OtherDecl) &&
+        if (canHideTag(OtherDecl) && !OtherDecl->isInvalidDecl() &&
             getContextForScopeMatching(OtherDecl)->Equals(
                 getContextForScopeMatching(Decls[I]))) {
           RemovedDecls.set(I);
@@ -567,7 +568,7 @@ void LookupResult::resolveKind() {
 
     // For non-type declarations, check for a prior lookup result naming this
     // canonical declaration.
-    if (!ExistingI) {
+    if (!D->isPlaceholderVar(getSema().getLangOpts()) && !ExistingI) {
       auto UniqueResult = Unique.insert(std::make_pair(D, I));
       if (!UniqueResult.second) {
         // We've seen this entity before.
@@ -610,7 +611,11 @@ void LookupResult::resolveKind() {
           RemovedDecls.set(I);
           continue;
         }
-
+        if (D->isPlaceholderVar(getSema().getLangOpts()) &&
+            getContextForScopeMatching(D) ==
+                getContextForScopeMatching(Decls[I])) {
+          ReferenceToPlaceHolderVariable = true;
+        }
         Ambiguous = true;
       }
       HasNonFunction = D;
@@ -634,7 +639,9 @@ void LookupResult::resolveKind() {
       (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
     Ambiguous = true;
 
-  if (Ambiguous)
+  if (Ambiguous && ReferenceToPlaceHolderVariable)
+    setAmbiguous(LookupResult::AmbiguousReferenceToPlaceholderVariable);
+  else if (Ambiguous)
     setAmbiguous(LookupResult::AmbiguousReference);
   else if (HasUnresolved)
     ResultKind = LookupResult::FoundUnresolvedValue;
@@ -1193,8 +1200,8 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
     // Perform template argument deduction against the type that we would
     // expect the function to have.
     if (R.getSema().DeduceTemplateArguments(ConvTemplate, nullptr, ExpectedType,
-                                            Specialization, Info)
-          == Sema::TDK_Success) {
+                                            Specialization, Info) ==
+        TemplateDeductionResult::Success) {
       R.addDecl(Specialization);
       Found = true;
     }
@@ -1586,7 +1593,6 @@ bool Sema::isUsableModule(const Module *M) {
   //   The global module fragment can be used to provide declarations that are
   //   attached to the global module and usable within the module unit.
   if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment ||
-      M == TheExportedImplicitGlobalModuleFragment ||
       // If M is the module we're parsing, it should be usable. This covers the
       // private module fragment. The private module fragment is usable only if
       // it is within the current module unit. And it must be the current
@@ -2862,6 +2868,18 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
     break;
   }
 
+  case LookupResult::AmbiguousReferenceToPlaceholderVariable: {
+    Diag(NameLoc, diag::err_using_placeholder_variable) << Name << LookupRange;
+    DeclContext *DC = nullptr;
+    for (auto *D : Result) {
+      Diag(D->getLocation(), diag::note_reference_placeholder) << D;
+      if (DC != nullptr && DC != D->getDeclContext())
+        break;
+      DC = D->getDeclContext();
+    }
+    break;
+  }
+
   case LookupResult::AmbiguousReference: {
     Diag(NameLoc, diag::err_ambiguous_reference) << Name << LookupRange;
 
@@ -2964,6 +2982,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     case TemplateArgument::Integral:
     case TemplateArgument::Expression:
     case TemplateArgument::NullPtr:
+    case TemplateArgument::StructuralValue:
       // [Note: non-type template arguments do not contribute to the set of
       //  associated namespaces. ]
       break;
@@ -3892,7 +3911,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
             // with an import).
-            assert(FM && FM->isModulePurview() && !FM->isPrivateModule() &&
+            assert(FM && FM->isNamedModule() && !FM->isPrivateModule() &&
                    "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
@@ -5680,12 +5699,12 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
 
 /// Get a "quoted.h" or <angled.h> include path to use in a diagnostic
 /// suggesting the addition of a #include of the specified file.
-static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
+static std::string getHeaderNameForHeader(Preprocessor &PP, FileEntryRef E,
                                           llvm::StringRef IncludingFile) {
-  bool IsSystem = false;
+  bool IsAngled = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
-      E, IncludingFile, &IsSystem);
-  return (IsSystem ? '<' : '"') + Path + (IsSystem ? '>' : '"');
+      E, IncludingFile, &IsAngled);
+  return (IsAngled ? '<' : '"') + Path + (IsAngled ? '>' : '"');
 }
 
 void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
@@ -5693,6 +5712,11 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
                                  ArrayRef<Module *> Modules,
                                  MissingImportKind MIK, bool Recover) {
   assert(!Modules.empty());
+
+  // See https://github.com/llvm/llvm-project/issues/73893. It is generally
+  // confusing than helpful to show the namespace is not visible.
+  if (isa<NamespaceDecl>(Decl))
+    return;
 
   auto NotePrevious = [&] {
     // FIXME: Suppress the note backtrace even under
@@ -5705,7 +5729,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
   llvm::SmallVector<Module*, 8> UniqueModules;
   llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
   for (auto *M : Modules) {
-    if (M->isGlobalModule() || M->isPrivateModule())
+    if (M->isExplicitGlobalModule() || M->isPrivateModule())
       continue;
     if (UniqueModuleSet.insert(M).second)
       UniqueModules.push_back(M);
@@ -5713,11 +5737,12 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   // Try to find a suitable header-name to #include.
   std::string HeaderName;
-  if (const FileEntry *Header =
+  if (OptionalFileEntryRef Header =
           PP.getHeaderToIncludeForDiagnostics(UseLoc, DeclLoc)) {
     if (const FileEntry *FE =
             SourceMgr.getFileEntryForID(SourceMgr.getFileID(UseLoc)))
-      HeaderName = getHeaderNameForHeader(PP, Header, FE->tryGetRealPathName());
+      HeaderName =
+          getHeaderNameForHeader(PP, *Header, FE->tryGetRealPathName());
   }
 
   // If we have a #include we should suggest, or if all definition locations
@@ -5736,6 +5761,28 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   Modules = UniqueModules;
 
+  auto GetModuleNameForDiagnostic = [this](const Module *M) -> std::string {
+    if (M->isModuleMapModule())
+      return M->getFullModuleName();
+
+    Module *CurrentModule = getCurrentModule();
+
+    if (M->isImplicitGlobalModule())
+      M = M->getTopLevelModule();
+
+    bool IsInTheSameModule =
+        CurrentModule && CurrentModule->getPrimaryModuleInterfaceName() ==
+                             M->getPrimaryModuleInterfaceName();
+
+    // If the current module unit is in the same module with M, it is OK to show
+    // the partition name. Otherwise, it'll be sufficient to show the primary
+    // module name.
+    if (IsInTheSameModule)
+      return M->getTopLevelModuleName().str();
+    else
+      return M->getPrimaryModuleInterfaceName().str();
+  };
+
   if (Modules.size() > 1) {
     std::string ModuleList;
     unsigned N = 0;
@@ -5745,7 +5792,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
         ModuleList += "[...]";
         break;
       }
-      ModuleList += M->getFullModuleName();
+      ModuleList += GetModuleNameForDiagnostic(M);
     }
 
     Diag(UseLoc, diag::err_module_unimported_use_multiple)
@@ -5753,7 +5800,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
   } else {
     // FIXME: Add a FixItHint that imports the corresponding module.
     Diag(UseLoc, diag::err_module_unimported_use)
-      << (int)MIK << Decl << Modules[0]->getFullModuleName();
+        << (int)MIK << Decl << GetModuleNameForDiagnostic(Modules[0]);
   }
 
   NotePrevious();

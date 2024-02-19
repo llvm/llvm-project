@@ -16,26 +16,31 @@
 # DISCARD-LOCALS:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .Lused
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
+# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .L.str
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} unused
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} unused_gc
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} .text
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} text
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} gc
+# DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} .rodata.str1.1
 # DISCARD-LOCALS-NEXT:           NOTYPE  GLOBAL DEFAULT {{.*}} _start
 
 ## --discard-all removes all unused regular local symbols.
 # DISCARD-ALL:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
 # DISCARD-ALL-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .Lused
 # DISCARD-ALL-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
+# DISCARD-ALL-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .L.str
 # DISCARD-ALL-NEXT:           SECTION LOCAL  DEFAULT {{.*}} .text
 # DISCARD-ALL-NEXT:           SECTION LOCAL  DEFAULT {{.*}} text
 # DISCARD-ALL-NEXT:           SECTION LOCAL  DEFAULT {{.*}} gc
+# DISCARD-ALL-NEXT:           SECTION LOCAL  DEFAULT {{.*}} .rodata.str1.1
 # DISCARD-ALL-NEXT:           NOTYPE  GLOBAL DEFAULT {{.*}} _start
 
 # REL:      .rela.text {
 # REL-NEXT:   R_X86_64_PLT32 text 0xFFFFFFFFFFFFFFFC
 # REL-NEXT:   R_X86_64_PLT32 .Lused 0xFFFFFFFFFFFFFFFC
 # REL-NEXT:   R_X86_64_PLT32 used 0xFFFFFFFFFFFFFFFC
+# REL-NEXT:   R_X86_64_PC32 .L.str 0xFFFFFFFFFFFFFFFC
 # REL-NEXT: }
 
 .globl _start
@@ -43,6 +48,7 @@ _start:
   call text@plt
   jmp .Lused@plt
   call used@plt
+  leaq .L.str(%rip), %rdi
 
 .section text,"ax"
 .Lunused:
@@ -54,3 +60,6 @@ used:
 .Lunused_gc:
 unused_gc:
   ret
+
+.section .rodata.str1.1,"aMS",@progbits,1
+.L.str: .asciz "a"

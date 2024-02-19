@@ -14,10 +14,22 @@
 
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 #include <optional>
+#include <utility>
 
 #define DEBUG_TYPE "int-range-analysis"
 
@@ -66,22 +78,6 @@ void IntegerRangeAnalysis::visitOperation(
       })) {
     return;
   }
-
-  // Ignore non-integer outputs - return early if the op has no scalar
-  // integer results
-  bool hasIntegerResult = false;
-  for (auto it : llvm::zip(results, op->getResults())) {
-    Value value = std::get<1>(it);
-    if (value.getType().isIntOrIndex()) {
-      hasIntegerResult = true;
-    } else {
-      IntegerValueRangeLattice *lattice = std::get<0>(it);
-      propagateIfChanged(lattice,
-                         lattice->join(IntegerValueRange::getMaxRange(value)));
-    }
-  }
-  if (!hasIntegerResult)
-    return;
 
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
   if (!inferrable)
@@ -184,7 +180,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
             getLatticeElementFor(op, value);
-        if (lattice != nullptr)
+        if (lattice != nullptr && !lattice->getValue().isUninitialized())
           return getUpper ? lattice->getValue().getValue().smax()
                           : lattice->getValue().getValue().smin();
       }
@@ -200,7 +196,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
     std::optional<Value> iv = loop.getSingleInductionVar();
     if (!iv) {
-      return SparseDataFlowAnalysis ::visitNonControlFlowArguments(
+      return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
           op, successor, argLattices, firstIndex);
     }
     std::optional<OpFoldResult> lowerBound = loop.getSingleLowerBound();
@@ -228,6 +224,6 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     return;
   }
 
-  return SparseDataFlowAnalysis::visitNonControlFlowArguments(
+  return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
       op, successor, argLattices, firstIndex);
 }

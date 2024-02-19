@@ -34,10 +34,10 @@ exit:
   ret void
 }
 
-declare void @llvm.trap() noreturn cold
+declare void @llvm.trap() noreturn cold memory(inaccessiblemem: write)
 declare void @_Z10sideeffectv()
 ;.
-; REUSE: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
+; REUSE: @G = external dso_local global i32, align 4
 ;.
 ; REUSE-LABEL: @foo(
 ; REUSE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 0
@@ -79,7 +79,7 @@ declare void @_Z10sideeffectv()
 ; REUSE-NEXT:    unreachable
 ;
 ;.
-; REUSE: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind }
+; REUSE: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ; REUSE: attributes #[[ATTR1:[0-9]+]] = { cold minsize noreturn }
 ; REUSE: attributes #[[ATTR2]] = { noinline }
 ;.

@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -976,7 +977,7 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   auto File = SP->getFile();
   std::string FileName;
 
-  if (!File->getFilename().startswith("/") && File->getDirectory().size())
+  if (!File->getFilename().starts_with("/") && File->getDirectory().size())
     FileName = File->getDirectory().str() + "/" + File->getFilename().str();
   else
     FileName = std::string(File->getFilename());
@@ -1318,14 +1319,18 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   if (MI->isInlineAsm()) {
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
-    for (; MI->getOperand(NumDefs).isReg() && MI->getOperand(NumDefs).isDef();
-         ++NumDefs)
-      ;
-
-    // Skip this inline asm instruction if the asmstr is empty.
-    const char *AsmStr = MI->getOperand(NumDefs).getSymbolName();
-    if (AsmStr[0] == 0)
-      return;
+    while (true) {
+      const MachineOperand &MO = MI->getOperand(NumDefs);
+      if (MO.isReg() && MO.isDef()) {
+        ++NumDefs;
+        continue;
+      }
+      // Skip this inline asm instruction if the asmstr is empty.
+      const char *AsmStr = MO.getSymbolName();
+      if (AsmStr[0] == 0)
+        return;
+      break;
+    }
   }
 
   if (MI->getOpcode() == BPF::LD_imm64) {
@@ -1344,8 +1349,9 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     // If the insn is "r2 = LD_imm64 @<an TypeIdAttr global>",
     // The LD_imm64 result will be replaced with a btf type id.
     processGlobalValue(MI->getOperand(1));
-  } else if (MI->getOpcode() == BPF::CORE_MEM ||
-             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+  } else if (MI->getOpcode() == BPF::CORE_LD64 ||
+             MI->getOpcode() == BPF::CORE_LD32 ||
+             MI->getOpcode() == BPF::CORE_ST ||
              MI->getOpcode() == BPF::CORE_SHIFT) {
     // relocation insn is a load, store or shift insn.
     processGlobalValue(MI->getOperand(3));
@@ -1368,6 +1374,8 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     // been generated, construct one based on function signature.
     if (LineInfoGenerated == false) {
       auto *S = MI->getMF()->getFunction().getSubprogram();
+      if (!S)
+        return;
       MCSymbol *FuncLabel = Asm->getFunctionBegin();
       constructLineInfo(S, FuncLabel, S->getLine(), 0);
       LineInfoGenerated = true;
@@ -1409,7 +1417,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       SecName = Sec->getName();
     }
 
-    if (ProcessingMapDef != SecName.startswith(".maps"))
+    if (ProcessingMapDef != SecName.starts_with(".maps"))
       continue;
 
     // Create a .rodata datasec if the global variable is an initialized
@@ -1435,7 +1443,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     DIGlobalVariable *DIGlobal = nullptr;
     for (auto *GVE : GVs) {
       DIGlobal = GVE->getVariable();
-      if (SecName.startswith(".maps"))
+      if (SecName.starts_with(".maps"))
         visitMapDefType(DIGlobal->getType(), GVTypeId);
       else
         visitTypeEntry(DIGlobal->getType(), GVTypeId, false, false);
@@ -1510,10 +1518,8 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
           return false;
         }
 
-        if (Reloc == BPFCoreSharedInfo::ENUM_VALUE_EXISTENCE ||
-            Reloc == BPFCoreSharedInfo::ENUM_VALUE ||
-            Reloc == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL ||
-            Reloc == BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE)
+        if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
+            Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);
         else
           OutMI.setOpcode(BPF::MOV_ri);
@@ -1522,8 +1528,9 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
         return true;
       }
     }
-  } else if (MI->getOpcode() == BPF::CORE_MEM ||
-             MI->getOpcode() == BPF::CORE_ALU32_MEM ||
+  } else if (MI->getOpcode() == BPF::CORE_LD64 ||
+             MI->getOpcode() == BPF::CORE_LD32 ||
+             MI->getOpcode() == BPF::CORE_ST ||
              MI->getOpcode() == BPF::CORE_SHIFT) {
     const MachineOperand &MO = MI->getOperand(3);
     if (MO.isGlobal()) {

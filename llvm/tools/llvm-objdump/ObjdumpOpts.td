@@ -87,6 +87,11 @@ def disassembler_options_EQ : Joined<["--"], "disassembler-options=">,
 def : JoinedOrSeparate<["-"], "M">, Alias<disassembler_options_EQ>,
   HelpText<"Alias for --disassembler-options=">;
 
+def disassembler_color_EQ : Joined<["--"], "disassembler-color=">,
+  MetaVarName<"mode">,
+  HelpText<"Enable or disable disassembler color output. "
+           "Valid options are \"on\", \"off\" and \"terminal\" (default)">;
+
 def dynamic_reloc : Flag<["--"], "dynamic-reloc">,
   HelpText<"Display the dynamic relocation entries in the file">;
 def : Flag<["-"], "R">, Alias<dynamic_reloc>,
@@ -131,6 +136,9 @@ def mcpu_EQ : Joined<["--"], "mcpu=">,
 def mattr_EQ : Joined<["--"], "mattr=">,
   MetaVarName<"a1,+a2,-a3,...">,
   HelpText<"Target specific attributes (--mattr=help for details)">;
+
+def mllvm : Separate<["-"], "mllvm">, HelpText<"Specify an argument to forward to LLVM's CommandLine library">, MetaVarName<"<arg>">;
+def : Joined<["-"], "mllvm=">, Alias<mllvm>;
 
 def no_show_raw_insn : Flag<["--"], "no-show-raw-insn">,
   HelpText<"When disassembling instructions, "

@@ -1,5 +1,5 @@
 ! Test lowering of elemental intrinsic operations with array arguments to HLFIR
-! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir --polymorphic-type -I nowhere -o - %s 2>&1 | FileCheck %s
 
 subroutine binary(x, y)
   integer :: x(100), y(100)
@@ -182,11 +182,13 @@ end subroutine char_return
 ! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_23]] : index
 ! CHECK:             %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_22]], %[[VAL_23]] : index
-! CHECK:             %[[VAL_26:.*]] = fir.call @llvm.stacksave() fastmath<contract> : () -> !fir.ref<i8>
+! CHECK:             %[[VAL_26:.*]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
 ! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_25]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
-! CHECK:             fir.call @llvm.stackrestore(%[[VAL_26]]) fastmath<contract> : (!fir.ref<i8>) -> ()
-! CHECK:             hlfir.yield_element %[[VAL_28]]#0 : !fir.ref<!fir.char<1,3>>
+! CHECK:             %[[MustFree:.*]] = arith.constant false
+! CHECK:             %[[ResultTemp:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[MustFree]] : (!fir.ref<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
+! CHECK:             fir.call @llvm.stackrestore.p0(%[[VAL_26]]) fastmath<contract> : (!fir.ref<i8>) -> ()
+! CHECK:             hlfir.yield_element %[[ResultTemp]] : !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           }
 ! CHECK:           %[[VAL_29:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_30:.*]]:3 = fir.box_dims %[[VAL_10]]#0, %[[VAL_29]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (index, index, index)
@@ -195,7 +197,7 @@ end subroutine char_return
 ! CHECK:           ^bb0(%[[VAL_33:.*]]: index):
 ! CHECK:             %[[VAL_34:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_33]])  typeparams %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:             %[[VAL_35:.*]] = hlfir.apply %[[VAL_36:.*]], %[[VAL_33]] typeparams %[[VAL_16]] : (!hlfir.expr<?x!fir.char<1,3>>, index, index) -> !hlfir.expr<!fir.char<1,3>>
-! CHECK:             %[[VAL_37:.*]]:3 = hlfir.associate %[[VAL_35]] typeparams %[[VAL_16]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, i1)
+! CHECK:             %[[VAL_37:.*]]:3 = hlfir.associate %[[VAL_35]] typeparams %[[VAL_16]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, i1)
 ! CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]]#1 : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
@@ -210,5 +212,55 @@ end subroutine char_return
 ! CHECK:           hlfir.assign %[[VAL_46:.*]] to %[[VAL_8]]#0 realloc : !hlfir.expr<?x!fir.logical<4>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:           hlfir.destroy %[[VAL_46]] : !hlfir.expr<?x!fir.logical<4>>
 ! CHECK:           hlfir.destroy %[[VAL_47:.*]] : !hlfir.expr<?x!fir.char<1,3>>
+! CHECK:           return
+! CHECK:         }
+
+subroutine polymorphic_parenthesis(x, y)
+  type t
+  end type t
+  class(t), allocatable :: x(:)
+  class(t), intent(in) :: y(:)
+  x = (y)
+end subroutine polymorphic_parenthesis
+! CHECK-LABEL:   func.func @_QPpolymorphic_parenthesis(
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>> {fir.bindc_name = "x"},
+! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>> {fir.bindc_name = "y"}) {
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFpolymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFpolymorphic_parenthesisEy"} : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>) -> (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_4]] : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]] = hlfir.elemental %[[VAL_6]] mold %[[VAL_3]]#0 unordered : (!fir.shape<1>, !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>) -> !hlfir.expr<?x!fir.type<_QFpolymorphic_parenthesisTt>?> {
+! CHECK:           ^bb0(%[[VAL_8:.*]]: index):
+! CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_8]])  : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, index) -> !fir.class<!fir.type<_QFpolymorphic_parenthesisTt>>
+! CHECK:             %[[VAL_10:.*]] = hlfir.as_expr %[[VAL_9]] : (!fir.class<!fir.type<_QFpolymorphic_parenthesisTt>>) -> !hlfir.expr<!fir.type<_QFpolymorphic_parenthesisTt>?>
+! CHECK:             hlfir.yield_element %[[VAL_10]] : !hlfir.expr<!fir.type<_QFpolymorphic_parenthesisTt>?>
+! CHECK:           }
+! CHECK:           hlfir.assign %[[VAL_7]] to %[[VAL_2]]#0 realloc : !hlfir.expr<?x!fir.type<_QFpolymorphic_parenthesisTt>?>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>
+! CHECK:           hlfir.destroy %[[VAL_7]] : !hlfir.expr<?x!fir.type<_QFpolymorphic_parenthesisTt>?>
+! CHECK:           return
+! CHECK:         }
+
+subroutine unlimited_polymorphic_parenthesis(x, y)
+  class(*), allocatable :: x(:)
+  class(*), intent(in) :: y(:)
+  x = (y)
+end subroutine unlimited_polymorphic_parenthesis
+! CHECK-LABEL:   func.func @_QPunlimited_polymorphic_parenthesis(
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "x"},
+! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "y"}) {
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFunlimited_polymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFunlimited_polymorphic_parenthesisEy"} : (!fir.class<!fir.array<?xnone>>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_4]] : (!fir.class<!fir.array<?xnone>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]] = hlfir.elemental %[[VAL_6]] mold %[[VAL_3]]#0 unordered : (!fir.shape<1>, !fir.class<!fir.array<?xnone>>) -> !hlfir.expr<?xnone?> {
+! CHECK:           ^bb0(%[[VAL_8:.*]]: index):
+! CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_8]])  : (!fir.class<!fir.array<?xnone>>, index) -> !fir.class<none>
+! CHECK:             %[[VAL_10:.*]] = hlfir.as_expr %[[VAL_9]] : (!fir.class<none>) -> !hlfir.expr<none?>
+! CHECK:             hlfir.yield_element %[[VAL_10]] : !hlfir.expr<none?>
+! CHECK:           }
+! CHECK:           hlfir.assign %[[VAL_7]] to %[[VAL_2]]#0 realloc : !hlfir.expr<?xnone?>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK:           hlfir.destroy %[[VAL_7]] : !hlfir.expr<?xnone?>
 ! CHECK:           return
 ! CHECK:         }

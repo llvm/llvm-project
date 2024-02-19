@@ -447,6 +447,23 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairRangeOptional);
 }
 
+std::optional<ArgumentRepetitionType> 
+CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
+  return llvm::StringSwitch<ArgumentRepetitionType>(string)
+  .Case("plain", eArgRepeatPlain)  
+  .Case("optional", eArgRepeatOptional)
+  .Case("plus", eArgRepeatPlus)
+  .Case("star", eArgRepeatStar) 
+  .Case("range", eArgRepeatRange)
+  .Case("pair-plain", eArgRepeatPairPlain)
+  .Case("pair-optional", eArgRepeatPairOptional)
+  .Case("pair-plus", eArgRepeatPairPlus)
+  .Case("pair-star", eArgRepeatPairStar)
+  .Case("pair-range", eArgRepeatPairRange)
+  .Case("pair-range-optional", eArgRepeatPairRangeOptional)
+  .Default({});
+}
+
 static CommandObject::CommandArgumentEntry
 OptSetFiltered(uint32_t opt_set_mask,
                CommandObject::CommandArgumentEntry &cmd_arg_entry) {
@@ -715,7 +732,7 @@ Thread *CommandObject::GetDefaultThread() {
     return nullptr;
 }
 
-bool CommandObjectParsed::Execute(const char *args_string,
+void CommandObjectParsed::Execute(const char *args_string,
                                   CommandReturnObject &result) {
   bool handled = false;
   Args cmd_args(args_string);
@@ -746,18 +763,18 @@ bool CommandObjectParsed::Execute(const char *args_string,
           result.AppendErrorWithFormatv("'{0}' doesn't take any arguments.",
                                         GetCommandName());
           Cleanup();
-          return false;
+          return;
         }
-        handled = DoExecute(cmd_args, result);
+        m_interpreter.IncreaseCommandUsage(*this);
+        DoExecute(cmd_args, result);
       }
     }
 
     Cleanup();
   }
-  return handled;
 }
 
-bool CommandObjectRaw::Execute(const char *args_string,
+void CommandObjectRaw::Execute(const char *args_string,
                                CommandReturnObject &result) {
   bool handled = false;
   if (HasOverrideCallback()) {
@@ -770,9 +787,8 @@ bool CommandObjectRaw::Execute(const char *args_string,
   }
   if (!handled) {
     if (CheckRequirements(result))
-      handled = DoExecute(args_string, result);
+      DoExecute(args_string, result);
 
     Cleanup();
   }
-  return handled;
 }

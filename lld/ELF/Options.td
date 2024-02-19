@@ -42,6 +42,9 @@ def Bno_symbolic: F<"Bno-symbolic">, HelpText<"Don't bind default visibility def
 
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind default visibility defined symbols locally for -shared">;
 
+def Bsymbolic_non_weak: F<"Bsymbolic-non-weak">,
+  HelpText<"Bind default visibility defined STB_GLOBAL symbols locally for -shared">;
+
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
   HelpText<"Bind default visibility defined function symbols locally for -shared">;
 
@@ -125,9 +128,12 @@ defm as_needed: B<"as-needed",
 defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 
-defm call_graph_profile_sort: BB<"call-graph-profile-sort",
-    "Reorder sections with call graph profile (default)",
-    "Do not reorder sections with call graph profile">;
+def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
+  HelpText<"Reorder input sections with call graph profile using the specified algorithm (default: cdsort)">,
+  MetaVarName<"[none,hfsort,cdsort]">,
+  Values<"none,hfsort,cdsort">;
+def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
+  Flags<[HelpHidden]>;
 
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
@@ -601,9 +607,14 @@ def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
 defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">;
+defm lto_known_safe_vtables : EEq<"lto-known-safe-vtables",
+  "When --lto-validate-all-vtables-have-type-infos is enabled, skip validation on these vtables (_ZTV symbols)">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+defm lto_validate_all_vtables_have_type_infos: BB<"lto-validate-all-vtables-have-type-infos",
+  "Validate that all vtables have type infos for LTO link",
+  "Do not validate that all vtables have type infos for LTO link">;
 defm lto_whole_program_visibility: BB<"lto-whole-program-visibility",
   "Asserts that the LTO link has whole program visibility",
   "Asserts that the LTO link does not have whole program visibility">;
@@ -626,6 +637,9 @@ def save_temps_eq: JJ<"save-temps=">, HelpText<"Save select intermediate LTO com
   Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
+defm lto_basic_block_address_map: BB<"lto-basic-block-address-map",
+  "Emit basic block address map for LTO",
+  "Do not emit basic block address map for LTO (default)">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
@@ -647,6 +661,10 @@ def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
 
+defm fat_lto_objects: BB<"fat-lto-objects",
+    "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
+    "Ignore the .llvm.lto section in relocatable object files (default).">;
+
 def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for --lto-O">;
 def: F<"plugin-opt=debug-pass-manager">,
   Alias<lto_debug_pass_manager>, HelpText<"Alias for --lto-debug-pass-manager">;
@@ -666,8 +684,6 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
-def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
-  HelpText<"Use opaque pointers in IR during LTO (default)">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;

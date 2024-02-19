@@ -310,7 +310,7 @@ def emit_named_structured_op(
         )
 
     # Set the index attributes used to compute the indexing maps.
-    named_op = getattr(linalg, op_class_name)(ins, outs, result_types)
+    named_op = getattr(linalg, op_class_name)(result_types, ins, outs)
     for name, value in index_attrs.items():
         named_op.operation.attributes[name] = value
 
@@ -527,28 +527,28 @@ class _BodyBuilder:
 
     def _binary_max_signed(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MaxFOp(lhs, rhs).result
+            return arith.MaximumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MaxSIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'max' operands: {lhs}, {rhs}")
 
     def _binary_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MaxFOp(lhs, rhs).result
+            return arith.MaximumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MaxUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'max_unsigned' operands: {lhs}, {rhs}")
 
     def _binary_min_signed(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MinFOp(lhs, rhs).result
+            return arith.MinimumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MinSIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'min' operands: {lhs}, {rhs}")
 
     def _binary_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
         if _is_floating_point_type(lhs.type):
-            return arith.MinFOp(lhs, rhs).result
+            return arith.MinimumFOp(lhs, rhs).result
         if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
             return arith.MinUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'min_unsigned' operands: {lhs}, {rhs}")

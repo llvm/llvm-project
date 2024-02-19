@@ -128,7 +128,7 @@ template <typename LoadOpTy, typename StoreOpTy>
 static void emitScalarImplementation(OpBuilder &b, Location loc,
                                      ArrayRef<Value> allIvs,
                                      LinalgOp linalgOp) {
-  assert(linalgOp.hasBufferSemantics() &&
+  assert(linalgOp.hasPureBufferSemantics() &&
          "expected linalg op with buffer semantics");
   SmallVector<Value> indexedValues;
   indexedValues.reserve(linalgOp->getNumOperands());
@@ -149,11 +149,12 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
         b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
-  for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
+  for (OpOperand &outputOperand : linalgOp.getDpsInitsMutable()) {
     SmallVector<Value> indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getMatchingIndexingMap(outputOperand), allIvsPlusDims);
+        b, loc, linalgOp.getMatchingIndexingMap(&outputOperand),
+        allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, outputOperand->get(), indexing));
+        b.create<LoadOpTy>(loc, outputOperand.get(), indexing));
   }
 
   // TODO: When a region inliner exists, use it.
@@ -161,13 +162,13 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   // 3. Emit store.
   SmallVector<SmallVector<Value>, 8> indexing;
   SmallVector<Value> outputBuffers;
-  for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
-    if (!isa<MemRefType>(outputOperand->get().getType()))
+  for (OpOperand &outputOperand : linalgOp.getDpsInitsMutable()) {
+    if (!isa<MemRefType>(outputOperand.get().getType()))
       continue;
     indexing.push_back(makeCanonicalAffineApplies(
-        b, loc, linalgOp.getMatchingIndexingMap(outputOperand),
+        b, loc, linalgOp.getMatchingIndexingMap(&outputOperand),
         allIvsPlusDims));
-    outputBuffers.push_back(outputOperand->get());
+    outputBuffers.push_back(outputOperand.get());
   }
   inlineRegionAndEmitStore<LoadOpTy, StoreOpTy>(b, loc, linalgOp, indexedValues,
                                                 indexing, outputBuffers);
@@ -199,9 +200,9 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
   // Replace the index operations in the body of the innermost loop op.
   if (!loopOps.empty()) {
     auto loopOp = cast<LoopLikeOpInterface>(loopOps.back());
-    for (IndexOp indexOp :
-         llvm::make_early_inc_range(loopOp.getLoopBody().getOps<IndexOp>()))
-      rewriter.replaceOp(indexOp, allIvs[indexOp.getDim()]);
+    for (Region *r : loopOp.getLoopRegions())
+      for (IndexOp indexOp : llvm::make_early_inc_range(r->getOps<IndexOp>()))
+        rewriter.replaceOp(indexOp, allIvs[indexOp.getDim()]);
   }
 }
 
@@ -217,7 +218,7 @@ static FailureOr<LinalgLoops> linalgOpToLoopsImpl(RewriterBase &rewriter,
 
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).
-  assert(linalgOp.hasBufferSemantics() &&
+  assert(linalgOp.hasPureBufferSemantics() &&
          "expected linalg op with buffer semantics");
 
   auto loopRanges = linalgOp.createLoopRanges(rewriter, linalgOp.getLoc());
@@ -263,7 +264,7 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!isa<LinalgOp>(op) || !linalgOp.hasBufferSemantics()) {
+    if (!isa<LinalgOp>(op) || !linalgOp.hasPureBufferSemantics()) {
       return rewriter.notifyMatchFailure(
           op, "expected linalg op with buffer semantics");
     }
@@ -297,13 +298,13 @@ struct FoldAffineOp : public RewritePattern {
 
     AffineExpr expr = map.getResult(0);
     if (map.getNumInputs() == 0) {
-      if (auto val = expr.dyn_cast<AffineConstantExpr>()) {
+      if (auto val = dyn_cast<AffineConstantExpr>(expr)) {
         rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, val.getValue());
         return success();
       }
       return failure();
     }
-    if (expr.dyn_cast<AffineDimExpr>() || expr.dyn_cast<AffineSymbolExpr>()) {
+    if (dyn_cast<AffineDimExpr>(expr) || dyn_cast<AffineSymbolExpr>(expr)) {
       rewriter.replaceOp(op, op->getOperand(0));
       return success();
     }

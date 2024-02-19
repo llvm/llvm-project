@@ -27,6 +27,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   PopulateSwitch.cpp
   RawStringLiteral.cpp
   RemoveUsingNamespace.cpp
+  ScopifyEnum.cpp
   SpecialMembers.cpp
   SwapIfBranches.cpp
 
@@ -44,4 +45,5 @@ add_clang_library(clangDaemonTweaks OBJECT
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

@@ -68,8 +68,8 @@ void FakeStack::Destroy(int tid) {
   if (Verbosity() >= 2) {
     InternalScopedString str;
     for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++)
-      str.append("%zd: %zd/%zd; ", class_id, hint_position_[class_id],
-                 NumberOfFrames(stack_size_log(), class_id));
+      str.AppendF("%zd: %zd/%zd; ", class_id, hint_position_[class_id],
+                  NumberOfFrames(stack_size_log(), class_id));
     Report("T%d: FakeStack destroyed: %s\n", tid, str.data());
   }
   uptr size = RequiredSize(stack_size_log_);
@@ -133,6 +133,12 @@ void FakeStack::HandleNoReturn() {
   needs_gc_ = true;
 }
 
+// Hack: The statement below is not true if we take into account sigaltstack or
+// makecontext. It should be possible to make GC to discard wrong stack frame if
+// we use these tools. For now, let's support the simplest case and allow GC to
+// discard only frames from the default stack, assuming there is no buffer on
+// the stack which is used for makecontext or sigaltstack.
+//
 // When throw, longjmp or some such happens we don't call OnFree() and
 // as the result may leak one or more fake frames, but the good news is that
 // we are notified about all such events by HandleNoReturn().
@@ -140,6 +146,14 @@ void FakeStack::HandleNoReturn() {
 // We do it based on their 'real_stack' values -- everything that is lower
 // than the current real_stack is garbage.
 NOINLINE void FakeStack::GC(uptr real_stack) {
+  AsanThread *curr_thread = GetCurrentThread();
+  if (!curr_thread)
+    return;  // Try again when we have a thread.
+  auto top = curr_thread->stack_top();
+  auto bottom = curr_thread->stack_bottom();
+  if (real_stack < bottom || real_stack > top)
+    return;  // Not the default stack.
+
   for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++) {
     u8 *flags = GetFlags(stack_size_log(), class_id);
     for (uptr i = 0, n = NumberOfFrames(stack_size_log(), class_id); i < n;
@@ -147,8 +161,12 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
       if (flags[i] == 0) continue;  // not allocated.
       FakeFrame *ff = reinterpret_cast<FakeFrame *>(
           GetFrame(stack_size_log(), class_id, i));
-      if (ff->real_stack < real_stack) {
+      // GC only on the default stack.
+      if (bottom < ff->real_stack && ff->real_stack < real_stack) {
         flags[i] = 0;
+        // Poison the frame, so the any access will be reported as UAR.
+        SetShadow(reinterpret_cast<uptr>(ff), BytesInSizeClass(class_id),
+                  class_id, kMagic8);
       }
     }
   }
@@ -205,11 +223,12 @@ static FakeStack *GetFakeStackFastAlways() {
 
 static ALWAYS_INLINE uptr OnMalloc(uptr class_id, uptr size) {
   FakeStack *fs = GetFakeStackFast();
-  if (!fs) return 0;
-  uptr local_stack;
-  uptr real_stack = reinterpret_cast<uptr>(&local_stack);
-  FakeFrame *ff = fs->Allocate(fs->stack_size_log(), class_id, real_stack);
-  if (!ff) return 0;  // Out of fake stack.
+  if (!fs)
+    return 0;
+  FakeFrame *ff =
+      fs->Allocate(fs->stack_size_log(), class_id, GET_CURRENT_FRAME());
+  if (!ff)
+    return 0;  // Out of fake stack.
   uptr ptr = reinterpret_cast<uptr>(ff);
   SetShadow(ptr, size, class_id, 0);
   return ptr;
@@ -219,9 +238,8 @@ static ALWAYS_INLINE uptr OnMallocAlways(uptr class_id, uptr size) {
   FakeStack *fs = GetFakeStackFastAlways();
   if (!fs)
     return 0;
-  uptr local_stack;
-  uptr real_stack = reinterpret_cast<uptr>(&local_stack);
-  FakeFrame *ff = fs->Allocate(fs->stack_size_log(), class_id, real_stack);
+  FakeFrame *ff =
+      fs->Allocate(fs->stack_size_log(), class_id, GET_CURRENT_FRAME());
   if (!ff)
     return 0;  // Out of fake stack.
   uptr ptr = reinterpret_cast<uptr>(ff);

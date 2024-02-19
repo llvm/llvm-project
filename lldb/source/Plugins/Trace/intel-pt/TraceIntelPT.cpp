@@ -48,8 +48,8 @@ enum {
 #include "TraceIntelPTPropertiesEnum.inc"
 };
 
-ConstString TraceIntelPT::PluginProperties::GetSettingName() {
-  return ConstString(TraceIntelPT::GetPluginNameStatic());
+llvm::StringRef TraceIntelPT::PluginProperties::GetSettingName() {
+  return TraceIntelPT::GetPluginNameStatic();
 }
 
 TraceIntelPT::PluginProperties::PluginProperties() : Properties() {
@@ -60,14 +60,14 @@ TraceIntelPT::PluginProperties::PluginProperties() : Properties() {
 uint64_t
 TraceIntelPT::PluginProperties::GetInfiniteDecodingLoopVerificationThreshold() {
   const uint32_t idx = ePropertyInfiniteDecodingLoopVerificationThreshold;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_traceintelpt_properties[idx].default_uint_value);
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_traceintelpt_properties[idx].default_uint_value);
 }
 
 uint64_t TraceIntelPT::PluginProperties::GetExtremelyLargeDecodingThreshold() {
   const uint32_t idx = ePropertyExtremelyLargeDecodingThreshold;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_traceintelpt_properties[idx].default_uint_value);
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_traceintelpt_properties[idx].default_uint_value);
 }
 
 TraceIntelPT::PluginProperties &TraceIntelPT::GetGlobalProperties() {

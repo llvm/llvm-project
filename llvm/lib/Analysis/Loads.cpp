@@ -450,11 +450,10 @@ llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
            "to scan backward from a given instruction, when searching for "
            "available loaded value"));
 
-Value *llvm::FindAvailableLoadedValue(LoadInst *Load,
-                                      BasicBlock *ScanBB,
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
                                       unsigned MaxInstsToScan,
-                                      AAResults *AA, bool *IsLoad,
+                                      BatchAAResults *AA, bool *IsLoad,
                                       unsigned *NumScanedInst) {
   // Don't CSE load that is volatile or anything stronger than unordered.
   if (!Load->isUnordered())
@@ -583,7 +582,7 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
 Value *llvm::findAvailablePtrLoadStore(
     const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
     BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
-    AAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst) {
+    BatchAAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
@@ -664,7 +663,7 @@ Value *llvm::findAvailablePtrLoadStore(
   return nullptr;
 }
 
-Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
                                       bool *IsLoadCSE,
                                       unsigned MaxInstsToScan) {
   const DataLayout &DL = Load->getModule()->getDataLayout();

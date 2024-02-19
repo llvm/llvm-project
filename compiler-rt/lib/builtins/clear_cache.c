@@ -113,7 +113,7 @@ void __clear_cache(void *start, void *end) {
 #elif defined(__linux__) || defined(__OpenBSD__)
     // Pre-R6 may not be globalized. And some implementations may give strange
     // synci_step. So, let's use libc call for it.
-    cacheflush(start, end_int - start_int, BCACHE);
+    _flush_cache(start, end_int - start_int, BCACHE);
 #else
     (void)start_int;
     (void)end_int;

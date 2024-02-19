@@ -16,12 +16,12 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -236,6 +236,13 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // codes.
       SetPrompt(GetPrompt());
     } else if (property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiPrefix].name ||
+               property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiSuffix].name) {
+      // Prompt colors changed. Ping the prompt so it can reset the ansi
+      // terminal codes.
+      SetPrompt(GetPrompt());
+    } else if (property_path ==
                g_debugger_properties[ePropertyUseSourceCache].name) {
       // use-source-cache changed. Wipe out the cache contents if it was
       // disabled.
@@ -297,6 +304,18 @@ bool Debugger::GetNotifyVoid() const {
 
 llvm::StringRef Debugger::GetPrompt() const {
   constexpr uint32_t idx = ePropertyPrompt;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiPrefix() const {
+  const uint32_t idx = ePropertyPromptAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiSuffix() const {
+  const uint32_t idx = ePropertyPromptAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
 }
@@ -432,6 +451,24 @@ llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
   const uint32_t idx = ePropertyShowAutosuggestionAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetRegexMatchAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowRegexMatchAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetRegexMatchAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowRegexMatchAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+bool Debugger::GetShowDontUsePoHint() const {
+  const uint32_t idx = ePropertyShowDontUsePoHint;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::GetUseSourceCache() const {
@@ -905,7 +942,7 @@ void Debugger::Clear() {
     for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
         if (ProcessSP process_sp = target_sp->GetProcessSP())
-          process_sp->Finalize();
+          process_sp->Finalize(false /* not destructing */);
         target_sp->Destroy();
       }
     }
@@ -921,15 +958,6 @@ void Debugger::Clear() {
     if (Diagnostics::Enabled())
       Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
-}
-
-bool Debugger::GetCloseInputOnEOF() const {
-  //    return m_input_comm.GetCloseOnEOF();
-  return false;
-}
-
-void Debugger::SetCloseInputOnEOF(bool b) {
-  //    m_input_comm.SetCloseOnEOF(b);
 }
 
 bool Debugger::GetAsyncExecution() {
@@ -1275,17 +1303,17 @@ bool Debugger::InterruptRequested() {
   return GetCommandInterpreter().WasInterrupted();
 }
 
-Debugger::InterruptionReport::InterruptionReport(std::string function_name, 
-    const llvm::formatv_object_base &payload) :  
-        m_function_name(std::move(function_name)), 
-        m_interrupt_time(std::chrono::system_clock::now()),
-        m_thread_id(llvm::get_threadid()) {
+Debugger::InterruptionReport::InterruptionReport(
+    std::string function_name, const llvm::formatv_object_base &payload)
+    : m_function_name(std::move(function_name)),
+      m_interrupt_time(std::chrono::system_clock::now()),
+      m_thread_id(llvm::get_threadid()) {
   llvm::raw_string_ostream desc(m_description);
   desc << payload << "\n";
 }
 
 void Debugger::ReportInterruption(const InterruptionReport &report) {
-    // For now, just log the description:
+  // For now, just log the description:
   Log *log = GetLog(LLDBLog::Host);
   LLDB_LOG(log, "Interruption: {0}", report.m_description);
 }

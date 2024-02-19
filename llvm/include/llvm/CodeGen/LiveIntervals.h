@@ -139,6 +139,13 @@ class VirtRegMap;
       return LI;
     }
 
+    /// Return an existing interval for \p Reg.
+    /// If \p Reg has no interval then this creates a new empty one instead.
+    /// Note: does not trigger interval computation.
+    LiveInterval &getOrCreateEmptyInterval(Register Reg) {
+      return hasInterval(Reg) ? getInterval(Reg) : createEmptyInterval(Reg);
+    }
+
     /// Interval removal.
     void removeInterval(Register Reg) {
       delete VirtRegIntervals[Reg];
@@ -322,7 +329,7 @@ class VirtRegMap;
     /// OrigRegs is a vector of registers that were originally used by the
     /// instructions in the range between the two iterators.
     ///
-    /// Currently, the only only changes that are supported are simple removal
+    /// Currently, the only changes that are supported are simple removal
     /// and addition of uses.
     void repairIntervalsInRange(MachineBasicBlock *MBB,
                                 MachineBasicBlock::iterator Begin,

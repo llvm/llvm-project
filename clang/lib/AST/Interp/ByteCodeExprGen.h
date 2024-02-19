@@ -30,11 +30,11 @@ namespace interp {
 
 template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
-template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
+template <class Emitter> class SourceLocScope;
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -60,17 +60,19 @@ public:
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
+  bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
+  bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E);
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
+  bool VisitGNUNullExpr(const GNUNullExpr *E);
   bool VisitCXXThisExpr(const CXXThisExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
@@ -78,10 +80,12 @@ public:
   bool VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E);
   bool VisitArraySubscriptExpr(const ArraySubscriptExpr *E);
   bool VisitInitListExpr(const InitListExpr *E);
+  bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   bool VisitConstantExpr(const ConstantExpr *E);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E);
+  bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   bool VisitStringLiteral(const StringLiteral *E);
@@ -92,11 +96,26 @@ public:
   bool VisitExprWithCleanups(const ExprWithCleanups *E);
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E);
-  bool VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitTypeTraitExpr(const TypeTraitExpr *E);
   bool VisitLambdaExpr(const LambdaExpr *E);
   bool VisitPredefinedExpr(const PredefinedExpr *E);
+  bool VisitCXXThrowExpr(const CXXThrowExpr *E);
+  bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E);
+  bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
+  bool VisitCXXConstructExpr(const CXXConstructExpr *E);
+  bool VisitSourceLocExpr(const SourceLocExpr *E);
+  bool VisitOffsetOfExpr(const OffsetOfExpr *E);
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
+  bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
+  bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
+  bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
+  bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
+  bool VisitRequiresExpr(const RequiresExpr *E);
+  bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -117,9 +136,8 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    return E->isGLValue() ? PT_Ptr : classify(E->getType());
+    return Ctx.classify(E);
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
@@ -132,19 +150,25 @@ protected:
     }
     llvm_unreachable("not a primitive type");
   }
-
+  /// Evaluates an expression and places the result on the stack. If the
+  /// expression is of composite type, a local variable will be created
+  /// and a pointer to said variable will be placed on the stack.
+  bool visit(const Expr *E);
+  /// Compiles an initializer. This is like visit() but it will never
+  /// create a variable and instead rely on a variable already having
+  /// been created. visitInitializer() then relies on a pointer to this
+  /// variable being on top of the stack.
+  bool visitInitializer(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
-  /// Evaluates an expression and places result on stack.
-  bool visit(const Expr *E);
-  /// Compiles an initializer.
-  bool visitInitializer(const Expr *E);
-  /// Compiles an array initializer.
-  bool visitArrayInitializer(const Expr *Initializer);
-  /// Compiles a record initializer.
-  bool visitRecordInitializer(const Expr *Initializer);
+  /// Just pass evaluation on to \p E. This leaves all the parsing flags
+  /// intact.
+  bool delegate(const Expr *E);
+
   /// Creates and initializes a variable from the given decl.
   bool visitVarDecl(const VarDecl *VD);
+  /// Visit an APValue.
+  bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -155,6 +179,9 @@ protected:
       return false;
 
     if (!visitInitializer(Init))
+      return false;
+
+    if (!this->emitInitPtr(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -168,8 +195,7 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if ((Init->getType()->isArrayType() || Init->getType()->isRecordType()) &&
-        !this->emitCheckGlobalCtor(Init))
+    if (!this->emitInitPtr(Init))
       return false;
 
     return this->emitPopPtr(Init);
@@ -183,11 +209,11 @@ protected:
     if (!visitInitializer(I))
       return false;
 
-    return this->emitPopPtr(I);
+    return this->emitInitPtrPop(I);
   }
 
-  bool visitConditional(const AbstractConditionalOperator *E,
-                        llvm::function_ref<bool(const Expr *)> V);
+  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -200,13 +226,14 @@ private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
-  friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
+  friend class SourceLocScope<Emitter>;
 
   /// Emits a zero initializer.
-  bool visitZeroInitializer(QualType QT, const Expr *E);
+  bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
+  bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
   enum class DerefKind {
     /// Value is read and pushed to stack.
@@ -232,22 +259,15 @@ private:
                       llvm::function_ref<bool(PrimType)> Indirect);
 
   /// Emits an APSInt constant.
+  bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
     return emitConst(static_cast<llvm::APSInt>(Value), E);
   }
 
   /// Emits an integer constant.
+  template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
-
-  /// Returns the CXXRecordDecl for the type of the given expression,
-  /// or nullptr if no such decl exists.
-  const CXXRecordDecl *getRecordDecl(const Expr *E) const {
-    QualType T = E->getType();
-    if (const auto *RD = T->getPointeeCXXRecordDecl())
-      return RD;
-    return T->getAsCXXRecordDecl();
-  }
 
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
@@ -258,9 +278,20 @@ private:
     return FPO.getRoundingMode();
   }
 
+  bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  PrimType classifyComplexElementType(QualType T) const {
+    assert(T->isAnyComplexType());
+
+    QualType ElemType = T->getAs<ComplexType>()->getElementType();
+
+    return *this->classify(ElemType);
+  }
+
+  bool emitComplexReal(const Expr *SubExpr);
+
   bool emitRecordDestruction(const Descriptor *Desc);
-  bool emitDerivedToBaseCasts(const RecordType *DerivedType,
-                              const RecordType *BaseType, const Expr *E);
+  unsigned collectBaseOffset(const RecordType *BaseType,
+                             const RecordType *DerivedType);
 
 protected:
   /// Variable to storage mapping.
@@ -275,8 +306,18 @@ protected:
   /// Current argument index. Needed to emit ArrayInitIndexExpr.
   std::optional<uint64_t> ArrayIndex;
 
+  /// DefaultInit- or DefaultArgExpr, needed for SourceLocExpr.
+  const Expr *SourceLocDefaultExpr = nullptr;
+
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
+
+  /// Flag inidicating if we're initializing an already created
+  /// variable. This is set in visitInitializer().
+  bool Initializing = false;
+
+  /// Flag indicating if we're initializing a global variable.
+  bool GlobalDecl = false;
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;
@@ -330,6 +371,7 @@ public:
     if (!Idx)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
   }
 
   /// Overriden to support explicit destruction.
@@ -338,6 +380,7 @@ public:
       return;
     this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
     this->Idx = std::nullopt;
   }
 
@@ -359,8 +402,27 @@ public:
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
         this->Ctx->emitRecordDestruction(Local.Desc);
+        removeIfStoredOpaqueValue(Local);
       }
     }
+  }
+
+  void removeStoredOpaqueValues() {
+    if (!Idx)
+      return;
+
+    for (const Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+      removeIfStoredOpaqueValue(Local);
+    }
+  }
+
+  void removeIfStoredOpaqueValue(const Scope::Local &Local) {
+    if (const auto *OVE =
+            llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
+      if (auto It = this->Ctx->OpaqueExprs.find(OVE);
+          It != this->Ctx->OpaqueExprs.end())
+        this->Ctx->OpaqueExprs.erase(It);
+    };
   }
 
   /// Index of the scope in the chain.
@@ -428,6 +490,28 @@ public:
 private:
   ByteCodeExprGen<Emitter> *Ctx;
   std::optional<uint64_t> OldArrayIndex;
+};
+
+template <class Emitter> class SourceLocScope final {
+public:
+  SourceLocScope(ByteCodeExprGen<Emitter> *Ctx, const Expr *DefaultExpr)
+      : Ctx(Ctx) {
+    assert(DefaultExpr);
+    // We only switch if the current SourceLocDefaultExpr is null.
+    if (!Ctx->SourceLocDefaultExpr) {
+      Enabled = true;
+      Ctx->SourceLocDefaultExpr = DefaultExpr;
+    }
+  }
+
+  ~SourceLocScope() {
+    if (Enabled)
+      Ctx->SourceLocDefaultExpr = nullptr;
+  }
+
+private:
+  ByteCodeExprGen<Emitter> *Ctx;
+  bool Enabled = false;
 };
 
 } // namespace interp

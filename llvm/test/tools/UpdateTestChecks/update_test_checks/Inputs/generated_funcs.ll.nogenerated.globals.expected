@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 @G = external dso_local global i32, align 4
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
+; CHECK: @G = external dso_local global i32, align 4
 ;.
 define void @foo(i32) {
 ; CHECK-LABEL: @foo(
@@ -56,10 +56,10 @@ exit:
   ret void
 }
 
-declare void @llvm.trap() noreturn cold
+declare void @llvm.trap() noreturn cold memory(inaccessiblemem: write)
 declare void @_Z10sideeffectv()
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { cold minsize noreturn }
 ; CHECK: attributes #[[ATTR2]] = { noinline }
 ;.

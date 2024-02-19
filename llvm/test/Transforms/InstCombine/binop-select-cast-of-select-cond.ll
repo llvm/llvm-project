@@ -132,7 +132,7 @@ define <2 x i64> @vector_test(i1 %c) {
 ; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], <2 x i64> <i64 64, i64 64>, <2 x i64> <i64 1, i64 1>
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i64> undef, i64 [[EXT]], i64 0
+; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i64> poison, i64 [[EXT]], i64 0
 ; CHECK-NEXT:    [[VEC1:%.*]] = shufflevector <2 x i64> [[VEC0]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i64> [[SEL]], [[VEC1]]
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]
@@ -187,8 +187,8 @@ define i64 @select_non_const_sides(i1 %c, i64 %arg1, i64 %arg2) {
 define i6 @sub_select_sext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) {
 ; CHECK-LABEL: define i6 @sub_select_sext_op_swapped_non_const_args
 ; CHECK-SAME: (i1 [[C:%.*]], i6 [[ARGT:%.*]], i6 [[ARGF:%.*]]) {
-; CHECK-DAG:     [[TMP1:%.*]] = xor i6 [[ARGT]], -1
-; CHECK-DAG:     [[TMP2:%.*]] = sub i6 0, [[ARGF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i6 [[ARGT]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i6 0, [[ARGF]]
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i6 [[TMP1]], i6 [[TMP2]]
 ; CHECK-NEXT:    ret i6 [[SUB]]
 ;
@@ -201,8 +201,8 @@ define i6 @sub_select_sext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) 
 define i6 @sub_select_zext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) {
 ; CHECK-LABEL: define i6 @sub_select_zext_op_swapped_non_const_args
 ; CHECK-SAME: (i1 [[C:%.*]], i6 [[ARGT:%.*]], i6 [[ARGF:%.*]]) {
-; CHECK-DAG:     [[TMP1:%.*]] = sub i6 1, [[ARGT]]
-; CHECK-DAG:     [[TMP2:%.*]] = sub i6 0, [[ARGF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i6 1, [[ARGT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i6 0, [[ARGF]]
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i6 [[TMP1]], i6 [[TMP2]]
 ; CHECK-NEXT:    ret i6 [[SUB]]
 ;
@@ -223,4 +223,20 @@ define <2 x i8> @vectorized_add(<2 x i1> %c, <2 x i8> %arg) {
   %sel = select <2 x i1> %c, <2 x i8> %arg, <2 x i8> <i8 1, i8 1>
   %add = add <2 x i8> %sel, %zext
   ret <2 x i8> %add
+}
+
+@b = external global [72 x i32]
+@c = external global i32
+
+define i64 @pr64669(i64 %a) {
+; CHECK-LABEL: define i64 @pr64669
+; CHECK-SAME: (i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c), i64 [[TMP1]], i64 0
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %mul = select i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c), i64 %a, i64 0
+  %conv3 = zext i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c) to i64
+  %add = add nsw i64 %mul, %conv3
+  ret i64 %add
 }

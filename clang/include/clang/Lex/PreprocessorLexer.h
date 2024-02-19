@@ -157,7 +157,7 @@ public:
 
   /// getFileEntry - Return the FileEntry corresponding to this FileID.  Like
   /// getFileID(), this only works for lexers with attached preprocessors.
-  OptionalFileEntryRefDegradesToFileEntryPtr getFileEntry() const;
+  OptionalFileEntryRef getFileEntry() const;
 
   /// Iterator that traverses the current stack of preprocessor
   /// conditional directives (\#if/\#ifdef/\#ifndef).

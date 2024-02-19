@@ -14,15 +14,15 @@
 #ifndef LLVM_TEXTAPI_INTERFACEFILE_H
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
-#include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/Symbol.h"
 #include "llvm/TextAPI/SymbolSet.h"
 #include "llvm/TextAPI/Target.h"
@@ -48,35 +48,6 @@ enum class ObjCConstraintType : unsigned {
   GC = 4,
 };
 
-// clang-format off
-
-/// Defines the file type this file represents.
-enum FileType : unsigned {
-  /// Invalid file type.
-  Invalid = 0U,
-
-  /// Text-based stub file (.tbd) version 1.0
-  TBD_V1  = 1U <<  0,
-
-  /// Text-based stub file (.tbd) version 2.0
-  TBD_V2  = 1U <<  1,
-
-  /// Text-based stub file (.tbd) version 3.0
-  TBD_V3  = 1U <<  2,
-
-  /// Text-based stub file (.tbd) version 4.0
-  TBD_V4  = 1U <<  3,
-
-  /// Text-based stub file (.tbd) version 5.0
-  TBD_V5  = 1U <<  4,
-
-  All     = ~0U,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
-};
-
-// clang-format on
-
 /// Reference to an interface file.
 class InterfaceFileRef {
 public:
@@ -93,6 +64,10 @@ public:
   template <typename RangeT> void addTargets(RangeT &&Targets) {
     for (const auto &Target : Targets)
       addTarget(Target(Target));
+  }
+
+  bool hasTarget(Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
   }
 
   using const_target_iterator = TargetList::const_iterator;
@@ -173,6 +148,13 @@ public:
   /// \param Target the target to add into.
   void addTarget(const Target &Target);
 
+  /// Determine if target triple slice exists in file.
+  ///
+  /// \param Targ the value to find.
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
+
   /// Set and add targets.
   ///
   /// Add the subset of llvm::triples that is supported by Tapi
@@ -228,11 +210,25 @@ public:
   /// Check if the library uses two-level namespace.
   bool isTwoLevelNamespace() const { return IsTwoLevelNamespace; }
 
+  /// Specify if the library is an OS library but not shared cache eligible.
+  void setOSLibNotForSharedCache(bool V = true) {
+    IsOSLibNotForSharedCache = V;
+  }
+
+  /// Check if the library is an OS library that is not shared cache eligible.
+  bool isOSLibNotForSharedCache() const { return IsOSLibNotForSharedCache; }
+
   /// Specify if the library is application extension safe (or not).
   void setApplicationExtensionSafe(bool V = true) { IsAppExtensionSafe = V; }
 
   /// Check if the library is application extension safe.
   bool isApplicationExtensionSafe() const { return IsAppExtensionSafe; }
+
+  /// Check if the library has simulator support.
+  bool hasSimulatorSupport() const { return HasSimSupport; }
+
+  /// Specify if the library has simulator support.
+  void setSimulatorSupport(bool V = true) { HasSimSupport = V; }
 
   /// Set the Objective-C constraint.
   void setObjCConstraint(ObjCConstraintType Constraint) {
@@ -318,18 +314,19 @@ public:
   ///
   /// \param Kind The kind of global symbol to record.
   /// \param Name The name of the symbol.
-  std::optional<const Symbol *> getSymbol(SymbolKind Kind,
-                                          StringRef Name) const {
-    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name))
+  /// \param ObjCIF The ObjCInterface symbol type, if applicable.
+  std::optional<const Symbol *>
+  getSymbol(EncodeKind Kind, StringRef Name,
+            ObjCIFSymbolKind ObjCIF = ObjCIFSymbolKind::None) const {
+    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name, ObjCIF))
       return Sym;
     return std::nullopt;
   }
 
   /// Add a symbol to the symbols list or extend an existing one.
-  template <typename RangeT,
-            typename ElT = typename std::remove_reference<
-                decltype(*std::begin(std::declval<RangeT>()))>::type>
-  void addSymbol(SymbolKind Kind, StringRef Name, RangeT &&Targets,
+  template <typename RangeT, typename ElT = std::remove_reference_t<
+                                 decltype(*std::begin(std::declval<RangeT>()))>>
+  void addSymbol(EncodeKind Kind, StringRef Name, RangeT &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -340,7 +337,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Targets The list of targets the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, TargetList &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, TargetList &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -351,7 +348,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Target The target the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, Target &Target,
+  void addSymbol(EncodeKind Kind, StringRef Name, Target &Target,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Target);
   }
@@ -403,6 +400,14 @@ public:
   void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
                      bool Overwrite = false);
 
+  /// Set InterfaceFile properties from pre-gathered binary attributes,
+  /// if they are not set already.
+  ///
+  /// \param BA Attributes typically represented in load commands.
+  /// \param Targ MachO Target slice to add attributes to.
+  void setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                          const Target &Targ);
+
   /// The equality is determined by attributes that impact linking
   /// compatibilities. Path, & FileKind are irrelevant since these by
   /// itself should not impact linking.
@@ -430,7 +435,9 @@ private:
   PackedVersion CompatibilityVersion;
   uint8_t SwiftABIVersion{0};
   bool IsTwoLevelNamespace{false};
+  bool IsOSLibNotForSharedCache{false};
   bool IsAppExtensionSafe{false};
+  bool HasSimSupport{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;
   std::vector<std::pair<Target, std::string>> ParentUmbrellas;
   std::vector<InterfaceFileRef> AllowableClients;

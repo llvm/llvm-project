@@ -243,23 +243,37 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
 #define MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-// This function actually returns a struct by value, but we can't unpoison a
-// temporary! The following is equivalent on all supported platforms but
-// aarch64 (which uses a different register for sret value).  We have a test
-// to confirm that.
-INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
-#ifdef __aarch64__
-  uptr r8;
-  asm volatile("mov %0,x8" : "=r" (r8));
-  sret = reinterpret_cast<__sanitizer_struct_mallinfo*>(r8);
-#endif
-  REAL(memset)(sret, 0, sizeof(*sret));
+#if (!SANITIZER_FREEBSD && !SANITIZER_NETBSD) || __GLIBC_PREREQ(2, 33)
+template <class T>
+static NOINLINE void clear_mallinfo(T *sret) {
+  ENSURE_MSAN_INITED();
+  internal_memset(sret, 0, sizeof(*sret));
   __msan_unpoison(sret, sizeof(*sret));
 }
-#define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
+#endif
+
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+// Interceptors use NRVO and assume that sret will be pre-allocated in
+// caller frame.
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
+  __sanitizer_struct_mallinfo sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
 #else
-#define MSAN_MAYBE_INTERCEPT_MALLINFO
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO
+#endif
+
+#if __GLIBC_PREREQ(2, 33)
+INTERCEPTOR(__sanitizer_struct_mallinfo2, mallinfo2) {
+  __sanitizer_struct_mallinfo2 sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2 INTERCEPT_FUNCTION(mallinfo2)
+#else
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2
 #endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
@@ -401,9 +415,23 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
   __msan_unpoison(endptr, sizeof(*endptr));         \
   return res;
 
+// On s390x, long double return values are passed via implicit reference,
+// which needs to be unpoisoned.  We make the implicit pointer explicit.
+#define INTERCEPTOR_STRTO_SRET_BODY(func, sret, ...) \
+  ENSURE_MSAN_INITED();                              \
+  REAL(func)(sret, __VA_ARGS__);                     \
+  __msan_unpoison(sret, sizeof(*sret));              \
+  __msan_unpoison(endptr, sizeof(*endptr));
+
 #define INTERCEPTOR_STRTO(ret_type, func, char_type)                       \
   INTERCEPTOR(ret_type, func, const char_type *nptr, char_type **endptr) { \
     INTERCEPTOR_STRTO_BODY(ret_type, func, nptr, endptr);                  \
+  }
+
+#define INTERCEPTOR_STRTO_SRET(ret_type, func, char_type)                \
+  INTERCEPTOR(void, func, ret_type *sret, const char_type *nptr,         \
+              char_type **endptr) {                                      \
+    INTERCEPTOR_STRTO_SRET_BODY(func, sret, nptr, endptr);               \
   }
 
 #define INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)                \
@@ -418,6 +446,12 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
     INTERCEPTOR_STRTO_BODY(ret_type, func, nptr, endptr, loc);           \
   }
 
+#define INTERCEPTOR_STRTO_SRET_LOC(ret_type, func, char_type)            \
+  INTERCEPTOR(void, func, ret_type *sret, const char_type *nptr,         \
+              char_type **endptr, void *loc) {                           \
+    INTERCEPTOR_STRTO_SRET_BODY(func, sret, nptr, endptr, loc);          \
+  }
+
 #define INTERCEPTOR_STRTO_BASE_LOC(ret_type, func, char_type)            \
   INTERCEPTOR(ret_type, func, const char_type *nptr, char_type **endptr, \
               int base, void *loc) {                                     \
@@ -428,6 +462,10 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
 #define INTERCEPTORS_STRTO(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO(ret_type, func, char_type)             \
   INTERCEPTOR_STRTO_LOC(ret_type, func##_l, char_type)
+
+#define INTERCEPTORS_STRTO_SRET(ret_type, func, char_type)      \
+  INTERCEPTOR_STRTO_SRET(ret_type, func, char_type)             \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, func##_l, char_type)
 
 #define INTERCEPTORS_STRTO_BASE(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)             \
@@ -440,6 +478,12 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
   INTERCEPTOR_STRTO_LOC(ret_type, __##func##_l, char_type) \
   INTERCEPTOR_STRTO_LOC(ret_type, __##func##_internal, char_type)
 
+#define INTERCEPTORS_STRTO_SRET(ret_type, func, char_type)      \
+  INTERCEPTOR_STRTO_SRET(ret_type, func, char_type)             \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, func##_l, char_type)     \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, __##func##_l, char_type) \
+  INTERCEPTOR_STRTO_SRET_LOC(ret_type, __##func##_internal, char_type)
+
 #define INTERCEPTORS_STRTO_BASE(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)             \
   INTERCEPTOR_STRTO_BASE_LOC(ret_type, func##_l, char_type)     \
@@ -449,7 +493,11 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
 
 INTERCEPTORS_STRTO(double, strtod, char)
 INTERCEPTORS_STRTO(float, strtof, char)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, strtold, char)
+#else
 INTERCEPTORS_STRTO(long double, strtold, char)
+#endif
 INTERCEPTORS_STRTO_BASE(long, strtol, char)
 INTERCEPTORS_STRTO_BASE(long long, strtoll, char)
 INTERCEPTORS_STRTO_BASE(unsigned long, strtoul, char)
@@ -458,11 +506,42 @@ INTERCEPTORS_STRTO_BASE(u64, strtouq, char)
 
 INTERCEPTORS_STRTO(double, wcstod, wchar_t)
 INTERCEPTORS_STRTO(float, wcstof, wchar_t)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, wcstold, wchar_t)
+#else
 INTERCEPTORS_STRTO(long double, wcstold, wchar_t)
+#endif
 INTERCEPTORS_STRTO_BASE(long, wcstol, wchar_t)
 INTERCEPTORS_STRTO_BASE(long long, wcstoll, wchar_t)
 INTERCEPTORS_STRTO_BASE(unsigned long, wcstoul, wchar_t)
 INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)
+
+#if SANITIZER_GLIBC
+INTERCEPTORS_STRTO(double, __isoc23_strtod, char)
+INTERCEPTORS_STRTO(float, __isoc23_strtof, char)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, __isoc23_strtold, char)
+#else
+INTERCEPTORS_STRTO(long double, __isoc23_strtold, char)
+#endif
+INTERCEPTORS_STRTO_BASE(long, __isoc23_strtol, char)
+INTERCEPTORS_STRTO_BASE(long long, __isoc23_strtoll, char)
+INTERCEPTORS_STRTO_BASE(unsigned long, __isoc23_strtoul, char)
+INTERCEPTORS_STRTO_BASE(unsigned long long, __isoc23_strtoull, char)
+INTERCEPTORS_STRTO_BASE(u64, __isoc23_strtouq, char)
+
+INTERCEPTORS_STRTO(double, __isoc23_wcstod, wchar_t)
+INTERCEPTORS_STRTO(float, __isoc23_wcstof, wchar_t)
+#ifdef __s390x__
+INTERCEPTORS_STRTO_SRET(long double, __isoc23_wcstold, wchar_t)
+#else
+INTERCEPTORS_STRTO(long double, __isoc23_wcstold, wchar_t)
+#endif
+INTERCEPTORS_STRTO_BASE(long, __isoc23_wcstol, wchar_t)
+INTERCEPTORS_STRTO_BASE(long long, __isoc23_wcstoll, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long, __isoc23_wcstoul, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long long, __isoc23_wcstoull, wchar_t)
+#endif
 
 #if SANITIZER_NETBSD
 #define INTERCEPT_STRTO(func) \
@@ -474,6 +553,12 @@ INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)
   INTERCEPT_FUNCTION(func##_l); \
   INTERCEPT_FUNCTION(__##func##_l); \
   INTERCEPT_FUNCTION(__##func##_internal);
+
+#define INTERCEPT_STRTO_VER(func, ver) \
+  INTERCEPT_FUNCTION_VER(func, ver); \
+  INTERCEPT_FUNCTION_VER(func##_l, ver); \
+  INTERCEPT_FUNCTION_VER(__##func##_l, ver); \
+  INTERCEPT_FUNCTION_VER(__##func##_internal, ver);
 #endif
 
 
@@ -1241,24 +1326,6 @@ static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso) {
   return res;
 }
 
-static void BeforeFork() {
-  StackDepotLockAll();
-  ChainedOriginDepotLockAll();
-}
-
-static void AfterFork() {
-  ChainedOriginDepotUnlockAll();
-  StackDepotUnlockAll();
-}
-
-INTERCEPTOR(int, fork, void) {
-  ENSURE_MSAN_INITED();
-  BeforeFork();
-  int pid = REAL(fork)();
-  AfterFork();
-  return pid;
-}
-
 // NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
@@ -1713,6 +1780,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
   MSAN_MAYBE_INTERCEPT_MALLINFO;
+  MSAN_MAYBE_INTERCEPT_MALLINFO2;
   MSAN_MAYBE_INTERCEPT_MALLOPT;
   MSAN_MAYBE_INTERCEPT_MALLOC_STATS;
   INTERCEPT_FUNCTION(fread);
@@ -1735,7 +1803,11 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(strncat);
   INTERCEPT_STRTO(strtod);
   INTERCEPT_STRTO(strtof);
+#ifdef SANITIZER_NLDBL_VERSION
+  INTERCEPT_STRTO_VER(strtold, SANITIZER_NLDBL_VERSION);
+#else
   INTERCEPT_STRTO(strtold);
+#endif
   INTERCEPT_STRTO(strtol);
   INTERCEPT_STRTO(strtoul);
   INTERCEPT_STRTO(strtoll);
@@ -1743,11 +1815,33 @@ void InitializeInterceptors() {
   INTERCEPT_STRTO(strtouq);
   INTERCEPT_STRTO(wcstod);
   INTERCEPT_STRTO(wcstof);
+#ifdef SANITIZER_NLDBL_VERSION
+  INTERCEPT_STRTO_VER(wcstold, SANITIZER_NLDBL_VERSION);
+#else
   INTERCEPT_STRTO(wcstold);
+#endif
   INTERCEPT_STRTO(wcstol);
   INTERCEPT_STRTO(wcstoul);
   INTERCEPT_STRTO(wcstoll);
   INTERCEPT_STRTO(wcstoull);
+#if SANITIZER_GLIBC
+  INTERCEPT_STRTO(__isoc23_strtod);
+  INTERCEPT_STRTO(__isoc23_strtof);
+  INTERCEPT_STRTO(__isoc23_strtold);
+  INTERCEPT_STRTO(__isoc23_strtol);
+  INTERCEPT_STRTO(__isoc23_strtoul);
+  INTERCEPT_STRTO(__isoc23_strtoll);
+  INTERCEPT_STRTO(__isoc23_strtoull);
+  INTERCEPT_STRTO(__isoc23_strtouq);
+  INTERCEPT_STRTO(__isoc23_wcstod);
+  INTERCEPT_STRTO(__isoc23_wcstof);
+  INTERCEPT_STRTO(__isoc23_wcstold);
+  INTERCEPT_STRTO(__isoc23_wcstol);
+  INTERCEPT_STRTO(__isoc23_wcstoul);
+  INTERCEPT_STRTO(__isoc23_wcstoll);
+  INTERCEPT_STRTO(__isoc23_wcstoull);
+#endif
+
 #ifdef SANITIZER_NLDBL_VERSION
   INTERCEPT_FUNCTION_VER(vswprintf, SANITIZER_NLDBL_VERSION);
   INTERCEPT_FUNCTION_VER(swprintf, SANITIZER_NLDBL_VERSION);
@@ -1821,7 +1915,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(atexit);
   INTERCEPT_FUNCTION(__cxa_atexit);
   INTERCEPT_FUNCTION(shmat);
-  INTERCEPT_FUNCTION(fork);
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
 

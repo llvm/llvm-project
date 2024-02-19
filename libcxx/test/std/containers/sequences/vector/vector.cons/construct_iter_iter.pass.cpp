@@ -88,6 +88,12 @@ TEST_CONSTEXPR_CXX20 void basic_test_cases() {
       bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
   test<std::vector<int, safe_allocator<int> > >(
       random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
+
+  // Regression test for https://github.com/llvm/llvm-project/issues/46841
+  {
+    std::vector<int> v1({}, forward_iterator<const int*>{});
+    std::vector<int> v2(forward_iterator<const int*>{}, {});
+  }
 #endif
 }
 

@@ -21,6 +21,7 @@ add_llvm_tool(llvm-dwp
   DEPENDS
   intrinsics_gen
   DwpOptsTableGen
+  GENERATE_DRIVER
   )
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)

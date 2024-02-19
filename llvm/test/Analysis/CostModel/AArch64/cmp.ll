@@ -17,7 +17,7 @@ define void @cmps() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cf16 = fcmp oge half undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cf32 = fcmp ogt float undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cf64 = fcmp ogt double undef, undef
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %cfv816 = fcmp olt <8 x half> undef, undef
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %cfv816 = fcmp olt <8 x half> undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cfv432 = fcmp oge <4 x float> undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cfv264 = fcmp oge <2 x double> undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void

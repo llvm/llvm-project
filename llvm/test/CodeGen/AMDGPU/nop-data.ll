@@ -76,7 +76,7 @@ entry:
 ; CHECK-NEXT: s_nop 0
 ; CHECK-NEXT: s_nop 0
 ; CHECK-NEXT: s_nop 0
-; CHECK-NEXT: s_nop 0  // 0000000001FC: BF800000
+; CHECK-NEXT: s_nop 0  // 0000000000FC: BF800000
 
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <kernel1>:
@@ -87,4 +87,4 @@ entry:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

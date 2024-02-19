@@ -28,6 +28,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 void ManualDWARFIndex::Index() {
   if (m_indexed)
@@ -74,9 +75,8 @@ void ManualDWARFIndex::Index() {
   // Include 2 passes per unit to index for extracting DIEs from the unit and
   // indexing the unit, and then 8 extra entries for finalizing each index set.
   const uint64_t total_progress = units_to_index.size() * 2 + 8;
-  Progress progress(
-      llvm::formatv("Manually indexing DWARF for {0}", module_desc.GetData()),
-      total_progress);
+  Progress progress("Manually indexing DWARF", module_desc.GetData(),
+                    total_progress);
 
   std::vector<IndexSet> sets(units_to_index.size());
 
@@ -654,7 +654,7 @@ void ManualDWARFIndex::IndexSet::Encode(DataEncoder &encoder) const {
 
   // Now that all strings have been gathered, we will emit the string table.
   strtab.Encode(encoder);
-  // Followed the the symbol table data.
+  // Followed by the symbol table data.
   encoder.AppendData(index_encoder.GetData());
 }
 

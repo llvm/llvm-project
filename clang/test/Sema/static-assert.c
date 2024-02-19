@@ -94,3 +94,20 @@ _Static_assert(__builtin_strlen("1"), "");  // ext-warning {{'_Static_assert' is
 // __builtin_strlen(literal) is considered an integer constant expression
 // and doesn't cause a pedantic warning
 #endif
+
+
+_Static_assert(0, L"\xFFFFFFFF"); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}} \
+                                  // expected-error {{invalid escape sequence '\xFFFFFFFF' in an unevaluated string literal}} \
+                                  // expected-error {{hex escape sequence out of range}} \
+                                  // ext-warning {{'_Static_assert' is a C11 extension}}
+_Static_assert(0, L"\u1234"); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}} \
+                              // expected-error {{static assertion failed: ሴ}} \
+                              // ext-warning {{'_Static_assert' is a C11 extension}}
+
+_Static_assert(0, L"\x1ff"      // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}} \
+                                // expected-error {{hex escape sequence out of range}} \
+                                // expected-error {{invalid escape sequence '\x1ff' in an unevaluated string literal}} \
+                                // ext-warning {{'_Static_assert' is a C11 extension}}
+                   "0\x123"     // expected-error {{invalid escape sequence '\x123' in an unevaluated string literal}}
+                   "fx\xfffff"  // expected-error {{invalid escape sequence '\xfffff' in an unevaluated string literal}}
+                   "goop");

@@ -902,7 +902,6 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   // We want that 'to' is actually complete after this function so let's
   // tell the ASTImporter that 'to' was imported from 'from'.
   MapImported(from, to);
-  ASTImporter::Imported(from, to);
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -944,44 +943,41 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   // the class was originally sourced from symbols.
 
   if (ObjCInterfaceDecl *to_objc_interface = dyn_cast<ObjCInterfaceDecl>(to)) {
-    do {
-      ObjCInterfaceDecl *to_superclass = to_objc_interface->getSuperClass();
+    ObjCInterfaceDecl *to_superclass = to_objc_interface->getSuperClass();
 
-      if (to_superclass)
-        break; // we're not going to override it if it's set
+    if (to_superclass)
+      return; // we're not going to override it if it's set
 
-      ObjCInterfaceDecl *from_objc_interface =
-          dyn_cast<ObjCInterfaceDecl>(from);
+    ObjCInterfaceDecl *from_objc_interface = dyn_cast<ObjCInterfaceDecl>(from);
 
-      if (!from_objc_interface)
-        break;
+    if (!from_objc_interface)
+      return;
 
-      ObjCInterfaceDecl *from_superclass = from_objc_interface->getSuperClass();
+    ObjCInterfaceDecl *from_superclass = from_objc_interface->getSuperClass();
 
-      if (!from_superclass)
-        break;
+    if (!from_superclass)
+      return;
 
-      llvm::Expected<Decl *> imported_from_superclass_decl =
-          Import(from_superclass);
+    llvm::Expected<Decl *> imported_from_superclass_decl =
+        Import(from_superclass);
 
-      if (!imported_from_superclass_decl) {
-        LLDB_LOG_ERROR(log, imported_from_superclass_decl.takeError(),
-                       "Couldn't import decl: {0}");
-        break;
-      }
+    if (!imported_from_superclass_decl) {
+      LLDB_LOG_ERROR(log, imported_from_superclass_decl.takeError(),
+                     "Couldn't import decl: {0}");
+      return;
+    }
 
-      ObjCInterfaceDecl *imported_from_superclass =
-          dyn_cast<ObjCInterfaceDecl>(*imported_from_superclass_decl);
+    ObjCInterfaceDecl *imported_from_superclass =
+        dyn_cast<ObjCInterfaceDecl>(*imported_from_superclass_decl);
 
-      if (!imported_from_superclass)
-        break;
+    if (!imported_from_superclass)
+      return;
 
-      if (!to_objc_interface->hasDefinition())
-        to_objc_interface->startDefinition();
+    if (!to_objc_interface->hasDefinition())
+      to_objc_interface->startDefinition();
 
-      to_objc_interface->setSuperClass(m_source_ctx->getTrivialTypeSourceInfo(
-          m_source_ctx->getObjCInterfaceType(imported_from_superclass)));
-    } while (false);
+    to_objc_interface->setSuperClass(m_source_ctx->getTrivialTypeSourceInfo(
+        m_source_ctx->getObjCInterfaceType(imported_from_superclass)));
   }
 }
 
@@ -1028,7 +1024,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   // Some decls shouldn't be tracked here because they were not created by
   // copying 'from' to 'to'. Just exit early for those.
   if (m_decls_to_ignore.count(to))
-    return clang::ASTImporter::Imported(from, to);
+    return;
 
   // Transfer module ownership information.
   auto *from_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
@@ -1080,12 +1076,6 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       if (origin.ctx != &to->getASTContext()) {
         if (!to_context_md->hasOrigin(to) || user_id != LLDB_INVALID_UID)
           to_context_md->setOrigin(to, origin);
-
-        ImporterDelegateSP direct_completer =
-            m_main.GetDelegate(&to->getASTContext(), origin.ctx);
-
-        if (direct_completer.get() != this)
-          direct_completer->ASTImporter::Imported(origin.decl, to);
 
         LLDB_LOG(log,
                  "    [ClangASTImporter] Propagated origin "

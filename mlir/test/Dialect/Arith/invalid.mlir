@@ -206,6 +206,15 @@ func.func @func_with_ops() {
 
 // -----
 
+func.func @func_with_ops() {
+^bb0:
+  %c = arith.constant dense<0> : tensor<42 x i32, "foo">
+  // expected-error@+1 {{op failed to verify that result type has i1 element type and same shape as operands}}
+  %r = "arith.cmpi"(%c, %c) {predicate = 0} : (tensor<42 x i32, "foo">, tensor<42 x i32, "foo">) -> tensor<42 x i1, "bar">
+}
+
+// -----
+
 func.func @invalid_cmp_shape(%idx : () -> ()) {
   // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
   %cmp = arith.cmpi eq, %idx, %idx : () -> ()
@@ -415,6 +424,14 @@ func.func @fpext_vec_i32_to_f32(%arg0 : vector<2xi32>) {
 func.func @fpext_vec_f32_to_i32(%arg0 : vector<2xf32>) {
   // expected-error@+1 {{op result #0 must be floating-point-like, but got 'vector<2xi32>'}}
   %0 = arith.extf %arg0 : vector<2xf32> to vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @fpext_vec_f32_to_i32(%arg0 : tensor<2xf32, "foo">) {
+  // expected-error@+1 {{op operand type 'tensor<2xf32, "foo">' and result type 'tensor<2xf64, "bar">' are cast incompatible}}
+  %0 = arith.extf %arg0 : tensor<2xf32, "foo"> to tensor<2xf64, "bar">
   return
 }
 
@@ -768,4 +785,13 @@ func.func @disallow_zero_rank_tensor_with_unranked_tensor(%arg0 : tensor<i1>, %a
   // expected-error @+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
   %0 = arith.select %arg0, %arg1, %arg2 : tensor<i1>, tensor<2x?xi64>
   return %0 : tensor<2x?xi64>
+}
+
+// -----
+
+func.func @select_tensor_encoding(
+  %arg0 : tensor<8xi1, "bar">, %arg1 : tensor<8xi32, "foo">, %arg2 : tensor<8xi32, "foo">) -> tensor<8xi32, "foo"> {
+  // expected-error @+1 {{'arith.select' op expected condition type to have the same shape as the result type}}
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "bar">, tensor<8xi32, "foo">
+  return %0 : tensor<8xi32, "foo">
 }

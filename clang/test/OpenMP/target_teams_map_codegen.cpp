@@ -2238,8 +2238,10 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14mapWithPrivatev_l27
-// CHECK5-SAME: () #[[ATTR0:[0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1:[0-9]+]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14mapWithPrivatev_l27.omp_outlined)
 // CHECK5-NEXT:    ret void
 //
@@ -2257,12 +2259,14 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
 // CHECK5-NEXT:    [[Y_CASTED:%.*]] = alloca i64, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
@@ -2292,10 +2296,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
@@ -2384,10 +2390,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2410,10 +2418,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2436,10 +2446,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2462,10 +2474,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca ptr, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
@@ -2582,10 +2596,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca ptr, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
@@ -2702,10 +2718,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l72
-// CHECK5-SAME: (ptr noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], ptr noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], ptr noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca ptr, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
@@ -2794,10 +2812,12 @@ void mapInt128() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9mapInt128v_l74
-// CHECK5-SAME: (ptr noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], ptr noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK5-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 16 dereferenceable(16) [[Y:%.*]], ptr noundef nonnull align 16 dereferenceable(16) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK5-NEXT:  entry:
+// CHECK5-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[Z_ADDR:%.*]] = alloca ptr, align 8
+// CHECK5-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
@@ -2886,8 +2906,10 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14mapWithPrivatev_l27
-// CHECK7-SAME: () #[[ATTR0:[0-9]+]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1:[0-9]+]], i32 0, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z14mapWithPrivatev_l27.omp_outlined)
 // CHECK7-NEXT:    ret void
 //
@@ -2905,12 +2927,14 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z19mapWithFirstprivatev_l33
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[Y_CASTED:%.*]] = alloca i32, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 4
@@ -2940,10 +2964,12 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16mapWithReductionv_l39
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 4
@@ -3032,10 +3058,12 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7mapFromv_l45
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3058,10 +3086,12 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5mapTov_l51
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3084,10 +3114,12 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapAllocv_l57
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -3110,10 +3142,12 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l63
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[Z_ADDR:%.*]] = alloca ptr, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 4
@@ -3230,10 +3264,12 @@ void mapInt128() {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8mapArrayv_l65
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
+// CHECK7-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(352) [[Y:%.*]], ptr noundef nonnull align 4 dereferenceable(396) [[Z:%.*]]) #[[ATTR0]] {
 // CHECK7-NEXT:  entry:
+// CHECK7-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[Y_ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[Z_ADDR:%.*]] = alloca ptr, align 4
+// CHECK7-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[Y]], ptr [[Y_ADDR]], align 4
 // CHECK7-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 4

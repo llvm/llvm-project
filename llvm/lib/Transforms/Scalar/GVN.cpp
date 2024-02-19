@@ -592,7 +592,7 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
 
 /// Returns true if a value number exists for the specified value.
 bool GVNPass::ValueTable::exists(Value *V) const {
-  return valueNumbering.count(V) != 0;
+  return valueNumbering.contains(V);
 }
 
 /// lookup_or_add - Returns the value number for the specified value, assigning
@@ -760,7 +760,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AA = AM.getResult<AAManager>(F);
   auto *MemDep =
       isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
@@ -772,8 +772,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<TargetLibraryAnalysis>();
   if (MSSA)
     PA.preserve<MemorySSAAnalysis>();
-  if (LI)
-    PA.preserve<LoopAnalysis>();
+  PA.preserve<LoopAnalysis>();
   return PA;
 }
 
@@ -946,9 +945,14 @@ static void replaceValuesPerBlockEntry(
     SmallVectorImpl<AvailableValueInBlock> &ValuesPerBlock, Value *OldValue,
     Value *NewValue) {
   for (AvailableValueInBlock &V : ValuesPerBlock) {
-    if ((V.AV.isSimpleValue() && V.AV.getSimpleValue() == OldValue) ||
-       (V.AV.isCoercedLoadValue() && V.AV.getCoercedLoadValue() == OldValue))
-      V = AvailableValueInBlock::get(V.BB, NewValue);
+    if (V.AV.Val == OldValue)
+      V.AV.Val = NewValue;
+    if (V.AV.isSelectValue()) {
+      if (V.AV.V1 == OldValue)
+        V.AV.V1 = NewValue;
+      if (V.AV.V2 == OldValue)
+        V.AV.V2 = NewValue;
+    }
   }
 }
 
@@ -1147,13 +1151,11 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
   BasicBlock *FromBB = From->getParent();
   BatchAAResults BatchAA(*AA);
   for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor())
-    for (auto I = BB == FromBB ? From->getReverseIterator() : BB->rbegin(),
-              E = BB->rend();
-         I != E; ++I) {
+    for (auto *Inst = BB == FromBB ? From : BB->getTerminator();
+         Inst != nullptr; Inst = Inst->getPrevNonDebugInstruction()) {
       // Stop the search if limit is reached.
       if (++NumVisitedInsts > MaxNumVisitedInsts)
         return nullptr;
-      Instruction *Inst = &*I;
       if (isModSet(BatchAA.getModRefInfo(Inst, Loc)))
         return nullptr;
       if (auto *LI = dyn_cast<LoadInst>(Inst))
@@ -1368,7 +1370,7 @@ LoadInst *GVNPass::findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
                                            LoadInst *Load) {
   // For simplicity we handle a Pred has 2 successors only.
   auto *Term = Pred->getTerminator();
-  if (Term->getNumSuccessors() != 2 || Term->isExceptionalTerminator())
+  if (Term->getNumSuccessors() != 2 || Term->isSpecialTerminator())
     return nullptr;
   auto *SuccBB = Term->getSuccessor(0);
   if (SuccBB == LoadBB)
@@ -1416,16 +1418,8 @@ void GVNPass::eliminatePartiallyRedundantLoad(
                      Load->getSyncScopeID(), UnavailableBlock->getTerminator());
     NewLoad->setDebugLoc(Load->getDebugLoc());
     if (MSSAU) {
-      auto *MSSA = MSSAU->getMemorySSA();
-      // Get the defining access of the original load or use the load if it is a
-      // MemoryDef (e.g. because it is volatile). The inserted loads are
-      // guaranteed to load from the same definition.
-      auto *LoadAcc = MSSA->getMemoryAccess(Load);
-      auto *DefiningAcc =
-          isa<MemoryDef>(LoadAcc) ? LoadAcc : LoadAcc->getDefiningAccess();
       auto *NewAccess = MSSAU->createMemoryAccessInBB(
-          NewLoad, DefiningAcc, NewLoad->getParent(),
-          MemorySSA::BeforeTerminator);
+          NewLoad, nullptr, NewLoad->getParent(), MemorySSA::BeforeTerminator);
       if (auto *NewDef = dyn_cast<MemoryDef>(NewAccess))
         MSSAU->insertDef(NewDef, /*RenameUses=*/true);
       else
@@ -1444,8 +1438,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
     if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
       NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
     if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
-      if (LI &&
-          LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
+      if (LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
         NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
 
     // We do not propagate the old load's debug location, because the new
@@ -1482,6 +1475,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
   // Perform PHI construction.
   Value *V = ConstructSSAForLoadSet(Load, ValuesPerBlock, *this);
   // ConstructSSAForLoadSet is responsible for combining metadata.
+  ICF->removeUsersOf(Load);
   Load->replaceAllUsesWith(V);
   if (isa<PHINode>(V))
     V->takeName(Load);
@@ -1752,9 +1746,6 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 bool GVNPass::performLoopLoadPRE(LoadInst *Load,
                                  AvailValInBlkVect &ValuesPerBlock,
                                  UnavailBlkVect &UnavailableBlocks) {
-  if (!LI)
-    return false;
-
   const Loop *L = LI->getLoopFor(Load->getParent());
   // TODO: Generalize to other loop blocks that dominate the latch.
   if (!L || L->getHeader() != Load->getParent())
@@ -1901,6 +1892,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
     // Perform PHI construction.
     Value *V = ConstructSSAForLoadSet(Load, ValuesPerBlock, *this);
     // ConstructSSAForLoadSet is responsible for combining metadata.
+    ICF->removeUsersOf(Load);
     Load->replaceAllUsesWith(V);
 
     if (isa<PHINode>(V))
@@ -1922,7 +1914,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   // Step 4: Eliminate partial redundancy.
   if (!isPREEnabled() || !isLoadPREEnabled())
     return Changed;
-  if (!isLoadInLoopPREEnabled() && LI && LI->getLoopFor(Load->getParent()))
+  if (!isLoadInLoopPREEnabled() && LI->getLoopFor(Load->getParent()))
     return Changed;
 
   if (performLoopLoadPRE(Load, ValuesPerBlock, UnavailableBlocks) ||
@@ -1998,12 +1990,12 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
   if (ConstantInt *Cond = dyn_cast<ConstantInt>(V)) {
     if (Cond->isZero()) {
       Type *Int8Ty = Type::getInt8Ty(V->getContext());
+      Type *PtrTy = PointerType::get(V->getContext(), 0);
       // Insert a new store to null instruction before the load to indicate that
       // this code is not reachable.  FIXME: We could insert unreachable
       // instruction directly because we can modify the CFG.
       auto *NewS = new StoreInst(PoisonValue::get(Int8Ty),
-                                 Constant::getNullValue(Int8Ty->getPointerTo()),
-                                 IntrinsicI);
+                                 Constant::getNullValue(PtrTy), IntrinsicI);
       if (MSSAU) {
         const MemoryUseOrDef *FirstNonDom = nullptr;
         const auto *AL =
@@ -2023,14 +2015,12 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
           }
         }
 
-        // This added store is to null, so it will never executed and we can
-        // just use the LiveOnEntry def as defining access.
         auto *NewDef =
             FirstNonDom ? MSSAU->createMemoryAccessBefore(
-                              NewS, MSSAU->getMemorySSA()->getLiveOnEntryDef(),
+                              NewS, nullptr,
                               const_cast<MemoryUseOrDef *>(FirstNonDom))
                         : MSSAU->createMemoryAccessInBB(
-                              NewS, MSSAU->getMemorySSA()->getLiveOnEntryDef(),
+                              NewS, nullptr,
                               NewS->getParent(), MemorySSA::BeforeTerminator);
 
         MSSAU->insertDef(cast<MemoryDef>(NewDef), /*RenameUses=*/false);
@@ -2177,6 +2167,7 @@ bool GVNPass::processLoad(LoadInst *L) {
   Value *AvailableValue = AV->MaterializeAdjustedValue(L, L, *this);
 
   // MaterializeAdjustedValue is responsible for combining metadata.
+  ICF->removeUsersOf(L);
   L->replaceAllUsesWith(AvailableValue);
   markInstructionForDeletion(L);
   if (MSSAU)
@@ -2631,8 +2622,8 @@ bool GVNPass::processInstruction(Instruction *I) {
 
     // Remember how many outgoing edges there are to every successor.
     SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-    for (unsigned i = 0, n = SI->getNumSuccessors(); i != n; ++i)
-      ++SwitchEdges[SI->getSuccessor(i)];
+    for (BasicBlock *Succ : successors(Parent))
+      ++SwitchEdges[Succ];
 
     for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end();
          i != e; ++i) {
@@ -2695,7 +2686,7 @@ bool GVNPass::processInstruction(Instruction *I) {
 /// runOnFunction - This is the main transformation entry point for a function.
 bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                       const TargetLibraryInfo &RunTLI, AAResults &RunAA,
-                      MemoryDependenceResults *RunMD, LoopInfo *LI,
+                      MemoryDependenceResults *RunMD, LoopInfo &LI,
                       OptimizationRemarkEmitter *RunORE, MemorySSA *MSSA) {
   AC = &RunAC;
   DT = &RunDT;
@@ -2705,7 +2696,7 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   MD = RunMD;
   ImplicitControlFlowTracking ImplicitCFT;
   ICF = &ImplicitCFT;
-  this->LI = LI;
+  this->LI = &LI;
   VN.setMemDep(MD);
   ORE = RunORE;
   InvalidBlockRPONumbers = true;
@@ -2719,7 +2710,7 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   // Merge unconditional branches, allowing PRE to catch more
   // optimization opportunities.
   for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
-    bool removedBlock = MergeBlockIntoPredecessor(&BB, &DTU, LI, MSSAU, MD);
+    bool removedBlock = MergeBlockIntoPredecessor(&BB, &DTU, &LI, MSSAU, MD);
     if (removedBlock)
       ++NumGVNBlocks;
 
@@ -2778,7 +2769,12 @@ bool GVNPass::processBlock(BasicBlock *BB) {
   // use our normal hash approach for phis.  Instead, simply look for
   // obvious duplicates.  The first pass of GVN will tend to create
   // identical phis, and the second or later passes can eliminate them.
-  ChangedFunction |= EliminateDuplicatePHINodes(BB);
+  SmallPtrSet<PHINode *, 8> PHINodesToRemove;
+  ChangedFunction |= EliminateDuplicatePHINodes(BB, PHINodesToRemove);
+  for (PHINode *PN : PHINodesToRemove) {
+    VN.erase(PN);
+    removeInstruction(PN);
+  }
 
   for (BasicBlock::iterator BI = BB->begin(), BE = BB->end();
        BI != BE;) {
@@ -2997,9 +2993,9 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
   ++NumGVNPRE;
 
   // Create a PHI to make the value available in this block.
-  PHINode *Phi =
-      PHINode::Create(CurInst->getType(), predMap.size(),
-                      CurInst->getName() + ".pre-phi", &CurrentBlock->front());
+  PHINode *Phi = PHINode::Create(CurInst->getType(), predMap.size(),
+                                 CurInst->getName() + ".pre-phi");
+  Phi->insertBefore(CurrentBlock->begin());
   for (unsigned i = 0, e = predMap.size(); i != e; ++i) {
     if (Value *V = predMap[i].first) {
       // If we use an existing value in this phi, we have to patch the original
@@ -3290,8 +3286,6 @@ public:
     if (skipFunction(F))
       return false;
 
-    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     return Impl.runImpl(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
@@ -3301,7 +3295,7 @@ public:
         Impl.isMemDepEnabled()
             ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
             : nullptr,
-        LIWP ? &LIWP->getLoopInfo() : nullptr,
+        getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
         MSSAWP ? &MSSAWP->getMSSA() : nullptr);
   }

@@ -44,7 +44,6 @@
 #include <cassert>
 #include <iterator>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -64,6 +63,10 @@ STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
 static cl::opt<int>
     CSUsesThreshold("csuses-threshold", cl::Hidden, cl::init(1024),
                     cl::desc("Threshold for the size of CSUses"));
+
+static cl::opt<bool> AggressiveMachineCSE(
+    "aggressive-machine-cse", cl::Hidden, cl::init(false),
+    cl::desc("Override the profitability heuristics for Machine CSE"));
 
 namespace {
 
@@ -403,7 +406,7 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
 
 bool MachineCSE::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
-      MI->isInlineAsm() || MI->isDebugInstr())
+      MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo())
     return false;
 
   // Ignore copies.
@@ -439,6 +442,9 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
 /// defined.
 bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
                                    MachineBasicBlock *CSBB, MachineInstr *MI) {
+  if (AggressiveMachineCSE)
+    return true;
+
   // FIXME: Heuristics that works around the lack the live range splitting.
 
   // If CSReg is used at all uses of Reg, CSE should not increase register

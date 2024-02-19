@@ -101,8 +101,8 @@ entry:
 define i32 @csinc7(i32 %a, i32 %b) {
 ; CHECK-LABEL: csinc7:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #-4097 // =0xffffefff
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    mov w8, #-4097
 ; CHECK-NEXT:    csinc w8, w8, wzr, eq
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret

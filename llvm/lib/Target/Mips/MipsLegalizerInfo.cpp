@@ -12,6 +12,7 @@
 
 #include "MipsLegalizerInfo.h"
 #include "MipsTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/IntrinsicsMips.h"
@@ -329,8 +330,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   verify(*ST.getInstrInfo());
 }
 
-bool MipsLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                       MachineInstr &MI) const {
+bool MipsLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   using namespace TargetOpcode;
 
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
@@ -510,7 +512,7 @@ bool MipsLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
-  switch (MI.getIntrinsicID()) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::trap: {
     MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
     MI.eraseFromParent();

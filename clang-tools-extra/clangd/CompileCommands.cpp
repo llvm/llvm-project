@@ -28,7 +28,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/TargetParser/Host.h"
 #include <iterator>
 #include <optional>
 #include <string>
@@ -83,7 +82,7 @@ std::string resolve(std::string Path) {
     log("Failed to resolve possible symlink {0}", Path);
     return Path;
   }
-  return std::string(Resolved.str());
+  return std::string(Resolved);
 }
 
 // Get a plausible full `clang` path.
@@ -115,7 +114,7 @@ std::string detectClangPath() {
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
-  return std::string(ClangPath.str());
+  return std::string(ClangPath);
 }
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
@@ -187,12 +186,6 @@ static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
 
 } // namespace
 
-CommandMangler::CommandMangler() {
-  Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
-                  ? llvm::cl::TokenizeWindowsCommandLine
-                  : llvm::cl::TokenizeGNUCommandLine;
-}
-
 CommandMangler CommandMangler::detect() {
   CommandMangler Result;
   Result.ClangPath = detectClangPath();
@@ -213,14 +206,6 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   if (Cmd.empty())
     return;
 
-  // FS used for expanding response files.
-  // FIXME: ExpandResponseFiles appears not to provide the usual
-  // thread-safety guarantees, as the access to FS is not locked!
-  // For now, use the real FS, which is known to be threadsafe (if we don't
-  // use/change working directory, which ExpandResponseFiles doesn't).
-  auto FS = llvm::vfs::getRealFileSystem();
-  tooling::addExpandedResponseFiles(Cmd, Command.Directory, Tokenizer, *FS);
-
   auto &OptTable = clang::driver::getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
   llvm::SmallVector<const char *, 16> OriginalArgs;
@@ -237,14 +222,8 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
       llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
-      /*FlagsToInclude=*/
-      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
-                  driver::options::CLDXCOption)
-               : /*everything*/ 0,
-      /*FlagsToExclude=*/driver::options::NoDriverOption |
-          (IsCLMode
-               ? 0
-               : (driver::options::CLOption | driver::options::CLDXCOption)));
+      llvm::opt::Visibility(IsCLMode ? driver::options::CLOption
+                                     : driver::options::ClangOption));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
@@ -296,10 +275,10 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
     Cmd.resize(DashDashIndex);
   }
   llvm::sort(IndicesToDrop);
-  llvm::for_each(llvm::reverse(IndicesToDrop),
-                 // +1 to account for the executable name in Cmd[0] that
-                 // doesn't exist in ArgList.
-                 [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
+  for (unsigned Idx : llvm::reverse(IndicesToDrop))
+    // +1 to account for the executable name in Cmd[0] that
+    // doesn't exist in ArgList.
+    Cmd.erase(Cmd.begin() + Idx + 1);
   // All the inputs are stripped, append the name for the requested file. Rest
   // of the modifications should respect `--`.
   Cmd.push_back("--");
@@ -334,26 +313,29 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
 
   tooling::addTargetAndModeForProgramName(Cmd, Cmd.front());
 
-  // Check whether the flag exists, either as -flag or -flag=*
-  auto Has = [&](llvm::StringRef Flag) {
-    for (llvm::StringRef Arg : Cmd) {
-      if (Arg.consume_front(Flag) && (Arg.empty() || Arg[0] == '='))
-        return true;
-    }
-    return false;
+  // Check whether the flag exists in the command.
+  auto HasExact = [&](llvm::StringRef Flag) {
+    return llvm::any_of(Cmd, [&](llvm::StringRef Arg) { return Arg == Flag; });
+  };
+
+  // Check whether the flag appears in the command as a prefix.
+  auto HasPrefix = [&](llvm::StringRef Flag) {
+    return llvm::any_of(
+        Cmd, [&](llvm::StringRef Arg) { return Arg.starts_with(Flag); });
   };
 
   llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
-    return Elem.startswith("--save-temps") || Elem.startswith("-save-temps");
+    return Elem.starts_with("--save-temps") || Elem.starts_with("-save-temps");
   });
 
   std::vector<std::string> ToAppend;
-  if (ResourceDir && !Has("-resource-dir"))
+  if (ResourceDir && !HasExact("-resource-dir") && !HasPrefix("-resource-dir="))
     ToAppend.push_back(("-resource-dir=" + *ResourceDir));
 
   // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
   // `--sysroot` is a superset of the `-isysroot` argument.
-  if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
+  if (Sysroot && !HasPrefix("-isysroot") && !HasExact("--sysroot") &&
+      !HasPrefix("--sysroot=")) {
     ToAppend.push_back("-isysroot");
     ToAppend.push_back(*Sysroot);
   }
@@ -364,7 +346,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   }
 
   if (!Cmd.empty()) {
-    bool FollowSymlink = !Has("-no-canonical-prefixes");
+    bool FollowSymlink = !HasExact("-no-canonical-prefixes");
     Cmd.front() =
         (FollowSymlink ? ResolvedDrivers : ResolvedDriversNoFollow)
             .get(Cmd.front(), [&, this] {
@@ -441,23 +423,13 @@ DriverMode getDriverMode(const std::vector<std::string> &Args) {
 
 // Returns the set of DriverModes where an option may be used.
 unsigned char getModes(const llvm::opt::Option &Opt) {
-  // Why is this so complicated?!
-  // Reference is clang::driver::Driver::getIncludeExcludeOptionFlagMasks()
   unsigned char Result = DM_None;
-  if (Opt.hasFlag(driver::options::CC1Option))
+  if (Opt.hasVisibilityFlag(driver::options::ClangOption))
+    Result |= DM_GCC;
+  if (Opt.hasVisibilityFlag(driver::options::CC1Option))
     Result |= DM_CC1;
-  if (!Opt.hasFlag(driver::options::NoDriverOption)) {
-    if (Opt.hasFlag(driver::options::CLOption)) {
-      Result |= DM_CL;
-    } else if (Opt.hasFlag(driver::options::CLDXCOption)) {
-      Result |= DM_CL;
-    } else {
-      Result |= DM_GCC;
-      if (Opt.hasFlag(driver::options::CoreOption)) {
-        Result |= DM_CL;
-      }
-    }
-  }
+  if (Opt.hasVisibilityFlag(driver::options::CLOption))
+    Result |= DM_CL;
   return Result;
 }
 
@@ -493,8 +465,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
   static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
       NAME##_init, std::size(NAME##_init) - 1);
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELP, METAVAR, VALUES)                                          \
+#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -505,8 +477,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       DriverID AliasID;
       const void *AliasArgs;
     } AliasTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELP, METAVAR, VALUES)                                          \
+#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -603,7 +575,7 @@ const ArgStripper::Rule *ArgStripper::matchingRule(llvm::StringRef Arg,
       continue; // not applicable to current driver mode
     if (BestRule && BestRule->Priority < R.Priority)
       continue; // lower-priority than best candidate.
-    if (!Arg.startswith(R.Text))
+    if (!Arg.starts_with(R.Text))
       continue; // current arg doesn't match the prefix string
     bool PrefixMatch = Arg.size() > R.Text.size();
     // Can rule apply as an exact/prefix match?

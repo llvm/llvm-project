@@ -11,22 +11,22 @@
 
 // RUN: %check_clang_tidy -check-suffixes=ENABLED,SHARED -std=c++11 %s \
 // RUN: readability-identifier-naming %t -- \
-// RUN:  -config='{ InheritParentConfig: true, CheckOptions: [ \
-// RUN:   {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
-// RUN:   {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
-// RUN:   {key: readability-identifier-naming.GetConfigPerFile, value: true} \
-// RUN:  ]}' -header-filter='.*' -- -I%theaders
+// RUN:  -config='{ InheritParentConfig: true, CheckOptions: { \
+// RUN:   readability-identifier-naming.FunctionCase: camelBack, \
+// RUN:   readability-identifier-naming.ParameterCase: CamelCase, \
+// RUN:   readability-identifier-naming.GetConfigPerFile: true \
+// RUN:  }}' -header-filter='.*' -- -I%theaders
 
 // On DISABLED run, everything should be made 'camelBack'.
 
 // RUN: cp -R %S/Inputs/identifier-naming/. %theaders
 // RUN: %check_clang_tidy -check-suffixes=DISABLED,SHARED -std=c++11 %s \
 // RUN: readability-identifier-naming %t -- \
-// RUN:  -config='{ InheritParentConfig: false, CheckOptions: [ \
-// RUN:   {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
-// RUN:   {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
-// RUN:   {key: readability-identifier-naming.GetConfigPerFile, value: false} \
-// RUN:  ]}' -header-filter='.*' -- -I%theaders
+// RUN:  -config='{ InheritParentConfig: false, CheckOptions: { \
+// RUN:   readability-identifier-naming.FunctionCase: camelBack, \
+// RUN:   readability-identifier-naming.ParameterCase: CamelCase, \
+// RUN:   readability-identifier-naming.GetConfigPerFile: false \
+// RUN:  }}' -header-filter='.*' -- -I%theaders
 
 #include "global-style1/header.h"
 #include "global-style2/header.h"

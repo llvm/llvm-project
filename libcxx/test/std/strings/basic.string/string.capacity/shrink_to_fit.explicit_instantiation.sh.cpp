@@ -31,7 +31,7 @@ struct string16_char_traits {
   typedef std::mbstate_t state_type;
   typedef std::fpos<state_type> pos_type;
 
-  static void assign(char_type&, const char_type&) { }
+  static void assign(char_type&, const char_type&) {}
   static bool eq(const char_type&, const char_type&) { return false; }
   static bool lt(const char_type&, const char_type&) { return false; }
   static int compare(const char_type*, const char_type*, std::size_t) { return 0; }
@@ -53,7 +53,7 @@ template class std::basic_string<char16, string16_char_traits>;
 extern template class std::basic_string<char16, string16_char_traits>;
 
 int main(int, char**) {
-    std::basic_string<char16, string16_char_traits> s;
-    s.shrink_to_fit();
+  std::basic_string<char16, string16_char_traits> s;
+  s.shrink_to_fit();
 }
 #endif

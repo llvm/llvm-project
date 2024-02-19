@@ -53,7 +53,7 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
                                                bool can_connect) {
   lldb::ProcessSP process_sp;
   if (crash_file && !can_connect) {
-    // Read enough data for a ELF32 header or ELF64 header Note: Here we care
+    // Read enough data for an ELF32 header or ELF64 header Note: Here we care
     // about e_type field only, so it is safe to ignore possible presence of
     // the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
@@ -99,7 +99,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_file(core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {
@@ -108,7 +108,7 @@ ProcessElfCore::~ProcessElfCore() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
@@ -131,7 +131,7 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
       m_core_aranges.Append(range_entry);
     }
   }
-  // Keep a separate map of permissions that that isn't coalesced so all ranges
+  // Keep a separate map of permissions that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =
       ((header.p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |
@@ -261,8 +261,8 @@ Status ProcessElfCore::DoLoadCore() {
       exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
-        exe_module_sp = GetTarget().GetOrCreateModule(exe_module_spec, 
-                                                      true /* notify */);
+        exe_module_sp =
+            GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -832,7 +832,7 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   for (const auto &note : notes) {
     // OpenBSD per-thread information is stored in notes named "OpenBSD@nnn" so
     // match on the initial part of the string.
-    if (!llvm::StringRef(note.info.n_name).startswith("OpenBSD"))
+    if (!llvm::StringRef(note.info.n_name).starts_with("OpenBSD"))
       continue;
 
     switch (note.info.n_type) {

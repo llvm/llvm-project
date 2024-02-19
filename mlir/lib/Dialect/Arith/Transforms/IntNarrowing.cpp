@@ -81,7 +81,7 @@ struct NarrowingPattern : OpRewritePattern<SourceOp> {
       return newElemTy;
 
     if (auto shapedTy = dyn_cast<ShapedType>(origTy))
-      if (auto elemTy = dyn_cast<IntegerType>(shapedTy.getElementType()))
+      if (dyn_cast<IntegerType>(shapedTy.getElementType()))
         return shapedTy.clone(shapedTy.getShape(), newElemTy);
 
     return failure();
@@ -113,9 +113,9 @@ public:
   /// wrapper when `op` is either `arith.extsi` or `arith.extui`, and failure
   /// otherwise.
   static FailureOr<ExtensionOp> from(Operation *op) {
-    if (auto sext = dyn_cast_or_null<arith::ExtSIOp>(op))
+    if (dyn_cast_or_null<arith::ExtSIOp>(op))
       return ExtensionOp{op, ExtensionKind::Sign};
-    if (auto zext = dyn_cast_or_null<arith::ExtUIOp>(op))
+    if (dyn_cast_or_null<arith::ExtUIOp>(op))
       return ExtensionOp{op, ExtensionKind::Zero};
 
     return failure();
@@ -516,7 +516,7 @@ struct ExtensionOverExtract final : NarrowingPattern<vector::ExtractOp> {
       return failure();
 
     Value newExtract = rewriter.create<vector::ExtractOp>(
-        op.getLoc(), ext->getIn(), op.getPosition());
+        op.getLoc(), ext->getIn(), op.getMixedPosition());
     ext->recreateAndReplace(rewriter, op, newExtract);
     return success();
   }
@@ -645,8 +645,9 @@ struct ExtensionOverInsert final
                                      vector::InsertOp origInsert,
                                      Value narrowValue,
                                      Value narrowDest) const override {
-    return rewriter.create<vector::InsertOp>(
-        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getPosition());
+    return rewriter.create<vector::InsertOp>(origInsert.getLoc(), narrowValue,
+                                             narrowDest,
+                                             origInsert.getMixedPosition());
   }
 };
 
@@ -711,7 +712,7 @@ struct ExtensionOverTranspose final : NarrowingPattern<vector::TransposeOp> {
     VectorType newTy =
         origTy.cloneWith(origTy.getShape(), ext->getInElementType());
     Value newTranspose = rewriter.create<vector::TransposeOp>(
-        op.getLoc(), newTy, ext->getIn(), op.getTransp());
+        op.getLoc(), newTy, ext->getIn(), op.getPermutation());
     ext->recreateAndReplace(rewriter, op, newTranspose);
     return success();
   }
@@ -748,6 +749,12 @@ struct ArithIntNarrowingPass final
   using ArithIntNarrowingBase::ArithIntNarrowingBase;
 
   void runOnOperation() override {
+    if (bitwidthsSupported.empty() ||
+        llvm::is_contained(bitwidthsSupported, 0)) {
+      // Invalid pass options.
+      return signalPassFailure();
+    }
+
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     RewritePatternSet patterns(ctx);

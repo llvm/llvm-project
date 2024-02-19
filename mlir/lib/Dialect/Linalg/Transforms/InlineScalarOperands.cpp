@@ -35,7 +35,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     SmallVector<size_t> scalarOperands;
@@ -54,8 +54,9 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     if (scalarOperands.empty())
       return failure();
 
-    for (OpOperand *opOperand : genericOp.getDpsInitOperands())
-      newIndexingMaps.emplace_back(genericOp.getMatchingIndexingMap(opOperand));
+    for (OpOperand &opOperand : genericOp.getDpsInitsMutable())
+      newIndexingMaps.emplace_back(
+          genericOp.getMatchingIndexingMap(&opOperand));
 
     Location loc = genericOp->getLoc();
     SmallVector<Value> outputOperands = genericOp.getOutputs();

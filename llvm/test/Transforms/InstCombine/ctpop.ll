@@ -347,7 +347,7 @@ define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, ptr %p) {
 define i32 @zext_ctpop(i16 %x) {
 ; CHECK-LABEL: @zext_ctpop(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X:%.*]]), !range [[RNG4:![0-9]+]]
-; CHECK-NEXT:    [[P:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[P:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
   %z = zext i16 %x to i32
@@ -358,7 +358,7 @@ define i32 @zext_ctpop(i16 %x) {
 define <2 x i32> @zext_ctpop_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @zext_ctpop_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i7> @llvm.ctpop.v2i7(<2 x i7> [[X:%.*]]), !range [[RNG2]]
-; CHECK-NEXT:    [[P:%.*]] = zext <2 x i7> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[P:%.*]] = zext nneg <2 x i7> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[P]]
 ;
   %z = zext <2 x i7> %x to <2 x i32>
@@ -474,4 +474,15 @@ define i32 @parity_xor_extra_use2(i32 %arg, i32 %arg1) {
   %i4 = and i32 %i3, 1
   %i5 = xor i32 %i2, %i4
   ret i32 %i5
+}
+
+define i32 @select_ctpop_zero(i32 %x) {
+; CHECK-LABEL: @select_ctpop_zero(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    ret i32 [[CTPOP]]
+;
+  %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %x, 0
+  %res = select i1 %cmp, i32 0, i32 %ctpop
+  ret i32 %res
 }

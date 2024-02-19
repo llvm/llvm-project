@@ -2,20 +2,20 @@
 
 # Check that when we combine SEXT we assign the correct debug location.
 # CHECK: !9 = !DILocation(line: 36, column: 21, scope: !4)
-# CHECK: G_AND %5, %4, debug-location !9
+# CHECK: G_AND %4, %5, debug-location !9
 
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-unknown"
   
-  define i64 @main(i8 %pat) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !4 {
+  define i64 @main(i8 %pat) personality ptr @__gxx_personality_v0 !dbg !4 {
   entry:
     %sext.1 = zext i8 %pat to i16, !dbg !8
     %sext.zext.1 = sext i16 %sext.1 to i64, !dbg !9
     ret i64 %sext.zext.1
   }
   
-  declare void @printf(i8*, ...)
+  declare void @printf(ptr, ...)
   
   declare i32 @__gxx_personality_v0(...)
   

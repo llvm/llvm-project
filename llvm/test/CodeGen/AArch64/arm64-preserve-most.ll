@@ -1,6 +1,6 @@
-; RUN: llc -O0 --march=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
-; RUN: llc -O1 --march=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
-; RUN: llc -O2 --march=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 --mtriple=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O1 --mtriple=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O2 --mtriple=aarch64 -verify-machineinstrs --filetype=asm %s -o - 2>&1 | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 

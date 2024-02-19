@@ -224,6 +224,40 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
   return std::nullopt;
 }
 
+bool areParensNeededForStatement(const Stmt &Node) {
+  if (isa<ParenExpr>(&Node))
+    return false;
+
+  if (isa<clang::BinaryOperator>(&Node) || isa<UnaryOperator>(&Node))
+    return true;
+
+  if (isa<clang::ConditionalOperator>(&Node) ||
+      isa<BinaryConditionalOperator>(&Node))
+    return true;
+
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node)) {
+    switch (Op->getOperator()) {
+    case OO_PlusPlus:
+      [[fallthrough]];
+    case OO_MinusMinus:
+      return Op->getNumArgs() != 2;
+    case OO_Call:
+      [[fallthrough]];
+    case OO_Subscript:
+      [[fallthrough]];
+    case OO_Arrow:
+      return false;
+    default:
+      return true;
+    };
+  }
+
+  if (isa<CStyleCastExpr>(&Node))
+    return true;
+
+  return false;
+}
+
 // Return true if expr needs to be put in parens when it is an argument of a
 // prefix unary operator, e.g. when it is a binary or ternary operator
 // syntactically.
@@ -253,7 +287,7 @@ std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
   StringRef Text = tooling::fixit::getText(ExprNode, Context);
 
   if (Text.empty())
-    return std::string();
+    return {};
 
   // Remove remaining '->' from overloaded operator call
   Text.consume_back("->");

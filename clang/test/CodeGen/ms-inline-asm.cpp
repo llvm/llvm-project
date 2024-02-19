@@ -1,8 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -x c++ %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - -std=c++11 | FileCheck %s
 
-// rdar://13645930
-
 struct Foo {
   static int *ptr;
   static int a, b;

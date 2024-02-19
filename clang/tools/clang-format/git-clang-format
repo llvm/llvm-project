@@ -98,6 +98,7 @@ def main():
       'ts',  # TypeScript
       'cs',  # C Sharp
       'json',  # Json
+      'sv', 'svh', 'v', 'vh', # Verilog
       ])
 
   p = argparse.ArgumentParser(
@@ -131,6 +132,10 @@ def main():
                  help='passed to clang-format'),
   p.add_argument('-v', '--verbose', action='count', default=0,
                  help='print extra information')
+  p.add_argument('--diff_from_common_commit', action='store_true',
+                 help=('diff from the last common commit for commits in '
+                      'separate branches rather than the exact point of the '
+                      'commits'))
   # We gather all the remaining positional arguments into 'args' since we need
   # to use some heuristics to determine whether or not <commit> was present.
   # However, to print pretty messages, we make use of metavar and help.
@@ -144,15 +149,23 @@ def main():
   del opts.quiet
 
   commits, files = interpret_args(opts.args, dash_dash, opts.commit)
-  if len(commits) > 1:
+  if len(commits) > 2:
+    die('at most two commits allowed; %d given' % len(commits))
+  if len(commits) == 2:
     if opts.staged:
       die('--staged is not allowed when two commits are given')
     if not opts.diff:
       die('--diff is required when two commits are given')
-  else:
-    if len(commits) > 2:
-      die('at most two commits allowed; %d given' % len(commits))
-  changed_lines = compute_diff_and_extract_lines(commits, files, opts.staged)
+  elif opts.diff_from_common_commit:
+    die('--diff_from_common_commit is only allowed when two commits are given')
+
+  if os.path.dirname(opts.binary):
+    opts.binary = os.path.abspath(opts.binary)
+
+  changed_lines = compute_diff_and_extract_lines(commits,
+                                                 files,
+                                                 opts.staged,
+                                                 opts.diff_from_common_commit)
   if opts.verbose >= 1:
     ignored_files = set(changed_lines)
   filter_by_extension(changed_lines, opts.extensions.lower().split(','))
@@ -300,9 +313,9 @@ def get_object_type(value):
   return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files, staged):
+def compute_diff_and_extract_lines(commits, files, staged, diff_common_commit):
   """Calls compute_diff() followed by extract_lines()."""
-  diff_process = compute_diff(commits, files, staged)
+  diff_process = compute_diff(commits, files, staged, diff_common_commit)
   changed_lines = extract_lines(diff_process.stdout)
   diff_process.stdout.close()
   diff_process.wait()
@@ -312,7 +325,7 @@ def compute_diff_and_extract_lines(commits, files, staged):
   return changed_lines
 
 
-def compute_diff(commits, files, staged):
+def compute_diff(commits, files, staged, diff_common_commit):
   """Return a subprocess object producing the diff from `commits`.
 
   The return value's `stdin` file object will produce a patch with the
@@ -322,10 +335,13 @@ def compute_diff(commits, files, staged):
   Zero context lines are used in the patch."""
   git_tool = 'diff-index'
   extra_args = []
-  if len(commits) > 1:
+  if len(commits) == 2:
     git_tool = 'diff-tree'
+    if diff_common_commit:
+      commits = [f'{commits[0]}...{commits[1]}']
   elif staged:
     extra_args += ['--cached']
+
   cmd = ['git', git_tool, '-p', '-U0'] + extra_args + commits + ['--']
   cmd.extend(files)
   p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -605,7 +621,7 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
     index_tree = old_tree
   else:
     with temporary_index_file(new_tree):
-      run('git', 'checkout-index', '-a', '-f')
+      run('git', 'checkout-index', '-f', '--', *changed_files)
   return changed_files
 
 

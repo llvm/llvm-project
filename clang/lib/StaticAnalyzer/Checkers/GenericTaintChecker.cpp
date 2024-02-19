@@ -104,8 +104,7 @@ bool isStdin(SVal Val, const ASTContext &ACtx) {
   // variable named stdin with the proper type.
   if (const auto *D = dyn_cast_or_null<VarDecl>(DeclReg->getDecl())) {
     D = D->getCanonicalDecl();
-    // FIXME: This should look for an exact match.
-    if (D->getName().contains("stdin") && D->isExternC()) {
+    if (D->getName() == "stdin" && D->hasExternalStorage() && D->isExternC()) {
       const QualType FILETy = ACtx.getFILEType().getCanonicalType();
       const QualType Ty = D->getType().getCanonicalType();
 
@@ -622,12 +621,14 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"getlogin_r"}}, TR::Source({{0}})},
 
       // Props
+      {{{"accept"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"fgetc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"fgetln"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"fgets"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
+      {{{"fgetws"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
       {{{"fscanf"}}, TR::Prop({{0}}, {{}, 2})},
       {{{"fscanf_s"}}, TR::Prop({{0}}, {{}, {2}})},
       {{{"sscanf"}}, TR::Prop({{0}}, {{}, 2})},
@@ -694,8 +695,10 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strnlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+      // See the details here: https://github.com/llvm/llvm-project/pull/66086
+
       {{{"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
@@ -731,6 +734,8 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strcat"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {{"wcsncat"}}},
+       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdupa"}}},
        TR::Prop({{0}}, {{ReturnValueIndex}})},
@@ -739,12 +744,14 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       // Sinks
       {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
       {{{"popen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execl"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execle"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execlp"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execvp"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execvP"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{{"execve"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execl"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{{"execle"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{{"execlp"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
+      {{{"execv"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
+      {{{"execve"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{{"fexecve"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
+      {{{"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
+      {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
       {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
       {{CDF_MaybeBuiltin, {{"malloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
       {{CDF_MaybeBuiltin, {{"calloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},

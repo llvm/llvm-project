@@ -17,7 +17,7 @@
 #include <stdint.h> // uintxx_t
 #include <stdlib.h> // malloc/free
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Simple structure to allocate a buffer of a particular size.
 // When ASAN is present it also poisons the whole memory.
@@ -198,6 +198,6 @@ inline bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
   return true;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_TEST_SRC_STRING_MEMORY_UTILS_MEMORY_CHECK_UTILS_H

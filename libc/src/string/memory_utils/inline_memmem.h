@@ -9,14 +9,16 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H
 
+#include "src/__support/macros/attributes.h"
+
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename Comp>
-constexpr static void *inline_memmem(const void *haystack, size_t haystack_len,
-                                     const void *needle, size_t needle_len,
-                                     Comp &&comp) {
+LIBC_INLINE constexpr static void *
+inline_memmem(const void *haystack, size_t haystack_len, const void *needle,
+              size_t needle_len, Comp &&comp) {
   // TODO: simple brute force implementation. This can be
   // improved upon using well known string matching algorithms.
   if (!needle_len)
@@ -37,6 +39,6 @@ constexpr static void *inline_memmem(const void *haystack, size_t haystack_len,
   return nullptr;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H

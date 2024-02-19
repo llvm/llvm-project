@@ -84,9 +84,9 @@ TEST(UnixSignalsTest, GetInfo) {
 
   bool should_suppress = false, should_stop = false, should_notify = false;
   int32_t signo = 4;
-  std::string name =
+  bool success =
       signals.GetSignalInfo(signo, should_suppress, should_stop, should_notify);
-  EXPECT_EQ("SIG4", name);
+  ASSERT_TRUE(success);
   EXPECT_EQ(true, should_suppress);
   EXPECT_EQ(false, should_stop);
   EXPECT_EQ(true, should_notify);
@@ -94,15 +94,13 @@ TEST(UnixSignalsTest, GetInfo) {
   EXPECT_EQ(true, signals.GetShouldSuppress(signo));
   EXPECT_EQ(false, signals.GetShouldStop(signo));
   EXPECT_EQ(true, signals.GetShouldNotify(signo));
-  EXPECT_EQ(name, signals.GetSignalAsCString(signo));
 }
 
-TEST(UnixSignalsTest, GetAsCString) {
+TEST(UnixSignalsTest, GetAsStringRef) {
   TestSignals signals;
 
-  ASSERT_EQ(nullptr, signals.GetSignalAsCString(100));
-  std::string name = signals.GetSignalAsCString(16);
-  ASSERT_EQ("SIG16", name);
+  ASSERT_EQ(llvm::StringRef(), signals.GetSignalAsStringRef(100));
+  ASSERT_EQ("SIG16", signals.GetSignalAsStringRef(16));
 }
 
 TEST(UnixSignalsTest, GetAsString) {

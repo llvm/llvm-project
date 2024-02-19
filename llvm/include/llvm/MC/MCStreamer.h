@@ -270,7 +270,7 @@ protected:
 
   virtual void emitRawTextImpl(StringRef String);
 
-  /// Returns true if the the .cv_loc directive is in the right section.
+  /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
 public:
@@ -903,7 +903,7 @@ public:
   virtual void emitFileDirective(StringRef Filename);
 
   /// Emit ".file assembler diretive with additioal info.
-  virtual void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+  virtual void emitFileDirective(StringRef Filename, StringRef CompilerVersion,
                                  StringRef TimeStamp, StringRef Description);
 
   /// Emit the "identifiers" directive.  This implements the

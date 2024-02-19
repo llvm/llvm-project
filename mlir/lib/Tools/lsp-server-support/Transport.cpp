@@ -30,8 +30,8 @@ namespace {
 ///  - if there were multiple replies, only the first is sent
 class Reply {
 public:
-  Reply(const llvm::json::Value &id, StringRef method,
-        JSONTransport &transport);
+  Reply(const llvm::json::Value &id, StringRef method, JSONTransport &transport,
+        std::mutex &transportOutputMutex);
   Reply(Reply &&other);
   Reply &operator=(Reply &&) = delete;
   Reply(const Reply &) = delete;
@@ -44,16 +44,19 @@ private:
   std::atomic<bool> replied = {false};
   llvm::json::Value id;
   JSONTransport *transport;
+  std::mutex &transportOutputMutex;
 };
 } // namespace
 
 Reply::Reply(const llvm::json::Value &id, llvm::StringRef method,
-             JSONTransport &transport)
-    : id(id), transport(&transport) {}
+             JSONTransport &transport, std::mutex &transportOutputMutex)
+    : id(id), transport(&transport),
+      transportOutputMutex(transportOutputMutex) {}
 
 Reply::Reply(Reply &&other)
     : replied(other.replied.load()), id(std::move(other.id)),
-      transport(other.transport) {
+      transport(other.transport),
+      transportOutputMutex(other.transportOutputMutex) {
   other.transport = nullptr;
 }
 
@@ -65,6 +68,7 @@ void Reply::operator()(llvm::Expected<llvm::json::Value> reply) {
   }
   assert(transport && "expected valid transport to reply to");
 
+  std::lock_guard<std::mutex> transportLock(transportOutputMutex);
   if (reply) {
     Logger::info("--> reply:{0}({1})", method, id);
     transport->reply(std::move(id), std::move(reply));
@@ -98,7 +102,7 @@ bool MessageHandler::onCall(llvm::StringRef method, llvm::json::Value params,
                             llvm::json::Value id) {
   Logger::info("--> {0}({1})", method, id);
 
-  Reply reply(id, method, transport);
+  Reply reply(id, method, transport, transportOutputMutex);
 
   auto it = methodHandlers.find(method);
   if (it != methodHandlers.end()) {
@@ -341,7 +345,7 @@ LogicalResult JSONTransport::readDelimitedMessage(std::string &json) {
   llvm::SmallString<128> line;
   while (succeeded(readLine(in, line))) {
     StringRef lineRef = line.str().trim();
-    if (lineRef.startswith("//")) {
+    if (lineRef.starts_with("//")) {
       // Found a delimiter for the message.
       if (lineRef == "// -----")
         break;

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_ERROR_OR_RESULT_H
-#define LLVM_LIBC_SUPPORT_ERROR_OR_RESULT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ERROR_OR_H
+#define LLVM_LIBC_SRC___SUPPORT_ERROR_OR_H
 
 #include "src/__support/CPP/expected.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <class T> using ErrorOr = cpp::expected<T, int>;
 
@@ -34,6 +34,6 @@ using Error = cpp::unexpected<int>;
 //   constexpr operator T() { return value; }
 // };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SUPPORT_ERROR_OR_RESULT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_ERROR_OR_H

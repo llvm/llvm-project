@@ -21,17 +21,17 @@ namespace clang::tooling {
 class ExpandModularHeadersPPCallbacks::FileRecorder {
 public:
   /// Records that a given file entry is needed for replaying callbacks.
-  void addNecessaryFile(const FileEntry *File) {
+  void addNecessaryFile(FileEntryRef File) {
     // Don't record modulemap files because it breaks same file detection.
-    if (!(File->getName().endswith("module.modulemap") ||
-          File->getName().endswith("module.private.modulemap") ||
-          File->getName().endswith("module.map") ||
-          File->getName().endswith("module_private.map")))
+    if (!(File.getName().ends_with("module.modulemap") ||
+          File.getName().ends_with("module.private.modulemap") ||
+          File.getName().ends_with("module.map") ||
+          File.getName().ends_with("module_private.map")))
       FilesToRecord.insert(File);
   }
 
   /// Records content for a file and adds it to the FileSystem.
-  void recordFileContent(const FileEntry *File,
+  void recordFileContent(FileEntryRef File,
                          const SrcMgr::ContentCache &ContentCache,
                          llvm::vfs::InMemoryFileSystem &InMemoryFs) {
     // Return if we are not interested in the contents of this file.
@@ -43,7 +43,7 @@ public:
     if (!Data)
       return;
 
-    InMemoryFs.addFile(File->getName(), /*ModificationTime=*/0,
+    InMemoryFs.addFile(File.getName(), /*ModificationTime=*/0,
                        llvm::MemoryBuffer::getMemBufferCopy(*Data));
     // Remove the file from the set of necessary files.
     FilesToRecord.erase(File);
@@ -55,13 +55,13 @@ public:
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)
         llvm::dbgs() << "Did not record contents for input file: "
-                     << FileEntry->getName() << "\n";
+                     << FileEntry.getName() << "\n";
     });
   }
 
 private:
   /// A set of files whose contents are to be recorded.
-  llvm::DenseSet<const FileEntry *> FilesToRecord;
+  llvm::DenseSet<FileEntryRef> FilesToRecord;
 };
 
 ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
@@ -100,7 +100,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
                                               /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
-                         Compiler.getFrontendOpts());
+                         Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
                            Compiler.getTarget().getTriple());
 }
@@ -125,7 +125,7 @@ void ExpandModularHeadersPPCallbacks::handleModuleFile(
   Compiler.getASTReader()->visitInputFiles(
       *MF, true, false,
       [this](const serialization::InputFile &IF, bool /*IsSystem*/) {
-        Recorder->addNecessaryFile(IF.getFile());
+        Recorder->addNecessaryFile(*IF.getFile());
       });
   // Recursively handle all transitively imported modules.
   for (auto *Import : MF->Imports)
@@ -166,12 +166,12 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
     SourceLocation DirectiveLoc, const Token &IncludeToken,
     StringRef IncludedFilename, bool IsAngled, CharSourceRange FilenameRange,
     OptionalFileEntryRef IncludedFile, StringRef SearchPath,
-    StringRef RelativePath, const Module *Imported,
+    StringRef RelativePath, const Module *SuggestedModule, bool ModuleImported,
     SrcMgr::CharacteristicKind FileType) {
-  if (Imported) {
+  if (ModuleImported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            Imported->getASTFile());
+            *SuggestedModule->getASTFile());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

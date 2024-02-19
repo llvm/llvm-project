@@ -70,7 +70,7 @@ define i1 @is_nan_f80_strict(x86_fp80 %x) strictfp {
 ; CHECK-64-NEXT:    orb %dl, %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 3)  ; "nan"
+  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 3) strictfp ; "nan"
   ret i1 %0
 }
 
@@ -197,7 +197,7 @@ define i1 @is_zero_f80_strict(x86_fp80 %x) strictfp {
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:
-  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 96)  ; 0x60 = "zero"
+  %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 96) strictfp ; 0x60 = "zero"
   ret i1 %0
 }
 

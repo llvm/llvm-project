@@ -5,10 +5,6 @@ define i32 @test(ptr %p) {
 ; CHECK-LABEL: define i32 @test
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i32, ptr [[P]], i64 4
-; CHECK-NEXT:    store i32 0, ptr [[IDX2]], align 4
-; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i32, ptr [[P]], i64 6
-; CHECK-NEXT:    store i32 0, ptr [[IDX3]], align 4
 ; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr i32, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[IDX4]], align 4
 ; CHECK-NEXT:    [[IDX5:%.*]] = getelementptr i32, ptr [[P]], i64 10
@@ -69,9 +65,7 @@ define i32 @test(ptr %p) {
 ; CHECK-NEXT:    store i32 0, ptr [[IDX33]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    store i32 0, ptr [[IDX0]], align 4
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i32, ptr [[P]], i64 5
-; CHECK-NEXT:    store i32 0, ptr [[IDX1]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[IDX0]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

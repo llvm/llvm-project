@@ -20,6 +20,7 @@ def DeprecatedStaticAnalyzerFlag : DiagGroup<"deprecated-static-analyzer-flag">;
 // Empty DiagGroups are recognized by clang but ignored.
 def ODR : DiagGroup<"odr">;
 def : DiagGroup<"abi">;
+def : DiagGroup<"gnu-empty-initializer">; // Now a C extension, not GNU.
 def AbsoluteValue : DiagGroup<"absolute-value">;
 def MisspelledAssumption : DiagGroup<"misspelled-assumption">;
 def UnknownAssumption : DiagGroup<"unknown-assumption">;
@@ -39,13 +40,12 @@ def : DiagGroup<"auto-import">;
 def FrameworkHdrQuotedInclude : DiagGroup<"quoted-include-in-framework-header">;
 def FrameworkIncludePrivateFromPublic :
   DiagGroup<"framework-include-private-from-public">;
+def DeprecatedModuleDotMap : DiagGroup<"deprecated-module-dot-map">;
 def FrameworkHdrAtImport : DiagGroup<"atimport-in-framework-header">;
 def CXX14BinaryLiteral : DiagGroup<"c++14-binary-literal">;
 def CXXPre14CompatBinaryLiteral : DiagGroup<"c++98-c++11-compat-binary-literal">;
-def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
 def BinaryLiteral : DiagGroup<"binary-literal", [CXX14BinaryLiteral,
-                                                 CXXPre14CompatBinaryLiteral,
-                                                 GNUBinaryLiteral]>;
+                                                 CXXPre14CompatBinaryLiteral]>;
 def GNUCompoundLiteralInitializer : DiagGroup<"gnu-compound-literal-initializer">;
 def SingleBitBitFieldConstantConversion :
   DiagGroup<"single-bit-bitfield-constant-conversion">;
@@ -106,8 +106,10 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                 EnumCompareConditional]>;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
+def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
-                                     [ObjCSignedCharBoolImplicitIntConversion]>;
+                                     [Shorten64To32,
+                                      ObjCSignedCharBoolImplicitIntConversion]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
  [ImplicitConstIntFloatConversion]>;
@@ -143,7 +145,9 @@ def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
-def C2xCompat : DiagGroup<"c2x-compat">;
+def C23Compat : DiagGroup<"c23-compat">;
+def : DiagGroup<"c2x-compat", [C23Compat]>;
+
 def CXXCompat: DiagGroup<"c++-compat">;
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
@@ -228,7 +232,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedType,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr,
-                                          DeprecatedRedundantConstexprStaticDef,
+                                          DeprecatedRedundantConstexprStaticDef
                                           ]>,
                  DiagCategory<"Deprecations">;
 
@@ -286,9 +290,14 @@ def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
 def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 
 // Warnings for C code which is not compatible with previous C standards.
-def CPre2xCompat : DiagGroup<"pre-c2x-compat">;
-def CPre2xCompatPedantic : DiagGroup<"pre-c2x-compat-pedantic",
-                                     [CPre2xCompat]>;
+def CPre11Compat : DiagGroup<"pre-c11-compat">;
+def CPre11CompatPedantic : DiagGroup<"pre-c11-compat-pedantic",
+                                     [CPre11Compat]>;
+def CPre23Compat : DiagGroup<"pre-c23-compat">;
+def CPre23CompatPedantic : DiagGroup<"pre-c23-compat-pedantic",
+                                     [CPre23Compat]>;
+def : DiagGroup<"pre-c2x-compat", [CPre23Compat]>;
+def : DiagGroup<"pre-c2x-compat-pedantic", [CPre23CompatPedantic]>;
 
 // Warnings for C++ code which is not compatible with previous C++ standards.
 def CXXPre14Compat : DiagGroup<"pre-c++14-compat">;
@@ -342,7 +351,8 @@ def CXX98CompatPedantic : DiagGroup<"c++98-compat-pedantic",
                                      CXXPre20CompatPedantic,
                                      CXXPre23CompatPedantic]>;
 
-def CXX11Narrowing : DiagGroup<"c++11-narrowing">;
+def CXX11NarrowingConstReference : DiagGroup<"c++11-narrowing-const-reference">;
+def CXX11Narrowing : DiagGroup<"c++11-narrowing", [CXX11NarrowingConstReference]>;
 
 def CXX11WarnInconsistentOverrideDestructor :
   DiagGroup<"inconsistent-missing-destructor-override">;
@@ -409,7 +419,11 @@ def : DiagGroup<"c++2a-compat-pedantic", [CXX20CompatPedantic]>;
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
-def GlobalConstructors : DiagGroup<"global-constructors">;
+def GlobalConstructors : DiagGroup<"global-constructors"> {
+ code Documentation = [{
+Emit a warning for each variable declaration that generates code run at startup.
+ }];
+}
 def BitwiseConditionalParentheses: DiagGroup<"bitwise-conditional-parentheses">;
 def BitwiseOpParentheses: DiagGroup<"bitwise-op-parentheses">;
 def LogicalOpParentheses: DiagGroup<"logical-op-parentheses">;
@@ -436,11 +450,13 @@ def IncrementBool : DiagGroup<"increment-bool", [DeprecatedIncrementBool]>;
 def InfiniteRecursion : DiagGroup<"infinite-recursion">;
 def PureVirtualCallFromCtorDtor: DiagGroup<"call-to-pure-virtual-from-ctor-dtor">;
 def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
+def IgnoredGCH : DiagGroup<"ignored-gch">;
 def IgnoredReferenceQualifiers : DiagGroup<"ignored-reference-qualifiers">;
 def IgnoredQualifiers : DiagGroup<"ignored-qualifiers", [IgnoredReferenceQualifiers]>;
 def : DiagGroup<"import">;
 def GNUIncludeNext : DiagGroup<"gnu-include-next">;
 def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;
+def IncompatibleMSPragmaSection : DiagGroup<"incompatible-ms-pragma-section">;
 def IncompatiblePointerTypesDiscardsQualifiers
   : DiagGroup<"incompatible-pointer-types-discards-qualifiers">;
 def IncompatibleFunctionPointerTypes
@@ -574,7 +590,8 @@ def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
 def OrderedCompareFunctionPointers : DiagGroup<"ordered-compare-function-pointers">;
 def PackedNonPod : DiagGroup<"packed-non-pod">;
 def Packed : DiagGroup<"packed", [PackedNonPod]>;
-def Padded : DiagGroup<"padded">;
+def PaddedBitField : DiagGroup<"padded-bitfield">;
+def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
 
 def PessimizingMove : DiagGroup<"pessimizing-move">;
@@ -617,10 +634,9 @@ def Shadow : DiagGroup<"shadow", [ShadowFieldInConstructorModified,
 def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor,
                                          ShadowUncapturedLocal, ShadowField]>;
 
-def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def : DiagGroup<"sign-promo">;
 def SignCompare : DiagGroup<"sign-compare">;
-def : DiagGroup<"switch-default">;
+def SwitchDefault  : DiagGroup<"switch-default">;
 def : DiagGroup<"synth">;
 def SizeofArrayArgument : DiagGroup<"sizeof-array-argument">;
 def SizeofArrayDecay : DiagGroup<"sizeof-array-decay">;
@@ -672,13 +688,15 @@ def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
 def TautologicalBitwiseCompare : DiagGroup<"tautological-bitwise-compare">;
 def TautologicalUndefinedCompare : DiagGroup<"tautological-undefined-compare">;
 def TautologicalObjCBoolCompare : DiagGroup<"tautological-objc-bool-compare">;
+def TautologicalNegationCompare : DiagGroup<"tautological-negation-compare">;
 def TautologicalCompare : DiagGroup<"tautological-compare",
                                     [TautologicalConstantCompare,
                                      TautologicalPointerCompare,
                                      TautologicalOverlapCompare,
                                      TautologicalBitwiseCompare,
                                      TautologicalUndefinedCompare,
-                                     TautologicalObjCBoolCompare]>;
+                                     TautologicalObjCBoolCompare,
+                                     TautologicalNegationCompare]>;
 def HeaderHygiene : DiagGroup<"header-hygiene">;
 def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
@@ -837,7 +855,9 @@ def OverridingMethodMismatch : DiagGroup<"overriding-method-mismatch">;
 def VariadicMacros : DiagGroup<"variadic-macros">;
 def VectorConversion : DiagGroup<"vector-conversion">;      // clang specific
 def VexingParse : DiagGroup<"vexing-parse">;
-def VLAExtension : DiagGroup<"vla-extension">;
+def VLAUseStaticAssert : DiagGroup<"vla-extension-static-assert">;
+def VLACxxExtension : DiagGroup<"vla-cxx-extension", [VLAUseStaticAssert]>;
+def VLAExtension : DiagGroup<"vla-extension", [VLACxxExtension]>;
 def VLA : DiagGroup<"vla", [VLAExtension]>;
 def VolatileRegisterVar : DiagGroup<"volatile-register-var">;
 def Visibility : DiagGroup<"visibility">;
@@ -924,7 +944,6 @@ def Conversion : DiagGroup<"conversion",
                             EnumConversion,
                             BitFieldEnumConversion,
                             FloatConversion,
-                            Shorten64To32,
                             IntConversion,
                             ImplicitIntConversion,
                             ImplicitFloatConversion,
@@ -953,10 +972,16 @@ def FormatNonStandard : DiagGroup<"format-non-iso">;
 def FormatY2K : DiagGroup<"format-y2k">;
 def FormatPedantic : DiagGroup<"format-pedantic">;
 def FormatTypeConfusion : DiagGroup<"format-type-confusion">;
+
+def FormatOverflowNonKprintf: DiagGroup<"format-overflow-non-kprintf">;
+def FormatOverflow: DiagGroup<"format-overflow", [FormatOverflowNonKprintf]>;
+def FormatTruncationNonKprintf: DiagGroup<"format-truncation-non-kprintf">;
+def FormatTruncation: DiagGroup<"format-truncation", [FormatTruncationNonKprintf]>;
+
 def Format : DiagGroup<"format",
                        [FormatExtraArgs, FormatZeroLength, NonNull,
                         FormatSecurity, FormatY2K, FormatInvalidSpecifier,
-                        FormatInsufficientArgs]>,
+                        FormatInsufficientArgs, FormatOverflow, FormatTruncation]>,
              DiagCategory<"Format String Issue">;
 def FormatNonLiteral : DiagGroup<"format-nonliteral">;
 def Format2 : DiagGroup<"format=2",
@@ -1048,7 +1073,9 @@ def Most : DiagGroup<"most", [
 def ThreadSafetyAttributes : DiagGroup<"thread-safety-attributes">;
 def ThreadSafetyAnalysis   : DiagGroup<"thread-safety-analysis">;
 def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
-def ThreadSafetyReference  : DiagGroup<"thread-safety-reference">;
+def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
+def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
+                                             [ThreadSafetyReferenceReturn]>;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
                              [ThreadSafetyAttributes,
@@ -1065,7 +1092,8 @@ def Consumed       : DiagGroup<"consumed">;
 // warning should be active _only_ when -Wall is passed in, mark it as
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
-                            MisleadingIndentation, PackedNonPod]>;
+                            MisleadingIndentation, PackedNonPod,
+                            VLACxxExtension]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
@@ -1101,6 +1129,8 @@ def FutureAttrs : DiagGroup<"future-attribute-extensions", [CXX14Attrs,
                                                             CXX17Attrs,
                                                             CXX20Attrs]>;
 
+def CXX23AttrsOnLambda : DiagGroup<"c++23-lambda-attributes">;
+
 // A warning group for warnings about using C++11 features as extensions in
 // earlier C++ versions.
 def CXX11 : DiagGroup<"c++11-extensions", [CXX11ExtraSemi, CXX11InlineNamespace,
@@ -1120,7 +1150,7 @@ def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator, CXX20Attrs]>;
 
 // A warning group for warnings about using C++23 features as extensions in
 // earlier C++ versions.
-def CXX23 : DiagGroup<"c++23-extensions">;
+def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 
 // A warning group for warnings about using C++26 features as extensions in
 // earlier C++ versions.
@@ -1142,13 +1172,18 @@ def C11 : DiagGroup<"c11-extensions">;
 // A warning group for warnings about using C99 features as extensions.
 def C99 : DiagGroup<"c99-extensions", [C99Designator]>;
 
-// A warning group for warnings about using C2x features as extensions.
-def C2x : DiagGroup<"c2x-extensions">;
+// A warning group for warnings about using C23 features as extensions.
+def C23 : DiagGroup<"c23-extensions">;
+
+def : DiagGroup<"c2x-extensions", [C23]>;
+
+// Previously supported warning group which is no longer pertinent as binary
+// literals are a C++14 and C23 extension now instead of a GNU extension.
+def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
 
 // A warning group for warnings about GCC extensions.
 def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
-                            GNUAutoType,
-                            GNUBinaryLiteral, GNUCaseRange,
+                            GNUAutoType, GNUBinaryLiteral, GNUCaseRange,
                             GNUComplexInteger, GNUCompoundLiteralInitializer,
                             GNUConditionalOmittedOperand, GNUDesignator,
                             GNUEmptyStruct,
@@ -1207,6 +1242,8 @@ def MicrosoftEndOfFile : DiagGroup<"microsoft-end-of-file">;
 def MicrosoftInaccessibleBase : DiagGroup<"microsoft-inaccessible-base">;
 def MicrosoftStaticAssert : DiagGroup<"microsoft-static-assert">;
 def MicrosoftInitFromPredefined : DiagGroup<"microsoft-init-from-predefined">;
+def MicrosoftStringLiteralFromPredefined : DiagGroup<
+    "microsoft-string-literal-from-predefined">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;
@@ -1224,7 +1261,8 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftFlexibleArray, MicrosoftExtraQualification, MicrosoftCast,
      MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
      MicrosoftCommentPaste, MicrosoftEndOfFile, MicrosoftStaticAssert,
-     MicrosoftInitFromPredefined, MicrosoftInconsistentDllImport]>;
+     MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
+     MicrosoftInconsistentDllImport]>;
 
 def ClangClPch : DiagGroup<"clang-cl-pch">;
 
@@ -1279,10 +1317,15 @@ def OpenMPTarget : DiagGroup<"openmp-target", [OpenMPMapping]>;
 def OpenMPPre51Compat : DiagGroup<"pre-openmp-51-compat">;
 def OpenMP51Ext : DiagGroup<"openmp-51-extensions">;
 def OpenMPExtensions : DiagGroup<"openmp-extensions">;
+def OpenMPTargetException : DiagGroup<"openmp-target-exception">;
 def OpenMP : DiagGroup<"openmp", [
     SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget,
-    OpenMPMapping, OpenMP51Ext, OpenMPExtensions
+    OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException
   ]>;
+
+// OpenACC warnings.
+def SourceUsesOpenACC : DiagGroup<"source-uses-openacc">;
+def OpenACC : DiagGroup<"openacc", [SourceUsesOpenACC]>;
 
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
@@ -1299,10 +1342,12 @@ like YAML by adding the `-foptimization-record-file=<file>` command-line flag.
 Results can be filtered by function name by passing
 `-mllvm -filter-print-funcs=foo`, where `foo` is the target function's name.
 
-   .. code-block: console
+   .. code-block:: console
+
       clang -c a.cpp -Rpass-analysis=stack-frame-layout -mllvm -filter-print-funcs=foo
 
-   .. code-block: console
+   .. code-block:: console
+
       clang -c a.cpp -Rpass-analysis=stack-frame-layout -foptimization-record-file=<file>
 }];
 }
@@ -1384,7 +1429,7 @@ def CrossTU : DiagGroup<"ctu">;
 
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
-def FortifySource : DiagGroup<"fortify-source">;
+def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncation]>;
 
 def MaxTokens : DiagGroup<"max-tokens"> {
   code Documentation = [{
@@ -1394,19 +1439,22 @@ the token limit, which can be set in three ways:
 1. As a limit at a specific point in a file, using the ``clang max_tokens_here``
    pragma:
 
-   .. code-block: c++
+   .. code-block:: c++
+
       #pragma clang max_tokens_here 1234
 
 2. As a per-translation unit limit, using the ``-fmax-tokens=`` command-line
    flag:
 
-   .. code-block: console
+   .. code-block:: console
+
       clang -c a.cpp -fmax-tokens=1234
 
 3. As a per-translation unit limit using the ``clang max_tokens_total`` pragma,
    which works like and overrides the ``-fmax-tokens=`` flag:
 
-   .. code-block: c++
+   .. code-block:: c++
+
       #pragma clang max_tokens_total 1234
 
 These limits can be helpful in limiting code growth through included files.
@@ -1445,4 +1493,5 @@ def DXILValidation : DiagGroup<"dxil-validation">;
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 
 // Warnings and fixes to support the "safe buffers" programming model.
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage">;
+def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;

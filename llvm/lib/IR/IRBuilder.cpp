@@ -220,6 +220,9 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
     Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
     MaybeAlign SrcAlign, Value *Size, bool isVolatile, MDNode *TBAATag,
     MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+  assert((IntrID == Intrinsic::memcpy || IntrID == Intrinsic::memcpy_inline ||
+          IntrID == Intrinsic::memmove) &&
+         "Unexpected intrinsic ID");
   Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
@@ -246,41 +249,6 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
 
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
-  return CI;
-}
-
-CallInst *IRBuilderBase::CreateMemCpyInline(
-    Value *Dst, MaybeAlign DstAlign, Value *Src, MaybeAlign SrcAlign,
-    Value *Size, bool IsVolatile, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
-  Value *Ops[] = {Dst, Src, Size, getInt1(IsVolatile)};
-  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
-  Function *F = BB->getParent();
-  Module *M = F->getParent();
-  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy_inline, Tys);
-
-  CallInst *CI = CreateCall(TheFn, Ops);
-
-  auto *MCI = cast<MemCpyInlineInst>(CI);
-  if (DstAlign)
-    MCI->setDestAlignment(*DstAlign);
-  if (SrcAlign)
-    MCI->setSourceAlignment(*SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    MCI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    MCI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    MCI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    MCI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
 
   return CI;
 }
@@ -323,35 +291,82 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
   return CI;
 }
 
-CallInst *IRBuilderBase::CreateMemMove(Value *Dst, MaybeAlign DstAlign,
-                                       Value *Src, MaybeAlign SrcAlign,
-                                       Value *Size, bool isVolatile,
-                                       MDNode *TBAATag, MDNode *ScopeTag,
-                                       MDNode *NoAliasTag) {
-  Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
-  Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
+/// isConstantOne - Return true only if val is constant int 1
+static bool isConstantOne(const Value *Val) {
+  assert(Val && "isConstantOne does not work with nullptr Val");
+  const ConstantInt *CVal = dyn_cast<ConstantInt>(Val);
+  return CVal && CVal->isOne();
+}
+
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      ArrayRef<OperandBundleDef> OpB,
+                                      Function *MallocF, const Twine &Name) {
+  // malloc(type) becomes:
+  //       i8* malloc(typeSize)
+  // malloc(type, arraySize) becomes:
+  //       i8* malloc(typeSize*arraySize)
+  if (!ArraySize)
+    ArraySize = ConstantInt::get(IntPtrTy, 1);
+  else if (ArraySize->getType() != IntPtrTy)
+    ArraySize = CreateIntCast(ArraySize, IntPtrTy, false);
+
+  if (!isConstantOne(ArraySize)) {
+    if (isConstantOne(AllocSize)) {
+      AllocSize = ArraySize; // Operand * 1 = Operand
+    } else {
+      // Multiply type size by the array size...
+      AllocSize = CreateMul(ArraySize, AllocSize, "mallocsize");
+    }
+  }
+
+  assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
+  // Create the call to Malloc.
   Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memmove, Tys);
+  Type *BPTy = PointerType::getUnqual(Context);
+  FunctionCallee MallocFunc = MallocF;
+  if (!MallocFunc)
+    // prototype malloc as "void *malloc(size_t)"
+    MallocFunc = M->getOrInsertFunction("malloc", BPTy, IntPtrTy);
+  CallInst *MCall = CreateCall(MallocFunc, AllocSize, OpB, Name);
 
-  CallInst *CI = CreateCall(TheFn, Ops);
+  MCall->setTailCall();
+  if (Function *F = dyn_cast<Function>(MallocFunc.getCallee())) {
+    MCall->setCallingConv(F->getCallingConv());
+    F->setReturnDoesNotAlias();
+  }
 
-  auto *MMI = cast<MemMoveInst>(CI);
-  if (DstAlign)
-    MMI->setDestAlignment(*DstAlign);
-  if (SrcAlign)
-    MMI->setSourceAlignment(*SrcAlign);
+  assert(!MCall->getType()->isVoidTy() && "Malloc has void return type");
 
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+  return MCall;
+}
 
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
+                                      Value *AllocSize, Value *ArraySize,
+                                      Function *MallocF, const Twine &Name) {
 
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
+                      MallocF, Name);
+}
 
-  return CI;
+/// CreateFree - Generate the IR for a call to the builtin free function.
+CallInst *IRBuilderBase::CreateFree(Value *Source,
+                                    ArrayRef<OperandBundleDef> Bundles) {
+  assert(Source->getType()->isPointerTy() &&
+         "Can not free something of nonpointer type!");
+
+  Module *M = BB->getParent()->getParent();
+
+  Type *VoidTy = Type::getVoidTy(M->getContext());
+  Type *VoidPtrTy = PointerType::getUnqual(M->getContext());
+  // prototype free as "void free(void*)"
+  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, VoidPtrTy);
+  CallInst *Result = CreateCall(FreeFunc, Source, Bundles, "");
+  Result->setTailCall();
+  if (Function *F = dyn_cast<Function>(FreeFunc.getCallee()))
+    Result->setCallingConv(F->getCallingConv());
+
+  return Result;
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
@@ -521,19 +536,8 @@ static MaybeAlign getAlign(Value *Ptr) {
 }
 
 CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
-#ifndef NDEBUG
-  // Handle specially for constexpr cast. This is possible when
-  // opaque pointers not enabled since constant could be sinked
-  // directly by the design of llvm. This could be eliminated
-  // after we eliminate the abuse of constexpr.
-  auto *V = Ptr;
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->isCast())
-      V = CE->getOperand(0);
-
-  assert(isa<GlobalValue>(V) && cast<GlobalValue>(V)->isThreadLocal() &&
+  assert(isa<GlobalValue>(Ptr) && cast<GlobalValue>(Ptr)->isThreadLocal() &&
          "threadlocal_address only applies to thread local variables.");
-#endif
   CallInst *CI = CreateIntrinsic(llvm::Intrinsic::threadlocal_address,
                                  {Ptr->getType()}, {Ptr});
   if (MaybeAlign A = getAlign(Ptr)) {
@@ -1223,29 +1227,6 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   SmallVector<int, 16> Zeros;
   Zeros.resize(EC.getKnownMinValue());
   return CreateShuffleVector(V, Zeros, Name + ".splat");
-}
-
-Value *IRBuilderBase::CreateExtractInteger(
-    const DataLayout &DL, Value *From, IntegerType *ExtractedTy,
-    uint64_t Offset, const Twine &Name) {
-  auto *IntTy = cast<IntegerType>(From->getType());
-  assert(DL.getTypeStoreSize(ExtractedTy) + Offset <=
-             DL.getTypeStoreSize(IntTy) &&
-         "Element extends past full value");
-  uint64_t ShAmt = 8 * Offset;
-  Value *V = From;
-  if (DL.isBigEndian())
-    ShAmt = 8 * (DL.getTypeStoreSize(IntTy) -
-                 DL.getTypeStoreSize(ExtractedTy) - Offset);
-  if (ShAmt) {
-    V = CreateLShr(V, ShAmt, Name + ".shift");
-  }
-  assert(ExtractedTy->getBitWidth() <= IntTy->getBitWidth() &&
-         "Cannot extract to a larger integer!");
-  if (ExtractedTy != IntTy) {
-    V = CreateTrunc(V, ExtractedTy, Name + ".trunc");
-  }
-  return V;
 }
 
 Value *IRBuilderBase::CreatePreserveArrayAccessIndex(

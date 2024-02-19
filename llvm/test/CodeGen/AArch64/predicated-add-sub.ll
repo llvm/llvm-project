@@ -83,8 +83,8 @@ define <vscale x 2 x i64> @zext.add.2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 8 x i32> @zext.add.8xi32(<vscale x 8 x i32> %a, <vscale x 8 x i1> %v) #0 {
 ; CHECK-LABEL: zext.add.8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #1 // =0x1
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    mov z2.s, #1 // =0x1
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    add z1.s, p1/m, z1.s, z2.s
 ; CHECK-NEXT:    add z0.s, p0/m, z0.s, z2.s
@@ -98,16 +98,16 @@ define <vscale x 16 x i32> @zext.add.16xi32(<vscale x 16 x i32> %a, <vscale x 16
 ; CHECK-LABEL: zext.add.16xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    mov z4.s, #1 // =0x1
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    add z1.s, p3/m, z1.s, z4.s
-; CHECK-NEXT:    add z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    add z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    punpklo p3.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    add z3.s, p2/m, z3.s, z4.s
+; CHECK-NEXT:    add z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    add z0.s, p3/m, z0.s, z4.s
+; CHECK-NEXT:    add z1.s, p0/m, z1.s, z4.s
 ; CHECK-NEXT:    ret
   %extend = zext <vscale x 16 x i1> %v to <vscale x 16 x i32>
   %result = add <vscale x 16 x i32> %a, %extend
@@ -194,8 +194,8 @@ define <vscale x 2 x i64> @zext.sub.2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 8 x i32> @zext.sub.8xi32(<vscale x 8 x i32> %a, <vscale x 8 x i1> %v) #0 {
 ; CHECK-LABEL: zext.sub.8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    add z0.s, p1/m, z0.s, z2.s
 ; CHECK-NEXT:    add z1.s, p0/m, z1.s, z2.s
@@ -213,11 +213,11 @@ define <vscale x 16 x i32> @zext.sub.16xi32(<vscale x 16 x i32> %a, <vscale x 16
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p2.h, p1.b
 ; CHECK-NEXT:    punpkhi p1.h, p1.b
+; CHECK-NEXT:    punpklo p3.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    add z0.s, p2/m, z0.s, z4.s
 ; CHECK-NEXT:    add z1.s, p1/m, z1.s, z4.s
-; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    add z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    add z2.s, p3/m, z2.s, z4.s
 ; CHECK-NEXT:    add z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    ret
   %extend = zext <vscale x 16 x i1> %v to <vscale x 16 x i32>
@@ -305,8 +305,8 @@ define <vscale x 2 x i64> @sext.add.2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 8 x i32> @sext.add.8xi32(<vscale x 8 x i32> %a, <vscale x 8 x i1> %v) #0 {
 ; CHECK-LABEL: sext.add.8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    add z1.s, p1/m, z1.s, z2.s
 ; CHECK-NEXT:    add z0.s, p0/m, z0.s, z2.s
@@ -320,16 +320,16 @@ define <vscale x 16 x i32> @sext.add.16xi32(<vscale x 16 x i32> %a, <vscale x 16
 ; CHECK-LABEL: sext.add.16xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    mov z4.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    add z1.s, p3/m, z1.s, z4.s
-; CHECK-NEXT:    add z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    add z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    punpklo p3.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    add z3.s, p2/m, z3.s, z4.s
+; CHECK-NEXT:    add z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    add z0.s, p3/m, z0.s, z4.s
+; CHECK-NEXT:    add z1.s, p0/m, z1.s, z4.s
 ; CHECK-NEXT:    ret
   %extend = sext <vscale x 16 x i1> %v to <vscale x 16 x i32>
   %result = add <vscale x 16 x i32> %a, %extend
@@ -416,8 +416,8 @@ define <vscale x 2 x i64> @sext.sub.2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i
 define <vscale x 8 x i32> @sext.sub.8xi32(<vscale x 8 x i32> %a, <vscale x 8 x i1> %v) #0 {
 ; CHECK-LABEL: sext.sub.8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    sub z1.s, p1/m, z1.s, z2.s
 ; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z2.s
@@ -431,16 +431,16 @@ define <vscale x 16 x i32> @sext.sub.16xi32(<vscale x 16 x i32> %a, <vscale x 16
 ; CHECK-LABEL: sext.sub.16xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    mov z4.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    sub z1.s, p3/m, z1.s, z4.s
-; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    sub z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    punpklo p3.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    sub z3.s, p2/m, z3.s, z4.s
+; CHECK-NEXT:    sub z2.s, p1/m, z2.s, z4.s
+; CHECK-NEXT:    sub z0.s, p3/m, z0.s, z4.s
+; CHECK-NEXT:    sub z1.s, p0/m, z1.s, z4.s
 ; CHECK-NEXT:    ret
   %extend = sext <vscale x 16 x i1> %v to <vscale x 16 x i32>
   %result = sub <vscale x 16 x i32> %a, %extend

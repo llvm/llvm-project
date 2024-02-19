@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -triple x86_64-apple-darwin -print-ivar-layout -emit-llvm %s -o %t-64.s | FileCheck -check-prefix CHECK-LP64 %s
-// rdar://8991729
 
 @interface NSObject {
   id isa;
@@ -54,7 +53,6 @@
 
 // CHECK-LP64: strong ivar layout for class 'UnsafePerson': 0x21, 0x00
 
-// rdar://16136439
 @interface rdar16136439
     @property (nonatomic, readonly, weak) id first;
 @end

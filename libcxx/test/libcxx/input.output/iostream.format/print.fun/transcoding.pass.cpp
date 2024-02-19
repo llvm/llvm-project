@@ -6,7 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: no-filesystem
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
 // <print>
 
@@ -31,9 +33,9 @@ constexpr void test(std::basic_string_view<CharT> expected, std::string_view inp
   std::array<CharT, 1024> buffer;
   std::ranges::fill(buffer, CharT('*'));
 
-  CharT* out = std::__unicode::__transcode(input.begin(), input.end(), buffer.data());
+  auto out = std::__unicode::__transcode(input.begin(), input.end(), buffer.begin());
 
-  assert(std::basic_string_view<CharT>(buffer.data(), out) == expected);
+  assert(std::basic_string_view<CharT>(buffer.begin(), out) == expected);
 
   out = std::find_if(out, buffer.end(), [](CharT c) { return c != CharT('*'); });
   assert(out == buffer.end());

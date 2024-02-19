@@ -99,6 +99,9 @@ RetainedKnowledge
 llvm::getKnowledgeFromBundle(AssumeInst &Assume,
                              const CallBase::BundleOpInfo &BOI) {
   RetainedKnowledge Result;
+  if (!DebugCounter::shouldExecute(AssumeQueryCounter))
+    return Result;
+
   Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
   if (bundleHasArgument(BOI, ABA_WasOn))
     Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
@@ -122,7 +125,7 @@ RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(AssumeInst &Assume,
   return getKnowledgeFromBundle(Assume, BOI);
 }
 
-bool llvm::isAssumeWithEmptyBundle(AssumeInst &Assume) {
+bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {
   return none_of(Assume.bundle_op_infos(),
                  [](const CallBase::BundleOpInfo &BOI) {
                    return BOI.Tag->getKey() != IgnoreBundleTag;
@@ -158,8 +161,6 @@ llvm::getKnowledgeForValue(const Value *V,
                                              const CallBase::BundleOpInfo *)>
                                Filter) {
   NumAssumeQueries++;
-  if (!DebugCounter::shouldExecute(AssumeQueryCounter))
-    return RetainedKnowledge::none();
   if (AC) {
     for (AssumptionCache::ResultElem &Elem : AC->assumptionsFor(V)) {
       auto *II = cast_or_null<AssumeInst>(Elem.Assume);

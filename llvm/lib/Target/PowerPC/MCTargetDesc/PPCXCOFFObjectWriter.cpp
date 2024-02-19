@@ -69,6 +69,8 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TOCU, SignAndSizeForHalf16};
     case MCSymbolRefExpr::VK_PPC_L:
       return {XCOFF::RelocationType::R_TOCL, SignAndSizeForHalf16};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
+      return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForHalf16};
     }
   } break;
   case PPC::fixup_ppc_half16ds:
@@ -82,6 +84,8 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TOC, 15};
     case MCSymbolRefExpr::VK_PPC_L:
       return {XCOFF::RelocationType::R_TOCL, 15};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
+      return {XCOFF::RelocationType::R_TLS_LE, 15};
     }
   } break;
   case PPC::fixup_ppc_br24:
@@ -108,6 +112,8 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TLS, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_PPC_AIX_TLSGDM:
       return {XCOFF::RelocationType::R_TLSM, SignAndSizeForFKData};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSIE:
+      return {XCOFF::RelocationType::R_TLS_IE, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_None:

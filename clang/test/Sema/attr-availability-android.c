@@ -23,8 +23,6 @@ void test(void) {
   f5(0); // expected-error{{'f5' is unavailable: not available on Android}}
 }
 
-// rdar://10535640
-
 enum {
     foo __attribute__((availability(android,introduced=8.0,deprecated=9.0)))
 };

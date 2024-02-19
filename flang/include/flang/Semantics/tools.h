@@ -44,7 +44,8 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 const Scope *FindModuleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
-const Scope *FindPureProcedureContaining(const Symbol &);
+const Scope *FindOpenACCConstructContaining(const Scope *);
+
 const Symbol *FindPointerComponent(const Scope &);
 const Symbol *FindPointerComponent(const DerivedTypeSpec &);
 const Symbol *FindPointerComponent(const DeclTypeSpec &);
@@ -143,6 +144,10 @@ inline bool IsPointer(const Symbol &symbol) {
 inline bool IsAllocatable(const Symbol &symbol) {
   return symbol.attrs().test(Attr::ALLOCATABLE);
 }
+inline bool IsValue(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::VALUE);
+}
+// IsAllocatableOrObjectPointer() may be the better choice
 inline bool IsAllocatableOrPointer(const Symbol &symbol) {
   return IsPointer(symbol) || IsAllocatable(symbol);
 }
@@ -176,11 +181,13 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &,
     std::set<const DerivedTypeSpec *> * = nullptr,
     bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
 const Symbol *HasImpureFinal(const Symbol &);
+// Is this type finalizable or does it contain any polymorphic allocatable
+// ultimate components?
+bool MayRequireFinalization(const DerivedTypeSpec &derived);
+// Does this type have an allocatable direct component?
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+
 bool IsInBlankCommon(const Symbol &);
-inline bool IsAssumedSizeArray(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->IsAssumedSize();
-}
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
@@ -497,7 +504,7 @@ public:
       explicit ComponentPathNode(const DerivedTypeSpec &derived)
           : derived_{derived} {
         if constexpr (componentKind == ComponentKind::Scope) {
-          const Scope &scope{DEREF(derived.scope())};
+          const Scope &scope{DEREF(derived.GetScope())};
           nameIterator_ = scope.cbegin();
           nameEnd_ = scope.cend();
         } else {
@@ -663,6 +670,30 @@ inline const parser::Name *getDesignatorNameIfDataRef(
 }
 
 bool CouldBeDataPointerValuedFunction(const Symbol *);
+
+template <typename R, typename T>
+std::optional<R> GetConstExpr(
+    Fortran::semantics::SemanticsContext &semanticsContext, const T &x) {
+  using DefaultCharConstantType = Fortran::evaluate::Ascii;
+  if (const auto *expr{Fortran::semantics::GetExpr(semanticsContext, x)}) {
+    const auto foldExpr{Fortran::evaluate::Fold(
+        semanticsContext.foldingContext(), Fortran::common::Clone(*expr))};
+    if constexpr (std::is_same_v<R, std::string>) {
+      return Fortran::evaluate::GetScalarConstantValue<DefaultCharConstantType>(
+          foldExpr);
+    }
+  }
+  return std::nullopt;
+}
+
+// Returns "m" for a module, "m:sm" for a submodule.
+std::string GetModuleOrSubmoduleName(const Symbol &);
+
+// Return the assembly name emitted for a common block.
+std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
+
+// Check for ambiguous USE associations
+bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

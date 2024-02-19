@@ -12,17 +12,17 @@
 #include "src/__support/error_or.h"
 #include "src/errno/libc_errno.h" // For error macros
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 ErrorOr<Dir *> Dir::open(const char *path) {
   auto fd = platform_opendir(path);
   if (!fd)
-    return __llvm_libc::Error(fd.error());
+    return LIBC_NAMESPACE::Error(fd.error());
 
-  __llvm_libc::AllocChecker ac;
+  LIBC_NAMESPACE::AllocChecker ac;
   Dir *dir = new (ac) Dir(fd.value());
   if (!ac)
-    return __llvm_libc::Error(ENOMEM);
+    return LIBC_NAMESPACE::Error(ENOMEM);
   return dir;
 }
 
@@ -31,7 +31,7 @@ ErrorOr<struct ::dirent *> Dir::read() {
   if (readptr >= fillsize) {
     auto readsize = platform_fetch_dirents(fd, buffer);
     if (!readsize)
-      return __llvm_libc::Error(readsize.error());
+      return LIBC_NAMESPACE::Error(readsize.error());
     fillsize = readsize.value();
     readptr = 0;
   }
@@ -60,4 +60,4 @@ int Dir::close() {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

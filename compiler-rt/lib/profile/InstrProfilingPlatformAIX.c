@@ -187,12 +187,16 @@ void __llvm_profile_register_names_function(void *NamesStart,
 // define these zero length variables in each of the above 4 sections.
 static int dummy_cnts[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_CNTS_SECT_NAME);
+static int dummy_bits[0] COMPILER_RT_SECTION(
+    COMPILER_RT_SEG INSTR_PROF_BITS_SECT_NAME);
 static int dummy_data[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_DATA_SECT_NAME);
 static const int dummy_name[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_NAME_SECT_NAME);
 static int dummy_vnds[0] COMPILER_RT_SECTION(
     COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME);
+static int dummy_orderfile[0] COMPILER_RT_SECTION(
+    COMPILER_RT_SEG INSTR_PROF_ORDERFILE_SECT_NAME);
 
 // To avoid GC'ing of the dummy variables by the linker, reference them in an
 // array and reference the array in the runtime registration code
@@ -202,8 +206,9 @@ static int dummy_vnds[0] COMPILER_RT_SECTION(
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 COMPILER_RT_VISIBILITY
-void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_data,
-                               (void *)&dummy_name, (void *)&dummy_vnds};
+void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_bits,
+                               (void *)&dummy_data, (void *)&dummy_name,
+                               (void *)&dummy_vnds, (void *)&dummy_orderfile};
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

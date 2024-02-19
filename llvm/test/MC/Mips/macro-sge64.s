@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -arch=mips -mcpu=mips1 < %s 2>&1 \
+# RUN: not llvm-mc -triple=mips -mcpu=mips1 < %s 2>&1 \
 # RUN:   | FileCheck --check-prefix=MIPS32 %s
-# RUN: llvm-mc -arch=mips -show-encoding -mcpu=mips64 < %s \
+# RUN: llvm-mc -triple=mips -show-encoding -mcpu=mips64 < %s \
 # RUN:   | FileCheck --check-prefix=MIPS64 %s
 
 sge   $4, $5, 0x100000000

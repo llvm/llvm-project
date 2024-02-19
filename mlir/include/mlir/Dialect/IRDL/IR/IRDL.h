@@ -39,6 +39,11 @@ class OpDefAttr;
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/IRDL/IR/IRDLTypesGen.h.inc"
 
+#include "mlir/Dialect/IRDL/IR/IRDLEnums.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/IRDL/IR/IRDLAttributes.h.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/IRDL/IR/IRDLOps.h.inc"
 

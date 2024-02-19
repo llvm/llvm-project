@@ -35,8 +35,8 @@ define void @__int128_and_f(ptr noalias nocapture writeonly sret(i128) align 8 %
 ; Z15-LABEL: __int128_and_f:
 ; Z15:       # %bb.0: # %entry
 ; Z15-NEXT:    vl %v0, 0(%r3), 3
-; Z15-NEXT:    vrepg %v6, %v0, 1
 ; Z15-NEXT:    vlr %v4, %v0
+; Z15-NEXT:    vrepg %v6, %v0, 1
 ; Z15-NEXT:    #APP
 ; Z15-NEXT:    #NO_APP
 ; Z15-NEXT:    vmrhg %v0, %v4, %v6
@@ -260,8 +260,8 @@ entry:
 define <4 x i32> @vec128_and_f(<4 x i32> %cc_dep1) {
 ; CHECK-LABEL: vec128_and_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepg %v3, %v24, 1
 ; CHECK-NEXT:    vlr %v1, %v24
+; CHECK-NEXT:    vrepg %v3, %v24, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmrhg %v24, %v1, %v3

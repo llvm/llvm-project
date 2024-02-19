@@ -68,6 +68,8 @@ class AMDGPUCustomBehaviour : public CustomBehaviour {
   bool hasModifiersSet(const std::unique_ptr<Instruction> &Inst,
                        unsigned OpName) const;
   /// Helper function used in generateWaitCntInfo()
+  bool isGWS(uint16_t Opcode) const;
+  /// Helper function used in generateWaitCntInfo()
   bool isAlwaysGDS(uint16_t Opcode) const;
   /// Helper function used in generateWaitCntInfo()
   bool isVMEM(const MCInstrDesc &MCID);

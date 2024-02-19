@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s misc-const-correctness %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: "misc-const-correctness.AnalyzeValues", value: true},\
-// RUN:   {key: "misc-const-correctness.WarnPointersAsValues", value: true},\
-// RUN:   {key: "misc-const-correctness.TransformPointersAsValues", value: true}]}' \
+// RUN:  {misc-const-correctness.AnalyzeValues: true,\
+// RUN:   misc-const-correctness.WarnPointersAsValues: true,\
+// RUN:   misc-const-correctness.TransformPointersAsValues: true}}' \
 // RUN: -- -fno-delayed-template-parsing
 
 void potential_const_pointer() {

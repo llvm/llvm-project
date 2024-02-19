@@ -9,8 +9,8 @@
 // preprocessor definitions.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
-#define LLVM_LIBC_SRC_SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
 
 #include "architectures.h"
 
@@ -49,4 +49,4 @@
 #define LIBC_TARGET_CPU_HAS_NEAREST_INT
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CPU_FEATURES_H

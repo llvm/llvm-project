@@ -40,9 +40,10 @@ void spmd(void) {
 }
 
 #pragma omp begin declare target device_type(nohost)
-__attribute__((weak)) 
-extern "C" int __kmpc_target_init(void *Ident, char Mode,
-                       bool UseGenericStateMachine) { // expected-remark {{Could not internalize function. Some optimizations may not be possible. [OMP140]}}
+struct KernelEnvironmentTy;
+struct KernelLaunchEnvironmentTy;
+__attribute__((weak))
+extern "C" int __kmpc_target_init(struct KernelEnvironmentTy *, struct KernelLaunchEnvironmentTy *) { // expected-remark {{Could not internalize function. Some optimizations may not be possible. [OMP140]}}
   return 0;
 }
 #pragma omp end declare target

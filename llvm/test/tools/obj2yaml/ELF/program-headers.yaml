@@ -42,48 +42,57 @@
 # YAML-NEXT:    FirstSec: .hash
 # YAML-NEXT:    LastSec:  .dynstr
 # YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x0
 # YAML-NEXT:  - Type:     PT_LOAD
 # YAML-NEXT:    Flags:    [ PF_X, PF_R ]
 # YAML-NEXT:    FirstSec: .foo
 # YAML-NEXT:    LastSec:  .zed
 # YAML-NEXT:    VAddr:    0x1000
 # YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x281
 # YAML-NEXT:  - Type:     PT_LOAD
 # YAML-NEXT:    Flags:    [ PF_R ]
 # YAML-NEXT:    FirstSec: '.foo (1)'
 # YAML-NEXT:    LastSec:  .baz
 # YAML-NEXT:    VAddr:    0x2000
 # YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x291
 # YAML-NEXT:  - Type:     PT_LOAD
 # YAML-NEXT:    Flags:    [ PF_W, PF_R ]
 # YAML-NEXT:    FirstSec: .dynamic
 # YAML-NEXT:    LastSec:  .dynamic.tail
 # YAML-NEXT:    VAddr:    0x3EF0
 # YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x29A
 # YAML-NEXT:  - Type:     PT_DYNAMIC
 # YAML-NEXT:    Flags:    [ PF_W, PF_R ]
 # YAML-NEXT:    FirstSec: .dynamic
 # YAML-NEXT:    LastSec:  .dynamic
 # YAML-NEXT:    VAddr:    0x3EF0
 # YAML-NEXT:    Align:    0x8
+# YAML-NEXT:    Offset:   0x29A
 # YAML-NEXT:  - Type:     PT_GNU_RELRO
 # YAML-NEXT:    Flags:    [ PF_R ]
 # YAML-NEXT:    FirstSec: .dynamic
 # YAML-NEXT:    LastSec:  .dynamic
 # YAML-NEXT:    VAddr:    0x3EF0
+# YAML-NEXT:    Offset:   0x29A
 # YAML-NEXT:  - Type:  PT_LOAD
 # YAML-NEXT:    Flags: [ PF_R ]
 # YAML-NEXT:    VAddr: 0x4000
+# YAML-NEXT:    Offset:   0x0
 # YAML-NEXT:  - Type:     PT_LOAD
 # YAML-NEXT:    Flags:    [ PF_R ]
 # YAML-NEXT:    FirstSec: .gnu.hash
 # YAML-NEXT:    LastSec:  .gnu.hash
 # YAML-NEXT:    VAddr:    0x1A0
+# YAML-NEXT:    Offset:   0x248
 # YAML-NEXT:  - Type:     PT_LOAD
 # YAML-NEXT:    Flags:    [ PF_R ]
 # YAML-NEXT:    FirstSec: .gnu.hash
 # YAML-NEXT:    LastSec:  .gnu.hash
 # YAML-NEXT:    VAddr:    0x1A0
+# YAML-NEXT:    Offset:   0x248
 # YAML-NEXT: Sections:
 
 --- !ELF
@@ -233,21 +242,25 @@ DynamicSymbols: []
 # EMPTY-NEXT:   LastSec:  .empty.tls.end
 # EMPTY-NEXT:   VAddr:    0x1000
 # EMPTY-NEXT:   Align:    0x1000
+# EMPTY-NEXT:   Offset:   0x120
 # EMPTY-NEXT: - Type:     PT_TLS
 # EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
 # EMPTY-NEXT:   FirstSec: .empty.tls.start
 # EMPTY-NEXT:   LastSec:  .empty.tls.start
 # EMPTY-NEXT:   VAddr:    0x1000
+# EMPTY-NEXT:   Offset:   0x120
 # EMPTY-NEXT: - Type:     PT_TLS
 # EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
 # EMPTY-NEXT:   FirstSec: .empty.tls.middle
 # EMPTY-NEXT:   LastSec:  .empty.tls.middle
 # EMPTY-NEXT:   VAddr:    0x1100
+# EMPTY-NEXT:   Offset:   0x220
 # EMPTY-NEXT: - Type:     PT_TLS
 # EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
 # EMPTY-NEXT:   FirstSec: .empty.tls.end
 # EMPTY-NEXT:   LastSec:  .empty.tls.end
 # EMPTY-NEXT:   VAddr:    0x1200
+# EMPTY-NEXT:   Offset:   0x320
 # EMPTY-NEXT: Sections:
 
 --- !ELF
@@ -322,6 +335,7 @@ Sections:
 # MISALIGNED-YAML-NEXT:    LastSec:  .foo
 # MISALIGNED-YAML-NEXT:    VAddr:    0x1000
 # MISALIGNED-YAML-NEXT:    Align:    0x1000
+# MISALIGNED-YAML-NEXT:    Offset:   0x77
 # MISALIGNED-YAML-NEXT: Sections:
 
 --- !ELF
@@ -354,18 +368,22 @@ Sections:
 # NON-ALLOC-NEXT:   Flags:    [ PF_R ]
 # NON-ALLOC-NEXT:   FirstSec: .alloc.1
 # NON-ALLOC-NEXT:   LastSec:  .non-alloc.1
+# NON-ALLOC-NEXT:   Offset:   0x120
 # NON-ALLOC-NEXT: - Type:     PT_LOAD
 # NON-ALLOC-NEXT:   Flags:    [ PF_R ]
 # NON-ALLOC-NEXT:   FirstSec: .alloc.1
 # NON-ALLOC-NEXT:   LastSec:  .non-alloc.1
+# NON-ALLOC-NEXT:   Offset:   0x120
 # NON-ALLOC-NEXT: - Type:     PT_LOAD
 # NON-ALLOC-NEXT:   Flags:    [ PF_R ]
 # NON-ALLOC-NEXT:   FirstSec: .alloc.2
 # NON-ALLOC-NEXT:   LastSec:  .alloc.2
+# NON-ALLOC-NEXT:   Offset:   0x230
 # NON-ALLOC-NEXT: - Type:     PT_LOAD
 # NON-ALLOC-NEXT:   Flags:    [ PF_R ]
 # NON-ALLOC-NEXT:   FirstSec: .alloc.1
 # NON-ALLOC-NEXT:   LastSec:  .alloc.2
+# NON-ALLOC-NEXT:   Offset:   0x120
 # NON-ALLOC-NEXT: Sections:
 
 --- !ELF
@@ -418,23 +436,28 @@ Sections:
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .bss
 # NOBITS-NEXT:     LastSec:  .bss
+# NOBITS-NEXT:     Offset:   0x159
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .data.1
 # NOBITS-NEXT:     LastSec:  .bss
+# NOBITS-NEXT:     Offset:   0x158
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .data.1
 # NOBITS-NEXT:     LastSec:  .data.2
+# NOBITS-NEXT:     Offset:   0x158
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .bss
 # NOBITS-NEXT:     LastSec:  .data.2
+# NOBITS-NEXT:     Offset:   0x159
 # NOBITS-NEXT:   - Type:     PT_LOAD
 # NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
 # NOBITS-NEXT:     FirstSec: .foo.bss
 # NOBITS-NEXT:     LastSec:  .bar.bss
 # NOBITS-NEXT:     VAddr:    0x200000000
+# NOBITS-NEXT:     Offset:   0x15A
 # NOBITS-NEXT: Sections:
 
 --- !ELF
@@ -581,6 +604,7 @@ Sections:
 # ZERO-SIZE-NEXT:     FirstSec: .empty.bar1
 # ZERO-SIZE-NEXT:     LastSec:  .empty.bar2
 # ZERO-SIZE-NEXT:     VAddr:    0x2000
+# ZERO-SIZE-NEXT:     Offset:   0x78
 # ZERO-SIZE-NEXT: Sections:
 
 --- !ELF

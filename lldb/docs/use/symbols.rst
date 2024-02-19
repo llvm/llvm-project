@@ -1,9 +1,6 @@
 Symbols on macOS
 ================
 
-.. contents::
-   :local:
-
 On macOS, debug symbols are often in stand alone bundles called **dSYM** files.
 These are bundles that contain DWARF debug information and other resources
 related to builds and debug info.

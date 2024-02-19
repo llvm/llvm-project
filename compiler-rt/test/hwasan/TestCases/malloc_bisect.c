@@ -7,6 +7,10 @@
 // RUN: %env_hwasan_opts=malloc_bisect_left=0,malloc_bisect_right=4294967295,malloc_bisect_dump=1 not %run %t 2>&1 | \
 // RUN:     FileCheck %s --check-prefixes=CRASH,DUMP
 
+// FIXME: Recursive call into malloc from stack->Print(). Or maybe this feature
+// needs to be removed. We don't use it, but it's in the hot code.
+// UNSUPPORTED: internal_symbolizer
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>

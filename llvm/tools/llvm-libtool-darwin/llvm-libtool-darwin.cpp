@@ -23,7 +23,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -31,6 +31,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/Architecture.h"
+#include <cstdlib>
 #include <map>
 #include <type_traits>
 
@@ -42,9 +43,7 @@ using namespace llvm::opt;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -57,13 +56,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -138,7 +131,7 @@ static Expected<std::string> searchForFile(const Twine &FileName) {
 static Error processCommandLineLibraries() {
   for (StringRef BaseName : Libraries) {
     Expected<std::string> FullPath = searchForFile(
-        BaseName.endswith(".o") ? BaseName.str() : "lib" + BaseName + ".a");
+        BaseName.ends_with(".o") ? BaseName.str() : "lib" + BaseName + ".a");
     if (!FullPath)
       return FullPath.takeError();
     InputFiles.push_back(FullPath.get());
@@ -600,18 +593,17 @@ static Error createStaticLibrary(LLVMContext &LLVMCtx, const Config &C) {
 
   if (NewMembers.size() == 1)
     return writeArchive(OutputFile, NewMembers.begin()->second.getMembers(),
-                        /*WriteSymtab=*/true,
+                        SymtabWritingMode::NormalSymtab,
                         /*Kind=*/object::Archive::K_DARWIN, C.Deterministic,
                         /*Thin=*/false);
 
   SmallVector<OwningBinary<Archive>, 2> OutputBinaries;
   for (const std::pair<const uint64_t, NewArchiveMemberList> &M : NewMembers) {
     Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
-        writeArchiveToBuffer(M.second.getMembers(),
-                             /*WriteSymtab=*/true,
-                             /*Kind=*/object::Archive::K_DARWIN,
-                             C.Deterministic,
-                             /*Thin=*/false);
+        writeArchiveToBuffer(
+            M.second.getMembers(), SymtabWritingMode::NormalSymtab,
+            /*Kind=*/object::Archive::K_DARWIN, C.Deterministic,
+            /*Thin=*/false);
     if (!OutputBufferOrErr)
       return OutputBufferOrErr.takeError();
     std::unique_ptr<MemoryBuffer> &OutputBuffer = OutputBufferOrErr.get();
@@ -733,8 +725,7 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
   return C;
 }
 
-int main(int Argc, char **Argv) {
-  InitLLVM X(Argc, Argv);
+int llvm_libtool_darwin_main(int Argc, char **Argv, const llvm::ToolContext &) {
   Expected<Config> ConfigOrErr = parseCommandLine(Argc, Argv);
   if (!ConfigOrErr) {
     WithColor::defaultErrorHandler(ConfigOrErr.takeError());
@@ -760,4 +751,5 @@ int main(int Argc, char **Argv) {
     }
     break;
   }
+  return EXIT_SUCCESS;
 }

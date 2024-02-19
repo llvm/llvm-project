@@ -1,5 +1,7 @@
 RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
+RUN: dsymutil --linker parallel -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+
 The test was compiled from a single source:
 $ cat common.c 
 char common[16];

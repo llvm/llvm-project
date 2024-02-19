@@ -15,6 +15,7 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -56,7 +57,8 @@ using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
 ///    the headers for any referenced symbol
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
-              const PragmaIncludes *PI, const SourceManager &, UsedSymbolCB CB);
+              const PragmaIncludes *PI, const Preprocessor &PP,
+              UsedSymbolCB CB);
 
 struct AnalysisResults {
   std::vector<const Include *> Unused;
@@ -72,8 +74,7 @@ struct AnalysisResults {
 AnalysisResults
 analyze(llvm::ArrayRef<Decl *> ASTRoots,
         llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &I,
-        const PragmaIncludes *PI, const SourceManager &SM,
-        const HeaderSearch &HS,
+        const PragmaIncludes *PI, const Preprocessor &PP,
         llvm::function_ref<bool(llvm::StringRef)> HeaderFilter = nullptr);
 
 /// Removes unused includes and inserts missing ones in the main file.

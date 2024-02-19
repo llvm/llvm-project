@@ -164,9 +164,13 @@ class InferAddressSpaces : public FunctionPass {
 public:
   static char ID;
 
-  InferAddressSpaces() :
-    FunctionPass(ID), FlatAddrSpace(UninitializedAddressSpace) {}
-  InferAddressSpaces(unsigned AS) : FunctionPass(ID), FlatAddrSpace(AS) {}
+  InferAddressSpaces()
+      : FunctionPass(ID), FlatAddrSpace(UninitializedAddressSpace) {
+    initializeInferAddressSpacesPass(*PassRegistry::getPassRegistry());
+  }
+  InferAddressSpaces(unsigned AS) : FunctionPass(ID), FlatAddrSpace(AS) {
+    initializeInferAddressSpacesPass(*PassRegistry::getPassRegistry());
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -221,8 +225,8 @@ class InferAddressSpacesImpl {
       Value *V, PostorderStackTy &PostorderStack,
       DenseSet<Value *> &Visited) const;
 
-  bool rewriteIntrinsicOperands(IntrinsicInst *II,
-                                Value *OldV, Value *NewV) const;
+  bool rewriteIntrinsicOperands(IntrinsicInst *II, Value *OldV,
+                                Value *NewV) const;
   void collectRewritableIntrinsicOperands(IntrinsicInst *II,
                                           PostorderStackTy &PostorderStack,
                                           DenseSet<Value *> &Visited) const;
@@ -473,7 +477,7 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
 }
 
 // Returns all flat address expressions in function F. The elements are ordered
-// ordered in postorder.
+// in postorder.
 std::vector<WeakTrackingVH>
 InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
   // This function implements a non-recursive postorder traversal of a partial
@@ -483,8 +487,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
   DenseSet<Value *> Visited;
 
   auto PushPtrOperand = [&](Value *Ptr) {
-    appendsFlatAddressExpressionToPostorderStack(Ptr, PostorderStack,
-                                                 Visited);
+    appendsFlatAddressExpressionToPostorderStack(Ptr, PostorderStack, Visited);
   };
 
   // Look at operations that may be interesting accelerate by moving to a known
@@ -519,8 +522,11 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
       PushPtrOperand(ASC->getPointerOperand());
     } else if (auto *I2P = dyn_cast<IntToPtrInst>(&I)) {
       if (isNoopPtrIntCastPair(cast<Operator>(I2P), *DL, TTI))
-        PushPtrOperand(
-            cast<Operator>(I2P->getOperand(0))->getOperand(0));
+        PushPtrOperand(cast<Operator>(I2P->getOperand(0))->getOperand(0));
+    } else if (auto *RI = dyn_cast<ReturnInst>(&I)) {
+      if (auto *RV = RI->getReturnValue();
+          RV && RV->getType()->isPtrOrPtrVectorTy())
+        PushPtrOperand(RV);
     }
   }
 
@@ -923,12 +929,14 @@ bool InferAddressSpacesImpl::updateAddressSpace(
     Value *Src1 = Op.getOperand(2);
 
     auto I = InferredAddrSpace.find(Src0);
-    unsigned Src0AS = (I != InferredAddrSpace.end()) ?
-      I->second : Src0->getType()->getPointerAddressSpace();
+    unsigned Src0AS = (I != InferredAddrSpace.end())
+                          ? I->second
+                          : Src0->getType()->getPointerAddressSpace();
 
     auto J = InferredAddrSpace.find(Src1);
-    unsigned Src1AS = (J != InferredAddrSpace.end()) ?
-      J->second : Src1->getType()->getPointerAddressSpace();
+    unsigned Src1AS = (J != InferredAddrSpace.end())
+                          ? J->second
+                          : Src1->getType()->getPointerAddressSpace();
 
     auto *C0 = dyn_cast<Constant>(Src0);
     auto *C1 = dyn_cast<Constant>(Src1);
@@ -1097,7 +1105,8 @@ bool InferAddressSpacesImpl::isSafeToCastConstAddrSpace(Constant *C,
     // If we already have a constant addrspacecast, it should be safe to cast it
     // off.
     if (Op->getOpcode() == Instruction::AddrSpaceCast)
-      return isSafeToCastConstAddrSpace(cast<Constant>(Op->getOperand(0)), NewAS);
+      return isSafeToCastConstAddrSpace(cast<Constant>(Op->getOperand(0)),
+                                        NewAS);
 
     if (Op->getOpcode() == Instruction::IntToPtr &&
         Op->getType()->getPointerAddressSpace() == FlatAddrSpace)
@@ -1128,7 +1137,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   // construction.
   ValueToValueMapTy ValueWithNewAddrSpace;
   SmallVector<const Use *, 32> PoisonUsesToFix;
-  for (Value* V : Postorder) {
+  for (Value *V : Postorder) {
     unsigned NewAddrSpace = InferredAddrSpace.lookup(V);
 
     // In some degenerate cases (e.g. invalid IR in unreachable code), we may
@@ -1161,6 +1170,8 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
+  ValueToValueMapTy VMap;
+  ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   // Replaces the uses of the old address expressions with the new ones.
   for (const WeakTrackingVH &WVH : Postorder) {
@@ -1174,18 +1185,41 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
                       << *NewV << '\n');
 
     if (Constant *C = dyn_cast<Constant>(V)) {
-      Constant *Replace = ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
-                                                         C->getType());
+      Constant *Replace =
+          ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV), C->getType());
       if (C != Replace) {
         LLVM_DEBUG(dbgs() << "Inserting replacement const cast: " << Replace
                           << ": " << *Replace << '\n');
-        C->replaceAllUsesWith(Replace);
+        SmallVector<User *, 16> WorkList;
+        for (User *U : make_early_inc_range(C->users())) {
+          if (auto *I = dyn_cast<Instruction>(U)) {
+            if (I->getFunction() == F)
+              I->replaceUsesOfWith(C, Replace);
+          } else {
+            WorkList.append(U->user_begin(), U->user_end());
+          }
+        }
+        if (!WorkList.empty()) {
+          VMap[C] = Replace;
+          DenseSet<User *> Visited{WorkList.begin(), WorkList.end()};
+          while (!WorkList.empty()) {
+            User *U = WorkList.pop_back_val();
+            if (auto *I = dyn_cast<Instruction>(U)) {
+              if (I->getFunction() == F)
+                VMapper.remapInstruction(*I);
+              continue;
+            }
+            for (User *U2 : U->users())
+              if (Visited.insert(U2).second)
+                WorkList.push_back(U2);
+          }
+        }
         V = Replace;
       }
     }
 
     Value::use_iterator I, E, Next;
-    for (I = V->use_begin(), E = V->use_end(); I != E; ) {
+    for (I = V->use_begin(), E = V->use_end(); I != E;) {
       Use &U = *I;
 
       // Some users may see the same pointer operand in multiple operands. Skip
@@ -1205,6 +1239,11 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       // Skip if the current user is the new value itself.
       if (CurUser == NewV)
         continue;
+
+      if (auto *CurUserI = dyn_cast<Instruction>(CurUser);
+          CurUserI && CurUserI->getFunction() != F)
+        continue;
+
       // Handle more complex cases like intrinsic that need to be remangled.
       if (auto *MI = dyn_cast<MemIntrinsic>(CurUser)) {
         if (!MI->isVolatile() && handleMemIntrinsicPtrUse(MI, V, NewV))
@@ -1241,8 +1280,8 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
           if (auto *KOtherSrc = dyn_cast<Constant>(OtherSrc)) {
             if (isSafeToCastConstAddrSpace(KOtherSrc, NewAS)) {
               Cmp->setOperand(SrcIdx, NewV);
-              Cmp->setOperand(OtherIdx,
-                ConstantExpr::getAddrSpaceCast(KOtherSrc, NewV->getType()));
+              Cmp->setOperand(OtherIdx, ConstantExpr::getAddrSpaceCast(
+                                            KOtherSrc, NewV->getType()));
               continue;
             }
           }

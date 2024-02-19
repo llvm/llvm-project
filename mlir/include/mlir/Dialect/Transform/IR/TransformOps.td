@@ -14,7 +14,7 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -25,7 +25,7 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getSuccessorEntryOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -113,8 +113,9 @@ def AnnotateOp : TransformDialectOp<"annotate",
     all target operations, otherwise the attributes will be mapped 1:1 based on
     the order within the handles.
 
-    Fails silently if the length of the parameter payload does not match the length of
-    the target payload. Does not consume the provided handles.
+    Produces a silenceable failure if the length of the parameter payload does
+    not match the length of the target payload. Does not consume the provided
+    handles.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -154,6 +155,103 @@ def ApplyCommonSubexpressionEliminationOp : TransformDialectOp<"apply_cse",
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
   }];
+}
+
+def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]
+        # GraphRegionNoTerminator.traits> {
+  let summary = "Applies conversion patterns to the body of the targeted op";
+  let description = [{
+    This transform applies the specified conversion patterns to the targeted op
+    and all nested ops. By default, this transform applies a "full" dialect
+    conversion. If the `partial_conversion` unit attribute is present, this
+    transform applies a partial dialect conversion.
+
+    The patterns that should be applied are specified in the first graph region
+    of this op. They must implement the
+    `ConversionPatternDescriptorOpInterface`. The order in which patterns are
+    applied is unspecified; i.e., the ordering of ops in the region of this op
+    is irrelevant.
+
+    The second, optional graph region contains exactly one op that specifies
+    default type converter that should be used with this dialect conversion. If
+    provided, this op must implement the `TypeConverterBuilderOpInterface`.
+    Type converters are a property of conversion patterns: each conversion
+    pattern stores the type converter that should be used in its C++ class. Each
+    conversion pattern descriptor can optionally specify a type converter in its
+    `getTypeConverter` interface method. If no type converter is specified in
+    this method, the default type converter of the dialect conversion is used.
+    Default type converters are useful if the same type converter should be used
+    for multiple sets of conversion patterns. (Patterns that should not use this
+    default type converter specify their own type converter.)
+
+    The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
+    attributes specify the conversion target.
+
+    This transform consumes the `target` handle and modifies the payload. It
+    does not produce any handles.
+
+    This transform produces a silenceable failure if the dialect conversion was
+    unsuccessful.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       OptionalAttr<StrArrayAttr>:$legal_ops,
+                       OptionalAttr<StrArrayAttr>:$illegal_ops,
+                       OptionalAttr<StrArrayAttr>:$legal_dialects,
+                       OptionalAttr<StrArrayAttr>:$illegal_dialects,
+                       UnitAttr:$partial_conversion);
+  let results = (outs);
+  let regions = (region
+      MaxSizedRegion<1>:$patterns,
+      VariadicRegion<MaxSizedRegion<1>>:$default_type_converter_region);
+
+  let assemblyFormat = [{
+    `to` $target $patterns
+    (`with` `type_converter` $default_type_converter_region^)?
+    attr-dict `:` type($target)
+  }];
+  let hasVerifier = 1;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+        "Value":$target,
+        CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
+            $patternsBodyBuilder,
+        CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
+            $typeConverterBodyBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::transform::TypeConverterBuilderOpInterface getDefaultTypeConverter() {
+      if (getDefaultTypeConverterRegion().size() == 0)
+        return {};
+      return ::llvm::cast<::mlir::transform::TypeConverterBuilderOpInterface>(
+          &getDefaultTypeConverterRegion()[0].front().front());
+    }
+  }];
+}
+
+def ApplyToLLVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.dialect_to_llvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert ops from the specified dialect to LLVM
+    dialect ops. These patterns require an "LLVMTypeConverter".
+
+    Note: Only dialects that implement the `ConvertToLLVMPatternInterface` are
+    supported. Any conversion target modifications by interface implementations
+    are currently ignored. The conversion target is fully specified by the
+    enclosing "apply_conversion_patterns" op.
+  }];
+
+  let arguments = (ins StrAttr:$dialect_name);
+  let assemblyFormat = "$dialect_name attr-dict";
+  let hasVerifier = 1;
 }
 
 def ApplyDeadCodeEliminationOp : TransformDialectOp<"apply_dce",
@@ -212,13 +310,13 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     Only replacements via `RewriterBase::replaceOp` or `replaceOpWithNewOp` are
     considered "payload op replacements". Furthermore, only if the replacement
     values are defined by the same op and that op has the same type as the
-    original op, the mapping is updated. Otherwise, this transform fails
-    silently. More details can be found at the documentation site of
+    original op, the mapping is updated. Otherwise, this transform produces a
+    silenceable failure. More details can be found at the documentation site of
     `TrackingListener`.
 
-    This transform also fails silently if the pattern application did not
-    converge within the default number of iterations/rewrites of the greedy
-    pattern rewrite driver.
+    This transform also produces a silenceable failure if the pattern
+    application did not converge within the default number of
+    iterations/rewrites of the greedy pattern rewrite driver.
   }];
 
   let arguments = (ins
@@ -289,13 +387,17 @@ def ApplyLoopInvariantCodeMotionOp : TransformDialectOp<"apply_licm",
 def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
     [TransformOpInterface, TransformEachOpTrait,
      FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Applies the specified registered pass";
+  let summary = "Applies the specified registered pass or pass pipeline";
   let description = [{
-    This transform applies the specified pass to the targeted ops. The name of
-    the pass is specified as a string attribute, as set during pass
-    registration. Optionally, pass options may be specified as a string
-    attribute. The pass options syntax is identical to the one used with
-    "mlir-opt".
+    This transform applies the specified pass or pass pipeline to the targeted
+    ops. The name of the pass/pipeline is specified as a string attribute, as
+    set during pass/pipeline registration. Optionally, pass options may be
+    specified as a string attribute. The pass options syntax is identical to the
+    one used with "mlir-opt".
+
+    This op first looks for a pass pipeline with the specified name. If no such
+    pipeline exists, it looks for a pass with the specified name. If no such
+    pass exists either, this op fails definitely.
 
     This transform consumes the target handle and produces a new handle that is
     mapped to the same op. Passes are not allowed to remove/modify the operation
@@ -314,7 +416,7 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
-      ::mlir::transform::TransformRewriter &rewriter, 
+      ::mlir::transform::TransformRewriter &rewriter,
       ::mlir::Operation *target,
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
@@ -335,6 +437,61 @@ def CastOp : TransformDialectOp<"cast",
       ::mlir::Operation *target,
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
+  }];
+}
+
+def NumAssociationsOp : TransformDialectOp<"num_associations",
+    [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     MatchOpInterface]> {
+  let summary =
+    "Returns the number of payload objects associated with the argument";
+  let description = [{
+    Given an argument, handle or parameter, returns a new parameter associated
+    with a single 64-bit number that corresponds to the number of payload
+    objects (operations or values for a handle, attributes for a parameter)
+    associated with the argument.
+
+    Always succeeds.
+  }];
+  let arguments = (ins Transform_AnyHandleOrParamType:$handle);
+  let results = (outs TransformParamTypeInterface:$num);
+  let assemblyFormat = [{
+    $handle attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
+def CollectMatchingOp : TransformDialectOp<"collect_matching", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+    DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Collects all payload ops that match the given named matcher";
+  let description = [{
+    Collects operations or other payload IR objects nested under `root`
+    (inclusive) that match the given matcher expressed as a named sequence. The
+    matcher sequence must accept exactly one argument that it is not allowed to
+    modify. It must yield as many values as this op has results. Each of the
+    yielded values must be associated with exactly one payload object. If any
+    operation in the matcher sequence produces a silenceable failure, the
+    matcher advances to the next payload operation in the walk order without
+    finishing the sequence.
+
+    The i-th result of this operation is constructed by concatenating the i-th
+    yielded payload IR objects of all successful matcher sequence applications.
+    All results are guaranteed to be mapped to the same number of payload IR
+    objects.
+
+    The operation succeeds unless the matcher sequence produced a definite
+    failure for any invocation.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root,
+                       SymbolRefAttr:$matcher);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
+
+  let assemblyFormat = [{
+    $matcher `in` $root attr-dict `:` functional-type($root, $results)
   }];
 }
 
@@ -381,8 +538,16 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     This operation consumes the operand and produces a new handle associated
     with the same payload. This is necessary to trigger invalidation of handles
     to any of the payload operations nested in the payload operations associated
-    with the operand, as those are likely to be modified by actions. Note that
-    the root payload operation associated with the operand are not matched.
+    with the operand, as those are likely to be modified by actions.
+
+    By default, the root payload operation associated with the operand is not
+    matched. This is to support the conservative case where applied actions may
+    invalidate the root payload operation. If the optional `restrict_root`
+    attribute is set, the root operand is guaranteed to not be invalidated by any
+    of the applied actions. In such cases, the root payload operation is also
+    matched. This is useful because matching the root payload operation is a
+    common idiom, when e.g. matching a func.func directly and operations nested
+    under it.
 
     The operation succeeds if none of the matchers produced a definite failure
     during application and if all of the applied actions produced success. Note
@@ -395,13 +560,19 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$root,
+                       UnitAttr:$restrict_root,
                        SymbolRefArrayAttr:$matchers,
                        SymbolRefArrayAttr:$actions);
   let results = (outs TransformHandleTypeInterface:$updated);
 
-  let assemblyFormat =
-      "`in` $root custom<ForeachMatchSymbols>($matchers, $actions) "
-      "attr-dict `:` functional-type($root, $updated)";
+  let assemblyFormat = [{
+    (`restrict_root` $restrict_root^)?
+    `in`
+    $root
+    custom<ForeachMatchSymbols>($matchers, $actions)
+    attr-dict
+    `:` functional-type($root, $updated)
+  }];
 
   let hasVerifier = 1;
 }
@@ -410,7 +581,7 @@ def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getSuccessorRegions", "getSuccessorEntryOperands"]>,
+         "getSuccessorRegions", "getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each payload op";
@@ -462,8 +633,8 @@ def GetConsumersOfResult : TransformDialectOp<"get_consumers_of_result",
     The handle defined by this Transform op corresponds to all operations that
     consume the SSA value defined by the `target` and `result_number`
     arguments.
-    This operation applies to a single payload operation, otherwise it 
-    definitely fails.
+    This operation applies to a single payload operation, otherwise it produces
+    a definite failure.
     The return handle points to the consuming operations operations, which can
     be empty.
   }];
@@ -484,7 +655,8 @@ def GetDefiningOp : TransformDialectOp<"get_defining_op",
     The handle defined by this Transform op corresponds to the defining op of
     the targeted value.
 
-    This transform fails silently if the targeted value is a block argument.
+    This transform produces a silenceable failure if the targeted value is a
+    block argument.
   }];
 
   let arguments = (ins TransformValueHandleTypeInterface:$target);
@@ -495,8 +667,9 @@ def GetDefiningOp : TransformDialectOp<"get_defining_op",
 
 def GetParentOp : TransformDialectOp<"get_parent_op",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
+     MatchOpInterface,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Gets handles to the closest isolated-from-above parents";
+  let summary = "Gets handles to the closest parent ops";
   let description = [{
     The handle defined by this Transform op corresponds to the parents of the
     targeted payload ops (in the same order).
@@ -505,7 +678,11 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
     that case for each target op, the closest parent op that fulfills all
     requirements, is returned.
     - `isolated_from_above`: the parent op must be isolated from above
+    - `allow_empty_results`: get_parent_op is allowed to return an empty list
+      and still succeeds. In such a case, if `get_parent_op` fails for any
+      operation in the list, the entire transform returns an empty handle.
     - `op_name`: the parent op must have the specified name
+    - `nth_parent`: get the n-th parent of that satisfies the above requirements
 
     If `deduplicate` is set, the result handle does not contain any duplicate
     ops. For example, given the list
@@ -514,14 +691,18 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
     is applied, e.g., "B" may itself be a parent of "A". This may have an impact
     on the further transformation applied to the handle produced here.
 
-    If any of the given Payload IR ops has no such suitable parent, the
-    transformation fails silently.
+    If any of the given Payload IR ops has no such suitable parent, then:
+      - if `allow_empty_results` is set, the result handle is empty
+      - otherwise, the transformation produces a silenceable failure.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        UnitAttr:$isolated_from_above,
+                       UnitAttr:$allow_empty_results,
                        OptionalAttr<StrAttr>:$op_name,
-                       UnitAttr:$deduplicate);
+                       UnitAttr:$deduplicate,
+                       DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
+                                         "1">:$nth_parent);
   let results = (outs TransformHandleTypeInterface:$parent);
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -529,13 +710,13 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
 
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
-     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+     NavigationTransformOpTrait, MatchOpInterface, MemoryEffectsOpInterface]> {
   let summary = "Get handle to the producer of this operation's operand number";
   let description = [{
     The handle defined by this Transform op corresponds to operation that
     produces the SSA value defined by the `target` and `operand_number`
     arguments. If the origin of the SSA value is not an operations (i.e. it is
-    a block argument), the transform silently fails.
+    a block argument), the transform produces a silenceable failure.
     The return handle points to only the subset of successfully produced
     computational operations, which can be empty.
   }];
@@ -547,23 +728,75 @@ def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
                        "functional-type(operands, results)";
 }
 
-def GetResultOp : TransformDialectOp<"get_result",
+def GetOperandOp : TransformDialectOp<"get_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
-     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Get handle to the a result of the targeted op";
+     NavigationTransformOpTrait, MatchOpInterface, MemoryEffectsOpInterface]> {
+  let summary = "Get a handle to the operand(s) of the targeted op";
   let description = [{
-    The handle defined by this Transform op corresponds to the OpResult with
-    `result_number` that is defined by the given `target` operation.
+    The handle defined by this Transform op corresponds to the operands of the
+    given `target` operation specified by the given set of positions. There are
+    three possible modes:
+
+     - Position list directly, i.e. `%target[0, 1, 2]`. This will return the
+       operands at the specified positions.
+     - Inverted position list, i.e. `%target[except(0, 1, 2)]`. This will return
+       all operands except those at the given positions.
+     - All, i.e. `%target[all]`. This will return all operands of the operation.
     
-    This transform fails silently if the targeted operation does not have enough
-    results. It reads the target handle and produces the result handle.
+    This transform produces a silenceable failure if any of the operand indices
+    exceeds the number of operands in the target. It reads the target handle and
+    produces the result handle.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                       I64Attr:$result_number);
+                       DenseI64ArrayAttr:$raw_position_list,
+                       UnitAttr:$is_inverted,
+                       UnitAttr:$is_all);
   let results = (outs TransformValueHandleTypeInterface:$result);
-  let assemblyFormat = "$target `[` $result_number `]` attr-dict `:` "
-                       "functional-type(operands, results)";
+  let assemblyFormat =
+      "$target `[`"
+      "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
+      "`]` attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+
+def GetResultOp : TransformDialectOp<"get_result",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get a handle to the result(s) of the targeted op";
+  let description = [{
+    The handle defined by this Transform op correspond to the OpResults of the
+    given `target` operation. Optionally `result_number` can be specified to
+    select a specific result.
+    
+    This transform fails silently if the targeted operation does not have enough
+    results. It reads the target handle and produces the result handle.
+
+    The handle defined by this Transform op corresponds to the results of the
+    given `target` operation specified by the given set of positions. There are
+    three possible modes:
+
+     - Position list directly, i.e. `%target[0, 1, 2]`. This will return the
+       results at the specified positions.
+     - Inverted position list, i.e. `%target[except(0, 1, 2)]`. This will return
+       all results except those at the given positions.
+     - All, i.e. `%target[all]`. This will return all results of the operation.
+    
+    This transform produces a silenceable failure if any of the result indices
+    exceeds the number of results returned by the target. It reads the target
+    handle and produces the result handle.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       DenseI64ArrayAttr:$raw_position_list,
+                       UnitAttr:$is_inverted,
+                       UnitAttr:$is_all);
+  let results = (outs TransformValueHandleTypeInterface:$result);
+  let assemblyFormat =
+      "$target `[`"
+      "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
+      "`]` attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
 }
 
 def GetTypeOp : TransformDialectOp<"get_type",
@@ -615,7 +848,7 @@ def IncludeOp : TransformDialectOp<"include",
                        FailurePropagationMode:$failure_propagation_mode,
                        Variadic<Transform_AnyHandleOrParamType>:$operands);
   let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
-  
+
   let assemblyFormat =
       "$target `failures` `(` $failure_propagation_mode `)`"
       "`(` $operands `)` attr-dict `:` functional-type($operands, $results)";
@@ -632,7 +865,26 @@ def IncludeOp : TransformDialectOp<"include",
     ::mlir::Operation::operand_range getArgOperands() {
       return getOperands();
     }
+
+    ::mlir::MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
   }];
+}
+
+def MatchOperationEmptyOp : Op<Transform_Dialect, "match.operation_empty", [
+    AtMostOneOpMatcher,
+    MatchOpInterface,
+    MemoryEffectsOpInterface]> {
+  let summary =
+    "Matches if the handle is not associated to any op";
+  let description = [{
+    Succeeds if the handle is not associated to any op.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle);
+  let assemblyFormat =
+      "$operand_handle attr-dict `:` type($operand_handle)";
+  let extraClassDeclaration = AtMostOneOpMatcher.extraDeclaration;
 }
 
 def MatchOperationNameOp : TransformDialectOp<"match.operation_name",
@@ -699,8 +951,7 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
 }
 
 def NamedSequenceOp : TransformDialectOp<"named_sequence",
-    [CallableOpInterface,
-     FunctionOpInterface,
+    [FunctionOpInterface,
      IsolatedFromAbove,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -730,7 +981,7 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     Named sequences may include other named sequences via `transform.include`,
     but recursion is *not* allowed.
   }];
-  
+
   let arguments = (ins
     SymbolNameAttr:$sym_name,
     TypeAttrBase<"::mlir::FunctionType",
@@ -743,6 +994,17 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
+  let builders = [
+    // Build a named sequence.
+    OpBuilder<(ins
+      "StringRef":$symName,
+      "Type":$rootType,
+      "TypeRange":$resultType,
+      "SequenceBodyBuilderFn":$bodyBuilder,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
+  ];
+
   let extraClassDeclaration = [{
     ::llvm::ArrayRef<::mlir::Type> getArgumentTypes() {
       return getFunctionType().getInputs();
@@ -750,18 +1012,8 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     ::llvm::ArrayRef<::mlir::Type> getResultTypes() {
       return getFunctionType().getResults();
     }
-
     ::mlir::Region *getCallableRegion() {
       return &getBody();
-    }
-    ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
-      return getFunctionType().getResults();
-    }
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
     }
   }];
 }
@@ -774,10 +1026,10 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
   let description = [{
     Splits `handle` into one or multiple handles, as specified by the number
     of results of this operation. `handle` should be mapped to as many payload
-    ops as there are results. Otherwise, this transform will fail silently by
-    default. Each result handle is mapped to exactly one payload op. The order
-    of the payload ops is preserved, i.e., the i-th payload op is mapped to the
-    i-th result handle.
+    ops as there are results. Otherwise, this transform will fail produces a
+    silenceable failure by default. Each result handle is mapped to exactly one
+    payload op. The order of the payload ops is preserved, i.e., the i-th
+    payload op is mapped to the i-th result handle.
 
     This operation is useful for ensuring a statically known number of
     operations are tracked by the source `handle` and to extract them into
@@ -785,13 +1037,14 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
 
     If there are more payload ops than results, the remaining ops are mapped to
     the result with index `overflow_result`. If no `overflow_result` is
-    specified, the transform fails silently.
+    specified, the transform produces a silenceable failure.
 
-    If there are fewer payload ops than results, the transform fails silently
-    if `fail_on_payload_too_small` is set to "true". Otherwise, it succeeds and
-    the remaining result handles are not mapped to any op. It also succeeds if
-    `handle` is empty and `pass_through_empty_handle` is set to "true",
-    regardless of `fail_on_payload_too_small`.
+    If there are fewer payload ops than results, the transform produces a
+    silenceable failure if `fail_on_payload_too_small` is set to "true".
+    Otherwise, it succeeds and the remaining result handles are not mapped to
+    any op. It also succeeds if `handle` is empty and
+    `pass_through_empty_handle` is set to "true", regardless of
+    `fail_on_payload_too_small`.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$handle,
@@ -915,7 +1168,7 @@ def SelectOp : TransformDialectOp<"select",
 
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getSuccessorEntryOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -1028,7 +1281,7 @@ def VerifyOp : TransformDialectOp<"verify",
   let summary = "Verifies the targeted ops";
   let description = [{
     This transform verifies the targeted ops. If at least one op fails to
-    verify, the transform fails definitely.
+    verify, the transform produces a definite failure.
 
     Note: This op was designed for debugging purposes and should be used like an
     assertion. It is intentional that this op produces a definite failure and

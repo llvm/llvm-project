@@ -34,8 +34,8 @@ entry:
 define i8 @t3(ptr %X, i64 %i) {
 ; CHECK-LABEL: t3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %esi
-; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movzbl (%rdi,%rax,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
@@ -92,3 +92,19 @@ entry:
   ret i8 %tmp9
 }
 
+define i32 @t7(<16 x i8> %a0, ptr %p0) {
+; CHECK-LABEL: t7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmovmskb %xmm0, %eax
+; CHECK-NEXT:    shrl $3, %eax
+; CHECK-NEXT:    movzbl (%rdi,%rax,4), %eax
+; CHECK-NEXT:    retq
+  %i = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
+  %index = lshr i32 %i, 1
+  %mask = and i32 %index, 16777212
+  %val.ptr = getelementptr inbounds i8, ptr %p0, i32 %mask
+  %val = load i8, ptr %val.ptr
+  %ext = zext i8 %val to i32
+  ret i32 %ext
+}
+declare i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8>)

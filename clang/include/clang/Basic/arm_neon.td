@@ -1232,6 +1232,11 @@ def FRINT32X_S32 : SInst<"vrnd32x", "..", "fQf">;
 def FRINT32Z_S32 : SInst<"vrnd32z", "..", "fQf">;
 def FRINT64X_S32 : SInst<"vrnd64x", "..", "fQf">;
 def FRINT64Z_S32 : SInst<"vrnd64z", "..", "fQf">;
+
+def FRINT32X_S64 : SInst<"vrnd32x", "..", "dQd">;
+def FRINT32Z_S64 : SInst<"vrnd32z", "..", "dQd">;
+def FRINT64X_S64 : SInst<"vrnd64x", "..", "dQd">;
+def FRINT64Z_S64 : SInst<"vrnd64z", "..", "dQd">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1349,9 +1354,9 @@ let isScalarNarrowShift = 1 in {
   // Signed/Unsigned Saturating Rounded Shift Right Narrow (Immediate)
   def SCALAR_SQRSHRN_N: SInst<"vqrshrn_n", "(1<)1I", "SsSiSlSUsSUiSUl">;
   // Signed Saturating Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<U)1I", "SsSiSl">;
   // Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<U)1I", "SsSiSl">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

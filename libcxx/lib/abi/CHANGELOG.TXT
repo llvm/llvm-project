@@ -13,6 +13,56 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 18.0
+------------
+
+* [libc++] Moves is_terminal to the dylib
+
+  The patch moves the POSIX implementation of is_terminal to the dylib. This is
+  needed to avoid using <unistd.h> in public headers.
+
+  All platforms
+  Symbol added: _ZNSt6__ndk119__is_posix_terminalEP7__sFILE
+
+* [libc++abi] Implement __cxa_init_primary_exception and use it to optimize std::make_exception_ptr (#65534)
+
+  This patch implements __cxa_init_primary_exception, an extension to the Itanium C++ ABI.
+  This extension is already present in both libsupc++ and libcxxrt. This patch also starts
+  making use of this function in std::make_exception_ptr: instead of going through a full
+  throw/catch cycle, we are now able to initialize an exception directly, thus making
+  std::make_exception_ptr around 30x faster. Adding a new symbol is not an ABI break.
+
+  All platforms
+  -------------
+  Symbol added: __cxa_init_primary_exception
+
+* [libc++] Simplify the implementation of locale::id
+
+  This patch removes a symbol defined in the library for std::locale::id::__init().
+  The symbol '__init' was defined as a private static function as part of the locale::id
+  class and was never visible from outside the dylib. The addition of this symbol to the
+  ABI was most likely accidental. The deletion of the symbol should not be a breaking change.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__16locale2id6__initEv
+
+* [libc++] Remove symbol for std::system_error from the dylib
+
+  This patch removes a symbol defined in the library for std::system_error.
+  The symbol '__init' was defined as a private static function as part of the
+  system_error class and was never visible. The addition of this symbol to the ABI was most likely accidental.
+  The function '__init' is replaced by another equivalent function which is placed in the
+  anonymous namespace of the std::system_error source code file.
+  There are no internal references to this symbol which seems to support the reasoning that
+  this was never used outside of the dylib.
+  The deletion of the symbol should not be a breaking change.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__112system_error6__initERKNS_10error_codeENS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+
+------------
 Version 17.0
 ------------
 

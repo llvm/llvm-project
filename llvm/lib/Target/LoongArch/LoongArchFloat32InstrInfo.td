@@ -50,6 +50,8 @@ def FNEG_S   : FP_ALU_2R<0x01141400>;
 def FSQRT_S  : FP_ALU_2R<0x01144400>;
 def FRECIP_S : FP_ALU_2R<0x01145400>;
 def FRSQRT_S : FP_ALU_2R<0x01146400>;
+def FRECIPE_S : FP_ALU_2R<0x01147400>;
+def FRSQRTE_S : FP_ALU_2R<0x01148400>;
 def FSCALEB_S : FP_ALU_3R<0x01108000>;
 def FLOGB_S   : FP_ALU_2R<0x01142400>;
 def FCOPYSIGN_S : FP_ALU_3R<0x01128000>;
@@ -126,6 +128,23 @@ def PseudoST_CFR : Pseudo<(outs),
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def PseudoLD_CFR : Pseudo<(outs CFR:$ccd),
                           (ins GPR:$rj, grlenimm:$imm)>;
+
+// SET_CFR_{FALSE,TRUE}
+// These instructions are defined in order to avoid expensive check error if
+// regular instruction patterns are used.
+// fcmp.caf.s $dst, $fa0, $fa0
+def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">;
+// fcmp.cueq.s $dst, $fa0, $fa0
+def SET_CFR_TRUE  : SET_CFR<0x0c160000, "fcmp.cueq.s">;
+
+// Pseudo instruction for copying CFRs.
+def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let Size = 12;
+}
+
 } // Predicates = [HasBasicF]
 
 //===----------------------------------------------------------------------===//
@@ -153,10 +172,11 @@ def : PatFprFpr<fminnum_ieee, FMIN_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
-
 def : Pat<(fdiv fpimm1, (fsqrt FPR32:$fj)), (FRSQRT_S FPR32:$fj)>;
-
 def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
+def : Pat<(is_fpclass FPR32:$fj, (i32 timm:$mask)),
+          (SLTU R0, (ANDI (MOVFR2GR_S (FCLASS_S FPR32:$fj)),
+                          (to_fclass_mask timm:$mask)))>;
 
 /// Setcc
 
@@ -262,6 +282,12 @@ def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
 
+let Predicates = [HasFrecipe] in {
+// FP approximate reciprocal operation
+def : Pat<(int_loongarch_frecipe_s FPR32:$src), (FRECIPE_S FPR32:$src)>;
+def : Pat<(int_loongarch_frsqrte_s FPR32:$src), (FRSQRTE_S FPR32:$src)>;
+}
+
 // fmadd.s: fj * fk + fa
 def : Pat<(fma FPR32:$fj, FPR32:$fk, FPR32:$fa), (FMADD_S $fj, $fk, $fa)>;
 
@@ -277,8 +303,12 @@ def : Pat<(fneg (fma FPR32:$fj, FPR32:$fk, FPR32:$fa)),
 def : Pat<(fma_nsz (fneg FPR32:$fj), FPR32:$fk, (fneg FPR32:$fa)),
           (FNMADD_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
 
-// fnmsub.s: -fj * fk + fa
-def : Pat<(fma (fneg FPR32:$fj), FPR32:$fk, FPR32:$fa),
+// fnmsub.s: -(fj * fk - fa)
+def : Pat<(fneg (fma FPR32:$fj, FPR32:$fk, (fneg FPR32:$fa))),
+          (FNMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
+
+// fnmsub.s: -fj * fk + fa (the nsz flag on the FMA)
+def : Pat<(fma_nsz (fneg FPR32:$fj), FPR32:$fk, FPR32:$fa),
           (FNMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
 } // Predicates = [HasBasicF]
 

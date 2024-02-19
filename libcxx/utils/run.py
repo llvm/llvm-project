@@ -42,9 +42,8 @@ def main():
     # Do any necessary codesigning of test-executables found in the command line.
     if args.codesign_identity:
         for exe in filter(isTestExe, commandLine):
-            subprocess.check_call(
-                ["xcrun", "codesign", "-f", "-s", args.codesign_identity, exe], env={}
-            )
+            codesign = ["codesign", "-f", "-s", args.codesign_identity, exe]
+            subprocess.check_call(codesign, env={})
 
     # Extract environment variables into a dictionary
     env = {k: v for (k, v) in map(lambda s: s.split("=", 1), args.env)}

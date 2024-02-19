@@ -369,16 +369,12 @@ define void @simplify_before_foldAndOfICmps(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
 ; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[C10:%.*]] = icmp ugt i16 [[L7]], [[B11]]
-; CHECK-NEXT:    [[C5:%.*]] = icmp slt i16 [[L7]], 1
 ; CHECK-NEXT:    [[C7:%.*]] = icmp slt i16 [[L7]], 0
-; CHECK-NEXT:    [[B15:%.*]] = xor i1 [[C7]], [[C10]]
-; CHECK-NEXT:    [[C6:%.*]] = xor i1 [[B15]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C5]], [[C6]]
-; CHECK-NEXT:    [[C3:%.*]] = and i1 [[TMP2]], [[C10]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[C10]], true
-; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C3]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP4]]
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C7]], [[C10]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C10]], true
+; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C3]] to i64
+; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP3]]
 ; CHECK-NEXT:    store i16 [[L7]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
 ; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8
@@ -2769,9 +2765,9 @@ define i64 @icmp_slt_0_and_icmp_sgt_neg1_i64(i64 %x) {
 define i64 @icmp_slt_0_and_icmp_sge_neg1_i64_fail(i64 %x) {
 ; CHECK-LABEL: @icmp_slt_0_and_icmp_sge_neg1_i64_fail(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i64 [[X:%.*]], -2
-; CHECK-NEXT:    [[B:%.*]] = zext i1 [[A]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = lshr i64 [[X]], 62
-; CHECK-NEXT:    [[D:%.*]] = and i64 [[C]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[C]], 1
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[A]], i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    ret i64 [[D]]
 ;
   %A = icmp sge i64 %x, -1
@@ -2871,9 +2867,8 @@ define i32 @icmp_slt_0_and_icmp_sge_neg2_i32_multiuse1(i32 %x) {
 define i32 @icmp_slt_0_and_icmp_sge_neg2_i32_multiuse2(i32 %x) {
 ; CHECK-LABEL: @icmp_slt_0_and_icmp_sge_neg2_i32_multiuse2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -3
-; CHECK-NEXT:    [[B:%.*]] = zext i1 [[A]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[X]], 31
-; CHECK-NEXT:    [[D:%.*]] = and i32 [[C]], [[B]]
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[A]], i32 [[C]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[C]])
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -2923,10 +2918,9 @@ define i32 @icmp_slt_0_or_icmp_eq_100_i32_multiuse_fail1(i32 %x) {
 
 define i32 @icmp_x_slt_0_and_icmp_y_ne_neg2_i32_multiuse_fail2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @icmp_x_slt_0_and_icmp_y_ne_neg2_i32_multiuse_fail2(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[B:%.*]] = zext i1 [[A]] to i32
+; CHECK-NEXT:    [[A_NOT:%.*]] = icmp eq i32 [[X:%.*]], -2
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[Y:%.*]], 31
-; CHECK-NEXT:    [[D:%.*]] = and i32 [[C]], [[B]]
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[A_NOT]], i32 0, i32 [[C]]
 ; CHECK-NEXT:    call void @use32(i32 [[C]])
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -3017,10 +3011,8 @@ define i32 @icmp_x_slt_0_and_icmp_y_sgt_neg1_i32_fail(i32 %x, i32 %y) {
 
 define i32 @icmp_slt_0_xor_icmp_sge_neg2_i32_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_slt_0_xor_icmp_sge_neg2_i32_fail(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], [[A]]
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %A = icmp sge i32 %x, -2

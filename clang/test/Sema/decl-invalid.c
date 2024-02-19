@@ -20,8 +20,5 @@ struct; // expected-error {{declaration of anonymous struct must be a definition
 typedef int I;
 I; // expected-warning {{declaration does not declare anything}}
 
-
-
-// rdar://6880449
 register int test1;     // expected-error {{illegal storage class on file-scoped variable}}
 

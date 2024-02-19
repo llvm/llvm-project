@@ -36,7 +36,6 @@ struct ListOfGlobals {
 };
 
 static Mutex mu_for_globals;
-static LowLevelAllocator allocator_for_globals;
 static ListOfGlobals *list_of_all_globals;
 
 static const int kDynamicInitGlobalsInitialCapacity = 512;
@@ -81,18 +80,19 @@ static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
 }
 
 static void ReportGlobal(const Global &g, const char *prefix) {
+  DataInfo info;
+  bool symbolized = Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
   Report(
-      "%s Global[%p]: beg=%p size=%zu/%zu name=%s module=%s dyn_init=%zu "
+      "%s Global[%p]: beg=%p size=%zu/%zu name=%s source=%s module=%s "
+      "dyn_init=%zu "
       "odr_indicator=%p\n",
       prefix, (void *)&g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
-      g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
+      g.module_name, (symbolized ? info.module : "?"), g.has_dynamic_init,
+      (void *)g.odr_indicator);
 
-  DataInfo info;
-  Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
-  if (info.line != 0) {
+  if (symbolized && info.line != 0) {
     Report("  location: name=%s, %d\n", info.file, static_cast<int>(info.line));
-  }
-  else if (g.gcc_location != 0) {
+  } else if (g.gcc_location != 0) {
     // Fallback to Global::gcc_location
     Report("  location: name=%s, %d\n", g.gcc_location->filename, g.gcc_location->line_no);
   }
@@ -199,7 +199,7 @@ static inline bool UseODRIndicator(const Global *g) {
 // This function may be called more than once for every global
 // so we store the globals in a map.
 static void RegisterGlobal(const Global *g) {
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Added");
   CHECK(flags()->report_globals);
@@ -225,13 +225,13 @@ static void RegisterGlobal(const Global *g) {
   }
   if (CanPoisonMemory())
     PoisonRedZones(*g);
-  ListOfGlobals *l = new(allocator_for_globals) ListOfGlobals;
+  ListOfGlobals *l = new (GetGlobalLowLevelAllocator()) ListOfGlobals;
   l->g = g;
   l->next = list_of_all_globals;
   list_of_all_globals = l;
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
-      dynamic_init_globals = new (allocator_for_globals) VectorOfGlobals;
+      dynamic_init_globals = new (GetGlobalLowLevelAllocator()) VectorOfGlobals;
       dynamic_init_globals->reserve(kDynamicInitGlobalsInitialCapacity);
     }
     DynInitGlobal dyn_global = { *g, false };
@@ -240,7 +240,7 @@ static void RegisterGlobal(const Global *g) {
 }
 
 static void UnregisterGlobal(const Global *g) {
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Removed");
   CHECK(flags()->report_globals);
@@ -296,24 +296,28 @@ void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
     if (c == '\0' || !IsASCII(c)) return;
   }
   if (*(char *)(g.beg + g.size - 1) != '\0') return;
-  str->append("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
-              (char *)g.beg);
+  str->AppendF("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
+               (char *)g.beg);
 }
 
-void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g,
+                         bool print_module_name) {
   DataInfo info;
-  Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
-
-  if (info.line != 0) {
-    str->append("%s:%d", info.file, static_cast<int>(info.line));
+  if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
+    str->AppendF("%s:%d", info.file, static_cast<int>(info.line));
   } else if (g.gcc_location != 0) {
     // Fallback to Global::gcc_location
-    str->append("%s", g.gcc_location->filename ? g.gcc_location->filename : g.module_name);
-    if (g.gcc_location->line_no) str->append(":%d", g.gcc_location->line_no);
-    if (g.gcc_location->column_no) str->append(":%d", g.gcc_location->column_no);
+    str->AppendF("%s", g.gcc_location->filename ? g.gcc_location->filename
+                                                : g.module_name);
+    if (g.gcc_location->line_no)
+      str->AppendF(":%d", g.gcc_location->line_no);
+    if (g.gcc_location->column_no)
+      str->AppendF(":%d", g.gcc_location->column_no);
   } else {
-    str->append("%s", g.module_name);
+    str->AppendF("%s", g.module_name);
   }
+  if (print_module_name && info.module)
+    str->AppendF(" in %s", info.module);
 }
 
 } // namespace __asan
@@ -367,7 +371,7 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   Lock lock(&mu_for_globals);
   if (!global_registration_site_vector) {
     global_registration_site_vector =
-        new (allocator_for_globals) GlobalRegistrationSiteVector;
+        new (GetGlobalLowLevelAllocator()) GlobalRegistrationSiteVector;
     global_registration_site_vector->reserve(128);
   }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};
@@ -429,7 +433,7 @@ void __asan_before_dynamic_init(const char *module_name) {
     return;
   bool strict_init_order = flags()->strict_init_order;
   CHECK(module_name);
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   Lock lock(&mu_for_globals);
   if (flags()->report_globals >= 3)
     Printf("DynInitPoison module: %s\n", module_name);
@@ -453,7 +457,7 @@ void __asan_after_dynamic_init() {
       !CanPoisonMemory() ||
       !dynamic_init_globals)
     return;
-  CHECK(asan_inited);
+  CHECK(AsanInited());
   Lock lock(&mu_for_globals);
   // FIXME: Optionally report that we're unpoisoning globals from a module.
   for (uptr i = 0, n = dynamic_init_globals->size(); i < n; ++i) {

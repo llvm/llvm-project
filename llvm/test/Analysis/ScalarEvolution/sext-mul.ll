@@ -18,7 +18,7 @@ define void @foo(ptr nocapture %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    --> %tmp12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
 ; CHECK-NEXT:    %tmp13 = sub nsw i32 %tmp12, %arg1
 ; CHECK-NEXT:    --> ((-1 * %arg1) + %tmp12) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
-; CHECK-NEXT:    %tmp14 = or i64 %tmp10, 1
+; CHECK-NEXT:    %tmp14 = or disjoint i64 %tmp10, 1
 ; CHECK-NEXT:    --> (1 + (sext i32 {0,+,2}<%bb7> to i64))<nuw><nsw> U: [1,0) S: [-2147483647,2147483648) Exits: (1 + (sext i32 (-2 + (2 * %arg2)) to i64))<nuw><nsw> LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %tmp15 = getelementptr inbounds i32, ptr %arg, i64 %tmp14
 ; CHECK-NEXT:    --> (4 + (4 * (sext i32 {0,+,2}<%bb7> to i64))<nsw> + %arg) U: full-set S: full-set Exits: (4 + (4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg) LoopDispositions: { %bb7: Computable }
@@ -34,7 +34,7 @@ define void @foo(ptr nocapture %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:  Loop %bb7: symbolic max backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
 ; CHECK-NEXT:  Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb7: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb7: Trip multiple is 1
 ;
 bb:
   %tmp = icmp sgt i32 %arg2, 0
@@ -58,7 +58,7 @@ bb7:                                              ; preds = %bb7, %bb3
   %tmp12 = load i32, ptr %tmp11, align 4
   %tmp13 = sub nsw i32 %tmp12, %arg1
   store i32 %tmp13, ptr %tmp11, align 4
-  %tmp14 = or i64 %tmp10, 1
+  %tmp14 = or disjoint i64 %tmp10, 1
   %tmp15 = getelementptr inbounds i32, ptr %arg, i64 %tmp14
   %tmp16 = load i32, ptr %tmp15, align 4
   %tmp17 = mul nsw i32 %tmp16, %arg1
@@ -85,7 +85,7 @@ define void @goo(ptr nocapture %arg3, i32 %arg4, i32 %arg5) {
 ; CHECK-NEXT:    --> %t12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
 ; CHECK-NEXT:    %t13 = sub nsw i32 %t12, %arg4
 ; CHECK-NEXT:    --> ((-1 * %arg4) + %t12) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
-; CHECK-NEXT:    %t14 = or i128 %t10, 1
+; CHECK-NEXT:    %t14 = or disjoint i128 %t10, 1
 ; CHECK-NEXT:    --> (1 + (sext i127 {0,+,633825300114114700748351602688}<%bb7> to i128))<nuw><nsw> U: [1,-633825300114114700748351602686) S: [-85070591730234615865843651857942052863,85070591096409315751728951109590450178) Exits: (1 + (sext i127 (-633825300114114700748351602688 + (633825300114114700748351602688 * (zext i32 %arg5 to i127))) to i128))<nuw><nsw> LoopDispositions: { %bb7: Computable }
 ; CHECK-NEXT:    %t15 = getelementptr inbounds i32, ptr %arg3, i128 %t14
 ; CHECK-NEXT:    --> (4 + %arg3)<nuw> U: [4,0) S: [4,0) Exits: (4 + %arg3)<nuw> LoopDispositions: { %bb7: Invariant }
@@ -101,7 +101,7 @@ define void @goo(ptr nocapture %arg3, i32 %arg4, i32 %arg5) {
 ; CHECK-NEXT:  Loop %bb7: symbolic max backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
 ; CHECK-NEXT:  Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb7: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb7: Trip multiple is 1
 ;
 bb:
   %t = icmp sgt i32 %arg5, 0
@@ -125,7 +125,7 @@ bb7:                                              ; preds = %bb7, %bb3
   %t12 = load i32, ptr %t11, align 4
   %t13 = sub nsw i32 %t12, %arg4
   store i32 %t13, ptr %t11, align 4
-  %t14 = or i128 %t10, 1
+  %t14 = or disjoint i128 %t10, 1
   %t15 = getelementptr inbounds i32, ptr %arg3, i128 %t14
   %t16 = load i32, ptr %t15, align 4
   %t17 = mul nsw i32 %t16, %arg4

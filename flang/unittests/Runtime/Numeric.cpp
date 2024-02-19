@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/numeric.h"
 #include "gtest/gtest.h"
+#include "flang/Common/float128.h"
 #include <cmath>
 #include <limits>
 
@@ -85,7 +86,7 @@ TEST(Numeric, Nearest) {
   EXPECT_EQ(RTNAME(Nearest8)(Real<8>{1.0}, true),
       Real<8>{1.0} + std::ldexp(Real<8>{1.0}, -52));
   EXPECT_EQ(RTNAME(Nearest8)(Real<8>{1.0}, false),
-      Real<8>{1.0} - std::ldexp(Real<8>{1.0}, -52));
+      Real<8>{1.0} - 0.5 * std::ldexp(Real<8>{1.0}, -52));
 }
 
 TEST(Numeric, Nint) {

@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -28,8 +28,15 @@ constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
 constexpr const ::llvm::StringLiteral
     BufferizationDialect::kBufferLayoutAttrName;
 
-/// Attribute name used to mark escaping behavior of buffer allocations.
-constexpr const ::llvm::StringLiteral BufferizationDialect::kEscapeAttrName;
+/// An attribute that can be attached to ops with an allocation and/or
+/// deallocation side effect. It indicates that the op is under a "manual
+/// deallocation" scheme. In the case of an allocation op, the returned
+/// value is *not* an automatically managed allocation and assigned an
+/// ownership of "false". Furthermore, only deallocation ops that are
+/// guaranteed to deallocate a buffer under "manual deallocation" are
+/// allowed to have this attribute. (Deallocation ops without this
+/// attribute are rejected by the ownership-based buffer deallocation pass.)
+constexpr const ::llvm::StringLiteral BufferizationDialect::kManualDeallocation;
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
@@ -108,35 +115,13 @@ BufferizationDialect::verifyOperationAttribute(Operation *op,
                                                NamedAttribute attr) {
   using bufferization::BufferizableOpInterface;
 
-  if (attr.getName() == kEscapeAttrName) {
-    auto arrayAttr = llvm::dyn_cast<ArrayAttr>(attr.getValue());
-    if (!arrayAttr)
-      return op->emitError() << "'" << kEscapeAttrName
-                             << "' is expected to be a bool array attribute";
-    if (arrayAttr.size() != op->getNumResults())
-      return op->emitError()
-             << "'" << kEscapeAttrName
-             << "' has wrong number of elements, expected "
-             << op->getNumResults() << ", got " << arrayAttr.size();
-    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
-    if (!bufferizableOp)
-      return op->emitError()
-             << "'" << kEscapeAttrName << "' only valid on bufferizable ops";
-    for (const auto &it : llvm::enumerate(arrayAttr)) {
-      auto attr = it.value();
-      auto boolAttr = llvm::dyn_cast<BoolAttr>(attr);
-      if (!boolAttr)
-        return op->emitError() << "'" << kEscapeAttrName
-                               << "' is expected to be a bool array attribute";
-      if (!boolAttr.getValue())
-        continue;
-      if (!llvm::isa<TensorType>(op->getResult(it.index()).getType()))
-        return op->emitError()
-               << "'" << kEscapeAttrName << "' only valid for tensor results";
-      if (!bufferizableOp.bufferizesToAllocation(op->getOpResult(it.index())))
-        return op->emitError() << "'" << kEscapeAttrName
-                               << "' only valid for allocation results";
-    }
+  if (attr.getName() == kManualDeallocation) {
+    if (!mlir::hasEffect<MemoryEffects::Allocate>(op) &&
+        !mlir::hasEffect<MemoryEffects::Free>(op))
+      return op->emitOpError("attribute '")
+             << kManualDeallocation
+             << "' can be used only on ops that have an allocation and/or free "
+                "side effect";
     return success();
   }
 

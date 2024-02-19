@@ -34,6 +34,7 @@ public:
     bool is_set(int i) const override { return hwloc_bitmap_isset(mask, i); }
     void clear(int i) override { hwloc_bitmap_clr(mask, i); }
     void zero() override { hwloc_bitmap_zero(mask); }
+    bool empty() const override { return hwloc_bitmap_iszero(mask); }
     void copy(const KMPAffinity::Mask *src) override {
       const Mask *convert = static_cast<const Mask *>(src);
       hwloc_bitmap_copy(mask, convert->mask);
@@ -47,6 +48,10 @@ public:
       hwloc_bitmap_or(mask, mask, convert->mask);
     }
     void bitwise_not() override { hwloc_bitmap_not(mask, mask); }
+    bool is_equal(const KMPAffinity::Mask *rhs) const override {
+      const Mask *convert = static_cast<const Mask *>(rhs);
+      return hwloc_bitmap_isequal(mask, convert->mask);
+    }
     int begin() const override { return hwloc_bitmap_first(mask); }
     int end() const override { return -1; }
     int next(int previous) const override {
@@ -281,6 +286,28 @@ public:
 #elif __NR_sched_getaffinity != 123
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_VE
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 203
+#elif __NR_sched_setaffinity != 203
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 204
+#elif __NR_sched_getaffinity != 204
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_S390X
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 239
+#elif __NR_sched_setaffinity != 239
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 240
+#elif __NR_sched_getaffinity != 240
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
 #else
 #error Unknown or unsupported architecture
 #endif /* KMP_ARCH_* */
@@ -319,6 +346,13 @@ class KMPNativeAffinity : public KMPAffinity {
       for (mask_size_type i = 0; i < e; ++i)
         mask[i] = (mask_t)0;
     }
+    bool empty() const override {
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
+        if (mask[i] != (mask_t)0)
+          return false;
+      return true;
+    }
     void copy(const KMPAffinity::Mask *src) override {
       const Mask *convert = static_cast<const Mask *>(src);
       mask_size_type e = get_num_mask_types();
@@ -341,6 +375,14 @@ class KMPNativeAffinity : public KMPAffinity {
       mask_size_type e = get_num_mask_types();
       for (mask_size_type i = 0; i < e; ++i)
         mask[i] = ~(mask[i]);
+    }
+    bool is_equal(const KMPAffinity::Mask *rhs) const override {
+      const Mask *convert = static_cast<const Mask *>(rhs);
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
+        if (mask[i] != convert->mask[i])
+          return false;
+      return true;
     }
     int begin() const override {
       int retval = 0;
@@ -459,6 +501,12 @@ class KMPNativeAffinity : public KMPAffinity {
       for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] = 0;
     }
+    bool empty() const override {
+      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+        if (mask[i])
+          return false;
+      return true;
+    }
     void copy(const KMPAffinity::Mask *src) override {
       const Mask *convert = static_cast<const Mask *>(src);
       for (int i = 0; i < __kmp_num_proc_groups; ++i)
@@ -477,6 +525,13 @@ class KMPNativeAffinity : public KMPAffinity {
     void bitwise_not() override {
       for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] = ~(mask[i]);
+    }
+    bool is_equal(const KMPAffinity::Mask *rhs) const override {
+      const Mask *convert = static_cast<const Mask *>(rhs);
+      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+        if (mask[i] != convert->mask[i])
+          return false;
+      return true;
     }
     int begin() const override {
       int retval = 0;
@@ -679,6 +734,21 @@ struct kmp_hw_attr_t {
     }
     return false;
   }
+#if KMP_AFFINITY_SUPPORTED
+  bool contains(const kmp_affinity_attrs_t &attr) const {
+    if (!valid && !attr.valid)
+      return true;
+    if (valid && attr.valid) {
+      if (attr.core_type != KMP_HW_CORE_TYPE_UNKNOWN)
+        return (is_core_type_valid() &&
+                (get_core_type() == (kmp_hw_core_type_t)attr.core_type));
+      if (attr.core_eff != UNKNOWN_CORE_EFF)
+        return (is_core_eff_valid() && (get_core_eff() == attr.core_eff));
+      return true;
+    }
+    return false;
+  }
+#endif // KMP_AFFINITY_SUPPORTED
   bool operator==(const kmp_hw_attr_t &rhs) const {
     return (rhs.valid == valid && rhs.core_eff == core_eff &&
             rhs.core_type == core_type);
@@ -834,13 +904,18 @@ public:
 #if KMP_AFFINITY_SUPPORTED
   // Set the granularity for affinity settings
   void set_granularity(kmp_affinity_t &stgs) const;
-#endif
+  bool is_close(int hwt1, int hwt2, const kmp_affinity_t &stgs) const;
+  bool restrict_to_mask(const kmp_affin_mask_t *mask);
   bool filter_hw_subset();
-  bool is_close(int hwt1, int hwt2, int level) const;
+#endif
   bool is_uniform() const { return flags.uniform; }
   // Tell whether a type is a valid type in the topology
   // returns KMP_HW_UNKNOWN when there is no equivalent type
-  kmp_hw_t get_equivalent_type(kmp_hw_t type) const { return equivalent[type]; }
+  kmp_hw_t get_equivalent_type(kmp_hw_t type) const {
+    if (type == KMP_HW_UNKNOWN)
+      return KMP_HW_UNKNOWN;
+    return equivalent[type];
+  }
   // Set type1 = type2
   void set_equivalent_type(kmp_hw_t type1, kmp_hw_t type2) {
     KMP_DEBUG_ASSERT_VALID_HW_TYPE(type1);

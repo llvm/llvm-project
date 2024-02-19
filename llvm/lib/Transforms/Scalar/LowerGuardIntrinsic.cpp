@@ -20,24 +20,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/GuardUtils.h"
 
 using namespace llvm;
-
-namespace {
-struct LowerGuardIntrinsicLegacyPass : public FunctionPass {
-  static char ID;
-  LowerGuardIntrinsicLegacyPass() : FunctionPass(ID) {
-    initializeLowerGuardIntrinsicLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-}
 
 static bool lowerGuardIntrinsic(Function &F) {
   // Check if we can cheaply rule out the possibility of not having any work to
@@ -69,19 +54,6 @@ static bool lowerGuardIntrinsic(Function &F) {
   }
 
   return true;
-}
-
-bool LowerGuardIntrinsicLegacyPass::runOnFunction(Function &F) {
-  return lowerGuardIntrinsic(F);
-}
-
-char LowerGuardIntrinsicLegacyPass::ID = 0;
-INITIALIZE_PASS(LowerGuardIntrinsicLegacyPass, "lower-guard-intrinsic",
-                "Lower the guard intrinsic to normal control flow", false,
-                false)
-
-Pass *llvm::createLowerGuardIntrinsicPass() {
-  return new LowerGuardIntrinsicLegacyPass();
 }
 
 PreservedAnalyses LowerGuardIntrinsicPass::run(Function &F,

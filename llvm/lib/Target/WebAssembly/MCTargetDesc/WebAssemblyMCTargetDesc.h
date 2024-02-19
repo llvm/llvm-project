@@ -14,10 +14,10 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCTARGETDESC_H
 
-#include "../WebAssemblySubtarget.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include <memory>
 
@@ -425,8 +425,8 @@ inline bool isCallIndirect(unsigned Opc) {
   }
 }
 
-inline bool isBrTable(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
+inline bool isBrTable(unsigned Opc) {
+  switch (Opc) {
   case WebAssembly::BR_TABLE_I32:
   case WebAssembly::BR_TABLE_I32_S:
   case WebAssembly::BR_TABLE_I64:
@@ -535,7 +535,18 @@ inline bool isLocalTee(unsigned Opc) {
   }
 }
 
+static const unsigned UnusedReg = -1u;
+
+// For a given stackified WAReg, return the id number to print with push/pop.
+unsigned inline getWARegStackId(unsigned Reg) {
+  assert(Reg & INT32_MIN);
+  return Reg & INT32_MAX;
+}
+
 } // end namespace WebAssembly
 } // end namespace llvm
+
+#define GET_SUBTARGETINFO_ENUM
+#include "WebAssemblyGenSubtargetInfo.inc"
 
 #endif

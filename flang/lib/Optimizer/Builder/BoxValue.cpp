@@ -214,11 +214,6 @@ bool fir::BoxValue::verify() const {
     return false;
   if (!lbounds.empty() && lbounds.size() != rank())
     return false;
-  // Explicit extents are here to cover cases where an explicit-shape dummy
-  // argument comes as a fir.box. This can only happen with derived types and
-  // unlimited polymorphic.
-  if (!extents.empty() && !(isDerived() || isUnlimitedPolymorphic()))
-    return false;
   if (!extents.empty() && extents.size() != rank())
     return false;
   if (isCharacter() && explicitParams.size() > 1)
@@ -236,20 +231,4 @@ mlir::Value fir::factory::getExtentAtDimension(mlir::Location loc,
   if (dim < extents.size())
     return extents[dim];
   return {};
-}
-
-static inline bool isUndefOp(mlir::Value v) {
-  return mlir::isa_and_nonnull<fir::UndefOp>(v.getDefiningOp());
-}
-
-bool fir::ExtendedValue::isAssumedSize() const {
-  return match(
-      [](const fir::ArrayBoxValue &box) -> bool {
-        return !box.getExtents().empty() && isUndefOp(box.getExtents().back());
-        ;
-      },
-      [](const fir::CharArrayBoxValue &box) -> bool {
-        return !box.getExtents().empty() && isUndefOp(box.getExtents().back());
-      },
-      [](const auto &box) -> bool { return false; });
 }

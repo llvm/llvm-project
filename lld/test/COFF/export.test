@@ -68,10 +68,10 @@ CHECK6-NOT: duplicate /export option: exportfn1
 # RUN: llvm-nm -M %t.lib | FileCheck --check-prefix=SYMTAB %s
 
 SYMTAB: __imp_exportfn1 in export.test.tmp.DLL
-SYMTAB: exportfn1 in export.test.tmp.DLL
 SYMTAB: __imp_exportfn2 in export.test.tmp.DLL
-SYMTAB: exportfn2 in export.test.tmp.DLL
 SYMTAB: __imp_exportfn3 in export.test.tmp.DLL
+SYMTAB: exportfn1 in export.test.tmp.DLL
+SYMTAB: exportfn2 in export.test.tmp.DLL
 SYMTAB: exportfn3 in export.test.tmp.DLL
 
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:foo=kernel32.foobar

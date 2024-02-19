@@ -9,7 +9,7 @@
 //  Pass to get information for functions for the Stoke Optimization
 //  To use the Stoke optimization technique to optimize the HHVM.
 //  This Pass solves the two major problems to use the Stoke program without
-//  proting its code:
+//  probing its code:
 //
 //  1. Stoke works on function level, but it is only limited to relative
 //  small functions which are loop-free, call-free, exception-free, etc.
@@ -120,7 +120,7 @@ public:
   bool checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
                      RegAnalysis &RA, StokeFuncInfo &FuncInfo);
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

@@ -210,7 +210,7 @@ void Log::Warning(const char *format, ...) {
 void Log::Register(llvm::StringRef name, Channel &channel) {
   auto iter = g_channel_map->try_emplace(name, channel);
   assert(iter.second == true);
-  (void)iter;
+  UNUSED_IF_ASSERT_DISABLED(iter);
 }
 
 void Log::Unregister(llvm::StringRef name) {

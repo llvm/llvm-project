@@ -99,3 +99,45 @@ func.func @unordered() {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+func.func @polymorphic_mold_var(%arg0: !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>, %shape : index) {
+  %3 = fir.shape %shape : (index) -> !fir.shape<1>
+  %4 = hlfir.elemental %3 mold %arg0 unordered : (!fir.shape<1>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+  ^bb0(%arg2: index):
+    %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+  }
+  return
+}
+// CHECK-LABEL:   func.func @polymorphic_mold_var(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>,                   %[[VAL_1:.*]]: index) {
+// CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_3:.*]] = hlfir.elemental %[[VAL_2]] mold %[[VAL_0]] unordered : (!fir.shape<1>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+// CHECK:           ^bb0(%[[VAL_4:.*]]: index):
+// CHECK:             %[[VAL_5:.*]] = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+// CHECK:             hlfir.yield_element %[[VAL_5]] : !hlfir.expr<!fir.type<_QMtypesTt>?>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+func.func @polymorphic_mold_expr(%shape : index) {
+  %3 = fir.shape %shape : (index) -> !fir.shape<1>
+  %mold = fir.undefined !hlfir.expr<?x!fir.type<_QMtypesTt>?>
+  %4 = hlfir.elemental %3 mold %mold unordered : (!fir.shape<1>, !hlfir.expr<?x!fir.type<_QMtypesTt>?>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+  ^bb0(%arg2: index):
+    %6 = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %6 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+  }
+  return
+}
+// CHECK-LABEL:   func.func @polymorphic_mold_expr(
+// CHECK-SAME:        %[[VAL_0:.*]]: index) {
+// CHECK:           %[[VAL_1:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_2:.*]] = fir.undefined !hlfir.expr<?x!fir.type<_QMtypesTt>?>
+// CHECK:           %[[VAL_3:.*]] = hlfir.elemental %[[VAL_1]] mold %[[VAL_2]] unordered : (!fir.shape<1>, !hlfir.expr<?x!fir.type<_QMtypesTt>?>) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?> {
+// CHECK:           ^bb0(%[[VAL_4:.*]]: index):
+// CHECK:             %[[VAL_5:.*]] = fir.undefined !hlfir.expr<!fir.type<_QMtypesTt>?>
+// CHECK:             hlfir.yield_element %[[VAL_5]] : !hlfir.expr<!fir.type<_QMtypesTt>?>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

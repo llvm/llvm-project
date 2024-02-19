@@ -137,6 +137,8 @@ template <> struct ScalarEnumerationTraits<MachineJumpTableInfo::JTEntryKind> {
                 MachineJumpTableInfo::EK_GPRel32BlockAddress);
     IO.enumCase(EntryKind, "label-difference32",
                 MachineJumpTableInfo::EK_LabelDifference32);
+    IO.enumCase(EntryKind, "label-difference64",
+                MachineJumpTableInfo::EK_LabelDifference64);
     IO.enumCase(EntryKind, "inline", MachineJumpTableInfo::EK_Inline);
     IO.enumCase(EntryKind, "custom32", MachineJumpTableInfo::EK_Custom32);
   }
@@ -431,9 +433,9 @@ template <> struct ScalarTraits<FrameIndex> {
   static StringRef input(StringRef Scalar, void *Ctx, FrameIndex &FI) {
     FI.IsFixed = false;
     StringRef Num;
-    if (Scalar.startswith("%stack.")) {
+    if (Scalar.starts_with("%stack.")) {
       Num = Scalar.substr(7);
-    } else if (Scalar.startswith("%fixed-stack.")) {
+    } else if (Scalar.starts_with("%fixed-stack.")) {
       Num = Scalar.substr(13);
       FI.IsFixed = true;
     } else {

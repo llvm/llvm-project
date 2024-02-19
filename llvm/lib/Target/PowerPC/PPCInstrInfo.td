@@ -1328,6 +1328,9 @@ def SETFLM : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FLM),
                     "#SETFLM", [(set f64:$FRT, (int_ppc_setflm f8rc:$FLM))]>;
 }
 
+let isBarrier = 1, hasSideEffects = 1, Defs = [RM] in
+def FENCE : PPCEmitTimePseudo<(outs), (ins), "#FENCE", []>;
+
 let Defs = [LR] in
   def MovePCtoLR : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR", []>,
                    PPC970_Unit_BRU;
@@ -1641,8 +1644,16 @@ let isBranch = 1, isTerminator = 1, Size = 0 in {
 
 // System call.
 let PPC970_Unit = 7 in {
-  def SC     : SCForm<17, 1, (outs), (ins i32imm:$LEV),
+  def SC     : SCForm<17, 1, 0, (outs), (ins i32imm:$LEV),
                       "sc $LEV", IIC_BrB, [(PPCsc (i32 imm:$LEV))]>;
+}
+
+// We mark SCV as having no scheduling model since it is only meant to be used
+// as inline assembly. If we implement a builtin pattern for it we will need to
+// add it to the P9 and P10 scheduling models.
+let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
+  def SCV : SCForm<17, 0, 1, (outs), (ins i32imm:$LEV),
+                   "scv $LEV", IIC_BrB, []>;
 }
 
 // Branch history rolling buffer.
@@ -1713,11 +1724,11 @@ def : Pat<(int_ppc_dcbf xoaddr:$dst),
 def : Pat<(int_ppc_icbt xoaddr:$dst),
           (ICBT 0, xoaddr:$dst)>;
 
-def : Pat<(prefetch xoaddr:$dst, (i32 0), imm, (i32 1)),
+def : Pat<(prefetch xoaddr:$dst, (i32 0), timm, (i32 1)),
           (DCBT 0, xoaddr:$dst)>;   // data prefetch for loads
-def : Pat<(prefetch xoaddr:$dst, (i32 1), imm, (i32 1)),
+def : Pat<(prefetch xoaddr:$dst, (i32 1), timm, (i32 1)),
           (DCBTST 0, xoaddr:$dst)>; // data prefetch for stores
-def : Pat<(prefetch xoaddr:$dst, (i32 0), imm, (i32 0)),
+def : Pat<(prefetch xoaddr:$dst, (i32 0), timm, (i32 0)),
           (ICBT 0, xoaddr:$dst)>, Requires<[HasICBT]>; // inst prefetch (for read)
 
 def : Pat<(int_ppc_dcbt_with_hint xoaddr:$dst, i32:$TH),
@@ -1901,7 +1912,7 @@ def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, gprc:$RA, u5imm:$RB),
                           "stwat $RST, $RA, $RB", IIC_LdStStore>,
             Requires<[IsISA3_0]>;
 
-let isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+let isTrap = 1, hasCtrlDep = 1 in
 def TRAP  : XForm_24<31, 4, (outs), (ins), "trap", IIC_LdStLoad, [(trap)]>;
 
 def TWI : DForm_base<3, (outs), (ins u5imm:$RST, gprc:$RA, s16imm:$D, variable_ops),
@@ -3179,7 +3190,9 @@ def : Pat<(PPCtc_return (i32 texternalsym:$dst), imm:$imm),
 def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
+def : Pat<(int_ppc_fence), (FENCE)>;
 def : Pat<(int_ppc_readflm), (MFFS)>;
+def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
 // Hi and Lo for Darwin Global Addresses.
 def : Pat<(PPChi tglobaladdr:$in, 0), (LIS tglobaladdr:$in)>;
@@ -3251,8 +3264,8 @@ def GETtlsTpointer32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
                           "GETtlsTpointer32AIX",
                           [(set i32:$rD, (PPCgetTpointer))]>;
 
-// The following pattern matches local-exec TLS accesses on 32-bit AIX.
-// PPCaddTls is used in local-exec accesses in order to:
+// The following pattern matches local- and initial-exec TLS accesses on 32-bit AIX.
+// PPCaddTls is used in local- and initial-exec accesses in order to:
 //   - Get the address of a variable (add the variable offset to the thread
 //     pointer, retrieved by calling .__get_tpointer).
 //   - Create an opportunity to optimize the user of the loaded address.
@@ -3427,6 +3440,23 @@ def crnot : OutPatFrag<(ops node:$in),
                        (CRNOT $in)>;
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
+
+// Pseudo-instructions for alternate assembly syntax (never used by codegen).
+// These are aliases that require C++ handling to convert to the target
+// instruction, while InstAliases can be handled directly by tblgen.
+class PPCAsmPseudo<string asm, dag iops>
+  : Instruction {
+  let Namespace = "PPC";
+  bit PPC64 = 0;  // Default value, override with isPPC64
+
+  let OutOperandList = (outs);
+  let InOperandList = iops;
+  let Pattern = [];
+  let AsmString = asm;
+  let isAsmParserOnly = 1;
+  let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
+}
 
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
@@ -4317,6 +4347,9 @@ def TLBSX : XForm_tlb<914, (outs), (ins gprc:$RA, gprc:$RB), "tlbsx $RA, $RB",
 def TLBIVAX : XForm_tlb<786, (outs), (ins gprc:$RA, gprc:$RB), "tlbivax $RA, $RB",
                 IIC_LdStLoad>, Requires<[IsBookE]>;
 
+def TLBILX : XForm_tlbilx<18, (outs), (ins u2imm:$T, gprc:$RA, gprc:$RB),
+    "tlbilx $T, $RA, $RB", IIC_LdStLoad>, Requires<[IsBookE]>;
+
 def TLBRE : XForm_24_eieio<31, 946, (outs), (ins),
                            "tlbre", IIC_LdStLoad, []>, Requires<[IsBookE]>;
 
@@ -4445,23 +4478,6 @@ def ICBIEP  : XForm_1a<31, 991, (outs), (ins (memrr $RA, $RB):$addr), "icbiep $a
 //===----------------------------------------------------------------------===//
 // PowerPC Assembler Instruction Aliases
 //
-
-// Pseudo-instructions for alternate assembly syntax (never used by codegen).
-// These are aliases that require C++ handling to convert to the target
-// instruction, while InstAliases can be handled directly by tblgen.
-class PPCAsmPseudo<string asm, dag iops>
-  : Instruction {
-  let Namespace = "PPC";
-  bit PPC64 = 0;  // Default value, override with isPPC64
-
-  let OutOperandList = (outs);
-  let InOperandList = iops;
-  let Pattern = [];
-  let AsmString = asm;
-  let isAsmParserOnly = 1;
-  let isPseudo = 1;
-  let hasNoSchedulingInfo = 1;
-}
 
 def : InstAlias<"sc", (SC 0)>;
 
@@ -4680,6 +4696,12 @@ def : InstAlias<"tlbwehi $RS, $A", (TLBWE2 gprc:$RS, gprc:$A, 0)>,
 def : InstAlias<"tlbwelo $RS, $A", (TLBWE2 gprc:$RS, gprc:$A, 1)>,
                 Requires<[IsPPC4xx]>;
 
+def : InstAlias<"tlbilxlpid", (TLBILX 0, R0, R0)>, Requires<[IsBookE]>;
+def : InstAlias<"tlbilxpid", (TLBILX 1, R0, R0)>, Requires<[IsBookE]>;
+def : InstAlias<"tlbilxva $RA, $RB", (TLBILX 3, gprc:$RA, gprc:$RB)>,
+                Requires<[IsBookE]>;
+def : InstAlias<"tlbilxva $RB", (TLBILX 3, R0, gprc:$RB)>, Requires<[IsBookE]>;
+
 def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>;
 
 def SUBI : PPCAsmPseudo<"subi $rA, $rB, $imm",
@@ -4808,6 +4830,9 @@ def RLWNMbm : PPCAsmPseudo<"rlwnm $rA, $rS, $n, $b",
                           (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
 def RLWNMbm_rec : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
                            (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
+def PPCLdFixedAddr :
+  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm), "#FA_LOAD",
+                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))]>;
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.
@@ -5018,12 +5043,12 @@ def : Pat<(atomic_load_16 XForm:$src), (LHZX memrr:$src)>;
 def : Pat<(atomic_load_32 XForm:$src), (LWZX memrr:$src)>;
 
 // Atomic stores
-def : Pat<(atomic_store_8  DForm:$ptr, i32:$val), (STB  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_16 DForm:$ptr, i32:$val), (STH  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_32 DForm:$ptr, i32:$val), (STW  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_8  XForm:$ptr, i32:$val), (STBX gprc:$val, memrr:$ptr)>;
-def : Pat<(atomic_store_16 XForm:$ptr, i32:$val), (STHX gprc:$val, memrr:$ptr)>;
-def : Pat<(atomic_store_32 XForm:$ptr, i32:$val), (STWX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_16 i32:$val, DForm:$ptr), (STH  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_32 i32:$val, DForm:$ptr), (STW  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_8  i32:$val, XForm:$ptr), (STBX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_16 i32:$val, XForm:$ptr), (STHX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_32 i32:$val, XForm:$ptr), (STWX gprc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
 
@@ -5241,6 +5266,9 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  (ins gprc:$RB, (memrihash $D, $RA):$addr),
                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
+
+let Defs = [CR7], Itinerary = IIC_LdStSync in
+def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

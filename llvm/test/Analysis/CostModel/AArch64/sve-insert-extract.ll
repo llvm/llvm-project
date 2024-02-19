@@ -9,11 +9,11 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @ins_el0() #0 {
 ; CHECK-DEFAULT-LABEL: 'ins_el0'
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 false, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v1 = insertelement <vscale x 8 x i16> zeroinitializer, i16 0, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <vscale x 4 x i32> zeroinitializer, i32 0, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3 = insertelement <vscale x 2 x i64> zeroinitializer, i64 0, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 false, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = insertelement <vscale x 8 x i16> zeroinitializer, i16 0, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = insertelement <vscale x 4 x i32> zeroinitializer, i32 0, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = insertelement <vscale x 2 x i64> zeroinitializer, i64 0, i64 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
@@ -50,13 +50,13 @@ define void @ins_el0() #0 {
 
 define void @ins_el1() #0 {
 ; CHECK-DEFAULT-LABEL: 'ins_el1'
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 false, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v1 = insertelement <vscale x 8 x i16> zeroinitializer, i16 0, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = insertelement <vscale x 4 x i32> zeroinitializer, i32 0, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3 = insertelement <vscale x 2 x i64> zeroinitializer, i64 0, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %vi1 = insertelement <vscale x 16 x i1> zeroinitializer, i1 false, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v0 = insertelement <vscale x 16 x i8> zeroinitializer, i8 0, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = insertelement <vscale x 8 x i16> zeroinitializer, i16 0, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = insertelement <vscale x 4 x i32> zeroinitializer, i32 0, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = insertelement <vscale x 2 x i64> zeroinitializer, i64 0, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4 = insertelement <vscale x 4 x float> zeroinitializer, float 0.000000e+00, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = insertelement <vscale x 2 x double> zeroinitializer, double 0.000000e+00, i64 1
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-LOW-LABEL: 'ins_el1'
@@ -92,11 +92,11 @@ define void @ins_el1() #0 {
 
 define void @ext_el0() #0 {
 ; CHECK-DEFAULT-LABEL: 'ext_el0'
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 0
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 0
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 0
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
@@ -133,13 +133,13 @@ define void @ext_el0() #0 {
 
 define void @ext_el1() #0 {
 ; CHECK-DEFAULT-LABEL: 'ext_el1'
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 1
-; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %vi1 = extractelement <vscale x 16 x i1> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v0 = extractelement <vscale x 16 x i8> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = extractelement <vscale x 8 x i16> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = extractelement <vscale x 4 x i32> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = extractelement <vscale x 2 x i64> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4 = extractelement <vscale x 4 x float> zeroinitializer, i64 1
+; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = extractelement <vscale x 2 x double> zeroinitializer, i64 1
 ; CHECK-DEFAULT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-LOW-LABEL: 'ext_el1'

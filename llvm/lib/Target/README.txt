@@ -232,7 +232,7 @@ unsigned int popcount(unsigned int input) {
   return count;
 }
 
-This should be recognized as CLZ:  rdar://8459039
+This should be recognized as CLZ:  https://github.com/llvm/llvm-project/issues/64167
 
 unsigned clz_a(unsigned a) {
   int i;

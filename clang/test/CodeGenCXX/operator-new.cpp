@@ -14,7 +14,7 @@ void f1() {
   new teste();
 }
 
-// rdar://5739832 - operator new should check for overflow in multiply.
+// operator new should check for overflow in multiply.
 void *f2(long N) {
   return new int[N];
 

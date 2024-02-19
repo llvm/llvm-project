@@ -63,9 +63,14 @@ struct MyStruct { int StructCase; };
 // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: invalid case style for public member 'StructCase' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}struct MyStruct { int iStructCase; };
 
+struct shouldBeCamelCaseStruct { int iField; };
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'shouldBeCamelCaseStruct' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct ShouldBeCamelCaseStruct { int iField; };
+
 union MyUnion { int UnionCase; long lUnionCase; };
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for public member 'UnionCase' [readability-identifier-naming]
-// CHECK-FIXES: {{^}}union MyUnion { int iUnionCase; long lUnionCase; };
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for union 'MyUnion' [readability-identifier-naming]
+// CHECK-MESSAGES: :[[@LINE-2]]:21: warning: invalid case style for public member 'UnionCase' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}union myUnion { int iUnionCase; long lUnionCase; };
 
 //===----------------------------------------------------------------------===//
 // C string

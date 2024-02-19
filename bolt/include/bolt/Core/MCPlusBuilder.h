@@ -29,6 +29,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -64,7 +65,6 @@ public:
 private:
   /// A struct that represents a single annotation allocator
   struct AnnotationAllocator {
-    SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
     BumpPtrAllocator ValueAllocator;
     std::unordered_set<MCPlus::MCAnnotation *> AnnotationPool;
   };
@@ -96,60 +96,62 @@ private:
     return SignExtend64<56>(ImmValue & 0xff'ffff'ffff'ffffULL);
   }
 
-  MCInst *getAnnotationInst(const MCInst &Inst) const {
-    if (Inst.getNumOperands() == 0)
-      return nullptr;
+  std::optional<unsigned> getFirstAnnotationOpIndex(const MCInst &Inst) const {
+    const unsigned NumPrimeOperands = MCPlus::getNumPrimeOperands(Inst);
+    if (Inst.getNumOperands() == NumPrimeOperands)
+      return std::nullopt;
 
-    const MCOperand &LastOp = Inst.getOperand(Inst.getNumOperands() - 1);
-    if (!LastOp.isInst())
-      return nullptr;
+    assert(Inst.getOperand(NumPrimeOperands).getInst() == nullptr &&
+           "Empty instruction expected.");
 
-    MCInst *AnnotationInst = const_cast<MCInst *>(LastOp.getInst());
-    assert(AnnotationInst->getOpcode() == TargetOpcode::ANNOTATION_LABEL);
-
-    return AnnotationInst;
+    return NumPrimeOperands + 1;
   }
 
-  void removeAnnotationInst(MCInst &Inst) const {
-    assert(getAnnotationInst(Inst) && "Expected annotation instruction.");
-    Inst.erase(std::prev(Inst.end()));
-    assert(!getAnnotationInst(Inst) &&
-           "More than one annotation instruction detected.");
+  MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
+    for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
+      if (Iter->isInst()) {
+        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+        return Iter;
+      }
+    }
+    return Inst.end();
   }
 
-  void setAnnotationOpValue(MCInst &Inst, unsigned Index, int64_t Value,
-                            AllocatorIdTy AllocatorId = 0) {
-    MCInst *AnnotationInst = getAnnotationInst(Inst);
-    if (!AnnotationInst) {
-      AnnotationAllocator &Allocator = getAnnotationAllocator(AllocatorId);
-      AnnotationInst = new (Allocator.MCInstAllocator.Allocate()) MCInst();
-      AnnotationInst->setOpcode(TargetOpcode::ANNOTATION_LABEL);
-      Inst.addOperand(MCOperand::createInst(AnnotationInst));
+  void removeAnnotations(MCInst &Inst) const {
+    Inst.erase(getAnnotationInstOp(Inst), Inst.end());
+  }
+
+  void setAnnotationOpValue(MCInst &Inst, unsigned Index, int64_t Value) const {
+    const int64_t AnnotationValue = encodeAnnotationImm(Index, Value);
+    const std::optional<unsigned> FirstAnnotationOp =
+        getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp) {
+      Inst.addOperand(MCOperand::createInst(nullptr));
+      Inst.addOperand(MCOperand::createImm(AnnotationValue));
+      return;
     }
 
-    const int64_t AnnotationValue = encodeAnnotationImm(Index, Value);
-    for (int I = AnnotationInst->getNumOperands() - 1; I >= 0; --I) {
-      int64_t ImmValue = AnnotationInst->getOperand(I).getImm();
+    for (unsigned I = *FirstAnnotationOp; I < Inst.getNumOperands(); ++I) {
+      const int64_t ImmValue = Inst.getOperand(I).getImm();
       if (extractAnnotationIndex(ImmValue) == Index) {
-        AnnotationInst->getOperand(I).setImm(AnnotationValue);
+        Inst.getOperand(I).setImm(AnnotationValue);
         return;
       }
     }
 
-    AnnotationInst->addOperand(MCOperand::createImm(AnnotationValue));
+    Inst.addOperand(MCOperand::createImm(AnnotationValue));
   }
 
   std::optional<int64_t> getAnnotationOpValue(const MCInst &Inst,
                                               unsigned Index) const {
-    const MCInst *AnnotationInst = getAnnotationInst(Inst);
-    if (!AnnotationInst)
+    std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp)
       return std::nullopt;
 
-    for (int I = AnnotationInst->getNumOperands() - 1; I >= 0; --I) {
-      int64_t ImmValue = AnnotationInst->getOperand(I).getImm();
-      if (extractAnnotationIndex(ImmValue) == Index) {
+    for (unsigned I = *FirstAnnotationOp; I < Inst.getNumOperands(); ++I) {
+      const int64_t ImmValue = Inst.getOperand(I).getImm();
+      if (extractAnnotationIndex(ImmValue) == Index)
         return extractAnnotationValue(ImmValue);
-      }
     }
 
     return std::nullopt;
@@ -159,6 +161,7 @@ protected:
   const MCInstrAnalysis *Analysis;
   const MCInstrInfo *Info;
   const MCRegisterInfo *RegInfo;
+  const MCSubtargetInfo *STI;
 
   /// Map annotation name into an annotation index.
   StringMap<uint64_t> AnnotationNameIndexMap;
@@ -166,23 +169,24 @@ protected:
   /// Names of non-standard annotations.
   SmallVector<std::string, 8> AnnotationNames;
 
-  /// Allocate the TailCall annotation value. Clients of the target-specific
+  /// A mutex that is used to control parallel accesses to
+  /// AnnotationNameIndexMap and AnnotationsNames.
+  mutable llvm::sys::RWMutex AnnotationNameMutex;
+
+  /// Set TailCall annotation value to true. Clients of the target-specific
   /// MCPlusBuilder classes must use convert/lower/create* interfaces instead.
-  void setTailCall(MCInst &Inst);
-
-  /// Transfer annotations from \p SrcInst to \p DstInst.
-  void moveAnnotations(MCInst &&SrcInst, MCInst &DstInst) const {
-    assert(!getAnnotationInst(DstInst) &&
-           "Destination instruction should not have annotations.");
-    const MCInst *AnnotationInst = getAnnotationInst(SrcInst);
-    if (!AnnotationInst)
-      return;
-
-    DstInst.addOperand(MCOperand::createInst(AnnotationInst));
-    removeAnnotationInst(SrcInst);
-  }
+  void setTailCall(MCInst &Inst) const;
 
 public:
+  /// Transfer annotations from \p SrcInst to \p DstInst.
+  void moveAnnotations(MCInst &&SrcInst, MCInst &DstInst) const {
+    MCInst::iterator AnnotationOp = getAnnotationInstOp(SrcInst);
+    for (MCInst::iterator Iter = AnnotationOp; Iter != SrcInst.end(); ++Iter)
+      DstInst.addOperand(*Iter);
+
+    SrcInst.erase(AnnotationOp, SrcInst.end());
+  }
+
   /// Return iterator range covering def operands.
   iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
     return make_range(Inst.begin(),
@@ -326,8 +330,8 @@ public:
 
 public:
   MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                const MCRegisterInfo *RegInfo)
-      : Analysis(Analysis), Info(Info), RegInfo(RegInfo) {
+                const MCRegisterInfo *RegInfo, const MCSubtargetInfo *STI)
+      : Analysis(Analysis), Info(Info), RegInfo(RegInfo), STI(STI) {
     // Initialize the default annotation allocator with id 0
     AnnotationAllocators.emplace(0, AnnotationAllocator());
     MaxAllocatorId++;
@@ -384,7 +388,6 @@ public:
 
       Allocator.AnnotationPool.clear();
       Allocator.ValueAllocator.Reset();
-      Allocator.MCInstAllocator.DestroyAll();
     }
   }
 
@@ -437,7 +440,7 @@ public:
   virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
 
   /// Return true of the instruction is of pseudo kind.
-  bool isPseudo(const MCInst &Inst) const {
+  virtual bool isPseudo(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isPseudo();
   }
 
@@ -498,9 +501,9 @@ public:
   }
 
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
-                                                   MCContext *Ctx,
-                                                   bool IsLeaf) const {
+  virtual InstructionListType
+  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
+                       unsigned CodePointerSize) const {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -552,10 +555,6 @@ public:
   virtual bool deleteREPPrefix(MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
-  }
-
-  virtual bool isEHLabel(const MCInst &Inst) const {
-    return Inst.getOpcode() == TargetOpcode::EH_LABEL;
   }
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
@@ -613,12 +612,15 @@ public:
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
 
-  virtual bool isLoad(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
+  virtual bool mayLoad(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).mayLoad();
   }
 
-  virtual bool isStore(const MCInst &Inst) const {
+  virtual bool mayStore(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).mayStore();
+  }
+
+  virtual bool isAArch64Exclusive(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -639,9 +641,12 @@ public:
     return false;
   }
 
-  /// If non-zero, this is used to fill the executable space with instructions
-  /// that will trap. Defaults to 0.
-  virtual unsigned getTrapFillValue() const { return 0; }
+  /// Used to fill the executable space with instructions
+  /// that will trap.
+  virtual StringRef getTrapFillValue() const {
+    llvm_unreachable("not implemented");
+    return StringRef();
+  }
 
   /// Interface and basic functionality of a MCInstMatcher. The idea is to make
   /// it easy to match one or more MCInsts against a tree-like pattern and
@@ -1077,7 +1082,7 @@ public:
 
   /// Replace the compound memory operand of Inst with an immediate operand.
   /// The value of the immediate operand is computed by reading the \p
-  /// ConstantData array starting from \p offset and assuming little-endianess.
+  /// ConstantData array starting from \p offset and assuming little-endianness.
   /// Return true on success. The given instruction is modified in place.
   virtual bool replaceMemOperandWithImm(MCInst &Inst, StringRef ConstantData,
                                         uint64_t Offset) const {
@@ -1116,20 +1121,19 @@ public:
   std::optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
 
   /// Add handler and action info for call instruction.
-  void addEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
+  void addEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP) const;
 
   /// Update exception-handling info for the invoke instruction \p Inst.
   /// Return true on success and false otherwise, e.g. if the instruction is
   /// not an invoke.
-  bool updateEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
+  bool updateEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP) const;
 
   /// Return non-negative GNU_args_size associated with the instruction
   /// or -1 if there's no associated info.
   int64_t getGnuArgsSize(const MCInst &Inst) const;
 
   /// Add the value of GNU_args_size to Inst if it already has EH info.
-  void addGnuArgsSize(MCInst &Inst, int64_t GnuArgsSize,
-                      AllocatorIdTy AllocId = 0);
+  void addGnuArgsSize(MCInst &Inst, int64_t GnuArgsSize) const;
 
   /// Return jump table addressed by this instruction.
   uint64_t getJumpTable(const MCInst &Inst) const;
@@ -1142,7 +1146,7 @@ public:
                     AllocatorIdTy AllocId = 0);
 
   /// Disassociate instruction with a jump table.
-  bool unsetJumpTable(MCInst &Inst);
+  bool unsetJumpTable(MCInst &Inst) const;
 
   /// Return destination of conditional tail call instruction if \p Inst is one.
   std::optional<uint64_t> getConditionalTailCall(const MCInst &Inst) const;
@@ -1150,11 +1154,11 @@ public:
   /// Mark the \p Instruction as a conditional tail call, and set its
   /// destination address if it is known. If \p Instruction was already marked,
   /// update its destination with \p Dest.
-  bool setConditionalTailCall(MCInst &Inst, uint64_t Dest = 0);
+  bool setConditionalTailCall(MCInst &Inst, uint64_t Dest = 0) const;
 
   /// If \p Inst was marked as a conditional tail call convert it to a regular
   /// branch. Return true if the instruction was converted.
-  bool unsetConditionalTailCall(MCInst &Inst);
+  bool unsetConditionalTailCall(MCInst &Inst) const;
 
   /// Return offset of \p Inst in the original function, if available.
   std::optional<uint32_t> getOffset(const MCInst &Inst) const;
@@ -1163,10 +1167,23 @@ public:
   uint32_t getOffsetWithDefault(const MCInst &Inst, uint32_t Default) const;
 
   /// Set offset of \p Inst in the original function.
-  bool setOffset(MCInst &Inst, uint32_t Offset, AllocatorIdTy AllocatorId = 0);
+  bool setOffset(MCInst &Inst, uint32_t Offset) const;
 
   /// Remove offset annotation.
-  bool clearOffset(MCInst &Inst);
+  bool clearOffset(MCInst &Inst) const;
+
+  /// Return the label of \p Inst, if available.
+  MCSymbol *getLabel(const MCInst &Inst) const;
+
+  /// Set the label of \p Inst. This label will be emitted right before \p Inst
+  /// is emitted to MCStreamer.
+  bool setLabel(MCInst &Inst, MCSymbol *Label) const;
+
+  /// Get instruction size specified via annotation.
+  std::optional<uint32_t> getSize(const MCInst &Inst) const;
+
+  /// Set instruction size.
+  void setSize(MCInst &Inst, uint32_t Size) const;
 
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
@@ -1597,16 +1614,9 @@ public:
     return false;
   }
 
-  virtual void createLoadImmediate(MCInst &Inst, const MCPhysReg Dest,
-                                   uint32_t Imm) const {
+  virtual InstructionListType createLoadImmediate(const MCPhysReg Dest,
+                                                  uint64_t Imm) const {
     llvm_unreachable("not implemented");
-  }
-
-  /// Create instruction to increment contents of target by 1
-  virtual bool createIncMemory(MCInst &Inst, const MCSymbol *Target,
-                               MCContext *Ctx) const {
-    llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Create a fragment of code (sequence of instructions) that load a 32-bit
@@ -1728,17 +1738,51 @@ public:
     return false;
   }
 
-  virtual bool createEHLabel(MCInst &Inst, const MCSymbol *Label,
-                             MCContext *Ctx) const {
-    Inst.setOpcode(TargetOpcode::EH_LABEL);
-    Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_None, *Ctx)));
-    return true;
+  /// Extract a symbol and an addend out of the fixup value expression.
+  ///
+  /// Only the following limited expression types are supported:
+  ///   Symbol + Addend
+  ///   Symbol + Constant + Addend
+  ///   Const + Addend
+  ///   Symbol
+  std::pair<MCSymbol *, uint64_t> extractFixupExpr(const MCFixup &Fixup) const {
+    uint64_t Addend = 0;
+    MCSymbol *Symbol = nullptr;
+    const MCExpr *ValueExpr = Fixup.getValue();
+    if (ValueExpr->getKind() == MCExpr::Binary) {
+      const auto *BinaryExpr = cast<MCBinaryExpr>(ValueExpr);
+      assert(BinaryExpr->getOpcode() == MCBinaryExpr::Add &&
+             "unexpected binary expression");
+      const MCExpr *LHS = BinaryExpr->getLHS();
+      if (LHS->getKind() == MCExpr::Constant) {
+        Addend = cast<MCConstantExpr>(LHS)->getValue();
+      } else if (LHS->getKind() == MCExpr::Binary) {
+        const auto *LHSBinaryExpr = cast<MCBinaryExpr>(LHS);
+        assert(LHSBinaryExpr->getOpcode() == MCBinaryExpr::Add &&
+               "unexpected binary expression");
+        const MCExpr *LLHS = LHSBinaryExpr->getLHS();
+        assert(LLHS->getKind() == MCExpr::SymbolRef && "unexpected LLHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LLHS));
+        const MCExpr *RLHS = LHSBinaryExpr->getRHS();
+        assert(RLHS->getKind() == MCExpr::Constant && "unexpected RLHS");
+        Addend = cast<MCConstantExpr>(RLHS)->getValue();
+      } else {
+        assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
+      }
+      const MCExpr *RHS = BinaryExpr->getRHS();
+      assert(RHS->getKind() == MCExpr::Constant && "unexpected RHS");
+      Addend += cast<MCConstantExpr>(RHS)->getValue();
+    } else {
+      assert(ValueExpr->getKind() == MCExpr::SymbolRef && "unexpected value");
+      Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(ValueExpr));
+    }
+    return std::make_pair(Symbol, Addend);
   }
 
   /// Return annotation index matching the \p Name.
   std::optional<unsigned> getAnnotationIndex(StringRef Name) const {
+    std::shared_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
@@ -1748,10 +1792,10 @@ public:
   /// Return annotation index matching the \p Name. Create a new index if the
   /// \p Name wasn't registered previously.
   unsigned getOrCreateAnnotationIndex(StringRef Name) {
-    auto AI = AnnotationNameIndexMap.find(Name);
-    if (AI != AnnotationNameIndexMap.end())
-      return AI->second;
+    if (std::optional<unsigned> Index = getAnnotationIndex(Name))
+      return *Index;
 
+    std::unique_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     const unsigned Index =
         AnnotationNameIndexMap.size() + MCPlus::MCAnnotation::kGeneric;
     AnnotationNameIndexMap.insert(std::make_pair(Name, Index));
@@ -1765,6 +1809,8 @@ public:
   const ValueType &addAnnotation(MCInst &Inst, unsigned Index,
                                  const ValueType &Val,
                                  AllocatorIdTy AllocatorId = 0) {
+    assert(Index >= MCPlus::MCAnnotation::kGeneric &&
+           "Generic annotation type expected.");
     assert(!hasAnnotation(Inst, Index));
     AnnotationAllocator &Allocator = getAnnotationAllocator(AllocatorId);
     auto *A = new (Allocator.ValueAllocator)
@@ -1772,8 +1818,7 @@ public:
 
     if (!std::is_trivial<ValueType>::value)
       Allocator.AnnotationPool.insert(A);
-    setAnnotationOpValue(Inst, Index, reinterpret_cast<int64_t>(A),
-                         AllocatorId);
+    setAnnotationOpValue(Inst, Index, reinterpret_cast<int64_t>(A));
     return A->getValue();
   }
 
@@ -1906,21 +1951,21 @@ public:
   ///
   /// Return true if the annotation was removed, false if the annotation
   /// was not present.
-  bool removeAnnotation(MCInst &Inst, unsigned Index);
+  bool removeAnnotation(MCInst &Inst, unsigned Index) const;
 
   /// Remove annotation associated with \p Name.
   ///
   /// Return true if the annotation was removed, false if the annotation
   /// was not present.
-  bool removeAnnotation(MCInst &Inst, StringRef Name) {
+  bool removeAnnotation(MCInst &Inst, StringRef Name) const {
     const auto Index = getAnnotationIndex(Name);
     if (!Index)
       return false;
     return removeAnnotation(Inst, *Index);
   }
 
-  /// Remove meta-data, but don't destroy it.
-  void stripAnnotations(MCInst &Inst, bool KeepTC = false);
+  /// Remove meta-data from the instruction, but don't destroy it.
+  void stripAnnotations(MCInst &Inst, bool KeepTC = false) const;
 
   virtual InstructionListType
   createInstrumentedIndirectCall(MCInst &&CallInst, MCSymbol *HandlerFuncAddr,
@@ -1969,7 +2014,7 @@ public:
   }
 
   virtual InstructionListType createSymbolTrampoline(const MCSymbol *TgtSym,
-                                                     MCContext *Ctx) const {
+                                                     MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -2022,6 +2067,12 @@ public:
     return BlocksVectorTy();
   }
 
+  virtual uint16_t getMinFunctionAlignment() const {
+    // We have to use at least 2-byte alignment for functions because of C++
+    // ABI.
+    return 2;
+  }
+
   // AliasMap caches a mapping of registers to the set of registers that
   // alias (are sub or superregs of itself, including itself).
   std::vector<BitVector> AliasMap;
@@ -2032,15 +2083,18 @@ public:
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
                                       const MCInstrInfo *,
-                                      const MCRegisterInfo *);
+                                      const MCRegisterInfo *,
+                                      const MCSubtargetInfo *);
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
                                           const MCInstrInfo *,
-                                          const MCRegisterInfo *);
+                                          const MCRegisterInfo *,
+                                          const MCSubtargetInfo *);
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
                                         const MCInstrInfo *,
-                                        const MCRegisterInfo *);
+                                        const MCRegisterInfo *,
+                                        const MCSubtargetInfo *);
 
 } // namespace bolt
 } // namespace llvm

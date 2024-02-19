@@ -3,7 +3,7 @@
 
 define <1 x i8> @test1(<8 x i8> %in) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <8 x i8> [[IN:%.*]], <8 x i8> undef, <1 x i32> <i32 5>
+; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <8 x i8> [[IN:%.*]], <8 x i8> poison, <1 x i32> <i32 5>
 ; CHECK-NEXT:    ret <1 x i8> [[VEC]]
 ;
   %val = extractelement <8 x i8> %in, i32 5
@@ -427,7 +427,7 @@ define <5 x float> @insert_not_undef_shuffle_translate_commute_lengthen(float %x
 
 define <4 x float> @insert_nonzero_index_splat(float %x) {
 ; CHECK-LABEL: @insert_nonzero_index_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[SPLAT]]
 ;
@@ -438,7 +438,7 @@ define <4 x float> @insert_nonzero_index_splat(float %x) {
 
 define <3 x double> @insert_nonzero_index_splat_narrow(double %x) {
 ; CHECK-LABEL: @insert_nonzero_index_splat_narrow(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> undef, double [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> poison, double [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <3 x double> [[TMP1]], <3 x double> poison, <3 x i32> <i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <3 x double> [[SPLAT]]
 ;
@@ -449,7 +449,7 @@ define <3 x double> @insert_nonzero_index_splat_narrow(double %x) {
 
 define <5 x i7> @insert_nonzero_index_splat_widen(i7 %x) {
 ; CHECK-LABEL: @insert_nonzero_index_splat_widen(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x i7> undef, i7 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x i7> poison, i7 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <5 x i7> [[TMP1]], <5 x i7> poison, <5 x i32> <i32 poison, i32 0, i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <5 x i7> [[SPLAT]]
 ;

@@ -395,9 +395,10 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
         DefArgResult = ParseBraceInitializer();
       } else
         DefArgResult = ParseAssignmentExpression();
-      DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult);
+      DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult, Param);
       if (DefArgResult.isInvalid()) {
-        Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
+        Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
+                                               /*DefaultArg=*/nullptr);
       } else {
         if (Tok.isNot(tok::eof) || Tok.getEofData() != Param) {
           // The last two tokens are the terminator and the saved value of
@@ -977,6 +978,19 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
       } else {
         break;
       }
+      // Pack indexing
+      if (Tok.is(tok::ellipsis) && NextToken().is(tok::l_square)) {
+        Toks.push_back(Tok);
+        SourceLocation OpenLoc = ConsumeToken();
+        Toks.push_back(Tok);
+        ConsumeBracket();
+        if (!ConsumeAndStoreUntil(tok::r_square, Toks, /*StopAtSemi=*/true)) {
+          Diag(Tok.getLocation(), diag::err_expected) << tok::r_square;
+          Diag(OpenLoc, diag::note_matching) << tok::l_square;
+          return true;
+        }
+      }
+
     } while (Tok.is(tok::coloncolon));
 
     if (Tok.is(tok::code_completion)) {

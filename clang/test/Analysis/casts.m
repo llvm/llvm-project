@@ -18,7 +18,6 @@ void* test2(void *p) {
   return (*fp)();
 }
 
-// <radar://10087620>
 // A cast from int onjective C property reference to int.
 typedef signed char BOOL;
 @protocol NSObject  - (BOOL)isEqual:(id)object; @end

@@ -27,6 +27,8 @@ public:
     NotAConstant,
     OutOfRange,
     SizeMismatch,
+    LengthMismatch,
+    TooManyElems
   };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
@@ -65,7 +67,11 @@ public:
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
-      auto elements{TotalElementCount(x.shape())};
+      auto optElements{TotalElementCount(x.shape())};
+      if (!optElements) {
+        return TooManyElems;
+      }
+      auto elements{*optElements};
       auto elementBytes{bytes > 0 ? bytes / elements : 0};
       if (elements * elementBytes != bytes) {
         return SizeMismatch;
@@ -77,7 +83,7 @@ public:
           auto scalar{x.At(at)}; // this is a std string; size() in chars
           auto scalarBytes{scalar.size() * KIND};
           if (scalarBytes != elementBytes) {
-            result = SizeMismatch;
+            result = LengthMismatch;
           }
           // Blank padding when short
           for (; scalarBytes < elementBytes; scalarBytes += KIND) {

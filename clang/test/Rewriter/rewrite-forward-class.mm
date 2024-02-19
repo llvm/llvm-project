@@ -41,8 +41,6 @@ int I,J,K;
 
 };
 
-
-// rdar://15027032
 @interface ISDPropertyChangeGroup
 @end
 

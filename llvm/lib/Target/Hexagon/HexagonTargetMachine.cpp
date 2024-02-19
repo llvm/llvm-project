@@ -39,6 +39,10 @@ static cl::opt<bool>
 static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::init(true),
                                   cl::desc("Enable RDF-based optimizations"));
 
+cl::opt<unsigned> RDFFuncBlockLimit(
+    "rdf-bb-limit", cl::Hidden, cl::init(1000),
+    cl::desc("Basic block limit for a function for RDF optimizations"));
+
 static cl::opt<bool> DisableHardwareLoops("disable-hexagon-hwloops",
   cl::Hidden, cl::desc("Disable Hardware Loops for Hexagon target"));
 
@@ -117,6 +121,10 @@ static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
+static cl::opt<bool> DisableHexagonPostIncOpt(
+    "hexagon-postinc-opt", cl::Hidden,
+    cl::desc("Disable Hexagon post-increment optimization"));
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -153,6 +161,7 @@ namespace llvm {
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
+  void initializeHexagonPostIncOptPass(PassRegistry &);
   void initializeHexagonRDFOptPass(PassRegistry&);
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
   void initializeHexagonVExtractPass(PassRegistry &);
@@ -177,13 +186,14 @@ namespace llvm {
   FunctionPass *createHexagonGenPredicate();
   FunctionPass *createHexagonHardwareLoops();
   FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel);
+                                     CodeGenOptLevel OptLevel);
   FunctionPass *createHexagonLoopRescheduling();
   FunctionPass *createHexagonNewValueJump();
   FunctionPass *createHexagonOptAddrMode();
   FunctionPass *createHexagonOptimizeSZextends();
   FunctionPass *createHexagonPacketizer(bool Minimal);
   FunctionPass *createHexagonPeephole();
+  FunctionPass *createHexagonPostIncOpt();
   FunctionPass *createHexagonRDFOpt();
   FunctionPass *createHexagonSplitConst32AndConst64();
   FunctionPass *createHexagonSplitDoubleRegs();
@@ -213,6 +223,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
+  initializeHexagonPostIncOptPass(PR);
   initializeHexagonRDFOptPass(PR);
   initializeHexagonSplitDoubleRegsPass(PR);
   initializeHexagonVectorCombineLegacyPass(PR);
@@ -226,7 +237,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOpt::Level OL, bool JIT)
+                                           CodeGenOptLevel OL, bool JIT)
     // Specify the vector alignment explicitly. For v512x1, the calculated
     // alignment would be 512*alignment(i1), which is 512 bytes, instead of
     // the required minimum of 64 bytes.
@@ -237,9 +248,10 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small),
-          (HexagonNoOpt ? CodeGenOpt::None : OL)),
+          (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
+  initializeHexagonPostIncOptPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
 
@@ -274,7 +286,8 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());
@@ -330,7 +343,7 @@ TargetPassConfig *HexagonTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void HexagonPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
-  bool NoOpt = (getOptLevel() == CodeGenOpt::None);
+  bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt) {
     if (EnableInstSimplify)
@@ -363,7 +376,7 @@ void HexagonPassConfig::addIRPasses() {
 
 bool HexagonPassConfig::addInstSelector() {
   HexagonTargetMachine &TM = getHexagonTargetMachine();
-  bool NoOpt = (getOptLevel() == CodeGenOpt::None);
+  bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt)
     addPass(createHexagonOptimizeSZextends());
@@ -401,7 +414,7 @@ bool HexagonPassConfig::addInstSelector() {
 }
 
 void HexagonPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableCExtOpt)
       addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
@@ -411,12 +424,17 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops());
   }
-  if (TM->getOptLevel() >= CodeGenOpt::Default)
+
+  if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive)
+    if (!DisableHexagonPostIncOpt)
+      addPass(createHexagonPostIncOpt());
+
+  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableRDFOpt)
       addPass(createHexagonRDFOpt());
     if (!DisableHexagonCFGOpt)
@@ -428,13 +446,13 @@ void HexagonPassConfig::addPostRegAlloc() {
 
 void HexagonPassConfig::addPreSched2() {
   addPass(createHexagonCopyToCombine());
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&IfConverterID);
   addPass(createHexagonSplitConst32AndConst64());
 }
 
 void HexagonPassConfig::addPreEmitPass() {
-  bool NoOpt = (getOptLevel() == CodeGenOpt::None);
+  bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt)
     addPass(createHexagonNewValueJump());

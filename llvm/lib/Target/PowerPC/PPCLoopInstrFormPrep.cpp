@@ -660,8 +660,8 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
 
   Type *I8Ty = Type::getInt8Ty(BaseMemI->getParent()->getContext());
   Type *I8PtrTy =
-      Type::getInt8PtrTy(BaseMemI->getParent()->getContext(),
-                         BasePtr->getType()->getPointerAddressSpace());
+      PointerType::get(BaseMemI->getParent()->getContext(),
+                       BasePtr->getType()->getPointerAddressSpace());
 
   bool IsConstantInc = false;
   const SCEV *BasePtrIncSCEV = BasePtrSCEV->getStepRecurrence(*SE);
@@ -707,8 +707,8 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
   PHINode *NewPHI = PHINode::Create(I8PtrTy, HeaderLoopPredCount,
-                                    getInstrName(BaseMemI, PHINodeNameSuffix),
-                                    Header->getFirstNonPHI());
+                                    getInstrName(BaseMemI, PHINodeNameSuffix));
+  NewPHI->insertBefore(Header->getFirstNonPHIIt());
 
   Value *BasePtrStart = SCEVE.expandCodeFor(BasePtrStartSCEV, I8PtrTy,
                                             LoopPredecessor->getTerminator());

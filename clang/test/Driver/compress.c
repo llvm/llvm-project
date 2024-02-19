@@ -30,6 +30,6 @@
 // CHECK-OPT_GZ_EQ_ZLIB: {{.* "-cc1(as)?".* "--compress-debug-sections=zlib"}}
 // CHECK-OPT_GZ_EQ_ZLIB: "--compress-debug-sections=zlib"
 
-// RUN: %clang -### -fintegrated-as -gz=invalid -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
-// RUN: %clang -### -fintegrated-as -gz=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
+// RUN: not %clang -### -fintegrated-as -gz=invalid -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
+// RUN: not %clang -### -fintegrated-as -gz=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_INVALID %s
 // CHECK-OPT_GZ_EQ_INVALID: error: unsupported argument 'invalid' to option '-gz='

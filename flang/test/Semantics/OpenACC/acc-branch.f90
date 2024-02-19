@@ -1,8 +1,8 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC restruction in branch in and out of some construct
 !
-program openacc_clause_validity
+subroutine openacc_clause_validity
 
   implicit none
 
@@ -18,6 +18,27 @@ program openacc_clause_validity
     return
   end do
   !$acc end parallel
+
+  !$acc parallel loop
+  do i = 1, N
+    a(i) = 3.14
+    !ERROR: RETURN statement is not allowed in a PARALLEL LOOP construct
+    return
+  end do
+
+  !$acc serial loop
+  do i = 1, N
+    a(i) = 3.14
+    !ERROR: RETURN statement is not allowed in a SERIAL LOOP construct
+    return
+  end do
+
+  !$acc kernels loop
+  do i = 1, N
+    a(i) = 3.14
+    !ERROR: RETURN statement is not allowed in a KERNELS LOOP construct
+    return
+  end do
 
   !$acc parallel
   !$acc loop
@@ -167,4 +188,12 @@ program openacc_clause_validity
   end do
   !$acc end serial
 
-end program openacc_clause_validity
+
+  !$acc data create(a)
+
+  !ERROR: RETURN statement is not allowed in a DATA construct
+  if (size(a) == 10) return
+
+  !$acc end data
+
+end subroutine openacc_clause_validity

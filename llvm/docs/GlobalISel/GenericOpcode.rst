@@ -655,10 +655,10 @@ G_VECREDUCE_FADD, G_VECREDUCE_FMUL
 
 These reductions are relaxed variants which may reduce the elements in any order.
 
-G_VECREDUCE_FMAX, G_VECREDUCE_FMIN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_VECREDUCE_FMAX, G_VECREDUCE_FMIN, G_VECREDUCE_FMAXIMUM, G_VECREDUCE_FMINIMUM
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
+FMIN/FMAX/FMINIMUM/FMAXIMUM nodes can have flags, for NaN/NoNaN variants.
 
 
 Integer/bitwise reductions
@@ -751,9 +751,10 @@ operands.
 G_FENCE
 ^^^^^^^
 
-.. caution::
+Generic fence. The first operand is the memory ordering. The second operand is
+the syncscope.
 
-  I couldn't find any documentation on this at the time of writing.
+See the LLVM LangRef entry on the '``fence'`` instruction for more details.
 
 G_MEMCPY
 ^^^^^^^^
@@ -856,13 +857,25 @@ it during passes like legalization. This is needed because calls to exception
 throw routines do not return, so no code that must be on an executable path must
 be placed after throwing.
 
-G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_INTRINSIC, G_INTRINSIC_CONVERGENT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Call an intrinsic
+Call an intrinsic that has no side-effects.
 
-The _W_SIDE_EFFECTS version is considered to have unknown side-effects and
-as such cannot be reordered across other side-effecting instructions.
+The _CONVERGENT variant corresponds to an LLVM IR intrinsic marked `convergent`.
+
+.. note::
+
+  Unlike SelectionDAG, there is no _VOID variant. Both of these are permitted
+  to have zero, one, or multiple results.
+
+G_INTRINSIC_W_SIDE_EFFECTS, G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Call an intrinsic that is considered to have unknown side-effects and as such
+cannot be reordered across other side-effecting instructions.
+
+The _CONVERGENT variant corresponds to an LLVM IR intrinsic marked `convergent`.
 
 .. note::
 

@@ -1195,7 +1195,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
         /*isPropertyAccessor=*/false,
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-        ObjCMethodDecl::Required, false);
+        ObjCImplementationControl::Required, false);
     ParmVarDecl *Argument = ParmVarDecl::Create(S.Context, AtIndexGetter,
                                                 SourceLocation(), SourceLocation(),
                                                 arrayRef ? &S.Context.Idents.get("index")
@@ -1301,7 +1301,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
         /*isPropertyAccessor=*/false,
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-        ObjCMethodDecl::Required, false);
+        ObjCImplementationControl::Required, false);
     SmallVector<ParmVarDecl *, 2> Params;
     ParmVarDecl *object = ParmVarDecl::Create(S.Context, AtIndexSetter,
                                                 SourceLocation(), SourceLocation(),
@@ -1451,7 +1451,8 @@ MSPropertyOpBuilder::getBaseMSProperty(MSPropertySubscriptExpr *E) {
 
 Expr *MSPropertyOpBuilder::rebuildAndCaptureObject(Expr *syntacticBase) {
   InstanceBase = capture(RefExpr->getBaseExpr());
-  llvm::for_each(CallArgs, [this](Expr *&Arg) { Arg = capture(Arg); });
+  for (Expr *&Arg : CallArgs)
+    Arg = capture(Arg);
   syntacticBase = Rebuilder(S, [=](Expr *, unsigned Idx) -> Expr * {
                     switch (Idx) {
                     case 0:

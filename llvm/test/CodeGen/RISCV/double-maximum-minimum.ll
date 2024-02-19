@@ -47,14 +47,17 @@ define double @fminimum_f64(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
 ; RV32IZFINXZDINX-NEXT:    mv a4, a2
+; RV32IZFINXZDINX-NEXT:    mv a5, a3
 ; RV32IZFINXZDINX-NEXT:    bnez a6, .LBB0_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1:
 ; RV32IZFINXZDINX-NEXT:    mv a4, a0
+; RV32IZFINXZDINX-NEXT:    mv a5, a1
 ; RV32IZFINXZDINX-NEXT:  .LBB0_2:
 ; RV32IZFINXZDINX-NEXT:    feq.d a6, a2, a2
 ; RV32IZFINXZDINX-NEXT:    bnez a6, .LBB0_4
 ; RV32IZFINXZDINX-NEXT:  # %bb.3:
 ; RV32IZFINXZDINX-NEXT:    mv a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a1, a3
 ; RV32IZFINXZDINX-NEXT:  .LBB0_4:
 ; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a4
 ; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
@@ -121,14 +124,17 @@ define double @fmaximum_f64(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
 ; RV32IZFINXZDINX-NEXT:    mv a4, a2
+; RV32IZFINXZDINX-NEXT:    mv a5, a3
 ; RV32IZFINXZDINX-NEXT:    bnez a6, .LBB1_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1:
 ; RV32IZFINXZDINX-NEXT:    mv a4, a0
+; RV32IZFINXZDINX-NEXT:    mv a5, a1
 ; RV32IZFINXZDINX-NEXT:  .LBB1_2:
 ; RV32IZFINXZDINX-NEXT:    feq.d a6, a2, a2
 ; RV32IZFINXZDINX-NEXT:    bnez a6, .LBB1_4
 ; RV32IZFINXZDINX-NEXT:  # %bb.3:
 ; RV32IZFINXZDINX-NEXT:    mv a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a1, a3
 ; RV32IZFINXZDINX-NEXT:  .LBB1_4:
 ; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a4
 ; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
@@ -159,6 +165,213 @@ define double @fmaximum_f64(double %a, double %b) nounwind {
   %1 = call double @llvm.maximum.f64(double %a, double %b)
   ret double %1
 }
+
+define double @fminimum_nnan_f64(double %a, double %b) nounwind {
+; CHECKIFD-LABEL: fminimum_nnan_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fmin.d fa0, fa0, fa1
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fminimum_nnan_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fminimum_nnan_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
+  %1 = call nnan double @llvm.minimum.f64(double %a, double %b)
+  ret double %1
+}
+
+define double @fmaximum_nnan_f64(double %a, double %b) nounwind {
+; CHECKIFD-LABEL: fmaximum_nnan_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    feq.d a0, fa0, fa0
+; CHECKIFD-NEXT:    fmv.d fa5, fa1
+; CHECKIFD-NEXT:    beqz a0, .LBB3_3
+; CHECKIFD-NEXT:  # %bb.1:
+; CHECKIFD-NEXT:    feq.d a0, fa1, fa1
+; CHECKIFD-NEXT:    beqz a0, .LBB3_4
+; CHECKIFD-NEXT:  .LBB3_2:
+; CHECKIFD-NEXT:    fmin.d fa0, fa0, fa5
+; CHECKIFD-NEXT:    ret
+; CHECKIFD-NEXT:  .LBB3_3:
+; CHECKIFD-NEXT:    fmv.d fa5, fa0
+; CHECKIFD-NEXT:    feq.d a0, fa1, fa1
+; CHECKIFD-NEXT:    bnez a0, .LBB3_2
+; CHECKIFD-NEXT:  .LBB3_4:
+; CHECKIFD-NEXT:    fmin.d fa0, fa1, fa5
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fmaximum_nnan_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
+; RV32IZFINXZDINX-NEXT:    mv a4, a2
+; RV32IZFINXZDINX-NEXT:    mv a5, a3
+; RV32IZFINXZDINX-NEXT:    bnez a6, .LBB3_2
+; RV32IZFINXZDINX-NEXT:  # %bb.1:
+; RV32IZFINXZDINX-NEXT:    mv a4, a0
+; RV32IZFINXZDINX-NEXT:    mv a5, a1
+; RV32IZFINXZDINX-NEXT:  .LBB3_2:
+; RV32IZFINXZDINX-NEXT:    feq.d a6, a2, a2
+; RV32IZFINXZDINX-NEXT:    bnez a6, .LBB3_4
+; RV32IZFINXZDINX-NEXT:  # %bb.3:
+; RV32IZFINXZDINX-NEXT:    mv a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a1, a3
+; RV32IZFINXZDINX-NEXT:  .LBB3_4:
+; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a4
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fmaximum_nnan_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    feq.d a3, a0, a0
+; RV64IZFINXZDINX-NEXT:    mv a2, a1
+; RV64IZFINXZDINX-NEXT:    beqz a3, .LBB3_3
+; RV64IZFINXZDINX-NEXT:  # %bb.1:
+; RV64IZFINXZDINX-NEXT:    feq.d a3, a1, a1
+; RV64IZFINXZDINX-NEXT:    beqz a3, .LBB3_4
+; RV64IZFINXZDINX-NEXT:  .LBB3_2:
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
+; RV64IZFINXZDINX-NEXT:    ret
+; RV64IZFINXZDINX-NEXT:  .LBB3_3:
+; RV64IZFINXZDINX-NEXT:    mv a2, a0
+; RV64IZFINXZDINX-NEXT:    feq.d a3, a1, a1
+; RV64IZFINXZDINX-NEXT:    bnez a3, .LBB3_2
+; RV64IZFINXZDINX-NEXT:  .LBB3_4:
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a1, a2
+; RV64IZFINXZDINX-NEXT:    ret
+  %1 = call double @llvm.minimum.f64(double %a, double %b)
+  ret double %1
+}
+
+define double @fminimum_nnan_op_f64(double %a, double %b) nounwind {
+; CHECKIFD-LABEL: fminimum_nnan_op_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    feq.d a0, fa1, fa1
+; CHECKIFD-NEXT:    bnez a0, .LBB4_2
+; CHECKIFD-NEXT:  # %bb.1:
+; CHECKIFD-NEXT:    fmin.d fa0, fa1, fa1
+; CHECKIFD-NEXT:    ret
+; CHECKIFD-NEXT:  .LBB4_2:
+; CHECKIFD-NEXT:    fadd.d fa5, fa0, fa0
+; CHECKIFD-NEXT:    fmin.d fa0, fa5, fa1
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fminimum_nnan_op_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    feq.d a0, a2, a2
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    bnez a0, .LBB4_2
+; RV32IZFINXZDINX-NEXT:  # %bb.1:
+; RV32IZFINXZDINX-NEXT:    mv a0, a2
+; RV32IZFINXZDINX-NEXT:    mv a1, a3
+; RV32IZFINXZDINX-NEXT:    j .LBB4_3
+; RV32IZFINXZDINX-NEXT:  .LBB4_2:
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a0
+; RV32IZFINXZDINX-NEXT:  .LBB4_3:
+; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fminimum_nnan_op_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    feq.d a2, a1, a1
+; RV64IZFINXZDINX-NEXT:    bnez a2, .LBB4_2
+; RV64IZFINXZDINX-NEXT:  # %bb.1:
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a1, a1
+; RV64IZFINXZDINX-NEXT:    ret
+; RV64IZFINXZDINX-NEXT:  .LBB4_2:
+; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
+  %c = fadd nnan double %a, %a
+  %1 = call double @llvm.minimum.f64(double %c, double %b)
+  ret double %1
+}
+
+define double @fmaximum_nnan_op_f64(double %a, double %b) nounwind {
+; CHECKIFD-LABEL: fmaximum_nnan_op_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fadd.d fa5, fa0, fa1
+; CHECKIFD-NEXT:    fsub.d fa4, fa0, fa1
+; CHECKIFD-NEXT:    fmax.d fa0, fa5, fa4
+; CHECKIFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fmaximum_nnan_op_f64:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    fadd.d a4, a0, a2
+; RV32IZFINXZDINX-NEXT:    fsub.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    fmax.d a0, a4, a0
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: fmaximum_nnan_op_f64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fadd.d a2, a0, a1
+; RV64IZFINXZDINX-NEXT:    fsub.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fmax.d a0, a2, a0
+; RV64IZFINXZDINX-NEXT:    ret
+  %c = fadd nnan double %a, %b
+  %d = fsub nnan double %a, %b
+  %1 = call double @llvm.maximum.f64(double %c, double %d)
+  ret double %1
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV32IFD: {{.*}}
 ; RV64IFD: {{.*}}

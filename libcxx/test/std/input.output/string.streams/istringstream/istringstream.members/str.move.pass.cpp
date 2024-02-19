@@ -31,6 +31,20 @@ static void test() {
     assert(s == STR("testing"));
     assert(ss.view().empty());
   }
+  {
+    std::basic_istringstream<CharT> ss;
+    std::basic_string<CharT> s = std::move(ss).str();
+    assert(s.empty());
+    assert(ss.view().empty());
+  }
+  {
+    std::basic_istringstream<CharT> ss(
+        STR("a very long string that exceeds the small string optimization buffer length"));
+    const CharT* p             = ss.view().data();
+    std::basic_string<CharT> s = std::move(ss).str();
+    assert(s.data() == p); // the allocation was pilfered
+    assert(ss.view().empty());
+  }
 }
 
 int main(int, char**) {

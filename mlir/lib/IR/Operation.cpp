@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
 
@@ -309,8 +310,7 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
-      if (std::optional<Attribute> inherentAttr =
-              getInherentAttr(attr.getName()))
+      if (getInherentAttr(attr.getName()))
         setInherentAttr(attr.getName(), attr.getValue());
       else
         discardableAttrs.push_back(attr);
@@ -327,8 +327,7 @@ void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
-      if (std::optional<Attribute> inherentAttr =
-              getInherentAttr(attr.getName()))
+      if (getInherentAttr(attr.getName()))
         setInherentAttr(attr.getName(), attr.getValue());
       else
         discardableAttrs.push_back(attr);
@@ -353,16 +352,15 @@ Attribute Operation::getPropertiesAsAttribute() {
     return *getPropertiesStorage().as<Attribute *>();
   return info->getOpPropertiesAsAttribute(this);
 }
-LogicalResult
-Operation::setPropertiesFromAttribute(Attribute attr,
-                                      InFlightDiagnostic *diagnostic) {
+LogicalResult Operation::setPropertiesFromAttribute(
+    Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
   std::optional<RegisteredOperationName> info = getRegisteredInfo();
   if (LLVM_UNLIKELY(!info)) {
     *getPropertiesStorage().as<Attribute *>() = attr;
     return success();
   }
   return info->setOpPropertiesFromAttribute(
-      this->getName(), this->getPropertiesStorage(), attr, diagnostic);
+      this->getName(), this->getPropertiesStorage(), attr, emitError);
 }
 
 void Operation::copyProperties(OpaqueProperties rhs) {
@@ -609,13 +607,38 @@ void Operation::setSuccessor(Block *block, unsigned index) {
   getBlockOperands()[index].set(block);
 }
 
+#ifndef NDEBUG
+/// Assert that the folded results (in case of values) have the same type as
+/// the results of the given op.
+static void checkFoldResultTypes(Operation *op,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (results.empty())
+    return;
+
+  for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults())) {
+    if (auto value = dyn_cast<Value>(ofr)) {
+      if (value.getType() != opResult.getType()) {
+        op->emitOpError() << "folder produced a value of incorrect type: "
+                          << opResult.getType()
+                          << ", expected: " << value.getType();
+        assert(false && "incorrect fold result type");
+      }
+    }
+  }
+}
+#endif // NDEBUG
+
 /// Attempt to fold this operation using the Op's registered foldHook.
 LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  if (succeeded(name.foldHook(this, operands, results)))
+  if (succeeded(name.foldHook(this, operands, results))) {
+#ifndef NDEBUG
+    checkFoldResultTypes(this, results);
+#endif // NDEBUG
     return success();
+  }
 
   // Otherwise, fall back on the dialect hook to handle it.
   Dialect *dialect = getDialect();
@@ -626,7 +649,12 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   if (!interface)
     return failure();
 
-  return interface->fold(this, operands, results);
+  LogicalResult status = interface->fold(this, operands, results);
+#ifndef NDEBUG
+  if (succeeded(status))
+    checkFoldResultTypes(this, results);
+#endif // NDEBUG
+  return status;
 }
 
 LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {
@@ -754,7 +782,7 @@ void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
-  if (name.startswith((defaultDialect + ".").str()) && name.count('.') == 1)
+  if (name.starts_with((defaultDialect + ".").str()) && name.count('.') == 1)
     name = name.drop_front(defaultDialect.size() + 1);
   p.getStream() << name;
 }
@@ -1081,6 +1109,51 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultType(Operation *op) {
         return op->emitOpError()
                << "requires the same encoding for all operands and results";
   }
+  return success();
+}
+
+LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 1)))
+    return failure();
+
+  // delegate function that returns true if type is a shaped type with known
+  // rank
+  auto hasRank = [](const Type type) {
+    if (auto shapedType = dyn_cast<ShapedType>(type))
+      return shapedType.hasRank();
+
+    return false;
+  };
+
+  auto rankedOperandTypes =
+      llvm::make_filter_range(op->getOperandTypes(), hasRank);
+  auto rankedResultTypes =
+      llvm::make_filter_range(op->getResultTypes(), hasRank);
+
+  // If all operands and results are unranked, then no further verification.
+  if (rankedOperandTypes.empty() && rankedResultTypes.empty())
+    return success();
+
+  // delegate function that returns rank of shaped type with known rank
+  auto getRank = [](const Type type) {
+    return type.cast<ShapedType>().getRank();
+  };
+
+  auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
+                                          : getRank(*rankedResultTypes.begin());
+
+  for (const auto type : rankedOperandTypes) {
+    if (rank != getRank(type)) {
+      return op->emitOpError("operands don't have matching ranks");
+    }
+  }
+
+  for (const auto type : rankedResultTypes) {
+    if (rank != getRank(type)) {
+      return op->emitOpError("result type has different rank than operands");
+    }
+  }
+
   return success();
 }
 

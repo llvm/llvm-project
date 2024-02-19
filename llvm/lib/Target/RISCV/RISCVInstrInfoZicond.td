@@ -8,8 +8,6 @@
 //
 // This file describes the RISC-V instructions from the standard Integer
 // Conditional operations extension (Zicond).
-// This version is still experimental as the 'Zicond' extension hasn't been
-// ratified yet. It is based on v1.0-rc1 of the specification.
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,4 +38,13 @@ def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
           (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
 def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
           (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
 } // Predicates = [HasStdExtZicond]

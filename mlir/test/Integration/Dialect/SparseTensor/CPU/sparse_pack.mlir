@@ -1,44 +1,53 @@
-// DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+// do not use these LIT config files. Hence why this is kept inline.
 //
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
 
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
-
-// TODO: Pack only support CodeGen Path
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #SortedCOOI32 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton),
   posWidth = 32,
   crdWidth = 32
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
 
 #BCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed-hi-nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : loose_compressed(nonunique), d2 : singleton)
 }>
 
 module {
@@ -49,11 +58,13 @@ module {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f64
     %i0 = arith.constant 0 : i32
+
     //
-    // Initialize a 3-dim dense tensor.
+    // Setup COO.
     //
+
     %data = arith.constant dense<
-       [  1.0,  2.0,  3.0]
+       [ 1.0,  2.0,  3.0 ]
     > : tensor<3xf64>
 
     %pos = arith.constant dense<
@@ -76,14 +87,18 @@ module {
         [  7,  8]]
     > : tensor<3x2xi32>
 
-    %s4 = sparse_tensor.pack %data, %pos, %index : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>
+    %s4 = sparse_tensor.assemble %data, %pos, %index : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>
                                           to tensor<10x10xf64, #SortedCOO>
-    %s5= sparse_tensor.pack %data, %pos32, %index32 : tensor<3xf64>, tensor<2xi32>, tensor<3x2xi32>
-                                           to tensor<10x10xf64, #SortedCOOI32>
+    %s5 = sparse_tensor.assemble %data, %pos32, %index32 : tensor<3xf64>, tensor<2xi32>, tensor<3x2xi32>
+                                          to tensor<10x10xf64, #SortedCOOI32>
+
+    //
+    // Setup CSR.
+    //
 
     %csr_data = arith.constant dense<
-       [  1.0,  2.0,  3.0,  4.0]
-    > : tensor<4xf64>
+       [ 1.0,  2.0,  3.0 ]
+    > : tensor<3xf64>
 
     %csr_pos32 = arith.constant dense<
        [0, 1, 3]
@@ -92,12 +107,16 @@ module {
     %csr_index32 = arith.constant dense<
        [1, 0, 1]
     > : tensor<3xi32>
-    %csr= sparse_tensor.pack %csr_data, %csr_pos32, %csr_index32 : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>
+    %csr = sparse_tensor.assemble %csr_data, %csr_pos32, %csr_index32 : tensor<3xf64>, tensor<3xi32>, tensor<3xi32>
                                            to tensor<2x2xf64, #CSR>
 
+    //
+    // Setup BCOO.
+    //
+
     %bdata = arith.constant dense<
-       [  1.0,  2.0,  3.0,  4.0,  5.0,  0.0]
-    > : tensor<6xf64>
+       [ 1.0,  2.0,  3.0,  4.0,  5.0 ]
+    > : tensor<5xf64>
 
     %bpos = arith.constant dense<
        [0, 3, 3, 5]
@@ -111,10 +130,15 @@ module {
        [  4,  2],
        [ 10, 10]]
     > : tensor<6x2xindex>
-    %bs = sparse_tensor.pack %bdata, %bpos, %bindex :
-          tensor<6xf64>, tensor<4xindex>,  tensor<6x2xindex> to tensor<2x10x10xf64, #BCOO>
 
-    // CHECK:1
+    %bs = sparse_tensor.assemble %bdata, %bpos, %bindex :
+          tensor<5xf64>, tensor<4xindex>,  tensor<6x2xindex> to tensor<2x10x10xf64, #BCOO>
+
+    //
+    // Verify results.
+    //
+
+    // CHECK:     1
     // CHECK-NEXT:2
     // CHECK-NEXT:1
     //
@@ -130,7 +154,7 @@ module {
         vector.print %1: index
         vector.print %2: index
         vector.print %v: f64
-     }
+    }
 
     // CHECK-NEXT:1
     // CHECK-NEXT:2
@@ -148,7 +172,7 @@ module {
         vector.print %1: index
         vector.print %2: index
         vector.print %v: f64
-     }
+    }
 
     // CHECK-NEXT:0
     // CHECK-NEXT:1
@@ -166,39 +190,50 @@ module {
         vector.print %1: index
         vector.print %2: index
         vector.print %v: f64
-     }
+    }
 
-    %d_csr = tensor.empty() : tensor<4xf64>
-    %p_csr = tensor.empty() : tensor<3xi32>
-    %i_csr = tensor.empty() : tensor<3xi32>
-    %rd_csr, %rp_csr, %ri_csr, %ld_csr, %lp_csr, %li_csr = sparse_tensor.unpack %csr : tensor<2x2xf64, #CSR>
-                 outs(%d_csr, %p_csr, %i_csr : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>)
-                 -> tensor<4xf64>, (tensor<3xi32>, tensor<3xi32>), index, (index, index)
-
-    // CHECK-NEXT: ( 1, 2, 3, {{.*}} )
-    %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 : tensor<4xf64>, vector<4xf64>
-    vector.print %vd_csr : vector<4xf64>
-
+    // CHECK-NEXT:0
+    // CHECK-NEXT:1
+    // CHECK-NEXT:2
+    // CHECK-NEXT:1
+    //
+    // CHECK-NEXT:0
+    // CHECK-NEXT:5
+    // CHECK-NEXT:6
+    // CHECK-NEXT:2
+    //
+    // CHECK-NEXT:0
+    // CHECK-NEXT:7
+    // CHECK-NEXT:8
+    // CHECK-NEXT:3
+    //
     // CHECK-NEXT:1
     // CHECK-NEXT:2
     // CHECK-NEXT:3
-    //
     // CHECK-NEXT:4
-    // CHECK-NEXT:5
     //
-    // Make sure the trailing zeros are not traversed.
-    // CHECK-NOT: 0
+    // CHECK-NEXT:1
+    // CHECK-NEXT:4
+    // CHECK-NEXT:2
+    // CHECK-NEXT:5
     sparse_tensor.foreach in %bs : tensor<2x10x10xf64, #BCOO> do {
       ^bb0(%0: index, %1: index, %2: index, %v: f64) :
+        vector.print %0: index
+        vector.print %1: index
+        vector.print %2: index
         vector.print %v: f64
-     }
+    }
+
+    //
+    // Verify disassemble operations.
+    //
 
     %od = tensor.empty() : tensor<3xf64>
     %op = tensor.empty() : tensor<2xi32>
     %oi = tensor.empty() : tensor<3x2xi32>
-    %d, %p, %i, %dl, %pl, %il = sparse_tensor.unpack %s5 : tensor<10x10xf64, #SortedCOOI32>
+    %d, %p, %i, %dl, %pl, %il = sparse_tensor.disassemble %s5 : tensor<10x10xf64, #SortedCOOI32>
                  outs(%od, %op, %oi : tensor<3xf64>, tensor<2xi32>, tensor<3x2xi32>)
-                 -> tensor<3xf64>, (tensor<2xi32>, tensor<3x2xi32>), index, (index, index)
+                 -> tensor<3xf64>, (tensor<2xi32>, tensor<3x2xi32>), index, (i32, i64)
 
     // CHECK-NEXT: ( 1, 2, 3 )
     %vd = vector.transfer_read %d[%c0], %f0 : tensor<3xf64>, vector<3xf64>
@@ -208,25 +243,38 @@ module {
     %vi = vector.transfer_read %i[%c0, %c0], %i0 : tensor<3x2xi32>, vector<3x2xi32>
     vector.print %vi : vector<3x2xi32>
 
+    %d_csr = tensor.empty() : tensor<4xf64>
+    %p_csr = tensor.empty() : tensor<3xi32>
+    %i_csr = tensor.empty() : tensor<3xi32>
+    %rd_csr, %rp_csr, %ri_csr, %ld_csr, %lp_csr, %li_csr = sparse_tensor.disassemble %csr : tensor<2x2xf64, #CSR>
+                 outs(%d_csr, %p_csr, %i_csr : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>)
+                 -> tensor<4xf64>, (tensor<3xi32>, tensor<3xi32>), index, (i32, i64)
+
+    // CHECK-NEXT: ( 1, 2, 3 )
+    %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 : tensor<4xf64>, vector<3xf64>
+    vector.print %vd_csr : vector<3xf64>
 
     %bod = tensor.empty() : tensor<6xf64>
     %bop = tensor.empty() : tensor<4xindex>
     %boi = tensor.empty() : tensor<6x2xindex>
-    %bd, %bp, %bi, %ld, %lp, %li = sparse_tensor.unpack %bs : tensor<2x10x10xf64, #BCOO>
+    %bd, %bp, %bi, %ld, %lp, %li = sparse_tensor.disassemble %bs : tensor<2x10x10xf64, #BCOO>
                     outs(%bod, %bop, %boi : tensor<6xf64>, tensor<4xindex>, tensor<6x2xindex>)
-                    -> tensor<6xf64>, (tensor<4xindex>, tensor<6x2xindex>), index, (index, index)
+                    -> tensor<6xf64>, (tensor<4xindex>, tensor<6x2xindex>), index, (i32, tensor<i64>)
 
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, {{.*}} )
-    %vbd = vector.transfer_read %bd[%c0], %f0 : tensor<6xf64>, vector<6xf64>
-    vector.print %vbd : vector<6xf64>
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5 )
+    %vbd = vector.transfer_read %bd[%c0], %f0 : tensor<6xf64>, vector<5xf64>
+    vector.print %vbd : vector<5xf64>
+
     // CHECK-NEXT: 5
     vector.print %ld : index
 
     // CHECK-NEXT: ( ( 1, 2 ), ( 5, 6 ), ( 7, 8 ), ( 2, 3 ), ( 4, 2 ), ( {{.*}}, {{.*}} ) )
     %vbi = vector.transfer_read %bi[%c0, %c0], %c0 : tensor<6x2xindex>, vector<6x2xindex>
     vector.print %vbi : vector<6x2xindex>
+
     // CHECK-NEXT: 10
-    vector.print %li : index
+    %si = tensor.extract %li[] : tensor<i64>
+    vector.print %si : i64
 
     return
   }

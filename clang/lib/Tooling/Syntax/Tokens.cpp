@@ -401,6 +401,12 @@ std::string TokenBuffer::Mapping::str() const {
 
 std::optional<llvm::ArrayRef<syntax::Token>>
 TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
+  // In cases of invalid code, AST nodes can have source ranges that include
+  // the `eof` token. As there's no spelling for this token, exclude it from
+  // the range.
+  if (!Expanded.empty() && Expanded.back().kind() == tok::eof) {
+    Expanded = Expanded.drop_back();
+  }
   // Mapping an empty range is ambiguous in case of empty mappings at either end
   // of the range, bail out in that case.
   if (Expanded.empty())
@@ -940,11 +946,11 @@ std::string TokenBuffer::dumpForTests() const {
 
   for (FileID ID : Keys) {
     const MarkedFile &File = Files.find(ID)->second;
-    auto *Entry = SourceMgr->getFileEntryForID(ID);
+    auto Entry = SourceMgr->getFileEntryRefForID(ID);
     if (!Entry)
       continue; // Skip builtin files.
-    OS << llvm::formatv("file '{0}'\n", Entry->getName())
-       << "  spelled tokens:\n"
+    std::string Path = llvm::sys::path::convert_to_slash(Entry->getName());
+    OS << llvm::formatv("file '{0}'\n", Path) << "  spelled tokens:\n"
        << "    ";
     DumpTokens(OS, File.SpelledTokens);
     OS << "\n";

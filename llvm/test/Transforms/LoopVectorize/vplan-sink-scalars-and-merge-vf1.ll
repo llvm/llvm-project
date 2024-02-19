@@ -8,6 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-LABEL: sink_with_sideeffects
 ; CHECK:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: ir<0> = original trip-count
 ; CHECK-EMPTY:
@@ -29,9 +30,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 
 ; CHECK:      pred.store.if:
-; CHECK-NEXT:   CLONE ir<%tmp4> = zext ir<%tmp3>
-; CHECK-NEXT:   CLONE ir<%tmp5> = trunc ir<%tmp4>
-; CHECK-NEXT:   CLONE store ir<%tmp5>, ir<%tmp2>
+; CHECK-NEXT:   CLONE store ir<%tmp3>, ir<%tmp2>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
 ; CHECK:      pred.store.continue:
@@ -39,8 +38,8 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: }
 
 ; CHECK:      if.then.0:
-; CHECK-NEXT:  EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
-; CHECK-NEXT:  EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT:  EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:  EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block

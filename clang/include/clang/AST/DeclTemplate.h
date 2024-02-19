@@ -83,13 +83,16 @@ class TemplateParameterList final
 
   /// Whether this template parameter list contains an unexpanded parameter
   /// pack.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ContainsUnexpandedParameterPack : 1;
 
   /// Whether this template parameter list has a requires clause.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasRequiresClause : 1;
 
   /// Whether any of the template parameters has constrained-parameter
   /// constraint-expression.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasConstrainedParameters : 1;
 
 protected:
@@ -131,6 +134,7 @@ public:
   const_iterator end() const { return begin() + NumParams; }
 
   unsigned size() const { return NumParams; }
+  bool empty() const { return NumParams == 0; }
 
   ArrayRef<NamedDecl *> asArray() { return llvm::ArrayRef(begin(), end()); }
   ArrayRef<const NamedDecl*> asArray() const {
@@ -238,9 +242,6 @@ public:
 /// A template argument list.
 class TemplateArgumentList final
     : private llvm::TrailingObjects<TemplateArgumentList, TemplateArgument> {
-  /// The template argument list.
-  const TemplateArgument *Arguments;
-
   /// The number of template arguments in this template
   /// argument list.
   unsigned NumArguments;
@@ -255,29 +256,10 @@ public:
   TemplateArgumentList(const TemplateArgumentList &) = delete;
   TemplateArgumentList &operator=(const TemplateArgumentList &) = delete;
 
-  /// Type used to indicate that the template argument list itself is a
-  /// stack object. It does not own its template arguments.
-  enum OnStackType { OnStack };
-
   /// Create a new template argument list that copies the given set of
   /// template arguments.
   static TemplateArgumentList *CreateCopy(ASTContext &Context,
                                           ArrayRef<TemplateArgument> Args);
-
-  /// Construct a new, temporary template argument list on the stack.
-  ///
-  /// The template argument list does not own the template arguments
-  /// provided.
-  explicit TemplateArgumentList(OnStackType, ArrayRef<TemplateArgument> Args)
-      : Arguments(Args.data()), NumArguments(Args.size()) {}
-
-  /// Produces a shallow copy of the given template argument list.
-  ///
-  /// This operation assumes that the input argument list outlives it.
-  /// This takes the list as a pointer to avoid looking like a copy
-  /// constructor, since this really isn't safe to use that way.
-  explicit TemplateArgumentList(const TemplateArgumentList *Other)
-      : Arguments(Other->data()), NumArguments(Other->size()) {}
 
   /// Retrieve the template argument at a given index.
   const TemplateArgument &get(unsigned Idx) const {
@@ -298,7 +280,9 @@ public:
   unsigned size() const { return NumArguments; }
 
   /// Retrieve a pointer to the template argument list.
-  const TemplateArgument *data() const { return Arguments; }
+  const TemplateArgument *data() const {
+    return getTrailingObjects<TemplateArgument>();
+  }
 };
 
 void *allocateDefaultArgStorageChain(const ASTContext &C);
@@ -377,7 +361,8 @@ public:
     InheritedFrom = getParmOwningDefaultArg(InheritedFrom);
     if (!isSet())
       ValueOrInherited = InheritedFrom;
-    else if (auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+    else if ([[maybe_unused]] auto *D =
+                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
@@ -582,7 +567,7 @@ public:
   /// \code
   /// template<typename> struct A {
   ///   template<typename> void f();
-  ///   template<> void f<int>(); // ClassScopeFunctionSpecializationDecl
+  ///   template<> void f<int>();
   /// };
   /// \endcode
   ///
@@ -681,82 +666,48 @@ public:
 /// Provides information about a dependent function-template
 /// specialization declaration.
 ///
-/// Since explicit function template specialization and instantiation
-/// declarations can only appear in namespace scope, and you can only
-/// specialize a member of a fully-specialized class, the only way to
-/// get one of these is in a friend declaration like the following:
+/// This is used for function templates explicit specializations declared
+/// within class templates:
+///
+/// \code
+/// template<typename> struct A {
+///   template<typename> void f();
+///   template<> void f<int>(); // DependentFunctionTemplateSpecializationInfo
+/// };
+/// \endcode
+///
+/// As well as dependent friend declarations naming function template
+/// specializations declared within class templates:
 ///
 /// \code
 ///   template \<class T> void foo(T);
 ///   template \<class T> class A {
-///     friend void foo<>(T);
+///     friend void foo<>(T); // DependentFunctionTemplateSpecializationInfo
 ///   };
 /// \endcode
 class DependentFunctionTemplateSpecializationInfo final
     : private llvm::TrailingObjects<DependentFunctionTemplateSpecializationInfo,
-                                    TemplateArgumentLoc,
                                     FunctionTemplateDecl *> {
-  /// The number of potential template candidates.
-  unsigned NumTemplates;
-
-  /// The number of template arguments.
-  unsigned NumArgs;
-
-  /// The locations of the left and right angle brackets.
-  SourceRange AngleLocs;
-
-  size_t numTrailingObjects(OverloadToken<TemplateArgumentLoc>) const {
-    return NumArgs;
-  }
-  size_t numTrailingObjects(OverloadToken<FunctionTemplateDecl *>) const {
-    return NumTemplates;
-  }
-
-  DependentFunctionTemplateSpecializationInfo(
-                                 const UnresolvedSetImpl &Templates,
-                                 const TemplateArgumentListInfo &TemplateArgs);
-
-public:
   friend TrailingObjects;
 
+  /// The number of candidates for the primary template.
+  unsigned NumCandidates;
+
+  DependentFunctionTemplateSpecializationInfo(
+      const UnresolvedSetImpl &Candidates,
+      const ASTTemplateArgumentListInfo *TemplateArgsWritten);
+
+public:
+  /// The template arguments as written in the sources, if provided.
+  const ASTTemplateArgumentListInfo *TemplateArgumentsAsWritten;
+
   static DependentFunctionTemplateSpecializationInfo *
-  Create(ASTContext &Context, const UnresolvedSetImpl &Templates,
-         const TemplateArgumentListInfo &TemplateArgs);
+  Create(ASTContext &Context, const UnresolvedSetImpl &Candidates,
+         const TemplateArgumentListInfo *TemplateArgs);
 
-  /// Returns the number of function templates that this might
-  /// be a specialization of.
-  unsigned getNumTemplates() const { return NumTemplates; }
-
-  /// Returns the i'th template candidate.
-  FunctionTemplateDecl *getTemplate(unsigned I) const {
-    assert(I < getNumTemplates() && "template index out of range");
-    return getTrailingObjects<FunctionTemplateDecl *>()[I];
-  }
-
-  /// Returns the explicit template arguments that were given.
-  const TemplateArgumentLoc *getTemplateArgs() const {
-    return getTrailingObjects<TemplateArgumentLoc>();
-  }
-
-  /// Returns the number of explicit template arguments that were given.
-  unsigned getNumTemplateArgs() const { return NumArgs; }
-
-  llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
-    return llvm::ArrayRef(getTemplateArgs(), getNumTemplateArgs());
-  }
-
-  /// Returns the nth template argument.
-  const TemplateArgumentLoc &getTemplateArg(unsigned I) const {
-    assert(I < getNumTemplateArgs() && "template arg index out of range");
-    return getTemplateArgs()[I];
-  }
-
-  SourceLocation getLAngleLoc() const {
-    return AngleLocs.getBegin();
-  }
-
-  SourceLocation getRAngleLoc() const {
-    return AngleLocs.getEnd();
+  /// Returns the candidates for the primary function template.
+  ArrayRef<FunctionTemplateDecl *> getCandidates() const {
+    return {getTrailingObjects<FunctionTemplateDecl *>(), NumCandidates};
   }
 };
 
@@ -1373,10 +1324,7 @@ public:
          nullptr;
   }
 
-  void setTypeConstraint(NestedNameSpecifierLoc NNS,
-                         DeclarationNameInfo NameInfo, NamedDecl *FoundDecl,
-                         ConceptDecl *CD,
-                         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  void setTypeConstraint(ConceptReference *CR,
                          Expr *ImmediatelyDeclaredConstraint);
 
   /// Determine whether this template parameter has a type-constraint.
@@ -1869,7 +1817,7 @@ class ClassTemplateSpecializationDecl
   SourceLocation PointOfInstantiation;
 
   /// The kind of specialization this declaration refers to.
-  /// Really a value of type TemplateSpecializationKind.
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
 protected:
@@ -2615,70 +2563,6 @@ public:
   static bool classofKind(Kind K) { return K == TypeAliasTemplate; }
 };
 
-/// Declaration of a function specialization at template class scope.
-///
-/// For example:
-/// \code
-/// template <class T>
-/// class A {
-///    template <class U> void foo(U a) { }
-///    template<> void foo(int a) { }
-/// }
-/// \endcode
-///
-/// "template<> foo(int a)" will be saved in Specialization as a normal
-/// CXXMethodDecl. Then during an instantiation of class A, it will be
-/// transformed into an actual function specialization.
-///
-/// FIXME: This is redundant; we could store the same information directly on
-/// the CXXMethodDecl as a DependentFunctionTemplateSpecializationInfo.
-class ClassScopeFunctionSpecializationDecl : public Decl {
-  CXXMethodDecl *Specialization;
-  const ASTTemplateArgumentListInfo *TemplateArgs;
-
-  ClassScopeFunctionSpecializationDecl(
-      DeclContext *DC, SourceLocation Loc, CXXMethodDecl *FD,
-      const ASTTemplateArgumentListInfo *TemplArgs)
-      : Decl(Decl::ClassScopeFunctionSpecialization, DC, Loc),
-        Specialization(FD), TemplateArgs(TemplArgs) {}
-
-  ClassScopeFunctionSpecializationDecl(EmptyShell Empty)
-      : Decl(Decl::ClassScopeFunctionSpecialization, Empty) {}
-
-  virtual void anchor();
-
-public:
-  friend class ASTDeclReader;
-  friend class ASTDeclWriter;
-
-  CXXMethodDecl *getSpecialization() const { return Specialization; }
-  bool hasExplicitTemplateArgs() const { return TemplateArgs; }
-  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    return TemplateArgs;
-  }
-
-  static ClassScopeFunctionSpecializationDecl *
-  Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, CXXMethodDecl *FD,
-         bool HasExplicitTemplateArgs,
-         const TemplateArgumentListInfo &TemplateArgs) {
-    return new (C, DC) ClassScopeFunctionSpecializationDecl(
-        DC, Loc, FD,
-        HasExplicitTemplateArgs
-            ? ASTTemplateArgumentListInfo::Create(C, TemplateArgs)
-            : nullptr);
-  }
-
-  static ClassScopeFunctionSpecializationDecl *
-  CreateDeserialized(ASTContext &Context, unsigned ID);
-
-  // Implement isa/cast/dyncast/etc.
-  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-
-  static bool classofKind(Kind K) {
-    return K == Decl::ClassScopeFunctionSpecialization;
-  }
-};
-
 /// Represents a variable template specialization, which refers to
 /// a variable template with a given set of template arguments.
 ///
@@ -2738,13 +2622,14 @@ class VarTemplateSpecializationDecl : public VarDecl,
   SourceLocation PointOfInstantiation;
 
   /// The kind of specialization this declaration refers to.
-  /// Really a value of type TemplateSpecializationKind.
+  LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
   /// Whether this declaration is a complete definition of the
   /// variable template specialization. We can't otherwise tell apart
   /// an instantiated declaration from an instantiated definition with
   /// no initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsCompleteDefinition : 1;
 
 protected:

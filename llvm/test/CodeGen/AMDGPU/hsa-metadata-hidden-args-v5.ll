@@ -81,13 +81,16 @@
 ; CHECK-NEXT:      - .offset:         136
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_completion_action
+; CHECK:          - .offset:          144
+; CHECK-NEXT:        .size:           4
+; CHECK-NEXT:        .value_kind:     hidden_dynamic_lds_size
 ; GFX8-NEXT:      - .offset:         216
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_private_base
 ; GFX8-NEXT:      - .offset:         220
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_shared_base
-; CHECK:      - .offset:         224
+; CHECK:          - .offset:          224
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_queue_ptr
 
@@ -97,6 +100,7 @@
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 2
+@lds = external hidden addrspace(3) global [0 x i32], align 4
 define amdgpu_kernel void @test_v5(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -106,6 +110,7 @@ entry:
   %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
   store half %r.val, ptr addrspace(1) %r
+  store i32 1234, ptr addrspacecast (ptr addrspace(3) @lds to ptr), align 4
   ret void
 }
 

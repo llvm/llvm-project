@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -25,6 +26,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
@@ -108,8 +110,8 @@ template <typename T>
 bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   if (Size + sizeof(T) > Bytes.size())
     return false;
-  T Val = support::endian::read<T, support::endianness::little, 1>(
-      Bytes.data() + Size);
+  T Val =
+      support::endian::read<T, llvm::endianness::little>(Bytes.data() + Size);
   Size += sizeof(T);
   if (std::is_floating_point<T>::value) {
     MI.addOperand(
@@ -126,7 +128,7 @@ WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                        uint64_t Address,
                                        raw_ostream &CStream) const {
   Size = 0;
-  if (Address == 0) {
+  if (Symbol.Type == wasm::WASM_SYMBOL_TYPE_SECTION) {
     // Start of a code section: we're parsing only the function count.
     int64_t FunctionCount;
     if (!nextLEB(FunctionCount, Bytes, Size, false))

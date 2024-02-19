@@ -359,22 +359,21 @@ bool TypePromotionImpl::isSafeWrap(Instruction *I) {
   if (!OverflowConst.isNonPositive())
     return false;
 
+  SafeWrap.insert(I);
+
   // Using C1 = OverflowConst and C2 = ICmpConst, we can either prove that:
   //   zext(x) + sext(C1) <u zext(C2)  if C1 < 0 and C1 >s C2
   //   zext(x) + sext(C1) <u sext(C2)  if C1 < 0 and C1 <=s C2
   if (OverflowConst.sgt(ICmpConst)) {
     LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
                       << "const of " << *I << "\n");
-    SafeWrap.insert(I);
-    return true;
-  } else {
-    LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
-                      << "const of " << *I << " and " << *CI << "\n");
-    SafeWrap.insert(I);
-    SafeWrap.insert(CI);
     return true;
   }
-  return false;
+
+  LLVM_DEBUG(dbgs() << "IR Promotion: Allowing safe overflow for sext "
+                    << "const of " << *I << " and " << *CI << "\n");
+  SafeWrap.insert(CI);
+  return true;
 }
 
 bool TypePromotionImpl::shouldPromote(Value *V) {
@@ -492,11 +491,13 @@ void IRPromoter::PromoteTree() {
         // SafeWrap because SafeWrap.size() is used elsewhere.
         // For cmp, we need to sign extend a constant appearing in either
         // operand. For add, we should only sign extend the RHS.
-        Constant *NewConst = (SafeWrap.contains(I) &&
+        Constant *NewConst =
+            ConstantInt::get(Const->getContext(),
+                             (SafeWrap.contains(I) &&
                               (I->getOpcode() == Instruction::ICmp || i == 1) &&
                               I->getOpcode() != Instruction::Sub)
-                                 ? ConstantExpr::getSExt(Const, ExtTy)
-                                 : ConstantExpr::getZExt(Const, ExtTy);
+                                 ? Const->getValue().sext(PromotedWidth)
+                                 : Const->getValue().zext(PromotedWidth));
         I->setOperand(i, NewConst);
       } else if (isa<UndefValue>(Op))
         I->setOperand(i, ConstantInt::get(ExtTy, 0));
@@ -935,6 +936,8 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
       return 0;
 
     EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
+    if (TLI->isSExtCheaperThanZExt(SrcVT, PromotedVT))
+      return 0;
     if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
       LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
                         << "for promoted type\n");
@@ -1014,11 +1017,8 @@ bool TypePromotionLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
-
-  auto *TM = &TPC->getTM<TargetMachine>();
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  auto *TM = &TPC.getTM<TargetMachine>();
   auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 

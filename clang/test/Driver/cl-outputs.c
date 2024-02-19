@@ -9,7 +9,7 @@
 // FoEMPTY:  "-o" "cl-outputs.obj"
 
 // RUN: %clang_cl /Foa -### -- %s 2>&1 | FileCheck -check-prefix=FoNAME %s
-// RUN: %clang_cl /Foa -flto -### -- %s 2>&1 | FileCheck -check-prefix=FoNAME %s
+// RUN: not %clang_cl /Foa -flto -### -- %s 2>&1 | FileCheck -check-prefix=FoNAME %s
 // FoNAME:  "-o" "a.obj"
 
 // RUN: %clang_cl /Foa.ext /Fob.ext -### -- %s 2>&1 | FileCheck -check-prefix=FoNAMEEXT %s
@@ -27,7 +27,7 @@
 // RUN: %clang_cl /Fo.. -### -- %s 2>&1 | FileCheck -check-prefix=FoCRAZY %s
 // FoCRAZY:  "-o" "..obj"
 
-// RUN: %clang_cl /Foa.obj -### -- %s %s 2>&1 | FileCheck -check-prefix=CHECK-MULTIPLESOURCEERROR %s
+// RUN: not %clang_cl /Foa.obj -### -- %s %s 2>&1 | FileCheck -check-prefix=CHECK-MULTIPLESOURCEERROR %s
 // CHECK-MULTIPLESOURCEERROR: error: cannot specify '/Foa.obj' when compiling multiple source files
 
 // RUN: %clang_cl /Fomydir/ -### -- %s %s 2>&1 | FileCheck -check-prefix=CHECK-MULTIPLESOURCEOK %s
@@ -237,7 +237,7 @@
 // FaDIRNAME:  "-o" "foo.dir{{[/\\]+}}a.asm"
 // RUN: %clang_cl /FA /Fafoo.dir/a.ext -### -- %s 2>&1 | FileCheck -check-prefix=FaDIRNAMEEXT %s
 // FaDIRNAMEEXT:  "-o" "foo.dir{{[/\\]+}}a.ext"
-// RUN: %clang_cl /Faa.asm -### -- %s %s 2>&1 | FileCheck -check-prefix=FaMULTIPLESOURCE %s
+// RUN: not %clang_cl /Faa.asm -### -- %s %s 2>&1 | FileCheck -check-prefix=FaMULTIPLESOURCE %s
 // FaMULTIPLESOURCE: error: cannot specify '/Faa.asm' when compiling multiple source files
 // RUN: %clang_cl /Fa -### -- %s %s 2>&1 | FileCheck -check-prefix=FaMULTIPLESOURCEOK %s
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
@@ -259,7 +259,7 @@
 // FA_CSU_FaDIRNAME:  "-o" "foo.dir{{[/\\]+}}a.asm"
 // RUN: %clang_cl /FAcsu /Fafoo.dir/a.ext -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaDIRNAMEEXT %s
 // FA_CSU_FaDIRNAMEEXT:  "-o" "foo.dir{{[/\\]+}}a.ext"
-// RUN: %clang_cl /Faa.asm -### -- %s %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaMULTIPLESOURCE %s
+// RUN: not %clang_cl /Faa.asm -### -- %s %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaMULTIPLESOURCE %s
 // FA_CSU_FaMULTIPLESOURCE: error: cannot specify '/Faa.asm' when compiling multiple source files
 // RUN: %clang_cl /Fa -### -- %s %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaMULTIPLESOURCEOK %s
 // FA_CSU_FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"

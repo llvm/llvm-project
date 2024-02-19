@@ -132,38 +132,26 @@ struct TypeErasedDataflowAnalysisState {
   }
 };
 
-/// Transfers the state of a basic block by evaluating each of its elements in
-/// the context of `Analysis` and the states of its predecessors that are
-/// available in `BlockStates`. `PostVisitCFG` (if provided) will be applied to
-/// each element in the block, after it is evaluated.
-///
-/// Requirements:
-///
-///   All predecessors of `Block` except those with loop back edges must have
-///   already been transferred. States in `BlockStates` that are set to
-///   `std::nullopt` represent basic blocks that are not evaluated yet.
-TypeErasedDataflowAnalysisState transferBlock(
-    const ControlFlowContext &CFCtx,
-    llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates,
-    const CFGBlock &Block, const Environment &InitEnv,
-    TypeErasedDataflowAnalysis &Analysis,
-    std::function<void(const CFGElement &,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG = nullptr);
-
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices of
 /// the returned vector correspond to basic block IDs. Returns an error if the
 /// dataflow analysis cannot be performed successfully. Otherwise, calls
 /// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
+///
+/// `MaxBlockVisits` caps the number of block visits during analysis. It doesn't
+/// distinguish between repeat visits to the same block and visits to distinct
+/// blocks. This parameter is a backstop to prevent infinite loops, in the case
+/// of bugs in the lattice and/or transfer functions that prevent the analysis
+/// from converging.
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
     std::function<void(const CFGElement &,
                        const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG = nullptr);
+        PostVisitCFG,
+    std::int32_t MaxBlockVisits);
 
 } // namespace dataflow
 } // namespace clang

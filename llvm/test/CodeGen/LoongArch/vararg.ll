@@ -126,10 +126,9 @@ define i64 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; LA64-FPELIM-NEXT:    st.d $a2, $fp, 16
 ; LA64-FPELIM-NEXT:    addi.d $a0, $fp, 16
 ; LA64-FPELIM-NEXT:    st.d $a0, $fp, -32
+; LA64-FPELIM-NEXT:    st.d $a1, $fp, 8
 ; LA64-FPELIM-NEXT:    addi.d $a0, $a1, 15
-; LA64-FPELIM-NEXT:    addi.w $a1, $zero, -16
-; LA64-FPELIM-NEXT:    and $a0, $a0, $a1
-; LA64-FPELIM-NEXT:    st.d $s0, $fp, 8
+; LA64-FPELIM-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-FPELIM-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-FPELIM-NEXT:    move $sp, $a0
 ; LA64-FPELIM-NEXT:    bl %plt(notdead)
@@ -157,10 +156,9 @@ define i64 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; LA64-WITHFP-NEXT:    st.d $a2, $fp, 16
 ; LA64-WITHFP-NEXT:    addi.d $a0, $fp, 16
 ; LA64-WITHFP-NEXT:    st.d $a0, $fp, -32
+; LA64-WITHFP-NEXT:    st.d $a1, $fp, 8
 ; LA64-WITHFP-NEXT:    addi.d $a0, $a1, 15
-; LA64-WITHFP-NEXT:    addi.w $a1, $zero, -16
-; LA64-WITHFP-NEXT:    and $a0, $a0, $a1
-; LA64-WITHFP-NEXT:    st.d $s0, $fp, 8
+; LA64-WITHFP-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-WITHFP-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-WITHFP-NEXT:    move $sp, $a0
 ; LA64-WITHFP-NEXT:    bl %plt(notdead)

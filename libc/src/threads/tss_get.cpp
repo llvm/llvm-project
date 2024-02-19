@@ -13,8 +13,8 @@
 
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, tss_get, (tss_t key)) { return get_tss_value(key); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

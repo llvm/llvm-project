@@ -7,7 +7,7 @@
 #
 # REDEFINE: %{global:greeting}=Hello
 # RUN: %{global:echo}
-# CHECK: GLOBAL: Hello World
+# CHECK:# | GLOBAL: Hello World
 
 # We can redefine the test suite config's substitutions multiple times.  Again,
 # the expansion order remains the same (%{global:echo} before %{global:greeting}
@@ -17,7 +17,7 @@
 # REDEFINE: %{global:greeting}=Goodbye %{global:what}
 # REDEFINE: %{global:what}=Sleep
 # RUN: %{global:echo}
-# CHECK: GLOBAL: Goodbye Sleep Sleep
+# CHECK:# | GLOBAL: Goodbye Sleep Sleep
 
 # A new local substitution is prepended to the substitution list so that it can
 # depend on all substitutions that were defined previously, including those from
@@ -26,7 +26,7 @@
 # DEFINE: %{local:greeting}=Hey %{global:what}
 # DEFINE: %{local:echo}=echo "LOCAL: %{local:greeting} %{global:what}"
 # RUN: %{local:echo}
-# CHECK: LOCAL: Hey Sleep Sleep
+# CHECK:# | LOCAL: Hey Sleep Sleep
 
 # As for substitutions from the test suite config, redefining local
 # substitutions should not change the expansion order.  Again, the expansion
@@ -36,6 +36,6 @@
 # REDEFINE: %{local:greeting}=So Long %{global:what}
 # REDEFINE: %{global:what}=World
 # RUN: %{local:echo}
-# CHECK: LOCAL: So Long World World
+# CHECK:# | LOCAL: So Long World World
 
-# CHECK: Passed: 1
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}

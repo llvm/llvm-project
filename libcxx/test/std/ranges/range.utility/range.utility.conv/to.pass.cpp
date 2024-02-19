@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// MSVC warning C4244: 'argument': conversion from '_Ty' to 'int', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<class C, input_range R, class... Args> requires (!view<C>)
@@ -19,6 +22,7 @@
 #include <vector>
 #include "container.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "test_range.h"
 
 template <class Container, class Range, class... Args>
@@ -119,6 +123,7 @@ struct Fallback {
   constexpr void push_back(value_type) {}
   constexpr value_type* begin() { return &x; }
   constexpr value_type* end() { return &x; }
+  std::size_t size() const { return 0; }
 };
 
 struct CtrDirectOrFallback : Fallback {
@@ -180,7 +185,7 @@ struct Reservable : Fallback {
     reserve_called = true;
   }
 };
-static_assert(std::ranges::__reservable_container<Reservable<>>);
+LIBCPP_STATIC_ASSERT(std::ranges::__reservable_container<Reservable<>>);
 
 constexpr void test_constraints() {
   { // Case 1 -- construct directly from the range.

@@ -1,15 +1,15 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-min-jump-table-entries=4 < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-R
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables \
+; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables -ppc-min-jump-table-entries=4 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-A-LE
 ; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
-; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-min-jump-table-entries=4 < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-R
 ; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
-; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables \
+; RUN:   -mcpu=pwr10 -ppc-use-absolute-jumptables -ppc-min-jump-table-entries=4 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-A-BE
 

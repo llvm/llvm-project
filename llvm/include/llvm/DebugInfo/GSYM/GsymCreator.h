@@ -28,6 +28,7 @@ namespace llvm {
 
 namespace gsym {
 class FileWriter;
+class OutputAggregator;
 
 /// GsymCreator is used to emit GSYM data to a stand alone file or section
 /// within a file.
@@ -142,8 +143,8 @@ class GsymCreator {
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
   std::optional<AddressRanges> ValidTextRanges;
-  AddressRanges Ranges;
   std::optional<uint64_t> BaseAddress;
+  bool IsSegment = false;
   bool Finalized = false;
   bool Quiet;
 
@@ -278,9 +279,17 @@ class GsymCreator {
   /// \param Path The path prefix to use when saving the GSYM files.
   /// \param ByteOrder The endianness to use when saving the file.
   /// \param SegmentSize The size in bytes to segment the GSYM file into.
-  llvm::Error saveSegments(StringRef Path,
-                           llvm::support::endianness ByteOrder,
+  llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
                            uint64_t SegmentSize) const;
+
+  /// Let this creator know that this is a segment of another GsymCreator.
+  ///
+  /// When we have a segment, we know that function infos will be added in
+  /// ascending address range order without having to be finalized. We also
+  /// don't need to sort and unique entries during the finalize function call.
+  void setIsSegment() {
+    IsSegment = true;
+  }
 
 public:
   GsymCreator(bool Quiet = false);
@@ -299,7 +308,7 @@ public:
   ///                    a single GSYM file that contains all function
   ///                    information will be created.
   /// \returns An error object that indicates success or failure of the save.
-  llvm::Error save(StringRef Path, llvm::support::endianness ByteOrder,
+  llvm::Error save(StringRef Path, llvm::endianness ByteOrder,
                    std::optional<uint64_t> SegmentSize = std::nullopt) const;
 
   /// Encode a GSYM into the file writer stream at the current position.
@@ -352,7 +361,7 @@ public:
   ///         function infos, and function infos that were merged or removed.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  llvm::Error finalize(llvm::raw_ostream &OS);
+  llvm::Error finalize(OutputAggregator &OS);
 
   /// Set the UUID value.
   ///
@@ -378,17 +387,6 @@ public:
   /// Get the current number of FunctionInfo objects contained in this
   /// object.
   size_t getNumFunctionInfos() const;
-
-  /// Check if an address has already been added as a function info.
-  ///
-  /// FunctionInfo data can come from many sources: debug info, symbol tables,
-  /// exception information, and more. Symbol tables should be added after
-  /// debug info and can use this function to see if a symbol's start address
-  /// has already been added to the GsymReader. Calling this before adding
-  /// a function info from a source other than debug info avoids clients adding
-  /// many redundant FunctionInfo objects from many sources only for them to be
-  /// removed during the finalize() call.
-  bool hasFunctionInfoForAddress(uint64_t Addr) const;
 
   /// Set valid .text address ranges that all functions must be contained in.
   void SetValidTextRanges(AddressRanges &TextRanges) {

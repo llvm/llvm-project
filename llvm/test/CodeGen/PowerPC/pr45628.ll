@@ -232,14 +232,14 @@ define <1 x i128> @rotl_28(<1 x i128> %num) {
 ; P8-VSX-LABEL: rotl_28:
 ; P8-VSX:       # %bb.0: # %entry
 ; P8-VSX-NEXT:    xxswapd vs0, v2
-; P8-VSX-NEXT:    mfvsrd r3, v2
-; P8-VSX-NEXT:    rotldi r5, r3, 28
-; P8-VSX-NEXT:    mffprd r4, f0
-; P8-VSX-NEXT:    rldimi r5, r4, 28, 0
-; P8-VSX-NEXT:    rotldi r4, r4, 28
-; P8-VSX-NEXT:    rldimi r4, r3, 28, 0
+; P8-VSX-NEXT:    mfvsrd r4, v2
+; P8-VSX-NEXT:    rotldi r5, r4, 28
+; P8-VSX-NEXT:    mffprd r3, f0
+; P8-VSX-NEXT:    rldimi r5, r3, 28, 0
+; P8-VSX-NEXT:    rotldi r3, r3, 28
+; P8-VSX-NEXT:    rldimi r3, r4, 28, 0
 ; P8-VSX-NEXT:    mtfprd f0, r5
-; P8-VSX-NEXT:    mtfprd f1, r4
+; P8-VSX-NEXT:    mtfprd f1, r3
 ; P8-VSX-NEXT:    xxmrghd v2, vs1, vs0
 ; P8-VSX-NEXT:    blr
 ;
@@ -247,15 +247,15 @@ define <1 x i128> @rotl_28(<1 x i128> %num) {
 ; P8-NOVSX:       # %bb.0: # %entry
 ; P8-NOVSX-NEXT:    addi r3, r1, -32
 ; P8-NOVSX-NEXT:    stvx v2, 0, r3
-; P8-NOVSX-NEXT:    ld r3, -24(r1)
 ; P8-NOVSX-NEXT:    ld r4, -32(r1)
+; P8-NOVSX-NEXT:    ld r3, -24(r1)
 ; P8-NOVSX-NEXT:    rotldi r5, r4, 28
-; P8-NOVSX-NEXT:    rotldi r6, r3, 28
 ; P8-NOVSX-NEXT:    rldimi r5, r3, 28, 0
-; P8-NOVSX-NEXT:    rldimi r6, r4, 28, 0
-; P8-NOVSX-NEXT:    addi r3, r1, -16
+; P8-NOVSX-NEXT:    rotldi r3, r3, 28
+; P8-NOVSX-NEXT:    rldimi r3, r4, 28, 0
 ; P8-NOVSX-NEXT:    std r5, -8(r1)
-; P8-NOVSX-NEXT:    std r6, -16(r1)
+; P8-NOVSX-NEXT:    std r3, -16(r1)
+; P8-NOVSX-NEXT:    addi r3, r1, -16
 ; P8-NOVSX-NEXT:    lvx v2, 0, r3
 ; P8-NOVSX-NEXT:    blr
 entry:
@@ -303,36 +303,36 @@ define <1 x i128> @NO_rotl(<1 x i128> %num) {
 ; P8-VSX-LABEL: NO_rotl:
 ; P8-VSX:       # %bb.0: # %entry
 ; P8-VSX-NEXT:    xxswapd vs0, v2
-; P8-VSX-NEXT:    li r3, 0
-; P8-VSX-NEXT:    mfvsrd r5, v2
-; P8-VSX-NEXT:    mffprd r4, f0
+; P8-VSX-NEXT:    mfvsrd r4, v2
+; P8-VSX-NEXT:    mffprd r3, f0
+; P8-VSX-NEXT:    rotldi r5, r3, 20
+; P8-VSX-NEXT:    sldi r3, r3, 20
+; P8-VSX-NEXT:    rldimi r5, r4, 20, 0
 ; P8-VSX-NEXT:    mtfprd f0, r3
-; P8-VSX-NEXT:    rotldi r3, r4, 20
-; P8-VSX-NEXT:    sldi r4, r4, 20
-; P8-VSX-NEXT:    rldimi r3, r5, 20, 0
-; P8-VSX-NEXT:    mtfprd f1, r4
-; P8-VSX-NEXT:    rldicl r4, r5, 28, 36
-; P8-VSX-NEXT:    mtfprd f2, r3
-; P8-VSX-NEXT:    mtfprd f3, r4
-; P8-VSX-NEXT:    xxmrghd v2, vs2, vs1
-; P8-VSX-NEXT:    xxmrghd v3, vs0, vs3
+; P8-VSX-NEXT:    li r3, 0
+; P8-VSX-NEXT:    mtfprd f1, r5
+; P8-VSX-NEXT:    xxmrghd v2, vs1, vs0
+; P8-VSX-NEXT:    mtfprd f0, r3
+; P8-VSX-NEXT:    rldicl r3, r4, 28, 36
+; P8-VSX-NEXT:    mtfprd f1, r3
+; P8-VSX-NEXT:    xxmrghd v3, vs0, vs1
 ; P8-VSX-NEXT:    xxlor v2, v2, v3
 ; P8-VSX-NEXT:    blr
 ;
 ; P8-NOVSX-LABEL: NO_rotl:
 ; P8-NOVSX:       # %bb.0: # %entry
 ; P8-NOVSX-NEXT:    addis r3, r2, .LCPI8_0@toc@ha
-; P8-NOVSX-NEXT:    addis r4, r2, .LCPI8_1@toc@ha
 ; P8-NOVSX-NEXT:    addi r3, r3, .LCPI8_0@toc@l
 ; P8-NOVSX-NEXT:    lvx v3, 0, r3
-; P8-NOVSX-NEXT:    addi r3, r4, .LCPI8_1@toc@l
-; P8-NOVSX-NEXT:    lvx v4, 0, r3
-; P8-NOVSX-NEXT:    vslo v5, v2, v3
+; P8-NOVSX-NEXT:    addis r3, r2, .LCPI8_1@toc@ha
+; P8-NOVSX-NEXT:    addi r3, r3, .LCPI8_1@toc@l
+; P8-NOVSX-NEXT:    lvx v5, 0, r3
+; P8-NOVSX-NEXT:    vslo v4, v2, v3
 ; P8-NOVSX-NEXT:    vspltb v3, v3, 15
-; P8-NOVSX-NEXT:    vsro v2, v2, v4
-; P8-NOVSX-NEXT:    vspltb v4, v4, 15
-; P8-NOVSX-NEXT:    vsl v3, v5, v3
-; P8-NOVSX-NEXT:    vsr v2, v2, v4
+; P8-NOVSX-NEXT:    vsl v3, v4, v3
+; P8-NOVSX-NEXT:    vsro v2, v2, v5
+; P8-NOVSX-NEXT:    vspltb v5, v5, 15
+; P8-NOVSX-NEXT:    vsr v2, v2, v5
 ; P8-NOVSX-NEXT:    vor v2, v3, v2
 ; P8-NOVSX-NEXT:    blr
 entry:

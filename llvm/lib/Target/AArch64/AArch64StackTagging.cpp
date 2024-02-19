@@ -11,8 +11,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -435,7 +433,7 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
 void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                       uint64_t Size) {
   IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(SetTagFunc, {IRB.CreatePointerCast(AI, IRB.getInt8PtrTy()),
+  IRB.CreateCall(SetTagFunc, {IRB.CreatePointerCast(AI, IRB.getPtrTy()),
                               ConstantInt::get(IRB.getInt64Ty(), Size)});
 }
 
@@ -544,10 +542,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
+        !SInfo.CallsReturnTwice &&
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
-                                   ClMaxLifetimes) &&
-        !SInfo.CallsReturnTwice;
+                                   ClMaxLifetimes);
     if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
@@ -564,7 +562,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
+      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size);
@@ -580,6 +578,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // Fixup debug intrinsics to point to the new alloca.
     for (auto *DVI : Info.DbgVariableIntrinsics)
       DVI->replaceVariableLocationOp(OldAI, Info.AI);
+    for (auto *DPV : Info.DbgVariableRecords)
+      DPV->replaceVariableLocationOp(OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

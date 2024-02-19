@@ -34,13 +34,16 @@ intermediate LLVM representation.
    Docker
    FatLTO
    ExtendingLLVM
+   GitHub
    GoldPlugin
+   GlobalISel/MIRPatterns
    HowToBuildOnARM
    HowToBuildWithPGO
    HowToBuildWindowsItaniumPrograms
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
    LoopTerminology
@@ -59,6 +62,7 @@ intermediate LLVM representation.
    ReportingGuide
    ResponseGuide
    Remarks
+   RemoveDIsDebugInfo
    RISCVUsage
    SourceLevelDebugging
    SPIRVUsage
@@ -119,12 +123,13 @@ LLVM Builds and Distributions
 Optimizations
 -------------
 
-:doc:`WritingAnLLVMPass`
-   Information on how to write LLVM transformations and analyses.
-
 :doc:`WritingAnLLVMNewPMPass`
    Information on how to write LLVM transformations under the new pass
    manager.
+
+:doc:`WritingAnLLVMPass`
+   Information on how to write LLVM transformations and analyses under the
+   legacy pass manager.
 
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.
@@ -175,6 +180,13 @@ Optimizations
    referencing, to determine variable locations for debug info in the final
    stages of compilation.
 
+:doc:`RemoveDIsDebugInfo`
+   This is a migration guide describing how to move from debug info using
+   intrinsics such as dbg.value to using the non-instruction DPValue object.
+
+:doc:`InstrProfileFormat`
+   This document explains two binary formats of instrumentation-based profiles.
+
 Code Generation
 ---------------
 
@@ -189,6 +201,13 @@ Code Generation
 :doc:`TableGen <TableGen/index>`
    Describes the TableGen tool, which is used heavily by the LLVM code
    generator.
+
+==========
+GlobalISel
+==========
+
+:doc:`MIRPatterns <GlobalISel/MIRPatterns>`
+   Describes the design of MIR Patterns and how to use them.
 
 ===
 JIT
@@ -261,4 +280,3 @@ Additional Topics
 
 :doc:`RISCVUsage`
    This document describes using the RISCV-V target.
-

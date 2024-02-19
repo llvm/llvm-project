@@ -57,15 +57,26 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
            << op.getMixedSizes().size() << " vs " << op.getMixedStrides().size()
            << ") so the rank of the result type is well-formed.";
 
-  if (failed(verifyListOfOperandsOrIntegers(op, "offset", maxRanks[0],
-                                            op.static_offsets(), op.offsets())))
+  if (failed(verifyListOfOperandsOrIntegers(
+          op, "offset", maxRanks[0], op.getStaticOffsets(), op.getOffsets())))
     return failure();
-  if (failed(verifyListOfOperandsOrIntegers(op, "size", maxRanks[1],
-                                            op.static_sizes(), op.sizes())))
+  if (failed(verifyListOfOperandsOrIntegers(
+          op, "size", maxRanks[1], op.getStaticSizes(), op.getSizes())))
     return failure();
-  if (failed(verifyListOfOperandsOrIntegers(op, "stride", maxRanks[2],
-                                            op.static_strides(), op.strides())))
+  if (failed(verifyListOfOperandsOrIntegers(
+          op, "stride", maxRanks[2], op.getStaticStrides(), op.getStrides())))
     return failure();
+
+  for (int64_t offset : op.getStaticOffsets()) {
+    if (offset < 0 && !ShapedType::isDynamic(offset))
+      return op->emitError("expected offsets to be non-negative, but got ")
+             << offset;
+  }
+  for (int64_t size : op.getStaticSizes()) {
+    if (size < 0 && !ShapedType::isDynamic(size))
+      return op->emitError("expected sizes to be non-negative, but got ")
+             << size;
+  }
   return success();
 }
 
@@ -179,11 +190,11 @@ ParseResult mlir::parseDynamicIndexList(
 bool mlir::detail::sameOffsetsSizesAndStrides(
     OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
     llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp) {
-  if (a.static_offsets().size() != b.static_offsets().size())
+  if (a.getStaticOffsets().size() != b.getStaticOffsets().size())
     return false;
-  if (a.static_sizes().size() != b.static_sizes().size())
+  if (a.getStaticSizes().size() != b.getStaticSizes().size())
     return false;
-  if (a.static_strides().size() != b.static_strides().size())
+  if (a.getStaticStrides().size() != b.getStaticStrides().size())
     return false;
   for (auto it : llvm::zip(a.getMixedOffsets(), b.getMixedOffsets()))
     if (!cmp(std::get<0>(it), std::get<1>(it)))
@@ -195,4 +206,10 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
     if (!cmp(std::get<0>(it), std::get<1>(it)))
       return false;
   return true;
+}
+
+unsigned mlir::detail::getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
+                                                   unsigned idx) {
+  return std::count_if(staticVals.begin(), staticVals.begin() + idx,
+                       [&](int64_t val) { return ShapedType::isDynamic(val); });
 }

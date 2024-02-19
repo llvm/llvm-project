@@ -15,7 +15,7 @@
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
@@ -39,9 +39,9 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #error "mmap or mmap2 syscalls not available."
 #endif
 
-  long ret_val =
-      __llvm_libc::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
-                                size, prot, flags, fd, offset);
+  long ret =
+      LIBC_NAMESPACE::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
+                                   size, prot, flags, fd, offset);
 
   // The mmap/mmap2 syscalls return negative values on error. These negative
   // values are actually the negative values of the error codes. So, fix them
@@ -52,12 +52,12 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret_val < 0 && ret_val > -EXEC_PAGESIZE) {
-    libc_errno = -ret_val;
+  if (ret < 0 && ret > -EXEC_PAGESIZE) {
+    libc_errno = static_cast<int>(-ret);
     return MAP_FAILED;
   }
 
-  return reinterpret_cast<void *>(ret_val);
+  return reinterpret_cast<void *>(ret);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

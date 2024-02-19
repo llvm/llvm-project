@@ -63,7 +63,9 @@ std::unique_ptr<BTFContext>
 BTFContext::create(const ObjectFile &Obj,
                    std::function<void(Error)> ErrorHandler) {
   auto Ctx = std::make_unique<BTFContext>();
-  if (Error E = Ctx->BTF.parse(Obj))
+  BTFParser::ParseOptions Opts;
+  Opts.LoadLines = true;
+  if (Error E = Ctx->BTF.parse(Obj, Opts))
     ErrorHandler(std::move(E));
   return Ctx;
 }

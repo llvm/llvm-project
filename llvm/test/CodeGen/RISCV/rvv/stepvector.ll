@@ -562,9 +562,9 @@ define <vscale x 16 x i64> @stepvector_nxv16i64() {
 ;
 ; RV64-LABEL: stepvector_nxv16i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    vadd.vx v16, v8, a0
 ; RV64-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
@@ -591,11 +591,11 @@ define <vscale x 16 x i64> @add_stepvector_nxv16i64() {
 ;
 ; RV64-LABEL: add_stepvector_nxv16i64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vadd.vx v16, v8, a0
 ; RV64-NEXT:    ret
 entry:
@@ -680,15 +680,15 @@ define <vscale x 16 x i64> @mul_bigimm_stepvector_nxv16i64() {
 ;
 ; RV64-LABEL: mul_bigimm_stepvector_nxv16i64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    lui a1, 1987
+; RV64-NEXT:    addiw a1, a1, -731
+; RV64-NEXT:    slli a1, a1, 12
+; RV64-NEXT:    addi a1, a1, -683
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    lui a0, 1987
-; RV64-NEXT:    addiw a0, a0, -731
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, -683
-; RV64-NEXT:    vmul.vx v8, v8, a0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    mul a0, a1, a0
+; RV64-NEXT:    vmul.vx v8, v8, a1
 ; RV64-NEXT:    vadd.vx v16, v8, a0
 ; RV64-NEXT:    ret
 entry:
@@ -719,11 +719,11 @@ define <vscale x 16 x i64> @shl_stepvector_nxv16i64() {
 ;
 ; RV64-LABEL: shl_stepvector_nxv16i64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vsll.vi v8, v8, 2
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 2
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vsll.vi v8, v8, 2
 ; RV64-NEXT:    vadd.vx v16, v8, a0
 ; RV64-NEXT:    ret
 entry:
@@ -732,4 +732,46 @@ entry:
   %2 = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
   %3 = shl <vscale x 16 x i64> %2, %1
   ret <vscale x 16 x i64> %3
+}
+
+; maximum step is 4 * 2 = 8, so maximum step value is 7, so hi 61 bits are known
+; zero
+define <vscale x 2 x i64> @hi_bits_known_zero() vscale_range(2, 4) {
+; CHECK-LABEL: hi_bits_known_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    ret
+  %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %and = and <vscale x 2 x i64> %step, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 u0xfffffffffffffff8, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %and
+}
+
+; the maximum step here overflows so don't set the known hi bits
+define <vscale x 2 x i64> @hi_bits_known_zero_overflow() vscale_range(2, 4) {
+; CHECK-LABEL: hi_bits_known_zero_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmul.vx v8, v8, a0
+; CHECK-NEXT:    vand.vi v8, v8, -8
+; CHECK-NEXT:    ret
+  %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %step.mul = mul <vscale x 2 x i64> %step, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 u0xffffffffffffffff, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %and = and <vscale x 2 x i64> %step.mul, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 u0xfffffffffffffff8, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %and
+}
+
+; step values are multiple of 8, so lo 3 bits are known zero
+define <vscale x 2 x i64> @lo_bits_known_zero() {
+; CHECK-LABEL: lo_bits_known_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    ret
+  %step = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %step.mul = mul <vscale x 2 x i64> %step, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 8, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %and = and <vscale x 2 x i64> %step.mul, shufflevector(<vscale x 2 x i64> insertelement(<vscale x 2 x i64> poison, i64 7, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i64> %and
 }

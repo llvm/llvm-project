@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-namespace __llvm_libc {
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
+
+namespace LIBC_NAMESPACE {
 
 struct CallOnceFlag;
 using CallOnceCallback = void(void);
 
 int callonce(CallOnceFlag *flag, CallOnceCallback *callback);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H

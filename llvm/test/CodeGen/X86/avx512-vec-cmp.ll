@@ -1434,8 +1434,8 @@ define <4 x i32> @zext_bool_logic(<4 x i64> %cond1, <4 x i64> %cond2, <4 x i32> 
 define void @half_vec_compare(ptr %x, ptr %y) {
 ; KNL-LABEL: half_vec_compare:
 ; KNL:       ## %bb.0: ## %entry
-; KNL-NEXT:    vmovd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0x07]
-; KNL-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; KNL-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0x07]
 ; KNL-NEXT:    vpsrld $16, %xmm0, %xmm1 ## encoding: [0xc5,0xf1,0x72,0xd0,0x10]
 ; KNL-NEXT:    vpextrw $0, %xmm1, %eax ## encoding: [0xc5,0xf9,0xc5,0xc1,0x00]
 ; KNL-NEXT:    movzwl %ax, %eax ## encoding: [0x0f,0xb7,0xc0]
@@ -1458,9 +1458,7 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; KNL-NEXT:    cmovpl %ecx, %eax ## encoding: [0x0f,0x4a,0xc1]
 ; KNL-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
 ; KNL-NEXT:    vpinsrw $1, %edx, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc2,0x01]
-; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; KNL-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x00,0x05,A,A,A,A]
-; KNL-NEXT:    ## fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; KNL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
 ; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
 ; KNL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; KNL-NEXT:    vpextrw $0, %xmm0, (%rsi) ## encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
@@ -1468,8 +1466,8 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ;
 ; AVX512BW-LABEL: half_vec_compare:
 ; AVX512BW:       ## %bb.0: ## %entry
-; AVX512BW-NEXT:    vmovd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0x07]
-; AVX512BW-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; AVX512BW-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512BW-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0x07]
 ; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1 ## encoding: [0xc5,0xf1,0x72,0xd0,0x10]
 ; AVX512BW-NEXT:    vpextrw $0, %xmm1, %eax ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc5,0xc1,0x00]
 ; AVX512BW-NEXT:    movzwl %ax, %eax ## encoding: [0x0f,0xb7,0xc0]
@@ -1492,9 +1490,7 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; AVX512BW-NEXT:    cmovpl %ecx, %eax ## encoding: [0x0f,0x4a,0xc1]
 ; AVX512BW-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc2,0x01]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x00,0x05,A,A,A,A]
-; AVX512BW-NEXT:    ## fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
 ; AVX512BW-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
@@ -1502,8 +1498,8 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ;
 ; SKX-LABEL: half_vec_compare:
 ; SKX:       ## %bb.0: ## %entry
-; SKX-NEXT:    vmovd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0x07]
-; SKX-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SKX-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0x07]
 ; SKX-NEXT:    vpsrld $16, %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0x72,0xd0,0x10]
 ; SKX-NEXT:    vpextrw $0, %xmm1, %eax ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc5,0xc1,0x00]
 ; SKX-NEXT:    movzwl %ax, %eax ## encoding: [0x0f,0xb7,0xc0]
@@ -1531,7 +1527,8 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; SKX-NEXT:    kmovd %eax, %k1 ## encoding: [0xc5,0xfb,0x92,0xc8]
 ; SKX-NEXT:    kshiftlw $1, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x01]
 ; SKX-NEXT:    korw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x45,0xc9]
-; SKX-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7f,0x89,0x6f,0x05,A,A,A,A]
+; SKX-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; SKX-NEXT:    ## encoding: [0x62,0xf1,0x7f,0x89,0x6f,0x05,A,A,A,A]
 ; SKX-NEXT:    ## fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; SKX-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
 ; SKX-NEXT:    retq ## encoding: [0xc3]

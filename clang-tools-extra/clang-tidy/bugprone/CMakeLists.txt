@@ -11,6 +11,9 @@ add_clang_library(clangTidyBugproneModule
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp
+  CastingThroughVoidCheck.cpp
+  ChainedComparisonCheck.cpp
+  ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
   DanglingHandleCheck.cpp
   DynamicStaticInitializersCheck.cpp
@@ -22,7 +25,9 @@ add_clang_library(clangTidyBugproneModule
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
+  IncorrectEnableIfCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
+  IncDecInConditionsCheck.cpp
   IncorrectRoundingsCheck.cpp
   InfiniteLoopCheck.cpp
   IntegerDivisionCheck.cpp
@@ -33,11 +38,13 @@ add_clang_library(clangTidyBugproneModule
   MisplacedPointerArithmeticInAllocCheck.cpp
   MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
+  MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
   NotNullTerminatedResultCheck.cpp
+  OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
@@ -73,6 +80,7 @@ add_clang_library(clangTidyBugproneModule
   UnhandledSelfAssignmentCheck.cpp
   UniquePtrArrayMismatchCheck.cpp
   UnsafeFunctionsCheck.cpp
+  UnusedLocalNonTrivialVariableCheck.cpp
   UnusedRaiiCheck.cpp
   UnusedReturnValueCheck.cpp
   UseAfterMoveCheck.cpp
@@ -85,6 +93,7 @@ add_clang_library(clangTidyBugproneModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyBugproneModule

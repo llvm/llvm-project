@@ -58,7 +58,7 @@ public:
   /// given JITDylib.
   ///
   /// The ORC runtime requires access to a number of symbols in
-  /// libc++. It is up to the caller to ensure that the requried
+  /// libc++. It is up to the caller to ensure that the required
   /// symbols can be referenced by code added to PlatformJD. The
   /// standard way to achieve this is to first attach dynamic library
   /// search generators for either the given process, or for the

@@ -12,16 +12,21 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <string>
 
 #include "check_assertion.h"
 
-int main(int, char**) {
-    std::string s;
-    TEST_LIBCPP_ASSERT_FAILURE(s.pop_back(), "string::pop_back(): string is already empty");
+template <class S>
+void test() {
+  S s;
+  TEST_LIBCPP_ASSERT_FAILURE(s.pop_back(), "string::pop_back(): string is already empty");
+}
 
-    return 0;
+int main(int, char**) {
+  test<std::string>();
+
+  return 0;
 }

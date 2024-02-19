@@ -130,6 +130,16 @@ protected:
   bool shouldEraseOutputFiles() override;
 };
 
+class InstallAPIAction : public ASTFrontendAction {
+protected:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
+
+public:
+  static std::unique_ptr<llvm::raw_pwrite_stream>
+  CreateOutputFile(CompilerInstance &CI, StringRef InFile);
+};
+
 class GenerateInterfaceStubsAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -150,6 +160,9 @@ private:
 class GenerateModuleInterfaceAction : public GenerateModuleAction {
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
 
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;

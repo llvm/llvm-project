@@ -221,5 +221,30 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    // Make sure we take into account the number of times that a key repeats into equality.
+    {
+        typedef std::pair<int, char> P;
+        P a[] = {P(1, 'a'), P(1, 'b'),            P(1, 'd'), P(2, 'b')};
+        P b[] = {P(1, 'a'), P(1, 'b'), P(1, 'b'), P(1, 'd'), P(2, 'b')};
+
+        std::unordered_multimap<int, char> c1(std::begin(a), std::end(a));
+        std::unordered_multimap<int, char> c2(std::begin(b), std::end(b));
+        assert(testEquality(c1, c2, false));
+    }
+
+    // Make sure we incorporate the values into the equality of the maps.
+    // If we were to compare only the keys (including how many time each key repeats),
+    // the following test would fail cause only the values differ.
+    {
+        typedef std::pair<int, char> P;
+        P a[] = {P(1, 'a'), P(1, 'b'), P(1, 'd'), P(2, 'b')};
+        P b[] = {P(1, 'a'), P(1, 'b'), P(1, 'E'), P(2, 'b')};
+        //                                   ^ different here
+
+        std::unordered_multimap<int, char> c1(std::begin(a), std::end(a));
+        std::unordered_multimap<int, char> c2(std::begin(b), std::end(b));
+        assert(testEquality(c1, c2, false));
+    }
+
+    return 0;
 }

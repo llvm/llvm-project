@@ -64,7 +64,7 @@
 # Checking second CU
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x00000045)
-# POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000035)
+# POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000025)
 # POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_variable
 # POSTCHECK: DW_TAG_variable

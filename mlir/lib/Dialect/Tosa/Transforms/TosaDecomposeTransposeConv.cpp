@@ -112,9 +112,9 @@ public:
     convPad[3] = kernelWidth - 1 + pad[3];
 
     auto reverse1 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
+        loc, weightTy, weight, /* axis = */ rewriter.getI32IntegerAttr(1));
     auto reverse2 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
+        loc, weightTy, reverse1, /* axis = */ rewriter.getI32IntegerAttr(2));
 
     Value conv2d;
     if (op.getQuantizationInfo()) {
@@ -236,10 +236,10 @@ public:
 
     weight = createOpAndInfer<tosa::ReverseOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-        rewriter.getI64IntegerAttr(1));
+        /* axis = */ rewriter.getI32IntegerAttr(1));
     weight = createOpAndInfer<tosa::ReverseOp>(
         rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-        rewriter.getI64IntegerAttr(2));
+        /* axis = */ rewriter.getI32IntegerAttr(2));
 
     // We need to pad the input far enough that we can pull all values.
     llvm::SmallVector<int32_t, 8> inputPadding = {0, 0, 0, 0, 0, 0, 0, 0};

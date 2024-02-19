@@ -15,8 +15,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_FUNCTION_H
 #define LLVM_CLANG_AST_INTERP_FUNCTION_H
 
-#include "Pointer.h"
 #include "Source.h"
+#include "Descriptor.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -24,6 +25,7 @@ namespace clang {
 namespace interp {
 class Program;
 class ByteCodeEmitter;
+class Pointer;
 enum PrimType : uint32_t;
 
 /// Describes a scope block.
@@ -65,7 +67,7 @@ private:
 /// the argument values need to be preceeded by a Pointer for the This object.
 ///
 /// If the function uses Return Value Optimization, the arguments (and
-/// potentially the This pointer) need to be proceeded by a Pointer pointing
+/// potentially the This pointer) need to be preceeded by a Pointer pointing
 /// to the location to construct the returned value.
 ///
 /// After the function has been called, it will remove all arguments,
@@ -127,7 +129,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call in constexpr.
-  bool isConstexpr() const { return IsValid; }
+  bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
   bool isVirtual() const;
@@ -144,6 +146,22 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this function is a lambda static invoker,
+  /// which we generate custom byte code for.
+  bool isLambdaStaticInvoker() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return MD->isLambdaStaticInvoker();
+    return false;
+  }
+
+  /// Returns whether this function is the call operator
+  /// of a lambda record decl.
+  bool isLambdaCallOperator() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return clang::isLambdaCallOperator(MD);
+    return false;
+  }
+
   /// Checks if the function is fully done compiling.
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
@@ -152,9 +170,28 @@ public:
   /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
 
+  /// Checks if the function is defined.
+  bool isDefined() const { return Defined; }
+
+  bool isVariadic() const { return Variadic; }
+
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
 
+  bool isBuiltin() const { return F->getBuiltinID() != 0; }
+
+  bool isUnevaluatedBuiltin() const { return IsUnevaluatedBuiltin; }
+
   unsigned getNumParams() const { return ParamTypes.size(); }
+
+  /// Returns the number of parameter this function takes when it's called,
+  /// i.e excluding the instance pointer and the RVO pointer.
+  unsigned getNumWrittenParams() const {
+    assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
+    return getNumParams() - hasThisPointer() - hasRVO();
+  }
+  unsigned getWrittenArgSize() const {
+    return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
+  }
 
   unsigned getParamOffset(unsigned ParamIndex) const {
     return ParamOffsets[ParamIndex];
@@ -166,7 +203,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO);
+           bool HasRVO, bool UnevaluatedBuiltin);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -181,6 +218,7 @@ private:
   }
 
   void setIsFullyCompiled(bool FC) { IsFullyCompiled = FC; }
+  void setDefined(bool D) { Defined = D; }
 
 private:
   friend class Program;
@@ -222,6 +260,9 @@ private:
   bool HasRVO = false;
   /// If we've already compiled the function's body.
   bool HasBody = false;
+  bool Defined = false;
+  bool Variadic = false;
+  bool IsUnevaluatedBuiltin = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
