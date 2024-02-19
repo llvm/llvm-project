@@ -44,12 +44,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s0, s5, s0, s1
 ; SUPPRESS-NEXT:    fadd s1, s4, s2
 ; SUPPRESS-NEXT:    fadd s5, s0, s3
-; SUPPRESS-NEXT:    str s1, [x8]
-; SUPPRESS-NEXT:    str s5, [x8, #4]
+; SUPPRESS-NEXT:    stp s1, s5, [x8]
 ; SUPPRESS-NEXT:    fsub s2, s2, s4
 ; SUPPRESS-NEXT:    fsub s0, s3, s0
-; SUPPRESS-NEXT:    str s2, [x8, #8]
-; SUPPRESS-NEXT:    str s0, [x8, #12]
+; SUPPRESS-NEXT:    stp s2, s0, [x8, #8]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s3, s4, [x9]
 ; SUPPRESS-NEXT:    ldp s6, s7, [x8, #16]
@@ -60,12 +58,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s3, s17, s3, s4
 ; SUPPRESS-NEXT:    fadd s4, s16, s6
 ; SUPPRESS-NEXT:    fadd s17, s3, s7
-; SUPPRESS-NEXT:    str s4, [x8, #16]
-; SUPPRESS-NEXT:    str s17, [x8, #20]
+; SUPPRESS-NEXT:    stp s4, s17, [x8, #16]
 ; SUPPRESS-NEXT:    fsub s6, s6, s16
 ; SUPPRESS-NEXT:    fsub s3, s7, s3
-; SUPPRESS-NEXT:    str s6, [x8, #24]
-; SUPPRESS-NEXT:    str s3, [x8, #28]
+; SUPPRESS-NEXT:    stp s6, s3, [x8, #24]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s7, s16, [x9]
 ; SUPPRESS-NEXT:    fmul s18, s16, s17
@@ -74,12 +70,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s4, s16, s4, s17
 ; SUPPRESS-NEXT:    fadd s16, s7, s1
 ; SUPPRESS-NEXT:    fadd s17, s4, s5
-; SUPPRESS-NEXT:    str s16, [x8]
-; SUPPRESS-NEXT:    str s17, [x8, #4]
+; SUPPRESS-NEXT:    stp s16, s17, [x8]
 ; SUPPRESS-NEXT:    fsub s1, s1, s7
 ; SUPPRESS-NEXT:    fsub s4, s5, s4
-; SUPPRESS-NEXT:    str s1, [x8, #16]
-; SUPPRESS-NEXT:    str s4, [x8, #20]
+; SUPPRESS-NEXT:    stp s1, s4, [x8, #16]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    lsl x9, x3, #4
 ; SUPPRESS-NEXT:    add x10, x10, x9
@@ -90,12 +84,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s3, s4, s6, s3
 ; SUPPRESS-NEXT:    fadd s4, s1, s2
 ; SUPPRESS-NEXT:    fadd s5, s3, s0
-; SUPPRESS-NEXT:    str s4, [x8, #8]
-; SUPPRESS-NEXT:    str s5, [x8, #12]
+; SUPPRESS-NEXT:    stp s4, s5, [x8, #8]
 ; SUPPRESS-NEXT:    fsub s1, s2, s1
 ; SUPPRESS-NEXT:    fsub s0, s0, s3
-; SUPPRESS-NEXT:    str s1, [x8, #24]
-; SUPPRESS-NEXT:    str s0, [x8, #28]
+; SUPPRESS-NEXT:    stp s1, s0, [x8, #24]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s0, s1, [x10]
 ; SUPPRESS-NEXT:    ldp s2, s3, [x8, #32]
@@ -106,12 +98,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s0, s5, s0, s1
 ; SUPPRESS-NEXT:    fadd s1, s4, s2
 ; SUPPRESS-NEXT:    fadd s5, s0, s3
-; SUPPRESS-NEXT:    str s1, [x8, #32]
-; SUPPRESS-NEXT:    str s5, [x8, #36]
+; SUPPRESS-NEXT:    stp s1, s5, [x8, #32]
 ; SUPPRESS-NEXT:    fsub s2, s2, s4
 ; SUPPRESS-NEXT:    fsub s3, s3, s0
-; SUPPRESS-NEXT:    str s2, [x8, #40]
-; SUPPRESS-NEXT:    str s3, [x8, #44]
+; SUPPRESS-NEXT:    stp s2, s3, [x8, #40]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s0, s4, [x10]
 ; SUPPRESS-NEXT:    ldp s6, s7, [x8, #48]
@@ -122,12 +112,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s0, s17, s0, s4
 ; SUPPRESS-NEXT:    fadd s4, s16, s6
 ; SUPPRESS-NEXT:    fadd s17, s0, s7
-; SUPPRESS-NEXT:    str s4, [x8, #48]
-; SUPPRESS-NEXT:    str s17, [x8, #52]
+; SUPPRESS-NEXT:    stp s4, s17, [x8, #48]
 ; SUPPRESS-NEXT:    fsub s6, s6, s16
 ; SUPPRESS-NEXT:    fsub s0, s7, s0
-; SUPPRESS-NEXT:    str s6, [x8, #56]
-; SUPPRESS-NEXT:    str s0, [x8, #60]
+; SUPPRESS-NEXT:    stp s6, s0, [x8, #56]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s7, s16, [x10]
 ; SUPPRESS-NEXT:    fmul s18, s16, s17
@@ -136,12 +124,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s4, s16, s4, s17
 ; SUPPRESS-NEXT:    fadd s16, s7, s1
 ; SUPPRESS-NEXT:    fadd s17, s4, s5
-; SUPPRESS-NEXT:    str s16, [x8, #32]
-; SUPPRESS-NEXT:    str s17, [x8, #36]
+; SUPPRESS-NEXT:    stp s16, s17, [x8, #32]
 ; SUPPRESS-NEXT:    fsub s7, s1, s7
 ; SUPPRESS-NEXT:    fsub s4, s5, s4
-; SUPPRESS-NEXT:    str s7, [x8, #48]
-; SUPPRESS-NEXT:    str s4, [x8, #52]
+; SUPPRESS-NEXT:    stp s7, s4, [x8, #48]
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, x9
 ; SUPPRESS-NEXT:    ldp s1, s5, [x9]
@@ -151,12 +137,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s5, s5, s6, s0
 ; SUPPRESS-NEXT:    fadd s6, s1, s2
 ; SUPPRESS-NEXT:    fadd s18, s5, s3
-; SUPPRESS-NEXT:    str s6, [x8, #40]
-; SUPPRESS-NEXT:    str s18, [x8, #44]
+; SUPPRESS-NEXT:    stp s6, s18, [x8, #40]
 ; SUPPRESS-NEXT:    fsub s0, s2, s1
 ; SUPPRESS-NEXT:    fsub s1, s3, s5
-; SUPPRESS-NEXT:    str s0, [x8, #56]
-; SUPPRESS-NEXT:    str s1, [x8, #60]
+; SUPPRESS-NEXT:    stp s0, s1, [x8, #56]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
 ; SUPPRESS-NEXT:    ldp s2, s3, [x9]
 ; SUPPRESS-NEXT:    ldp s5, s19, [x8]
@@ -166,12 +150,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s2, s17, s2, s3
 ; SUPPRESS-NEXT:    fadd s3, s16, s5
 ; SUPPRESS-NEXT:    fadd s17, s2, s19
-; SUPPRESS-NEXT:    str s3, [x8]
-; SUPPRESS-NEXT:    str s17, [x8, #4]
+; SUPPRESS-NEXT:    stp s3, s17, [x8]
 ; SUPPRESS-NEXT:    fsub s3, s5, s16
 ; SUPPRESS-NEXT:    fsub s2, s19, s2
-; SUPPRESS-NEXT:    str s3, [x8, #32]
-; SUPPRESS-NEXT:    str s2, [x8, #36]
+; SUPPRESS-NEXT:    stp s3, s2, [x8, #32]
 ; SUPPRESS-NEXT:    ldr x9, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x9, w3, sxtw #3
 ; SUPPRESS-NEXT:    ldp s2, s3, [x9]
@@ -182,12 +164,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s2, s18, s2, s3
 ; SUPPRESS-NEXT:    fadd s3, s6, s5
 ; SUPPRESS-NEXT:    fadd s17, s2, s16
-; SUPPRESS-NEXT:    str s3, [x8, #8]
-; SUPPRESS-NEXT:    str s17, [x8, #12]
+; SUPPRESS-NEXT:    stp s3, s17, [x8, #8]
 ; SUPPRESS-NEXT:    fsub s3, s5, s6
 ; SUPPRESS-NEXT:    fsub s2, s16, s2
-; SUPPRESS-NEXT:    str s3, [x8, #40]
-; SUPPRESS-NEXT:    str s2, [x8, #44]
+; SUPPRESS-NEXT:    stp s3, s2, [x8, #40]
 ; SUPPRESS-NEXT:    lsl x9, x3, #33
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, x9, asr #29
@@ -199,12 +179,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s2, s4, s2, s3
 ; SUPPRESS-NEXT:    fadd s3, s7, s5
 ; SUPPRESS-NEXT:    fadd s4, s2, s6
-; SUPPRESS-NEXT:    str s3, [x8, #16]
-; SUPPRESS-NEXT:    str s4, [x8, #20]
+; SUPPRESS-NEXT:    stp s3, s4, [x8, #16]
 ; SUPPRESS-NEXT:    fsub s3, s5, s7
 ; SUPPRESS-NEXT:    fsub s2, s6, s2
-; SUPPRESS-NEXT:    str s3, [x8, #48]
-; SUPPRESS-NEXT:    str s2, [x8, #52]
+; SUPPRESS-NEXT:    stp s3, s2, [x8, #48]
 ; SUPPRESS-NEXT:    add w9, w3, w3, lsl #1
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, w9, sxtw #3
@@ -216,12 +194,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fmadd s1, s1, s2, s3
 ; SUPPRESS-NEXT:    fadd s2, s0, s4
 ; SUPPRESS-NEXT:    fadd s3, s1, s5
-; SUPPRESS-NEXT:    str s2, [x8, #24]
-; SUPPRESS-NEXT:    str s3, [x8, #28]
+; SUPPRESS-NEXT:    stp s2, s3, [x8, #24]
 ; SUPPRESS-NEXT:    fsub s0, s4, s0
 ; SUPPRESS-NEXT:    fsub s1, s5, s1
-; SUPPRESS-NEXT:    str s0, [x8, #56]
-; SUPPRESS-NEXT:    str s1, [x8, #60]
+; SUPPRESS-NEXT:    stp s0, s1, [x8, #56]
 ; SUPPRESS-NEXT:    ret
 ;
 ; NOSUPPRESS-LABEL: load_store_units_critical:

@@ -451,6 +451,14 @@ public:
   /// @name Convenience Predicates
   /// @{
 
+  /// Returns the pointer width of this architecture.
+  static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch);
+
+  /// Returns the pointer width of this architecture.
+  unsigned getArchPointerBitWidth() const {
+    return getArchPointerBitWidth(getArch());
+  }
+
   /// Test whether the architecture is 64-bit
   ///
   /// Note that this tests for 64-bit pointer width, and nothing else. Note

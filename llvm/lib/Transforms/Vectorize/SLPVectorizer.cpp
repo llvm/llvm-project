@@ -13239,8 +13239,7 @@ bool BoUpSLP::collectValuesToDemote(
       return true;
     auto NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
-    KnownBits Known = computeKnownBits(V, *DL);
-    if (!Known.isNonNegative())
+    if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
       ++BitWidth1;
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);

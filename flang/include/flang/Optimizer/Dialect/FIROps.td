@@ -2436,6 +2436,65 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
   }];
 }
 
+def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
+    AttrSizedOperandSegments]> {
+  let summary = "call CUDA kernel";
+
+  let description = [{
+    Launch a CUDA kernel from the host.
+
+    ```
+      // launch simple kernel with no arguments. bytes and stream value are
+      // optional in the chevron notation.
+      fir.cuda_kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    I32:$grid_x,
+    I32:$grid_y,
+    I32:$block_x,
+    I32:$block_y,
+    I32:$block_z,
+    Optional<I32>:$bytes,
+    Optional<I32>:$stream,
+    Variadic<AnyType>:$args
+  );
+
+  let assemblyFormat = [{
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $block_x `,` $block_y `,`
+        $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return getCalleeAttr();
+    }
+
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+    }
+    mlir::FunctionType getFunctionType();
+
+    unsigned getNbNoArgOperand() {
+      unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
+      if (getBytes()) ++nbNoArgOperand;
+      if (getStream()) ++nbNoArgOperand;
+      return nbNoArgOperand;
+    }
+
+    operand_range getArgOperands() {
+      return {operand_begin() + getNbNoArgOperand(), operand_end()};
+    }
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return mlir::MutableOperandRange(
+          *this, getNbNoArgOperand(), getArgs().size() - 1);
+    }
+  }];
+}
+
 // Constant operations that support Fortran
 
 def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {

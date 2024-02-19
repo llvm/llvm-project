@@ -1,0 +1,114 @@
+.. _c23_support:
+
+===========
+C23 Support
+===========
+
+.. contents:: Table of Contents
+  :depth: 4
+  :local:
+
+---------------------
+Implementation Status
+---------------------
+
+(It's helpful to review 'Annex B (Informative) Library Summary' for these.)
+
+New headers:
+
+* stdbit.h
+* stdckdint.h
+
+Additions:
+
+* uchar.h
+
+  * mbrtoc8
+  * c8rtomb
+  * char*_t
+
+* string.h
+
+  * memset_explicit
+  * memccpy
+  * strdup
+  * strndup
+
+* time.h
+
+  * gmtime_r
+  * localtime_r
+  * timegm
+  * timespec_getres
+  * strftime conversion specifiers
+
+    * 0b
+    * 0B
+* math.h
+
+  * acospi*
+  * asinpi*
+  * atanpi*
+  * atan2pi*
+  * cospi*
+  * sinpi*
+  * tanpi*
+  * exp10*
+  * exp10m1*
+  * exp2m1*
+  * log10p1*
+  * logp1
+  * log2p1*
+  * rsqrt*
+  * __STDC_IEC_60559_DFP__ functions (_Decimal32, _Decimal64, _Decimal128)
+  * compoundn*
+  * totalorder*
+  * totalordermag*
+  * getpayload*
+  * setpayload*
+  * iscannonical
+  * issignaling
+  * issubnormal
+  * iszero
+  * llogb*
+  * pown*
+  * powr*
+  * rootn*
+  * roundeven*
+  * fromfp*
+  * ufromfp*
+  * fromfpx*
+  * nextup*
+  * nextdown*
+  * canonicalize*
+  * fmaximum*
+  * fminimum*
+  * fmaximum_mag*
+  * fminimum_mag*
+  * fmaximum_mag_num*
+  * fminimum_mag_num*
+  * fadd*
+  * fsub*
+  * fmul*
+  * fdiv*
+  * ffma*
+  * dfmal
+  * fsqrt*
+  * dsqrtl
+* fenv.h
+
+  * fesetexcept
+  * fetestexceptflag
+  * fegetmode
+  * fesetmode
+* stddef.h
+
+  * unreachable
+* stdlib.h
+
+  * free_sized
+  * free_aligned_sized
+  * memalignment
+* tgmath.h
+
+  * <TODO>
