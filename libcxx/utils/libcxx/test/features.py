@@ -476,6 +476,7 @@ DEFAULT_FEATURES += [
     ),
 ]
 
+
 # Creation of symlinks require elevated privileges on Windows unless
 # Windows developer mode is enabled.
 def check_unprivileged_symlinks(cfg):
@@ -499,12 +500,14 @@ def check_unprivileged_symlinks(cfg):
         if os.path.exists(symlink_file_path):
             os.remove(symlink_file_path)
 
+
 DEFAULT_FEATURES += [
     Feature(
         name="host-can-create-symlinks",
         when=check_unprivileged_symlinks,
     )
 ]
+
 
 # Detect whether GDB is on the system, has Python scripting and supports
 # adding breakpoint commands. If so add a substitution to access it.
