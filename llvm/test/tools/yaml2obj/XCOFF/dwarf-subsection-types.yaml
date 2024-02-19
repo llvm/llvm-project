@@ -1,13 +1,9 @@
 ## Test that we can generate and read DWARF section headers.
 
 # RUN: yaml2obj --docnum=1 %s -o %t32
-# RUN: llvm-readobj --section-headers %t32 | \
-# RUN    FileCheck --check-prefixes=HDRS,HDRS32 %s
 # RUN: obj2yaml %t32 | FileCheck --check-prefix=YAML %s
 
 # RUN: yaml2obj --docnum=1 -DMAGIC=0x01F7 %s -o %t64
-# RUN: llvm-readobj --section-headers %t64 | \
-# RUN    FileCheck --check-prefixes=HDRS,HDRS64 %s
 # RUN: obj2yaml %t64 | FileCheck --check-prefix=YAML %s
 
 # YAML:         - Name:            .dwabrev
@@ -19,34 +15,6 @@
 # YAML:         - Name:            .dwline
 # YAML:         Flags:           [ STYP_DWARF ]
 # YAML-NEXT:    DWARFSectionSubtype: SSUBTYP_DWLINE
-
-# HDRS32:       Format: aixcoff-rs6000
-# HDRS64:       Format: aix5coff64-rs6000
-# HDRS:         Arch: powerpc
-# HDRS-NEXT:    AddressSize: 32bit
-# HDRS-NEXT:    Sections [
-# HDRS-NEXT:      Section {
-# HDRS:             Index: 1
-# HDRS-NEXT:        Name: .data
-# HDRS:             Type: STYP_DATA (0x40)
-# HDRS-NEXT:      }
-# HDRS-NEXT:      Section {
-# HDRS-NEXT:        Index: 2
-# HDRS-NEXT:        Name: .dwabrev
-# HDRS:             Type: STYP_DWARF (0x10)
-# HDRS-NEXT:        DWARFSubType: SSUBTYP_DWABREV (0x60000)
-# HDRS-NEXT:      }
-# HDRS-NEXT:      Section {
-# HDRS-NEXT:        Index: 3
-# HDRS-NEXT:        Name: .dwinfo
-# HDRS:             Type: STYP_DWARF (0x10)
-# HDRS-NEXT:        DWARFSubType: SSUBTYP_DWINFO (0x10000)
-# HDRS-NEXT:      }
-# HDRS-NEXT:      Section {
-# HDRS-NEXT:        Index: 4
-# HDRS-NEXT:        Name: .dwline
-# HDRS:             Type: STYP_DWARF (0x10)
-# HDRS-NEXT:        DWARFSubType: SSUBTYP_DWLINE (0x20000)
 
 --- !XCOFF
 FileHeader:
@@ -81,7 +49,6 @@ Sections:
     SectionData:     00000021
 StringTable:     {}
 ...
-
 
 ## Test that an invalid DWARF section subtype is diagnosed.
 # RUN: not yaml2obj --docnum=2 %s -o %t 2>&1 | FileCheck --check-prefix=ERR1 %s

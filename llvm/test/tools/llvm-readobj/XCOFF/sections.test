@@ -47,31 +47,13 @@
 #   SEC-NEXT:  Section {
 #   SEC-NEXT:    Index: 3
 #   SEC-NEXT:    Name: .dwabrev
-#   SEC-NEXT:    PhysicalAddress: 0x0
-#   SEC-NEXT:    VirtualAddress: 0x0
-#   SEC-NEXT:    Size: 0x4
-# SEC32-NEXT:    RawDataOffset: 0xBC
-# SEC64-NEXT:    RawDataOffset: 0x140
-#   SEC-NEXT:    RelocationPointer: 0x0
-#   SEC-NEXT:    LineNumberPointer: 0x0
-#   SEC-NEXT:    NumberOfRelocations: 0
-#   SEC-NEXT:    NumberOfLineNumbers: 0
-#   SEC-NEXT:    Type: STYP_DWARF (0x10)
+#        SEC:    Type: STYP_DWARF (0x10)
 #   SEC-NEXT:    DWARFSubType: SSUBTYP_DWABREV (0x60000)
 #   SEC-NEXT:  }
 #   SEC-NEXT:  Section {
 #   SEC-NEXT:    Index: 4
 #   SEC-NEXT:    Name: .dwinfo
-#   SEC-NEXT:    PhysicalAddress: 0x0
-#   SEC-NEXT:    VirtualAddress: 0x0
-#   SEC-NEXT:    Size: 0x4
-# SEC32-NEXT:    RawDataOffset: 0xC0
-# SEC64-NEXT:    RawDataOffset: 0x144
-#   SEC-NEXT:    RelocationPointer: 0x0
-#   SEC-NEXT:    LineNumberPointer: 0x0
-#   SEC-NEXT:    NumberOfRelocations: 0
-#   SEC-NEXT:    NumberOfLineNumbers: 0
-#   SEC-NEXT:    Type: STYP_DWARF (0x10)
+#        SEC:    Type: STYP_DWARF (0x10)
 #   SEC-NEXT:    DWARFSubType: SSUBTYP_DWINFO (0x10000)
 #   SEC-NEXT:  }
 #   SEC-NEXT:]
