@@ -1865,3 +1865,59 @@ omp.private {type = firstprivate} @x.privatizer : f32 alloc {
 ^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
 }
+
+// -----
+
+func.func @private_type_mismatch(%arg0: index) {
+// expected-error @below {{type mismatch between a private variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.parallel private(@var1.privatizer %arg0 -> %arg2 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+// -----
+
+func.func @firstprivate_type_mismatch(%arg0: index) {
+  // expected-error @below {{type mismatch between a firstprivate variable and its privatizer op, var type: 'index' vs. privatizer op type: '!llvm.ptr'}}
+  omp.parallel private(@var1.privatizer %arg0 -> %arg2 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+omp.private {type = firstprivate} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}
+
+// -----
+
+func.func @undefined_privatizer(%arg0: index) {
+  // expected-error @below {{failed to lookup privatizer op with symbol: '@var1.privatizer'}}
+  omp.parallel private(@var1.privatizer %arg0 -> %arg2 : index) {
+    omp.terminator
+  }
+
+  return
+}
+
+// -----
+func.func @undefined_privatizer(%arg0: !llvm.ptr) {
+  // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
+  "omp.parallel"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 1>, privatizers = [@x.privatizer, @y.privatizer]}> ({
+    ^bb0(%arg2: !llvm.ptr):
+      omp.terminator
+    }) : (!llvm.ptr) -> ()
+  return
+}
