@@ -55226,6 +55226,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
         uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
         uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
+        // MVT::v16i16 has repeated blend mask.
+        if (Op0.getSimpleValueType() == MVT::v16i16) {
+          Mask0 = (Mask0 << 8) | Mask0;
+          Mask1 = (Mask1 << 8) | Mask1;
+        }
         uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
         MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
         MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
