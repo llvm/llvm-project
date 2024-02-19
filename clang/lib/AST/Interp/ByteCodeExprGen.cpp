@@ -2473,17 +2473,6 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
     }
   }
 
-  // If the declaration is a constant value, emit it here even
-  // though the declaration was not evaluated in the current scope.
-  // The access mode can only be read in this case.
-  if (!DiscardResult && AK == DerefKind::Read) {
-    if (VD->hasLocalStorage() && VD->hasInit() && !VD->isConstexpr()) {
-      QualType VT = VD->getType();
-      if (VT.isConstQualified() && VT->isFundamentalType())
-        return this->visit(VD->getInit());
-    }
-  }
-
   // Value cannot be produced - try to emit pointer.
   return visit(LV) && Indirect(T);
 }
