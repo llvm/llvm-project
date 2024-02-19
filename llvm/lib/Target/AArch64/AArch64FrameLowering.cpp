@@ -3197,21 +3197,13 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   }
 
   // For performance reasons restore SVE register in increasing order
-  auto PPRBegin =
-      std::find_if(RegPairs.begin(), RegPairs.end(), [](const RegPairInfo &c) {
-        return c.Type == RegPairInfo::PPR;
-      });
-  auto PPREnd = std::find_if(
-      RegPairs.rbegin(), RegPairs.rend(),
-      [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; });
+  auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
+  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+  auto PPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsPPR);
   std::reverse(PPRBegin, PPREnd.base());
-  auto ZPRBegin =
-      std::find_if(RegPairs.begin(), RegPairs.end(), [](const RegPairInfo &c) {
-        return c.Type == RegPairInfo::ZPR;
-      });
-  auto ZPREnd = std::find_if(
-      RegPairs.rbegin(), RegPairs.rend(),
-      [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; });
+  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
+  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+  auto ZPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsZPR);
   std::reverse(ZPRBegin, ZPREnd.base());
 
   if (ReverseCSRRestoreSeq) {
