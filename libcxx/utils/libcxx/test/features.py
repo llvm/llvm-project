@@ -8,10 +8,12 @@
 
 from libcxx.test.dsl import *
 from lit.BooleanExpression import BooleanExpression
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 _isAnyClang = lambda cfg: "__clang__" in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
@@ -472,6 +474,36 @@ DEFAULT_FEATURES += [
         name="buildhost=aix",
         when=lambda cfg: platform.system().lower().startswith("aix"),
     ),
+]
+
+# Creation of symlinks require elevated privileges on Windows unless
+# Windows developer mode is enabled.
+def check_unprivileged_symlinks(cfg):
+    if not platform.system().lower().startswith("windows"):
+        return True
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_file_path = temp_file.name
+
+    # Close the file to ensure it can be linked.
+    temp_file.close()
+
+    symlink_file_path = temp_file_path + "_symlink"
+    try:
+        os.symlink(temp_file_path, symlink_file_path)
+        return True
+    except Exception as e:
+        return False
+    finally:
+        os.remove(temp_file_path)
+        if os.path.exists(symlink_file_path):
+            os.remove(symlink_file_path)
+
+DEFAULT_FEATURES += [
+    Feature(
+        name="host-can-create-symlinks",
+        when=check_unprivileged_symlinks,
+    )
 ]
 
 # Detect whether GDB is on the system, has Python scripting and supports
