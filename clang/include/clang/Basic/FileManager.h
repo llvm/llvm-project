@@ -283,7 +283,7 @@ public:
                    bool RequiresNullTerminator = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true) {
+                   bool RequiresNullTerminator = true) const {
     return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
                                 RequiresNullTerminator);
   }
@@ -291,7 +291,7 @@ public:
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
-                       bool RequiresNullTerminator);
+                       bool RequiresNullTerminator) const;
 
 public:
   /// Get the 'stat' information for the given \p Path.
