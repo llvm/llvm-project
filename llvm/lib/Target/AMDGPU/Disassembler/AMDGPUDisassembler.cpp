@@ -154,11 +154,12 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
                                 AMDGPUDisassembler::OpWidthTy OpWidth,
                                 unsigned Imm, unsigned EncImm,
                                 bool MandatoryLiteral, unsigned ImmWidth,
+                                AMDGPU::OperandSemantics Sema,
                                 const MCDisassembler *Decoder) {
   assert(Imm < (1U << EncSize) && "Operand doesn't fit encoding!");
   auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(
-      Inst, DAsm->decodeSrcOp(OpWidth, EncImm, MandatoryLiteral, ImmWidth));
+  return addOperand(Inst, DAsm->decodeSrcOp(OpWidth, EncImm, MandatoryLiteral,
+                                            ImmWidth, Sema));
 }
 
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
@@ -174,7 +175,7 @@ template <AMDGPUDisassembler::OpWidthTy OpWidth>
 static DecodeStatus decodeAV10(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
                                const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm | AMDGPU::EncValues::IS_VGPR,
-                     false, 0, Decoder);
+                     false, 0, AMDGPU::OperandSemantics::INT, Decoder);
 }
 
 // Decoder for Src(9-bit encoding) registers only.
@@ -182,7 +183,8 @@ template <AMDGPUDisassembler::OpWidthTy OpWidth>
 static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
                                   uint64_t /* Addr */,
                                   const MCDisassembler *Decoder) {
-  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, false, 0, Decoder);
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, false, 0,
+                     AMDGPU::OperandSemantics::INT, Decoder);
 }
 
 // Decoder for Src(9-bit encoding) AGPR, register number encoded in 9bits, set
@@ -191,7 +193,8 @@ static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
 template <AMDGPUDisassembler::OpWidthTy OpWidth>
 static DecodeStatus decodeSrcA9(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
                                 const MCDisassembler *Decoder) {
-  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, false, 0, Decoder);
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, false, 0,
+                     AMDGPU::OperandSemantics::INT, Decoder);
 }
 
 // Decoder for 'enum10' from decodeSrcOp, Imm{0-8} is 9-bit Src encoding
@@ -200,7 +203,8 @@ template <AMDGPUDisassembler::OpWidthTy OpWidth>
 static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
                                   uint64_t /* Addr */,
                                   const MCDisassembler *Decoder) {
-  return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm, false, 0, Decoder);
+  return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm, false, 0,
+                     AMDGPU::OperandSemantics::INT, Decoder);
 }
 
 // Decoder for RegisterOperands using 9-bit Src encoding. Operand can be
@@ -208,28 +212,33 @@ static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
 // will be decoded and InstPrinter will report warning. Immediate will be
 // decoded into constant of size ImmWidth, should match width of immediate used
 // by OperandType (important for floating point types).
-template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth>
+template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth,
+          unsigned OperandSemantics>
 static DecodeStatus decodeSrcRegOrImm9(MCInst &Inst, unsigned Imm,
                                        uint64_t /* Addr */,
                                        const MCDisassembler *Decoder) {
-  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, false, ImmWidth, Decoder);
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, false, ImmWidth,
+                     (AMDGPU::OperandSemantics)OperandSemantics, Decoder);
 }
 
 // Decoder for Src(9-bit encoding) AGPR or immediate. Set Imm{9} to 1 (set acc)
 // and decode using 'enum10' from decodeSrcOp.
-template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth>
+template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth,
+          unsigned OperandSemantics>
 static DecodeStatus decodeSrcRegOrImmA9(MCInst &Inst, unsigned Imm,
                                         uint64_t /* Addr */,
                                         const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, false, ImmWidth,
-                     Decoder);
+                     (AMDGPU::OperandSemantics)OperandSemantics, Decoder);
 }
 
-template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth>
+template <AMDGPUDisassembler::OpWidthTy OpWidth, unsigned ImmWidth,
+          unsigned OperandSemantics>
 static DecodeStatus decodeSrcRegOrImmDeferred9(MCInst &Inst, unsigned Imm,
                                                uint64_t /* Addr */,
                                                const MCDisassembler *Decoder) {
-  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, true, ImmWidth, Decoder);
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, true, ImmWidth,
+                     (AMDGPU::OperandSemantics)OperandSemantics, Decoder);
 }
 
 // Default decoders generated by tablegen: 'Decode<RegClass>RegisterClass'
@@ -394,8 +403,9 @@ static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
                                            const MCDisassembler *Decoder) {
   assert(Imm < (1 << 9) && "9-bit encoding");
   auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(
-      Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm, false, 64, true));
+  return addOperand(Inst,
+                    DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm, false, 64,
+                                      AMDGPU::OperandSemantics::FP64));
 }
 
 #define DECODE_SDWA(DecName) \
@@ -1414,7 +1424,7 @@ static int64_t getInlineImmVal64(unsigned Imm) {
   }
 }
 
-static int64_t getInlineImmVal16(unsigned Imm) {
+static int64_t getInlineImmValF16(unsigned Imm) {
   switch (Imm) {
   case 240:
     return 0x3800;
@@ -1439,9 +1449,40 @@ static int64_t getInlineImmVal16(unsigned Imm) {
   }
 }
 
-MCOperand AMDGPUDisassembler::decodeFPImmed(unsigned ImmWidth, unsigned Imm) {
-  assert(Imm >= AMDGPU::EncValues::INLINE_FLOATING_C_MIN
-      && Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX);
+static int64_t getInlineImmValBF16(unsigned Imm) {
+  switch (Imm) {
+  case 240:
+    return 0x3F00;
+  case 241:
+    return 0xBF00;
+  case 242:
+    return 0x3F80;
+  case 243:
+    return 0xBF80;
+  case 244:
+    return 0x4000;
+  case 245:
+    return 0xC000;
+  case 246:
+    return 0x4080;
+  case 247:
+    return 0xC080;
+  case 248: // 1 / (2 * PI)
+    return 0x3E22;
+  default:
+    llvm_unreachable("invalid fp inline imm");
+  }
+}
+
+static int64_t getInlineImmVal16(unsigned Imm, AMDGPU::OperandSemantics Sema) {
+  return (Sema == AMDGPU::OperandSemantics::BF16) ? getInlineImmValBF16(Imm)
+                                                  : getInlineImmValF16(Imm);
+}
+
+MCOperand AMDGPUDisassembler::decodeFPImmed(unsigned ImmWidth, unsigned Imm,
+                                            AMDGPU::OperandSemantics Sema) {
+  assert(Imm >= AMDGPU::EncValues::INLINE_FLOATING_C_MIN &&
+         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX);
 
   // ToDo: case 248: 1/(2*PI) - is allowed only on VI
   // ImmWidth 0 is a default case where operand should not allow immediates.
@@ -1454,7 +1495,7 @@ MCOperand AMDGPUDisassembler::decodeFPImmed(unsigned ImmWidth, unsigned Imm) {
   case 64:
     return MCOperand::createImm(getInlineImmVal64(Imm));
   case 16:
-    return MCOperand::createImm(getInlineImmVal16(Imm));
+    return MCOperand::createImm(getInlineImmVal16(Imm, Sema));
   default:
     llvm_unreachable("implement me");
   }
@@ -1568,7 +1609,8 @@ int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
                                           bool MandatoryLiteral,
-                                          unsigned ImmWidth, bool IsFP) const {
+                                          unsigned ImmWidth,
+                                          AMDGPU::OperandSemantics Sema) const {
   using namespace AMDGPU::EncValues;
 
   assert(Val < 1024); // enum10
@@ -1581,14 +1623,13 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
                                    : getVgprClassId(Width), Val - VGPR_MIN);
   }
   return decodeNonVGPRSrcOp(Width, Val & 0xFF, MandatoryLiteral, ImmWidth,
-                            IsFP);
+                            Sema);
 }
 
-MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
-                                                 unsigned Val,
-                                                 bool MandatoryLiteral,
-                                                 unsigned ImmWidth,
-                                                 bool IsFP) const {
+MCOperand
+AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
+                                       bool MandatoryLiteral, unsigned ImmWidth,
+                                       AMDGPU::OperandSemantics Sema) const {
   // Cases when Val{8} is 1 (vgpr, agpr or true 16 vgpr) should have been
   // decoded earlier.
   assert(Val < (1 << 8) && "9-bit Src encoding when Val{8} is 0");
@@ -1609,14 +1650,14 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
     return decodeIntImmed(Val);
 
   if (INLINE_FLOATING_C_MIN <= Val && Val <= INLINE_FLOATING_C_MAX)
-    return decodeFPImmed(ImmWidth, Val);
+    return decodeFPImmed(ImmWidth, Val, Sema);
 
   if (Val == LITERAL_CONST) {
     if (MandatoryLiteral)
       // Keep a sentinel value for deferred setting
       return MCOperand::createImm(LITERAL_CONST);
     else
-      return decodeLiteralConstant(IsFP && ImmWidth == 64);
+      return decodeLiteralConstant(Sema == AMDGPU::OperandSemantics::FP64);
   }
 
   switch (Width) {
@@ -1713,9 +1754,10 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
 }
 
-MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
-                                            const unsigned Val,
-                                            unsigned ImmWidth) const {
+MCOperand
+AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width, const unsigned Val,
+                                  unsigned ImmWidth,
+                                  AMDGPU::OperandSemantics Sema) const {
   using namespace AMDGPU::SDWA;
   using namespace AMDGPU::EncValues;
 
@@ -1746,7 +1788,7 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
       return decodeIntImmed(SVal);
 
     if (INLINE_FLOATING_C_MIN <= SVal && SVal <= INLINE_FLOATING_C_MAX)
-      return decodeFPImmed(ImmWidth, SVal);
+      return decodeFPImmed(ImmWidth, SVal, Sema);
 
     return decodeSpecialReg32(SVal);
   } else if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands)) {
@@ -1756,11 +1798,11 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
 }
 
 MCOperand AMDGPUDisassembler::decodeSDWASrc16(unsigned Val) const {
-  return decodeSDWASrc(OPW16, Val, 16);
+  return decodeSDWASrc(OPW16, Val, 16, AMDGPU::OperandSemantics::FP16);
 }
 
 MCOperand AMDGPUDisassembler::decodeSDWASrc32(unsigned Val) const {
-  return decodeSDWASrc(OPW32, Val, 32);
+  return decodeSDWASrc(OPW32, Val, 32, AMDGPU::OperandSemantics::FP32);
 }
 
 MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
