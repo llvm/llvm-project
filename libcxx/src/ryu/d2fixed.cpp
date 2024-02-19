@@ -82,9 +82,9 @@ inline constexpr int __POW10_ADDITIONAL_BITS = 120;
   const uint64_t __multiplied = __umul256_hi128_lo64(__vHi, __vLo, 0x89705F4136B4A597u, 0x31680A88F8953031u);
 
   // For uint32_t truncation, see the __mod1e9() comment in d2s_intrinsics.h.
-  const uint32_t __shifted = static_cast<uint32_t>(__multiplied >> 29);
+  const uint32_t __shiftedValue = static_cast<uint32_t>(__multiplied >> 29);
 
-  return static_cast<uint32_t>(__vLo) - 1000000000 * __shifted;
+  return static_cast<uint32_t>(__vLo) - 1000000000 * __shiftedValue;
 }
 #endif // ^^^ intrinsics available ^^^
 

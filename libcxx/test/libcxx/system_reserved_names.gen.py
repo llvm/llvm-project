@@ -172,4 +172,7 @@ static_assert(__builtin_strcmp(STRINGIFY(max), STRINGIFY(SYSTEM_RESERVED_NAME)) 
 static_assert(__builtin_strcmp(STRINGIFY(move), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 static_assert(__builtin_strcmp(STRINGIFY(erase), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 static_assert(__builtin_strcmp(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
+
+// __shifted is a reserved keyword on the LLVM Widberg compiler
+#define __shifted SYSTEM_RESERVED_NAME
 """)
