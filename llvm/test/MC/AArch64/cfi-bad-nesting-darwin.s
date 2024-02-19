@@ -8,6 +8,8 @@
 	.p2align	2
 _locomotive:
 	.cfi_startproc
+	; An N_ALT_ENTRY symbol can be defined in the middle of a subsection, so
+	; these are opted out of the .cfi_{start,end}proc nesting check.
 	.alt_entry _engineer
 _engineer:
 	ret
