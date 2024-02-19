@@ -1157,8 +1157,13 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  if (!this->delegate(Base))
-    return false;
+  if (Initializing) {
+    if (!this->delegate(Base))
+      return false;
+  } else {
+    if (!this->visit(Base))
+      return false;
+  }
 
   // Base above gives us a pointer on the stack.
   // TODO: Implement non-FieldDecl members.
