@@ -33,101 +33,101 @@
 
 template <typename CharT>
 void test_sfinae() {
-  using SSTREAM  = std::basic_istringstream<CharT, std::char_traits<CharT>>;
-  using CSSTREAM = std::basic_istringstream<CharT, constexpr_char_traits<CharT>>;
+  using StrStream  = std::basic_istringstream<CharT, std::char_traits<CharT>>;
+  using CStrStream = std::basic_istringstream<CharT, constexpr_char_traits<CharT>>;
 
   // `CharT*`
 
-  static_assert(std::constructible_from<SSTREAM, CharT*, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, CharT*, std::ios_base::openmode>());
+  static_assert(std::constructible_from<StrStream, CharT*, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, CharT*, std::ios_base::openmode>());
 
-  static_assert(std::constructible_from<CSSTREAM, CharT*, std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM, CharT*, std::ios_base::openmode>());
+  static_assert(std::constructible_from<CStrStream, CharT*, std::ios_base::openmode>);
+  static_assert(!test_convertible<CStrStream, CharT*, std::ios_base::openmode>());
 
   // `const CharT*`
-  static_assert(std::constructible_from<SSTREAM, const CharT*, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, const CharT*, std::ios_base::openmode>());
+  static_assert(std::constructible_from<StrStream, const CharT*, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, const CharT*, std::ios_base::openmode>());
 
-  static_assert(std::constructible_from<CSSTREAM, const CharT*, std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM, const CharT*, std::ios_base::openmode, std::ios_base::openmode>());
+  static_assert(std::constructible_from<CStrStream, const CharT*, std::ios_base::openmode>);
+  static_assert(!test_convertible<CStrStream, const CharT*, std::ios_base::openmode, std::ios_base::openmode>());
 
   // `std::basic_string_view<CharT>`
-  static_assert(std::constructible_from<SSTREAM,
+  static_assert(std::constructible_from<StrStream,
                                         const std::basic_string_view<CharT, std::char_traits<CharT>>,
                                         std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM,
+  static_assert(!test_convertible<StrStream,
                                   const std::basic_string_view<CharT, std::char_traits<CharT>>,
                                   std::ios_base::openmode>());
 
-  static_assert(std::constructible_from<CSSTREAM,
+  static_assert(std::constructible_from<CStrStream,
                                         const std::basic_string_view<CharT, constexpr_char_traits<CharT>>,
                                         std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const std::basic_string_view<CharT, constexpr_char_traits<CharT>>,
                                   std::ios_base::openmode>());
 
   // `std::basic_string<CharT>`
-  static_assert(std::constructible_from<SSTREAM, const std::basic_string<CharT>, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, const std::basic_string<CharT>, std::ios_base::openmode>());
+  static_assert(std::constructible_from<StrStream, const std::basic_string<CharT>, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, const std::basic_string<CharT>, std::ios_base::openmode>());
 
-  static_assert(std::constructible_from<CSSTREAM,
+  static_assert(std::constructible_from<CStrStream,
                                         const std::basic_string<CharT, constexpr_char_traits<CharT>>,
                                         std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const std::basic_string<CharT, constexpr_char_traits<CharT>>,
                                   std::ios_base::openmode>());
 
   // ConstConvertibleStringView<CharT>
-  static_assert(std::constructible_from<SSTREAM, const ConstConvertibleStringView<CharT>, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, const ConstConvertibleStringView<CharT>, std::ios_base::openmode>());
+  static_assert(std::constructible_from<StrStream, const ConstConvertibleStringView<CharT>, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, const ConstConvertibleStringView<CharT>, std::ios_base::openmode>());
 
-  static_assert(std::constructible_from<CSSTREAM,
+  static_assert(std::constructible_from<CStrStream,
                                         const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                         std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                   std::ios_base::openmode>());
 
   // NonConstConvertibleStringView<CharT>
-  static_assert(!std::constructible_from<SSTREAM, NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, NonConstConvertibleStringView<CharT>, std::ios_base::openmode>());
+  static_assert(!std::constructible_from<StrStream, NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, NonConstConvertibleStringView<CharT>, std::ios_base::openmode>());
 
-  static_assert(!std::constructible_from<SSTREAM, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>());
+  static_assert(!std::constructible_from<StrStream, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>());
 
-  static_assert(!std::constructible_from<CSSTREAM,
+  static_assert(!std::constructible_from<CStrStream,
                                          const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                          std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                   std::ios_base::openmode>());
 
-  static_assert(!std::constructible_from<CSSTREAM,
+  static_assert(!std::constructible_from<CStrStream,
                                          const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                          std::ios_base::openmode>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                   std::ios_base::openmode>());
 
   //  nasty_char*
-  using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
+  using NStrStream = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
-  static_assert(std::constructible_from<NSSTREAM, nasty_char*, test_allocator<nasty_char>>);
-  static_assert(!test_convertible<NSSTREAM, nasty_char*, std::ios_base::openmode>());
+  static_assert(std::constructible_from<NStrStream, nasty_char*, test_allocator<nasty_char>>);
+  static_assert(!test_convertible<NStrStream, nasty_char*, std::ios_base::openmode>());
 
   // const nasty_char*
-  using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
+  using NStrStream = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
-  static_assert(std::constructible_from<NSSTREAM, const nasty_char*, test_allocator<nasty_char>>);
-  static_assert(!test_convertible<NSSTREAM, const nasty_char*, std::ios_base::openmode>());
+  static_assert(std::constructible_from<NStrStream, const nasty_char*, test_allocator<nasty_char>>);
+  static_assert(!test_convertible<NStrStream, const nasty_char*, std::ios_base::openmode>());
 
   // Non-`string-view-like`
-  static_assert(!std::constructible_from<SSTREAM, const SomeObject, std::ios_base::openmode>);
-  static_assert(!test_convertible<SSTREAM, const SomeObject, std::ios_base::openmode>());
+  static_assert(!std::constructible_from<StrStream, const SomeObject, std::ios_base::openmode>);
+  static_assert(!test_convertible<StrStream, const SomeObject, std::ios_base::openmode>());
 
   // Non-mode
-  static_assert(!std::constructible_from<SSTREAM, const std::basic_string_view<CharT>, const SomeObject>);
-  static_assert(!test_convertible<SSTREAM, const std::basic_string_view<CharT>, const SomeObject>());
+  static_assert(!std::constructible_from<StrStream, const std::basic_string_view<CharT>, const SomeObject>);
+  static_assert(!test_convertible<StrStream, const std::basic_string_view<CharT>, const SomeObject>());
 }
 
 #define CS(S) MAKE_CSTRING(CharT, S)
@@ -136,29 +136,29 @@ void test_sfinae() {
 
 template <class CharT>
 static void test() {
-  using SSTREAM = std::basic_istringstream<CharT, std::char_traits<CharT>>;
+  using StrStream = std::basic_istringstream<CharT, std::char_traits<CharT>>;
 
   // const CharT*
   {
-    SSTREAM ss(CS("zmt"), std::ios_base::binary);
+    StrStream ss(CS("zmt"), std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
   // std::basic_string_view<CharT>
   {
     const std::basic_string_view<CharT> csv = SV("zmt");
-    SSTREAM ss(csv, std::ios_base::binary);
+    StrStream ss(csv, std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
   // std::basic_string<CharT>
   {
     const std::basic_string<CharT> cs = ST("zmt");
-    SSTREAM ss(cs, std::ios_base::binary);
+    StrStream ss(cs, std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
   // ConstConvertibleStringView<CharT>
   {
     const ConstConvertibleStringView<CharT> sv{CS("zmt")};
-    SSTREAM ss(sv, std::ios_base::binary);
+    StrStream ss(sv, std::ios_base::binary);
     assert(ss.str() == CS("zmt"));
   }
 }

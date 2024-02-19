@@ -32,35 +32,38 @@
 
 template <typename CharT>
 void test_sfinae() {
-  using SSTREAM  = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
-  using CSSTREAM = std::basic_istringstream<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>;
+  using StrStream  = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
+  using CStrStream = std::basic_istringstream<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>;
 
-  static_assert(HasStr<SSTREAM, CharT*>);
-  static_assert(HasStr<CSSTREAM, CharT*>);
+  static_assert(is_valid_argument_for_str_member<StrStream, CharT*>);
+  static_assert(is_valid_argument_for_str_member<CStrStream, CharT*>);
 
-  static_assert(HasStr<SSTREAM, const CharT*>);
-  static_assert(HasStr<CSSTREAM, const CharT*>);
+  static_assert(is_valid_argument_for_str_member<StrStream, const CharT*>);
+  static_assert(is_valid_argument_for_str_member<CStrStream, const CharT*>);
 
-  static_assert(HasStr<SSTREAM, std::basic_string_view<CharT>>);
-  static_assert(HasStr<CSSTREAM, std::basic_string_view<CharT, constexpr_char_traits<CharT>>>);
+  static_assert(is_valid_argument_for_str_member<StrStream, std::basic_string_view<CharT>>);
+  static_assert(
+      is_valid_argument_for_str_member<CStrStream, std::basic_string_view<CharT, constexpr_char_traits<CharT>>>);
 
-  static_assert(HasStr<SSTREAM, std::basic_string<CharT>>);
-  static_assert(HasStr<CSSTREAM, std::basic_string<CharT, constexpr_char_traits<CharT>>>);
+  static_assert(is_valid_argument_for_str_member<StrStream, std::basic_string<CharT>>);
+  static_assert(is_valid_argument_for_str_member<CStrStream, std::basic_string<CharT, constexpr_char_traits<CharT>>>);
 
-  static_assert(HasStr<SSTREAM, ConstConvertibleStringView<CharT>>);
-  static_assert(HasStr<CSSTREAM, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
+  static_assert(is_valid_argument_for_str_member<StrStream, ConstConvertibleStringView<CharT>>);
+  static_assert(
+      is_valid_argument_for_str_member<CStrStream, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 
-  using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
+  using NStrStream = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
-  static_assert(HasStr<NSSTREAM, nasty_char*>);
-  static_assert(HasStr<NSSTREAM, const nasty_char*>);
+  static_assert(is_valid_argument_for_str_member<NStrStream, nasty_char*>);
+  static_assert(is_valid_argument_for_str_member<NStrStream, const nasty_char*>);
 
-  static_assert(!HasStr<SSTREAM, CharT>);
-  static_assert(!HasStr<SSTREAM, int>);
-  static_assert(!HasStr<SSTREAM, SomeObject>);
-  static_assert(!HasStr<SSTREAM, std::nullptr_t>);
-  static_assert(!HasStr<SSTREAM, NonConstConvertibleStringView<CharT>>);
-  static_assert(!HasStr<CSSTREAM, NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
+  static_assert(!is_valid_argument_for_str_member<StrStream, CharT>);
+  static_assert(!is_valid_argument_for_str_member<StrStream, int>);
+  static_assert(!is_valid_argument_for_str_member<StrStream, SomeObject>);
+  static_assert(!is_valid_argument_for_str_member<StrStream, std::nullptr_t>);
+  static_assert(!is_valid_argument_for_str_member<StrStream, NonConstConvertibleStringView<CharT>>);
+  static_assert(!is_valid_argument_for_str_member<CStrStream,
+                                                  NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
 }
 
 #define CS(S) MAKE_CSTRING(CharT, S)

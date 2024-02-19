@@ -10,7 +10,7 @@
 #define TEST_STD_INPUTOUTPUT_STRINGSTREAMS_CONCEPTS_H
 
 template <typename S, typename T>
-concept HasStr = requires(S s, const T& sv) {
+concept is_valid_argument_for_str_member = requires(S s, const T& sv) {
   { s.str(sv) };
 };
 

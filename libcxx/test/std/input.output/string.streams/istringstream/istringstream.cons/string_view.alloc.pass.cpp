@@ -33,95 +33,95 @@
 
 template <typename CharT>
 void test_sfinae() {
-  using SSTREAM  = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
-  using CSSTREAM = std::basic_istringstream<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>;
+  using StrStream  = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
+  using CStrStream = std::basic_istringstream<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>;
 
   // `CharT*`
-  static_assert(std::constructible_from<SSTREAM, CharT*, const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM, CharT*, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<StrStream, CharT*, const test_allocator<CharT>>);
+  static_assert(test_convertible<StrStream, CharT*, const test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM, CharT*, const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM, CharT*, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<CStrStream, CharT*, const test_allocator<CharT>>);
+  static_assert(test_convertible<CStrStream, CharT*, const test_allocator<CharT>>());
 
   // `const CharT*`
-  static_assert(std::constructible_from<SSTREAM, const CharT*, const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM, const CharT*, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<StrStream, const CharT*, const test_allocator<CharT>>);
+  static_assert(test_convertible<StrStream, const CharT*, const test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM, const CharT*, const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM, const CharT*, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<CStrStream, const CharT*, const test_allocator<CharT>>);
+  static_assert(test_convertible<CStrStream, const CharT*, const test_allocator<CharT>>());
 
   // `std::basic_string_view<CharT>`
-  static_assert(std::constructible_from<SSTREAM, const std::basic_string_view<CharT>, const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM, std::basic_string_view<CharT>, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<StrStream, const std::basic_string_view<CharT>, const test_allocator<CharT>>);
+  static_assert(test_convertible<StrStream, std::basic_string_view<CharT>, const test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM,
+  static_assert(std::constructible_from<CStrStream,
                                         const std::basic_string_view<CharT, constexpr_char_traits<CharT>>,
                                         const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM,
+  static_assert(test_convertible<CStrStream,
                                  std::basic_string_view<CharT, constexpr_char_traits<CharT>>,
                                  const test_allocator<CharT>>());
 
   // `std::basic_string<CharT>`
-  static_assert(std::constructible_from<SSTREAM, const std::basic_string<CharT>, const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM, const std::basic_string<CharT>, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<StrStream, const std::basic_string<CharT>, const test_allocator<CharT>>);
+  static_assert(test_convertible<StrStream, const std::basic_string<CharT>, const test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM,
+  static_assert(std::constructible_from<CStrStream,
                                         const std::basic_string<CharT, constexpr_char_traits<CharT>>,
                                         const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM,
+  static_assert(test_convertible<CStrStream,
                                  const std::basic_string<CharT, constexpr_char_traits<CharT>>,
                                  const test_allocator<CharT>>());
 
   // ConstConvertibleStringView<CharT>
-  static_assert(std::constructible_from<SSTREAM, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
-  static_assert(test_convertible<SSTREAM, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
+  static_assert(std::constructible_from<StrStream, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
+  static_assert(test_convertible<StrStream, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
 
-  static_assert(std::constructible_from<CSSTREAM,
+  static_assert(std::constructible_from<CStrStream,
                                         const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                         const test_allocator<CharT>>);
-  static_assert(test_convertible<CSSTREAM,
+  static_assert(test_convertible<CStrStream,
                                  const ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                  const test_allocator<CharT>>());
 
   // NonConstConvertibleStringView<CharT>
-  static_assert(!std::constructible_from<SSTREAM, NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
-  static_assert(!test_convertible<SSTREAM, NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
+  static_assert(!std::constructible_from<StrStream, NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
+  static_assert(!test_convertible<StrStream, NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
 
   static_assert(
-      !std::constructible_from<SSTREAM, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
-  static_assert(!test_convertible<SSTREAM, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
+      !std::constructible_from<StrStream, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
+  static_assert(!test_convertible<StrStream, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
 
-  static_assert(!std::constructible_from<CSSTREAM,
+  static_assert(!std::constructible_from<CStrStream,
                                          const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                          const test_allocator<CharT>>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                   const test_allocator<CharT>>());
 
-  static_assert(!std::constructible_from<CSSTREAM,
+  static_assert(!std::constructible_from<CStrStream,
                                          const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                          const test_allocator<CharT>>);
-  static_assert(!test_convertible<CSSTREAM,
+  static_assert(!test_convertible<CStrStream,
                                   const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,
                                   const test_allocator<CharT>>());
 
   // nasty_char*
-  using NSSTREAM = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
+  using NStrStream = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
 
-  static_assert(std::constructible_from<NSSTREAM, nasty_char*, test_allocator<nasty_char>>);
-  static_assert(test_convertible<NSSTREAM, nasty_char*, const test_allocator<nasty_char>>());
+  static_assert(std::constructible_from<NStrStream, nasty_char*, test_allocator<nasty_char>>);
+  static_assert(test_convertible<NStrStream, nasty_char*, const test_allocator<nasty_char>>());
 
   // const nasty_char*
-  static_assert(std::constructible_from<NSSTREAM, const nasty_char*, test_allocator<nasty_char>>);
-  static_assert(test_convertible<NSSTREAM, const nasty_char*, const test_allocator<nasty_char>>());
+  static_assert(std::constructible_from<NStrStream, const nasty_char*, test_allocator<nasty_char>>);
+  static_assert(test_convertible<NStrStream, const nasty_char*, const test_allocator<nasty_char>>());
 
   // Non-`string-view-like`
-  static_assert(!std::constructible_from<SSTREAM, const SomeObject, const test_allocator<CharT>>);
-  static_assert(!test_convertible<SSTREAM, const SomeObject, const test_allocator<CharT>>());
+  static_assert(!std::constructible_from<StrStream, const SomeObject, const test_allocator<CharT>>);
+  static_assert(!test_convertible<StrStream, const SomeObject, const test_allocator<CharT>>());
 
   // Non-allocator
-  static_assert(!std::constructible_from<SSTREAM, const std::basic_string_view<CharT>, const NonAllocator>);
-  static_assert(!test_convertible<SSTREAM, const std::basic_string_view<CharT>, const NonAllocator>());
+  static_assert(!std::constructible_from<StrStream, const std::basic_string_view<CharT>, const NonAllocator>);
+  static_assert(!test_convertible<StrStream, const std::basic_string_view<CharT>, const NonAllocator>());
 }
 
 #define CS(S) MAKE_CSTRING(CharT, S)
@@ -130,34 +130,34 @@ void test_sfinae() {
 
 template <class CharT>
 static void test() {
-  using SSTREAM = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
+  using StrStream = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
 
   const test_allocator<CharT> ca;
 
   // const CharT*
   {
-    SSTREAM ss(CS("zmt"), ca);
+    StrStream ss(CS("zmt"), ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
   // std::basic_string_view<CharT>
   {
     const std::basic_string_view<CharT> csv = SV("zmt");
-    SSTREAM ss(csv, ca);
+    StrStream ss(csv, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
   // std::basic_string<CharT>
   {
     const std::basic_string<CharT> cs = ST("zmt");
-    SSTREAM ss(cs, ca);
+    StrStream ss(cs, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
   // ConstConvertibleStringView<CharT>
   {
     const ConstConvertibleStringView<CharT> sv{CS("zmt")};
-    SSTREAM ss(sv, ca);
+    StrStream ss(sv, ca);
     assert(ss.str() == CS("zmt"));
     assert(ss.rdbuf()->get_allocator() == ca);
   }
