@@ -3261,15 +3261,16 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
                                                  SDValue &SrcMods) const {
   Src = In;
   unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned ModOpcode;
   SmallVector<SDValue, 8> EltsF32;
 
   if (auto *BV = dyn_cast<BuildVectorSDNode>(stripBitcast(In))) {
+    assert(BV->getNumOperands() > 0);
+    // Based on first element decide which mod we match, neg or abs
+    SDValue ElF32 = stripBitcast(BV->getOperand(0));
+    unsigned ModOpcode =
+        (ElF32.getOpcode() == ISD::FNEG) ? ISD::FNEG : ISD::FABS;
     for (unsigned i = 0; i < BV->getNumOperands(); ++i) {
       SDValue ElF32 = stripBitcast(BV->getOperand(i));
-      // Based on first element decide which mod we match, neg or abs
-      if (EltsF32.empty())
-        ModOpcode = (ElF32.getOpcode() == ISD::FNEG) ? ISD::FNEG : ISD::FABS;
       if (ElF32.getOpcode() != ModOpcode)
         break;
       EltsF32.push_back(ElF32.getOperand(0));
