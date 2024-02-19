@@ -34,10 +34,17 @@ v_dot2_bf16_bf16 v2, v0, 4.0, v2
 v_dot2_bf16_bf16 v2, v0, -4.0, v2
 // CHECK: v_dot2_bf16_bf16 v2, v0, -4.0, v2       ; encoding: [0x02,0x00,0x67,0xd6,0x00,0xef,0x09,0x04]
 
-// FIXME: pi/2 rounded value is incorrect in the inst printer.
+// Check 1/(2*pi) rounded value and ideomatic fp32 0.15915494 value
+// which cannot be accurately represented in bf16.
 
 v_dot2_bf16_bf16 v2, v0, 0.158203125, v2
 // CHECK: v_dot2_bf16_bf16 v2, v0, 0.15915494, v2 ; encoding: [0x02,0x00,0x67,0xd6,0x00,0xf1,0x09,0x04]
 
+v_dot2_bf16_bf16 v2, v0, 0.15915494, v2
+// CHECK: v_dot2_bf16_bf16 v2, v0, 0.15915494, v2 ; encoding: [0x02,0x00,0x67,0xd6,0x00,0xf1,0x09,0x04]
+
 v_dot2_bf16_bf16 v2, v0, 0x3e22, v2
 // CHECK: v_dot2_bf16_bf16 v2, v0, 0.15915494, v2 ; encoding: [0x02,0x00,0x67,0xd6,0x00,0xf1,0x09,0x04]
+
+v_dot2_bf16_bf16 v2, v0, v2, 0.15915494
+// CHECK: v_dot2_bf16_bf16 v2, v0, v2, 0.15915494 ; encoding: [0x02,0x00,0x67,0xd6,0x00,0x05,0xe2,0x03]
