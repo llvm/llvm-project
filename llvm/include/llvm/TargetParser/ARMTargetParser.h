@@ -258,7 +258,6 @@ uint64_t parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
 ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
-unsigned parseArchMinorVersion(StringRef Arch);
 
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
