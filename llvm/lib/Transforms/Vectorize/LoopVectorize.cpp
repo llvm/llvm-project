@@ -9240,6 +9240,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 }
 
 void VPReductionRecipe::execute(VPTransformState &State) {
+  // TODO: Store scalar value for in-loop reductions as {Part, 0}.
   assert(!State.Instance && "Reduction being replicated.");
   Value *PrevInChain = State.get(getChainOp(), 0);
   RecurKind Kind = RdxDesc.getRecurrenceKind();

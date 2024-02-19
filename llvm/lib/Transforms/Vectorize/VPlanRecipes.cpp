@@ -1787,6 +1787,7 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
+  // TODO: Store scalar value for in-loop reductions as {Part, 0}.
   auto &Builder = State.Builder;
 
   // Reductions do not have to start at zero. They can start with
