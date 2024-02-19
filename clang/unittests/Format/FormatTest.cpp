@@ -22893,6 +22893,19 @@ TEST_F(FormatTest, FormatsLambdas) {
                LLVMWithBeforeLambdaBody);
   verifyFormat("FctWithTwoParams_SLS_All([]() { return 43; }, 87);",
                LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "FctWithTwoParams_SLS_All(\n"
+      "    87, []() { return LongLineThatWillForceBothParamsToNewLine(); });",
+      LLVMWithBeforeLambdaBody);
+  verifyFormat(
+      "FctWithTwoParams_SLS_All(\n"
+      "    87,\n"
+      "    []()\n"
+      "    {\n"
+      "      return "
+      "LongLineThatWillForceTheLambdaBodyToBeBrokenIntoMultipleLines();\n"
+      "    });",
+      LLVMWithBeforeLambdaBody);
   verifyFormat("FctWithOneNestedLambdas_SLS_All([]() { return 17; });",
                LLVMWithBeforeLambdaBody);
   verifyFormat(
