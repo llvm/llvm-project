@@ -1,0 +1,514 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/npe",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 16,
+                    "content": "int x = 42;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 22,
+                    "content": "A *p = new A(&x);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 5,
+                    "endLine": 7,
+                    "endColumn": 21,
+                    "content": "modifyPointer(p)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 14,
+                    "content": "A *q = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 11,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 17,
+                    "content": "useAlias(*q)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 17,
+                    "endLine": 4,
+                    "endColumn": 33,
+                    "content": "alias.getValue()",
+                    "stmtKind": "CXXMemberCallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 34,
+                    "content": "int value = alias.getValue();",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 17,
+                    "content": "return value",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 16,
+                    "content": "int x = 42;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 22,
+                    "content": "A *p = new A(&x);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 5,
+                    "endLine": 7,
+                    "endColumn": 21,
+                    "content": "modifyPointer(p)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 14,
+                    "content": "A *q = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 11,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 17,
+                    "content": "useAlias(*q)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 17,
+                    "endLine": 4,
+                    "endColumn": 33,
+                    "content": "alias.getValue()",
+                    "stmtKind": "CXXMemberCallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; // sink\n    }"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 21,
+                    "content": "return *data",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; // sink\n    }"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 34,
+                    "content": "int value = alias.getValue();",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 17,
+                    "content": "return value",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 16,
+                    "content": "int x = 42;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 22,
+                    "content": "A *p = new A(&x);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 5,
+                    "endLine": 7,
+                    "endColumn": 21,
+                    "content": "modifyPointer(p)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "void modifyPointer(A *&ptr) {\n    ptr->data = nullptr; // source\n    return;\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 24,
+                    "content": "ptr->data = nullptr",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 11,
+                    "content": "return",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "void modifyPointer(A *&ptr) {\n    ptr->data = nullptr; // source\n    return;\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 14,
+                    "content": "A *q = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 11,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 17,
+                    "content": "useAlias(*q)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 17,
+                    "endLine": 4,
+                    "endColumn": 33,
+                    "content": "alias.getValue()",
+                    "stmtKind": "CXXMemberCallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 34,
+                    "content": "int value = alias.getValue();",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 17,
+                    "content": "return value",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 16,
+                    "content": "int x = 42;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 22,
+                    "content": "A *p = new A(&x);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 5,
+                    "endLine": 7,
+                    "endColumn": 21,
+                    "content": "modifyPointer(p)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "void modifyPointer(A *&ptr) {\n    ptr->data = nullptr; // source\n    return;\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 24,
+                    "content": "ptr->data = nullptr",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 11,
+                    "content": "return",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "void modifyPointer(A *&ptr) {\n    ptr->data = nullptr; // source\n    return;\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 14,
+                    "content": "A *q = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 11,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 17,
+                    "content": "useAlias(*q)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 6,
+                    "endColumn": 2,
+                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 17,
+                    "endLine": 4,
+                    "endColumn": 33,
+                    "content": "alias.getValue()",
+                    "stmtKind": "CXXMemberCallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; // sink\n    }"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 21,
+                    "content": "return *data",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; // sink\n    }"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 34,
+                    "content": "int value = alias.getValue();",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 17,
+                    "content": "return value",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        }
+    ]
+}
