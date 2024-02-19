@@ -627,9 +627,11 @@ public:
 
   void cleanup() override;
 
-private:
-  friend struct OperationConverter;
+  const TypeConverter *getConverter() const { return converter; }
 
+  bool hasChangedResults() const { return changedResults; }
+
+private:
   /// An optional type converter that can be used to materialize conversions
   /// between the new and old values if necessary.
   const TypeConverter *converter;
@@ -2387,7 +2389,9 @@ enum OpConversionMode {
   /// applied to the operations on success.
   Analysis,
 };
+} // namespace
 
+namespace mlir {
 // This class converts operations to a given conversion target via a set of
 // rewrite patterns. The conversion behaves differently depending on the
 // conversion mode.
@@ -2447,7 +2451,7 @@ private:
   /// *not* to be legalizable to the target.
   DenseSet<Operation *> *trackedOps;
 };
-} // namespace
+} // namespace mlir
 
 LogicalResult OperationConverter::convert(ConversionPatternRewriter &rewriter,
                                           Operation *op) {
@@ -2539,7 +2543,7 @@ OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
   for (unsigned i = 0; i < rewriterImpl.rewrites.size(); ++i) {
     auto *opReplacement =
         dyn_cast<ReplaceOperationRewrite>(rewriterImpl.rewrites[i].get());
-    if (!opReplacement || !opReplacement->changedResults)
+    if (!opReplacement || !opReplacement->hasChangedResults())
       continue;
     Operation *op = opReplacement->getOperation();
     for (OpResult result : op->getResults()) {
@@ -2563,9 +2567,9 @@ OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
 
       // Legalize this result.
       rewriter.setInsertionPoint(op);
-      if (failed(legalizeChangedResultType(op, result, newValue,
-                                           opReplacement->converter, rewriter,
-                                           rewriterImpl, *inverseMapping)))
+      if (failed(legalizeChangedResultType(
+              op, result, newValue, opReplacement->getConverter(), rewriter,
+              rewriterImpl, *inverseMapping)))
         return failure();
     }
   }

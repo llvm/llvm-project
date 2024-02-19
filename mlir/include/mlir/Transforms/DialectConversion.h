@@ -27,6 +27,7 @@ class Block;
 class ConversionPatternRewriter;
 class MLIRContext;
 class Operation;
+struct OperationConverter;
 class Type;
 class Value;
 
@@ -657,7 +658,6 @@ struct ConversionPatternRewriterImpl;
 /// hooks.
 class ConversionPatternRewriter final : public PatternRewriter {
 public:
-  explicit ConversionPatternRewriter(MLIRContext *ctx);
   ~ConversionPatternRewriter() override;
 
   /// Apply a signature conversion to the entry block of the given region. This
@@ -764,6 +764,14 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  // Allow OperationConverter to construct new rewriters.
+  friend struct OperationConverter;
+
+  /// Conversion pattern rewriters must not be used outside of dialect
+  /// conversions. They apply some IR rewrites in a delayed fashion and could
+  /// bring the IR into an inconsistent state when used standalone.
+  explicit ConversionPatternRewriter(MLIRContext *ctx);
+
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;
 
