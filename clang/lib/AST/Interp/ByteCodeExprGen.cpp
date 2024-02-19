@@ -2156,6 +2156,12 @@ bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
   return this->emitConstBool(E->isSatisfied(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXRewrittenBinaryOperator(
+    const CXXRewrittenBinaryOperator *E) {
+  return this->delegate(E->getSemanticForm());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
