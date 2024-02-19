@@ -51,19 +51,20 @@ using Point = SmallVector<Fraction>;
 // g_{ij} \in Q^n are vectors.
 class GeneratingFunction {
 public:
-  GeneratingFunction(unsigned numParam, SmallVector<int> signs,
+  GeneratingFunction(unsigned numSymbols, SmallVector<int> signs,
                      std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
-      : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
+      : numSymbols(numSymbols), signs(signs), numerators(nums),
+        denominators(dens) {
 #ifndef NDEBUG
     for (const ParamPoint &term : numerators)
-      assert(term.getNumRows() == numParam + 1 &&
+      assert(term.getNumRows() == numSymbols + 1 &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
 #endif // NDEBUG
   }
 
-  unsigned getNumParams() const { return numParam; }
+  unsigned getNumSymbols() const { return numSymbols; }
 
   SmallVector<int> getSigns() const { return signs; }
 
@@ -74,7 +75,7 @@ public:
   }
 
   GeneratingFunction operator+(const GeneratingFunction &gf) const {
-    assert(numParam == gf.getNumParams() &&
+    assert(numSymbols == gf.getNumSymbols() &&
            "two generating functions with different numbers of parameters "
            "cannot be added!");
     SmallVector<int> sumSigns = signs;
@@ -87,7 +88,7 @@ public:
     std::vector<std::vector<Point>> sumDenominators = denominators;
     sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
                            gf.denominators.end());
-    return GeneratingFunction(numParam, sumSigns, sumNumerators,
+    return GeneratingFunction(numSymbols, sumSigns, sumNumerators,
                               sumDenominators);
   }
 
@@ -127,7 +128,7 @@ public:
   }
 
 private:
-  unsigned numParam;
+  unsigned numSymbols;
   SmallVector<int> signs;
   std::vector<ParamPoint> numerators;
   std::vector<std::vector<Point>> denominators;

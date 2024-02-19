@@ -696,7 +696,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     allDenominators.insert(allDenominators.end(), den.begin(), den.end());
   Point mu = getNonOrthogonalVector(allDenominators);
 
-  unsigned numParams = gf.getNumParams();
+  unsigned numParams = gf.getNumSymbols();
   const std::vector<std::vector<Point>> &ds = gf.getDenominators();
   QuasiPolynomial totalTerm(numParams, 0);
   for (int i : llvm::seq<int>(0, ds.size())) {

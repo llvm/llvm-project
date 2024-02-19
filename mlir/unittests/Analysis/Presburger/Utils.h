@@ -78,7 +78,7 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
 // Note that this is not a true equality check.
 inline void EXPECT_EQ_REPR_GENERATINGFUNCTION(detail::GeneratingFunction a,
                                               detail::GeneratingFunction b) {
-  EXPECT_EQ(a.getNumParams(), b.getNumParams());
+  EXPECT_EQ(a.getNumSymbols(), b.getNumSymbols());
 
   SmallVector<int> aSigns = a.getSigns();
   SmallVector<int> bSigns = b.getSigns();
