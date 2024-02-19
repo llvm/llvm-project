@@ -54,6 +54,10 @@ cl::list<SPIRV::Extension::Extension> Extensions(
                    "use of local memory and work group barriers, and to "
                    "utilize specialized hardware to load and store blocks of "
                    "data from images or buffers."),
+        clEnumValN(SPIRV::Extension::SPV_KHR_uniform_group_instructions,
+                   "SPV_KHR_uniform_group_instructions",
+                   "Allows support for additional group operations within "
+                   "uniform control flow."),
         clEnumValN(SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
                    "SPV_KHR_no_integer_wrap_decoration",
                    "Adds decorations to indicate that a given instruction does "

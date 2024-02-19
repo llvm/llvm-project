@@ -1069,6 +1069,20 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
     break;
+  case SPIRV::OpGroupIMulKHR:
+  case SPIRV::OpGroupFMulKHR:
+  case SPIRV::OpGroupBitwiseAndKHR:
+  case SPIRV::OpGroupBitwiseOrKHR:
+  case SPIRV::OpGroupBitwiseXorKHR:
+  case SPIRV::OpGroupLogicalAndKHR:
+  case SPIRV::OpGroupLogicalOrKHR:
+  case SPIRV::OpGroupLogicalXorKHR:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_uniform_group_instructions);
+      Reqs.addCapability(SPIRV::Capability::GroupUniformArithmeticKHR);
+    }
+    break;
   case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
