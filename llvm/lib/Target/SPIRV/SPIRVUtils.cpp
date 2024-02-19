@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
