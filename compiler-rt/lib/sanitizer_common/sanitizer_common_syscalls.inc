@@ -2808,6 +2808,15 @@ PRE_SYSCALL(fchownat)
 POST_SYSCALL(fchownat)
 (long res, long dfd, const void *filename, long user, long group, long flag) {}
 
+PRE_SYSCALL(fchmodat2)(long dfd, const void *filename, long mode, long flag) {
+  if (filename)
+    PRE_READ(filename,
+             __sanitizer::internal_strlen((const char *)filename) + 1);
+}
+
+POST_SYSCALL(fchmodat2)
+(long res, long dfd, const void *filename, long mode, long flag) {}
+
 PRE_SYSCALL(openat)(long dfd, const void *filename, long flags, long mode) {
   if (filename)
     PRE_READ(filename,
