@@ -282,22 +282,7 @@ public:
   /// their counterpart from a C++ module.
   struct ASTImporterDelegate : public clang::ASTImporter {
     ASTImporterDelegate(ClangASTImporter &main, clang::ASTContext *target_ctx,
-                        clang::ASTContext *source_ctx)
-        : clang::ASTImporter(*target_ctx, main.m_file_manager, *source_ctx,
-                             main.m_file_manager, true /*minimal*/),
-          m_main(main), m_source_ctx(source_ctx) {
-      // Target and source ASTContext shouldn't be identical. Importing AST
-      // nodes within the same AST doesn't make any sense as the whole idea
-      // is to import them to a different AST.
-      lldbassert(target_ctx != source_ctx && "Can't import into itself");
-      // This is always doing a minimal import of any declarations. This means
-      // that there has to be an ExternalASTSource in the target ASTContext
-      // (that should implement the callbacks that complete any declarations
-      // on demand). Without an ExternalASTSource, this ASTImporter will just
-      // do a minimal import and the imported declarations won't be completed.
-      assert(target_ctx->getExternalSource() && "Missing ExternalSource");
-      setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
-    }
+                        clang::ASTContext *source_ctx);
 
     /// Scope guard that attaches a CxxModuleHandler to an ASTImporterDelegate
     /// and deattaches it at the end of the scope. Supports being used multiple
