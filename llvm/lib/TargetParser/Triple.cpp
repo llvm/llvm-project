@@ -240,6 +240,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case AIX: return "aix";
   case AMDHSA: return "amdhsa";
   case AMDPAL: return "amdpal";
+  case BridgeOS: return "bridgeos";
   case CUDA: return "cuda";
   case Darwin: return "darwin";
   case DragonFly: return "dragonfly";
