@@ -181,20 +181,6 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                                ArgAccessQual);
 }
 
-static bool isEntryPoint(const Function &F) {
-  // OpenCL handling: any function with the SPIR_KERNEL
-  // calling convention will be a potential entry point.
-  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
-    return true;
-
-  // HLSL handling: special attribute are emitted from the
-  // front-end.
-  if (F.getFnAttribute("hlsl.shader").isValid())
-    return true;
-
-  return false;
-}
-
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   if (STI.isOpenCLEnv())
