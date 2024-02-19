@@ -484,11 +484,11 @@ void LinuxKernelRewriter::updateLKMarkers() {
         LKPatcher->addLE64Patch(LKMarkerInfo.SectionOffset, NewAddress);
     }
   }
-  outs() << "BOLT-INFO: patching linux kernel sections. Total patches per "
-            "section are as follows:\n";
+  BC.outs() << "BOLT-INFO: patching linux kernel sections. Total patches per "
+               "section are as follows:\n";
   for (const std::pair<const std::string, uint64_t> &KV : PatchCounts)
-    outs() << "  Section: " << KV.first << ", patch-counts: " << KV.second
-           << '\n';
+    BC.outs() << "  Section: " << KV.first << ", patch-counts: " << KV.second
+              << '\n';
 }
 
 Error LinuxKernelRewriter::readORCTables() {
@@ -530,8 +530,8 @@ Error LinuxKernelRewriter::readORCTables() {
                                "out of bounds while reading ORC IP table");
 
     if (IP < PrevIP && opts::Verbosity)
-      errs() << "BOLT-WARNING: out of order IP 0x" << Twine::utohexstr(IP)
-             << " detected while reading ORC\n";
+      BC.errs() << "BOLT-WARNING: out of order IP 0x" << Twine::utohexstr(IP)
+                << " detected while reading ORC\n";
 
     PrevIP = IP;
 
@@ -564,8 +564,8 @@ Error LinuxKernelRewriter::readORCTables() {
 
     if (!BF) {
       if (opts::Verbosity)
-        errs() << "BOLT-WARNING: no binary function found matching ORC 0x"
-               << Twine::utohexstr(IP) << ": " << Entry.ORC << '\n';
+        BC.errs() << "BOLT-WARNING: no binary function found matching ORC 0x"
+                  << Twine::utohexstr(IP) << ": " << Entry.ORC << '\n';
       continue;
     }
 
@@ -591,15 +591,15 @@ Error LinuxKernelRewriter::readORCTables() {
     BC.MIB->addAnnotation(*Inst, "ORC", Entry.ORC);
   }
 
-  outs() << "BOLT-INFO: parsed " << NumORCEntries << " ORC entries\n";
+  BC.outs() << "BOLT-INFO: parsed " << NumORCEntries << " ORC entries\n";
 
   if (opts::DumpORC) {
-    outs() << "BOLT-INFO: ORC unwind information:\n";
+    BC.outs() << "BOLT-INFO: ORC unwind information:\n";
     for (const ORCListEntry &E : ORCEntries) {
-      outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
+      BC.outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
       if (E.BF)
-        outs() << ": " << *E.BF;
-      outs() << '\n';
+        BC.outs() << ": " << *E.BF;
+      BC.outs() << '\n';
     }
   }
 
@@ -632,12 +632,12 @@ Error LinuxKernelRewriter::readORCTables() {
   llvm::sort(ORCEntries);
 
   if (opts::DumpORC) {
-    outs() << "BOLT-INFO: amended ORC unwind information:\n";
+    BC.outs() << "BOLT-INFO: amended ORC unwind information:\n";
     for (const ORCListEntry &E : ORCEntries) {
-      outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
+      BC.outs() << "0x" << Twine::utohexstr(E.IP) << ": " << E.ORC;
       if (E.BF)
-        outs() << ": " << *E.BF;
-      outs() << '\n';
+        BC.outs() << ": " << *E.BF;
+      BC.outs() << '\n';
     }
   }
 
@@ -684,8 +684,8 @@ Error LinuxKernelRewriter::processORCPostCFG() {
                  "ORC info at function entry expected.");
 
           if (It->ORC == NullORC && BF.hasORC()) {
-            errs() << "BOLT-WARNING: ORC unwind info excludes prologue for "
-                   << BF << '\n';
+            BC.errs() << "BOLT-WARNING: ORC unwind info excludes prologue for "
+                      << BF << '\n';
           }
 
           It->BF = &BF;
@@ -878,9 +878,10 @@ Error LinuxKernelRewriter::readStaticCalls() {
     ++EntryID;
 
     if (opts::DumpStaticCalls) {
-      outs() << "Static Call Site: " << EntryID << '\n';
-      outs() << "\tCallAddress:   0x" << Twine::utohexstr(CallAddress) << '\n'
-             << "\tKeyAddress:    0x" << Twine::utohexstr(KeyAddress) << '\n';
+      BC.outs() << "Static Call Site: " << EntryID << '\n';
+      BC.outs() << "\tCallAddress:   0x" << Twine::utohexstr(CallAddress)
+                << "\n\tKeyAddress:    0x" << Twine::utohexstr(KeyAddress)
+                << '\n';
     }
 
     BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(CallAddress);
@@ -916,8 +917,8 @@ Error LinuxKernelRewriter::readStaticCalls() {
     StaticCallEntries.push_back({EntryID, BF, Label});
   }
 
-  outs() << "BOLT-INFO: parsed " << StaticCallEntries.size()
-         << " static call entries\n";
+  BC.outs() << "BOLT-INFO: parsed " << StaticCallEntries.size()
+            << " static call entries\n";
 
   return Error::success();
 }
