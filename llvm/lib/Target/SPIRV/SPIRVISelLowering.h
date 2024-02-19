@@ -31,6 +31,12 @@ public:
     return true;
   }
 
+  /// Set the lower limit for number of blocks in a jump table in such a way to
+  /// prevent creation of jump tables from switch
+  unsigned getMinimumJumpTableEntries() const override {
+    return 0xffffffff;
+  }
+
   // This is to prevent sexts of non-i64 vector indices which are generated
   // within general IRTranslator hence type generation for it is omitted.
   MVT getVectorIdxTy(const DataLayout &DL) const override {
