@@ -73,7 +73,8 @@ void test_sfinae() {
                                  const test_allocator<CharT>>());
 
   // ConstConvertibleStringView<CharT>
-  static_assert(std::constructible_from<StrStream, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
+  static_assert(
+      std::constructible_from<StrStream, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
   static_assert(test_convertible<StrStream, const ConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
 
   static_assert(std::constructible_from<CStrStream,
@@ -89,7 +90,8 @@ void test_sfinae() {
 
   static_assert(
       !std::constructible_from<StrStream, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>);
-  static_assert(!test_convertible<StrStream, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
+  static_assert(
+      !test_convertible<StrStream, const NonConstConvertibleStringView<CharT>, const test_allocator<CharT>>());
 
   static_assert(!std::constructible_from<CStrStream,
                                          const NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>,

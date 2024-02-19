@@ -92,7 +92,8 @@ void test_sfinae() {
   static_assert(!std::constructible_from<StrStream, NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
   static_assert(!test_convertible<StrStream, NonConstConvertibleStringView<CharT>, std::ios_base::openmode>());
 
-  static_assert(!std::constructible_from<StrStream, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
+  static_assert(
+      !std::constructible_from<StrStream, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>);
   static_assert(!test_convertible<StrStream, const NonConstConvertibleStringView<CharT>, std::ios_base::openmode>());
 
   static_assert(!std::constructible_from<CStrStream,
