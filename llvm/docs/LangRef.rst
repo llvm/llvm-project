@@ -5656,7 +5656,7 @@ contain any character by escaping non-printable characters with
 
 .. note::
 
-   A metadata string is metadata, but is not a meatdata node.
+   A metadata string is metadata, but is not a metadata node.
 
 .. _metadata-node:
 
