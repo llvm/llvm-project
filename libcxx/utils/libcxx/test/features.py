@@ -493,7 +493,7 @@ def check_unprivileged_symlinks(cfg):
     try:
         os.symlink(temp_file_path, symlink_file_path)
         return True
-    except Exception as e:
+    except OSError as e:
         return False
     finally:
         os.remove(temp_file_path)
