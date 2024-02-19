@@ -434,6 +434,8 @@ public:
   bool predCanBeUsedAsDotNew(const MachineInstr &MI, Register PredReg) const;
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
+  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
+  bool isCircBufferInstr(const MachineInstr &MI) const;
 
   unsigned getAddrMode(const MachineInstr &MI) const;
   MachineOperand *getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,

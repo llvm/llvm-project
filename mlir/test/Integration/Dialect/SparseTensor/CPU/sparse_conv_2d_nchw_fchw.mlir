@@ -207,6 +207,7 @@ func.func @entry() {
   bufferization.dealloc_tensor %out2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %out2D_nhwc_CCCD : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %out2D_nhwc_CCCC : tensor<?x?x?x?xf32>
+  bufferization.dealloc_tensor %dense_ret :tensor<?x?x?x?xf32>
 
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
   bufferization.dealloc_tensor %in2D_nhwc_CCCD : tensor<?x?x?x?xf32, #CDCD>

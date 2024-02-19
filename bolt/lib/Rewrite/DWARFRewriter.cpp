@@ -720,12 +720,7 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
         RangesBase = RangesSectionWriter->getSectionOffset();
-        // For DWARF5 there is now .debug_rnglists.dwo, so don't need to
-        // update rnglists base.
-        if (RangesBase) {
-          DwoRangesBase[*DWOId] = *RangesBase;
-          setDwoRangesBase(*DWOId, *RangesBase);
-        }
+        setDwoRangesBase(*DWOId, *RangesBase);
       }
 
       updateUnitDebugInfo(*(*SplitCU), DWODIEBuilder, DebugLocDWoWriter,

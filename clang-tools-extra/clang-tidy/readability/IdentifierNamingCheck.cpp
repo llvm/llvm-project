@@ -1408,13 +1408,16 @@ const IdentifierNamingCheck::FileStyle &
 IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   if (!GetConfigPerFile)
     return *MainFileStyle;
-  StringRef Parent = llvm::sys::path::parent_path(FileName);
+
+  SmallString<128> RealFileName;
+  llvm::sys::fs::real_path(FileName, RealFileName);
+  StringRef Parent = llvm::sys::path::parent_path(RealFileName);
   auto Iter = NamingStylesCache.find(Parent);
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
   llvm::StringRef CheckName = getID();
-  ClangTidyOptions Options = Context->getOptionsForFile(FileName);
+  ClangTidyOptions Options = Context->getOptionsForFile(RealFileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
     auto It = NamingStylesCache.try_emplace(
         Parent,
