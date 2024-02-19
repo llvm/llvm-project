@@ -704,8 +704,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     // Computing on non const index requires extra mask or compare operations.
     unsigned MaskCostForIdx = (Index != -1U) ? 0 : 1;
     if (ST->hasP9Altivec()) {
-      // P10 has vxform insert which can handle non const index. The MaskCost is
-      // for masking the index.
+      // P10 has vxform insert which can handle non const index. The
+      // MaskCostForIdx is for masking the index.
       // P9 has insert for const index. A move-to VSR and a permute/insert.
       // Assume vector operation cost for both (cost will be 2x on P9).
       if (ISD == ISD::INSERT_VECTOR_ELT) {
