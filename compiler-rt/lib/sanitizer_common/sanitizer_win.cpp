@@ -144,7 +144,7 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
   return rv;
 }
 
-void UnmapOrDie(void *addr, uptr size) {
+void UnmapOrDie(void *addr, uptr size, bool) {
   if (!size || !addr)
     return;
 
