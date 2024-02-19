@@ -1340,21 +1340,23 @@ uint32_t DWARFDebugLine::LineTable::lookupAddressImpl(
   if (It == Sequences.end() || It->SectionIndex != Address.SectionIndex)
     return UnknownRowIndex;
 
-  uint32_t RowIndex = findRowInSeq(*It, Address);
+  uint32_t RowIndex;
   if (LineKind == DILineInfoSpecifier::ApproximateLineKind::Before) {
-    for (auto SeqInst = Sequence.HighPC; SeqInst >= It->LowPC; --SeqInst) {
+    for (auto SeqInst = Sequence.HighPC; SeqInst >= It->LowPC;) {
+      RowIndex = findRowInSeq(*It, Address);
       if (Rows[RowIndex].Line)
         break;
-      Address.Address--;
-      RowIndex = findRowInSeq(*It, Address);
+      Address.Address = --SeqInst;
     }
   } else if (LineKind == DILineInfoSpecifier::ApproximateLineKind::After) {
-    for (auto SeqInst = Sequence.HighPC; SeqInst < It->HighPC; ++SeqInst) {
+    for (auto SeqInst = Sequence.HighPC; SeqInst <= It->HighPC;) {
+      RowIndex = findRowInSeq(*It, Address);
       if (Rows[RowIndex].Line)
         break;
-      Address.Address++;
-      RowIndex = findRowInSeq(*It, Address);
+      Address.Address = ++SeqInst;
     }
+  } else {
+    RowIndex = findRowInSeq(*It, Address);
   }
   return RowIndex;
 }
