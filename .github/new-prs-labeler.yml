@@ -822,6 +822,23 @@ backend:X86:
   - llvm/lib/TargetParser/X86*
   - llvm/utils/TableGen/X86*
 
+backend:PowerPC:
+  - llvm/include/llvm/IR/IntrinsicsPowerPC.td
+  - llvm/lib/Target/PowerPC/**
+  - llvm/test/CodeGen/PowerPC/**
+  - llvm/test/MC/PowerPC/**
+  - llvm/test/MC/XCOFF/**
+  - llvm/test/DebugInfo/XCOFF/**
+  - llvm/test/DebugInfo/PowerPC/**
+  - llvm/test/LTO/PowerPC/**
+  - clang/lib/Basic/Targets/PPC.*
+  - clang/lib/Driver/ToolChains/PPC.*
+  - clang/lib/Driver/ToolChains/AIX.*
+  - clang/lib/Driver/ToolChains/Arch/PPC.*
+  - clang/lib/CodeGen/Targets/PPC.cpp
+  - clang/test/CodeGen/PowerPC/**
+  - clang/include/clang/Basic/BuiltinsPPC.*
+
 third-party:unittests:
   - third-party/unittests/**
 
