@@ -574,8 +574,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // relatively low cost.
 
     // If arguments aren't actually supplied, then we cannot determine the
-    // value of the index.
-    if (ICA.getArgs().size() < 2)
+    // value of the index. We also want to skip this on predicate types.
+    if (ICA.getArgs().size() != 2 ||
+        ICA.getReturnType()->getScalarType()->isIntegerTy(1))
       break;
     LLVMContext &C = RetTy->getContext();
     EVT MRTy = getTLI()->getValueType(DL, RetTy);
@@ -586,7 +587,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (RLK.first == TargetLoweringBase::TypeLegal &&
         PLK.first == TargetLoweringBase::TypeLegal && Idx &&
         Idx->getZExtValue() == 0)
-      return InstructionCost(1);
+      return TTI::TCC_Basic;
     break;
   }
   case Intrinsic::vector_insert: {
@@ -595,8 +596,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // relatively low cost.
 
     // If arguments aren't actually supplied, then we cannot determine the
-    // value of the index.
-    if (ICA.getArgs().size() < 3)
+    // value of the index. We also want to skip this on predicate types.
+    if (ICA.getArgs().size() != 3 ||
+        ICA.getReturnType()->getScalarType()->isIntegerTy(1))
       break;
     LLVMContext &C = RetTy->getContext();
     EVT MTy0 = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
@@ -607,7 +609,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (LK0.first == TargetLoweringBase::TypeLegal &&
         LK1.first == TargetLoweringBase::TypeLegal && Idx &&
         Idx->getZExtValue() == 0)
-      return InstructionCost(1);
+      return TTI::TCC_Basic;
     break;
   }
   case Intrinsic::bitreverse: {
