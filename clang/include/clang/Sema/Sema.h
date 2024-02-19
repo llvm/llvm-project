@@ -453,7 +453,7 @@ class Sema final {
   // 26. C++ Template Argument Deduction (SemaTemplateDeduction.cpp)
   // 27. C++ Template Instantiation (SemaTemplateInstantiate.cpp)
   // 28. C++ Template Declaration Instantiation
-  // (SemaTemplateInstantiateDecl.cpp)
+  //     (SemaTemplateInstantiateDecl.cpp)
   // 29. C++ Variadic Templates (SemaTemplateVariadic.cpp)
   // 30. Constraints and Concepts (SemaConcept.cpp)
   // 31. Types (SemaType.cpp)
