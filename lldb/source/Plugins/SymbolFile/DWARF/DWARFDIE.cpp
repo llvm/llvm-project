@@ -316,8 +316,14 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
         GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_extra_discriminator, 0);
     bool isaPointer =
         GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_isa_pointer, 0);
-    s.Printf("__ptrauth(%d, %d, 0x0%x, %d)", key, isAddressDiscriminated,
-             extraDiscriminator, isaPointer);
+    bool authenticatesNullValues = GetAttributeValueAsUnsigned(
+        DW_AT_LLVM_ptrauth_authenticates_null_values, 0);
+    unsigned authenticationMode =
+        GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_authentication_mode, 3);
+
+    s.Printf("__ptrauth(%d, %d, 0x0%x, %d, %d, %d)", key,
+             isAddressDiscriminated, extraDiscriminator, isaPointer,
+             authenticatesNullValues, authenticationMode);
     break;
   }
   default:

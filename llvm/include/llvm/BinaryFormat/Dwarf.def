@@ -611,6 +611,7 @@ HANDLE_DW_AT(0x3e06, LLVM_ptrauth_extra_discriminator, 0, LLVM)
 HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
 HANDLE_DW_AT(0x3e08, LLVM_ptrauth_isa_pointer, 0, LLVM)
 HANDLE_DW_AT(0x3e09, LLVM_ptrauth_authenticates_null_values, 0, LLVM)
+HANDLE_DW_AT(0x3e0a, LLVM_ptrauth_authentication_mode, 0, LLVM)
 
 // Apple extensions.
 
