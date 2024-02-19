@@ -50,8 +50,9 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg,
   // The cast is necessary for the hostcall case 
   // for the argument to be compatible with device lib 
   // functions.
-  if (!IsBuffered && isa<PointerType>(Ty)) {
-    return Builder.CreatePtrToInt(Arg, Int64Ty);
+  if (isa<PointerType>(Ty)) {
+    return IsBuffered ? Arg :
+                        Builder.CreatePtrToInt(Arg, Int64Ty);
   }
 
   llvm_unreachable("unexpected type");
@@ -225,9 +226,9 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
     Arg = ConstantInt::get(Builder.getInt64Ty(), 0U);
   }
 
-  // If the format specifies a string but the argument is not, the frontend
-  // will have printed a warning. We just rely on undefined behaviour and send
-  // the argument anyway.
+  // If the format specifies a string but the argument is not, the frontend will
+  // have printed a warning. We just rely on undefined behaviour and send the
+  // argument anyway.
   return appendArg(Builder, Desc, Arg, IsLast, IsBuffered);
 }
 

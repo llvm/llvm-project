@@ -376,7 +376,7 @@ typedef __attribute__((ext_vector_type(16))) float float16;
 // CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 16, !tbaa [[TBAA27]]
 // CHECK_BUFFERED-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA27]]
 // CHECK_BUFFERED-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA27]]
-// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 44)
 // CHECK_BUFFERED-NEXT:    [[TMP2:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
 // CHECK_BUFFERED-NEXT:    br i1 [[TMP2]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
 // CHECK_BUFFERED:       end.block:
@@ -385,7 +385,7 @@ typedef __attribute__((ext_vector_type(16))) float float16;
 // CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 16, ptr addrspace(5) [[B]]) #[[ATTR1]]
 // CHECK_BUFFERED-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA27]]
 // CHECK_BUFFERED-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
-// CHECK_BUFFERED-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> <i32 1, i32 undef, i32 undef>, i32 [[VECEXT]], i32 1
+// CHECK_BUFFERED-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> <i32 1, i32 poison, i32 poison>, i32 [[VECEXT]], i32 1
 // CHECK_BUFFERED-NEXT:    [[VECINIT5:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 3, i32 2
 // CHECK_BUFFERED-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[VECINIT5]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 // CHECK_BUFFERED-NEXT:    store <4 x i32> [[EXTRACTVEC]], ptr addrspace(5) [[DOTCOMPOUNDLITERAL4]], align 16, !tbaa [[TBAA27]]
@@ -395,11 +395,11 @@ typedef __attribute__((ext_vector_type(16))) float float16;
 // CHECK_BUFFERED-NEXT:    store <4 x i32> [[EXTRACTVEC7]], ptr addrspace(5) [[B]], align 16, !tbaa [[TBAA27]]
 // CHECK_BUFFERED-NEXT:    [[LOADVEC48:%.*]] = load <4 x i32>, ptr addrspace(5) [[B]], align 16
 // CHECK_BUFFERED-NEXT:    [[EXTRACTVEC9:%.*]] = shufflevector <4 x i32> [[LOADVEC48]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN10:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN10:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 36)
 // CHECK_BUFFERED-NEXT:    [[TMP5:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN10]], null
 // CHECK_BUFFERED-NEXT:    br i1 [[TMP5]], label [[ARGPUSH_BLOCK12:%.*]], label [[END_BLOCK11:%.*]]
 // CHECK_BUFFERED:       argpush.block:
-// CHECK_BUFFERED-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_BUFFERED-NEXT:    store i32 178, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
 // CHECK_BUFFERED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK_BUFFERED-NEXT:    store i64 157641626367533276, ptr addrspace(1) [[TMP6]], align 8
 // CHECK_BUFFERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP6]], i32 8
@@ -436,11 +436,11 @@ typedef __attribute__((ext_vector_type(16))) float float16;
 // CHECK_BUFFERED-NEXT:    [[TMP19:%.*]] = load <2 x float>, ptr addrspace(5) [[VAR3]], align 8, !tbaa [[TBAA27]]
 // CHECK_BUFFERED-NEXT:    [[TMP20:%.*]] = load <8 x float>, ptr addrspace(5) [[VAR4]], align 32, !tbaa [[TBAA27]]
 // CHECK_BUFFERED-NEXT:    [[TMP21:%.*]] = load <16 x float>, ptr addrspace(5) [[VAR5]], align 64, !tbaa [[TBAA27]]
-// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN19:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 36)
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN19:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 100)
 // CHECK_BUFFERED-NEXT:    [[TMP22:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN19]], null
 // CHECK_BUFFERED-NEXT:    br i1 [[TMP22]], label [[ARGPUSH_BLOCK21:%.*]], label [[END_BLOCK20:%.*]]
 // CHECK_BUFFERED:       argpush.block12:
-// CHECK_BUFFERED-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN10]], align 4
+// CHECK_BUFFERED-NEXT:    store i32 146, ptr addrspace(1) [[PRINTF_ALLOC_FN10]], align 4
 // CHECK_BUFFERED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN10]], i32 4
 // CHECK_BUFFERED-NEXT:    store i64 8349377361424904666, ptr addrspace(1) [[TMP23]], align 8
 // CHECK_BUFFERED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP23]], i32 8
@@ -464,7 +464,7 @@ typedef __attribute__((ext_vector_type(16))) float float16;
 // CHECK_BUFFERED-NEXT:    [[TMP32:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN28]], null
 // CHECK_BUFFERED-NEXT:    br i1 [[TMP32]], label [[ARGPUSH_BLOCK30:%.*]], label [[END_BLOCK29:%.*]]
 // CHECK_BUFFERED:       argpush.block21:
-// CHECK_BUFFERED-NEXT:    store i32 146, ptr addrspace(1) [[PRINTF_ALLOC_FN19]], align 4
+// CHECK_BUFFERED-NEXT:    store i32 402, ptr addrspace(1) [[PRINTF_ALLOC_FN19]], align 4
 // CHECK_BUFFERED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN19]], i32 4
 // CHECK_BUFFERED-NEXT:    store i64 -7312483467425511358, ptr addrspace(1) [[TMP33]], align 8
 // CHECK_BUFFERED-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP33]], i32 8
@@ -553,7 +553,7 @@ typedef __attribute__((ext_vector_type(16))) float float16;
 // CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 16, ptr addrspace(5) [[B]]) #[[ATTR2]]
 // CHECK_HOSTCALL-NEXT:    [[TMP25:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA17]]
 // CHECK_HOSTCALL-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[TMP25]], i32 2
-// CHECK_HOSTCALL-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> <i32 1, i32 undef, i32 undef>, i32 [[VECEXT]], i32 1
+// CHECK_HOSTCALL-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> <i32 1, i32 poison, i32 poison>, i32 [[VECEXT]], i32 1
 // CHECK_HOSTCALL-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 3, i32 2
 // CHECK_HOSTCALL-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[VECINIT2]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 // CHECK_HOSTCALL-NEXT:    store <4 x i32> [[EXTRACTVEC]], ptr addrspace(5) [[DOTCOMPOUNDLITERAL1]], align 16, !tbaa [[TBAA17]]
