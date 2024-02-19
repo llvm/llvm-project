@@ -35,7 +35,7 @@ if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS)
 endif()
 
 # Similar situation applies to stdckdint_test.
-if(LLVM_LIBC_FULL_BUILD AND libc.include.stdckdint IN_LIST TARGET_PUBLIC_HEADERS)
+if(LLVM_LIBC_FULL_BUILD)
   add_libc_test(
     stdckdint_test
     SUITE
@@ -44,6 +44,5 @@ if(LLVM_LIBC_FULL_BUILD AND libc.include.stdckdint IN_LIST TARGET_PUBLIC_HEADERS
       stdckdint_test.cpp
     DEPENDS
       libc.include.llvm-libc-macros.stdckdint_macros
-      libc.include.stdckdint
   )
 endif()
