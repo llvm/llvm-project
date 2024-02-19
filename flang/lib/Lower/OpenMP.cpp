@@ -69,7 +69,7 @@ static llvm::ArrayRef<llvm::omp::Directive> getWorksharingLoop() {
 static uint32_t getOpenMPVersion(const mlir::ModuleOp &mod) {
   if (mlir::Attribute verAttr = mod->getAttr("omp.version"))
     return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
-  llvm_unreachable("Exoecting OpenMP version attribute in module");
+  llvm_unreachable("Expecting OpenMP version attribute in module");
 }
 
 static Fortran::semantics::Symbol *
