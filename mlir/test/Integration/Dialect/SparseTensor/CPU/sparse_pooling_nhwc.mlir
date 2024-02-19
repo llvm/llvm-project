@@ -87,5 +87,6 @@ func.func @entry() {
   bufferization.dealloc_tensor %in_CCCC : tensor<1x4x4x1xf32, #CCCC>
   bufferization.dealloc_tensor %CCCC_ret : tensor<1x3x3x1xf32, #CCCC>
   bufferization.dealloc_tensor %dense_ret : tensor<1x3x3x1xf32>
+  bufferization.dealloc_tensor %s1 : tensor<1x3x3x1xf32>
   return
 }
