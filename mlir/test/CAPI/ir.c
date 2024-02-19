@@ -1970,6 +1970,15 @@ int testOperands(void) {
   fprintf(stderr, "\n");
   // CHECK: Second replacement use owner: "dummy.op2"
 
+  MlirOpOperand use5 = mlirValueGetFirstUse(constTwoValue);
+  MlirOpOperand use6 = mlirOpOperandGetNextUse(use5);
+  if (!mlirValueEqual(mlirOpOperandGetValue(use5),
+                      mlirOpOperandGetValue(use6))) {
+    fprintf(stderr,
+            "ERROR: First and second operand should share the same value\n");
+    return 5;
+  }
+
   mlirOperationDestroy(op);
   mlirOperationDestroy(op2);
   mlirOperationDestroy(constZero);

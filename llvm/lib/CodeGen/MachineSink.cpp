@@ -500,13 +500,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     return false;
 
   // Now we know we can fold the instruction in all its users.
-  if (UsedRegA)
-    MRI->clearKillFlags(UsedRegA);
-  if (UsedRegB)
-    MRI->clearKillFlags(UsedRegB);
-
   for (auto &[SinkDst, MaybeAM] : SinkInto) {
-    [[maybe_unused]] MachineInstr *New = nullptr;
+    MachineInstr *New = nullptr;
     LLVM_DEBUG(dbgs() << "Sinking copy of"; MI.dump(); dbgs() << "into";
                SinkDst->dump());
     if (SinkDst->isCopy()) {
@@ -525,9 +520,27 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       Register DstReg = SinkDst->getOperand(0).getReg();
       TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI, *TRI);
       New = &*std::prev(InsertPt);
+      if (!New->getDebugLoc())
+        New->setDebugLoc(SinkDst->getDebugLoc());
+
+      // The operand registers of the "sunk" instruction have their live range
+      // extended and their kill flags may no longer be correct. Conservatively
+      // clear the kill flags.
+      if (UsedRegA)
+        MRI->clearKillFlags(UsedRegA);
+      if (UsedRegB)
+        MRI->clearKillFlags(UsedRegB);
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
+
+      // The registers of the addressing mode may have their live range extended
+      // and their kill flags may no longer be correct. Conservatively clear the
+      // kill flags.
+      if (Register R = MaybeAM.BaseReg; R.isValid() && R.isVirtual())
+        MRI->clearKillFlags(R);
+      if (Register R = MaybeAM.ScaledReg; R.isValid() && R.isVirtual())
+        MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     // Clear the StoreInstrCache, since we may invalidate it by erasing.
@@ -1936,13 +1949,8 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
   for (unsigned DefReg : DefedRegsInCopy)
     for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
       SuccBB->removeLiveIn(S);
-  for (auto U : UsedOpsInCopy) {
-    Register SrcReg = MI->getOperand(U).getReg();
-    LaneBitmask Mask;
-    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S)
-      Mask |= (*S).second;
-    SuccBB->addLiveIn(SrcReg, Mask);
-  }
+  for (auto U : UsedOpsInCopy)
+    SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();
 }
 

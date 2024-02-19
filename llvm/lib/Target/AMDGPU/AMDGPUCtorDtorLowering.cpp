@@ -128,7 +128,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
       LoopBB, ExitBB);
   IRB.SetInsertPoint(LoopBB);
   auto *CallBackPHI = IRB.CreatePHI(PtrTy, 2, "ptr");
-  auto *CallBack = IRB.CreateLoad(CallBackTy->getPointerTo(F.getAddressSpace()),
+  auto *CallBack = IRB.CreateLoad(IRB.getPtrTy(F.getAddressSpace()),
                                   CallBackPHI, "callback");
   IRB.CreateCall(CallBackTy, CallBack);
   auto *NewCallBack =

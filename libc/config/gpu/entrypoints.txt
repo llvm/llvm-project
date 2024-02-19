@@ -215,10 +215,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lroundf
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.nan
+    libc.src.math.nanf
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nextafter
     libc.src.math.nextafterf
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
     libc.src.math.pow
     libc.src.math.powf
     libc.src.math.remainder

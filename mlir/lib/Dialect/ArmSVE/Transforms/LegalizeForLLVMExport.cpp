@@ -30,8 +30,8 @@ class ForwardOperands : public OpConversionPattern<OpTy> {
     if (adaptor.getOperands().getTypes() == op->getOperands().getTypes())
       return rewriter.notifyMatchFailure(op, "operand types already match");
 
-    rewriter.updateRootInPlace(
-        op, [&]() { op->setOperands(adaptor.getOperands()); });
+    rewriter.modifyOpInPlace(op,
+                             [&]() { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };
@@ -137,6 +137,9 @@ using ConvertToSvboolOpLowering =
 using ConvertFromSvboolOpLowering =
     SvboolConversionOpLowering<ConvertFromSvboolOp, ConvertFromSvboolIntrOp>;
 
+using ZipX2OpLowering = OneToOneConvertToLLVMPattern<ZipX2Op, ZipX2IntrOp>;
+using ZipX4OpLowering = OneToOneConvertToLLVMPattern<ZipX4Op, ZipX4IntrOp>;
+
 } // namespace
 
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
@@ -163,7 +166,9 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ScalableMaskedUDivIOpLowering,
                ScalableMaskedDivFOpLowering,
                ConvertToSvboolOpLowering,
-               ConvertFromSvboolOpLowering>(converter);
+               ConvertFromSvboolOpLowering,
+               ZipX2OpLowering,
+               ZipX4OpLowering>(converter);
   // clang-format on
 }
 
@@ -184,7 +189,9 @@ void mlir::configureArmSVELegalizeForExportTarget(
                     ScalableMaskedUDivIIntrOp,
                     ScalableMaskedDivFIntrOp,
                     ConvertToSvboolIntrOp,
-                    ConvertFromSvboolIntrOp>();
+                    ConvertFromSvboolIntrOp,
+                    ZipX2IntrOp,
+                    ZipX4IntrOp>();
   target.addIllegalOp<SdotOp,
                       SmmlaOp,
                       UdotOp,
@@ -199,6 +206,8 @@ void mlir::configureArmSVELegalizeForExportTarget(
                       ScalableMaskedUDivIOp,
                       ScalableMaskedDivFOp,
                       ConvertToSvboolOp,
-                      ConvertFromSvboolOp>();
+                      ConvertFromSvboolOp,
+                      ZipX2Op,
+                      ZipX4Op>();
   // clang-format on
 }

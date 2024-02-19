@@ -280,3 +280,163 @@ func.func @printf(%arg0 : !spirv.ptr<i8, UniformConstant>, %arg1 : i32, %arg2 : 
   return %0 : i32
 }
 
+// -----
+
+func.func @tan(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.tan {{%.*}} : f32
+  %2 = spirv.CL.tan %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @tan(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.tan {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.tan %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @atan(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.atan {{%.*}} : f32
+  %2 = spirv.CL.atan %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @atan(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.atan {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.atan %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @atanh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.atanh {{%.*}} : f32
+  %2 = spirv.CL.atanh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @atanh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.atanh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.atanh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @sinh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.sinh {{%.*}} : f32
+  %2 = spirv.CL.sinh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @sinh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.sinh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.sinh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @cosh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.cosh {{%.*}} : f32
+  %2 = spirv.CL.cosh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @cosh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.cosh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.cosh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @asin(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.asin {{%.*}} : f32
+  %2 = spirv.CL.asin %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @asin(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.asin {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.asin %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @asinh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.asinh {{%.*}} : f32
+  %2 = spirv.CL.asinh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @asinh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.asinh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.asinh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @acos(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.acos {{%.*}} : f32
+  %2 = spirv.CL.acos %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @acos(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.acos {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.acos %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @acosh(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.acosh {{%.*}} : f32
+  %2 = spirv.CL.acosh %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @acosh(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.acosh {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.acosh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @atan2(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.CL.atan2 {{%.*}}, {{%.*}} : f32
+  %2 = spirv.CL.atan2 %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+func.func @atan2(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.atan2 {{%.*}}, {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.atan2 %arg0, %arg1 : vector<4xf16>
+  return
+}
+

@@ -110,6 +110,22 @@ public:
     return nullptr;
   }
 
+  /// Attempt to return the minimal possible value for a given symbol. Note
+  /// that a ConstraintManager is not obligated to return a lower bound, it may
+  /// also return nullptr.
+  virtual const llvm::APSInt *getSymMinVal(ProgramStateRef state,
+                                           SymbolRef sym) const {
+    return nullptr;
+  }
+
+  /// Attempt to return the minimal possible value for a given symbol. Note
+  /// that a ConstraintManager is not obligated to return a lower bound, it may
+  /// also return nullptr.
+  virtual const llvm::APSInt *getSymMaxVal(ProgramStateRef state,
+                                           SymbolRef sym) const {
+    return nullptr;
+  }
+
   /// Scan all symbols referenced by the constraints. If the symbol is not
   /// alive, remove it.
   virtual ProgramStateRef removeDeadBindings(ProgramStateRef state,

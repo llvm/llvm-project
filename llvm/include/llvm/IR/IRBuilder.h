@@ -200,6 +200,14 @@ public:
       SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
+  /// This specifies that created instructions should be inserted at
+  /// the specified point, but also requires that \p IP is dereferencable.
+  void SetInsertPoint(BasicBlock::iterator IP) {
+    BB = IP->getParent();
+    InsertPt = IP;
+    SetCurrentDebugLocation(IP->getStableDebugLoc());
+  }
+
   /// This specifies that created instructions should inserted at the beginning
   /// end of the specified function, but after already existing static alloca
   /// instructions that are at the start.
@@ -554,11 +562,6 @@ public:
   /// Fetch the type representing a pointer.
   PointerType *getPtrTy(unsigned AddrSpace = 0) {
     return PointerType::get(Context, AddrSpace);
-  }
-
-  /// Fetch the type representing a pointer to an 8-bit integer value.
-  PointerType *getInt8PtrTy(unsigned AddrSpace = 0) {
-    return getPtrTy(AddrSpace);
   }
 
   /// Fetch the type of an integer with size at least as big as that of a
@@ -1969,6 +1972,16 @@ public:
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
                          const Twine &Name = "") {
     return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
+  }
+
+  Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
+                      bool IsInBounds = false) {
+    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, IsInBounds);
+  }
+
+  Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
+                              const Twine &Name = "") {
+    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, /*IsInBounds*/ true);
   }
 
   /// Same as CreateGlobalString, but return a pointer with "i8*" type

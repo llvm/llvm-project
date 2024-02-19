@@ -16,7 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
+#include "Utils/CodegenUtils.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -145,8 +145,8 @@ static Value genLvlTypesBuffer(OpBuilder &builder, Location loc,
                                SparseTensorType stt) {
   SmallVector<Value> lvlTypes;
   lvlTypes.reserve(stt.getLvlRank());
-  for (const auto dlt : stt.getEncoding().getLvlTypes())
-    lvlTypes.push_back(constantDimLevelTypeEncoding(builder, loc, dlt));
+  for (const auto lt : stt.getEncoding().getLvlTypes())
+    lvlTypes.push_back(constantLevelTypeEncoding(builder, loc, lt));
   return allocaBuffer(builder, loc, lvlTypes);
 }
 

@@ -77,7 +77,7 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-LINUX:       # %bb.0:
 ; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
 ; SSE-LINUX-NEXT:    movaps %xmm0, 48(%rdi)
-; SSE-LINUX-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551615,0]
+; SSE-LINUX-NEXT:    movsd {{.*#+}} xmm1 = [18446744073709551615,0]
 ; SSE-LINUX-NEXT:    movaps %xmm1, 32(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, 16(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, (%rdi)
@@ -92,7 +92,7 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-MSVC:       # %bb.0:
 ; SSE-MSVC-NEXT:    xorps %xmm0, %xmm0
 ; SSE-MSVC-NEXT:    movaps %xmm0, 48(%rcx)
-; SSE-MSVC-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551615,0]
+; SSE-MSVC-NEXT:    movsd {{.*#+}} xmm1 = [18446744073709551615,0]
 ; SSE-MSVC-NEXT:    movaps %xmm1, 32(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, 16(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, (%rcx)
@@ -108,11 +108,11 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; AVX-LINUX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [18446744073709551615,0,18446744073709551615,0]
 ; AVX-LINUX-NEXT:    # ymm0 = mem[0,1,0,1]
 ; AVX-LINUX-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX-LINUX-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,0]
-; AVX-LINUX-NEXT:    vmovaps %ymm0, 32(%rdi)
-; AVX-LINUX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-LINUX-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX-LINUX-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,0,0,18446744073709551615]
+; AVX-LINUX-NEXT:    vmovaps %xmm0, %xmm1
+; AVX-LINUX-NEXT:    vmovaps %ymm1, 32(%rdi)
+; AVX-LINUX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-LINUX-NEXT:    vmovaps %ymm1, 32(%rsi)
 ; AVX-LINUX-NEXT:    vmovaps %ymm0, (%rsi)
 ; AVX-LINUX-NEXT:    vzeroupper
 ; AVX-LINUX-NEXT:    retq
@@ -122,11 +122,11 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; AVX-MSVC-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [18446744073709551615,0,18446744073709551615,0]
 ; AVX-MSVC-NEXT:    # ymm0 = mem[0,1,0,1]
 ; AVX-MSVC-NEXT:    vmovaps %ymm0, (%rcx)
-; AVX-MSVC-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551615,0]
-; AVX-MSVC-NEXT:    vmovaps %ymm0, 32(%rcx)
-; AVX-MSVC-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-MSVC-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX-MSVC-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551615,0,0,18446744073709551615]
+; AVX-MSVC-NEXT:    vmovaps %xmm0, %xmm1
+; AVX-MSVC-NEXT:    vmovaps %ymm1, 32(%rcx)
+; AVX-MSVC-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-MSVC-NEXT:    vmovaps %ymm1, 32(%rdx)
 ; AVX-MSVC-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX-MSVC-NEXT:    vzeroupper
 ; AVX-MSVC-NEXT:    retq

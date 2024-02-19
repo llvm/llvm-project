@@ -36,7 +36,7 @@ using namespace clang;
 // A check to make sure the ObjCOrBuiltinID has sufficient room to store the
 // largest possible target/aux-target combination. If we exceed this, we likely
 // need to just change the ObjCOrBuiltinIDBits value in IdentifierTable.h.
-static_assert(2 * LargestBuiltinID < (2 << (ObjCOrBuiltinIDBits - 1)),
+static_assert(2 * LargestBuiltinID < (2 << (InterestingIdentifierBits - 1)),
               "Insufficient ObjCOrBuiltinID Bits");
 
 //===----------------------------------------------------------------------===//
@@ -280,13 +280,13 @@ static void AddObjCKeyword(StringRef Name,
   Table.get(Name).setObjCKeywordID(ObjCID);
 }
 
-static void AddInterestingIdentifier(StringRef Name,
-                                     tok::InterestingIdentifierKind BTID,
-                                     IdentifierTable &Table) {
-  // Don't add 'not_interesting' identifier.
-  if (BTID != tok::not_interesting) {
+static void AddNotableIdentifier(StringRef Name,
+                                 tok::NotableIdentifierKind BTID,
+                                 IdentifierTable &Table) {
+  // Don't add 'not_notable' identifier.
+  if (BTID != tok::not_notable) {
     IdentifierInfo &Info = Table.get(Name, tok::identifier);
-    Info.setInterestingIdentifierID(BTID);
+    Info.setNotableIdentifierID(BTID);
   }
 }
 
@@ -306,8 +306,8 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
-#define INTERESTING_IDENTIFIER(NAME)                                           \
-  AddInterestingIdentifier(StringRef(#NAME), tok::NAME, *this);
+#define NOTABLE_IDENTIFIER(NAME)                                               \
+  AddNotableIdentifier(StringRef(#NAME), tok::NAME, *this);
 
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
@@ -604,7 +604,7 @@ LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
 static bool startsWithWord(StringRef name, StringRef word) {
   if (name.size() < word.size()) return false;
   return ((name.size() == word.size() || !isLowercase(name[word.size()])) &&
-          name.startswith(word));
+          name.starts_with(word));
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
@@ -628,8 +628,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
     return OMF_performSelector;
 
   // The other method families may begin with a prefix of underscores.
-  while (!name.empty() && name.front() == '_')
-    name = name.substr(1);
+  name = name.ltrim('_');
 
   if (name.empty()) return OMF_None;
   switch (name.front()) {
@@ -742,7 +741,7 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
 
 std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
   StringRef Name = Sel.getNameForSlot(0);
-  assert(Name.startswith("set") && "invalid setter name");
+  assert(Name.starts_with("set") && "invalid setter name");
   return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
 }
 

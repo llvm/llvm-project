@@ -87,13 +87,13 @@ define void @masked_store_v16f32(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    fcmeq p1.s, p0/z, z0.s, z2.s
-; VBITS_GE_256-NEXT:    fcmeq p0.s, p0/z, z1.s, z3.s
+; VBITS_GE_256-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_256-NEXT:    fcmeq p0.s, p0/z, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p1, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_store_v16f32:

@@ -1850,7 +1850,7 @@ static bool hasObjCExceptionAttribute(ASTContext &Context,
 static llvm::GlobalValue::LinkageTypes
 getLinkageTypeForObjCMetadata(CodeGenModule &CGM, StringRef Section) {
   if (CGM.getTriple().isOSBinFormatMachO() &&
-      (Section.empty() || Section.startswith("__DATA")))
+      (Section.empty() || Section.starts_with("__DATA")))
     return llvm::GlobalValue::InternalLinkage;
   return llvm::GlobalValue::PrivateLinkage;
 }
@@ -5038,12 +5038,10 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     return ("__DATA," + Section + "," + MachOAttributes).str();
   }
   case llvm::Triple::ELF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return Section.substr(2).str();
   case llvm::Triple::COFF:
-    assert(Section.substr(0, 2) == "__" &&
-           "expected the name to begin with __");
+    assert(Section.starts_with("__") && "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
   case llvm::Triple::Wasm:
   case llvm::Triple::GOFF:
@@ -6162,7 +6160,7 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
   // Section name is obtained by calling GetSectionName, which returns
   // sections in the __DATA segment on MachO.
   assert((!CGM.getTriple().isOSBinFormatMachO() ||
-          SectionName.startswith("__DATA")) &&
+          SectionName.starts_with("__DATA")) &&
          "SectionName expected to start with __DATA on MachO");
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
       CGM.getModule(), Init->getType(), false,

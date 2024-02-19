@@ -84,6 +84,8 @@ module attributes {gpu.container_module} {
 
       %one = arith.constant 1.0 : f32
 
+      %vec = vector.broadcast %arg0 : f32 to vector<4xf32>
+
       // CHECK: %{{.*}} = gpu.all_reduce add %{{.*}} {
       // CHECK-NEXT: } : (f32) -> f32
       %sum = gpu.all_reduce add %one {} : (f32) -> (f32)
@@ -92,11 +94,25 @@ module attributes {gpu.container_module} {
       // CHECK-NEXT: } : (f32) -> f32
       %sum1 = gpu.all_reduce add %one uniform {} : (f32) -> f32
 
+      // CHECK: %{{.*}} = gpu.all_reduce %{{.*}} {
+      // CHECK-NEXT: ^{{.*}}(%{{.*}}: f32, %{{.*}}: f32):
+      // CHECK-NEXT: %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
+      // CHECK-NEXT: gpu.yield %{{.*}} : f32
+      // CHECK-NEXT: } : (f32) -> f32
+      %sum2 = gpu.all_reduce %one { 
+      ^bb(%lhs : f32, %rhs : f32):
+        %tmp = arith.addf %lhs, %rhs : f32
+        gpu.yield %tmp : f32
+      } : (f32) -> (f32)
+
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (f32) -> f32
       %sum_subgroup = gpu.subgroup_reduce add %one : (f32) -> f32
 
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} uniform : (f32) -> f32
       %sum_subgroup1 = gpu.subgroup_reduce add %one uniform : (f32) -> f32
+
+      // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (vector<4xf32>) -> vector<4xf32>
+      %sum_subgroup2 = gpu.subgroup_reduce add %vec : (vector<4xf32>) -> vector<4xf32>
 
       %width = arith.constant 7 : i32
       %offset = arith.constant 3 : i32
@@ -151,6 +167,9 @@ module attributes {gpu.container_module} {
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
+
+    // CHECK: gpu.launch_func @kernels::@kernel_1 clusters in (%{{.*}}, %{{.*}}, %{{.*}}) blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @kernels::@kernel_1 clusters in (%cst, %cst, %cst) blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
 
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) dynamic_shared_memory_size %c0 args(%0 : f32, %1 : memref<?xf32, 1>)
 
@@ -403,4 +422,7 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
   gpu.func @kernel(%arg0 : f32) kernel {
     gpu.return
   }
+}
+
+gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }

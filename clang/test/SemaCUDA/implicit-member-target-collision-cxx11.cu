@@ -6,7 +6,7 @@
 // Test 1: collision between two bases
 
 struct A1_with_host_ctor {
-  A1_with_host_ctor() { static int nontrivial_ctor = 1; }
+  A1_with_host_ctor() {}
 };
 
 struct B1_with_device_ctor {

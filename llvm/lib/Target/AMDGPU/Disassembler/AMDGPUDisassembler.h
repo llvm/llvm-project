@@ -100,11 +100,14 @@ private:
   mutable uint64_t Literal64;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
+  unsigned CodeObjectVersion;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);
   ~AMDGPUDisassembler() override = default;
+
+  void setABIVersion(unsigned Version) override;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -200,6 +203,7 @@ public:
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
+  void convertTrue16OpSel(MCInst &MI) const;
 
   enum OpWidthTy {
     OPW32,
@@ -251,6 +255,7 @@ public:
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
 
   MCOperand decodeBoolReg(unsigned Val) const;
+  MCOperand decodeSplitBarrier(unsigned Val) const;
 
   int getTTmpIdx(unsigned Val) const;
 
@@ -264,6 +269,7 @@ public:
   bool isGFX10Plus() const;
   bool isGFX11() const;
   bool isGFX11Plus() const;
+  bool isGFX12Plus() const;
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

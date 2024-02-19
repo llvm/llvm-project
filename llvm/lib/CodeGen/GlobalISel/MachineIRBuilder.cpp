@@ -199,7 +199,7 @@ void MachineIRBuilder::validateShiftOp(const LLT Res, const LLT Op0,
 MachineInstrBuilder
 MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
                               const SrcOp &Op1, std::optional<unsigned> Flags) {
-  assert(Res.getLLTTy(*getMRI()).getScalarType().isPointer() &&
+  assert(Res.getLLTTy(*getMRI()).isPointerOrPointerVector() &&
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
   assert(Op1.getLLTTy(*getMRI()).getScalarType().isScalar() && "invalid offset type");
 
@@ -269,14 +269,19 @@ MachineIRBuilder::buildDeleteTrailingVectorElements(const DstOp &Res,
   LLT ResTy = Res.getLLTTy(*getMRI());
   LLT Op0Ty = Op0.getLLTTy(*getMRI());
 
-  assert((ResTy.isVector() && Op0Ty.isVector()) && "Non vector type");
-  assert((ResTy.getElementType() == Op0Ty.getElementType()) &&
+  assert(Op0Ty.isVector() && "Non vector type");
+  assert(((ResTy.isScalar() && (ResTy == Op0Ty.getElementType())) ||
+          (ResTy.isVector() &&
+           (ResTy.getElementType() == Op0Ty.getElementType()))) &&
          "Different vector element types");
-  assert((ResTy.getNumElements() < Op0Ty.getNumElements()) &&
-         "Op0 has fewer elements");
+  assert(
+      (ResTy.isScalar() || (ResTy.getNumElements() < Op0Ty.getNumElements())) &&
+      "Op0 has fewer elements");
 
-  SmallVector<Register, 8> Regs;
   auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
+  if (ResTy.isScalar())
+    return buildCopy(Res, Unmerge.getReg(0));
+  SmallVector<Register, 8> Regs;
   for (unsigned i = 0; i < ResTy.getNumElements(); ++i)
     Regs.push_back(Unmerge.getReg(i));
   return buildMergeLikeInstr(Res, Regs);
@@ -314,7 +319,10 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
   assert(EltTy.getScalarSizeInBits() == Val.getBitWidth() &&
          "creating constant with the wrong size");
 
-  if (Ty.isVector()) {
+  assert(!Ty.isScalableVector() &&
+         "unexpected scalable vector in buildConstant");
+
+  if (Ty.isFixedVector()) {
     auto Const = buildInstr(TargetOpcode::G_CONSTANT)
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addCImm(&Val);
@@ -347,7 +355,10 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
 
   assert(!Ty.isPointer() && "invalid operand type");
 
-  if (Ty.isVector()) {
+  assert(!Ty.isScalableVector() &&
+         "unexpected scalable vector in buildFConstant");
+
+  if (Ty.isFixedVector()) {
     auto Const = buildInstr(TargetOpcode::G_FCONSTANT)
     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
     .addFPImm(&Val);
@@ -1049,6 +1060,18 @@ MachineIRBuilder::buildFence(unsigned Ordering, unsigned Scope) {
   return buildInstr(TargetOpcode::G_FENCE)
     .addImm(Ordering)
     .addImm(Scope);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildPrefetch(const SrcOp &Addr,
+                                                    unsigned RW,
+                                                    unsigned Locality,
+                                                    unsigned CacheType,
+                                                    MachineMemOperand &MMO) {
+  auto MIB = buildInstr(TargetOpcode::G_PREFETCH);
+  Addr.addSrcToMIB(MIB);
+  MIB.addImm(RW).addImm(Locality).addImm(CacheType);
+  MIB.addMemOperand(&MMO);
+  return MIB;
 }
 
 MachineInstrBuilder

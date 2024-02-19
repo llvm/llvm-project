@@ -38,6 +38,12 @@ class SPIRVGlobalRegistry {
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
+  // map a Function to its definition (as a machine instruction operand)
+  DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
+  // map function pointer (as a machine instruction operand) to the used
+  // Function
+  DenseMap<const MachineOperand *, const Function *> InstrToFunction;
+
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
   const MachineInstr *checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
@@ -101,6 +107,29 @@ public:
     DT.buildDepsGraph(Graph, MMI);
   }
 
+  // Map a machine operand that represents a use of a function via function
+  // pointer to a machine operand that represents the function definition.
+  // Return either the register or invalid value, because we have no context for
+  // a good diagnostic message in case of unexpectedly missing references.
+  const MachineOperand *getFunctionDefinitionByUse(const MachineOperand *Use) {
+    auto ResF = InstrToFunction.find(Use);
+    if (ResF == InstrToFunction.end())
+      return nullptr;
+    auto ResReg = FunctionToInstr.find(ResF->second);
+    return ResReg == FunctionToInstr.end() ? nullptr : ResReg->second;
+  }
+  // map function pointer (as a machine instruction operand) to the used
+  // Function
+  void recordFunctionPointer(const MachineOperand *MO, const Function *F) {
+    InstrToFunction[MO] = F;
+  }
+  // map a Function to its definition (as a machine instruction)
+  void recordFunctionDefinition(const Function *F, const MachineOperand *MO) {
+    FunctionToInstr[F] = MO;
+  }
+  // Return true if any OpConstantFunctionPointerINTEL were generated
+  bool hasConstFunPtr() { return !InstrToFunction.empty(); }
+
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,
@@ -138,6 +167,7 @@ public:
 
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given string containing the name of the builtin type.
+  // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
   SPIRVType *getOrCreateSPIRVTypeByName(
       StringRef TypeStr, MachineIRBuilder &MIRBuilder,
       SPIRV::StorageClass::StorageClass SC = SPIRV::StorageClass::Function,

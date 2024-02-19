@@ -103,6 +103,7 @@ namespace X86Disassembler {
 #define bFromEVEX4of4(evex) bitFromOffset4(evex)
 #define v2FromEVEX4of4(evex) invertedBitFromOffset3(evex)
 #define aaaFromEVEX4of4(evex) threeBitsFromOffset0(evex)
+#define nfFromEVEX4of4(evex) bitFromOffset2(evex)
 
 // These enums represent Intel registers for use by the decoder.
 #define REGS_8BIT                                                              \
@@ -628,6 +629,7 @@ enum VEXLeadingOpcodeByte {
   VEX_LOB_0F = 0x1,
   VEX_LOB_0F38 = 0x2,
   VEX_LOB_0F3A = 0x3,
+  VEX_LOB_MAP4 = 0x4,
   VEX_LOB_MAP5 = 0x5,
   VEX_LOB_MAP6 = 0x6,
   VEX_LOB_MAP7 = 0x7

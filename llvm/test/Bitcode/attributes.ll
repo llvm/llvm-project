@@ -521,6 +521,11 @@ define void @f90(ptr writable %p) {
   ret void
 }
 
+; CHECK: define void @f91(ptr dead_on_unwind %p)
+define void @f91(ptr dead_on_unwind %p) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }

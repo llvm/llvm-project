@@ -249,13 +249,13 @@ class DAPTestCaseBase(TestBase):
     def continue_to_exit(self, exitCode=0):
         self.dap_server.request_continue()
         stopped_events = self.dap_server.wait_for_stopped()
-        self.assertEquals(
+        self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
         )
-        self.assertEquals(
+        self.assertEqual(
             stopped_events[0]["event"], "exited", "make sure program ran to completion"
         )
-        self.assertEquals(
+        self.assertEqual(
             stopped_events[0]["body"]["exitCode"],
             exitCode,
             "exitCode == %i" % (exitCode),
@@ -291,6 +291,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         sourceMap=None,
         sourceInitFile=False,
+        expectFailure=False,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
@@ -322,6 +323,8 @@ class DAPTestCaseBase(TestBase):
             postRunCommands=postRunCommands,
             sourceMap=sourceMap,
         )
+        if expectFailure:
+            return response
         if not (response and response["success"]):
             self.assertTrue(
                 response["success"], "attach failed (%s)" % (response["message"])
@@ -437,6 +440,8 @@ class DAPTestCaseBase(TestBase):
         commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        launchCommands=None,
+        expectFailure=False,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
@@ -470,4 +475,6 @@ class DAPTestCaseBase(TestBase):
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
             customThreadFormat=customThreadFormat,
+            launchCommands=launchCommands,
+            expectFailure=expectFailure,
         )

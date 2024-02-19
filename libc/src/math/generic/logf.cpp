@@ -54,10 +54,11 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   using fputil::round_result_slightly_down;
   using fputil::round_result_slightly_up;
@@ -79,15 +80,15 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
     // Subnormal inputs.
-    if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL)) {
+    if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval())) {
       if (x_u == 0) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::neg_inf());
+        return FPBits::inf(Sign::NEG).get_val();
       }
       // Normalize denormal inputs.
-      xbits.set_val(xbits.get_val() * 0x1.0p23f);
+      xbits = FPBits(xbits.get_val() * 0x1.0p23f);
       m -= 23;
       x_u = xbits.uintval();
     }
@@ -112,18 +113,18 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
     // Exceptional inputs.
-    if (LIBC_UNLIKELY(x_u > FPBits::MAX_NORMAL)) {
+    if (LIBC_UNLIKELY(x_u > FPBits::max_normal().uintval())) {
       if (x_u == 0x8000'0000U) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::neg_inf());
+        return FPBits::inf(Sign::NEG).get_val();
       }
-      if (xbits.get_sign() && !xbits.is_nan()) {
+      if (xbits.is_neg() && !xbits.is_nan()) {
         // Return NaN and raise FE_INVALID
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::build_quiet_nan(0);
+        return FPBits::quiet_nan().get_val();
       }
       // x is +inf or nan
       return x;
@@ -135,7 +136,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   // rounding mode.
   if (LIBC_UNLIKELY((x_u & 0x007f'ffffU) == 0))
     return static_cast<float>(
-        static_cast<double>(m + xbits.get_unbiased_exponent()) * LOG_2);
+        static_cast<double>(m + xbits.get_biased_exponent()) * LOG_2);
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   uint32_t mant = xbits.get_mantissa();
@@ -146,9 +147,9 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   m += static_cast<int>((x_u + (1 << 16)) >> 23);
 
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
-  float u = static_cast<float>(xbits);
+  float u = xbits.get_val();
   double v;
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.

@@ -60,17 +60,22 @@ int t4(void) {
 }
 
 void bar() {}
+static void (*fptr)();
 
 void t5(void) {
   __asm {
     call bar
     jmp bar
+    call fptr
+    jmp fptr
   }
   // CHECK: t5
   // CHECK: call void asm sideeffect inteldialect
   // CHECK-SAME: call ${0:P}
   // CHECK-SAME: jmp ${1:P}
-  // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar)
+  // CHECK-SAME: call $2
+  // CHECK-SAME: jmp $3
+  // CHECK-SAME: "*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar, ptr elementtype(ptr) @fptr, ptr elementtype(ptr) @fptr)
 }
 
 void t47(void) {

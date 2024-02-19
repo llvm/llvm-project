@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Multilib.h"
@@ -143,6 +144,9 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
+// Parse -mtls-dialect=. Return true if the target supports both general-dynamic
+// and TLSDESC, and TLSDESC is requested.
+bool isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
 /// \p EnvVar is split by system delimiter for environment variables.
 /// If \p ArgName is "-I", "-L", or an empty string, each entry from \p EnvVar
@@ -211,8 +215,17 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple);
+
+void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                           const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs,
+                           const llvm::Triple &Triple);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang
+
+clang::CodeGenOptions::FramePointerKind
+getFramePointerKind(const llvm::opt::ArgList &Args, const llvm::Triple &Triple);
 
 #endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H

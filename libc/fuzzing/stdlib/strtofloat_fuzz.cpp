@@ -14,7 +14,7 @@
 #include "src/stdlib/strtof.h"
 #include "src/stdlib/strtold.h"
 
-#include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -22,18 +22,17 @@
 
 #include "utils/MPFRWrapper/mpfr_inc.h"
 
-using LIBC_NAMESPACE::fputil::FloatProperties;
+using LIBC_NAMESPACE::fputil::FPBits;
 
 // This function calculates the effective precision for a given float type and
 // exponent. Subnormals have a lower effective precision since they don't
 // necessarily use all of the bits of the mantissa.
 template <typename F> inline constexpr int effective_precision(int exponent) {
-  const int full_precision = FloatProperties<F>::MANTISSA_PRECISION;
+  const int full_precision = FPBits<F>::FRACTION_LEN + 1;
 
   // This is intended to be 0 when the exponent is the lowest normal and
   // increase as the exponent's magnitude increases.
-  const int bits_below_normal =
-      (-exponent) - (FloatProperties<F>::EXPONENT_BIAS - 1);
+  const int bits_below_normal = (-exponent) - (FPBits<F>::EXP_BIAS - 1);
 
   // The precision should be the normal, full precision, minus the bits lost
   // by this being a subnormal, minus one for the implicit leading one.

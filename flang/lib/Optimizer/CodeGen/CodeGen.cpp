@@ -13,9 +13,11 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "CGOps.h"
+#include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -34,6 +36,7 @@
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -42,6 +45,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -59,14 +63,40 @@ namespace fir {
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
+static constexpr unsigned defaultAddressSpace = 0u;
 
 /// `fir.box` attribute values as defined for CFI_attribute_t in
 /// flang/ISO_Fortran_binding.h.
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
-static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context) {
-  return mlir::LLVM::LLVMPointerType::get(context);
+static inline unsigned
+getAllocaAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+    if (mlir::Attribute addrSpace =
+            mlir::DataLayout(module).getAllocaMemorySpace())
+      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return defaultAddressSpace;
+}
+
+static inline unsigned
+getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+    if (mlir::Attribute addrSpace =
+            mlir::DataLayout(module).getProgramMemorySpace())
+      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return defaultAddressSpace;
+}
+
+static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
+                                        unsigned addressSpace = 0) {
+  return mlir::LLVM::LLVMPointerType::get(context, addressSpace);
 }
 
 static inline mlir::Type getI8Type(mlir::MLIRContext *context) {
@@ -116,6 +146,9 @@ static int64_t getConstantIntValue(mlir::Value val) {
 static unsigned getTypeDescFieldId(mlir::Type ty) {
   auto isArray = fir::dyn_cast_ptrOrBoxEleTy(ty).isa<fir::SequenceType>();
   return isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
+}
+static unsigned getLenParamFieldId(mlir::Type ty) {
+  return getTypeDescFieldId(ty) + 1;
 }
 
 namespace {
@@ -366,19 +399,37 @@ protected:
     return getBlockForAllocaInsert(op->getParentOp());
   }
 
-  // Generate an alloca of size 1 for an object of type \p llvmObjectTy.
-  mlir::LLVM::AllocaOp
-  genAllocaWithType(mlir::Location loc, mlir::Type llvmObjectTy,
-                    unsigned alignment,
-                    mlir::ConversionPatternRewriter &rewriter) const {
+  // Generate an alloca of size 1 for an object of type \p llvmObjectTy in the
+  // allocation address space provided for the architecture in the DataLayout
+  // specification. If the address space is different from the devices
+  // program address space we perform a cast. In the case of most architectures
+  // the program and allocation address space will be the default of 0 and no
+  // cast will be emitted.
+  mlir::Value genAllocaAndAddrCastWithType(
+      mlir::Location loc, mlir::Type llvmObjectTy, unsigned alignment,
+      mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
     mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
     mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
     rewriter.setInsertionPointToStart(insertBlock);
     auto size = genI32Constant(loc, rewriter, 1);
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(llvmObjectTy.getContext());
-    auto al = rewriter.create<mlir::LLVM::AllocaOp>(
-        loc, llvmPtrTy, llvmObjectTy, size, alignment);
+    unsigned allocaAs = getAllocaAddressSpace(rewriter);
+    unsigned programAs = getProgramAddressSpace(rewriter);
+
+    mlir::Value al = rewriter.create<mlir::LLVM::AllocaOp>(
+        loc, ::getLlvmPtrType(llvmObjectTy.getContext(), allocaAs),
+        llvmObjectTy, size, alignment);
+
+    // if our allocation address space, is not the same as the program address
+    // space, then we must emit a cast to the program address space before use.
+    // An example case would be on AMDGPU, where the allocation address space is
+    // the numeric value 5 (private), and the program address space is 0
+    // (generic).
+    if (allocaAs != programAs) {
+      al = rewriter.create<mlir::LLVM::AddrSpaceCastOp>(
+          loc, ::getLlvmPtrType(llvmObjectTy.getContext(), programAs), al);
+    }
+
     rewriter.restoreInsertionPoint(thisPt);
     return al;
   }
@@ -530,20 +581,34 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
         size = rewriter.create<mlir::LLVM::MulOp>(
             loc, ity, size, integerCast(loc, rewriter, ity, operands[i]));
     }
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(alloc.getContext());
+
+    unsigned allocaAs = getAllocaAddressSpace(rewriter);
+    unsigned programAs = getProgramAddressSpace(rewriter);
+
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
     // attribute like before is certainly bad).
     auto llvmAlloc = rewriter.create<mlir::LLVM::AllocaOp>(
-        loc, llvmPtrTy, llvmObjectType, size);
+        loc, ::getLlvmPtrType(alloc.getContext(), allocaAs), llvmObjectType,
+        size);
     if (alloc.getPinned())
       llvmAlloc->setDiscardableAttr(alloc.getPinnedAttrName(),
                                     alloc.getPinnedAttr());
     if (alloc.getBindcName())
       llvmAlloc->setDiscardableAttr(alloc.getBindcNameAttrName(),
                                     alloc.getBindcNameAttr());
-    rewriter.replaceOp(alloc, llvmAlloc);
+    if (allocaAs == programAs) {
+      rewriter.replaceOp(alloc, llvmAlloc);
+    } else {
+      // if our allocation address space, is not the same as the program address
+      // space, then we must emit a cast to the program address space before
+      // use. An example case would be on AMDGPU, where the allocation address
+      // space is the numeric value 5 (private), and the program address space
+      // is 0 (generic).
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(
+          alloc, ::getLlvmPtrType(alloc.getContext(), programAs), llvmAlloc);
+    }
     return mlir::success();
   }
 };
@@ -840,16 +905,18 @@ struct CmpcOpConversion : public FIROpConversion<fir::CmpcOp> {
     mlir::ValueRange operands = adaptor.getOperands();
     mlir::Type resTy = convertType(cmp.getType());
     mlir::Location loc = cmp.getLoc();
-    llvm::SmallVector<mlir::Value, 2> rp = {
+    mlir::LLVM::FastmathFlags fmf =
+        mlir::arith::convertArithFastMathFlagsToLLVM(cmp.getFastmath());
+    mlir::LLVM::FCmpPredicate pred =
+        static_cast<mlir::LLVM::FCmpPredicate>(cmp.getPredicate());
+    auto rcp = rewriter.create<mlir::LLVM::FCmpOp>(
+        loc, resTy, pred,
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, operands[0], 0),
-        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, operands[1], 0)};
-    auto rcp =
-        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, rp, cmp->getAttrs());
-    llvm::SmallVector<mlir::Value, 2> ip = {
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, operands[1], 0), fmf);
+    auto icp = rewriter.create<mlir::LLVM::FCmpOp>(
+        loc, resTy, pred,
         rewriter.create<mlir::LLVM::ExtractValueOp>(loc, operands[0], 1),
-        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, operands[1], 1)};
-    auto icp =
-        rewriter.create<mlir::LLVM::FCmpOp>(loc, resTy, ip, cmp->getAttrs());
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, operands[1], 1), fmf);
     llvm::SmallVector<mlir::Value, 2> cp = {rcp, icp};
     switch (cmp.getPredicate()) {
     case mlir::arith::CmpFPredicate::OEQ: // .EQ.
@@ -1152,20 +1219,23 @@ struct EmboxCharOpConversion : public FIROpConversion<fir::EmboxCharOp> {
 } // namespace
 
 /// Return the LLVMFuncOp corresponding to the standard malloc call.
-static mlir::LLVM::LLVMFuncOp
+static mlir::SymbolRefAttr
 getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
+  static constexpr char mallocName[] = "malloc";
   auto module = op->getParentOfType<mlir::ModuleOp>();
-  if (mlir::LLVM::LLVMFuncOp mallocFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("malloc"))
-    return mallocFunc;
+  if (auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
+    return mlir::SymbolRefAttr::get(mallocFunc);
+  if (auto userMalloc = module.lookupSymbol<mlir::func::FuncOp>(mallocName))
+    return mlir::SymbolRefAttr::get(userMalloc);
   mlir::OpBuilder moduleBuilder(
       op->getParentOfType<mlir::ModuleOp>().getBodyRegion());
   auto indexType = mlir::IntegerType::get(op.getContext(), 64);
-  return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
-      rewriter.getUnknownLoc(), "malloc",
+  auto mallocDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
+      op.getLoc(), mallocName,
       mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
                                         indexType,
                                         /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(mallocDecl);
 }
 
 /// Helper function for generating the LLVM IR that computes the distance
@@ -1213,7 +1283,6 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
   matchAndRewrite(fir::AllocMemOp heap, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type heapTy = heap.getType();
-    mlir::LLVM::LLVMFuncOp mallocFunc = getMalloc(heap, rewriter);
     mlir::Location loc = heap.getLoc();
     auto ity = lowerTy().indexType();
     mlir::Type dataTy = fir::unwrapRefType(heapTy);
@@ -1226,7 +1295,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
-    heap->setAttr("callee", mlir::SymbolRefAttr::get(mallocFunc));
+    heap->setAttr("callee", getMalloc(heap, rewriter));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size, heap->getAttrs());
     return mlir::success();
@@ -1244,19 +1313,25 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
 } // namespace
 
 /// Return the LLVMFuncOp corresponding to the standard free call.
-static mlir::LLVM::LLVMFuncOp
-getFree(fir::FreeMemOp op, mlir::ConversionPatternRewriter &rewriter) {
+static mlir::SymbolRefAttr getFree(fir::FreeMemOp op,
+                                   mlir::ConversionPatternRewriter &rewriter) {
+  static constexpr char freeName[] = "free";
   auto module = op->getParentOfType<mlir::ModuleOp>();
-  if (mlir::LLVM::LLVMFuncOp freeFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free"))
-    return freeFunc;
+  // Check if free already defined in the module.
+  if (auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(freeName))
+    return mlir::SymbolRefAttr::get(freeFunc);
+  if (auto freeDefinedByUser =
+          module.lookupSymbol<mlir::func::FuncOp>(freeName))
+    return mlir::SymbolRefAttr::get(freeDefinedByUser);
+  // Create llvm declaration for free.
   mlir::OpBuilder moduleBuilder(module.getBodyRegion());
   auto voidType = mlir::LLVM::LLVMVoidType::get(op.getContext());
-  return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
-      rewriter.getUnknownLoc(), "free",
+  auto freeDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
+      rewriter.getUnknownLoc(), freeName,
       mlir::LLVM::LLVMFunctionType::get(voidType,
                                         getLlvmPtrType(op.getContext()),
                                         /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(freeDecl);
 }
 
 static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
@@ -1276,9 +1351,8 @@ struct FreeMemOpConversion : public FIROpConversion<fir::FreeMemOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::FreeMemOp freemem, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::LLVM::LLVMFuncOp freeFunc = getFree(freemem, rewriter);
     mlir::Location loc = freemem.getLoc();
-    freemem->setAttr("callee", mlir::SymbolRefAttr::get(freeFunc));
+    freemem->setAttr("callee", getFree(freemem, rewriter));
     rewriter.create<mlir::LLVM::CallOp>(loc, mlir::TypeRange{},
                                         mlir::ValueRange{adaptor.getHeapref()},
                                         freemem->getAttrs());
@@ -1512,6 +1586,14 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         descriptor =
             insertField(rewriter, loc, descriptor, {typeDescFieldId}, typeDesc,
                         /*bitCast=*/true);
+      // Always initialize the length parameter field to zero to avoid issues
+      // with uninitialized values in Fortran code trying to compare physical
+      // representation of derived types with pointer/allocatable components.
+      // This has been seen in hashing algorithms using TRANSFER.
+      mlir::Value zero =
+          genConstantIndex(loc, rewriter.getI64Type(), rewriter, 0);
+      descriptor = insertField(rewriter, loc, descriptor,
+                               {getLenParamFieldId(boxTy), 0}, zero);
     }
     return descriptor;
   }
@@ -1687,8 +1769,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (isInGlobalOp(rewriter))
       return boxValue;
     mlir::Type llvmBoxTy = boxValue.getType();
-    auto alloca =
-        this->genAllocaWithType(loc, llvmBoxTy, defaultAlign, rewriter);
+    auto alloca = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy,
+                                                     defaultAlign, rewriter);
     auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, alloca);
     this->attachTBAATag(storeOp, boxTy, boxTy, nullptr);
     return alloca;
@@ -2385,6 +2467,9 @@ struct XArrayCoorOpConversion
     const bool baseIsBoxed = coor.getMemref().getType().isa<fir::BaseBoxType>();
     TypePair baseBoxTyPair =
         baseIsBoxed ? getBoxTypePair(coor.getMemref().getType()) : TypePair{};
+    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
+        mlir::LLVM::IntegerOverflowFlagsAttr::get(
+            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2405,14 +2490,15 @@ struct XArrayCoorOpConversion
         if (normalSlice)
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
-      auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
+      auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb, nsw);
       mlir::Value diff =
-          rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step);
+          rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step, nsw);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
-        auto adj = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, lb);
-        diff = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, adj);
+        auto adj =
+            rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, lb, nsw);
+        diff = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, adj, nsw);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -2420,17 +2506,21 @@ struct XArrayCoorOpConversion
         // Use stride in bytes from the descriptor.
         mlir::Value stride =
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
-        auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, stride);
-        offset = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset);
+        auto sc =
+            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, stride, nsw);
+        offset =
+            rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset, nsw);
       } else {
         // Use stride computed at last iteration.
-        auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, prevExt);
-        offset = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset);
+        auto sc =
+            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, prevExt, nsw);
+        offset =
+            rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset, nsw);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
-        prevExt =
-            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, prevExt, nextExt);
+        prevExt = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, prevExt,
+                                                     nextExt, nsw);
       }
     }
 
@@ -2489,8 +2579,8 @@ struct XArrayCoorOpConversion
           assert(coor.getLenParams().size() == 1);
           auto length = integerCast(loc, rewriter, idxTy,
                                     operands[coor.lenParamsOffset()]);
-          offset =
-              rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset, length);
+          offset = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset,
+                                                      length, nsw);
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
@@ -2663,6 +2753,9 @@ private:
     auto cpnTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
     mlir::Type llvmPtrTy = ::getLlvmPtrType(coor.getContext());
     mlir::Type byteTy = ::getI8Type(coor.getContext());
+    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
+        mlir::LLVM::IntegerOverflowFlagsAttr::get(
+            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
 
     for (unsigned i = 1, last = operands.size(); i < last; ++i) {
       if (auto arrTy = cpnTy.dyn_cast<fir::SequenceType>()) {
@@ -2678,9 +2771,9 @@ private:
              index < lastIndex; ++index) {
           mlir::Value stride = getStrideFromBox(loc, boxTyPair, operands[0],
                                                 index - i, rewriter);
-          auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy,
-                                                       operands[index], stride);
-          off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off);
+          auto sc = rewriter.create<mlir::LLVM::MulOp>(
+              loc, idxTy, operands[index], stride, nsw);
+          off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off, nsw);
         }
         resultAddr = rewriter.create<mlir::LLVM::GEPOp>(
             loc, llvmPtrTy, byteTy, resultAddr,
@@ -3095,11 +3188,11 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       else
         attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
-          genAllocaWithType(loc, llvmLoadTy, defaultAlign, rewriter);
+          genAllocaAndAddrCastWithType(loc, llvmLoadTy, defaultAlign, rewriter);
       auto storeOp =
           rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
       attachTBAATag(storeOp, boxTy, boxTy, nullptr);
-      rewriter.replaceOp(load, newBoxStorage.getResult());
+      rewriter.replaceOp(load, newBoxStorage);
     } else {
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
           load.getLoc(), llvmLoadTy, adaptor.getOperands(), load->getAttrs());
@@ -3656,6 +3749,27 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
   }
 };
 
+struct BoxOffsetOpConversion : public FIROpConversion<fir::BoxOffsetOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxOffsetOp boxOffset, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+
+    mlir::Type pty = ::getLlvmPtrType(boxOffset.getContext());
+    mlir::Type boxType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
+    mlir::Type llvmBoxTy =
+        lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
+    int fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
+                      ? getTypeDescFieldId(boxType)
+                      : kAddrPosInBox;
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        boxOffset, pty, llvmBoxTy, adaptor.getBoxRef(),
+        llvm::ArrayRef<mlir::LLVM::GEPArg>{0, fieldId});
+    return mlir::success();
+  }
+};
+
 /// Conversion pattern for operation that must be dead. The information in these
 /// operations is used by other operation. At this point they should not have
 /// anymore uses.
@@ -3727,13 +3841,13 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::LLVM::CallOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     auto callee = op.getCallee();
     if (callee)
       if (callee->equals("hypotf"))
         op.setCalleeAttr(mlir::SymbolRefAttr::get(op.getContext(), "_hypotf"));
 
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return mlir::success();
   }
 };
@@ -3746,10 +3860,10 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::LLVM::LLVMFuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     if (op.getSymName().equals("hypotf"))
       op.setSymNameAttr(rewriter.getStringAttr("_hypotf"));
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return mlir::success();
   }
 };
@@ -3771,6 +3885,17 @@ public:
     auto mod = getModule();
     if (!forcedTargetTriple.empty())
       fir::setTargetTriple(mod, forcedTargetTriple);
+
+    if (!forcedDataLayout.empty()) {
+      llvm::DataLayout dl(forcedDataLayout);
+      fir::support::setMLIRDataLayout(mod, dl);
+    }
+
+    if (!forcedTargetCPU.empty())
+      fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTargetFeatures.empty())
+      fir::setTargetFeatures(mod, forcedTargetFeatures);
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
@@ -3797,35 +3922,45 @@ public:
     if (mlir::failed(runPipeline(mathConvertionPM, mod)))
       return signalPassFailure();
 
+    std::optional<mlir::DataLayout> dl =
+        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+    if (!dl) {
+      mlir::emitError(mod.getLoc(),
+                      "module operation must carry a data layout attribute "
+                      "to generate llvm IR from FIR");
+      signalPassFailure();
+      return;
+    }
+
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule(),
                                          options.applyTBAA || applyTBAA,
-                                         options.forceUnifiedTBAATree};
+                                         options.forceUnifiedTBAATree, *dl};
     mlir::RewritePatternSet pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
         AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
         BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-        BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
-        BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
-        ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-        DTEntryOpConversion, DivcOpConversion, EmboxOpConversion,
-        EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
-        FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
-        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
-        InsertOnRangeOpConversion, InsertValueOpConversion,
-        IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-        MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
-        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-        StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-        TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-        UndefOpConversion, UnreachableOpConversion,
-        UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
-                                                                  options);
+        BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
+        BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
+        CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
+        CoordinateOpConversion, DTEntryOpConversion, DivcOpConversion,
+        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
+        ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+        FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+        HasValueOpConversion, InsertOnRangeOpConversion,
+        InsertValueOpConversion, IsPresentOpConversion,
+        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
+        NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
+        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
+        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
+        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
+        SubcOpConversion, TypeDescOpConversion, TypeInfoOpConversion,
+        UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
+        UnreachableOpConversion, UnrealizedConversionCastOpConversion,
+        XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+        ZeroOpConversion>(typeConverter, options);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
@@ -3836,6 +3971,11 @@ public:
     mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
+
+    // Flang specific overloads for OpenMP operations, to allow for special
+    // handling of things like Box types.
+    fir::populateOpenMPFIRToLLVMConversionPatterns(typeConverter, pattern);
+
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     // The OpenMP dialect is legal for Operations without regions, for those

@@ -26,29 +26,59 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+// The algorithm is listed in https://dl.acm.org/doi/pdf/10.1145/363717.363780.
 struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
   using OpConversionPattern<complex::AbsOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(complex::AbsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-    auto type = op.getType();
+    mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
     arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
-    Value real =
-        rewriter.create<complex::ReOp>(loc, type, adaptor.getComplex());
-    Value imag =
-        rewriter.create<complex::ImOp>(loc, type, adaptor.getComplex());
-    Value realSqr =
-        rewriter.create<arith::MulFOp>(loc, real, real, fmf.getValue());
-    Value imagSqr =
-        rewriter.create<arith::MulFOp>(loc, imag, imag, fmf.getValue());
-    Value sqNorm =
-        rewriter.create<arith::AddFOp>(loc, realSqr, imagSqr, fmf.getValue());
+    Type elementType = op.getType();
+    Value arg = adaptor.getComplex();
 
-    rewriter.replaceOpWithNewOp<math::SqrtOp>(op, sqNorm);
+    Value zero =
+        b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
+    Value one = b.create<arith::ConstantOp>(elementType,
+                                            b.getFloatAttr(elementType, 1.0));
+
+    Value real = b.create<complex::ReOp>(elementType, arg);
+    Value imag = b.create<complex::ImOp>(elementType, arg);
+
+    Value realIsZero =
+        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, real, zero);
+    Value imagIsZero =
+        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, imag, zero);
+
+    // Real > Imag
+    Value imagDivReal = b.create<arith::DivFOp>(imag, real, fmf.getValue());
+    Value imagSq =
+        b.create<arith::MulFOp>(imagDivReal, imagDivReal, fmf.getValue());
+    Value imagSqPlusOne = b.create<arith::AddFOp>(imagSq, one, fmf.getValue());
+    Value imagSqrt = b.create<math::SqrtOp>(imagSqPlusOne, fmf.getValue());
+    Value realAbs = b.create<math::AbsFOp>(real, fmf.getValue());
+    Value absImag = b.create<arith::MulFOp>(imagSqrt, realAbs, fmf.getValue());
+
+    // Real <= Imag
+    Value realDivImag = b.create<arith::DivFOp>(real, imag, fmf.getValue());
+    Value realSq =
+        b.create<arith::MulFOp>(realDivImag, realDivImag, fmf.getValue());
+    Value realSqPlusOne = b.create<arith::AddFOp>(realSq, one, fmf.getValue());
+    Value realSqrt = b.create<math::SqrtOp>(realSqPlusOne, fmf.getValue());
+    Value imagAbs = b.create<math::AbsFOp>(imag, fmf.getValue());
+    Value absReal = b.create<arith::MulFOp>(realSqrt, imagAbs, fmf.getValue());
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(
+        op, realIsZero, imagAbs,
+        b.create<arith::SelectOp>(
+            imagIsZero, realAbs,
+            b.create<arith::SelectOp>(
+                b.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, real, imag),
+                absImag, absReal)));
+
     return success();
   }
 };
@@ -569,29 +599,39 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto type = cast<ComplexType>(adaptor.getLhs().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
+    auto fmfValue = fmf.getValue();
 
     Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.getLhs());
-    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal);
+    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal, fmfValue);
     Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.getLhs());
-    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag);
+    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag, fmfValue);
     Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal);
+    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal, fmfValue);
     Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag);
+    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag, fmfValue);
 
-    Value lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
-    Value lhsRealTimesRhsRealAbs = b.create<math::AbsFOp>(lhsRealTimesRhsReal);
-    Value lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
-    Value lhsImagTimesRhsImagAbs = b.create<math::AbsFOp>(lhsImagTimesRhsImag);
-    Value real =
-        b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
+    Value lhsRealTimesRhsReal =
+        b.create<arith::MulFOp>(lhsReal, rhsReal, fmfValue);
+    Value lhsRealTimesRhsRealAbs =
+        b.create<math::AbsFOp>(lhsRealTimesRhsReal, fmfValue);
+    Value lhsImagTimesRhsImag =
+        b.create<arith::MulFOp>(lhsImag, rhsImag, fmfValue);
+    Value lhsImagTimesRhsImagAbs =
+        b.create<math::AbsFOp>(lhsImagTimesRhsImag, fmfValue);
+    Value real = b.create<arith::SubFOp>(lhsRealTimesRhsReal,
+                                         lhsImagTimesRhsImag, fmfValue);
 
-    Value lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
-    Value lhsImagTimesRhsRealAbs = b.create<math::AbsFOp>(lhsImagTimesRhsReal);
-    Value lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
-    Value lhsRealTimesRhsImagAbs = b.create<math::AbsFOp>(lhsRealTimesRhsImag);
-    Value imag =
-        b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
+    Value lhsImagTimesRhsReal =
+        b.create<arith::MulFOp>(lhsImag, rhsReal, fmfValue);
+    Value lhsImagTimesRhsRealAbs =
+        b.create<math::AbsFOp>(lhsImagTimesRhsReal, fmfValue);
+    Value lhsRealTimesRhsImag =
+        b.create<arith::MulFOp>(lhsReal, rhsImag, fmfValue);
+    Value lhsRealTimesRhsImagAbs =
+        b.create<math::AbsFOp>(lhsRealTimesRhsImag, fmfValue);
+    Value imag = b.create<arith::AddFOp>(lhsImagTimesRhsReal,
+                                         lhsRealTimesRhsImag, fmfValue);
 
     // Handle cases where the "naive" calculation results in NaN values.
     Value realIsNan =
@@ -717,20 +757,20 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     recalc = b.create<arith::AndIOp>(isNan, recalc);
 
     // Recalculate real part.
-    lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
-    lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
-    Value newReal =
-        b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
+    lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal, fmfValue);
+    lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag, fmfValue);
+    Value newReal = b.create<arith::SubFOp>(lhsRealTimesRhsReal,
+                                            lhsImagTimesRhsImag, fmfValue);
     real = b.create<arith::SelectOp>(
-        recalc, b.create<arith::MulFOp>(inf, newReal), real);
+        recalc, b.create<arith::MulFOp>(inf, newReal, fmfValue), real);
 
     // Recalculate imag part.
-    lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
-    lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
-    Value newImag =
-        b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
+    lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal, fmfValue);
+    lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag, fmfValue);
+    Value newImag = b.create<arith::AddFOp>(lhsImagTimesRhsReal,
+                                            lhsRealTimesRhsImag, fmfValue);
     imag = b.create<arith::SelectOp>(
-        recalc, b.create<arith::MulFOp>(inf, newImag), imag);
+        recalc, b.create<arith::MulFOp>(inf, newImag, fmfValue), imag);
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);
     return success();

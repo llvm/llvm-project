@@ -623,7 +623,7 @@ static bool canLongjmp(const Value *Callee) {
     return false;
 
   // __cxa_find_matching_catch_N functions cannot longjmp
-  if (Callee->getName().startswith("__cxa_find_matching_catch_"))
+  if (Callee->getName().starts_with("__cxa_find_matching_catch_"))
     return false;
 
   // Exception-catching related functions
@@ -1517,7 +1517,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
 
       Value *Threw = nullptr;
       BasicBlock *Tail;
-      if (Callee->getName().startswith("__invoke_")) {
+      if (Callee->getName().starts_with("__invoke_")) {
         // If invoke wrapper has already been generated for this call in
         // previous EH phase, search for the load instruction
         // %__THREW__.val = __THREW__;

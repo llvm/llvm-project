@@ -12,14 +12,13 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -2094,7 +2093,7 @@ TEST(TransferTest, TemporaryObject) {
 
 TEST(TransferTest, ElidableConstructor) {
   // This test is effectively the same as TransferTest.TemporaryObject, but
-  // the code is compiled as C++ 14.
+  // the code is compiled as C++14.
   std::string Code = R"(
     struct A {
       int Bar;
@@ -2312,6 +2311,81 @@ TEST(TransferTest, AssignmentOperatorWithInitAndInheritance) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsVoid) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      void operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsByValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      S operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, InitListExprAsXValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    void target() {
+      bool&& Foo{false};
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo");
+        ASSERT_TRUE(FooVal.formula().isLiteral(false));
+      });
+}
+
+TEST(TransferTest, InitListExprAsUnion) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    class target {
+      union {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      constexpr target() : F{nullptr} {}
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Just verify that it doesn't crash.
+      });
 }
 
 TEST(TransferTest, CopyConstructor) {
@@ -2632,6 +2706,140 @@ TEST(TransferTest, BindTemporary) {
             *cast<RecordStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(BarVal, getFieldValue(&FooLoc, *BazDecl, Env));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocation) {
+  std::string Code = R"(
+    struct A {
+      virtual ~A() = default;
+    };
+
+    void target() {
+      0, A();
+      (void)0; // [[p]]
+    }
+  )";
+  using ast_matchers::binaryOperator;
+  using ast_matchers::cxxBindTemporaryExpr;
+  using ast_matchers::cxxTemporaryObjectExpr;
+  using ast_matchers::exprWithCleanups;
+  using ast_matchers::has;
+  using ast_matchers::hasOperatorName;
+  using ast_matchers::hasRHS;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // The expression `0, A()` in the code above produces the following
+        // structure, consisting of four prvalues of record type.
+        // `Env.getResultObjectLocation()` should return the same location for
+        // all of these.
+        auto MatchResult = match(
+            traverse(TK_AsIs,
+                     exprWithCleanups(
+                         has(binaryOperator(
+                                 hasOperatorName(","),
+                                 hasRHS(cxxBindTemporaryExpr(
+                                            has(cxxTemporaryObjectExpr().bind(
+                                                "toe")))
+                                            .bind("bte")))
+                                 .bind("comma")))
+                         .bind("ewc")),
+            ASTCtx);
+        auto *TOE = selectFirst<CXXTemporaryObjectExpr>("toe", MatchResult);
+        ASSERT_NE(TOE, nullptr);
+        auto *Comma = selectFirst<BinaryOperator>("comma", MatchResult);
+        ASSERT_NE(Comma, nullptr);
+        auto *EWC = selectFirst<ExprWithCleanups>("ewc", MatchResult);
+        ASSERT_NE(EWC, nullptr);
+        auto *BTE = selectFirst<CXXBindTemporaryExpr>("bte", MatchResult);
+        ASSERT_NE(BTE, nullptr);
+
+        RecordStorageLocation &Loc = Env.getResultObjectLocation(*TOE);
+        EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*Comma));
+        EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*EWC));
+        EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*BTE));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocationForDefaultInitExpr) {
+  std::string Code = R"(
+    struct S {};
+    struct target {
+      target () {
+        (void)0;
+        // [[p]]
+      }
+      S s = {};
+    };
+  )";
+
+  using ast_matchers::cxxCtorInitializer;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *SField = findValueDecl(ASTCtx, "s");
+
+        auto *CtorInit = selectFirst<CXXCtorInitializer>(
+            "ctor_initializer",
+            match(cxxCtorInitializer().bind("ctor_initializer"), ASTCtx));
+        ASSERT_NE(CtorInit, nullptr);
+
+        auto *DefaultInit = cast<CXXDefaultInitExpr>(CtorInit->getInit());
+
+        RecordStorageLocation &Loc = Env.getResultObjectLocation(*DefaultInit);
+
+        // FIXME: The result object location for the `CXXDefaultInitExpr` should
+        // be the location of the member variable being initialized, but we
+        // don't do this correctly yet; see also comments in
+        // `builtinTransferInitializer()`.
+        // For the time being, we just document the current erroneous behavior
+        // here (this should be `EXPECT_EQ` when the behavior is fixed).
+        EXPECT_NE(&Loc, Env.getThisPointeeStorageLocation()->getChild(*SField));
+      });
+}
+
+// This test ensures that CXXOperatorCallExpr returning prvalues are correctly
+// handled by the transfer functions, especially that `getResultObjectLocation`
+// correctly returns a storage location for those.
+TEST(TransferTest, ResultObjectLocationForCXXOperatorCallExpr) {
+  std::string Code = R"(
+    struct A {
+      A operator+(int);
+    };
+
+    void target() {
+      A a;
+      a + 3;
+      (void)0; // [[p]]
+    }
+  )";
+  using ast_matchers::cxxOperatorCallExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *CallExpr = selectFirst<CXXOperatorCallExpr>(
+            "call_expr",
+            match(cxxOperatorCallExpr().bind("call_expr"), ASTCtx));
+
+        EXPECT_NE(&Env.getResultObjectLocation(*CallExpr), nullptr);
       });
 }
 
@@ -4165,6 +4373,34 @@ TEST(TransferTest, LoopWithShortCircuitedConditionConverges) {
     }
   )cc";
   ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
+}
+
+TEST(TransferTest, LoopCanProveInvariantForBoolean) {
+  // Check that we can prove `b` is always false in the loop.
+  // This test exercises the logic in `widenDistinctValues()` that preserves
+  // information if the boolean can be proved to be either true or false in both
+  // the previous and current iteration.
+  std::string Code = R"cc(
+    int return_int();
+    void target() {
+      bool b = return_int() == 0;
+      if (b) return;
+      while (true) {
+        b;
+        // [[p]]
+        b = return_int() == 0;
+        if (b) return;
+      }
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &BVal = getValueForDecl<BoolValue>(ASTCtx, Env, "b");
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BVal.formula())));
+      });
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
@@ -6328,6 +6564,37 @@ TEST(TransferTest, DifferentReferenceLocInJoin) {
         // environment.
         const ValueDecl *VD = findValueDecl(ASTCtx, "range");
         ASSERT_EQ(Env.getStorageLocation(*VD), nullptr);
+      });
+}
+
+// This test verifies correct modeling of a relational dependency that goes
+// through unmodeled functions (the simple `cond()` in this case).
+TEST(TransferTest, ConditionalRelation) {
+  std::string Code = R"(
+    bool cond();
+    void target() {
+       bool a = true;
+       bool b = true;
+       if (cond()) {
+         a = false;
+         if (cond()) {
+           b = false;
+         }
+       }
+       (void)0;
+       // [[p]]
+    }
+ )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &A = Env.arena();
+        auto &VarA = getValueForDecl<BoolValue>(ASTCtx, Env, "a").formula();
+        auto &VarB = getValueForDecl<BoolValue>(ASTCtx, Env, "b").formula();
+
+        EXPECT_FALSE(Env.allows(A.makeAnd(VarA, A.makeNot(VarB))));
       });
 }
 

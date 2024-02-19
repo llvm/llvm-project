@@ -106,7 +106,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
          "Invalid constantexpr bitcast!");
 
   // Catch the obvious splat cases.
-  if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy))
+  if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy, DL))
     return Res;
 
   if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
@@ -342,7 +342,7 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
 }
 
 Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
-                                         const DataLayout &DL) {
+                                               const DataLayout &DL) {
   do {
     Type *SrcTy = C->getType();
     if (SrcTy == DestTy)
@@ -355,7 +355,7 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
     // Catch the obvious splat cases (since all-zeros can coerce non-integral
     // pointers legally).
-    if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy))
+    if (Constant *Res = ConstantFoldLoadFromUniformValue(C, DestTy, DL))
       return Res;
 
     // If the type sizes are the same and a cast is legal, just directly
@@ -709,7 +709,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
     return PoisonValue::get(Ty);
 
   // Try an offset-independent fold of a uniform value.
-  if (Constant *Result = ConstantFoldLoadFromUniformValue(C, Ty))
+  if (Constant *Result = ConstantFoldLoadFromUniformValue(C, Ty, DL))
     return Result;
 
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
@@ -745,7 +745,7 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
 
   // If this load comes from anywhere in a uniform constant global, the value
   // is always the same, regardless of the loaded offset.
-  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty);
+  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty, DL);
 }
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
@@ -754,11 +754,16 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   return ConstantFoldLoadFromConstPtr(C, Ty, Offset, DL);
 }
 
-Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty) {
+Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
+                                                 const DataLayout &DL) {
   if (isa<PoisonValue>(C))
     return PoisonValue::get(Ty);
   if (isa<UndefValue>(C))
     return UndefValue::get(Ty);
+  // If padding is needed when storing C to memory, then it isn't considered as
+  // uniform.
+  if (!DL.typeSizeEqualsStoreSize(C->getType()))
+    return nullptr;
   if (C->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
@@ -1533,6 +1538,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
   case Intrinsic::arm_mve_vctp8:
@@ -2423,6 +2429,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
              "Precision lost during fp16 constfolding");
 
       return ConstantFP::get(Ty->getContext(), Val);
+    }
+
+    case Intrinsic::amdgcn_s_wqm: {
+      uint64_t Val = Op->getZExtValue();
+      Val |= (Val & 0x5555555555555555ULL) << 1 |
+             ((Val >> 1) & 0x5555555555555555ULL);
+      Val |= (Val & 0x3333333333333333ULL) << 2 |
+             ((Val >> 2) & 0x3333333333333333ULL);
+      return ConstantInt::get(Ty, Val);
     }
 
     case Intrinsic::amdgcn_s_quadmask: {

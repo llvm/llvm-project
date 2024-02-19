@@ -18,7 +18,7 @@ import shlex
 import socket
 import subprocess
 import sys
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 
 # Sync a host file /path/to/dir/file to ${REMOTE_BASE_DIR}/run-${HASH}/dir/file.

@@ -111,8 +111,8 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
 ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
                                  ListenerSP listener_sp,
                                  const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_aranges(),
-      m_core_range_infos(), m_core_module_sp(), m_core_file(core_file),
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
+      m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
@@ -123,7 +123,7 @@ ProcessMachCore::~ProcessMachCore() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 bool ProcessMachCore::CheckAddressForDyldOrKernel(lldb::addr_t addr,

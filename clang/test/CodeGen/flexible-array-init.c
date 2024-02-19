@@ -20,3 +20,11 @@ struct __attribute((packed, aligned(4))) { char a; int x; char z[]; } e = { 1, 2
 
 struct { int x; char y[]; } f = { 1, { 13, 15 } };
 // CHECK: @f ={{.*}} global <{ i32, [2 x i8] }> <{ i32 1, [2 x i8] c"\0D\0F" }>
+
+union {
+  struct {
+    int a;
+    char b[];
+  } x;
+} in_union = {};
+// CHECK: @in_union ={{.*}} global %union.anon zeroinitializer

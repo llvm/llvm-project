@@ -29,7 +29,9 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -110,6 +112,7 @@ private:
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
+  bool foldTruncFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
 
   void replaceValue(Value &Old, Value &New) {
@@ -261,8 +264,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      SrcPtr, MinVecTy->getPointerTo(AS));
+  Value *CastedPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
@@ -324,7 +327,7 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
 
   IRBuilder<> Builder(Load);
   Value *CastedPtr =
-      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Ty->getPointerTo(AS));
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
   replaceValue(I, *VecLd);
   ++NumVecLoad;
@@ -1525,6 +1528,60 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return foldSelectShuffle(*Shuffle, true);
 }
 
+/// Determine if its more efficient to fold:
+///   reduce(trunc(x)) -> trunc(reduce(x)).
+bool VectorCombine::foldTruncFromReductions(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+    break;
+  default:
+    return false;
+  }
+
+  unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
+  Value *ReductionSrc = I.getOperand(0);
+
+  Value *TruncSrc;
+  if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
+    return false;
+
+  auto *Trunc = cast<CastInst>(ReductionSrc);
+  auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
+  auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
+  Type *ResultTy = I.getType();
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost OldCost =
+      TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
+                           TTI::CastContextHint::None, CostKind, Trunc) +
+      TTI.getArithmeticReductionCost(ReductionOpc, ReductionSrcTy, std::nullopt,
+                                     CostKind);
+  InstructionCost NewCost =
+      TTI.getArithmeticReductionCost(ReductionOpc, TruncSrcTy, std::nullopt,
+                                     CostKind) +
+      TTI.getCastInstrCost(Instruction::Trunc, ResultTy,
+                           ReductionSrcTy->getScalarType(),
+                           TTI::CastContextHint::None, CostKind);
+
+  if (OldCost <= NewCost || !NewCost.isValid())
+    return false;
+
+  Value *NewReduction = Builder.CreateIntrinsic(
+      TruncSrcTy->getScalarType(), II->getIntrinsicID(), {TruncSrc});
+  Value *NewTruncation = Builder.CreateTrunc(NewReduction, ResultTy);
+  replaceValue(I, *NewTruncation);
+  return true;
+}
+
 /// This method looks for groups of shuffles acting on binops, of the form:
 ///  %x = shuffle ...
 ///  %y = shuffle ...
@@ -1809,16 +1866,16 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
           return SSV->getOperand(Op);
     return SV->getOperand(Op);
   };
-  Builder.SetInsertPoint(SVI0A->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI0A->getInsertionPointAfterDef());
   Value *NSV0A = Builder.CreateShuffleVector(GetShuffleOperand(SVI0A, 0),
                                              GetShuffleOperand(SVI0A, 1), V1A);
-  Builder.SetInsertPoint(SVI0B->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI0B->getInsertionPointAfterDef());
   Value *NSV0B = Builder.CreateShuffleVector(GetShuffleOperand(SVI0B, 0),
                                              GetShuffleOperand(SVI0B, 1), V1B);
-  Builder.SetInsertPoint(SVI1A->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI1A->getInsertionPointAfterDef());
   Value *NSV1A = Builder.CreateShuffleVector(GetShuffleOperand(SVI1A, 0),
                                              GetShuffleOperand(SVI1A, 1), V2A);
-  Builder.SetInsertPoint(SVI1B->getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*SVI1B->getInsertionPointAfterDef());
   Value *NSV1B = Builder.CreateShuffleVector(GetShuffleOperand(SVI1B, 0),
                                              GetShuffleOperand(SVI1B, 1), V2B);
   Builder.SetInsertPoint(Op0);
@@ -1916,6 +1973,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::Call:
         MadeChange |= foldShuffleFromReductions(I);
+        MadeChange |= foldTruncFromReductions(I);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:

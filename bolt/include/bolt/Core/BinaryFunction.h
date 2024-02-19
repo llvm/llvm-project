@@ -75,6 +75,14 @@ enum IndirectCallPromotionType : char {
   ICP_ALL          /// Perform ICP on calls and jump tables.
 };
 
+/// Hash functions supported for BF/BB hashing.
+enum class HashFunction : char {
+  StdHash, /// std::hash, implementation is platform-dependent. Provided for
+           /// backwards compatibility.
+  XXH3,    /// llvm::xxh3_64bits, the default.
+  Default = XXH3,
+};
+
 /// Information on a single indirect call to a particular callee.
 struct IndirectCallProfile {
   MCSymbol *Symbol;
@@ -1236,6 +1244,8 @@ public:
       return SmallString<32>(CodeSectionName);
     if (Fragment == FragmentNum::cold())
       return SmallString<32>(ColdCodeSectionName);
+    if (BC.HasWarmSection && Fragment == FragmentNum::warm())
+      return SmallString<32>(BC.getWarmCodeSectionName());
     return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
   }
 
@@ -1900,12 +1910,11 @@ public:
 
   /// Support dynamic relocations in constant islands, which may happen if
   /// binary is linked with -z notext option.
-  void markIslandDynamicRelocationAtAddress(uint64_t Address) {
-    if (!isInConstantIsland(Address)) {
-      errs() << "BOLT-ERROR: dynamic relocation found for text section at 0x"
-             << Twine::utohexstr(Address) << "\n";
-      exit(1);
-    }
+  Error markIslandDynamicRelocationAtAddress(uint64_t Address) {
+    if (!isInConstantIsland(Address))
+      return createFatalBOLTError(
+          Twine("dynamic relocation found for text section at 0x") +
+          Twine::utohexstr(Address) + Twine("\n"));
 
     // Mark island to have dynamic relocation
     Islands->HasDynamicRelocations = true;
@@ -1914,6 +1923,7 @@ public:
     // move binary data during updateOutputValues, making us emit
     // dynamic relocation with the right offset value.
     getOrCreateIslandAccess(Address);
+    return Error::success();
   }
 
   bool hasDynamicRelocationAtIsland() const {
@@ -2044,9 +2054,10 @@ public:
   /// state to State:Disassembled.
   ///
   /// Returns false if disassembly failed.
-  bool disassemble();
+  Error disassemble();
 
-  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+  Error handlePCRelOperand(MCInst &Instruction, uint64_t Address,
+                           uint64_t Size);
 
   MCSymbol *handleExternalReference(MCInst &Instruction, uint64_t Size,
                                     uint64_t Offset, uint64_t TargetAddress,
@@ -2090,7 +2101,7 @@ public:
   ///
   /// Returns true on success and update the current function state to
   /// State::CFG. Returns false if CFG cannot be built.
-  bool buildCFG(MCPlusBuilder::AllocatorIdTy);
+  Error buildCFG(MCPlusBuilder::AllocatorIdTy);
 
   /// Perform post-processing of the CFG.
   void postProcessCFG();
@@ -2207,7 +2218,7 @@ public:
   }
 
   /// Process LSDA information for the function.
-  void parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
+  Error parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
 
   /// Update exception handling ranges for the function.
   void updateEHRanges();
@@ -2232,18 +2243,21 @@ public:
   ///
   /// If \p UseDFS is set, process basic blocks in DFS order. Otherwise, use
   /// the existing layout order.
+  /// \p HashFunction specifies which function is used for BF hashing.
   ///
   /// By default, instruction operands are ignored while calculating the hash.
   /// The caller can change this via passing \p OperandHashFunc function.
   /// The return result of this function will be mixed with internal hash.
   size_t computeHash(
-      bool UseDFS = false,
+      bool UseDFS = false, HashFunction HashFunction = HashFunction::Default,
       OperandHashFuncTy OperandHashFunc = [](const MCOperand &) {
         return std::string();
       }) const;
 
   /// Compute hash values for each block of the function.
-  void computeBlockHashes() const;
+  /// \p HashFunction specifies which function is used for BB hashing.
+  void
+  computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
   void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
 

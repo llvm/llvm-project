@@ -729,22 +729,6 @@ def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
   let imm12 = 0b110000000000;
 }
 
-let Predicates = [HasStdExtZawrs] in {
-def WRS_NTO : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "wrs.nto", "">,
-              Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0b000000001101;
-}
-
-def WRS_STO : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "wrs.sto", "">,
-              Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0b000000011101;
-}
-} // Predicates = [HasStdExtZawrs]
-
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 def CSRRW : CSR_ir<0b001, "csrrw">;
@@ -1202,6 +1186,7 @@ def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 def sexti16 : ComplexPattern<XLenVT, 1, "selectSExtBits<16>">;
+def sexti16i32 : ComplexPattern<i32, 1, "selectSExtBits<16>">;
 def sexti32 : ComplexPattern<i64, 1, "selectSExtBits<32>">;
 def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
@@ -1242,6 +1227,10 @@ def anyext_oneuse : unop_oneuse<anyext>;
 def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
+def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
+  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -1260,6 +1249,8 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  if (N->getFlags().hasDisjoint())
+    return true;
   KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
   KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
   return KnownBits::haveNoCommonBitsSet(Known0, Known1);
@@ -1269,14 +1260,14 @@ def : PatGprSimm12<or_is_add, ADDI>;
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
 def : Pat<(XLenVT (sub 0, (and_oneuse GPR:$rs, 1))),
-          (SRAI (SLLI $rs, (ImmSubFromXLen (XLenVT 1))),
+          (SRAI (XLenVT (SLLI $rs, (ImmSubFromXLen (XLenVT 1)))),
                 (ImmSubFromXLen (XLenVT 1)))>;
 
 // AND with leading/trailing ones mask exceeding simm32/simm12.
 def : Pat<(i64 (and GPR:$rs, LeadingOnesMask:$mask)),
-          (SLLI (SRLI $rs, LeadingOnesMask:$mask), LeadingOnesMask:$mask)>;
+          (SLLI (i64 (SRLI $rs, LeadingOnesMask:$mask)), LeadingOnesMask:$mask)>;
 def : Pat<(XLenVT (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (SLLI $rs, TrailingOnesMask:$mask), TrailingOnesMask:$mask)>;
+          (SRLI (XLenVT (SLLI $rs, TrailingOnesMask:$mask)), TrailingOnesMask:$mask)>;
 
 // Match both a plain shift and one where the shift amount is masked (this is
 // typically introduced when the legalizer promotes the shift amount and
@@ -1367,154 +1358,6 @@ def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
                                                   node:$falsev), [{}],
                                   IntCCtoRISCVCC>;
 
-let Predicates = [HasShortForwardBranchOpt], isSelect = 1,
-    Constraints = "$dst = $falsev", isCommutable = 1, Size = 8 in {
-// This instruction moves $truev to $dst when the condition is true. It will
-// be expanded to control flow in RISCVExpandPseudoInsts.
-def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
-                            (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                             GPR:$falsev, GPR:$truev),
-                            [(set GPR:$dst,
-                              (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
-                                                       GPR:$rhs, cond,
-                                                       (XLenVT GPR:$truev),
-                                                       GPR:$falsev))]>,
-                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                            ReadSFBALU, ReadSFBALU]>;
-}
-
-// Conditional binops, that updates update $dst to (op rs1, rs2) when condition
-// is true. Returns $falsev otherwise. Selected by optimizeSelect.
-// TODO: Can we use DefaultOperands on the regular binop to accomplish this more
-// like how ARM does predication?
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
-    Constraints = "$dst = $falsev" in {
-def PseudoCCADD : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSUB : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSLL : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                         ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRL : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                         ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRA : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                         ReadSFBALU, ReadSFBALU]>;
-def PseudoCCAND : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCOR  : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCXOR : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-
-def PseudoCCADDI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCSLLI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCSRLI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCSRAI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCANDI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCORI  : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCXORI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-
-// RV64I instructions
-def PseudoCCADDW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSLLW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRLW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRAW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU, ReadSFBALU]>;
-
-def PseudoCCADDIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-def PseudoCCSLLIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-def PseudoCCSRLIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-def PseudoCCSRAIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
-                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-}
-
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
@@ -1531,13 +1374,13 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
              (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
-let Predicates = [NoShortForwardBranchOpt] in
+let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 class SelectCompressOpt<CondCode Cond>
     : Pat<(riscv_selectcc_frag:$select (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond,
                                        (XLenVT GPR:$truev), GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (ADDI GPR:$lhs, (NegImm simm12:$Constant)), (XLenVT X0),
+    (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs, (NegImm simm12:$Constant))), (XLenVT X0),
                           (IntCCtoRISCVCC $select), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
@@ -1719,6 +1562,35 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32, isCodeGenOnly = 0 in
+def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tlsdesc", "$dst, $src">;
+
+def TLSDESCCallSymbol : AsmOperandClass {
+  let Name = "TLSDESCCallSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTLSDESCCallSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %tlsdesc_call variant.
+def tlsdesc_call_symbol : Operand<XLenVT> {
+  let ParserMatchClass = TLSDESCCallSymbol;
+}
+// This is a special case of the JALR instruction used to facilitate the use of a
+// fourth operand to emit a relocation on a symbol relating to this instruction.
+// The relocation does not affect any bits of the instruction itself but is used
+// as a hint to the linker.
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
+                         (ins GPR:$rs1, simm12:$imm12, tlsdesc_call_symbol:$src), [],
+                         "jalr", "$rd, ${imm12}(${rs1}), $src">,
+                         Sched<[WriteJalr, ReadJalr]> {
+  let Defs = [X10];
+  let Uses = [X10];
+}
+
 
 /// Sign/Zero Extends
 
@@ -1856,12 +1728,12 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 /// RV64 patterns
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (i64 (SLLI GPR:$rs1, 32)), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
-          (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
+          (SRLI (i64 (SLLI GPR:$rs1, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 class binop_allhusers<SDPatternOperator operator>
@@ -1896,7 +1768,7 @@ def u32simm12 : ImmLeaf<XLenVT, [{
 let Predicates = [IsRV64] in {
 
 def : Pat<(i64 (and GPR:$rs, LeadingOnesWMask:$mask)),
-          (SLLI (SRLIW $rs, LeadingOnesWMask:$mask), LeadingOnesWMask:$mask)>;
+          (SLLI (i64 (SRLIW $rs, LeadingOnesWMask:$mask)), LeadingOnesWMask:$mask)>;
 
 /// sext and zext
 
@@ -1992,13 +1864,13 @@ def KCFI_CHECK
 
 /// Simple optimization
 def : Pat<(XLenVT (add GPR:$rs1, (AddiPair:$rs2))),
-          (ADDI (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
+          (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
                 (AddiPairImmSmall GPR:$rs2))>;
 
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
 def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
-          (ADDIW (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
+          (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
                  (AddiPairImmSmall AddiPair:$rs2))>;
 }
 
@@ -2057,7 +1929,7 @@ def : PatGprImm<srl, SRLIW, uimm5, i32>;
 def : PatGprImm<sra, SRAIW, uimm5, i32>;
 
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
-          (SRLI (SLLI $rs, (i64 (XLenSubTrailingOnes $mask))),
+          (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
                 (i64 (XLenSubTrailingOnes $mask)))>;
 
 // Use sext if the sign bit of the input is 0.
@@ -2065,12 +1937,12 @@ def : Pat<(zext_is_sext GPR:$src), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NotHasStdExtZba] in {
-def : Pat<(zext GPR:$src), (SRLI (SLLI GPR:$src, 32), 32)>;
+def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
-          (SRLI (SLLI GPR:$rs, 32), (ImmSubFrom32 uimm5:$shamt))>;
+          (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2082,6 +1954,8 @@ include "RISCVInstrInfoM.td"
 
 // Atomic
 include "RISCVInstrInfoA.td"
+include "RISCVInstrInfoZa.td"
+include "RISCVInstrInfoZalasr.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2098,13 +1972,16 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
-// Integer
-include "RISCVInstrInfoZicbo.td"
-include "RISCVInstrInfoZicond.td"
-
 // Compressed
 include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
+
+// Integer
+include "RISCVInstrInfoZimop.td"
+include "RISCVInstrInfoZicbo.td"
+include "RISCVInstrInfoZicond.td"
+include "RISCVInstrInfoZicfiss.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -2113,4 +1990,11 @@ include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
+include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
+
+//===----------------------------------------------------------------------===//
+// Global ISel
+//===----------------------------------------------------------------------===//
+
+include "RISCVInstrGISel.td"

@@ -319,7 +319,13 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
 template <typename AnyMemRefDefOp>
 static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
                                     Region *region) {
-  auto memRefType = memrefDefOp.getType();
+  MemRefType memRefType = memrefDefOp.getType();
+
+  // Dimension index is out of bounds.
+  if (index >= memRefType.getRank()) {
+    return false;
+  }
+
   // Statically shaped.
   if (!memRefType.isDynamicDim(index))
     return true;
@@ -348,8 +354,19 @@ static bool isDimOpValidSymbol(ShapedDimOpInterface dimOp, Region *region) {
   if (!index.has_value())
     return false;
 
+  // Skip over all memref.cast ops (if any).
+  Operation *op = dimOp.getShapedValue().getDefiningOp();
+  while (auto castOp = dyn_cast<memref::CastOp>(op)) {
+    // Bail on unranked memrefs.
+    if (isa<UnrankedMemRefType>(castOp.getSource().getType()))
+      return false;
+    op = castOp.getSource().getDefiningOp();
+    if (!op)
+      return false;
+  }
+
   int64_t i = index.value();
-  return TypeSwitch<Operation *, bool>(dimOp.getShapedValue().getDefiningOp())
+  return TypeSwitch<Operation *, bool>(op)
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
@@ -1128,7 +1145,9 @@ AffineApplyOp
 mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
                                       ArrayRef<OpFoldResult> operands) {
   return makeComposedAffineApply(
-      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}).front(),
+      b, loc,
+      AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}, b.getContext())
+          .front(),
       operands);
 }
 
@@ -1189,7 +1208,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   if (failed(applyOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
     if (OpBuilder::Listener *listener = b.getListener())
-      listener->notifyOperationInserted(applyOp);
+      listener->notifyOperationInserted(applyOp, /*previous=*/{});
     return applyOp.getResult();
   }
 
@@ -1203,7 +1222,9 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                             AffineExpr expr,
                                             ArrayRef<OpFoldResult> operands) {
   return makeComposedFoldedAffineApply(
-      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}).front(),
+      b, loc,
+      AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}, b.getContext())
+          .front(),
       operands);
 }
 
@@ -1257,7 +1278,7 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
   if (failed(minMaxOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
     if (OpBuilder::Listener *listener = b.getListener())
-      listener->notifyOperationInserted(minMaxOp);
+      listener->notifyOperationInserted(minMaxOp, /*previous=*/{});
     return minMaxOp.getResult();
   }
 
@@ -1651,19 +1672,22 @@ LogicalResult AffineDmaStartOp::verifyInvariantsImpl() {
     if (!idx.getType().isIndex())
       return emitOpError("src index to dma_start must have 'index' type");
     if (!isValidAffineIndexOperand(idx, scope))
-      return emitOpError("src index must be a dimension or symbol identifier");
+      return emitOpError(
+          "src index must be a valid dimension or symbol identifier");
   }
   for (auto idx : getDstIndices()) {
     if (!idx.getType().isIndex())
       return emitOpError("dst index to dma_start must have 'index' type");
     if (!isValidAffineIndexOperand(idx, scope))
-      return emitOpError("dst index must be a dimension or symbol identifier");
+      return emitOpError(
+          "dst index must be a valid dimension or symbol identifier");
   }
   for (auto idx : getTagIndices()) {
     if (!idx.getType().isIndex())
       return emitOpError("tag index to dma_start must have 'index' type");
     if (!isValidAffineIndexOperand(idx, scope))
-      return emitOpError("tag index must be a dimension or symbol identifier");
+      return emitOpError(
+          "tag index must be a valid dimension or symbol identifier");
   }
   return success();
 }
@@ -1752,7 +1776,8 @@ LogicalResult AffineDmaWaitOp::verifyInvariantsImpl() {
     if (!idx.getType().isIndex())
       return emitOpError("index to dma_wait must have 'index' type");
     if (!isValidAffineIndexOperand(idx, scope))
-      return emitOpError("index must be a dimension or symbol identifier");
+      return emitOpError(
+          "index must be a valid dimension or symbol identifier");
   }
   return success();
 }
@@ -2106,7 +2131,8 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
-MutableArrayRef<OpOperand> AffineForOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>>
+AffineForOp::getYieldedValuesMutable() {
   return cast<AffineYieldOp>(getBody()->getTerminator()).getOperandsMutable();
 }
 
@@ -2472,7 +2498,7 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
         newYieldValuesFn(rewriter, getLoc(), newIterArgs);
     assert(newInitOperands.size() == newYieldedValues.size() &&
            "expected as many new yield values as new iter operands");
-    rewriter.updateRootInPlace(yieldOp, [&]() {
+    rewriter.modifyOpInPlace(yieldOp, [&]() {
       yieldOp.getOperandsMutable().append(newYieldedValues);
     });
   }
@@ -2665,9 +2691,9 @@ struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
         !llvm::hasSingleElement(*ifOp.getElseBlock()) || ifOp.getNumResults())
       return failure();
 
-    rewriter.startRootUpdate(ifOp);
+    rewriter.startOpModification(ifOp);
     rewriter.eraseBlock(ifOp.getElseBlock());
-    rewriter.finalizeRootUpdate(ifOp);
+    rewriter.finalizeOpModification(ifOp);
     return success();
   }
 };
@@ -2913,8 +2939,7 @@ static void composeSetAndOperands(IntegerSet &set,
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
-LogicalResult AffineIfOp::fold(FoldAdaptor,
-                               SmallVectorImpl<OpFoldResult> &) {
+LogicalResult AffineIfOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
   auto set = getIntegerSet();
   SmallVector<Value, 4> operands(getOperands());
   composeSetAndOperands(set, operands);
@@ -3005,18 +3030,19 @@ static LogicalResult
 verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
                        Operation::operand_range mapOperands,
                        MemRefType memrefType, unsigned numIndexOperands) {
-    AffineMap map = mapAttr.getValue();
-    if (map.getNumResults() != memrefType.getRank())
-      return op->emitOpError("affine map num results must equal memref rank");
-    if (map.getNumInputs() != numIndexOperands)
-      return op->emitOpError("expects as many subscripts as affine map inputs");
+  AffineMap map = mapAttr.getValue();
+  if (map.getNumResults() != memrefType.getRank())
+    return op->emitOpError("affine map num results must equal memref rank");
+  if (map.getNumInputs() != numIndexOperands)
+    return op->emitOpError("expects as many subscripts as affine map inputs");
 
   Region *scope = getAffineScope(op);
   for (auto idx : mapOperands) {
     if (!idx.getType().isIndex())
       return op->emitOpError("index to load must have 'index' type");
     if (!isValidAffineIndexOperand(idx, scope))
-      return op->emitOpError("index must be a dimension or symbol identifier");
+      return op->emitOpError(
+          "index must be a valid dimension or symbol identifier");
   }
 
   return success();
@@ -3605,7 +3631,8 @@ LogicalResult AffinePrefetchOp::verify() {
   Region *scope = getAffineScope(*this);
   for (auto idx : getMapOperands()) {
     if (!isValidAffineIndexOperand(idx, scope))
-      return emitOpError("index must be a dimension or symbol identifier");
+      return emitOpError(
+          "index must be a valid dimension or symbol identifier");
   }
   return success();
 }
@@ -4462,6 +4489,17 @@ LogicalResult AffineVectorStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 // DelinearizeIndexOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult AffineDelinearizeIndexOp::inferReturnTypes(
+    MLIRContext *context, std::optional<::mlir::Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
+  AffineDelinearizeIndexOpAdaptor adaptor(operands, attributes, properties,
+                                          regions);
+  inferredReturnTypes.assign(adaptor.getBasis().size(),
+                             IndexType::get(context));
+  return success();
+}
 
 void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
                                      Value linearIndex,

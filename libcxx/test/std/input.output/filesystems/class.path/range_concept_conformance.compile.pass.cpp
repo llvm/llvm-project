@@ -11,11 +11,11 @@
 
 // path
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <concepts>
 #include <ranges>
-
+namespace fs = std::filesystem;
 
 static_assert(std::same_as<std::ranges::iterator_t<fs::path>, fs::path::iterator>);
 static_assert(std::ranges::common_range<fs::path>);

@@ -643,7 +643,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
                                                                   : "200704");
     Builder.defineMacro("__cpp_constexpr_in_decltype", "201711L");
     Builder.defineMacro("__cpp_range_based_for",
-                        LangOpts.CPlusPlus17 ? "201603L" : "200907");
+                        LangOpts.CPlusPlus23   ? "202211L"
+                        : LangOpts.CPlusPlus17 ? "201603L"
+                                               : "200907");
     Builder.defineMacro("__cpp_static_assert", LangOpts.CPlusPlus26 ? "202306L"
                                                : LangOpts.CPlusPlus17
                                                    ? "201411L"
@@ -728,6 +730,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
+    Builder.defineMacro("__cpp_auto_cast", "202110L");
   }
 
   // We provide those C++23 features as extensions in earlier language modes, so
@@ -763,6 +766,60 @@ void InitializeOpenCLFeatureTestMacros(const TargetInfo &TI,
 
   // Assume compiling for FULL profile
   Builder.defineMacro("__opencl_c_int64");
+}
+
+llvm::SmallString<32> ConstructFixedPointLiteral(llvm::APFixedPoint Val,
+                                                 llvm::StringRef Suffix) {
+  if (Val.isSigned() && Val == llvm::APFixedPoint::getMin(Val.getSemantics())) {
+    // When representing the min value of a signed fixed point type in source
+    // code, we cannot simply write `-<lowest value>`. For example, the min
+    // value of a `short _Fract` cannot be written as `-1.0hr`. This is because
+    // the parser will read this (and really any negative numerical literal) as
+    // a UnaryOperator that owns a FixedPointLiteral with a positive value
+    // rather than just a FixedPointLiteral with a negative value. Compiling
+    // `-1.0hr` results in an overflow to the maximal value of that fixed point
+    // type. The correct way to represent a signed min value is to instead split
+    // it into two halves, like `(-0.5hr-0.5hr)` which is what the standard
+    // defines SFRACT_MIN as.
+    llvm::SmallString<32> Literal;
+    Literal.push_back('(');
+    llvm::SmallString<32> HalfStr =
+        ConstructFixedPointLiteral(Val.shr(1), Suffix);
+    Literal += HalfStr;
+    Literal += HalfStr;
+    Literal.push_back(')');
+    return Literal;
+  }
+
+  llvm::SmallString<32> Str(Val.toString());
+  Str += Suffix;
+  return Str;
+}
+
+void DefineFixedPointMacros(const TargetInfo &TI, MacroBuilder &Builder,
+                            llvm::StringRef TypeName, llvm::StringRef Suffix,
+                            unsigned Width, unsigned Scale, bool Signed) {
+  // Saturation doesn't affect the size or scale of a fixed point type, so we
+  // don't need it here.
+  llvm::FixedPointSemantics FXSema(
+      Width, Scale, Signed, /*IsSaturated=*/false,
+      !Signed && TI.doUnsignedFixedPointTypesHavePadding());
+  llvm::SmallString<32> MacroPrefix("__");
+  MacroPrefix += TypeName;
+  Builder.defineMacro(MacroPrefix + "_EPSILON__",
+                      ConstructFixedPointLiteral(
+                          llvm::APFixedPoint::getEpsilon(FXSema), Suffix));
+  Builder.defineMacro(MacroPrefix + "_FBIT__", Twine(Scale));
+  Builder.defineMacro(
+      MacroPrefix + "_MAX__",
+      ConstructFixedPointLiteral(llvm::APFixedPoint::getMax(FXSema), Suffix));
+
+  // ISO/IEC TR 18037:2008 doesn't specify MIN macros for unsigned types since
+  // they're all just zero.
+  if (Signed)
+    Builder.defineMacro(
+        MacroPrefix + "_MIN__",
+        ConstructFixedPointLiteral(llvm::APFixedPoint::getMin(FXSema), Suffix));
 }
 
 static void InitializePredefinedMacros(const TargetInfo &TI,
@@ -808,6 +865,13 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__ATOMIC_RELEASE", "3");
   Builder.defineMacro("__ATOMIC_ACQ_REL", "4");
   Builder.defineMacro("__ATOMIC_SEQ_CST", "5");
+
+  // Define macros for the clang atomic scopes.
+  Builder.defineMacro("__MEMORY_SCOPE_SYSTEM", "0");
+  Builder.defineMacro("__MEMORY_SCOPE_DEVICE", "1");
+  Builder.defineMacro("__MEMORY_SCOPE_WRKGRP", "2");
+  Builder.defineMacro("__MEMORY_SCOPE_WVFRNT", "3");
+  Builder.defineMacro("__MEMORY_SCOPE_SINGLE", "4");
 
   // Define macros for the OpenCL memory scope.
   // The values should match AtomicScopeOpenCLModel::ID enum.
@@ -1087,6 +1151,47 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
              TI.getTypeWidth(TI.getIntMaxType()) &&
          "uintmax_t and intmax_t have different widths?");
 
+  if (LangOpts.FixedPoint) {
+    // Each unsigned type has the same width as their signed type.
+    DefineFixedPointMacros(TI, Builder, "SFRACT", "HR", TI.getShortFractWidth(),
+                           TI.getShortFractScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "USFRACT", "UHR",
+                           TI.getShortFractWidth(),
+                           TI.getUnsignedShortFractScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "FRACT", "R", TI.getFractWidth(),
+                           TI.getFractScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "UFRACT", "UR", TI.getFractWidth(),
+                           TI.getUnsignedFractScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "LFRACT", "LR", TI.getLongFractWidth(),
+                           TI.getLongFractScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "ULFRACT", "ULR",
+                           TI.getLongFractWidth(),
+                           TI.getUnsignedLongFractScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "SACCUM", "HK", TI.getShortAccumWidth(),
+                           TI.getShortAccumScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "USACCUM", "UHK",
+                           TI.getShortAccumWidth(),
+                           TI.getUnsignedShortAccumScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "ACCUM", "K", TI.getAccumWidth(),
+                           TI.getAccumScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "UACCUM", "UK", TI.getAccumWidth(),
+                           TI.getUnsignedAccumScale(), /*Signed=*/false);
+    DefineFixedPointMacros(TI, Builder, "LACCUM", "LK", TI.getLongAccumWidth(),
+                           TI.getLongAccumScale(), /*Signed=*/true);
+    DefineFixedPointMacros(TI, Builder, "ULACCUM", "ULK",
+                           TI.getLongAccumWidth(),
+                           TI.getUnsignedLongAccumScale(), /*Signed=*/false);
+
+    Builder.defineMacro("__SACCUM_IBIT__", Twine(TI.getShortAccumIBits()));
+    Builder.defineMacro("__USACCUM_IBIT__",
+                        Twine(TI.getUnsignedShortAccumIBits()));
+    Builder.defineMacro("__ACCUM_IBIT__", Twine(TI.getAccumIBits()));
+    Builder.defineMacro("__UACCUM_IBIT__", Twine(TI.getUnsignedAccumIBits()));
+    Builder.defineMacro("__LACCUM_IBIT__", Twine(TI.getLongAccumIBits()));
+    Builder.defineMacro("__ULACCUM_IBIT__",
+                        Twine(TI.getUnsignedLongAccumIBits()));
+  }
+
   if (TI.hasFloat16Type())
     DefineFloatMacros(Builder, "FLT16", &TI.getHalfFormat(), "F16");
   DefineFloatMacros(Builder, "FLT", &TI.getFloatFormat(), "F");
@@ -1344,16 +1449,35 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
+  // Target OS macro definitions.
+  if (PPOpts.DefineTargetOSMacros) {
+    const llvm::Triple &Triple = TI.getTriple();
+#define TARGET_OS(Name, Predicate)                                             \
+  Builder.defineMacro(#Name, (Predicate) ? "1" : "0");
+#include "clang/Basic/TargetOSMacros.def"
+#undef TARGET_OS
+  }
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }
 
+static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
+                                       MacroBuilder &Builder) {
+  if (CodeGenOpts.hasProfileInstr())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_GENERATE");
+
+  if (CodeGenOpts.hasProfileIRUse() || CodeGenOpts.hasProfileClangUse())
+    Builder.defineMacro("__LLVM_INSTR_PROFILE_USE");
+}
+
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
-void clang::InitializePreprocessor(
-    Preprocessor &PP, const PreprocessorOptions &InitOpts,
-    const PCHContainerReader &PCHContainerRdr,
-    const FrontendOptions &FEOpts) {
+void clang::InitializePreprocessor(Preprocessor &PP,
+                                   const PreprocessorOptions &InitOpts,
+                                   const PCHContainerReader &PCHContainerRdr,
+                                   const FrontendOptions &FEOpts,
+                                   const CodeGenOptions &CodeGenOpts) {
   const LangOptions &LangOpts = PP.getLangOpts();
   std::string PredefineBuffer;
   PredefineBuffer.reserve(4080);
@@ -1399,6 +1523,11 @@ void clang::InitializePreprocessor(
   // current language configuration.
   InitializeStandardPredefinedMacros(PP.getTargetInfo(), PP.getLangOpts(),
                                      FEOpts, Builder);
+
+  // The PGO instrumentation profile macros are driven by options
+  // -fprofile[-instr]-generate/-fcs-profile-generate/-fprofile[-instr]-use,
+  // hence they are not guarded by InitOpts.UsePredefines.
+  InitializePGOProfileMacros(CodeGenOpts, Builder);
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
   // that they come from the command line.

@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
@@ -132,18 +133,17 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
-/// Get a topologically sorted list of blocks for the given function.
+/// Get a topologically sorted list of blocks for the given basic blocks.
 static SetVector<llvm::BasicBlock *>
-getTopologicallySortedBlocks(llvm::Function *func) {
+getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
   SetVector<llvm::BasicBlock *> blocks;
-  for (llvm::BasicBlock &bb : *func) {
-    if (!blocks.contains(&bb)) {
-      llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(&bb);
+  for (llvm::BasicBlock *basicBlock : basicBlocks) {
+    if (!blocks.contains(basicBlock)) {
+      llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(basicBlock);
       blocks.insert(traversal.begin(), traversal.end());
     }
   }
-  assert(blocks.size() == func->size() && "some blocks are not sorted");
-
+  assert(blocks.size() == basicBlocks.size() && "some blocks are not sorted");
   return blocks;
 }
 
@@ -619,6 +619,19 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
+void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
+                                               Operation *op) const {
+  auto iface = cast<IntegerOverflowFlagsInterface>(op);
+
+  IntegerOverflowFlags value = {};
+  value = bitEnumSet(value, IntegerOverflowFlags::nsw, inst->hasNoSignedWrap());
+  value =
+      bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
+
+  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
+  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
@@ -700,14 +713,14 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
 
 /// Returns an integer or float attribute for the provided scalar constant
 /// `constScalar` or nullptr if the conversion fails.
-static Attribute getScalarConstantAsAttr(OpBuilder &builder,
+static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
   // Convert scalar intergers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
-        IntegerType::get(context, constInt->getType()->getBitWidth()),
+        IntegerType::get(context, constInt->getBitWidth()),
         constInt->getValue());
   }
 
@@ -853,12 +866,24 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     alignment = align.value();
   }
 
+  // Get the global expression associated with this global variable and convert
+  // it.
+  DIGlobalVariableExpressionAttr globalExpressionAttr;
+  SmallVector<llvm::DIGlobalVariableExpression *> globalExpressions;
+  globalVar->getDebugInfo(globalExpressions);
+
+  // There should only be a single global expression.
+  if (!globalExpressions.empty())
+    globalExpressionAttr =
+        debugImporter->translateGlobalVariableExpression(globalExpressions[0]);
+
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), globalVar->getName(),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
-      /*thread_local=*/globalVar->isThreadLocal());
+      /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExpr=*/globalExpressionAttr);
   globalInsertionOp = globalOp;
 
   if (globalVar->hasInitializer() && !valueAttr) {
@@ -1199,6 +1224,40 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+LogicalResult ModuleImport::convertIntrinsicArguments(
+    ArrayRef<llvm::Value *> values, ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
+    SmallVectorImpl<NamedAttribute> &attrsOut) {
+  assert(immArgPositions.size() == immArgAttrNames.size() &&
+         "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
+         "length");
+
+  SmallVector<llvm::Value *> operands(values);
+  for (auto [immArgPos, immArgName] :
+       llvm::zip(immArgPositions, immArgAttrNames)) {
+    auto &value = operands[immArgPos];
+    auto *constant = llvm::cast<llvm::Constant>(value);
+    auto attr = getScalarConstantAsAttr(builder, constant);
+    assert(attr && attr.getType().isIntOrFloat() &&
+           "expected immarg to be float or integer constant");
+    auto nameAttr = StringAttr::get(attr.getContext(), immArgName);
+    attrsOut.push_back({nameAttr, attr});
+    // Mark matched attribute values as null (so they can be removed below).
+    value = nullptr;
+  }
+
+  for (llvm::Value *value : operands) {
+    if (!value)
+      continue;
+    auto mlirValue = convertValue(value);
+    if (failed(mlirValue))
+      return failure();
+    valuesOut.push_back(*mlirValue);
+  }
+
+  return success();
+}
+
 IntegerAttr ModuleImport::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
   FailureOr<Value> converted = convertValue(value);
@@ -1380,6 +1439,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     } else {
       callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
+    callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
@@ -1457,6 +1517,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
           loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
           ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
+    invokeOp.setCConv(convertCConvFromLLVM(invokeInst->getCallingConv()));
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
     else
@@ -1578,8 +1639,20 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
 static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("aarch64_pstate_sm_body"),
-    StringLiteral("aarch64_pstate_za_new"),
+    StringLiteral("aarch64_pstate_sm_compatible"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_preserves_za"),
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_inout_za"),
     StringLiteral("vscale_range"),
+    StringLiteral("frame-pointer"),
+    StringLiteral("target-features"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("no-infs-fp-math"),
+    StringLiteral("no-nans-fp-math"),
+    StringLiteral("approx-func-fp-math"),
+    StringLiteral("no-signed-zeros-fp-math"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1648,9 +1721,19 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmStreaming(true);
   else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
     funcOp.setArmLocallyStreaming(true);
+  else if (func->hasFnAttribute("aarch64_pstate_sm_compatible"))
+    funcOp.setArmStreamingCompatible(true);
 
-  if (func->hasFnAttribute("aarch64_pstate_za_new"))
+  if (func->hasFnAttribute("aarch64_new_za"))
     funcOp.setArmNewZa(true);
+  else if (func->hasFnAttribute("aarch64_in_za"))
+    funcOp.setArmInZa(true);
+  else if (func->hasFnAttribute("aarch64_out_za"))
+    funcOp.setArmOutZa(true);
+  else if (func->hasFnAttribute("aarch64_inout_za"))
+    funcOp.setArmInoutZa(true);
+  else if (func->hasFnAttribute("aarch64_preserves_za"))
+    funcOp.setArmPreservesZa(true);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
   if (attr.isValid()) {
@@ -1660,6 +1743,45 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
         context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
         IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
   }
+
+  // Process frame-pointer attribute.
+  if (func->hasFnAttribute("frame-pointer")) {
+    StringRef stringRefFramePointerKind =
+        func->getFnAttribute("frame-pointer").getValueAsString();
+    funcOp.setFramePointerAttr(LLVM::FramePointerKindAttr::get(
+        funcOp.getContext(), LLVM::framePointerKind::symbolizeFramePointerKind(
+                                 stringRefFramePointerKind)
+                                 .value()));
+  }
+
+  if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
+      attr.isStringAttribute())
+    funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("target-features");
+      attr.isStringAttribute())
+    funcOp.setTargetFeaturesAttr(
+        LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
+      attr.isStringAttribute())
+    funcOp.setUnsafeFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoInfsFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoNansFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
+      attr.isStringAttribute())
+    funcOp.setApproxFuncFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
 }
 
 DictionaryAttr
@@ -1767,11 +1889,26 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (func->isDeclaration())
     return success();
 
-  // Eagerly create all blocks.
-  for (llvm::BasicBlock &bb : *func) {
-    Block *block =
-        builder.createBlock(&funcOp.getBody(), funcOp.getBody().end());
-    mapBlock(&bb, block);
+  // Collect the set of basic blocks reachable from the function's entry block.
+  // This step is crucial as LLVM IR can contain unreachable blocks that
+  // self-dominate. As a result, an operation might utilize a variable it
+  // defines, which the import does not support. Given that MLIR lacks block
+  // label support, we can safely remove unreachable blocks, as there are no
+  // indirect branch instructions that could potentially target these blocks.
+  llvm::df_iterator_default_set<llvm::BasicBlock *> reachable;
+  for (llvm::BasicBlock *basicBlock : llvm::depth_first_ext(func, reachable))
+    (void)basicBlock;
+
+  // Eagerly create all reachable blocks.
+  SmallVector<llvm::BasicBlock *> reachableBasicBlocks;
+  for (llvm::BasicBlock &basicBlock : *func) {
+    // Skip unreachable blocks.
+    if (!reachable.contains(&basicBlock))
+      continue;
+    Region &body = funcOp.getBody();
+    Block *block = builder.createBlock(&body, body.end());
+    mapBlock(&basicBlock, block);
+    reachableBasicBlocks.push_back(&basicBlock);
   }
 
   // Add function arguments to the entry block.
@@ -1784,10 +1921,11 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Process the blocks in topological order. The ordered traversal ensures
   // operands defined in a dominating block have a valid mapping to an MLIR
   // value once a block is translated.
-  SetVector<llvm::BasicBlock *> blocks = getTopologicallySortedBlocks(func);
+  SetVector<llvm::BasicBlock *> blocks =
+      getTopologicallySortedBlocks(reachableBasicBlocks);
   setConstantInsertionPointToStart(lookupBlock(blocks.front()));
-  for (llvm::BasicBlock *bb : blocks)
-    if (failed(processBasicBlock(bb, lookupBlock(bb))))
+  for (llvm::BasicBlock *basicBlock : blocks)
+    if (failed(processBasicBlock(basicBlock, lookupBlock(basicBlock))))
       return failure();
 
   // Process the debug intrinsics that require a delayed conversion after
@@ -1856,7 +1994,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   DILocalVariableAttr localVariableAttr =
       matchLocalVariableAttr(dbgIntr->getArgOperand(1));
   auto locationExprAttr =
-      DIExpressionAttr::get(context, dbgIntr->getExpression()->getElements());
+      debugImporter->translateExpression(dbgIntr->getExpression());
   Operation *op =
       llvm::TypeSwitch<llvm::DbgVariableIntrinsic *, Operation *>(dbgIntr)
           .Case([&](llvm::DbgDeclareInst *) {

@@ -1,5 +1,6 @@
 ; Check that the pass does not crash on the code.
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu %s -o /dev/null
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu %s -o /dev/null
 
 %class.F = type { %class.o, i8, [7 x i8] }
 %class.o = type <{ ptr, i32, [4 x i8] }>

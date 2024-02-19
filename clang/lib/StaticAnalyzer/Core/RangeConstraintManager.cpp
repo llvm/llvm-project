@@ -1876,6 +1876,12 @@ public:
   const llvm::APSInt *getSymVal(ProgramStateRef State,
                                 SymbolRef Sym) const override;
 
+  const llvm::APSInt *getSymMinVal(ProgramStateRef State,
+                                   SymbolRef Sym) const override;
+
+  const llvm::APSInt *getSymMaxVal(ProgramStateRef State,
+                                   SymbolRef Sym) const override;
+
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override;
 
@@ -2863,6 +2869,22 @@ const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
   return T ? T->getConcreteValue() : nullptr;
 }
 
+const llvm::APSInt *RangeConstraintManager::getSymMinVal(ProgramStateRef St,
+                                                         SymbolRef Sym) const {
+  const RangeSet *T = getConstraint(St, Sym);
+  if (!T || T->isEmpty())
+    return nullptr;
+  return &T->getMinValue();
+}
+
+const llvm::APSInt *RangeConstraintManager::getSymMaxVal(ProgramStateRef St,
+                                                         SymbolRef Sym) const {
+  const RangeSet *T = getConstraint(St, Sym);
+  if (!T || T->isEmpty())
+    return nullptr;
+  return &T->getMaxValue();
+}
+
 //===----------------------------------------------------------------------===//
 //                Remove dead symbols from existing constraints
 //===----------------------------------------------------------------------===//
@@ -3248,6 +3270,10 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
 void RangeConstraintManager::printValue(raw_ostream &Out, ProgramStateRef State,
                                         SymbolRef Sym) {
   const RangeSet RS = getRange(State, Sym);
+  if (RS.isEmpty()) {
+    Out << "<empty rangeset>";
+    return;
+  }
   Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
   RS.dump(Out);
 }

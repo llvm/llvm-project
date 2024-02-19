@@ -122,6 +122,11 @@ public:
   /// current space; this will result in an assert failure.
   void setSpaceExceptLocals(const PresburgerSpace &oSpace);
 
+  /// Set the identifier for the ith variable of the specified kind of the
+  /// IntegerRelation's PresburgerSpace. The index is relative to the kind of
+  /// the variable.
+  void setId(VarKind kind, unsigned i, Identifier id);
+
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
     return PresburgerSpace::getRelationSpace(space.getNumDomainVars(),
@@ -220,6 +225,8 @@ public:
   inline SmallVector<int64_t, 8> getInequality64(unsigned idx) const {
     return getInt64Vec(inequalities.getRow(idx));
   }
+
+  inline IntMatrix getInequalities() const { return inequalities; }
 
   /// Get the number of vars of the specified kind.
   unsigned getNumVarKind(VarKind kind) const {
@@ -577,6 +584,11 @@ public:
     convertVarKind(kind, varStart, varLimit, VarKind::Local);
   }
 
+  /// Merge and align symbol variables of `this` and `other` with respect to
+  /// identifiers. After this operation the symbol variables of both relations
+  /// have the same identifiers in the same order.
+  void mergeAndAlignSymbols(IntegerRelation &other);
+
   /// Adds additional local vars to the sets such that they both have the union
   /// of the local vars in each set, without changing the set of points that
   /// lie in `this` and `other`.
@@ -698,6 +710,17 @@ public:
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
   PresburgerRelation subtract(const PresburgerRelation &set) const;
+
+  // Remove equalities which have only zero coefficients.
+  void removeTrivialEqualities();
+
+  // Verify whether the relation is full-dimensional, i.e.,
+  // no equality holds for the relation.
+  //
+  // If there are no variables, it always returns true.
+  // If there is at least one variable and the relation is empty, it returns
+  // false.
+  bool isFullDim();
 
   void print(raw_ostream &os) const;
   void dump() const;
@@ -858,6 +881,26 @@ public:
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
                           /*numReservedCols=*/space.getNumVars() + 1, space) {}
+
+  /// Constructs a relation with the specified number of dimensions and symbols
+  /// and adds the given inequalities.
+  explicit IntegerPolyhedron(const PresburgerSpace &space,
+                             IntMatrix inequalities)
+      : IntegerPolyhedron(space) {
+    for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
+      addInequality(inequalities.getRow(i));
+  }
+
+  /// Constructs a relation with the specified number of dimensions and symbols
+  /// and adds the given inequalities, after normalizing row-wise to integer
+  /// values.
+  explicit IntegerPolyhedron(const PresburgerSpace &space,
+                             FracMatrix inequalities)
+      : IntegerPolyhedron(space) {
+    IntMatrix ineqsNormalized = inequalities.normalizeRows();
+    for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
+      addInequality(ineqsNormalized.getRow(i));
+  }
 
   /// Construct a set from an IntegerRelation. The relation should have
   /// no domain vars.

@@ -69,19 +69,23 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // is created similiarly if IsWorstCase is true.
 multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                  list<ProcResourceKind> resources,
-                                 int predLat, list<int> predCycles,
-                                 int noPredLat, list<int> noPredCycles,
+                                 int predLat, list<int> predAcquireCycles,
+                                 list<int> predReleaseCycles, int noPredLat,
+                                 list<int> noPredAcquireCycles,
+                                 list<int> noPredReleaseCycles,
                                  string mx, bit IsWorstCase> {
   defvar nameMX = name # "_" # mx;
 
   // Define the different behaviors
-  def NAME # nameMX # "_Pred" : SchedWriteRes<resources> {
+  def nameMX # "_Pred" : SchedWriteRes<resources>{
     let Latency = predLat;
-    let ReleaseAtCycles = predCycles;
+    let AcquireAtCycles = predAcquireCycles;
+    let ReleaseAtCycles = predReleaseCycles;
   }
-  def NAME # nameMX # "_NoPred" : SchedWriteRes<resources> {
+  def nameMX # "_NoPred" : SchedWriteRes<resources> {
     let Latency = noPredLat;
-    let ReleaseAtCycles = noPredCycles;
+    let AcquireAtCycles = noPredAcquireCycles;
+    let ReleaseAtCycles = noPredReleaseCycles;
   }
 
   // Tie behavior to predicate
@@ -469,9 +473,9 @@ defm "" : LMULSchedWrites<"WriteVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedWrites<"WriteVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedWrites<"WriteVMIotV">;
+defm "" : LMULSchedWrites<"WriteVIotaV">;
 // 15.9. Vector Element Index Instruction
-defm "" : LMULSchedWrites<"WriteVMIdxV">;
+defm "" : LMULSchedWrites<"WriteVIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -696,7 +700,7 @@ defm "" : LMULSchedReads<"ReadVMFFSV">;
 // 15.6. Vector Set-only-First Mask Bit
 defm "" : LMULSchedReads<"ReadVMSFSV">;
 // 15.8. Vector Iota Instruction
-defm "" : LMULSchedReads<"ReadVMIotV">;
+defm "" : LMULSchedReads<"ReadVIotaV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
@@ -908,8 +912,8 @@ defm "" : LMULWriteRes<"WriteVMALUV", []>;
 defm "" : LMULWriteRes<"WriteVMPopV", []>;
 defm "" : LMULWriteRes<"WriteVMFFSV", []>;
 defm "" : LMULWriteRes<"WriteVMSFSV", []>;
-defm "" : LMULWriteRes<"WriteVMIotV", []>;
-defm "" : LMULWriteRes<"WriteVMIdxV", []>;
+defm "" : LMULWriteRes<"WriteVIotaV", []>;
+defm "" : LMULWriteRes<"WriteVIdxV", []>;
 
 // 16. Vector Permutation Instructions
 def : WriteRes<WriteVIMovVX, []>;
@@ -1070,7 +1074,7 @@ defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
 defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
 defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
-defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
+defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
 
 // 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVIMovVX, 0>;

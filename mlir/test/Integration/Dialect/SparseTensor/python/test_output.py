@@ -124,11 +124,14 @@ def main():
         # Loop over various sparse types (COO, CSR, DCSR, CSC, DCSC) with
         # regular and loose compression and various metadata bitwidths.
         # For these simple orderings, dim2lvl and lvl2dim are the same.
+        builder = st.EncodingAttr.build_level_type
+        fmt = st.LevelFormat
+        prop = st.LevelProperty
         levels = [
-            [st.DimLevelType.compressed_nu, st.DimLevelType.singleton],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.dense, st.DimLevelType.loose_compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [builder(fmt.compressed, [prop.non_unique]), builder(fmt.singleton)],
+            [builder(fmt.dense), builder(fmt.compressed)],
+            [builder(fmt.dense), builder(fmt.loose_compressed)],
+            [builder(fmt.compressed), builder(fmt.compressed)],
         ]
         orderings = [
             (ir.AffineMap.get_permutation([0, 1]), 0),
@@ -149,10 +152,10 @@ def main():
 
         # Now do the same for BSR.
         level = [
-            st.DimLevelType.dense,
-            st.DimLevelType.compressed,
-            st.DimLevelType.dense,
-            st.DimLevelType.dense,
+            builder(fmt.dense),
+            builder(fmt.compressed),
+            builder(fmt.dense),
+            builder(fmt.dense),
         ]
         d0 = ir.AffineDimExpr.get(0)
         d1 = ir.AffineDimExpr.get(1)

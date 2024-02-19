@@ -10,7 +10,7 @@
 
 // <tuple>
 
-// template <class F, class T> constexpr decltype(auto) apply(F &&, T &&)
+// template <class F, class T> constexpr decltype(auto) apply(F &&, T &&) noexcept(see below) // noexcept since C++23
 
 // Test with different ref/ptr/cv qualified argument types.
 
@@ -192,7 +192,11 @@ void test_noexcept()
         // test that the functions noexcept-ness is propagated
         using Tup = std::tuple<int, const char*, long>;
         Tup t;
+#if TEST_STD_VER >= 23
+        ASSERT_NOEXCEPT(std::apply(nec, t));
+#else
         LIBCPP_ASSERT_NOEXCEPT(std::apply(nec, t));
+#endif
         ASSERT_NOT_NOEXCEPT(std::apply(tc, t));
     }
     {
@@ -200,7 +204,11 @@ void test_noexcept()
         using Tup = std::tuple<NothrowMoveable, int>;
         Tup t;
         ASSERT_NOT_NOEXCEPT(std::apply(nec, t));
+#if TEST_STD_VER >= 23
+        ASSERT_NOEXCEPT(std::apply(nec, std::move(t)));
+#else
         LIBCPP_ASSERT_NOEXCEPT(std::apply(nec, std::move(t)));
+#endif
     }
 }
 

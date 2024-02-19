@@ -177,7 +177,7 @@ entry:
 define signext i8 @test4(ptr nocapture %P, double %F) nounwind readonly {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm1
 ; CHECK-NEXT:    seta %al

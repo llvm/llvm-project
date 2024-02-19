@@ -626,3 +626,23 @@ void test() {
 }
 
 }
+
+
+namespace GH75732 {
+auto serialize(auto&& archive, auto&& c){ }
+struct D {
+    auto serialize(this auto&& self, auto&& archive) {
+        serialize(archive, self); // expected-error {{call to explicit member function without an object argument}}
+    }
+};
+}
+
+namespace GH80971 {
+struct S {
+  auto f(this auto self...) {  }
+};
+
+int bug() {
+  S{}.f(0);
+}
+}

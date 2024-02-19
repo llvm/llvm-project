@@ -13,11 +13,11 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Debug.h"
@@ -77,13 +77,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
 }
 
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
-  OS << Opcode << ", Tys={";
+  OS << "Opcode=" << Opcode << ", Tys={";
   for (const auto &Type : Types) {
     OS << Type << ", ";
   }
-  OS << "}, Opcode=";
-
-  OS << Opcode << ", MMOs={";
+  OS << "}, MMOs={";
   for (const auto &MMODescr : MMODescrs) {
     OS << MMODescr.MemoryTy << ", ";
   }

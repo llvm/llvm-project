@@ -186,6 +186,12 @@ template <typename LatticeT> struct DataflowAnalysisState {
 /// the dataflow analysis cannot be performed successfully. Otherwise, calls
 /// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
+///
+/// `MaxBlockVisits` caps the number of block visits during analysis. See
+/// `runTypeErasedDataflowAnalysis` for a full description. The default value is
+/// essentially arbitrary -- large enough to accommodate what seems like any
+/// reasonable CFG, but still small enough to limit the cost of hitting the
+/// limit.
 template <typename AnalysisT>
 llvm::Expected<std::vector<
     std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
@@ -194,7 +200,8 @@ runDataflowAnalysis(
     const Environment &InitEnv,
     std::function<void(const CFGElement &, const DataflowAnalysisState<
                                                typename AnalysisT::Lattice> &)>
-        PostVisitCFG = nullptr) {
+        PostVisitCFG = nullptr,
+    std::int32_t MaxBlockVisits = 20'000) {
   std::function<void(const CFGElement &,
                      const TypeErasedDataflowAnalysisState &)>
       PostVisitCFGClosure = nullptr;
@@ -212,7 +219,7 @@ runDataflowAnalysis(
   }
 
   auto TypeErasedBlockStates = runTypeErasedDataflowAnalysis(
-      CFCtx, Analysis, InitEnv, PostVisitCFGClosure);
+      CFCtx, Analysis, InitEnv, PostVisitCFGClosure, MaxBlockVisits);
   if (!TypeErasedBlockStates)
     return TypeErasedBlockStates.takeError();
 
@@ -234,6 +241,22 @@ runDataflowAnalysis(
   return std::move(BlockStates);
 }
 
+// Create an analysis class that is derived from `DataflowAnalysis`. This is an
+// SFINAE adapter that allows us to call two different variants of constructor
+// (either with or without the optional `Environment` parameter).
+// FIXME: Make all classes derived from `DataflowAnalysis` take an `Environment`
+// parameter in their constructor so that we can get rid of this abomination.
+template <typename AnalysisT>
+auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
+    -> decltype(AnalysisT(ASTCtx, Env)) {
+  return AnalysisT(ASTCtx, Env);
+}
+template <typename AnalysisT>
+auto createAnalysis(ASTContext &ASTCtx, Environment &Env)
+    -> decltype(AnalysisT(ASTCtx)) {
+  return AnalysisT(ASTCtx);
+}
+
 /// Runs a dataflow analysis over the given function and then runs `Diagnoser`
 /// over the results. Returns a list of diagnostics for `FuncDecl` or an
 /// error. Currently, errors can occur (at least) because the analysis requires
@@ -245,6 +268,10 @@ runDataflowAnalysis(
 ///   iterations.
 /// - This limit is still low enough to keep runtimes acceptable (on typical
 ///   machines) in cases where we hit the limit.
+///
+/// `MaxBlockVisits` caps the number of block visits during analysis. See
+/// `runDataflowAnalysis` for a full description and explanation of the default
+/// value.
 template <typename AnalysisT, typename Diagnostic>
 llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
     const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
@@ -252,7 +279,8 @@ llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
         const CFGElement &, ASTContext &,
         const TransferStateForDiagnostics<typename AnalysisT::Lattice> &)>
         Diagnoser,
-    std::int64_t MaxSATIterations = 1'000'000'000) {
+    std::int64_t MaxSATIterations = 1'000'000'000,
+    std::int32_t MaxBlockVisits = 20'000) {
   llvm::Expected<ControlFlowContext> Context =
       ControlFlowContext::build(FuncDecl);
   if (!Context)
@@ -262,7 +290,7 @@ llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
   const WatchedLiteralsSolver *Solver = OwnedSolver.get();
   DataflowAnalysisContext AnalysisContext(std::move(OwnedSolver));
   Environment Env(AnalysisContext, FuncDecl);
-  AnalysisT Analysis(ASTCtx);
+  AnalysisT Analysis = createAnalysis<AnalysisT>(ASTCtx, Env);
   llvm::SmallVector<Diagnostic> Diagnostics;
   if (llvm::Error Err =
           runTypeErasedDataflowAnalysis(
@@ -277,7 +305,8 @@ llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
                             State.Lattice.Value),
                         State.Env));
                 llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
-              })
+              },
+              MaxBlockVisits)
               .takeError())
     return std::move(Err);
 

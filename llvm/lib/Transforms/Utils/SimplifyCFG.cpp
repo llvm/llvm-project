@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
@@ -1101,12 +1100,13 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
   // Note that there may be multiple predecessor blocks, so we cannot move
   // bonus instructions to a predecessor block.
   for (Instruction &BonusInst : *BB) {
-    if (isa<DbgInfoIntrinsic>(BonusInst) || BonusInst.isTerminator())
+    if (BonusInst.isTerminator())
       continue;
 
     Instruction *NewBonusInst = BonusInst.clone();
 
-    if (PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
+    if (!isa<DbgInfoIntrinsic>(BonusInst) &&
+        PTI->getDebugLoc() != NewBonusInst->getDebugLoc()) {
       // Unless the instruction has the same !dbg location as the original
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
@@ -1116,7 +1116,6 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     RemapInstruction(NewBonusInst, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    VMap[&BonusInst] = NewBonusInst;
 
     // If we speculated an instruction, we need to drop any metadata that may
     // result in undefined behavior, as the metadata might have been valid
@@ -1126,8 +1125,16 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     NewBonusInst->dropUBImplyingAttrsAndMetadata();
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
+    auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
+    RemapDPValueRange(NewBonusInst->getModule(), Range, VMap,
+                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+    if (isa<DbgInfoIntrinsic>(BonusInst))
+      continue;
+
     NewBonusInst->takeName(&BonusInst);
     BonusInst.setName(NewBonusInst->getName() + ".old");
+    VMap[&BonusInst] = NewBonusInst;
 
     // Update (liveout) uses of bonus instructions,
     // now that the bonus instruction has been cloned into predecessor.
@@ -1519,6 +1526,62 @@ static bool shouldHoistCommonInstructions(Instruction *I1, Instruction *I2,
   return true;
 }
 
+/// Hoists DPValues from \p I1 and \p OtherInstrs that are identical in
+/// lock-step to \p TI. This matches how dbg.* intrinsics are hoisting in
+/// hoistCommonCodeFromSuccessors. e.g. The input:
+///    I1                DPVs: { x, z },
+///    OtherInsts: { I2  DPVs: { x, y, z } }
+/// would result in hoisting only DPValue x.
+static void
+hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
+                               SmallVectorImpl<Instruction *> &OtherInsts) {
+  if (!I1->hasDbgValues())
+    return;
+  using CurrentAndEndIt =
+      std::pair<DPValue::self_iterator, DPValue::self_iterator>;
+  // Vector of {Current, End} iterators.
+  SmallVector<CurrentAndEndIt> Itrs;
+  Itrs.reserve(OtherInsts.size() + 1);
+  // Helper lambdas for lock-step checks:
+  // Return true if this Current == End.
+  auto atEnd = [](const CurrentAndEndIt &Pair) {
+    return Pair.first == Pair.second;
+  };
+  // Return true if all Current are identical.
+  auto allIdentical = [](const SmallVector<CurrentAndEndIt> &Itrs) {
+    return all_of(make_first_range(ArrayRef(Itrs).drop_front()),
+                  [&](DPValue::self_iterator I) {
+                    return Itrs[0].first->isIdenticalToWhenDefined(*I);
+                  });
+  };
+
+  // Collect the iterators.
+  Itrs.push_back(
+      {I1->getDbgValueRange().begin(), I1->getDbgValueRange().end()});
+  for (Instruction *Other : OtherInsts) {
+    if (!Other->hasDbgValues())
+      return;
+    Itrs.push_back(
+        {Other->getDbgValueRange().begin(), Other->getDbgValueRange().end()});
+  }
+
+  // Iterate in lock-step until any of the DPValue lists are exausted. If
+  // the lock-step DPValues are identical, hoist all of them to TI.
+  // This replicates the dbg.* intrinsic behaviour in
+  // hoistCommonCodeFromSuccessors.
+  while (none_of(Itrs, atEnd)) {
+    bool HoistDPVs = allIdentical(Itrs);
+    for (CurrentAndEndIt &Pair : Itrs) {
+      // Increment Current iterator now as we may be about to move the DPValue.
+      DPValue &DPV = *Pair.first++;
+      if (HoistDPVs) {
+        DPV.removeFromParent();
+        TI->getParent()->insertDPValueBefore(&DPV, TI->getIterator());
+      }
+    }
+  }
+}
+
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If EqTermsOnly is
 /// given, only perform hoisting in case both blocks only contain a terminator.
@@ -1591,7 +1654,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     auto OtherSuccIterRange = make_first_range(OtherSuccIterPairRange);
 
     Instruction *I1 = &*BB1ItrPair.first;
-    auto *BB1 = I1->getParent();
 
     // Skip debug info if it is not identical.
     bool AllDbgInstsAreIdentical = all_of(OtherSuccIterRange, [I1](auto &Iter) {
@@ -1617,18 +1679,23 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         AllInstsAreIdentical = false;
     }
 
+    SmallVector<Instruction *, 8> OtherInsts;
+    for (auto &SuccIter : OtherSuccIterRange)
+      OtherInsts.push_back(&*SuccIter);
+
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
     if (HasTerminator) {
       // Even if BB, which contains only one unreachable instruction, is ignored
       // at the beginning of the loop, we can hoist the terminator instruction.
       // If any instructions remain in the block, we cannot hoist terminators.
-      if (NumSkipped || !AllInstsAreIdentical)
+      if (NumSkipped || !AllInstsAreIdentical) {
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
         return Changed;
-      SmallVector<Instruction *, 8> Insts;
-      for (auto &SuccIter : OtherSuccIterRange)
-        Insts.push_back(&*SuccIter);
-      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, Insts) || Changed;
+      }
+
+      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, OtherInsts) ||
+             Changed;
     }
 
     if (AllInstsAreIdentical) {
@@ -1653,18 +1720,25 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         // The debug location is an integral part of a debug info intrinsic
         // and can't be separated from it or replaced.  Instead of attempting
         // to merge locations, simply hoist both copies of the intrinsic.
-        I1->moveBeforePreserving(TI);
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
+        // We've just hoisted DPValues; move I1 after them (before TI) and
+        // leave any that were not hoisted behind (by calling moveBefore
+        // rather than moveBeforePreserving).
+        I1->moveBefore(TI);
         for (auto &SuccIter : OtherSuccIterRange) {
           auto *I2 = &*SuccIter++;
           assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBeforePreserving(TI);
+          I2->moveBefore(TI);
         }
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
         // we remove the now redundant second instruction.
-        I1->moveBeforePreserving(TI);
-        BB->splice(TI->getIterator(), BB1, I1->getIterator());
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
+        // We've just hoisted DPValues; move I1 after them (before TI) and
+        // leave any that were not hoisted behind (by calling moveBefore
+        // rather than moveBeforePreserving).
+        I1->moveBefore(TI);
         for (auto &SuccIter : OtherSuccIterRange) {
           Instruction *I2 = &*SuccIter++;
           assert(I2 != I1);
@@ -1683,8 +1757,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       Changed = true;
       NumHoistCommonInstrs += SuccIterPairs.size();
     } else {
-      if (NumSkipped >= HoistCommonSkipLimit)
+      if (NumSkipped >= HoistCommonSkipLimit) {
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
         return Changed;
+      }
       // We are about to skip over a pair of non-identical instructions. Record
       // if any have characteristics that would prevent reordering instructions
       // across them.
@@ -1745,7 +1821,10 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
     }
   }
 
-  // Okay, it is safe to hoist the terminator.
+  // Hoist DPValues attached to the terminator to match dbg.* intrinsic hoisting
+  // behaviour in hoistCommonCodeFromSuccessors.
+  hoistLockstepIdenticalDPValues(TI, I1, OtherSuccTIs);
+  // Clone the terminator and hoist it into the pred, without any debug info.
   Instruction *NT = I1->clone();
   NT->insertInto(TIParent, TI->getIterator());
   if (!NT->getType()->isVoidTy()) {
@@ -3094,10 +3173,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (llvm::is_contained(DAI->location_ops(), OrigV))
-        DAI->replaceVariableLocationOp(OrigV, S);
-    }
+    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+      if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
+        DbgAssign->replaceVariableLocationOp(OrigV, S);
+    };
+    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
+    for_each(at::getDPVAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3126,7 +3207,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // instructions, in the same way that dbg.value intrinsics are dropped at the
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    It.dropDbgValues();
+    for (DPValue &DPV : make_early_inc_range(It.getDbgValueRange()))
+      if (!DPV.isDbgAssign())
+        It.dropOneDbgValue(&DPV);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
@@ -3298,6 +3381,10 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     BasicBlock::iterator InsertPt = EdgeBB->getFirstInsertionPt();
     DenseMap<Value *, Value *> TranslateMap; // Track translated values.
     TranslateMap[Cond] = CB;
+
+    // RemoveDIs: track instructions that we optimise away while folding, so
+    // that we can copy DPValues from them later.
+    BasicBlock::iterator SrcDbgCursor = BB->begin();
     for (BasicBlock::iterator BBI = BB->begin(); &*BBI != BI; ++BBI) {
       if (PHINode *PN = dyn_cast<PHINode>(BBI)) {
         TranslateMap[PN] = PN->getIncomingValueForBlock(EdgeBB);
@@ -3332,12 +3419,25 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
           TranslateMap[&*BBI] = N;
       }
       if (N) {
+        // Copy all debug-info attached to instructions from the last we
+        // successfully clone, up to this instruction (they might have been
+        // folded away).
+        for (; SrcDbgCursor != BBI; ++SrcDbgCursor)
+          N->cloneDebugInfoFrom(&*SrcDbgCursor);
+        SrcDbgCursor = std::next(BBI);
+        // Clone debug-info on this instruction too.
+        N->cloneDebugInfoFrom(&*BBI);
+
         // Register the new instruction with the assumption cache if necessary.
         if (auto *Assume = dyn_cast<AssumeInst>(N))
           if (AC)
             AC->registerAssumption(Assume);
       }
     }
+
+    for (; &*SrcDbgCursor != BI; ++SrcDbgCursor)
+      InsertPt->cloneDebugInfoFrom(&*SrcDbgCursor);
+    InsertPt->cloneDebugInfoFrom(BI);
 
     BB->removePredecessor(EdgeBB);
     BranchInst *EdgeBI = cast<BranchInst>(EdgeBB->getTerminator());
@@ -3743,21 +3843,21 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   ValueToValueMapTy VMap; // maps original values to cloned values
   CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(BB, PredBlock, VMap);
 
+  Module *M = BB->getModule();
+
+  if (PredBlock->IsNewDbgInfoFormat) {
+    PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
+    for (DPValue &DPV : PredBlock->getTerminator()->getDbgValueRange()) {
+      RemapDPValue(M, &DPV, VMap,
+                   RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    }
+  }
+
   // Now that the Cond was cloned into the predecessor basic block,
   // or/and the two conditions together.
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
-
-  // Copy any debug value intrinsics into the end of PredBlock.
-  for (Instruction &I : *BB) {
-    if (isa<DbgInfoIntrinsic>(I)) {
-      Instruction *NewI = I.clone();
-      RemapInstruction(NewI, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      NewI->insertBefore(PBI);
-    }
-  }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -6269,7 +6369,7 @@ Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
   }
   case BitMapKind: {
     // Type of the bitmap (e.g. i59).
-    IntegerType *MapTy = BitMap->getType();
+    IntegerType *MapTy = BitMap->getIntegerType();
 
     // Cast Index to the same type as the bitmap.
     // Note: The Index is <= the number of elements in the table, so
@@ -6644,7 +6744,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   Value *TableIndex;
   ConstantInt *TableIndexOffset;
   if (UseSwitchConditionAsTableIndex) {
-    TableIndexOffset = ConstantInt::get(MaxCaseVal->getType(), 0);
+    TableIndexOffset = ConstantInt::get(MaxCaseVal->getIntegerType(), 0);
     TableIndex = SI->getCondition();
   } else {
     TableIndexOffset = MinCaseVal;
@@ -6728,7 +6828,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // Get the TableIndex'th bit of the bitmask.
     // If this bit is 0 (meaning hole) jump to the default destination,
     // else continue with table lookup.
-    IntegerType *MapTy = TableMask->getType();
+    IntegerType *MapTy = TableMask->getIntegerType();
     Value *MaskIndex =
         Builder.CreateZExtOrTrunc(TableIndex, MapTy, "switch.maskindex");
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
@@ -6874,18 +6974,17 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  auto *ShiftC = ConstantInt::get(Ty, Shift);
-  auto *Sub = Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
-  auto *LShr = Builder.CreateLShr(Sub, ShiftC);
-  auto *Shl = Builder.CreateShl(Sub, Ty->getBitWidth() - Shift);
-  auto *Rot = Builder.CreateOr(LShr, Shl);
+  Value *Sub =
+      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+  Value *Rot = Builder.CreateIntrinsic(
+      Ty, Intrinsic::fshl,
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
     auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
-    Case.setValue(
-        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(ShiftC->getValue()))));
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;
 }
@@ -6951,7 +7050,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   // Replace each case with its trailing zeros number.
   for (auto &Case : SI->cases()) {
     auto *OrigValue = Case.getCaseValue();
-    Case.setValue(ConstantInt::get(OrigValue->getType(),
+    Case.setValue(ConstantInt::get(OrigValue->getIntegerType(),
                                    OrigValue->getValue().countr_zero()));
   }
 
@@ -7363,10 +7462,33 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
       if (GEP->getPointerOperand() == I) {
-        if (!GEP->isInBounds() || !GEP->hasAllZeroIndices())
+        // The current base address is null, there are four cases to consider:
+        // getelementptr (TY, null, 0)                 -> null
+        // getelementptr (TY, null, not zero)          -> may be modified
+        // getelementptr inbounds (TY, null, 0)        -> null
+        // getelementptr inbounds (TY, null, not zero) -> poison iff null is
+        // undefined?
+        if (!GEP->hasAllZeroIndices() &&
+            (!GEP->isInBounds() ||
+             NullPointerIsDefined(GEP->getFunction(),
+                                  GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
+
+    // Look through return.
+    if (ReturnInst *Ret = dyn_cast<ReturnInst>(Use)) {
+      bool HasNoUndefAttr =
+          Ret->getFunction()->hasRetAttribute(Attribute::NoUndef);
+      // Return undefined to a noundef return value is undefined.
+      if (isa<UndefValue>(C) && HasNoUndefAttr)
+        return true;
+      // Return null to a nonnull+noundef return value is undefined.
+      if (C->isNullValue() && HasNoUndefAttr &&
+          Ret->getFunction()->hasRetAttribute(Attribute::NonNull)) {
+        return !PtrValueMayBeModified;
+      }
+    }
 
     // Look through bitcasts.
     if (BitCastInst *BC = dyn_cast<BitCastInst>(Use))

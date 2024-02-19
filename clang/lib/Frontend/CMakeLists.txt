@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   ProfileData
   Support
   TargetParser
+  TextAPI
   )
 
 add_clang_library(clangFrontend
@@ -27,6 +28,7 @@ add_clang_library(clangFrontend
   HeaderIncludeGen.cpp
   InitPreprocessor.cpp
   LayoutOverrideSource.cpp
+  InstallAPIConsumer.cpp
   LogDiagnosticPrinter.cpp
   ModuleDependencyCollector.cpp
   MultiplexConsumer.cpp
@@ -48,10 +50,12 @@ add_clang_library(clangFrontend
   intrinsics_gen
 
   LINK_LIBS
+  clangAPINotes
   clangAST
   clangBasic
   clangDriver
   clangEdit
+  clangInstallAPI
   clangLex
   clangParse
   clangSema

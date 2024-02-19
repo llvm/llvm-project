@@ -190,6 +190,7 @@ tools.extend(
         "llvm-dis",
         "llvm-dwarfdump",
         "llvm-dwarfutil",
+        "llvm-dwp",
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
@@ -571,6 +572,9 @@ if "darwin" == sys.platform:
         result = sysctl_cmd.stdout.read().decode("ascii")
         if "hw.optional.fma: 1" in result:
             config.available_features.add("fma3")
+
+if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 17063:
+    config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
 if not re.match(

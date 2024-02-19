@@ -10,7 +10,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
@@ -300,6 +299,8 @@ static const StringMap<MachineInfo> TargetMap{
     // LoongArch
     {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
+    // SystemZ
+    {"elf64-s390", {ELF::EM_S390, true, false}},
 };
 
 static Expected<TargetInfo>
@@ -316,7 +317,7 @@ getOutputTargetInfoByTargetName(StringRef TargetName) {
     MI.OSABI = ELF::ELFOSABI_FREEBSD;
 
   FileFormat Format;
-  if (TargetName.startswith("elf"))
+  if (TargetName.starts_with("elf"))
     Format = FileFormat::ELF;
   else
     // This should never happen because `TargetName` is valid (it certainly
@@ -688,6 +689,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
+                            .Case("srec", FileFormat::SREC)
                             .Default(FileFormat::Unspecified);
   if (Config.OutputFormat == FileFormat::Unspecified) {
     if (OutputFormat.empty()) {
@@ -732,11 +734,44 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+  Config.SymbolsPrefixRemove =
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
+
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
     Config.ExtractPartition = Arg->getValue();
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_gap_fill)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--gap-fill' is only supported for binary output");
+    ErrorOr<uint64_t> Val = getAsInteger<uint64_t>(A->getValue());
+    if (!Val)
+      return createStringError(Val.getError(), "--gap-fill: bad number: %s",
+                               A->getValue());
+    uint8_t ByteVal = Val.get();
+    if (ByteVal != Val.get())
+      return createStringError(std::errc::value_too_large,
+                               "gap-fill value %s is out of range (0 to 0xff)",
+                               A->getValue());
+    Config.GapFill = ByteVal;
+  }
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_pad_to)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--pad-to' is only supported for binary output");
+    ErrorOr<uint64_t> Addr = getAsInteger<uint64_t>(A->getValue());
+    if (!Addr)
+      return createStringError(Addr.getError(), "--pad-to: bad number: %s",
+                               A->getValue());
+    Config.PadTo = *Addr;
+  }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))

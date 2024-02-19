@@ -431,7 +431,8 @@ static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
 // The following prologues cannot be patched because of the short jump
 // jumping to the patching region.
 
-#if SANITIZER_WINDOWS64
+// Short jump patterns  below are only for x86_64.
+#  if SANITIZER_WINDOWS_x64
 // ntdll!wcslen in Win11
 //   488bc1          mov     rax,rcx
 //   0fb710          movzx   edx,word ptr [rax]
@@ -462,7 +463,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   return 4;
 #endif
 
-#if SANITIZER_WINDOWS64
+#  if SANITIZER_WINDOWS_x64
   if (memcmp((u8*)address, kPrologueWithShortJump1,
              sizeof(kPrologueWithShortJump1)) == 0 ||
       memcmp((u8*)address, kPrologueWithShortJump2,
@@ -544,7 +545,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 7;
   }
 
-#if SANITIZER_WINDOWS64
+#  if SANITIZER_WINDOWS_x64
   switch (*(u8*)address) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
                 //   movabs eax, dword ptr ds:[XXXXXXXX]
@@ -577,6 +578,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x018a:  // mov al, byte ptr [rcx]
       return 2;
 
+    case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
       if (rel_offset)
         *rel_offset = 2;
@@ -943,19 +945,26 @@ bool OverrideFunction(
 
 static void **InterestingDLLsAvailable() {
   static const char *InterestingDLLs[] = {
-      "kernel32.dll",
-      "msvcr100.dll",      // VS2010
-      "msvcr110.dll",      // VS2012
-      "msvcr120.dll",      // VS2013
-      "vcruntime140.dll",  // VS2015
-      "ucrtbase.dll",      // Universal CRT
-#if (defined(__MINGW32__) && defined(__i386__))
-      "libc++.dll",        // libc++
-      "libunwind.dll",     // libunwind
-#endif
-      // NTDLL should go last as it exports some functions that we should
-      // override in the CRT [presumably only used internally].
-      "ntdll.dll", NULL};
+    "kernel32.dll",
+    "msvcr100d.dll",      // VS2010
+    "msvcr110d.dll",      // VS2012
+    "msvcr120d.dll",      // VS2013
+    "vcruntime140d.dll",  // VS2015
+    "ucrtbased.dll",      // Universal CRT
+    "msvcr100.dll",       // VS2010
+    "msvcr110.dll",       // VS2012
+    "msvcr120.dll",       // VS2013
+    "vcruntime140.dll",   // VS2015
+    "ucrtbase.dll",       // Universal CRT
+#  if (defined(__MINGW32__) && defined(__i386__))
+    "libc++.dll",     // libc++
+    "libunwind.dll",  // libunwind
+#  endif
+    // NTDLL should go last as it exports some functions that we should
+    // override in the CRT [presumably only used internally].
+    "ntdll.dll",
+    NULL
+  };
   static void *result[ARRAY_SIZE(InterestingDLLs)] = { 0 };
   if (!result[0]) {
     for (size_t i = 0, j = 0; InterestingDLLs[i]; ++i) {

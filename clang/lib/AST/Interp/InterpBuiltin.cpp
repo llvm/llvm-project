@@ -34,6 +34,19 @@ PrimType getIntPrimType(const InterpState &S) {
   llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
+PrimType getLongPrimType(const InterpState &S) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned LongWidth = TI.getLongWidth();
+
+  if (LongWidth == 64)
+    return PT_Sint64;
+  else if (LongWidth == 32)
+    return PT_Sint32;
+  else if (LongWidth == 16)
+    return PT_Sint16;
+  llvm_unreachable("long isn't 16, 32 or 64 bit?");
+}
+
 /// Peek an integer value from the stack into an APSInt.
 static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   if (Offset == 0)
@@ -42,8 +55,8 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   APSInt R;
   INT_TYPE_SWITCH(T, {
     T Val = Stk.peek<T>(Offset);
-    R = APSInt(
-        APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+    R = APSInt(APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()),
+               !T::isSigned());
   });
 
   return R;
@@ -110,6 +123,19 @@ static void pushAPSInt(InterpState &S, const APSInt &Val) {
   }
 }
 
+/// Pushes \p Val to the stack, as a target-dependent 'long'.
+static void pushLong(InterpState &S, int64_t Val) {
+  PrimType LongType = getLongPrimType(S);
+  if (LongType == PT_Sint64)
+    S.Stk.push<Integral<64, true>>(Integral<64, true>::from(Val));
+  else if (LongType == PT_Sint32)
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Val));
+  else if (LongType == PT_Sint16)
+    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Val));
+  else
+    llvm_unreachable("Long isn't 16, 32 or 64 bit?");
+}
+
 static void pushSizeT(InterpState &S, uint64_t Val) {
   const TargetInfo &TI = S.getCtx().getTargetInfo();
   unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
@@ -129,6 +155,11 @@ static void pushSizeT(InterpState &S, uint64_t Val) {
   }
 }
 
+static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
+  INT_TYPE_SWITCH_NO_BOOL(
+      ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+}
+
 static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
                          std::optional<PrimType> &T) {
   if (!T)
@@ -138,6 +169,8 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
   case X:                                                                      \
     return Ret<X>(S, OpPC, Result);
   switch (*T) {
+    RET_CASE(PT_Ptr);
+    RET_CASE(PT_FnPtr);
     RET_CASE(PT_Float);
     RET_CASE(PT_Bool);
     RET_CASE(PT_Sint8);
@@ -533,21 +566,297 @@ static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// __builtin_expect(long, long)
+// __builtin_expect_with_probability(long, long, double)
+static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  // The return value is simply the value of the first parameter.
+  // We ignore the probability.
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3);
+
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  unsigned Offset = align(primSize(getLongPrimType(S))) * 2;
+  if (NumArgs == 3)
+    Offset += align(primSize(PT_Float));
+
+  APSInt Val = peekToAPSInt(S.Stk, ArgT, Offset);
+  pushLong(S, Val.getSExtValue());
+  return true;
+}
+
+/// rotateleft(value, amount)
+static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call,
+                                   bool Right) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+
+  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
+  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+
+  APSInt Result;
+  if (Right)
+    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+  else // Left.
+    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+
+  pushAPSInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Value = peekToAPSInt(S.Stk, ArgT);
+
+  uint64_t N = Value.countr_zero();
+  pushInt(S, N == Value.getBitWidth() ? 0 : N + 1);
+  return true;
+}
+
+static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType PtrT =
+      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
+
+  if (PtrT == PT_FnPtr) {
+    const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
+    S.Stk.push<FunctionPointer>(Arg);
+  } else if (PtrT == PT_Ptr) {
+    const Pointer &Arg = S.Stk.peek<Pointer>();
+    S.Stk.push<Pointer>(Arg);
+  } else {
+    assert(false && "Unsupported pointer type passed to __builtin_addressof()");
+  }
+  return true;
+}
+
+static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame, const Function *Func,
+                                 const CallExpr *Call) {
+
+  PrimType ArgT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
+
+  TYPE_SWITCH(ArgT, const T &Arg = S.Stk.peek<T>(); S.Stk.push<T>(Arg););
+
+  return Func->getDecl()->isConstexpr();
+}
+
+static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
+                                                 const InterpFrame *Frame,
+                                                 const Function *Func,
+                                                 const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Arg = peekToAPSInt(S.Stk, ArgT);
+
+  int Result =
+      S.getCtx().getTargetInfo().getEHDataRegisterNumber(Arg.getZExtValue());
+  pushInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_launder(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame,
+                                    const Function *Func,
+                                    const CallExpr *Call) {
+  const Pointer &Arg = S.Stk.peek<Pointer>();
+  S.Stk.push<Pointer>(Arg);
+  return true;
+}
+
+// Two integral values followed by a pointer (lhs, rhs, resultOut)
+static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  Pointer &ResultPtr = S.Stk.peek<Pointer>();
+  if (ResultPtr.isDummy())
+    return false;
+
+  unsigned BuiltinOp = Func->getBuiltinID();
+  PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt RHS = peekToAPSInt(S.Stk, RHST,
+                            align(primSize(PT_Ptr)) + align(primSize(RHST)));
+  APSInt LHS = peekToAPSInt(S.Stk, LHST,
+                            align(primSize(PT_Ptr)) + align(primSize(RHST)) +
+                                align(primSize(LHST)));
+  QualType ResultType = Call->getArg(2)->getType()->getPointeeType();
+  PrimType ResultT = *S.getContext().classify(ResultType);
+  bool Overflow;
+
+  APSInt Result;
+  if (BuiltinOp == Builtin::BI__builtin_add_overflow ||
+      BuiltinOp == Builtin::BI__builtin_sub_overflow ||
+      BuiltinOp == Builtin::BI__builtin_mul_overflow) {
+    bool IsSigned = LHS.isSigned() || RHS.isSigned() ||
+                    ResultType->isSignedIntegerOrEnumerationType();
+    bool AllSigned = LHS.isSigned() && RHS.isSigned() &&
+                     ResultType->isSignedIntegerOrEnumerationType();
+    uint64_t LHSSize = LHS.getBitWidth();
+    uint64_t RHSSize = RHS.getBitWidth();
+    uint64_t ResultSize = S.getCtx().getTypeSize(ResultType);
+    uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
+
+    // Add an additional bit if the signedness isn't uniformly agreed to. We
+    // could do this ONLY if there is a signed and an unsigned that both have
+    // MaxBits, but the code to check that is pretty nasty.  The issue will be
+    // caught in the shrink-to-result later anyway.
+    if (IsSigned && !AllSigned)
+      ++MaxBits;
+
+    LHS = APSInt(LHS.extOrTrunc(MaxBits), !IsSigned);
+    RHS = APSInt(RHS.extOrTrunc(MaxBits), !IsSigned);
+    Result = APSInt(MaxBits, !IsSigned);
+  }
+
+  // Find largest int.
+  switch (BuiltinOp) {
+  default:
+    llvm_unreachable("Invalid value for BuiltinOp");
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+    Result = LHS.isSigned() ? LHS.sadd_ov(RHS, Overflow)
+                            : LHS.uadd_ov(RHS, Overflow);
+    break;
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+    Result = LHS.isSigned() ? LHS.ssub_ov(RHS, Overflow)
+                            : LHS.usub_ov(RHS, Overflow);
+    break;
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+    Result = LHS.isSigned() ? LHS.smul_ov(RHS, Overflow)
+                            : LHS.umul_ov(RHS, Overflow);
+    break;
+  }
+
+  // In the case where multiple sizes are allowed, truncate and see if
+  // the values are the same.
+  if (BuiltinOp == Builtin::BI__builtin_add_overflow ||
+      BuiltinOp == Builtin::BI__builtin_sub_overflow ||
+      BuiltinOp == Builtin::BI__builtin_mul_overflow) {
+    // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
+    // since it will give us the behavior of a TruncOrSelf in the case where
+    // its parameter <= its size.  We previously set Result to be at least the
+    // type-size of the result, so getTypeSize(ResultType) <= Resu
+    APSInt Temp = Result.extOrTrunc(S.getCtx().getTypeSize(ResultType));
+    Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
+
+    if (!APSInt::isSameValue(Temp, Result))
+      Overflow = true;
+    Result = Temp;
+  }
+
+  // Write Result to ResultPtr and put Overflow on the stacl.
+  assignInteger(ResultPtr, ResultT, Result);
+  ResultPtr.initialize();
+  assert(Func->getDecl()->getReturnType()->isBooleanType());
+  S.Stk.push<Boolean>(Overflow);
+  return true;
+}
+
+/// Three integral values followed by a pointer (lhs, rhs, carry, carryOut).
+static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame,
+                                    const Function *Func,
+                                    const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
+  PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType CarryT = *S.getContext().classify(Call->getArg(2)->getType());
+  APSInt RHS = peekToAPSInt(S.Stk, RHST,
+                            align(primSize(PT_Ptr)) + align(primSize(CarryT)) +
+                                align(primSize(RHST)));
+  APSInt LHS =
+      peekToAPSInt(S.Stk, LHST,
+                   align(primSize(PT_Ptr)) + align(primSize(RHST)) +
+                       align(primSize(CarryT)) + align(primSize(LHST)));
+  APSInt CarryIn = peekToAPSInt(
+      S.Stk, LHST, align(primSize(PT_Ptr)) + align(primSize(CarryT)));
+  APSInt CarryOut;
+
+  APSInt Result;
+  // Copy the number of bits and sign.
+  Result = LHS;
+  CarryOut = LHS;
+
+  bool FirstOverflowed = false;
+  bool SecondOverflowed = false;
+  switch (BuiltinOp) {
+  default:
+    llvm_unreachable("Invalid value for BuiltinOp");
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+    Result =
+        LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+    break;
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll:
+    Result =
+        LHS.usub_ov(RHS, FirstOverflowed).usub_ov(CarryIn, SecondOverflowed);
+    break;
+  }
+  // It is possible for both overflows to happen but CGBuiltin uses an OR so
+  // this is consistent.
+  CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
+
+  Pointer &CarryOutPtr = S.Stk.peek<Pointer>();
+  QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
+  PrimType CarryOutT = *S.getContext().classify(CarryOutType);
+  assignInteger(CarryOutPtr, CarryOutT, CarryOut);
+  CarryOutPtr.initialize();
+
+  assert(Call->getType() == Call->getArg(0)->getType());
+  pushAPSInt(S, Result);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
-  QualType ReturnType = Call->getCallReturnType(S.getCtx());
-  std::optional<PrimType> ReturnT = S.getContext().classify(ReturnType);
+  std::optional<PrimType> ReturnT = S.getContext().classify(Call);
+
   // If classify failed, we assume void.
-  assert(ReturnT || ReturnType->isVoidType());
+  assert(ReturnT || Call->getType()->isVoidType());
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
     break;
   case Builtin::BI__builtin_assume:
+  case Builtin::BI__assume:
     break;
   case Builtin::BI__builtin_strcmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame))
@@ -699,6 +1008,109 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_classify_type:
     if (!interp__builtin_classify_type(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability:
+    if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/false))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+    if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BIas_const:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+    if (!interp__builtin_move(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_eh_return_data_regno:
+    if (!interp__builtin_eh_return_data_regno(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_launder:
+    if (!interp__builtin_launder(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_add_overflow:
+  case Builtin::BI__builtin_sub_overflow:
+  case Builtin::BI__builtin_mul_overflow:
+  case Builtin::BI__builtin_sadd_overflow:
+  case Builtin::BI__builtin_uadd_overflow:
+  case Builtin::BI__builtin_uaddl_overflow:
+  case Builtin::BI__builtin_uaddll_overflow:
+  case Builtin::BI__builtin_usub_overflow:
+  case Builtin::BI__builtin_usubl_overflow:
+  case Builtin::BI__builtin_usubll_overflow:
+  case Builtin::BI__builtin_umul_overflow:
+  case Builtin::BI__builtin_umull_overflow:
+  case Builtin::BI__builtin_umulll_overflow:
+  case Builtin::BI__builtin_saddl_overflow:
+  case Builtin::BI__builtin_saddll_overflow:
+  case Builtin::BI__builtin_ssub_overflow:
+  case Builtin::BI__builtin_ssubl_overflow:
+  case Builtin::BI__builtin_ssubll_overflow:
+  case Builtin::BI__builtin_smul_overflow:
+  case Builtin::BI__builtin_smull_overflow:
+  case Builtin::BI__builtin_smulll_overflow:
+    if (!interp__builtin_overflowop(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll:
+    if (!interp__builtin_carryop(S, OpPC, Frame, F, Call))
       return false;
     break;
 

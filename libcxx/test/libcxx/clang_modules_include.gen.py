@@ -10,7 +10,7 @@
 # This is important notably because the LLDB data formatters use
 # libc++ headers with modules enabled.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])
@@ -38,6 +38,9 @@ for header in public_headers:
 
 // TODO: Investigate this failure
 // UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
+
+// TODO: Investigate this failure
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-PICOLIBC-FIXME
 
 {lit_header_restrictions.get(header, '')}
 

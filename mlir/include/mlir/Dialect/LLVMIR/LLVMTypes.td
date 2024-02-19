@@ -162,6 +162,8 @@ def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec"> {
     elements can be processed as one in SIMD context.
   }];
 
+  let typeName = "llvm.fixed_vec";
+
   let parameters = (ins "Type":$elementType, "unsigned":$numElements);
   let assemblyFormat = [{
     `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
@@ -191,6 +193,8 @@ def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec"> {
     unknown length that is known to be divisible by some constant. These
     elements can be processed as one in SIMD context.
   }];
+
+  let typeName = "llvm.scalable_vec";
 
   let parameters = (ins "Type":$elementType, "unsigned":$minNumElements);
   let assemblyFormat = [{

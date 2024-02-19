@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
+
 ;; Check that SelectionDAG downgrades dbg.assigns to dbg.values if assignment
 ;; tracking isn't enabled (e.g. if the module flag
 ;; "debug-info-assignment-tracking" is missing / false).

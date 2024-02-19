@@ -268,7 +268,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   StringRef FirstComponentName = Path[0].first->getName();
   if (!getSourceManager().isInSystemHeader(Path[0].second) &&
       (FirstComponentName == "std" ||
-       (FirstComponentName.startswith("std") &&
+       (FirstComponentName.starts_with("std") &&
         llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit))))
     Diag(Path[0].second, diag::warn_reserved_module_name) << Path[0].first;
 
@@ -529,7 +529,8 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (!Mod)
     return true;
 
-  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty()) {
+  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty() &&
+      !getLangOpts().ObjC) {
     Diag(ImportLoc, diag::err_module_import_non_interface_nor_parition)
         << ModuleName;
     return true;

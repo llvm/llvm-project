@@ -123,9 +123,6 @@ public:
 
   virtual bool instrEntryBBEnabled() const = 0;
 
-  /// Return true if we must provide debug info to create PGO profiles.
-  virtual bool useDebugInfoCorrelate() const { return false; }
-
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
 
@@ -377,12 +374,6 @@ public:
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
-
-  bool useDebugInfoCorrelate() const override {
-    return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
-  }
-
-  bool useCorrelate() const { return useDebugInfoCorrelate(); }
 
   bool hasSingleByteCoverage() const override {
     return (Version & VARIANT_MASK_BYTE_COVERAGE) != 0;
@@ -745,9 +736,9 @@ public:
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                           std::vector<uint64_t> &Counts);
 
-  /// Fill Bitmap Bytes with the profile data for the given function name.
-  Error getFunctionBitmapBytes(StringRef FuncName, uint64_t FuncHash,
-                               std::vector<uint8_t> &BitmapBytes);
+  /// Fill Bitmap with the profile data for the given function name.
+  Error getFunctionBitmap(StringRef FuncName, uint64_t FuncHash,
+                          BitVector &Bitmap);
 
   /// Return the maximum of all known function counts.
   /// \c UseCS indicates whether to use the context-sensitive count.

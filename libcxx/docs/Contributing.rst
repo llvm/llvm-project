@@ -67,9 +67,6 @@ avoid invoking a user-defined ``operator,``, make sure to cast the result to
 In general, try to follow the style of existing code. There are a few
 exceptions:
 
-- ``_VSTD::foo`` is no longer used in new code. Use ``std::foo`` instead.
-- ``_LIBCPP_INLINE_VISIBILITY`` is no longer used in new code. Use
-  ``_LIBCPP_HIDE_FROM_ABI`` instead.
 - Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
   by libc++ accept alias declarations in all standard modes.
 
@@ -165,6 +162,7 @@ sure you don't forget anything:
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
+- If needed, did you add `_LIBCPP_PUSH_MACROS` and `_LIBCPP_POP_MACROS` to the relevant headers?
 
 The review process
 ==================

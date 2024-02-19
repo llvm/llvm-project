@@ -316,4 +316,3 @@ define i64 @mul288(i64 %a) {
   %c = mul i64 %a, 288
   ret i64 %c
 }
-

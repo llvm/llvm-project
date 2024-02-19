@@ -12,12 +12,14 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-x1  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-e1 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1 | FileCheck %s
-; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n2 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v1 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-512tvb | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5  | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1    | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1a   | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1b   | FileCheck %s
 
 declare <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %d, <16 x i8> %k)
 declare <16 x i8> @llvm.aarch64.crypto.aesmc(<16 x i8> %d)

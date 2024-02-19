@@ -30,7 +30,7 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-A55-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    [[ADD21:%.*]] = add nsw i32 [[MUL16]], [[TMP3]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21]], ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or i64 [[INDVARS_IV]], 1
+; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-A55-NEXT:    [[ARRAYIDX10_1:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-A55-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX10_1]], align 2
 ; CHECK-A55-NEXT:    [[CONV_1:%.*]] = sext i16 [[TMP4]] to i32
@@ -42,7 +42,7 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-A55-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX20_1]], align 4
 ; CHECK-A55-NEXT:    [[ADD21_1:%.*]] = add nsw i32 [[MUL16_1]], [[TMP6]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_1]], ptr [[ARRAYIDX20_1]], align 4
-; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or i64 [[INDVARS_IV]], 2
+; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-A55-NEXT:    [[ARRAYIDX10_2:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[INDVARS_IV_NEXT_1]]
 ; CHECK-A55-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX10_2]], align 2
 ; CHECK-A55-NEXT:    [[CONV_2:%.*]] = sext i16 [[TMP7]] to i32
@@ -54,7 +54,7 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-A55-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX20_2]], align 4
 ; CHECK-A55-NEXT:    [[ADD21_2:%.*]] = add nsw i32 [[MUL16_2]], [[TMP9]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_2]], ptr [[ARRAYIDX20_2]], align 4
-; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or i64 [[INDVARS_IV]], 3
+; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
 ; CHECK-A55-NEXT:    [[ARRAYIDX10_3:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[INDVARS_IV_NEXT_2]]
 ; CHECK-A55-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX10_3]], align 2
 ; CHECK-A55-NEXT:    [[CONV_3:%.*]] = sext i16 [[TMP10]] to i32

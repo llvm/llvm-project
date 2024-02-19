@@ -212,7 +212,7 @@ static std::optional<TypeSize> getPointerSize(const Value *V,
   Opts.NullIsUnknownSize = NullPointerIsDefined(F);
 
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::Fixed(Size);
+    return TypeSize::getFixed(Size);
   return std::nullopt;
 }
 
@@ -488,27 +488,27 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   uint64_t DeadSliceSizeInBits = OldSizeInBits - NewSizeInBits;
   uint64_t DeadSliceOffsetInBits =
       OldOffsetInBits + (IsOverwriteEnd ? NewSizeInBits : 0);
-  auto SetDeadFragExpr = [](DbgAssignIntrinsic *DAI,
+  auto SetDeadFragExpr = [](auto *Assign,
                             DIExpression::FragmentInfo DeadFragment) {
     // createFragmentExpression expects an offset relative to the existing
     // fragment offset if there is one.
     uint64_t RelativeOffset = DeadFragment.OffsetInBits -
-                              DAI->getExpression()
+                              Assign->getExpression()
                                   ->getFragmentInfo()
                                   .value_or(DIExpression::FragmentInfo(0, 0))
                                   .OffsetInBits;
     if (auto NewExpr = DIExpression::createFragmentExpression(
-            DAI->getExpression(), RelativeOffset, DeadFragment.SizeInBits)) {
-      DAI->setExpression(*NewExpr);
+            Assign->getExpression(), RelativeOffset, DeadFragment.SizeInBits)) {
+      Assign->setExpression(*NewExpr);
       return;
     }
     // Failed to create a fragment expression for this so discard the value,
     // making this a kill location.
     auto *Expr = *DIExpression::createFragmentExpression(
-        DIExpression::get(DAI->getContext(), std::nullopt),
+        DIExpression::get(Assign->getContext(), std::nullopt),
         DeadFragment.OffsetInBits, DeadFragment.SizeInBits);
-    DAI->setExpression(Expr);
-    DAI->setKillLocation();
+    Assign->setExpression(Expr);
+    Assign->setKillLocation();
   };
 
   // A DIAssignID to use so that the inserted dbg.assign intrinsics do not
@@ -526,32 +526,35 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   // returned by getAssignmentMarkers so save a copy of the markers to iterate
   // over.
   auto LinkedRange = at::getAssignmentMarkers(Inst);
+  SmallVector<DPValue *> LinkedDPVAssigns = at::getDPVAssignmentMarkers(Inst);
   SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
                                            LinkedRange.end());
-  for (auto *DAI : Linked) {
+  auto InsertAssignForOverlap = [&](auto *Assign) {
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
-                                        DeadSliceSizeInBits, DAI,
+                                        DeadSliceSizeInBits, Assign,
                                         NewFragment) ||
         !NewFragment) {
       // We couldn't calculate the intersecting fragment for some reason. Be
       // cautious and unlink the whole assignment from the store.
-      DAI->setKillAddress();
-      DAI->setAssignId(GetDeadLink());
-      continue;
+      Assign->setKillAddress();
+      Assign->setAssignId(GetDeadLink());
+      return;
     }
     // No intersect.
     if (NewFragment->SizeInBits == 0)
-      continue;
+      return;
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
-    auto *NewAssign = cast<DbgAssignIntrinsic>(DAI->clone());
-    NewAssign->insertAfter(DAI);
+    auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
+    NewAssign->insertAfter(Assign);
     NewAssign->setAssignId(GetDeadLink());
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
     NewAssign->setKillAddress();
-  }
+  };
+  for_each(Linked, InsertAssignForOverlap);
+  for_each(LinkedDPVAssigns, InsertAssignForOverlap);
 }
 
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
@@ -1901,6 +1904,57 @@ struct DSEState {
     return true;
   }
 
+  // Check if there is a dominating condition, that implies that the value
+  // being stored in a ptr is already present in the ptr.
+  bool dominatingConditionImpliesValue(MemoryDef *Def) {
+    auto *StoreI = cast<StoreInst>(Def->getMemoryInst());
+    BasicBlock *StoreBB = StoreI->getParent();
+    Value *StorePtr = StoreI->getPointerOperand();
+    Value *StoreVal = StoreI->getValueOperand();
+
+    DomTreeNode *IDom = DT.getNode(StoreBB)->getIDom();
+    if (!IDom)
+      return false;
+
+    auto *BI = dyn_cast<BranchInst>(IDom->getBlock()->getTerminator());
+    if (!BI || !BI->isConditional())
+      return false;
+
+    // In case both blocks are the same, it is not possible to determine
+    // if optimization is possible. (We would not want to optimize a store
+    // in the FalseBB if condition is true and vice versa.)
+    if (BI->getSuccessor(0) == BI->getSuccessor(1))
+      return false;
+
+    Instruction *ICmpL;
+    ICmpInst::Predicate Pred;
+    if (!match(BI->getCondition(),
+               m_c_ICmp(Pred,
+                        m_CombineAnd(m_Load(m_Specific(StorePtr)),
+                                     m_Instruction(ICmpL)),
+                        m_Specific(StoreVal))) ||
+        !ICmpInst::isEquality(Pred))
+      return false;
+
+    // In case the else blocks also branches to the if block or the other way
+    // around it is not possible to determine if the optimization is possible.
+    if (Pred == ICmpInst::ICMP_EQ &&
+        !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(0)),
+                      StoreBB))
+      return false;
+
+    if (Pred == ICmpInst::ICMP_NE &&
+        !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(1)),
+                      StoreBB))
+      return false;
+
+    MemoryAccess *LoadAcc = MSSA.getMemoryAccess(ICmpL);
+    MemoryAccess *ClobAcc =
+        MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+
+    return MSSA.dominates(ClobAcc, LoadAcc);
+  }
+
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
   bool storeIsNoop(MemoryDef *Def, const Value *DefUO) {
@@ -1930,6 +1984,9 @@ struct DSEState {
 
     if (!Store)
       return false;
+
+    if (dominatingConditionImpliesValue(Def))
+      return true;
 
     if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
       if (LoadI->getPointerOperand() == Store->getOperand(1)) {
@@ -2093,7 +2150,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
-    SetVector<MemoryAccess *> ToCheck;
+    SmallSetVector<MemoryAccess *, 8> ToCheck;
     ToCheck.insert(KillingDef->getDefiningAccess());
 
     bool Shortend = false;
@@ -2170,7 +2227,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
           auto *DeadSI = dyn_cast<StoreInst>(DeadI);
           auto *KillingSI = dyn_cast<StoreInst>(KillingI);
           // We are re-using tryToMergePartialOverlappingStores, which requires
-          // DeadSI to dominate DeadSI.
+          // DeadSI to dominate KillingSI.
           // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
           if (DeadSI && KillingSI && DT.dominates(DeadSI, KillingSI)) {
             if (Constant *Merged = tryToMergePartialOverlappingStores(

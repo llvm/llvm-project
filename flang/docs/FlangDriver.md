@@ -163,6 +163,71 @@ forward compiler options to the frontend driver, `flang-new -fc1`.
 You can read more on the design of `clangDriver` in Clang's [Driver Design &
 Internals](https://clang.llvm.org/docs/DriverInternals.html).
 
+## Linker Driver
+When used as a linker, Flang's frontend driver assembles the command line for an
+external linker command (e.g., LLVM's `lld`) and invokes it to create the final
+executable by linking static and shared libraries together with all the
+translation units supplied as object files.
+
+By default, the Flang linker driver adds several libraries to the linker
+invocation to make sure that all entrypoints for program start
+(Fortran's program unit) and runtime routines can be resolved by the linker.
+
+An abridged example (only showing the Fortran specific linker flags, omission
+indicated by `[...]`) for such a linker invocation on a Linux system would look
+like this:
+
+```
+$ flang -v -o example example.o
+"/usr/bin/ld" [...] example.o [...] "--whole-archive" "-lFortran_main"
+"--no-whole-archive" "-lFortranRuntime" "-lFortranDecimal" [...]
+```
+
+The automatically added libraries are:
+
+* `Fortran_main`: Provides the main entry point `main` that then invokes
+  `_QQmain` with the Fortran program unit.  This library has a dependency to
+  the `FortranRuntime` library.
+* `FortranRuntime`: Provides most of the Flang runtime library.
+* `FortranDecimal`: Provides operations for decimal numbers.
+
+The default is that, when using Flang as the linker, one of the Fortran
+translation units provides the program unit and therefore it is assumed that
+Fortran is the main code part (calling into C/C++ routines via `BIND (C)`
+interfaces).  When composing the linker commandline, Flang uses
+`--whole-archive` and `--no-whole-archive` (Windows: `/WHOLEARCHIVE:`,
+Darwin & AIX: *not implemented yet*) to make sure that all for `Fortran_main`
+is processed by the linker.  This is done to issue a proper error message when
+multiple definitions of `main` occur.  This happens, for instance, when linking
+a code that has a Fortran program unit with a C/C++ code that also defines a
+`main` function.  A user may be required to explicitly provide the C++ runtime
+libraries at link time (e.g., via `-lstdc++` for STL)
+
+If the code is C/C++ based and invokes Fortran routines, one can either use Clang
+or Flang as the linker driver.  If Clang is used, it will automatically all
+required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
+In this case, one has to explicitly provide the Fortran runtime libraries
+`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link
+and use the `-fno-fortran-main` flag.  This flag removes
+`Fortran_main` from the linker stage and hence requires one of the C/C++
+translation units to provide a definition of the `main` function. In this case,
+it may be required to explicitly supply C++ runtime libraries as mentioned above.
+
+When creating shared or static libraries using Flang with `-shared` or `-static`
+flag, Fortran_main is automatically removed from the linker stage (i.e.,
+`-fno-fortran-main` is on by default).  It is assumed that when creating a
+static or shared library, the generated library does not need a `main`
+function, as a final link stage will occur that will provide the `Fortran_main`
+library when creating the final executable.
+
+On Darwin, the logical root where the system libraries are located (sysroot)
+must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`
+or by using the `-isysroot` flag when linking a binary. On other targets
+`-isysroot` doesn't change the linker command line (it only affects the header
+search path). While with Clang `-isysroot` also changes the sysroot for
+includes, with Flang (and Fortran in general) it only affects Darwin libraries'
+sysroot.
+
 ## Frontend Driver
 Flang's frontend driver is the main interface between compiler developers and
 the Flang frontend. The high-level design is similar to Clang's frontend
@@ -318,7 +383,7 @@ At this point you should be able to trigger that frontend action that you have
 just added using your new frontend option.
 
 
-# CMake Support
+## CMake Support
 As of [#7246](https://gitlab.kitware.com/cmake/cmake/-/merge_requests/7246)
 (and soon to be released CMake 3.24.0), `cmake` can detect `flang-new` as a
 supported Fortran compiler. You can configure your CMake projects to use
@@ -332,7 +397,7 @@ You should see the following in the output:
 ```
 where `<version>` corresponds to the LLVM Flang version.
 
-# Testing
+## Testing
 In LIT, we define two variables that you can use to invoke Flang's drivers:
 * `%flang` is expanded as `flang-new` (i.e. the compiler driver)
 * `%flang_fc1` is expanded as `flang-new -fc1` (i.e. the frontend driver)
@@ -351,7 +416,7 @@ test as only available on Unix-like systems (i.e. systems that contain a Unix
 shell). In practice this means that the corresponding test is skipped on
 Windows.
 
-# Frontend Driver Plugins
+## Frontend Driver Plugins
 Plugins are an extension to the frontend driver that make it possible to run
 extra user defined frontend actions, in the form of a specialization of a
 `PluginParseTreeAction`. These actions are run during compilation, after
@@ -364,7 +429,7 @@ plugins. The process for using plugins includes:
 Flang plugins are limited to `flang-new -fc1` and are currently only available /
 been tested on Linux.
 
-## Creating a Plugin
+### Creating a Plugin
 There are three parts required for plugins to work:
 1. [`PluginParseTreeAction` subclass](#a-pluginparsetreeaction-subclass)
 1. [Implementation of `ExecuteAction`](#implementation-of-executeaction)
@@ -374,7 +439,7 @@ There is an example plugin located in `flang/example/PrintFlangFunctionNames`
 that demonstrates these points by using the `ParseTree` API to print out
 function and subroutine names declared in the input file.
 
-### A `PluginParseTreeAction` Subclass
+#### A `PluginParseTreeAction` Subclass
 This subclass will wrap everything together and represent the `FrontendAction`
 corresponding to your plugin. It will need to inherit from
 `PluginParseTreeAction` (defined in `flang/include/flang/FrontendActions.h`), in
@@ -384,7 +449,7 @@ can be registered, e.g.
 class PrintFunctionNamesAction : public PluginParseTreeAction
 ```
 
-### Implementation of `ExecuteAction`
+#### Implementation of `ExecuteAction`
 Like in other frontend actions, the driver looks for an `ExecuteAction` function
 to run, so in order for your plugin to do something, you will need to implement
 the `ExecuteAction` method in your plugin class. This method will contain the
@@ -429,7 +494,7 @@ defined in `flang/include/flang/Parser/parse-tree.h`. In the example, there is a
 the `FunctionStmt` struct and prints it. This function will be run after every
 `FunctionStmt` node is visited in the parse tree.
 
-### Plugin Registration
+#### Plugin Registration
 A plugin registry is used to store names and descriptions of a collection of
 plugins. The Flang plugin registry, defined in
 `flang/include/flang/Frontend/FrontendPluginRegistry.h`, is an alias of
@@ -444,7 +509,7 @@ static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
     "print-fns", "Print Function names");
 ```
 
-## Loading and Running a Plugin
+### Loading and Running a Plugin
 In order to use plugins, there are 2 command line options made available to the
 frontend driver, `flang-new -fc1`:
 * [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
@@ -460,19 +525,19 @@ Both these options are parsed in `flang/lib/Frontend/CompilerInvocation.cpp` and
 fulfil their actions in
 `flang/lib/FrontendTool/ExecuteCompilerInvocation.cpp`
 
-### The `-load <dsopath>` option
+#### The `-load <dsopath>` option
 This loads the plugin shared object library, with the path given at `<dsopath>`,
 using `LoadLibraryPermantly` from LLVM's `llvm::sys::DynamicLibrary`, which
 itself uses `dlopen`. During this stage, the plugin is registered with the
 registration line from the plugin, storing the name and description.
 
-### The `-plugin <name>` option
+#### The `-plugin <name>` option
 This sets `frontend::ActionKind programAction` in `FrontendOptions` to
 `PluginAction`, through which it searches the plugin registry for the plugin
 name from `<name>`. If found, it returns the instantiated plugin, otherwise it
 reports an error diagnostic and returns `nullptr`.
 
-## Enabling In-Tree Plugins
+### Enabling In-Tree Plugins
 For in-tree plugins, there is the CMake flag `FLANG_PLUGIN_SUPPORT`, enabled by
 default, that controls the exporting of executable symbols from `flang-new`,
 which plugins need access to. Additionally, there is the CMake flag
@@ -482,7 +547,7 @@ example programs are built. This includes plugins that are in the
 `flang/examples/CMakeLists.txt`, for example, the `PrintFlangFunctionNames`
 plugin. It is also possible to develop plugins out-of-tree.
 
-## Limitations
+### Limitations
 Note that the traversal API presented here is under active development and
 might change in the future. We expect it to evolve as support for new
 language features are added. This document and the examples will be updated
@@ -499,7 +564,7 @@ to re-analyze expressions and modify scope or symbols. You can check
 [Semantics.md](Semantics.md) for more details on how `ParseTree` is edited
 e.g. during the semantic checks.
 
-# LLVM Pass Plugins
+## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
 passes. The `-fpass-plugin` option enables these passes to be passed to the

@@ -394,6 +394,8 @@ declare preserve_mostcc void @f.preserve_mostcc()
 ; CHECK: declare preserve_mostcc void @f.preserve_mostcc()
 declare preserve_allcc void @f.preserve_allcc()
 ; CHECK: declare preserve_allcc void @f.preserve_allcc()
+declare preserve_nonecc void @f.preserve_nonecc()
+; CHECK: declare preserve_nonecc void @f.preserve_nonecc()
 declare swifttailcc void @f.swifttailcc()
 ; CHECK: declare swifttailcc void @f.swifttailcc()
 declare cc64 void @f.cc64()
@@ -1358,6 +1360,10 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   ; CHECK: or i8 %op1, %op2
   xor i8 %op1, %op2
   ; CHECK: xor i8 %op1, %op2
+
+  ; disjoint
+  or disjoint i8 %op1, %op2
+  ; CHECK: or disjoint i8 %op1, %op2
 
   ret void
 }

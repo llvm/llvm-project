@@ -10,10 +10,10 @@
 //  CHECK-SAME:  %[[TMP_arg0:.*]]: tensor<2x4xf64, #sparse>
 //  CHECK-SAME:  %[[TMP_arg1:.*]]: tensor<3x4xf64, #sparse>
 //  CHECK-SAME:  %[[TMP_arg2:.*]]: tensor<4x4xf64, #sparse>
-//       CHECK:  %[[TMP_c0:.*]] = arith.constant 0 : index
-//       CHECK:  %[[TMP_c1:.*]] = arith.constant 1 : index
-//       CHECK:  %[[TMP_c5:.*]] = arith.constant 5 : index
-//       CHECK:  %[[TMP_c2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:  %[[TMP_c0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:  %[[TMP_c1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:  %[[TMP_c5:.*]] = arith.constant 5 : index
+//   CHECK-DAG:  %[[TMP_c2:.*]] = arith.constant 2 : index
 //       CHECK:  %[[TMP_0:.*]] = bufferization.alloc_tensor() : tensor<9x4xf64, #sparse>
 //       CHECK:  %[[TMP_1:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse>
 //       CHECK:  %[[TMP_2:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 0 : index} : tensor<2x4xf64, #sparse>

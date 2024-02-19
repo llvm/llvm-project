@@ -26,7 +26,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerTestOneInput(const uint8_t *data,
     return -1;
   llvm::StringRef str(reinterpret_cast<const char *>(data), size - 1);
   // Skip if bytecode.
-  if (str.startswith("ML\xefR"))
+  if (str.starts_with("ML\xefR"))
     return -1;
 
   // Create a null-terminated memory buffer from the input.

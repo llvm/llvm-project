@@ -58,6 +58,9 @@ public:
   bool isValue() const { return isFortranValue(*this); }
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
+  bool isProcedurePointer() const {
+    return fir::isBoxProcAddressType(getType());
+  }
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
@@ -67,6 +70,9 @@ public:
 
   /// Is this an array or an assumed ranked entity?
   bool isArray() const { return getRank() != 0; }
+
+  /// Is this an assumed ranked entity?
+  bool isAssumedRank() const { return getRank() == -1; }
 
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
@@ -227,20 +233,20 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                          fir::FortranVariableOpInterface fortranVariable);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
-fir::FortranVariableOpInterface genDeclare(mlir::Location loc,
-                                           fir::FirOpBuilder &builder,
-                                           const fir::ExtendedValue &exv,
-                                           llvm::StringRef name,
-                                           fir::FortranVariableFlagsAttr flags);
+fir::FortranVariableOpInterface
+genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+           const fir::ExtendedValue &exv, llvm::StringRef name,
+           fir::FortranVariableFlagsAttr flags,
+           fir::CUDADataAttributeAttr cudaAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
 /// properly typed when placed in memory.
-hlfir::AssociateOp genAssociateExpr(mlir::Location loc,
-                                    fir::FirOpBuilder &builder,
-                                    hlfir::Entity value,
-                                    mlir::Type variableType,
-                                    llvm::StringRef name);
+hlfir::AssociateOp
+genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity value, mlir::Type variableType,
+                 llvm::StringRef name,
+                 std::optional<mlir::NamedAttribute> attr = std::nullopt);
 
 /// Get the raw address of a variable (simple fir.ref/fir.ptr, or fir.heap
 /// value). The returned value should be used with care, it does not contain any
@@ -401,15 +407,15 @@ mlir::Value inlineElementalOp(
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
-               const hlfir::Entity &entity);
+               hlfir::Entity entity);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
-                 const hlfir::Entity &entity, mlir::Type targetType);
+                 hlfir::Entity entity, mlir::Type targetType);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             const hlfir::Entity &entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,

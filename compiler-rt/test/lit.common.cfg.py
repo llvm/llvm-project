@@ -454,6 +454,9 @@ if not getattr(config, "sanitizer_uses_static_unwind", False):
 if config.has_lld:
     config.available_features.add("lld-available")
 
+if config.aarch64_sme:
+    config.available_features.add("aarch64-sme-available")
+
 if config.use_lld:
     config.available_features.add("lld")
 
@@ -629,7 +632,7 @@ if config.host_os == "Linux":
 
         ver = LooseVersion(ver_string)
         any_glibc = False
-        for required in ["2.19", "2.27", "2.30", "2.34", "2.37"]:
+        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37"]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True

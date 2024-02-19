@@ -84,7 +84,7 @@ TEST(LowLevelTypeTest, Vector) {
       if (!EC.isScalable())
         EXPECT_EQ(S * EC.getFixedValue(), VTy.getSizeInBits());
       else
-        EXPECT_EQ(TypeSize::Scalable(S * EC.getKnownMinValue()),
+        EXPECT_EQ(TypeSize::getScalable(S * EC.getKnownMinValue()),
                   VTy.getSizeInBits());
 
       // Test equality operators.
@@ -259,6 +259,7 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test kind.
       ASSERT_TRUE(Ty.isValid());
       ASSERT_TRUE(Ty.isPointer());
+      ASSERT_TRUE(Ty.isPointerOrPointerVector());
 
       ASSERT_FALSE(Ty.isScalar());
       ASSERT_FALSE(Ty.isVector());
@@ -266,6 +267,8 @@ TEST(LowLevelTypeTest, Pointer) {
       ASSERT_TRUE(VTy.isValid());
       ASSERT_TRUE(VTy.isVector());
       ASSERT_TRUE(VTy.getElementType().isPointer());
+      ASSERT_TRUE(VTy.isPointerVector());
+      ASSERT_TRUE(VTy.isPointerOrPointerVector());
 
       EXPECT_EQ(Ty, VTy.getElementType());
       EXPECT_EQ(Ty.getSizeInBits(), VTy.getScalarSizeInBits());
@@ -382,8 +385,8 @@ static_assert(CEV2P1.isVector());
 static_assert(CEV2P1.getElementCount() == ElementCount::getFixed(2));
 static_assert(CEV2P1.getElementCount() != ElementCount::getFixed(1));
 static_assert(CEV2S32.getElementCount() == ElementCount::getFixed(2));
-static_assert(CEV2S32.getSizeInBits() == TypeSize::Fixed(64));
-static_assert(CEV2P1.getSizeInBits() == TypeSize::Fixed(128));
+static_assert(CEV2S32.getSizeInBits() == TypeSize::getFixed(64));
+static_assert(CEV2P1.getSizeInBits() == TypeSize::getFixed(128));
 static_assert(CEV2P1.getScalarType() == LLT::pointer(1, 64));
 static_assert(CES32.getScalarType() == CES32);
 static_assert(CEV2S32.getScalarType() == CES32);

@@ -1535,7 +1535,7 @@ std::string ObjFile::sourceFile() const {
   StringRef sep = sys::path::get_separator();
   // We don't use `path::append` here because we want an empty `dir` to result
   // in an absolute path. `append` would give us a relative path for that case.
-  if (!dir.endswith(sep))
+  if (!dir.ends_with(sep))
     dir += sep;
   return (dir + unitName).str();
 }
@@ -1904,10 +1904,10 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       continue;
 
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:
-    case SymbolKind::ObjectiveCClass:
-    case SymbolKind::ObjectiveCClassEHType:
-    case SymbolKind::ObjectiveCInstanceVariable:
+    case EncodeKind::GlobalSymbol:
+    case EncodeKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClassEHType:
+    case EncodeKind::ObjectiveCInstanceVariable:
       normalSymbols.push_back(symbol);
     }
   }
@@ -1915,19 +1915,19 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   // TODO(compnerd) filter out symbols based on the target platform
   for (const auto *symbol : normalSymbols) {
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:
+    case EncodeKind::GlobalSymbol:
       addSymbol(*symbol, symbol->getName());
       break;
-    case SymbolKind::ObjectiveCClass:
+    case EncodeKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
       addSymbol(*symbol, objc::klass + symbol->getName());
       addSymbol(*symbol, objc::metaclass + symbol->getName());
       break;
-    case SymbolKind::ObjectiveCClassEHType:
+    case EncodeKind::ObjectiveCClassEHType:
       addSymbol(*symbol, objc::ehtype + symbol->getName());
       break;
-    case SymbolKind::ObjectiveCInstanceVariable:
+    case EncodeKind::ObjectiveCInstanceVariable:
       addSymbol(*symbol, objc::ivar + symbol->getName());
       break;
     }

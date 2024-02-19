@@ -1130,10 +1130,14 @@ private:
         AllocatedPagesCount - Recorder.getReleasedPagesCount();
     const uptr InUseBytes = InUsePages * PageSize;
 
+    uptr Integral;
+    uptr Fractional;
+    computePercentage(BlockSize * InUseBlocks, InUsePages * PageSize, &Integral,
+                      &Fractional);
     Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
-                "pages: %6zu/%6zu inuse bytes: %6zuK\n",
+                "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",
                 ClassId, BlockSize, InUseBlocks, TotalBlocks, InUsePages,
-                AllocatedPagesCount, InUseBytes >> 10);
+                AllocatedPagesCount, InUseBytes >> 10, Integral, Fractional);
   }
 
   NOINLINE uptr releaseToOSMaybe(RegionInfo *Region, uptr ClassId,

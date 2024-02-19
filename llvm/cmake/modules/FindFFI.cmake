@@ -15,6 +15,7 @@
 # FFI_FOUND
 # FFI_INCLUDE_DIRS
 # FFI_LIBRARIES
+# FFI_STATIC_LIBRARIES
 # HAVE_FFI_CALL
 #
 # HAVE_FFI_H or HAVE_FFI_FFI_H is defined depending on the ffi.h include path.
@@ -34,7 +35,8 @@ else()
   endif()
 endif()
 
-find_library(FFI_LIBRARIES ffi PATHS ${FFI_LIBRARY_DIR})
+find_library(FFI_LIBRARIES NAMES ffi PATHS ${FFI_LIBRARY_DIR})
+find_library(FFI_STATIC_LIBRARIES NAMES libffi.a PATHS ${FFI_LIBRARY_DIR})
 
 if(FFI_LIBRARIES)
   include(CMakePushCheckState)
@@ -76,6 +78,7 @@ find_package_handle_standard_args(FFI
                                     ${required_includes}
                                     HAVE_FFI_CALL)
 mark_as_advanced(FFI_LIBRARIES
+                 FFI_STATIC_LIBRARIES
                  FFI_INCLUDE_DIRS
                  HAVE_FFI_CALL
                  FFI_HEADER
@@ -83,11 +86,18 @@ mark_as_advanced(FFI_LIBRARIES
                  HAVE_FFI_FFI_H)
 
 if(FFI_FOUND)
-  if(NOT TARGET FFI::ffi)
+  if(NOT TARGET FFI::ffi AND FFI_LIBRARIES)
     add_library(FFI::ffi UNKNOWN IMPORTED)
     set_target_properties(FFI::ffi PROPERTIES IMPORTED_LOCATION "${FFI_LIBRARIES}")
     if(FFI_INCLUDE_DIRS)
       set_target_properties(FFI::ffi PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFI_INCLUDE_DIRS}")
+    endif()
+  endif()
+  if(NOT TARGET FFI::ffi_static AND FFI_STATIC_LIBRARIES)
+    add_library(FFI::ffi_static UNKNOWN IMPORTED)
+    set_target_properties(FFI::ffi_static PROPERTIES IMPORTED_LOCATION "${FFI_STATIC_LIBRARIES}")
+    if(FFI_INCLUDE_DIRS)
+      set_target_properties(FFI::ffi_static PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFI_INCLUDE_DIRS}")
     endif()
   endif()
 endif()

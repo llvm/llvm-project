@@ -138,7 +138,7 @@ bool InputStream::read_line(std::ofstream *log, std::string &line) {
     if (!read_full(log, 1, line))
       return false;
 
-    if (llvm::StringRef(line).endswith("\r\n"))
+    if (llvm::StringRef(line).ends_with("\r\n"))
       break;
   }
   line.erase(line.size() - 2);

@@ -42,9 +42,9 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[PREDS]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer

@@ -3,10 +3,12 @@ static_library("Frontend") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/include/clang/Config",
+    "//clang/lib/APINotes",
     "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/Driver",
     "//clang/lib/Edit",
+    "//clang/lib/InstallAPI",
     "//clang/lib/Lex",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
@@ -17,6 +19,7 @@ static_library("Frontend") {
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
+    "//llvm/lib/TextAPI",
   ]
   sources = [
     "ASTConsumers.cpp",
@@ -37,6 +40,7 @@ static_library("Frontend") {
     "InitPreprocessor.cpp",
     "InterfaceStubFunctionsConsumer.cpp",
     "LayoutOverrideSource.cpp",
+    "InstallAPIConsumer.cpp",
     "LogDiagnosticPrinter.cpp",
     "ModuleDependencyCollector.cpp",
     "MultiplexConsumer.cpp",

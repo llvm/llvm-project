@@ -13,7 +13,7 @@ enum gcc_type_class {
   record_type_class, union_type_class,
   array_type_class, string_type_class,
   lang_type_class, opaque_type_class,
-  bitint_type_class
+  bitint_type_class, vector_type_class
 };
 
 class cl {
@@ -62,8 +62,8 @@ void foo() {
   int a14[__builtin_classify_type(arr) == pointer_type_class ? 1 : -1];
   int a15[__builtin_classify_type("abc") == pointer_type_class ? 1 : -1];
   int a16[__builtin_classify_type(block) == no_type_class ? 1 : -1];
-  int a17[__builtin_classify_type(vec) == no_type_class ? 1 : -1];
-  int a18[__builtin_classify_type(evec) == no_type_class ? 1 : -1];
+  int a17[__builtin_classify_type(vec) == vector_type_class ? 1 : -1];
+  int a18[__builtin_classify_type(evec) == vector_type_class ? 1 : -1];
   int a19[__builtin_classify_type(atomic_i) == integer_type_class ? 1 : -1];
   int a20[__builtin_classify_type(atomic_d) == real_type_class ? 1 : -1];
   int a21[__builtin_classify_type(complex_i) == complex_type_class ? 1 : -1];

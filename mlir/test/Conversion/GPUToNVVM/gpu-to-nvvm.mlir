@@ -582,22 +582,22 @@ gpu.module @test_module_30 {
     %result = gpu.subgroup_reduce add %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
+  // CHECK-LABEL: @subgroup_reduce_minsi
+  gpu.func @subgroup_reduce_minsi(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync min {{.*}}
+    %result = gpu.subgroup_reduce minsi %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL:  @subgroup_reduce_maxsi
+  gpu.func @subgroup_reduce_maxsi(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync max {{.*}}
+    %result = gpu.subgroup_reduce maxsi %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
   // CHECK-LABEL: func @subgroup_reduce_and
   gpu.func @subgroup_reduce_and(%arg0 : i32) {
     // CHECK: nvvm.redux.sync and {{.*}}
     %result = gpu.subgroup_reduce and %arg0 uniform {} : (i32) -> (i32)
-    gpu.return
-  }
-  // CHECK-LABEL:  @subgroup_reduce_max
-  gpu.func @subgroup_reduce_max(%arg0 : i32) {
-    // CHECK: nvvm.redux.sync max {{.*}}
-    %result = gpu.subgroup_reduce max %arg0 uniform {} : (i32) -> (i32)
-    gpu.return
-  }
-  // CHECK-LABEL: @subgroup_reduce_min
-  gpu.func @subgroup_reduce_min(%arg0 : i32) {
-    // CHECK: nvvm.redux.sync min {{.*}}
-    %result = gpu.subgroup_reduce min %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_or
@@ -626,6 +626,28 @@ gpu.module @test_module_31 {
     func.return %result32, %result64 : f32, f64
   }
 }
+
+gpu.module @test_module_32 {
+  // CHECK: llvm.func @__nv_erff(f32) -> f32
+  // CHECK: llvm.func @__nv_erf(f64) -> f64
+  // CHECK-LABEL: func @gpu_erf
+  func.func @gpu_erf(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.erf %arg_f32 : f32
+    // CHECK: llvm.call @__nv_erff(%{{.*}}) : (f32) -> f32
+    %result64 = math.erf %arg_f64 : f64
+    // CHECK: llvm.call @__nv_erf(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @gpumodule {
+// CHECK-LABEL: func @kernel_with_block_size()
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>} 
+  gpu.func @kernel_with_block_size() kernel attributes {gpu.known_block_size = array<i32: 128, 1, 1>} {
+    gpu.return
+  }
+}
+
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {

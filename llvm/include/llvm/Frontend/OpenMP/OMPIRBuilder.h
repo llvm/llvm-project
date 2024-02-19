@@ -83,11 +83,20 @@ BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 /// are ones that are not dependent on the configuration.
 class OpenMPIRBuilderConfig {
 public:
-  /// Flag for specifying if the compilation is done for embedded device code
-  /// or host code.
+  /// Flag to define whether to generate code for the role of the OpenMP host
+  /// (if set to false) or device (if set to true) in an offloading context. It
+  /// is set when the -fopenmp-is-target-device compiler frontend option is
+  /// specified.
   std::optional<bool> IsTargetDevice;
 
-  /// Flag for specifying if the compilation is done for an accelerator.
+  /// Flag for specifying if the compilation is done for an accelerator. It is
+  /// set according to the architecture of the target triple and currently only
+  /// true when targeting AMDGPU or NVPTX. Today, these targets can only perform
+  /// the role of an OpenMP target device, so `IsTargetDevice` must also be true
+  /// if `IsGPU` is true. This restriction might be lifted if an accelerator-
+  /// like target with the ability to work as the OpenMP host is added, or if
+  /// the capabilities of the currently supported GPU architectures are
+  /// expanded.
   std::optional<bool> IsGPU;
 
   // Flag for specifying if offloading is mandatory.
@@ -900,6 +909,28 @@ public:
                               omp::OpenMPOffloadMappingFlags MemberOfFlag);
 
 private:
+  /// Modifies the canonical loop to be a statically-scheduled workshare loop
+  /// which is executed on the device
+  ///
+  /// This takes a \p CLI representing a canonical loop, such as the one
+  /// created by \see createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to call OpenMP device rtl function
+  /// which handles worksharing of loop body interations.
+  ///
+  /// \param DL       Debug location for instructions added for the
+  ///                 workshare-loop construct itself.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param LoopType Information about type of loop worksharing.
+  ///                 It corresponds to type of loop workshare OpenMP pragma.
+  ///
+  /// \returns Point where to insert code after the workshare construct.
+  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                                         InsertPointTy AllocaIP,
+                                         omp::WorksharingLoopType LoopType);
+
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
   /// This takes a \p LoopInfo representing a canonical loop, such as the one
@@ -1012,6 +1043,8 @@ public:
   ///                                present in the schedule clause.
   /// \param HasOrderedClause Whether the (parameterless) ordered clause is
   ///                         present.
+  /// \param LoopType Information about type of loop worksharing.
+  ///                 It corresponds to type of loop workshare OpenMP pragma.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoop(
@@ -1020,7 +1053,9 @@ public:
       llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default,
       Value *ChunkSize = nullptr, bool HasSimdModifier = false,
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
-      bool HasOrderedClause = false);
+      bool HasOrderedClause = false,
+      omp::WorksharingLoopType LoopType =
+          omp::WorksharingLoopType::ForStaticLoop);
 
   /// Tile a loop nest.
   ///
@@ -2536,6 +2571,13 @@ public:
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
                       AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
                       bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
+  InsertPointTy createAtomicCompare(const LocationDescription &Loc,
+                                    AtomicOpValue &X, AtomicOpValue &V,
+                                    AtomicOpValue &R, Value *E, Value *D,
+                                    AtomicOrdering AO,
+                                    omp::OMPAtomicCompareOp Op,
+                                    bool IsXBinopExpr, bool IsPostfixUpdate,
+                                    bool IsFailOnly, AtomicOrdering Failure);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

@@ -1570,7 +1570,7 @@ void CommandObjectTypeSummaryAdd::DoExecute(Args &command,
 static bool FixArrayTypeNameWithRegex(ConstString &type_name) {
   llvm::StringRef type_name_ref(type_name.GetStringRef());
 
-  if (type_name_ref.endswith("[]")) {
+  if (type_name_ref.ends_with("[]")) {
     std::string type_name_str(type_name.GetCString());
     type_name_str.resize(type_name_str.length() - 2);
     if (type_name_str.back() != ' ')

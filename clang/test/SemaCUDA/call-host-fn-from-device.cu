@@ -12,7 +12,7 @@ extern "C" void host_fn() {}
 struct Dummy {};
 
 struct S {
-  S() { static int nontrivial_ctor = 1; }
+  S() {}
   // expected-note@-1 2 {{'S' declared here}}
   ~S() { host_fn(); }
   // expected-note@-1 {{'~S' declared here}}

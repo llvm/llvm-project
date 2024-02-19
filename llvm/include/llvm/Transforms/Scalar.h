@@ -25,13 +25,6 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// RedundantDbgInstElimination - This pass removes redundant dbg intrinsics
-// without modifying the CFG of the function.  It is a FunctionPass.
-//
-Pass *createRedundantDbgInstEliminationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // DeadCodeElimination - This pass is more powerful than DeadInstElimination,
 // because it is worklist driven that can potentially revisit instructions when
 // their other instructions become dead, to eliminate chains of dead
@@ -67,21 +60,6 @@ Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
                            int Count = -1, int AllowPartial = -1,
                            int Runtime = -1, int UpperBound = -1,
                            int AllowPeeling = -1);
-
-//===----------------------------------------------------------------------===//
-//
-// LoopRotate - This pass is a simple loop rotating pass.
-//
-Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
-
-//===----------------------------------------------------------------------===//
-//
-// DemoteRegisterToMemoryPass - This pass is used to demote registers to memory
-// references. In basically undoes the PromoteMemoryToRegister pass to make cfg
-// hacking easier.
-//
-FunctionPass *createDemoteRegisterToMemoryPass();
-extern char &DemoteRegisterToMemoryID;
 
 //===----------------------------------------------------------------------===//
 //

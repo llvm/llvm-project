@@ -90,7 +90,7 @@ bb3:                                              ; preds = %bb1, %bb2
 
 define i1 @test2(i32 %c) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @test1(i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call noundef i1 @test1(i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 entry:

@@ -103,6 +103,16 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
       }
     }
     break;
+  case Instruction::ShuffleVector: {
+    auto *ScalarTy = cast<VectorType>(Ty)->getElementType();
+    auto *VTy = cast<VectorType>(I->getOperand(0)->getType());
+    auto *FixedTy = VectorType::get(ScalarTy, VTy->getElementCount());
+    Value *Op0 = EvaluateInDifferentType(I->getOperand(0), FixedTy, isSigned);
+    Value *Op1 = EvaluateInDifferentType(I->getOperand(1), FixedTy, isSigned);
+    Res = new ShuffleVectorInst(Op0, Op1,
+                                cast<ShuffleVectorInst>(I)->getShuffleMask());
+    break;
+  }
   default:
     // TODO: Can handle more cases here.
     llvm_unreachable("Unreachable!");
@@ -172,9 +182,15 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
     if (!Cmp || Cmp->getOperand(0)->getType() != Sel->getType() ||
         (CI.getOpcode() == Instruction::Trunc &&
          shouldChangeType(CI.getSrcTy(), CI.getType()))) {
-      if (Instruction *NV = FoldOpIntoSelect(CI, Sel)) {
-        replaceAllDbgUsesWith(*Sel, *NV, CI, DT);
-        return NV;
+
+      // If it's a bitcast involving vectors, make sure it has the same number
+      // of elements on both sides.
+      if (CI.getOpcode() != Instruction::BitCast ||
+          match(&CI, m_ElementWiseBitCast(m_Value()))) {
+        if (Instruction *NV = FoldOpIntoSelect(CI, Sel)) {
+          replaceAllDbgUsesWith(*Sel, *NV, CI, DT);
+          return NV;
+        }
       }
     }
   }
@@ -363,6 +379,9 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
           I->getOpcode() == Instruction::FPToSI);
     return Ty->getScalarSizeInBits() >= MinBitWidth;
   }
+  case Instruction::ShuffleVector:
+    return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
+           canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
   default:
     // TODO: Can handle more cases here.
     break;
@@ -1223,13 +1242,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
   if (!Zext.hasNonNeg()) {
     // If this zero extend is only used by a shift, add nneg flag.
-    if (Zext.hasOneUse() && SrcTy->getScalarSizeInBits() > 2 &&
+    if (Zext.hasOneUse() &&
+        SrcTy->getScalarSizeInBits() >
+            Log2_64_Ceil(DestTy->getScalarSizeInBits()) &&
         match(Zext.user_back(), m_Shift(m_Value(), m_Specific(&Zext)))) {
       Zext.setNonNeg();
       return &Zext;
     }
 
-    if (isKnownNonNegative(Src, DL, 0, &AC, &Zext, &DT)) {
+    if (isKnownNonNegative(Src, SQ.getWithInstruction(&Zext))) {
       Zext.setNonNeg();
       return &Zext;
     }
@@ -1387,7 +1408,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   unsigned DestBitSize = DestTy->getScalarSizeInBits();
 
   // If the value being extended is zero or positive, use a zext instead.
-  if (isKnownNonNegative(Src, DL, 0, &AC, &Sext, &DT)) {
+  if (isKnownNonNegative(Src, SQ.getWithInstruction(&Sext))) {
     auto CI = CastInst::Create(Instruction::ZExt, Src, DestTy);
     CI->setNonNeg(true);
     return CI;

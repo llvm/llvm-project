@@ -40,6 +40,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "AsyncPasses.md"]
 
+## 'emitc' Dialect Passes
+
+[include "EmitCPasses.md"]
+
 ## 'func' Dialect Passes
 
 [include "FuncPasses.md"]
@@ -63,6 +67,10 @@ This document describes the available MLIR passes and their contracts.
 ## 'memref' Dialect Passes
 
 [include "MemRefPasses.md"]
+
+## 'mesh' Dialect Passes
+
+[include "MeshPasses.md"]
 
 ## 'ml\_program' Dialect Passes
 

@@ -15,6 +15,7 @@ add_header_library(
   HDRS
     bit.h
   DEPENDS
+    .limits
     .type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -45,6 +46,9 @@ add_header_library(
   limits
   HDRS
     limits.h
+  DEPENDS
+    .type_traits
+    libc.include.llvm-libc-macros.limits_macros
 )
 
 add_header_library(
@@ -118,6 +122,7 @@ add_header_library(
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h
+    type_traits/is_fixed_point.h
     type_traits/is_floating_point.h
     type_traits/is_function.h
     type_traits/is_integral.h
@@ -147,6 +152,11 @@ add_header_library(
     type_traits/true_type.h
     type_traits/type_identity.h
     type_traits/void_t.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.float
+    libc.include.llvm-libc-macros.stdfix_macros
 )
 
 add_header_library(

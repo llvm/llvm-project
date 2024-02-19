@@ -27,10 +27,14 @@ function(add_unittest_framework_library name)
       ${TEST_LIB_HDRS}
     )
     target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
-    target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
+    list(APPEND compile_options -fno-exceptions -fno-rtti)
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
+    if(LIBC_COMPILER_HAS_FIXED_POINT)
+      list(APPEND compile_options -ffixed-point)
+    endif()
+    target_compile_options(${lib} PUBLIC ${compile_options})
   endforeach()
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
   target_compile_options(${name}.hermetic
@@ -68,6 +72,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.fixed_point.fx_rep
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
 )

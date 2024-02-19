@@ -121,18 +121,11 @@ public:
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
-    bool Found = false;
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    erase_if(Users, [&User, &Found](VPUser *Other) {
-      if (Found)
-        return false;
-      if (Other == &User) {
-        Found = true;
-        return true;
-      }
-      return false;
-    });
+    auto *I = find(Users, &User);
+    if (I != Users.end())
+      Users.erase(I);
   }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
@@ -303,6 +296,14 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
+
+  /// Returns true if the VPUser only uses the first part of operand \p Op.
+  /// Conservatively returns false.
+  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.
@@ -349,7 +350,9 @@ public:
     VPInterleaveSC,
     VPReductionSC,
     VPReplicateSC,
+    VPScalarCastSC,
     VPScalarIVStepsSC,
+    VPVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,

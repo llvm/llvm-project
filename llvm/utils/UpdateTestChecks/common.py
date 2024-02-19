@@ -32,6 +32,14 @@ Version changelog:
 DEFAULT_VERSION = 4
 
 
+SUPPORTED_ANALYSES = {
+    "Branch Probability Analysis",
+    "Cost Model Analysis",
+    "Loop Access Analysis",
+    "Scalar Evolution Analysis",
+}
+
+
 class Regex(object):
     """Wrap a compiled regular expression object to allow deep copy of a regexp.
     This is required for the deep copy done in do_scrub.
@@ -773,12 +781,7 @@ class FunctionTestBuilder:
             )
             if "analysis" in m.groupdict():
                 analysis = m.group("analysis")
-                supported_analyses = {
-                    "cost model analysis",
-                    "scalar evolution analysis",
-                    "loop access analysis",
-                }
-                if analysis.lower() not in supported_analyses:
+                if analysis not in SUPPORTED_ANALYSES:
                     warn("Unsupported analysis mode: %r!" % (analysis,))
             if func.startswith("stress"):
                 # We only use the last line of the function body for stress tests.
@@ -1698,7 +1701,7 @@ def filter_globals_according_to_preference(
 
 METADATA_FILTERS = [
     (
-        r"(?<=\")(\w+ )?(\w+ version )[\d.]+(?: \([^)]+\))?",
+        r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
     (r'(!DIFile\(filename: ".+", directory: )".+"', r"\1{{.*}}"),
