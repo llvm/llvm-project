@@ -35,6 +35,11 @@ static cl::opt<bool>
     DumpORC("dump-orc", cl::desc("dump raw ORC unwind information (sorted)"),
             cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool> DumpStaticCalls("dump-static-calls",
+                                     cl::desc("dump Linux kernel static calls"),
+                                     cl::init(false), cl::Hidden,
+                                     cl::cat(BoltCategory));
+
 } // namespace opts
 
 /// Linux Kernel supports stack unwinding using ORC (oops rewind capability).
@@ -116,6 +121,19 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Number of entries in the input file ORC sections.
   uint64_t NumORCEntries = 0;
 
+  /// Section containing static call table.
+  ErrorOr<BinarySection &> StaticCallSection = std::errc::bad_address;
+  uint64_t StaticCallTableAddress = 0;
+  static constexpr size_t STATIC_CALL_ENTRY_SIZE = 8;
+
+  struct StaticCallInfo {
+    uint32_t ID;              /// Identifier of the entry in the table.
+    BinaryFunction *Function; /// Function containing associated call.
+    MCSymbol *Label;          /// Label attached to the call.
+  };
+  using StaticCallListType = std::vector<StaticCallInfo>;
+  StaticCallListType StaticCallEntries;
+
   /// Insert an LKMarker for a given code pointer \p PC from a non-code section
   /// \p SectionName.
   void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
@@ -152,6 +170,10 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Update ORC data in the binary.
   Error rewriteORCTables();
 
+  /// Static call table handling.
+  Error readStaticCalls();
+  Error rewriteStaticCalls();
+
   /// Mark instructions referenced by kernel metadata.
   Error markInstructions();
 
@@ -167,6 +189,9 @@ public:
     if (Error E = readORCTables())
       return E;
 
+    if (Error E = readStaticCalls())
+      return E;
+
     return Error::success();
   }
 
@@ -179,6 +204,9 @@ public:
 
   Error preEmitFinalizer() override {
     if (Error E = rewriteORCTables())
+      return E;
+
+    if (Error E = rewriteStaticCalls())
       return E;
 
     return Error::success();
@@ -788,6 +816,133 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   while (UnwindWriter.bytesRemaining()) {
     if (Error E = emitORCEntry(LastIP, NullORC, nullptr, /*Force*/ true))
       return E;
+  }
+
+  return Error::success();
+}
+
+/// The static call site table is created by objtool and contains entries in the
+/// following format:
+///
+///    struct static_call_site {
+///      s32 addr;
+///      s32 key;
+///    };
+///
+Error LinuxKernelRewriter::readStaticCalls() {
+  const BinaryData *StaticCallTable =
+      BC.getBinaryDataByName("__start_static_call_sites");
+  if (!StaticCallTable)
+    return Error::success();
+
+  StaticCallTableAddress = StaticCallTable->getAddress();
+
+  const BinaryData *Stop = BC.getBinaryDataByName("__stop_static_call_sites");
+  if (!Stop)
+    return createStringError(errc::executable_format_error,
+                             "missing __stop_static_call_sites symbol");
+
+  ErrorOr<BinarySection &> ErrorOrSection =
+      BC.getSectionForAddress(StaticCallTableAddress);
+  if (!ErrorOrSection)
+    return createStringError(errc::executable_format_error,
+                             "no section matching __start_static_call_sites");
+
+  StaticCallSection = *ErrorOrSection;
+  if (!StaticCallSection->containsAddress(Stop->getAddress() - 1))
+    return createStringError(errc::executable_format_error,
+                             "__stop_static_call_sites not in the same section "
+                             "as __start_static_call_sites");
+
+  if ((Stop->getAddress() - StaticCallTableAddress) % STATIC_CALL_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "static call table size error");
+
+  const uint64_t SectionAddress = StaticCallSection->getAddress();
+  DataExtractor DE(StaticCallSection->getContents(),
+                   BC.AsmInfo->isLittleEndian(),
+                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor Cursor(StaticCallTableAddress - SectionAddress);
+  uint32_t EntryID = 0;
+  while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
+    const uint64_t CallAddress =
+        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+    const uint64_t KeyAddress =
+        SectionAddress + Cursor.tell() + (int32_t)DE.getU32(Cursor);
+
+    // Consume the status of the cursor.
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading static calls");
+
+    ++EntryID;
+
+    if (opts::DumpStaticCalls) {
+      outs() << "Static Call Site: " << EntryID << '\n';
+      outs() << "\tCallAddress:   0x" << Twine::utohexstr(CallAddress) << '\n'
+             << "\tKeyAddress:    0x" << Twine::utohexstr(KeyAddress) << '\n';
+    }
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(CallAddress);
+    if (!BF)
+      continue;
+
+    if (!BC.shouldEmit(*BF))
+      continue;
+
+    if (!BF->hasInstructions())
+      continue;
+
+    MCInst *Inst = BF->getInstructionAtOffset(CallAddress - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction at call site address 0x%" PRIx64,
+                               CallAddress);
+
+    // Check for duplicate entries.
+    if (BC.MIB->hasAnnotation(*Inst, "StaticCall"))
+      return createStringError(errc::executable_format_error,
+                               "duplicate static call site at 0x%" PRIx64,
+                               CallAddress);
+
+    BC.MIB->addAnnotation(*Inst, "StaticCall", EntryID);
+
+    MCSymbol *Label = BC.MIB->getLabel(*Inst);
+    if (!Label) {
+      Label = BC.Ctx->createTempSymbol("__SC_");
+      BC.MIB->setLabel(*Inst, Label);
+    }
+
+    StaticCallEntries.push_back({EntryID, BF, Label});
+  }
+
+  outs() << "BOLT-INFO: parsed " << StaticCallEntries.size()
+         << " static call entries\n";
+
+  return Error::success();
+}
+
+/// The static call table is sorted during boot time in
+/// static_call_sort_entries(). This makes it possible to update existing
+/// entries in-place ignoring their relative order.
+Error LinuxKernelRewriter::rewriteStaticCalls() {
+  if (!StaticCallTableAddress || !StaticCallSection)
+    return Error::success();
+
+  for (auto &Entry : StaticCallEntries) {
+    if (!Entry.Function)
+      continue;
+
+    BinaryFunction &BF = *Entry.Function;
+    if (!BC.shouldEmit(BF))
+      continue;
+
+    // Create a relocation against the label.
+    const uint64_t EntryOffset = StaticCallTableAddress -
+                                 StaticCallSection->getAddress() +
+                                 (Entry.ID - 1) * STATIC_CALL_ENTRY_SIZE;
+    StaticCallSection->addRelocation(EntryOffset, Entry.Label,
+                                     ELF::R_X86_64_PC32, /*Addend*/ 0);
   }
 
   return Error::success();
