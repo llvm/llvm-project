@@ -52,22 +52,23 @@ void ICFG::tryAndAddCallSite(int fid, const CFGBlock &B) {
     if (!calleeDecl)
         return;
 
-    std::string callee = getFullSignature(calleeDecl);
-    int calleeFid = Global.getIdOfFunction(callee);
-    if (calleeFid == -1)
-        return;
-
     // callsite block has only one successor
     assert(B.succ_size() == 1);
     const CFGBlock &Succ = **B.succ_begin();
 
+    // get node id of callsite & its successor
     int uEntry = getNodeId(fid, B.getBlockID());
     int uExit = getNodeId(fid, Succ.getBlockID());
 
-    if (!visited(calleeFid)) {
+    // get callee
+    std::string callee = getFullSignature(calleeDecl);
+    int calleeFid = Global.getIdOfFunction(callee);
+    if (calleeFid == -1) {
         // callee has yet to be added to this ICFG
-        callsitesToProcess[calleeFid].push_back({uEntry, uExit});
+        requireTrue(!visited(calleeFid));
+        callsitesToProcess[callee].push_back({uEntry, uExit});
     } else {
+        requireTrue(visited(calleeFid));
         addCallAndReturnEdge(uEntry, uExit, calleeFid);
     }
 }
@@ -109,11 +110,12 @@ void ICFG::addFunction(int fid, const CFG &cfg) {
         tryAndAddCallSite(fid, B);
     }
 
+    const std::string &signature = Global.functionLocations[fid]->name;
     // process callsites
-    for (const auto &[uEntry, uExit] : callsitesToProcess[fid]) {
+    for (const auto &[uEntry, uExit] : callsitesToProcess[signature]) {
         addCallAndReturnEdge(uEntry, uExit, fid);
     }
-    callsitesToProcess.erase(fid);
+    callsitesToProcess.erase(signature);
 
     // cfg.viewCFG(LangOptions());
 }

@@ -31,8 +31,8 @@ struct ICFG {
 
     void addNormalEdge(int fid, int uBid, int vBid);
 
-    // callee -> all callsites (each callsite is a node id)
-    std::map<int, std::vector<std::pair<int, int>>> callsitesToProcess;
+    // callee's signature -> all callsites (each callsite is a node id)
+    std::map<std::string, std::vector<std::pair<int, int>>> callsitesToProcess;
 
     void addCallAndReturnEdge(int uEntry, int uExit, int calleeFid);
 
