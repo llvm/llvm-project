@@ -313,8 +313,10 @@ CommandObject::HandleArgumentCompletion(CompletionRequest &request,
     return;
 
   CommandArgumentEntry *entry_ptr = GetArgumentEntryAtIndex(0);
-  if (!entry_ptr)
-    return; // Maybe this should be an assert, this shouldn't be possible.
+  if (!entry_ptr) {
+    assert(entry_ptr && "We said there was one entry, but there wasn't.");
+    return; // Not worth crashing if asserts are off...
+  }
   
   CommandArgumentEntry &entry = *entry_ptr;
   // For now, we only handle the simple case of one homogenous argument type.
