@@ -1,0 +1,23 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/npe",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "",
+                    "line": -1,
+                    "column": -1
+                },
+                {
+                    "type": "sink",
+                    "file": "",
+                    "line": -1,
+                    "column": -1
+                }
+            ]
+        }
+    ]
+}

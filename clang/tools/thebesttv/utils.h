@@ -101,7 +101,12 @@ struct NamedLocation : public Location {
 struct GlobalStat {
     std::unique_ptr<CompilationDatabase> cb;
 
-    fs::path buildPath;
+    // 项目所在绝对目录。所有不在这个目录下的函数都会被排除
+    std::string projectDirectory;
+
+    bool isUnderProject(const std::string &file) {
+        return file.compare(0, projectDirectory.size(), projectDirectory) == 0;
+    }
 
     std::map<std::string, std::set<std::string>> callGraph;
 

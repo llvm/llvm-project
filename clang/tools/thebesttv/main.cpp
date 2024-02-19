@@ -335,9 +335,15 @@ void generateICFG(const std::vector<std::string> &allFiles) {
     Tool.run(newFrontendActionFactory<GenICFGAction>().get());
 }
 
+/**
+ * FIXME: all files 应该只有
+ * .c/.cpp，不包括头文件，所以统计会不准。以及，buildPath
+ * 现在是一个 JSON 文件了，不是目录。
+ */
 void printCloc(const std::vector<std::string> &allFiles) {
     // save all files to "compile_files.txt" under build path
-    fs::path resultFiles = Global.buildPath / "compile_files.txt";
+    fs::path resultFiles =
+        fs::path(Global.projectDirectory) / "compile_files.txt";
     std::ofstream ofs(resultFiles);
     if (!ofs.is_open()) {
         llvm::errs() << "Error: cannot open file " << resultFiles << "\n";
@@ -364,12 +370,22 @@ void printCloc(const std::vector<std::string> &allFiles) {
 
 int main(int argc, const char **argv) {
     if (argc != 2) {
-        llvm::errs() << "Usage: " << argv[0] << " <build-path>\n";
+        llvm::errs() << "Usage: " << argv[0] << " IR.json\n";
         return 1;
     }
 
-    Global.buildPath = fs::canonical(fs::absolute(argv[1]));
-    Global.cb = getCompilationDatabase(Global.buildPath);
+    fs::path jsonPath = fs::absolute(argv[1]);
+    llvm::errs() << "Reading from json: " << jsonPath << "\n";
+    std::ifstream ifs(jsonPath);
+    json input = json::parse(ifs);
+
+    Global.projectDirectory =
+        fs::canonical(input["root"].template get<std::string>()).string();
+
+    fs::path compile_commands =
+        fs::canonical(input["compile_commands"].template get<std::string>());
+    llvm::errs() << "compile_commands: " << compile_commands << "\n";
+    Global.cb = getCompilationDatabase(compile_commands);
 
     // print all files in compilation database
     const auto &allFiles = Global.cb->getAllFiles();
@@ -378,7 +394,6 @@ int main(int argc, const char **argv) {
         llvm::errs() << "  " << file << "\n";
 
     generateICFG(allFiles);
-    printCloc(allFiles);
 
     {
         llvm::errs() << "--- ICFG ---\n";
@@ -390,8 +405,8 @@ int main(int argc, const char **argv) {
         llvm::errs() << "  m: " << m << "\n";
     }
 
-    findPathBetween(locateVariable("main()", 23, 9),
-                    locateVariable("useAlias(const A &)", 19, 12));
+    findPathBetween(locateVariable("main()", 5, 8),
+                    locateVariable("useAlias(const A &)", 5, 12));
 
     // std::string source = "IOPriorityPanel_new(IOPriority)";
     // std::string target = "Panel_setSelected(Panel *, int)";
