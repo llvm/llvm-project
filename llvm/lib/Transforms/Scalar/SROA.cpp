@@ -2271,6 +2271,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // we have different element types.
   SmallVector<VectorType *, 4> CandidateTys;
   SetVector<Type *> LoadStoreTys;
+  SetVector<Type *> DeferredTys;
   Type *CommonEltTy = nullptr;
   VectorType *CommonVecPtrTy = nullptr;
   bool HaveVecPtrTy = false;
@@ -2342,20 +2343,28 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       Ty = SI->getValueOperand()->getType();
     else
       continue;
+
+    auto CandTy =
+        isa<VectorType>(Ty) ? cast<VectorType>(Ty)->getElementType() : Ty;
+    if (CandTy->isPointerTy() && (S.beginOffset() != P.beginOffset() ||
+                                  S.endOffset() != P.endOffset())) {
+      DeferredTys.insert(Ty);
+      continue;
+    }
+
     LoadStoreTys.insert(Ty);
     // Consider any loads or stores that are the exact size of the slice.
     if (S.beginOffset() == P.beginOffset() && S.endOffset() == P.endOffset())
       CheckCandidateType(Ty);
   }
 
-  if (auto *VTy = checkVectorTypesForPromotion(
-          P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
-          HaveCommonVecPtrTy, CommonVecPtrTy))
+  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
+  if (auto *VTy =
+          createAndCheckVectorTypesForPromotion(LoadStoreTys, CandidateTysCopy))
     return VTy;
 
-  SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   CandidateTys.clear();
-  return createAndCheckVectorTypesForPromotion(LoadStoreTys, CandidateTysCopy);
+  return createAndCheckVectorTypesForPromotion(DeferredTys, CandidateTysCopy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
