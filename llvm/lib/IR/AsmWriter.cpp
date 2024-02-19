@@ -293,7 +293,7 @@ static const Module *getModuleFromDPI(const DPMarker *Marker) {
 }
 
 static const Module *getModuleFromDPI(const DPValue *DPV) {
-  return getModuleFromDPI(DPV->getMarker());
+  return DPV->getMarker() ? getModuleFromDPI(DPV->getMarker()) : nullptr;
 }
 
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
@@ -4886,8 +4886,9 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
     if (F)
       MST.incorporateFunction(*F);
   };
-  incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
-                                          : nullptr);
+  incorporateFunction(Marker && Marker->getParent()
+                          ? Marker->getParent()->getParent()
+                          : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
   W.printDPValue(*this);
 }
