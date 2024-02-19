@@ -380,7 +380,6 @@ define void @sve_16v_1p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -397,6 +396,7 @@ define void @sve_16v_1p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #17
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    .cfi_restore z8
@@ -697,10 +697,10 @@ define void @sve_unprobed_area(<vscale x 4 x float> %a, i32 %n) #0 {
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
-; CHECK-NEXT:    ldr p9, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    .cfi_restore z8
