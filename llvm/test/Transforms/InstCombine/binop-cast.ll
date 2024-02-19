@@ -50,7 +50,7 @@ define i32 @and_sext_to_sel_multi_use(i32 %x, i1 %y) {
 ; CHECK-LABEL: @and_sext_to_sel_multi_use(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32
@@ -326,10 +326,8 @@ define <2 x i32> @and_add_bool_vec_to_select(<2 x i1> %x, <2 x i32> %y) {
 ; Negative test of and_add_bool_to_select
 define i32 @and_add_bool_to_select_multi_use(i1 %x, i32 %y) {
 ; CHECK-LABEL: @and_add_bool_to_select_multi_use(
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[NOT_X]] to i32
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[MASK]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[RES]], [[MASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[X:%.*]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val = zext i1 %x to i32

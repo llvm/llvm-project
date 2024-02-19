@@ -2710,7 +2710,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   //       arm may not be reversible due to poison semantics. Is that a good
   //       canonicalization?
   Value *A, *B;
-  if (match(&I, m_c_And(m_OneUse(m_SExt(m_Value(A))), m_Value(B))) &&
+  if (match(&I, m_c_And(m_SExt(m_Value(A)), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, B, Constant::getNullValue(Ty));
 
