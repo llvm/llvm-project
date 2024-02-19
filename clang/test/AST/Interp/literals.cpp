@@ -1124,3 +1124,10 @@ namespace rdar8769025 {
     f1(0); // both-warning{{null passed to a callee that requires a non-null argument}}
   }
 }
+
+namespace nullptrsub {
+  void a() {
+    char *f = (char *)0;
+    f = (char *)((char *)0 - (char *)0);
+  }
+}
