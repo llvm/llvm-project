@@ -720,12 +720,7 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
         RangesBase = RangesSectionWriter->getSectionOffset();
-        // For DWARF5 there is now .debug_rnglists.dwo, so don't need to
-        // update rnglists base.
-        if (RangesBase) {
-          DwoRangesBase[*DWOId] = *RangesBase;
-          setDwoRangesBase(*DWOId, *RangesBase);
-        }
+        setDwoRangesBase(*DWOId, *RangesBase);
       }
 
       updateUnitDebugInfo(*(*SplitCU), DWODIEBuilder, DebugLocDWoWriter,
@@ -873,7 +868,9 @@ void DWARFRewriter::updateUnitDebugInfo(
         OutputRanges.push_back({0, 0});
       const uint64_t RangesSectionOffset =
           RangesSectionWriter.addRanges(OutputRanges);
-      if (!Unit.isDWOUnit())
+      // Don't emit the zero low_pc arange.
+      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
+          OutputRanges.back().LowPC)
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,

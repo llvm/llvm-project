@@ -88,7 +88,10 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
 
-  auto Res = C.interpretDecl(VD);
+  bool CheckGlobalInitialized =
+      shouldBeGloballyIndexed(VD) &&
+      (VD->getType()->isRecordType() || VD->getType()->isArrayType());
+  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     Stk.clear();
     return false;
@@ -101,25 +104,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   Stk.clear();
 #endif
 
-  // Ensure global variables are fully initialized.
-  if (shouldBeGloballyIndexed(VD) &&
-      (VD->getType()->isRecordType() || VD->getType()->isArrayType() ||
-       VD->getType()->isAnyComplexType())) {
-    assert(Res.isLValue());
-
-    if (!VD->getType()->isAnyComplexType() &&
-        !Res.checkFullyInitialized(C.getState()))
-      return false;
-
-    // lvalue-to-rvalue conversion. We do this manually here so we can
-    // examine the result above before converting and returning it.
-    std::optional<APValue> RValueResult = Res.toRValue();
-    if (!RValueResult)
-      return false;
-    Result = *RValueResult;
-
-  } else
-    Result = Res.toAPValue();
+  Result = Res.toAPValue();
   return true;
 }
 

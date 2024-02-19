@@ -4335,6 +4335,13 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       return std::nullopt; // No need to reorder.
     return std::move(ResOrder);
   }
+  if (TE.State == TreeEntry::StridedVectorize && !TopToBottom &&
+      any_of(TE.UserTreeIndices,
+             [](const EdgeInfo &EI) {
+               return !Instruction::isBinaryOp(EI.UserTE->getOpcode());
+             }) &&
+      (TE.ReorderIndices.empty() || isReverseOrder(TE.ReorderIndices)))
+    return std::nullopt;
   if ((TE.State == TreeEntry::Vectorize ||
        TE.State == TreeEntry::StridedVectorize) &&
       (isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE.getMainOp()) ||
@@ -4760,7 +4767,8 @@ bool BoUpSLP::canReorderOperands(
   for (unsigned I = 0, E = UserTE->getNumOperands(); I < E; ++I) {
     if (any_of(Edges, [I](const std::pair<unsigned, TreeEntry *> &OpData) {
           return OpData.first == I &&
-                 OpData.second->State == TreeEntry::Vectorize;
+                 (OpData.second->State == TreeEntry::Vectorize ||
+                  OpData.second->State == TreeEntry::StridedVectorize);
         }))
       continue;
     if (TreeEntry *TE = getVectorizedOperand(UserTE, I)) {
@@ -4777,6 +4785,7 @@ bool BoUpSLP::canReorderOperands(
       // If there are reused scalars, process this node as a regular vectorize
       // node, just reorder reuses mask.
       if (TE->State != TreeEntry::Vectorize &&
+          TE->State != TreeEntry::StridedVectorize &&
           TE->ReuseShuffleIndices.empty() && TE->ReorderIndices.empty())
         GatherOps.push_back(TE);
       continue;
@@ -4785,6 +4794,7 @@ bool BoUpSLP::canReorderOperands(
     if (count_if(ReorderableGathers,
                  [&Gather, UserTE, I](TreeEntry *TE) {
                    assert(TE->State != TreeEntry::Vectorize &&
+                          TE->State != TreeEntry::StridedVectorize &&
                           "Only non-vectorized nodes are expected.");
                    if (any_of(TE->UserTreeIndices,
                               [UserTE, I](const EdgeInfo &EI) {

@@ -44,7 +44,9 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   return std::move(this->EvalResult);
 }
 
-EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD) {
+EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
+                                            bool CheckFullyInitialized) {
+  this->CheckFullyInitialized = CheckFullyInitialized;
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())
@@ -131,7 +133,17 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
-    EvalResult.setPointer(Ptr);
+    if (CheckFullyInitialized) {
+      if (!EvalResult.checkFullyInitialized(S, Ptr))
+        return false;
+
+      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
+      if (!RValueResult)
+        return false;
+      EvalResult.setValue(*RValueResult);
+    } else {
+      EvalResult.setValue(Ptr.toAPValue());
+    }
   }
 
   return true;
@@ -140,7 +152,6 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
   // Function pointers cannot be converted to rvalues.
-  assert(!ConvertResultToRValue);
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
