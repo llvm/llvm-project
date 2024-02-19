@@ -228,11 +228,15 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
     }
 
     if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(S)) {
-      for (const Stmt *CB : dyn_cast<CompoundStmt>(SS->getBody())->body()) {
-        for (const Decl *D : dyn_cast<DeclStmt>(CB)->decls()) {
-          // Once we reach the declaration of the VD we can return.
-          if (D->getCanonicalDecl() == VD)
-            return false;
+      if (const CompoundStmt *CST = dyn_cast<CompoundStmt>(SS->getBody())) {
+        for (const Stmt *CB : CST->body()) {
+          if (const DeclStmt *DST = dyn_cast<DeclStmt>(CB)) {
+            for (const Decl *D : DST->decls()) {
+              // Once we reach the declaration of the VD we can return.
+              if (D->getCanonicalDecl() == VD)
+                return false;
+            }
+          }
         }
       }
     }
