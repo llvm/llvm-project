@@ -422,6 +422,7 @@ enum class TemplateDeductionResult {
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
+/// \nosubgrouping
 class Sema final {
   // Table of Contents
   // -----------------
@@ -471,7 +472,7 @@ class Sema final {
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
-  /// @{
+  ///@{
 
 public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
@@ -1193,7 +1194,7 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -1203,7 +1204,7 @@ private:
 
   /// \name C++ Access Control
   /// Implementations are in SemaAccess.cpp
-  /// @{
+  ///@{
 
 public:
   enum AccessResult {
@@ -1280,7 +1281,7 @@ public:
       const MultiLevelTemplateArgumentList &TemplateArgs);
   void HandleDelayedAccessCheck(sema::DelayedDiagnostic &DD, Decl *Ctx);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -1290,7 +1291,7 @@ public:
 
   /// \name Attributes
   /// Implementations are in SemaAttr.cpp
-  /// @{
+  ///@{
 
 public:
   /// Controls member pointer representation format under the MS ABI.
@@ -1887,7 +1888,7 @@ public:
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -1897,7 +1898,7 @@ public:
 
   /// \name Availability Attribute Handling
   /// Implementations are in SemaAvailability.cpp
-  /// @{
+  ///@{
 
 public:
   /// Issue any -Wunguarded-availability warnings in \c FD
@@ -1915,7 +1916,7 @@ public:
                                   bool AvoidPartialAvailabilityChecks = false,
                                   ObjCInterfaceDecl *ClassReceiver = nullptr);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -1925,7 +1926,7 @@ public:
 
   /// \name Casts
   /// Implementations are in SemaCast.cpp
-  /// @{
+  ///@{
 
 public:
   static bool isCast(CheckedConversionKind CCK) {
@@ -1977,7 +1978,7 @@ public:
                                         Expr *CastExpr,
                                         SourceLocation RParenLoc);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -1987,7 +1988,7 @@ public:
 
   /// \name Extra Semantic Checking
   /// Implementations are in SemaChecking.cpp
-  /// @{
+  ///@{
 
 public:
   /// Used to change context to isConstantEvaluated without pushing a heavy
@@ -2397,7 +2398,7 @@ private:
   /// Adds an expression to the set of gathered misaligned members.
   void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
                                      CharUnits Alignment);
-  /// @}
+  ///@}
 
   //
   //
@@ -2407,7 +2408,7 @@ private:
 
   /// \name C++ Coroutines
   /// Implementations are in SemaCoroutine.cpp
-  /// @{
+  ///@{
 
 public:
   /// The C++ "std::coroutine_traits" template, which is defined in
@@ -2448,7 +2449,7 @@ public:
   /// potentially-throwing.
   bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -2458,7 +2459,7 @@ public:
 
   /// \name C++ Scope Specifiers
   /// Implementations are in SemaCXXScopeSpec.cpp
-  /// @{
+  ///@{
 
 public:
   // Marks SS invalid if it represents an incomplete type.
@@ -2645,7 +2646,7 @@ public:
   /// defining scope.
   void ActOnCXXExitDeclaratorScope(Scope *S, const CXXScopeSpec &SS);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -2655,7 +2656,7 @@ public:
 
   /// \name Declarations
   /// Implementations are in SemaDecl.cpp
-  /// @{
+  ///@{
 
 public:
   IdentifierResolver IdResolver;
@@ -3673,7 +3674,7 @@ private:
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -3683,7 +3684,7 @@ private:
 
   /// \name Declaration Attribute Handling
   /// Implementations are in SemaDeclAttr.cpp
-  /// @{
+  ///@{
 
 public:
   /// Describes the kind of priority given to an availability attribute.
@@ -3983,7 +3984,7 @@ public:
 
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -3993,7 +3994,7 @@ public:
 
   /// \name C++ Declarations
   /// Implementations are in SemaDeclCXX.cpp
-  /// @{
+  ///@{
 
 public:
   void CheckDelegatingCtorCycles();
@@ -5024,7 +5025,7 @@ private:
                                   const CXXRecordDecl *RD,
                                   bool DeclIsField = true);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -5034,7 +5035,7 @@ private:
 
   /// \name C++ Exception Specifications
   /// Implementations are in SemaExceptionSpec.cpp
-  /// @{
+  ///@{
 
 public:
   /// All the overriding functions seen during a class definition
@@ -5102,7 +5103,7 @@ public:
   bool CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
                                             const CXXMethodDecl *Old);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -5112,7 +5113,7 @@ public:
 
   /// \name Expressions
   /// Implementations are in SemaExpr.cpp
-  /// @{
+  ///@{
 
 public:
   /// Describes how the expressions currently being parsed are
@@ -6683,7 +6684,7 @@ private:
   void CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E);
   void CheckAddressOfNoDeref(const Expr *E);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -6693,7 +6694,7 @@ private:
 
   /// \name C++ Expressions
   /// Implementations are in SemaExprCXX.cpp
-  /// @{
+  ///@{
 
 public:
   /// The C++ "std::bad_alloc" class, which is defined by the C++
@@ -7169,7 +7170,7 @@ private:
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
                                  bool DeleteWasArrayForm);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -7179,7 +7180,7 @@ private:
 
   /// \name Member Access Expressions
   /// Implementations are in SemaExprMember.cpp
-  /// @{
+  ///@{
 
 public:
   ExprResult BuildPossibleImplicitMemberExpr(
@@ -7266,7 +7267,7 @@ public:
 private:
   void CheckMemberAccessOfNoDeref(const MemberExpr *E);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -7276,7 +7277,7 @@ private:
 
   /// \name Initializers
   /// Implementations are in SemaInit.cpp
-  /// @{
+  ///@{
 
 public:
   /// Stack of types that correspond to the parameter entities that are
@@ -7324,7 +7325,7 @@ public:
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
       const InitializationKind &Kind, MultiExprArg Init);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -7334,7 +7335,7 @@ public:
 
   /// \name C++ Lambda Expressions
   /// Implementations are in SemaLambda.cpp
-  /// @{
+  ///@{
 
 public:
   /// Create a new lambda closure type.
@@ -7492,7 +7493,7 @@ public:
   std::tuple<MangleNumberingContext *, Decl *>
   getCurrentMangleNumberContext(const DeclContext *DC);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -7527,7 +7528,7 @@ public:
   /// the ability to distinguish among them.
   ///
   /// Implementations are in SemaLookup.cpp
-  /// @{
+  ///@{
 
 public:
   /// Tracks whether we are in a context where typo correction is
@@ -7970,7 +7971,7 @@ private:
 
   bool isAcceptableSlow(const NamedDecl *D, AcceptableKind Kind);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -7980,7 +7981,7 @@ private:
 
   /// \name Modules
   /// Implementations are in SemaModule.cpp
-  /// @{
+  ///@{
 
 public:
   /// Get the module unit whose scope we are currently within.
@@ -8133,7 +8134,7 @@ private:
 
   VisibleModuleSet VisibleModules;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -8143,7 +8144,7 @@ private:
 
   /// \name C++ Overloading
   /// Implementations are in SemaOverload.cpp
-  /// @{
+  ///@{
 
 public:
   /// Whether deferrable diagnostics should be deferred.
@@ -8683,7 +8684,7 @@ private:
                                    bool IsInstance,
                                    SmallVectorImpl<ObjCMethodDecl *> &Methods);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -8693,7 +8694,7 @@ private:
 
   /// \name Pseudo-Object
   /// Implementations are in SemaPseudoObject.cpp
-  /// @{
+  ///@{
 
 public:
   void maybeExtendBlockObject(ExprResult &E);
@@ -8710,7 +8711,7 @@ public:
   ExprResult checkPseudoObjectRValue(Expr *E);
   Expr *recreateSyntacticForm(PseudoObjectExpr *E);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -8720,7 +8721,7 @@ public:
 
   /// \name Statements
   /// Implementations are in SemaStmt.cpp
-  /// @{
+  ///@{
 
 public:
   /// Stack of active SEH __finally scopes.  Can be empty.
@@ -8945,7 +8946,7 @@ private:
   /// statement that produces control flow different from GCC.
   void CheckBreakContinueBinding(Expr *E);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -8955,7 +8956,7 @@ private:
 
   /// \name `inline asm` Statement
   /// Implementations are in SemaStmtAsm.cpp
-  /// @{
+  ///@{
 
 public:
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
@@ -8984,7 +8985,7 @@ public:
   LabelDecl *GetOrCreateMSAsmLabel(StringRef ExternalLabelName,
                                    SourceLocation Location, bool AlwaysCreate);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -8994,7 +8995,7 @@ public:
 
   /// \name Statement Attribute Handling
   /// Implementations are in SemaStmtAttr.cpp
-  /// @{
+  ///@{
 
 public:
   bool CheckNoInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
@@ -9010,7 +9011,7 @@ public:
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
                              SmallVectorImpl<const Attr *> &OutAttrs);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -9020,7 +9021,7 @@ public:
 
   /// \name C++ Templates
   /// Implementations are in SemaTemplate.cpp
-  /// @{
+  ///@{
 
 public:
   // Saves the current floating-point pragma stack and clear it in this Sema.
@@ -9706,7 +9707,7 @@ public:
   void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
   void checkSpecializationReachability(SourceLocation Loc, NamedDecl *Spec);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -9716,7 +9717,7 @@ public:
 
   /// \name C++ Template Argument Deduction
   /// Implementations are in SemaTemplateDeduction.cpp
-  /// @{
+  ///@{
 
 public:
   /// When true, access checking violations are treated as SFINAE
@@ -9955,7 +9956,7 @@ public:
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
 
-  /// @}
+  ///@}
 
   //
   //
@@ -9965,7 +9966,7 @@ public:
 
   /// \name C++ Template Instantiation
   /// Implementations are in SemaTemplateInstantiate.cpp
-  /// @{
+  ///@{
 
 public:
   /// A helper class for building up ExtParameterInfos.
@@ -10685,7 +10686,7 @@ public:
     return CodeSynthesisContexts.size() > NonInstantiationEntries;
   }
 
-  /// @}
+  ///@}
 
   //
   //
@@ -10695,7 +10696,7 @@ public:
 
   /// \name C++ Template Declaration Instantiation
   /// Implementations are in SemaTemplateInstantiateDecl.cpp
-  /// @{
+  ///@{
 
 public:
   /// An entity for which implicit template instantiation is required.
@@ -10962,7 +10963,7 @@ private:
     }
   };
 
-  /// @}
+  ///@}
 
   //
   //
@@ -10972,7 +10973,7 @@ private:
 
   /// \name C++ Variadic Templates
   /// Implementations are in SemaTemplateVariadic.cpp
-  /// @{
+  ///@{
 
 public:
   /// Determine whether an unexpanded parameter pack might be permitted in this
@@ -11365,7 +11366,7 @@ public:
   ExprResult BuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
                                    BinaryOperatorKind Operator);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -11375,7 +11376,7 @@ public:
 
   /// \name Constraints and Concepts
   /// Implementations are in SemaConcept.cpp
-  /// @{
+  ///@{
 
 public:
   void PushSatisfactionStackEntry(const NamedDecl *D,
@@ -11612,7 +11613,7 @@ private:
       FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
       LocalInstantiationScope &Scope);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -11622,7 +11623,7 @@ private:
 
   /// \name Types
   /// Implementations are in SemaType.cpp
-  /// @{
+  ///@{
 
 public:
   /// A mapping that describes the nullability we've seen in each header file.
@@ -11982,7 +11983,7 @@ private:
 
   IdentifierInfo *Ident_NSError = nullptr;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -11992,7 +11993,7 @@ private:
 
   /// \name ObjC Declarations
   /// Implementations are in SemaDeclObjC.cpp
-  /// @{
+  ///@{
 
 public:
   enum ObjCSpecialMethodKind {
@@ -12362,7 +12363,7 @@ private:
                                            bool receiverIdOrClass,
                                            bool instance);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -12372,7 +12373,7 @@ private:
 
   /// \name ObjC Expressions
   /// Implementations are in SemaExprObjC.cpp
-  /// @{
+  ///@{
 
 public:
   /// Caches identifiers/selectors for NSFoundation APIs.
@@ -12655,7 +12656,7 @@ public:
                                     /*instance*/ false);
   }
 
-  /// @}
+  ///@}
 
   //
   //
@@ -12665,7 +12666,7 @@ public:
 
   /// \name ObjC @property and @synthesize
   /// Implementations are in SemaObjCProperty.cpp
-  /// @{
+  ///@{
 
 public:
   /// Ensure attributes are consistent with type.
@@ -12757,7 +12758,7 @@ public:
   void AtomicPropertySetterGetterRules(ObjCImplDecl *IMPDecl,
                                        ObjCInterfaceDecl *IDecl);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -12767,7 +12768,7 @@ public:
 
   /// \name Code Completion
   /// Implementations are in SemaCodeComplete.cpp
-  /// @{
+  ///@{
 
 public:
   /// Code-completion consumer.
@@ -12960,7 +12961,7 @@ public:
                               CodeCompletionTUInfo &CCTUInfo,
                               SmallVectorImpl<CodeCompletionResult> &Results);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -12970,7 +12971,7 @@ public:
 
   /// \name FixIt Helpers
   /// Implementations are in SemaFixItUtils.cpp
-  /// @{
+  ///@{
 
 public:
   /// Get a string to suggest for zero-initialization of a type.
@@ -12978,7 +12979,7 @@ public:
                                              SourceLocation Loc) const;
   std::string getFixItZeroLiteralForType(QualType T, SourceLocation Loc) const;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -12988,7 +12989,7 @@ public:
 
   /// \name Name Lookup for RISC-V Vector Intrinsic
   /// Implementations are in SemaRISCVVectorLookup.cpp
-  /// @{
+  ///@{
 
 public:
   /// Indicate RISC-V vector builtin functions enabled or not.
@@ -13000,7 +13001,7 @@ public:
 private:
   std::unique_ptr<sema::RISCVIntrinsicManager> RVIntrinsicManager;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -13010,7 +13011,7 @@ private:
 
   /// \name CUDA
   /// Implementations are in SemaCUDA.cpp
-  /// @{
+  ///@{
 
 public:
   /// Increments our count of the number of times we've seen a pragma forcing
@@ -13254,7 +13255,7 @@ public:
 private:
   unsigned ForceCUDAHostDeviceDepth = 0;
 
-  /// @}
+  ///@}
 
   //
   //
@@ -13264,7 +13265,7 @@ private:
 
   /// \name HLSL Constructs
   /// Implementations are in SemaHLSL.cpp
-  /// @{
+  ///@{
 
 public:
   Decl *ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
@@ -13272,7 +13273,7 @@ public:
                              SourceLocation IdentLoc, SourceLocation LBrace);
   void ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -13282,7 +13283,7 @@ public:
 
   /// \name OpenACC Constructs
   /// Implementations are in SemaOpenACC.cpp
-  /// @{
+  ///@{
 
 public:
   /// Called after parsing an OpenACC Clause so that it can be checked.
@@ -13322,7 +13323,7 @@ public:
   /// declaration group or associated statement.
   DeclGroupRef ActOnEndOpenACCDeclDirective();
 
-  /// @}
+  ///@}
 
   //
   //
@@ -13332,7 +13333,7 @@ public:
 
   /// \name OpenMP Directives and Clauses
   /// Implementations are in SemaOpenMP.cpp
-  /// @{
+  ///@{
 
 public:
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
@@ -14689,7 +14690,7 @@ private:
                         const DeclarationNameInfo &DirName,
                         OpenMPDirectiveKind CancelRegion);
 
-  /// @}
+  ///@}
 
   //
   //
@@ -14699,7 +14700,7 @@ private:
 
   /// \name SYCL Constructs
   /// Implementations are in SemaSYCL.cpp
-  /// @{
+  ///@{
 
 public:
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
@@ -14727,7 +14728,7 @@ public:
                                   llvm::DenseSet<QualType> Visited,
                                   ValueDecl *DeclToCheck);
 
-  /// @}
+  ///@}
 };
 
 DeductionFailureInfo
