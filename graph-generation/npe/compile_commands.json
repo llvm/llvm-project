@@ -1,0 +1,17 @@
+[
+    {
+        "command": "c++ -c -Wall -Wextra -std=c++11 -o main.o main.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/npe",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp"
+    },
+    {
+        "command": "c++ -c -Wall -Wextra -std=c++11 -o modifyPointer.o modifyPointer.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/npe",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp"
+    },
+    {
+        "command": "c++ -c -Wall -Wextra -std=c++11 -o useAlias.o useAlias.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/npe",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp"
+    }
+]
