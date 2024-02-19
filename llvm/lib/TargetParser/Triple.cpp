@@ -638,6 +638,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("elfiamcu", Triple::ELFIAMCU)
     .StartsWith("tvos", Triple::TvOS)
     .StartsWith("watchos", Triple::WatchOS)
+    .StartsWith("bridgeos", Triple::BridgeOS)
     .StartsWith("driverkit", Triple::DriverKit)
     .StartsWith("xros", Triple::XROS)
     .StartsWith("visionos", Triple::XROS)
