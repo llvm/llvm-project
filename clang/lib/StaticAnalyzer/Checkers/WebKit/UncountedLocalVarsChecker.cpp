@@ -26,28 +26,6 @@ using namespace ento;
 
 namespace {
 
-// for ( int a = ...) ... true
-// for ( int a : ...) ... true
-// if ( int* a = ) ... true
-// anything else ... false
-bool isDeclaredInForOrIf(const VarDecl *Var) {
-  assert(Var);
-  auto &ASTCtx = Var->getASTContext();
-  auto parent = ASTCtx.getParents(*Var);
-
-  if (parent.size() == 1) {
-    if (auto *DS = parent.begin()->get<DeclStmt>()) {
-      DynTypedNodeList grandParent = ASTCtx.getParents(*DS);
-      if (grandParent.size() == 1) {
-        return grandParent.begin()->get<ForStmt>() ||
-               grandParent.begin()->get<IfStmt>() ||
-               grandParent.begin()->get<CXXForRangeStmt>();
-      }
-    }
-  }
-  return false;
-}
-
 // FIXME: should be defined by anotations in the future
 bool isRefcountedStringsHack(const VarDecl *V) {
   assert(V);
@@ -133,6 +111,8 @@ class UncountedLocalVarsChecker
               "WebKit coding guidelines"};
   mutable BugReporter *BR;
 
+  TrivialFunctionAnalysis TFA;
+
 public:
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -171,6 +151,24 @@ public:
 
     std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
     if (IsUncountedPtr && *IsUncountedPtr) {
+
+      ASTContext &ctx = V->getASTContext();
+      for (DynTypedNodeList ancestors = ctx.getParents(*V); !ancestors.empty();
+           ancestors = ctx.getParents(*ancestors.begin())) {
+        for (auto &ancestor : ancestors) {
+          if (auto *S = ancestor.get<IfStmt>(); S && TFA.isTrivial(S))
+            return;
+          if (auto *S = ancestor.get<ForStmt>(); S && TFA.isTrivial(S))
+            return;
+          if (auto *S = ancestor.get<CXXForRangeStmt>(); S && TFA.isTrivial(S))
+            return;
+          if (auto *S = ancestor.get<WhileStmt>(); S && TFA.isTrivial(S))
+            return;
+          if (auto *S = ancestor.get<CompoundStmt>(); S && TFA.isTrivial(S))
+            return;
+        }
+      }
+
       const Expr *const InitExpr = V->getInit();
       if (!InitExpr)
         return; // FIXME: later on we might warn on uninitialized vars too
@@ -178,6 +176,7 @@ public:
       const clang::Expr *const InitArgOrigin =
           tryToFindPtrOrigin(InitExpr, /*StopAtFirstRefCountedObj=*/false)
               .first;
+
       if (!InitArgOrigin)
         return;
 
@@ -189,20 +188,17 @@ public:
                 dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
           const auto *MaybeGuardianArgType =
               MaybeGuardian->getType().getTypePtr();
-          if (!MaybeGuardianArgType)
-            return;
-          const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-              MaybeGuardianArgType->getAsCXXRecordDecl();
-          if (!MaybeGuardianArgCXXRecord)
-            return;
-
-          if (MaybeGuardian->isLocalVarDecl() &&
-              (isRefCounted(MaybeGuardianArgCXXRecord) ||
-               isRefcountedStringsHack(MaybeGuardian)) &&
-              isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian)) {
-            return;
+          if (MaybeGuardianArgType) {
+            const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
+                MaybeGuardianArgType->getAsCXXRecordDecl();
+            if (MaybeGuardianArgCXXRecord) {
+              if (MaybeGuardian->isLocalVarDecl() &&
+                  (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                   isRefcountedStringsHack(MaybeGuardian)) &&
+                  isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+                return;
+            }
           }
-
           // Parameters are guaranteed to be safe for the duration of the call
           // by another checker.
           if (isa<ParmVarDecl>(MaybeGuardian))
@@ -217,9 +213,6 @@ public:
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
     if (!V->isLocalVarDecl())
-      return true;
-
-    if (isDeclaredInForOrIf(V))
       return true;
 
     return false;

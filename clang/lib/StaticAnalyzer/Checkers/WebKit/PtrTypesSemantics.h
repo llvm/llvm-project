@@ -19,6 +19,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class Stmt;
 class Type;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
@@ -70,15 +71,27 @@ bool isSingleton(const FunctionDecl *F);
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
+  bool isTrivial(const Decl *D) const {
+    return isTrivialImpl(D, TheFunctionCache, TheStatementCache);
+  }
+
+  bool isTrivial(const Stmt *S) const {
+    return isTrivialImpl(S, TheFunctionCache, TheStatementCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
 
-  using CacheTy = llvm::DenseMap<const Decl *, bool>;
-  mutable CacheTy TheCache{};
+  using FunctionCacheTy = llvm::DenseMap<const Decl *, bool>;
+  mutable FunctionCacheTy TheFunctionCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
+  using StatementCacheTy = llvm::DenseMap<const Stmt *, bool>;
+  mutable StatementCacheTy TheStatementCache{};
+
+  static bool isTrivialImpl(const Decl *D, FunctionCacheTy &FunctionCache,
+                            StatementCacheTy &StatementCache);
+  static bool isTrivialImpl(const Stmt *S, FunctionCacheTy &FunctionCache,
+                            StatementCacheTy &StatementCache);
 };
 
 } // namespace clang
