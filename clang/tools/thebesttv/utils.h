@@ -69,6 +69,9 @@ struct Location {
 
     Location() : Location("", -1, -1) {}
 
+    Location(const json &j)
+        : file(j["file"]), line(j["line"]), column(j["column"]) {}
+
     Location(const std::string &file, int line, int column)
         : file(file), line(line), column(column) {}
 

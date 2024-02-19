@@ -7,15 +7,15 @@
             "locations": [
                 {
                     "type": "source",
-                    "file": "",
-                    "line": -1,
-                    "column": -1
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "line": 5,
+                    "column": 8
                 },
                 {
                     "type": "sink",
-                    "file": "",
-                    "line": -1,
-                    "column": -1
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "line": 5,
+                    "column": 12
                 }
             ]
         }

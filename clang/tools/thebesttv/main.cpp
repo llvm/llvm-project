@@ -81,16 +81,44 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
     return VarLocResult();
 }
 
-VarLocResult locateVariable(const std::string &signature, int line,
-                            int column) {
+struct FunctionLocator {
+    // file -> (fid, start line)
+    std::map<std::string, std::vector<std::pair<int, int>>> functionLocations;
 
-    int fid = Global.getIdOfFunction(signature);
-    if (fid == -1) {
-        llvm::errs() << "Function not found: " << signature << "\n";
-        return VarLocResult();
+    FunctionLocator() {
+        for (int i = 0; i < Global.functionLocations.size(); i++) {
+            const Location &loc = Global.functionLocations[i];
+            functionLocations[loc.file].emplace_back(i, loc.line);
+        }
+        // 根据 line 降序排列
+        for (auto &[file, locs] : functionLocations) {
+            std::sort(locs.begin(), locs.end(),
+                      [](const auto &a, const auto &b) {
+                          return a.second > b.second;
+                      });
+        }
     }
 
-    const NamedLocation &loc = Global.functionLocations[fid];
+    int getFid(const Location &loc) const {
+        auto it = functionLocations.find(loc.file);
+        if (it == functionLocations.end())
+            return -1;
+
+        for (const auto &[fid, startLine] : it->second) {
+            if (loc.line >= startLine) {
+                return fid;
+            }
+        }
+        return -1;
+    }
+};
+
+VarLocResult locateVariable(const FunctionLocator &locator,
+                            const Location &loc) {
+    int fid = locator.getFid(loc);
+    if (fid == -1) {
+        return VarLocResult();
+    }
 
     ClangTool Tool(*Global.cb, {loc.file});
     DiagnosticConsumer DC = IgnoringDiagConsumer();
@@ -108,7 +136,7 @@ VarLocResult locateVariable(const std::string &signature, int line,
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
-    return locateVariable(functionsInFile, loc.file, line, column);
+    return locateVariable(functionsInFile, loc.file, loc.line, loc.column);
 }
 
 std::string getSourceCode(SourceManager &SM, const SourceRange &range) {
@@ -268,19 +296,8 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     }
 }
 
-void dumpPath(const std::vector<int> &path, ordered_json &j) {
-    ordered_json jPath;
-    for (int x : path) {
-        dumpICFGNode(x, jPath);
-    }
-
-    j["type"] = "handCraftedExample";
-    j["locations"] = jPath;
-}
-
-void saveAsJson(const std::string &filename,
-                const std::set<std::vector<int>> &results) {
-    ordered_json jResults;
+void saveAsJson(const std::set<std::vector<int>> &results,
+                const std::string &type, ordered_json &jResults) {
     std::vector<std::vector<int>> sortedResults(results.begin(), results.end());
     // sort based on length
     std::sort(sortedResults.begin(), sortedResults.end(),
@@ -292,20 +309,16 @@ void saveAsJson(const std::string &filename,
         if (cnt++ > 10)
             break;
         ordered_json jPath;
-        dumpPath(path, jPath);
+        jPath["type"] = type;
+        for (int x : path) {
+            dumpICFGNode(x, jPath["locations"]);
+        }
         jResults.push_back(jPath);
     }
-
-    ordered_json j;
-    j["results"] = jResults;
-
-    std::ofstream o(filename);
-    // o << std::setw(4) << j << std::endl;
-    o << j.dump(4, ' ', false, json::error_handler_t::replace) << std::endl;
-    o.close();
 }
 
-void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
+static void findPathBetween(const VarLocResult &from, const VarLocResult &to,
+                            const std::string &type, ordered_json &jResults) {
     if (!from.isValid() || !to.isValid()) {
         llvm::errs() << "Invalid variable location!\n";
         return;
@@ -320,7 +333,7 @@ void findPathBetween(const VarLocResult &from, const VarLocResult &to) {
     ICFGPathFinder pFinder(icfg);
     pFinder.search(u, v, 3);
 
-    saveAsJson("path.json", pFinder.results);
+    saveAsJson(pFinder.results, type, jResults);
 }
 
 /**
@@ -377,7 +390,7 @@ int main(int argc, const char **argv) {
     fs::path jsonPath = fs::absolute(argv[1]);
     llvm::errs() << "Reading from json: " << jsonPath << "\n";
     std::ifstream ifs(jsonPath);
-    json input = json::parse(ifs);
+    ordered_json input = ordered_json::parse(ifs);
 
     Global.projectDirectory =
         fs::canonical(input["root"].template get<std::string>()).string();
@@ -405,8 +418,47 @@ int main(int argc, const char **argv) {
         llvm::errs() << "  m: " << m << "\n";
     }
 
-    findPathBetween(locateVariable("main()", 5, 8),
-                    locateVariable("useAlias(const A &)", 5, 12));
+    fs::path outputDir = jsonPath.parent_path();
+    {
+        llvm::errs() << "--- Path-finding ---\n";
+
+        FunctionLocator locator;
+        fs::path jsonResult = outputDir / "output.json";
+        llvm::errs() << "Output: " << jsonResult << "\n";
+
+        int total = input["results"].size();
+        llvm::errs() << "There are " << total << " results to search.\n";
+
+        ordered_json output(input);
+        output["results"].clear();
+
+        int cnt = 0;
+        for (ordered_json &result : input["results"]) {
+            cnt++;
+            std::string type = result["type"].template get<std::string>();
+            llvm::errs() << "[" << cnt << "/" << total << "] " << type << "\n";
+
+            ordered_json &locations = result["locations"];
+            Location from, to;
+            for (const ordered_json &loc : locations) {
+                std::string type = loc["type"].template get<std::string>();
+                if (type == "source") {
+                    from = Location(loc);
+                } else if (type == "sink") {
+                    to = Location(loc);
+                }
+            }
+
+            findPathBetween(locateVariable(locator, from),
+                            locateVariable(locator, to), type,
+                            output["results"]);
+        }
+
+        std::ofstream o(jsonResult);
+        o << output.dump(4, ' ', false, json::error_handler_t::replace)
+          << std::endl;
+        o.close();
+    }
 
     // std::string source = "IOPriorityPanel_new(IOPriority)";
     // std::string target = "Panel_setSelected(Panel *, int)";
