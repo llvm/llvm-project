@@ -543,3 +543,12 @@ namespace StaticLocals {
     static_assert(m == 0, "");
   }
 }
+
+namespace Local {
+  /// We used to run into infinite recursin here because we were
+  /// trying to evaluate t's initializer while evaluating t's initializer.
+  int a() {
+    const int t=t;
+    return t;
+  }
+}
