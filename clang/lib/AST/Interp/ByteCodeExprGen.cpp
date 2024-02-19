@@ -1157,8 +1157,13 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  if (!this->delegate(Base))
-    return false;
+  if (Initializing) {
+    if (!this->delegate(Base))
+      return false;
+  } else {
+    if (!this->visit(Base))
+      return false;
+  }
 
   // Base above gives us a pointer on the stack.
   // TODO: Implement non-FieldDecl members.
@@ -1716,6 +1721,9 @@ bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
+  if (DiscardResult)
+    return true;
+
   assert(Initializing);
   const Record *R = P.getOrCreateRecord(E->getLambdaClass());
 
@@ -2465,17 +2473,6 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
     }
   }
 
-  // If the declaration is a constant value, emit it here even
-  // though the declaration was not evaluated in the current scope.
-  // The access mode can only be read in this case.
-  if (!DiscardResult && AK == DerefKind::Read) {
-    if (VD->hasLocalStorage() && VD->hasInit() && !VD->isConstexpr()) {
-      QualType VT = VD->getType();
-      if (VT.isConstQualified() && VT->isFundamentalType())
-        return this->visit(VD->getInit());
-    }
-  }
-
   // Value cannot be produced - try to emit pointer.
   return visit(LV) && Indirect(T);
 }
@@ -2746,10 +2743,9 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
         return this->emitSetLocal(*VarT, Offset, VD);
       }
     } else {
-      if (std::optional<unsigned> Offset = this->allocateLocal(VD)) {
-        if (Init)
-          return this->visitLocalInitializer(Init, *Offset);
-      }
+      if (std::optional<unsigned> Offset = this->allocateLocal(VD))
+        return !Init || this->visitLocalInitializer(Init, *Offset);
+      return false;
     }
     return true;
   }
@@ -2824,6 +2820,20 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
+  auto Args = E->arguments();
+  // Calling a static operator will still
+  // pass the instance, but we don't need it.
+  // Discard it here.
+  if (isa<CXXOperatorCallExpr>(E)) {
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(E->getDirectCallee());
+        MD && MD->isStatic()) {
+      if (!this->discard(E->getArg(0)))
+        return false;
+      Args = drop_begin(Args, 1);
+    }
+  }
+
   // Add the (optional, implicit) This pointer.
   if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
     if (!this->visit(MC->getImplicitObjectArgument()))
@@ -2831,7 +2841,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   // Put arguments on the stack.
-  for (const auto *Arg : E->arguments()) {
+  for (const auto *Arg : Args) {
     if (!this->visit(Arg))
       return false;
   }

@@ -742,6 +742,67 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
     Reqs.addRequirements(SPIRV::Capability::ImageBasic);
 }
 
+// Add requirements for handling atomic float instructions
+#define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
+  "The atomic float instruction requires the following SPIR-V "                \
+  "extension: SPV_EXT_shader_atomic_float" ExtName
+static void AddAtomicFloatRequirements(const MachineInstr &MI,
+                                       SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST) {
+  assert(MI.getOperand(1).isReg() &&
+         "Expect register operand in atomic float instruction");
+  Register TypeReg = MI.getOperand(1).getReg();
+  SPIRVType *TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
+  if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
+    report_fatal_error("Result type of an atomic float instruction must be a "
+                       "floating-point type scalar");
+
+  unsigned BitWidth = TypeDef->getOperand(1).getImm();
+  unsigned Op = MI.getOpcode();
+  if (Op == SPIRV::OpAtomicFAddEXT) {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add))
+      report_fatal_error(ATOM_FLT_REQ_EXT_MSG("_add"), false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add);
+    switch (BitWidth) {
+    case 16:
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
+        report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      break;
+    case 32:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat32AddEXT);
+      break;
+    case 64:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat64AddEXT);
+      break;
+    default:
+      report_fatal_error(
+          "Unexpected floating-point type width in atomic float instruction");
+    }
+  } else {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max))
+      report_fatal_error(ATOM_FLT_REQ_EXT_MSG("_min_max"), false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max);
+    switch (BitWidth) {
+    case 16:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      break;
+    case 32:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat32MinMaxEXT);
+      break;
+    case 64:
+      Reqs.addCapability(SPIRV::Capability::AtomicFloat64MinMaxEXT);
+      break;
+    default:
+      report_fatal_error(
+          "Unexpected floating-point type width in atomic float instruction");
+    }
+  }
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::RequirementHandler &Reqs,
                           const SPIRVSubtarget &ST) {
@@ -1013,6 +1074,11 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
+    break;
+  case SPIRV::OpAtomicFAddEXT:
+  case SPIRV::OpAtomicFMinEXT:
+  case SPIRV::OpAtomicFMaxEXT:
+    AddAtomicFloatRequirements(MI, Reqs, ST);
     break;
   default:
     break;
