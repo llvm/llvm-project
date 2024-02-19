@@ -398,7 +398,7 @@ struct MCDCRecord {
     }
 
     /// Emulate RHS SmallVector::operator[]
-    MCDCRecord::CondState operator[](int I) const {
+    CondState operator[](int I) const {
       return (Visited[I] ? (Values[I] ? MCDC_True : MCDC_False)
                          : MCDC_DontCare);
     }
