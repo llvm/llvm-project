@@ -2214,14 +2214,15 @@ func.func @generate_negative_size_verifies() -> tensor<?x8xi32> {
 
 // -----
 
-func.func @infer_and_fold_pack_unpack_same_tiles(%t: tensor<10x20x?x?xf32>,
-    %dim1: index, %dim2: index, %dim3: index, %dim4: index, %tile1: index,
-    %tile2: index) -> tensor<10x20x?x?xf32> {
+func.func @infer_and_fold_pack_unpack_same_tiles(%t: tensor<10x20x4x4xf32>) -> tensor<10x20x4x4xf32> {
+  %dim1 = arith.constant 40 : index
+  %dim2 = arith.constant 80 : index
   %tensor_empty = tensor.empty(%dim1, %dim2) : tensor<?x?xf32>
-  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<10x20x?x?xf32> -> tensor<?x?xf32>
-  %tensor_empty1 = tensor.empty(%dim3, %dim4) : tensor<10x20x?x?xf32>
-  %packed = tensor.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<?x?xf32> -> tensor<10x20x?x?xf32>
-  return %packed : tensor<10x20x?x?xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [4, 4] into %tensor_empty : tensor<10x20x4x4xf32> -> tensor<?x?xf32>
+  %cast = tensor.cast %unpacked : tensor<?x?xf32> to tensor<40x80xf32>
+  %tensor_empty1 = tensor.empty() : tensor<10x20x4x4xf32>
+  %packed = tensor.pack %cast inner_dims_pos = [0, 1] inner_tiles = [4, 4] into %tensor_empty1 : tensor<40x80xf32> -> tensor<10x20x4x4xf32>
+  return %packed : tensor<10x20x4x4xf32>
 }
 // CHECK-LABEL: func.func @infer_and_fold_pack_unpack_same_tiles
 // CHECK-SAME:    %[[SRC:[0-9a-zA-Z]+]]
