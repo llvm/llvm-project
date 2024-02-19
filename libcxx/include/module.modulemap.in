@@ -1156,6 +1156,12 @@ module std_private_chrono_steady_clock           [system] {
   header "__chrono/steady_clock.h"
   export std_private_chrono_time_point
 }
+module std_private_chrono_time_zone              [system] {
+  header "__chrono/time_zone.h"
+}
+module std_private_chrono_time_zone_link         [system] {
+  header "__chrono/time_zone_link.h"
+}
 module std_private_chrono_system_clock           [system] {
   header "__chrono/system_clock.h"
   export std_private_chrono_time_point
@@ -1188,6 +1194,8 @@ module std_private_compare_strong_order                   [system] { header "__c
 module std_private_compare_synth_three_way                [system] { header "__compare/synth_three_way.h" }
 module std_private_compare_three_way_comparable           [system] { header "__compare/three_way_comparable.h" }
 module std_private_compare_weak_order                     [system] { header "__compare/weak_order.h" }
+
+module std_private_complex_complex_fwd            [system] { header "__fwd/complex.h" }
 
 module std_private_concepts_arithmetic            [system] { header "__concepts/arithmetic.h" }
 module std_private_concepts_assignable            [system] { header "__concepts/assignable.h" }

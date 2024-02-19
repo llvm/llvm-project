@@ -979,108 +979,90 @@ void ReductionClauseParsing() {
 int returns_int();
 
 void IntExprParsing() {
-  // expected-error@+3{{expected '('}}
-  // expected-warning@+2{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length
   {}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length()
   {}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+2{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(invalid)
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(5, 4)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(5)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(returns_int())
   {}
 
-  // expected-error@+3{{expected '('}}
-  // expected-warning@+2{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs
   {}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs()
   {}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+2{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(invalid)
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(5, 4)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(5)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(returns_int())
   {}
 
-  // expected-error@+3{{expected '('}}
-  // expected-warning@+2{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers
   {}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers()
   {}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+2{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(invalid)
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(5, 4)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(5)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(returns_int())
   {}
 
@@ -1262,210 +1244,176 @@ void IntExprParsing() {
 }
 
 void device_type() {
-  // expected-error@+3{{expected '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type
   {}
-  // expected-error@+3{{expected '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype
   {}
 
-  // expected-error@+5{{expected identifier}}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+4{{expected identifier}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(
     {}
-  // expected-error@+5{{expected identifier}}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+4{{expected identifier}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(
   {}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type()
   {}
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype()
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(*
   {}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(*
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident
   {}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident
   {}
 
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident ident2
   {}
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident ident2
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, ident2
   {}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident, ident2
   {}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, ident2,)
   {}
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident, ident2,)
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(*,)
   {}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(*,)
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(*,ident)
   {}
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(*,ident)
   {}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, *)
   {}
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident, *)
   {}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type("foo", 54)
   {}
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(31, "bar")
   {}
 
-  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, auto, int, float)
   {}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel dtype(ident, auto, int, float)
   {}
 
-  // expected-warning@+3{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+2{{OpenACC clause 'device_type' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'dtype' not yet implemented, clause ignored}}
 #pragma acc parallel device_type(ident, auto, int, float) dtype(ident, auto, int, float)
   {}
 }
 
 #define acc_async_sync -1
 void AsyncArgument() {
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async
   {}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async()
   {}
 
-  // expected-error@+3{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(invalid)
   {}
 
-  // expected-error@+4{{expected ')'}}
-  // expected-note@+3{{to match this '('}}
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(4, 3)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(returns_int())
   {}
 
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(5)
   {}
 
-  // expected-warning@+2{{OpenACC clause 'async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'parallel' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(acc_async_sync)
   {}
 }
