@@ -1744,13 +1744,6 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(const function_type, const function_type2), "");
   // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
   // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
-  static_assert(!__is_layout_compatible(EnumLayout, int), "");
-  static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
-  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
-  static_assert(__is_layout_compatible(EnumForward, EnumForward), "");
-  static_assert(!__is_layout_compatible(EnumForward, int), "");
-  static_assert(!__is_layout_compatible(EnumClassForward, int), "");
-  static_assert(__is_layout_compatible(EnumForward, EnumClassForward), "");
   static_assert(__is_layout_compatible(CStruct, CStruct2), "");
   static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
   static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
@@ -1783,6 +1776,14 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
   static_assert(__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
   static_assert(__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
+  static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout), "");
+  static_assert(__is_layout_compatible(EnumForward, EnumForward), "");
+  static_assert(__is_layout_compatible(EnumForward, EnumClassForward), "");
+  // Layout compatibility for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
+  static_assert(!__is_layout_compatible(EnumLayout, int), "");
+  static_assert(!__is_layout_compatible(EnumClassLayout, int), "");
+  static_assert(!__is_layout_compatible(EnumForward, int), "");
+  static_assert(!__is_layout_compatible(EnumClassForward, int), "");
   // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
   static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), ""); 
   static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
