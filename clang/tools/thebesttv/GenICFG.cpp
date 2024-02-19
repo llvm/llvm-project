@@ -28,16 +28,12 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         return true;
 
     /**
-     * 目前，跳过不在当前文件的函数
-     *
-     * 被跳过的主要包含库函数。
-     * 但如果 .h 中包含了函数定义(例如 inline 和 template
-     * 函数)，也会被省略。
+     * 跳过不在 Global.projectDirectory 中的函数。
      *
      * See: Is it a good practice to place C++ definitions in header files?
      *      https://stackoverflow.com/a/583271
      */
-    if (filePath != pLoc->file)
+    if (!Global.isUnderProject(pLoc->file))
         return true;
 
     if (!D->isThisDeclarationADefinition())
