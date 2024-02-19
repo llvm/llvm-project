@@ -13,10 +13,10 @@
 #ifndef FORTRAN_LOWER_OPENMP_H
 #define FORTRAN_LOWER_OPENMP_H
 
+#include "llvm/ADT/SmallVector.h"
+
 #include <cinttypes>
 #include <utility>
-
-#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 class Value;
@@ -51,6 +51,11 @@ namespace pft {
 struct Evaluation;
 struct Variable;
 } // namespace pft
+
+using OMPDeferredDeclTarInfo =
+    std::tuple<uint32_t /*mlir::omp::DeclareTargetCaptureClause*/,
+               uint32_t, /*mlir::omp::DeclareTargetDeviceType*/
+               Fortran::semantics::Symbol>;
 
 // Generate the OpenMP terminator for Operation at Location.
 mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
@@ -89,19 +94,13 @@ bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
                                  Fortran::semantics::SemanticsContext &,
                                  Fortran::lower::pft::Evaluation &,
                                  const parser::OpenMPDeclarativeConstruct &);
-void gatherDeferredDeclareTargets(
+void gatherOpenMPDeferredDeclareTargets(
     Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
     Fortran::lower::pft::Evaluation &,
     const parser::OpenMPDeclarativeConstruct &,
-    llvm::SmallVectorImpl<std::tuple<
-        uint32_t /*mlir::omp::DeclareTargetCaptureClause*/, uint32_t,
-        /*mlir::omp::DeclareTargetDeviceType*/ Fortran::semantics::Symbol>> &);
-bool markDelayedDeclareTargetFunctions(
-    mlir::Operation *,
-    llvm::SmallVectorImpl<
-        std::tuple<uint32_t /*mlir::omp::DeclareTargetCaptureClause*/,
-                   uint32_t, /*mlir::omp::DeclareTargetDeviceType*/
-                   Fortran::semantics::Symbol>> &,
+    llvm::SmallVectorImpl<OMPDeferredDeclTarInfo> &);
+bool markOpenMPDeferredDeclareTargetFunctions(
+    mlir::Operation *, llvm::SmallVectorImpl<OMPDeferredDeclTarInfo> &,
     AbstractConverter &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
 

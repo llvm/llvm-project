@@ -1173,10 +1173,8 @@ static void insertDeferredDeclareTargets(
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclareTargetConstruct &declareTargetConstruct,
-    llvm::SmallVectorImpl<
-        std::tuple<uint32_t /*mlir::omp::DeclareTargetCaptureClause*/,
-                   uint32_t, /*mlir::omp::DeclareTargetDeviceType*/
-                   Fortran::semantics::Symbol>> &deferredDeclareTarget) {
+    llvm::SmallVectorImpl<Fortran::lower::OMPDeferredDeclTarInfo>
+        &deferredDeclareTarget) {
   llvm::SmallVector<DeclareTargetCapturePair, 0> symbolAndClause;
   mlir::omp::DeclareTargetDeviceType devType = getDeclareTargetInfo(
       converter, semaCtx, eval, declareTargetConstruct, symbolAndClause);
@@ -2472,15 +2470,12 @@ bool Fortran::lower::isOpenMPTargetConstruct(
   return llvm::omp::allTargetSet.test(dir);
 }
 
-void Fortran::lower::gatherDeferredDeclareTargets(
+void Fortran::lower::gatherOpenMPDeferredDeclareTargets(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl,
-    llvm::SmallVectorImpl<
-        std::tuple<uint32_t /*mlir::omp::DeclareTargetCaptureClause*/,
-                   uint32_t, /*mlir::omp::DeclareTargetDeviceType*/
-                   Fortran::semantics::Symbol>> &deferredDeclareTarget) {
+    llvm::SmallVectorImpl<OMPDeferredDeclTarInfo> &deferredDeclareTarget) {
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct &ompReq) {
@@ -2518,12 +2513,9 @@ bool Fortran::lower::isOpenMPDeviceDeclareTarget(
 // This function will also return true if we encounter any device declare
 // target cases, to satisfy checking if we require the requires attributes
 // on the module.
-bool Fortran::lower::markDelayedDeclareTargetFunctions(
+bool Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
     mlir::Operation *mod,
-    llvm::SmallVectorImpl<
-        std::tuple<uint32_t /*mlir::omp::DeclareTargetCaptureClause*/,
-                   uint32_t, /*mlir::omp::DeclareTargetDeviceType*/
-                   Fortran::semantics::Symbol>> &deferredDeclareTargets,
+    llvm::SmallVectorImpl<OMPDeferredDeclTarInfo> &deferredDeclareTargets,
     AbstractConverter &converter) {
   bool deviceCodeFound = false;
   if (auto modOp = llvm::dyn_cast<mlir::ModuleOp>(mod)) {
