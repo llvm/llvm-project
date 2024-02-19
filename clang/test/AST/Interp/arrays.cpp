@@ -545,3 +545,22 @@ namespace LocalIndex {
     array[const_subscript] = 0;  // both-warning {{array index 3 is past the end of the array (that has type 'int[2]')}}
   }
 }
+
+namespace LocalVLA {
+  struct Foo {
+    int x;
+    Foo(int x) : x(x) {}
+  };
+  struct Elidable {
+    Elidable();
+  };
+
+  void foo(int size) {
+    Elidable elidableDynArray[size];
+#if __cplusplus >= 202002L
+     // both-note@-3 {{declared here}}
+     // both-warning@-3 {{variable length array}}
+     // both-note@-4 {{function parameter 'size' with unknown value}}
+#endif
+  }
+}

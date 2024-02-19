@@ -2749,10 +2749,9 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
         return this->emitSetLocal(*VarT, Offset, VD);
       }
     } else {
-      if (std::optional<unsigned> Offset = this->allocateLocal(VD)) {
-        if (Init)
-          return this->visitLocalInitializer(Init, *Offset);
-      }
+      if (std::optional<unsigned> Offset = this->allocateLocal(VD))
+        return !Init || this->visitLocalInitializer(Init, *Offset);
+      return false;
     }
     return true;
   }
