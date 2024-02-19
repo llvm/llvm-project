@@ -523,3 +523,32 @@ namespace Move {
   constexpr int A = std::move(5);
   static_assert(A == 5, "");
 }
+
+namespace StaticLocals {
+  void test() {
+    static int j; // both-note {{declared here}}
+    static_assert(&j != nullptr, ""); // both-warning {{always true}}
+
+    static_assert(j == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{read of non-const variable 'j'}}
+
+    static int k = 0; // both-note {{declared here}}
+    static_assert(k == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{read of non-const variable 'k'}}
+
+    static const int l = 12;
+    static_assert(l == 12, "");
+
+    static const int m; // both-error {{default initialization}}
+    static_assert(m == 0, "");
+  }
+}
+
+namespace Local {
+  /// We used to run into infinite recursin here because we were
+  /// trying to evaluate t's initializer while evaluating t's initializer.
+  int a() {
+    const int t=t;
+    return t;
+  }
+}
