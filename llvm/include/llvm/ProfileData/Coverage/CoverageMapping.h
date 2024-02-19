@@ -402,7 +402,8 @@ struct MCDCRecord {
     /// Equivalent to buildTestVector's Index.
     auto getIndex() const { return Values.getData()[0]; }
 
-    /// Emulate LHS SmallVector::operator[].
+    /// Set the condition \p Val at position \p I.
+    /// This emulates LHS SmallVector::operator[].
     void set(int I, CondState Val) {
       Visited[I] = (Val != MCDC_DontCare);
       Values[I] = (Val == MCDC_True);
