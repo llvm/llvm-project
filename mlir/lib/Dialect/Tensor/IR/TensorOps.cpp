@@ -3746,15 +3746,29 @@ SmallVector<int64_t> PackOp::getStaticTiles() {
 
 bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
                                  ArrayRef<int64_t> innerDimsPos,
+                                 ArrayRef<int64_t> outputShape,
+                                 ArrayRef<int64_t> outerDimsPerm,
                                  ArrayRef<OpFoldResult> innerTiles) {
+  SmallVector<int64_t> outputTileSizes(
+      outputShape.take_front(inputShape.size()));
+  if (!outerDimsPerm.empty()) {
+    assert(outerDimsPerm.size() == outputTileSizes.size() &&
+           "expected output and outer_dims_perm to have same size");
+    applyPermutationToVector(outputTileSizes,
+                             invertPermutationVector(outerDimsPerm));
+  }
   for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
     if (ShapedType::isDynamic(inputShape[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-    if (!constantTile)
-      continue;
-    if (inputShape[pos] % (*constantTile) != 0)
+
+    if (!constantTile) {
+      if (!ShapedType::isDynamic(outputTileSizes[pos]) &&
+          (inputShape[pos] % outputTileSizes[pos] != 0))
+        return true;
+    } else if (inputShape[pos] % (*constantTile) != 0) {
       return true;
+    }
   }
   return false;
 }
@@ -3776,9 +3790,11 @@ LogicalResult PackOp::verify() {
 
   if (!paddingValue &&
       requirePaddingValue(getSourceType().getShape(), getInnerDimsPos(),
+                          getDestType().getShape(), getOuterDimsPerm(),
                           getMixedTiles())) {
-    return emitOpError("invalid tile factor provided. Only full tiles are "
-                       "supported when padding_value is not set");
+    return emitOpError(
+        "invalid tile factor or output size provided. Only full tiles are "
+        "supported when padding_value is not set");
   }
   return success();
 }
@@ -3979,8 +3995,9 @@ static bool paddingIsNotNeeded(PackOp op) {
     return false;
   if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
     return false;
-  return !PackOp::requirePaddingValue(srcType.getShape(), op.getInnerDimsPos(),
-                                      op.getMixedTiles());
+  return !PackOp::requirePaddingValue(
+      srcType.getShape(), op.getInnerDimsPos(), op.getDestType().getShape(),
+      op.getOuterDimsPerm(), op.getMixedTiles());
 }
 
 /// Returns true if the `srcShape` or `destShape` is different from the one in
