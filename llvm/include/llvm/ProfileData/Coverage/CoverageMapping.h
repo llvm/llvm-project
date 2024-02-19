@@ -413,6 +413,7 @@ struct MCDCRecord {
     void push_back(CondState Val) {
       Visited.push_back(Val != MCDC_DontCare);
       Values.push_back(Val == MCDC_True);
+      assert(Values.size() == Visited.size());
     }
 
     /// Return the outcome is different each other.
