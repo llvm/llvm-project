@@ -794,24 +794,6 @@ void CommandInterpreter::LoadCommandDictionary() {
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> connect_wasm_cmd_up(
-      new CommandObjectRegexCommand(
-          *this, "wasm",
-          "Connect to a WebAssembly process via remote GDB server.  "
-          "If no host is specifed, localhost is assumed.",
-          "wasm [<hostname>:]<portnum>", 0, false));
-  if (connect_wasm_cmd_up) {
-    if (connect_wasm_cmd_up->AddRegexCommand(
-            "^([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)$",
-            "process connect --plugin wasm connect://%1:%2") &&
-        connect_wasm_cmd_up->AddRegexCommand(
-            "^([[:digit:]]+)$",
-            "process connect --plugin wasm connect://localhost:%1")) {
-      CommandObjectSP command_sp(connect_wasm_cmd_up.release());
-      m_command_dict[std::string(command_sp->GetCommandName())] = command_sp;
-    }
-  }
-
   std::unique_ptr<CommandObjectRegexCommand> connect_kdp_remote_cmd_up(
       new CommandObjectRegexCommand(
           *this, "kdp-remote",

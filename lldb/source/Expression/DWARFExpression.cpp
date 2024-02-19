@@ -348,11 +348,10 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
 
   case DW_OP_WASM_location: {
     uint8_t wasm_op = data.GetU8(&offset);
-    if (wasm_op == 3) {
+    if (wasm_op == 3)
       data.GetU32(&offset);
-    } else {
+    else
       data.GetULEB128(&offset);
-    }
     return offset - data_offset;
   }
 
