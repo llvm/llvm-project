@@ -31,47 +31,36 @@
 #include "../../macros.h"
 #include "../../types.h"
 
-template <typename CharT>
-void test_sfinae() {
-  using StrStream  = std::basic_istringstream<CharT, std::char_traits<CharT>, test_allocator<CharT>>;
-  using CStrStream = std::basic_istringstream<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>;
-
-  static_assert(is_valid_argument_for_str_member<StrStream, CharT*>);
-  static_assert(is_valid_argument_for_str_member<CStrStream, CharT*>);
-
-  static_assert(is_valid_argument_for_str_member<StrStream, const CharT*>);
-  static_assert(is_valid_argument_for_str_member<CStrStream, const CharT*>);
-
-  static_assert(is_valid_argument_for_str_member<StrStream, std::basic_string_view<CharT>>);
-  static_assert(
-      is_valid_argument_for_str_member<CStrStream, std::basic_string_view<CharT, constexpr_char_traits<CharT>>>);
-
-  static_assert(is_valid_argument_for_str_member<StrStream, std::basic_string<CharT>>);
-  static_assert(is_valid_argument_for_str_member<CStrStream, std::basic_string<CharT, constexpr_char_traits<CharT>>>);
-
-  static_assert(is_valid_argument_for_str_member<StrStream, ConstConvertibleStringView<CharT>>);
-  static_assert(
-      is_valid_argument_for_str_member<CStrStream, ConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
-
-  using NStrStream = std::basic_istringstream<nasty_char, nasty_char_traits, test_allocator<nasty_char>>;
+template <typename AllocT = std::allocator<nasty_char>>
+void test_sfinae_with_nasty_char() {
+  using NStrStream = std::basic_istringstream<nasty_char, nasty_char_traits, AllocT>;
 
   static_assert(is_valid_argument_for_str_member<NStrStream, nasty_char*>);
   static_assert(is_valid_argument_for_str_member<NStrStream, const nasty_char*>);
+}
+
+template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
+void test_sfinae() {
+  using StrStream = std::basic_istringstream<CharT, TraitsT, AllocT>;
+
+  static_assert(is_valid_argument_for_str_member<StrStream, CharT*>);
+  static_assert(is_valid_argument_for_str_member<StrStream, const CharT*>);
+  static_assert(is_valid_argument_for_str_member<StrStream, std::basic_string_view<CharT, TraitsT>>);
+  static_assert(is_valid_argument_for_str_member<StrStream, std::basic_string<CharT, TraitsT, AllocT>>);
+  static_assert(is_valid_argument_for_str_member<StrStream, ConstConvertibleStringView<CharT, TraitsT>>);
 
   static_assert(!is_valid_argument_for_str_member<StrStream, CharT>);
   static_assert(!is_valid_argument_for_str_member<StrStream, int>);
   static_assert(!is_valid_argument_for_str_member<StrStream, SomeObject>);
   static_assert(!is_valid_argument_for_str_member<StrStream, std::nullptr_t>);
-  static_assert(!is_valid_argument_for_str_member<StrStream, NonConstConvertibleStringView<CharT>>);
-  static_assert(!is_valid_argument_for_str_member<CStrStream,
-                                                  NonConstConvertibleStringView<CharT, constexpr_char_traits<CharT>>>);
+  static_assert(!is_valid_argument_for_str_member<StrStream, NonConstConvertibleStringView<CharT, TraitsT>>);
 }
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
 void test() {
   AllocT allocator;
 
-  std::basic_istringstream<CharT, TraitsT, AllocT> ss( std::ios_base::in , allocator);
+  std::basic_istringstream<CharT, TraitsT, AllocT> ss(std::ios_base::in, allocator);
   assert(ss.str().empty());
 
   // const CharT*
@@ -96,13 +85,21 @@ void test() {
 }
 
 int main(int, char**) {
+  test_sfinae_with_nasty_char();
+  test_sfinae_with_nasty_char<test_allocator<nasty_char>>();
   test_sfinae<char>();
+  test_sfinae<char, constexpr_char_traits<char>, std::allocator<char>>();
+  test_sfinae<char, std::char_traits<char>, test_allocator<char>>();
+  test_sfinae<char, constexpr_char_traits<char>, test_allocator<char>>();
   test<char>();
   test<char, constexpr_char_traits<char>, std::allocator<char>>();
   test<char, std::char_traits<char>, test_allocator<char>>();
   test<char, constexpr_char_traits<char>, test_allocator<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_sfinae<wchar_t>();
+  test_sfinae<wchar_t, constexpr_char_traits<wchar_t>, std::allocator<wchar_t>>();
+  test_sfinae<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>();
+  test_sfinae<wchar_t, constexpr_char_traits<wchar_t>, test_allocator<wchar_t>>();
   test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>, std::allocator<wchar_t>>();
   test<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>();
