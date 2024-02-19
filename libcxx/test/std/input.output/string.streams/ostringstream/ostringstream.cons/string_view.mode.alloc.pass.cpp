@@ -11,7 +11,7 @@
 // <sstream>
 
 // template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT>>
-// class basic_stringstream
+// class basic_ostringstream
 
 // template<class T>
 //   basic_ostringstream(const T& t, ios_base::openmode which, const Allocator& a);
