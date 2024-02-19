@@ -546,9 +546,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
-  if (!Subtarget->hasFullFP16())
-    setOperationAction(ISD::FP_ROUND, MVT::f16, Expand);
-  else
+
+  if (Subtarget->hasFPARMv8())
     setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
 
   setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
@@ -1883,7 +1882,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
   }
 
   // Lower fixed length vector operations to scalable equivalents.
-  setOperationAction(ISD::ANY_EXTEND, MVT::f32, Legal);
   setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
   setOperationAction(ISD::AND, VT, Custom);
@@ -24620,7 +24618,7 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
   EVT SrcVT = Op.getValueType();
 
   // Default to the generic legalizer
-  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
+  if (SrcVT == MVT::f16 && !Subtarget->hasFPARMv8())
     return;
 
   if (VT == MVT::v2i16 && SrcVT == MVT::i32) {
