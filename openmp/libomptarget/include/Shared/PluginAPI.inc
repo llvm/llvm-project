@@ -33,7 +33,6 @@ PLUGIN_API_HANDLE(launch_kernel, true);
 PLUGIN_API_HANDLE(init_requires, false);
 PLUGIN_API_HANDLE(synchronize, false);
 PLUGIN_API_HANDLE(query_async, false);
-PLUGIN_API_HANDLE(supports_empty_images, false);
 PLUGIN_API_HANDLE(set_info_flag, false);
 PLUGIN_API_HANDLE(print_device_info, false);
 PLUGIN_API_HANDLE(create_event, false);

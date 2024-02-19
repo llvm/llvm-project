@@ -6813,6 +6813,18 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (!isAlmostDeadIV(ToFold, LoopLatch, TermCond))
     return std::nullopt;
 
+  // Inserting instructions in the preheader has a runtime cost, scale
+  // the allowed cost with the loops trip count as best we can.
+  const unsigned ExpansionBudget = [&]() {
+    unsigned Budget = 2 * SCEVCheapExpansionBudget;
+    if (unsigned SmallTC = SE.getSmallConstantMaxTripCount(L))
+      return std::min(Budget, SmallTC);
+    if (std::optional<unsigned> SmallTC = getLoopEstimatedTripCount(L))
+      return std::min(Budget, *SmallTC);
+    // Unknown trip count, assume long running by default.
+    return Budget;
+  }();
+
   const SCEV *BECount = SE.getBackedgeTakenCount(L);
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
@@ -6862,8 +6874,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       continue;
     }
 
-    if (Expander.isHighCostExpansion(TermValueSLocal, L,
-                                     2*SCEVCheapExpansionBudget,
+    if (Expander.isHighCostExpansion(TermValueSLocal, L, ExpansionBudget,
                                      &TTI, InsertPt)) {
       LLVM_DEBUG(
           dbgs() << "Is too expensive to expand terminating value for phi node"

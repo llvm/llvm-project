@@ -1890,8 +1890,12 @@ DeclResult Sema::CheckClassTemplate(
       ContextRAII SavedContext(*this, SemanticContext);
       if (RebuildTemplateParamsInCurrentInstantiation(TemplateParams))
         Invalid = true;
-    } else if (TUK != TUK_Friend && TUK != TUK_Reference)
-      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc, false);
+    }
+
+    if (TUK != TUK_Friend && TUK != TUK_Reference)
+      diagnoseQualifiedDeclaration(SS, SemanticContext, Name, NameLoc,
+                                   /*TemplateId-*/ nullptr,
+                                   /*IsMemberSpecialization*/ false);
 
     LookupQualifiedName(Previous, SemanticContext);
   } else {
@@ -4601,9 +4605,9 @@ void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
 }
 
 DeclResult Sema::ActOnVarTemplateSpecialization(
-    Scope *S, Declarator &D, TypeSourceInfo *DI, SourceLocation TemplateKWLoc,
-    TemplateParameterList *TemplateParams, StorageClass SC,
-    bool IsPartialSpecialization) {
+    Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
+    SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
+    StorageClass SC, bool IsPartialSpecialization) {
   // D must be variable template id.
   assert(D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId &&
          "Variable template specialization is declared with a template id.");
@@ -4783,17 +4787,12 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   // Note that this is an explicit specialization.
   Specialization->setSpecializationKind(TSK_ExplicitSpecialization);
 
-  if (PrevDecl) {
-    // Check that this isn't a redefinition of this specialization,
-    // merging with previous declarations.
-    LookupResult PrevSpec(*this, GetNameForDeclarator(D), LookupOrdinaryName,
-                          forRedeclarationInCurContext());
-    PrevSpec.addDecl(PrevDecl);
-    D.setRedeclaration(CheckVariableDeclaration(Specialization, PrevSpec));
-  } else if (Specialization->isStaticDataMember() &&
-             Specialization->isOutOfLine()) {
+  Previous.clear();
+  if (PrevDecl)
+    Previous.addDecl(PrevDecl);
+  else if (Specialization->isStaticDataMember() &&
+           Specialization->isOutOfLine())
     Specialization->setAccess(VarTemplate->getAccess());
-  }
 
   return Specialization;
 }
@@ -4864,7 +4863,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
 
     if (TemplateDeductionResult Result =
-            DeduceTemplateArguments(Partial, CanonicalConverted, Info)) {
+            DeduceTemplateArguments(Partial, CanonicalConverted, Info);
+        Result != TemplateDeductionResult::Success) {
       // Store the failed-deduction information for use in diagnostics, later.
       // TODO: Actually use the failed-deduction info?
       FailedCandidates.addCandidate().set(
@@ -7244,10 +7244,10 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                          // along with the other associated constraints after
                          // checking the template argument list.
                          /*IgnoreConstraints=*/true);
-      if (Result == TDK_AlreadyDiagnosed) {
+      if (Result == TemplateDeductionResult::AlreadyDiagnosed) {
         if (ParamType.isNull())
           return ExprError();
-      } else if (Result != TDK_Success) {
+      } else if (Result != TemplateDeductionResult::Success) {
         Diag(Arg->getExprLoc(),
              diag::err_non_type_template_parm_type_deduction_failure)
             << Param->getDeclName() << Param->getType() << Arg->getType()
@@ -8831,6 +8831,15 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   bool isMemberSpecialization = false;
   bool isPartialSpecialization = false;
 
+  if (SS.isSet()) {
+    if (TUK != TUK_Reference && TUK != TUK_Friend &&
+        diagnoseQualifiedDeclaration(SS, ClassTemplate->getDeclContext(),
+                                     ClassTemplate->getDeclName(),
+                                     TemplateNameLoc, &TemplateId,
+                                     /*IsMemberSpecialization=*/false))
+      return true;
+  }
+
   // Check the validity of the template headers that introduce this
   // template.
   // FIXME: We probably shouldn't complain about these headers for
@@ -9636,8 +9645,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
       FunctionDecl *Specialization = nullptr;
       if (TemplateDeductionResult TDK = DeduceTemplateArguments(
               cast<FunctionTemplateDecl>(FunTmpl->getFirstDecl()),
-              ExplicitTemplateArgs ? &Args : nullptr, FT, Specialization,
-              Info)) {
+              ExplicitTemplateArgs ? &Args : nullptr, FT, Specialization, Info);
+          TDK != TemplateDeductionResult::Success) {
         // Template argument deduction failed; record why it failed, so
         // that we can provide nifty diagnostics.
         FailedCandidates.addCandidate().set(
@@ -9658,7 +9667,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
               IdentifyCUDATarget(FD, /* IgnoreImplicitHDAttr = */ true)) {
         FailedCandidates.addCandidate().set(
             I.getPair(), FunTmpl->getTemplatedDecl(),
-            MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
+            MakeDeductionFailureInfo(
+                Context, TemplateDeductionResult::CUDATargetMismatch, Info));
         continue;
       }
 
@@ -10808,11 +10818,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
 
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
     FunctionDecl *Specialization = nullptr;
-    if (TemplateDeductionResult TDK
-          = DeduceTemplateArguments(FunTmpl,
-                               (HasExplicitTemplateArgs ? &TemplateArgs
-                                                        : nullptr),
-                                    R, Specialization, Info)) {
+    if (TemplateDeductionResult TDK = DeduceTemplateArguments(
+            FunTmpl, (HasExplicitTemplateArgs ? &TemplateArgs : nullptr), R,
+            Specialization, Info);
+        TDK != TemplateDeductionResult::Success) {
       // Keep track of almost-matches.
       FailedCandidates.addCandidate()
           .set(P.getPair(), FunTmpl->getTemplatedDecl(),
@@ -10832,7 +10841,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
             IdentifyCUDATarget(D.getDeclSpec().getAttributes())) {
       FailedCandidates.addCandidate().set(
           P.getPair(), FunTmpl->getTemplatedDecl(),
-          MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
+          MakeDeductionFailureInfo(
+              Context, TemplateDeductionResult::CUDATargetMismatch, Info));
       continue;
     }
 

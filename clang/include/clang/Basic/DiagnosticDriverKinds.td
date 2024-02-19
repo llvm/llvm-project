@@ -93,6 +93,10 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to "
   "SPIR-V%select{| unless %1 is given}0.">;
 
+// TODO: Remove when COV6 is fully supported by ROCm.
+def warn_drv_amdgpu_cov6: Warning<
+  "code object v6 is still in development and not ready for production use yet;"
+  " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via "
   "'%2'">;
@@ -800,4 +804,7 @@ def warn_android_unversioned_fallback : Warning<
 
 def err_drv_triple_version_invalid : Error<
   "version '%0' in target triple '%1' is invalid">;
+
+def err_drv_installapi_unsupported : Error<
+  "InstallAPI is not supported for '%0'">;
 }

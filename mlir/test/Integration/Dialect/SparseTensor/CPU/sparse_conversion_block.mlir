@@ -103,6 +103,12 @@ module {
     call @dumpf64(%v3) : (memref<?xf64>) -> ()
     call @dumpf64(%v4) : (memref<?xf64>) -> ()
 
+    // TODO: Fix memory leaks.
+    bufferization.dealloc_tensor %1 : tensor<2x4xf64, #BSR>
+    bufferization.dealloc_tensor %2 : tensor<2x4xf64, #BSR>
+    bufferization.dealloc_tensor %3 : tensor<2x4xf64, #CSR>
+    bufferization.dealloc_tensor %4 : tensor<2x4xf64, #CSC>
+
     return
   }
 }

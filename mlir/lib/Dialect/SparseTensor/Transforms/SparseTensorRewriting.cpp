@@ -46,7 +46,7 @@ static bool isZeroValue(Value val) {
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
   return enc && !llvm::all_of(enc.getLvlTypes(),
-                              [](auto lt) { return lt == LevelType::Dense; });
+                              [](auto lt) { return lt == LevelFormat::Dense; });
 }
 static bool isSparseTensor(OpOperand *op) { return isSparseTensor(op->get()); }
 
@@ -543,14 +543,14 @@ public:
     if (!op.hasPureTensorSemantics() || op.getNumDpsInputs() != 1 ||
         op.getNumReductionLoops() == 0 || op.getNumResults() != 1)
       return failure();
-    auto inp = op.getDpsInputOperand(0);
-    auto init = op.getDpsInitOperand(0);
+    auto *inp = op.getDpsInputOperand(0);
+    auto *init = op.getDpsInitOperand(0);
     if (!isSparseTensor(inp))
       return failure();
     // Look for direct x = x OP y for semi-ring ready reductions.
-    auto red = cast<linalg::YieldOp>(op.getRegion().front().getTerminator())
-                   .getOperand(0)
-                   .getDefiningOp();
+    auto *red = cast<linalg::YieldOp>(op.getRegion().front().getTerminator())
+                    .getOperand(0)
+                    .getDefiningOp();
     if (!isa<arith::AndIOp, arith::MulIOp, arith::MulFOp, arith::MinimumFOp,
              arith::MinSIOp, arith::MinUIOp, arith::MaximumFOp, arith::MaxSIOp,
              arith::MaxUIOp>(red))
@@ -592,7 +592,7 @@ public:
     IRMapping irMap;
     irMap.map(red->getOperand(0), region->getArgument(0));
     irMap.map(red->getOperand(1), region->getArgument(1));
-    auto cloned = rewriter.clone(*red, irMap);
+    auto *cloned = rewriter.clone(*red, irMap);
     rewriter.create<sparse_tensor::YieldOp>(loc, cloned->getResult(0));
     rewriter.setInsertionPointAfter(custom);
     rewriter.replaceOp(red, custom.getResult());

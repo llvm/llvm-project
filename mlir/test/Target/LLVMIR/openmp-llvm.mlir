@@ -179,6 +179,27 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
 // -----
 
+// CHECK-LABEL: define void @test_omp_parallel_attrs()
+llvm.func @test_omp_parallel_attrs() -> () attributes {
+  target_cpu = "x86-64",
+  target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+  // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN:.*]])
+  omp.parallel {
+    omp.barrier
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// CHECK: define {{.*}} @[[OMP_OUTLINED_FN]]{{.*}} #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
+
+// -----
+
 // CHECK-LABEL: define void @test_omp_parallel_3()
 llvm.func @test_omp_parallel_3() -> () {
   // CHECK: [[OMP_THREAD_3_1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
@@ -2235,6 +2256,28 @@ llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:   br label %[[exit_stub:[^, ]+]]
 // CHECK: [[exit_stub]]:
 // CHECK:   ret void
+
+// -----
+
+// CHECK-LABEL: define void @omp_task_attrs()
+llvm.func @omp_task_attrs() -> () attributes {
+  target_cpu = "x86-64",
+  target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+  // CHECK: %[[task_data:.*]] = call {{.*}}@__kmpc_omp_task_alloc{{.*}}@[[outlined_fn:.*]])
+  // CHECK: call {{.*}}@__kmpc_omp_task(
+  // CHECK-SAME: ptr %[[task_data]]
+  omp.task {
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// CHECK: define {{.*}} @[[outlined_fn]]{{.*}} #[[attrs:[0-9]+]]
+// CHECK: attributes #[[attrs]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
 
 // -----
 

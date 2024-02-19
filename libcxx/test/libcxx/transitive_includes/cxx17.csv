@@ -127,6 +127,7 @@ chrono string
 chrono string_view
 chrono tuple
 chrono type_traits
+chrono vector
 chrono version
 cinttypes cstdint
 cmath limits
@@ -159,6 +160,7 @@ compare limits
 compare type_traits
 compare version
 complex cmath
+complex cstddef
 complex iosfwd
 complex sstream
 complex stdexcept
@@ -398,6 +400,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream concepts
 istream cstddef
 istream iosfwd
@@ -841,13 +844,17 @@ system_error type_traits
 system_error version
 thread array
 thread atomic
+thread cctype
 thread cerrno
 thread chrono
+thread clocale
 thread compare
 thread cstddef
 thread cstdint
+thread cstdlib
 thread cstring
 thread ctime
+thread cwchar
 thread functional
 thread iosfwd
 thread limits
@@ -956,8 +963,10 @@ variant version
 vector algorithm
 vector array
 vector atomic
+vector cctype
 vector cerrno
 vector climits
+vector clocale
 vector compare
 vector concepts
 vector cstddef

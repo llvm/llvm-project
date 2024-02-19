@@ -129,6 +129,7 @@ namespace llvm {
     COV_3 = 300, // Unsupported.
     COV_4 = 400,
     COV_5 = 500,
+    COV_6 = 600,
   };
 
   class TargetOptions {

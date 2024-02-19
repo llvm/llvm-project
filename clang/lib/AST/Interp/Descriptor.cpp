@@ -63,6 +63,9 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 template <typename T>
 static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
                         const Descriptor *D) {
+  // FIXME: Need to copy the InitMap?
+  Src += sizeof(InitMapPtr);
+  Dst += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
@@ -136,7 +139,7 @@ static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
 static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                        bool IsActive, const Descriptor *D) {
   const bool IsUnion = D->ElemRecord->isUnion();
-  auto CtorSub = [=](unsigned SubOff, Descriptor *F, bool IsBase) {
+  auto CtorSub = [=](unsigned SubOff, const Descriptor *F, bool IsBase) {
     auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + SubOff) - 1;
     Desc->Offset = SubOff;
     Desc->Desc = F;
@@ -158,7 +161,7 @@ static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
 }
 
 static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
-  auto DtorSub = [=](unsigned SubOff, Descriptor *F) {
+  auto DtorSub = [=](unsigned SubOff, const Descriptor *F) {
     if (auto Fn = F->DtorFn)
       Fn(B, Ptr + SubOff, F);
   };
