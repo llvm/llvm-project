@@ -67,15 +67,15 @@ x2: break 0
 # REL-NEXT: }
 
 # REL:      Hex dump of section '.gcc_except_table':
-# REL-NEXT: 0x00000000 80008000 80800080 80008080 80008080
-# REL-NEXT: 0x00000010 8000
+# REL-NEXT: 0x00000000 80008000 80800080 80008080 80008080 .
+# REL-NEXT: 0x00000010 8000                                .
 # REL:      Hex dump of section '.debug_rnglists':
-# REL-NEXT: 0x00000000 80008000 80800080 80008080 80008080
-# REL-NEXT: 0x00000010 8000
+# REL-NEXT: 0x00000000 80008000 80800080 80008080 80008080 .
+# REL-NEXT: 0x00000010 8000                                .
 # REL:      Hex dump of section '.debug_loclists':
-# REL-NEXT: 0x00000000 00
+# REL-NEXT: 0x00000000 00                                  .
 
-# CHECK: Hex dump of section '.gcc_except_table':
+# CHECK:      Hex dump of section '.gcc_except_table':
 # CHECK-NEXT: 0x[[#%x,]] f8008901 f8ff0089 8001f8ff ff008980 .
 # CHECK-NEXT: 0x[[#%x,]] 8001                                .
 # CHECK:      Hex dump of section '.debug_rnglists':
