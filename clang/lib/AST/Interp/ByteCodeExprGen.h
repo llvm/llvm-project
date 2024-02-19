@@ -116,6 +116,7 @@ public:
   bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
   bool VisitRequiresExpr(const RequiresExpr *E);
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
