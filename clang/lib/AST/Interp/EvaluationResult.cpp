@@ -132,9 +132,10 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   return Result;
 }
 
-bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
+bool EvaluationResult::checkFullyInitialized(InterpState &S,
+                                             const Pointer &Ptr) const {
   assert(Source);
-  assert(isLValue());
+  assert(empty());
 
   // Our Source must be a VarDecl.
   const Decl *SourceDecl = Source.dyn_cast<const Decl *>();
@@ -143,7 +144,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
   assert(VD->getType()->isRecordType() || VD->getType()->isArrayType());
   SourceLocation InitLoc = VD->getAnyInitializer()->getExprLoc();
 
-  const Pointer &Ptr = *std::get_if<Pointer>(&Value);
   assert(!Ptr.isZero());
 
   if (const Record *R = Ptr.getRecord())

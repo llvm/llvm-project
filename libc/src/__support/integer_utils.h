@@ -19,10 +19,32 @@
 
 namespace LIBC_NAMESPACE {
 
-template <typename T> NumberPair<T> full_mul(T a, T b);
+template <typename T> constexpr NumberPair<T> full_mul(T a, T b) {
+  NumberPair<T> pa = split(a);
+  NumberPair<T> pb = split(b);
+  NumberPair<T> prod;
+
+  prod.lo = pa.lo * pb.lo;                    // exact
+  prod.hi = pa.hi * pb.hi;                    // exact
+  NumberPair<T> lo_hi = split(pa.lo * pb.hi); // exact
+  NumberPair<T> hi_lo = split(pa.hi * pb.lo); // exact
+
+  constexpr size_t HALF_BIT_WIDTH = sizeof(T) * CHAR_BIT / 2;
+
+  auto r1 = add_with_carry(prod.lo, lo_hi.lo << HALF_BIT_WIDTH, T(0));
+  prod.lo = r1.sum;
+  prod.hi = add_with_carry(prod.hi, lo_hi.hi, r1.carry).sum;
+
+  auto r2 = add_with_carry(prod.lo, hi_lo.lo << HALF_BIT_WIDTH, T(0));
+  prod.lo = r2.sum;
+  prod.hi = add_with_carry(prod.hi, hi_lo.hi, r2.carry).sum;
+
+  return prod;
+}
 
 template <>
-LIBC_INLINE NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
+LIBC_INLINE constexpr NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a,
+                                                              uint32_t b) {
   uint64_t prod = uint64_t(a) * uint64_t(b);
   NumberPair<uint32_t> result;
   result.lo = uint32_t(prod);
@@ -30,35 +52,17 @@ LIBC_INLINE NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
   return result;
 }
 
-template <>
-LIBC_INLINE NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
 #ifdef __SIZEOF_INT128__
+template <>
+LIBC_INLINE constexpr NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a,
+                                                              uint64_t b) {
   __uint128_t prod = __uint128_t(a) * __uint128_t(b);
   NumberPair<uint64_t> result;
   result.lo = uint64_t(prod);
   result.hi = uint64_t(prod >> 64);
   return result;
-#else
-  NumberPair<uint64_t> pa = split(a);
-  NumberPair<uint64_t> pb = split(b);
-  NumberPair<uint64_t> prod;
-
-  prod.lo = pa.lo * pb.lo;                           // exact
-  prod.hi = pa.hi * pb.hi;                           // exact
-  NumberPair<uint64_t> lo_hi = split(pa.lo * pb.hi); // exact
-  NumberPair<uint64_t> hi_lo = split(pa.hi * pb.lo); // exact
-
-  auto r1 = add_with_carry(prod.lo, lo_hi.lo << 32, uint64_t(0));
-  prod.lo = r1.sum;
-  prod.hi = add_with_carry(prod.hi, lo_hi.hi, r1.carry).sum;
-
-  auto r2 = add_with_carry(prod.lo, hi_lo.lo << 32, uint64_t(0));
-  prod.lo = r2.sum;
-  prod.hi = add_with_carry(prod.hi, hi_lo.hi, r2.carry).sum;
-
-  return prod;
-#endif // __SIZEOF_INT128__
 }
+#endif // __SIZEOF_INT128__
 
 } // namespace LIBC_NAMESPACE
 

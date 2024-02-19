@@ -94,7 +94,7 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Added assembler/disassembler support for the experimental Zabha (Byte and
+* Added full support for the experimental Zabha (Byte and
   Halfword Atomic Memory Operations) extension.
 * Added assembler/disassembler support for the experimenatl Zalasr
   (Load-Acquire and Store-Release) extension.
@@ -136,6 +136,12 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
+* llvm-nm and llvm-objdump can now print symbol information from linked
+  WebAssembly binaries, using information from exports or the "name"
+  section for functions, globals and data segments. Symbol addresses and sizes
+  are printed as offsets in the file, allowing for binary size analysis. Wasm
+  files using reference types and GC are also supported (but also only for
+  functions, globals, and data, and only for listing symbols and names).
 
 Changes to LLDB
 ---------------------------------
