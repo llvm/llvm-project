@@ -1614,6 +1614,11 @@ struct CStructAlignment {
   alignas(16) int two;
 };
 
+enum EnumLayout : int {};
+enum class EnumClassLayout {};
+enum EnumForward : int;
+enum class EnumClassForward;
+
 struct CStructIncomplete;
 
 struct CStructNested {
@@ -1643,10 +1648,10 @@ struct CStructWithBitfelds3 {
   int b : 5;
 };
 
-enum EnumLayout : int {};
-enum class EnumClassLayout {};
-enum EnumForward : int;
-enum class EnumClassForward;
+struct CStructWithBitfelds4 {
+  EnumLayout a : 5;
+  int : 0;
+};
 
 union UnionLayout {
   int a;
@@ -1670,6 +1675,37 @@ union UnionLayout3 {
   double b;
   [[no_unique_address]] CEmptyStruct d;
 };
+
+struct StructWithAnonUnion {
+  union {
+    int a;
+    double b;
+    CStruct c;
+    [[no_unique_address]] CEmptyStruct d;
+    [[no_unique_address]] CEmptyStruct2 e;
+  };
+};
+
+struct StructWithAnonUnion2 {
+  union {
+    CStruct c;
+    int a;
+    CEmptyStruct2 e;
+    double b;
+    [[no_unique_address]] CEmptyStruct d;
+  };
+};
+
+struct StructWithAnonUnion3 {
+  union {
+    CStruct c;
+    int a;
+    CEmptyStruct2 e;
+    double b;
+    [[no_unique_address]] CEmptyStruct d;
+  } u;
+};
+
 
 void is_layout_compatible(int n)
 {
@@ -1736,6 +1772,7 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
   static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
+  static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds4), "");
   static_assert(__is_layout_compatible(int CStruct2::*, int CStruct2::*), "");
   static_assert(!__is_layout_compatible(int CStruct2::*, char CStruct2::*), "");
   static_assert(__is_layout_compatible(void(CStruct2::*)(int), void(CStruct2::*)(int)), "");
@@ -1744,6 +1781,8 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(UnionLayout, UnionLayout), "");
   static_assert(__is_layout_compatible(UnionLayout, UnionLayout2), "");
   static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
+  static_assert(__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
+  static_assert(__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
   // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
   static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete), ""); 
   static_assert(!__is_layout_compatible(CStruct, CStructIncomplete), "");
