@@ -457,6 +457,8 @@ const char *validationEventToString(ValidationEvent VE) {
     return "data-tlb-store-misses";
   case exegesis::ValidationEvent::InstructionTLBLoadMiss:
     return "instruction-tlb-load-misses";
+  case exegesis::ValidationEvent::BranchPredictionMiss:
+    return "branch-prediction-misses";
   }
   llvm_unreachable("Unhandled exegesis::ValidationEvent enum");
 }
@@ -476,6 +478,8 @@ Expected<ValidationEvent> stringToValidationEvent(StringRef Input) {
     return exegesis::ValidationEvent::DataTLBStoreMiss;
   else if (Input == "instruction-tlb-load-misses")
     return exegesis::ValidationEvent::InstructionTLBLoadMiss;
+  else if (Input == "branch-prediction-misses")
+    return exegesis::ValidationEvent::BranchPredictionMiss;
   else
     return make_error<StringError>("Invalid validation event string",
                                    errc::invalid_argument);

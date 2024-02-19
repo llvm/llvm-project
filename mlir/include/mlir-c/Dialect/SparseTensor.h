@@ -27,21 +27,17 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 /// file.
 typedef uint64_t MlirSparseTensorLevelType;
 
-enum MlirBaseSparseTensorLevelType {
+enum MlirSparseTensorLevelFormat {
   MLIR_SPARSE_TENSOR_LEVEL_DENSE = 0x000000010000,
   MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED = 0x000000020000,
-  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU = 0x000000020001,
-  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO = 0x000000020002,
-  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU_NO = 0x000000020003,
   MLIR_SPARSE_TENSOR_LEVEL_SINGLETON = 0x000000040000,
-  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU = 0x000000040001,
-  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NO = 0x000000040002,
-  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU_NO = 0x000000040003,
   MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED = 0x000000080000,
-  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU = 0x000000080001,
-  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NO = 0x000000080002,
-  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU_NO = 0x000000080003,
   MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M = 0x000000100000,
+};
+
+enum MlirSparseTensorLevelPropertyNondefault {
+  MLIR_SPARSE_PROPERTY_NON_UNIQUE = 0x0001,
+  MLIR_SPARSE_PROPERTY_NON_ORDERED = 0x0002,
 };
 
 //===----------------------------------------------------------------------===//
@@ -66,6 +62,10 @@ mlirSparseTensorEncodingGetLvlRank(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
 mlirSparseTensorEncodingAttrGetLvlType(MlirAttribute attr, intptr_t lvl);
 
+/// Returns a specified level-format of the `sparse_tensor.encoding` attribute.
+MLIR_CAPI_EXPORTED enum MlirSparseTensorLevelFormat
+mlirSparseTensorEncodingAttrGetLvlFmt(MlirAttribute attr, intptr_t lvl);
+
 /// Returns the dimension-to-level mapping of the `sparse_tensor.encoding`
 /// attribute.
 MLIR_CAPI_EXPORTED MlirAffineMap
@@ -83,6 +83,18 @@ mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr);
 /// Returns the coordinate bitwidth of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED int
 mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr);
+
+MLIR_CAPI_EXPORTED unsigned
+mlirSparseTensorEncodingAttrGetStructuredN(MlirSparseTensorLevelType lvlType);
+
+MLIR_CAPI_EXPORTED unsigned
+mlirSparseTensorEncodingAttrGetStructuredM(MlirSparseTensorLevelType lvlType);
+
+MLIR_CAPI_EXPORTED MlirSparseTensorLevelType
+mlirSparseTensorEncodingAttrBuildLvlType(
+    enum MlirSparseTensorLevelFormat lvlFmt,
+    const enum MlirSparseTensorLevelPropertyNondefault *properties,
+    unsigned propSize, unsigned n, unsigned m);
 
 #ifdef __cplusplus
 }

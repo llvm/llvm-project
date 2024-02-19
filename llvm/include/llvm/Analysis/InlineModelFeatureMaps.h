@@ -39,6 +39,8 @@ namespace llvm {
   M(int64_t, {1}, jump_table_penalty, "Accumulation of costs for jump tables") \
   M(int64_t, {1}, case_cluster_penalty,                                        \
     "Accumulation of costs for case clusters")                                 \
+  M(int64_t, {1}, switch_default_dest_penalty,                                 \
+    "Accumulation of costs for switch default destination")                    \
   M(int64_t, {1}, switch_penalty,                                              \
     "Accumulation of costs for switch statements")                             \
   M(int64_t, {1}, unsimplified_common_instructions,                            \

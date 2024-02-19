@@ -1177,9 +1177,6 @@ private:
   bool isFPMathOp() const;
 #endif
 
-protected:
-  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
-
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
@@ -2085,8 +2082,11 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                                 isPredicated() ? getMask() : nullptr);
+    auto *Copy =
+        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
+                              isPredicated() ? getMask() : nullptr);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReplicateSC)

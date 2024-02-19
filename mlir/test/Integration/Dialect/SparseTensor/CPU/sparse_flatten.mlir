@@ -115,6 +115,7 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
+    bufferization.dealloc_tensor %0 : tensor<7x3xf64>
 
     return
   }

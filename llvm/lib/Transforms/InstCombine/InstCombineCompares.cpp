@@ -813,14 +813,30 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    // Only lower this if the icmp is the only user of the GEP or if we expect
-    // the result to fold to a constant!
-    if ((GEPsInBounds || CmpInst::isEquality(Cond)) &&
-        (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
-        (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse())) {
+    if (GEPsInBounds || CmpInst::isEquality(Cond)) {
+      auto EmitGEPOffsetAndRewrite = [&](GEPOperator *GEP) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        auto *Inst = dyn_cast<Instruction>(GEP);
+        if (Inst)
+          Builder.SetInsertPoint(Inst);
+
+        Value *Offset = EmitGEPOffset(GEP);
+        // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
+        // the offset arithmetic.
+        if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
+            !GEP->getSourceElementType()->isIntegerTy(8)) {
+          replaceInstUsesWith(*Inst,
+                              Builder.CreateGEP(Builder.getInt8Ty(),
+                                                GEP->getPointerOperand(),
+                                                Offset, "", GEPsInBounds));
+          eraseInstFromFunction(*Inst);
+        }
+        return Offset;
+      };
+
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Value *L = EmitGEPOffset(GEPLHS);
-      Value *R = EmitGEPOffset(GEPRHS);
+      Value *L = EmitGEPOffsetAndRewrite(GEPLHS);
+      Value *R = EmitGEPOffsetAndRewrite(GEPRHS);
       return new ICmpInst(ICmpInst::getSignedPredicate(Cond), L, R);
     }
   }
@@ -6005,7 +6021,7 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth) {
   // If this is a normal comparison, it demands all bits. If it is a sign bit
   // comparison, it only demands the sign bit.
   bool UnusedBit;
-  if (InstCombiner::isSignBitCheck(I.getPredicate(), *RHS, UnusedBit))
+  if (isSignBitCheck(I.getPredicate(), *RHS, UnusedBit))
     return APInt::getSignMask(BitWidth);
 
   switch (I.getPredicate()) {
