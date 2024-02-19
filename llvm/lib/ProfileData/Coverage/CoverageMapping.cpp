@@ -303,8 +303,7 @@ private:
   void findExecutedTestVectors() {
     // Walk the binary decision diagram to enumerate all possible test vectors.
     // We start at the root node (ID == 0) with all values being DontCare.
-    // `Index` encodes the bitmask of true values and is initially 0.
-    MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
+    MCDCRecord::TestVector TV(NumConditions);
     buildTestVector(TV, 0);
   }
 

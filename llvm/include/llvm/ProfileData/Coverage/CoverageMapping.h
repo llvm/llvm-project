@@ -390,12 +390,8 @@ struct MCDCRecord {
     BitVector Visited; /// ~DontCare
 
   public:
-    /// Assume filling DontCare.
-    TestVector(unsigned n, CondState Cond = MCDC_DontCare) {
-      assert(Cond == MCDC_DontCare);
-      Values.resize(n);
-      Visited.resize(n);
-    }
+    /// Default values are filled with DontCare.
+    TestVector(unsigned N) : Values(N), Visited(N) {}
 
     /// Emulate RHS SmallVector::operator[]
     CondState operator[](int I) const {
