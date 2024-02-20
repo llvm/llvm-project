@@ -10,6 +10,7 @@
 #define PYTHON_TEST_OPS
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
@@ -47,6 +48,24 @@ def TestType : TestType<"TestType", "test_type">;
 //===----------------------------------------------------------------------===//
 
 def TestAttr : TestAttr<"TestAttr", "test_attr">;
+
+def IOFnone : I32BitEnumAttrCaseNone<"none">;
+def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+
+def IntegerOverflowFlags : I32BitEnumAttr<
+    "IntegerOverflowFlags", "",
+    [IOFnone, IOFnsw, IOFnuw]> {
+  let separator = ", ";
+  let cppNamespace = "python_test";
+  let genSpecializedAttr = 0;
+}
+
+// This is intentionally prefixed with LLVM to test for collision in AttrBuilder.
+def LLVM_IntegerOverflowFlagsAttr :
+    EnumAttr<Python_Test_Dialect, IntegerOverflowFlags, "overflow"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 //===----------------------------------------------------------------------===//
 // Operation definitions.

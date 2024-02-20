@@ -9,10 +9,12 @@
 #include "PythonTestDialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "PythonTestDialect.cpp.inc"
 
+#include "PythonTestEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "PythonTestAttributes.cpp.inc"
 

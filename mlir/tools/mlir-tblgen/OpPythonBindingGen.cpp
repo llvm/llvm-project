@@ -529,27 +529,31 @@ constexpr const char *multiResultAppendTemplate = "results.extend({0})";
 /// Template for attribute builder from raw input in the operation builder.
 ///   {0} is the builder argument name;
 ///   {1} is the attribute builder from raw;
-///   {2} is the attribute builder from raw.
+///   {2} is the attribute builder from raw;
+///   {3} is the attribute's fully qualified namespace.
 /// Use the value the user passed in if either it is already an Attribute or
 /// there is no method registered to make it an Attribute.
 constexpr const char *initAttributeWithBuilderTemplate =
     R"Py(attributes["{1}"] = ({0} if (
     issubclass(type({0}), _ods_ir.Attribute) or
-    not _ods_ir.AttrBuilder.contains('{2}')) else
-      _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
+    not (_ods_ir.AttrBuilder.contains('{3}') or _ods_ir.AttrBuilder.contains('{2}{3}'))) else
+      (_ods_ir.AttrBuilder.get('{3}')({0}, context=_ods_context) if _ods_ir.AttrBuilder.contains('{3}')
+       else _ods_ir.AttrBuilder.get('{2}{3}')({0}, context=_ods_context))))Py";
 
 /// Template for attribute builder from raw input for optional attribute in the
 /// operation builder.
 ///   {0} is the builder argument name;
 ///   {1} is the attribute builder from raw;
-///   {2} is the attribute builder from raw.
+///   {2} is the attribute builder from raw;
+///   {3} is the attribute's fully qualified namespace.
 /// Use the value the user passed in if either it is already an Attribute or
 /// there is no method registered to make it an Attribute.
 constexpr const char *initOptionalAttributeWithBuilderTemplate =
     R"Py(if {0} is not None: attributes["{1}"] = ({0} if (
         issubclass(type({0}), _ods_ir.Attribute) or
-        not _ods_ir.AttrBuilder.contains('{2}')) else
-          _ods_ir.AttrBuilder.get('{2}')({0}, context=_ods_context)))Py";
+        not (_ods_ir.AttrBuilder.contains('{3}') or _ods_ir.AttrBuilder.contains('{2}{3}'))) else
+          (_ods_ir.AttrBuilder.get('{3}')({0}, context=_ods_context) if _ods_ir.AttrBuilder.contains('{3}')
+           else _ods_ir.AttrBuilder.get('{2}{3}')({0}, context=_ods_context))))Py";
 
 constexpr const char *initUnitAttributeTemplate =
     R"Py(if bool({1}): attributes["{0}"] = _ods_ir.UnitAttr.get(
@@ -677,11 +681,23 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
     }
 
+    std::string namespace_;
+    if (attribute->attr.isEnumAttr()) {
+      EnumAttr enumAttr(attribute->attr.getDef());
+      namespace_ = getEnumAttributeNameSpace(enumAttr);
+    } else if (attribute->attr.getBaseAttr().isEnumAttr()) {
+      EnumAttr enumAttr(attribute->attr.getBaseAttr().getDef());
+      namespace_ = getEnumAttributeNameSpace(enumAttr);
+    }
+    if (!namespace_.empty())
+      namespace_ += "_";
+
     builderLines.push_back(llvm::formatv(
         attribute->attr.isOptional() || attribute->attr.hasDefaultValue()
             ? initOptionalAttributeWithBuilderTemplate
             : initAttributeWithBuilderTemplate,
-        argNames[i], attribute->name, attribute->attr.getAttrDefName()));
+        argNames[i], attribute->name, namespace_,
+        attribute->attr.getAttrDefName()));
   }
 }
 

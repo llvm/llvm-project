@@ -633,12 +633,19 @@ if(MLIR_INCLUDE_TESTS)
     "dialects/_python_test_ops_gen.py"
     -gen-python-op-bindings
     -bind-dialect=python_test)
+  mlir_tablegen(
+    "dialects/_python_test_enums_gen.py"
+    -gen-python-enum-bindings
+    EXTRA_INCLUDES
+      "${MLIR_MAIN_SRC_DIR}/test/python")
   add_public_tablegen_target(PythonTestDialectPyIncGen)
   declare_mlir_python_sources(
     MLIRPythonTestSources.Dialects.PythonTest.ops_gen
     ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
     ADD_TO_PARENT MLIRPythonTestSources.Dialects.PythonTest
-    SOURCES "dialects/_python_test_ops_gen.py")
+    SOURCES
+      "dialects/_python_test_ops_gen.py"
+      "dialects/_python_test_enums_gen.py")
 
   declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtension
     MODULE_NAME _mlirPythonTest

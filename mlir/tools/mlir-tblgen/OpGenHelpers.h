@@ -13,6 +13,7 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
 #define MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
 
+#include "mlir/TableGen/Attribute.h"
 #include "llvm/TableGen/Record.h"
 #include <vector>
 
@@ -27,6 +28,8 @@ getRequestedOpDefinitions(const llvm::RecordKeeper &recordKeeper);
 /// Checks whether `str` is a Python keyword or would shadow builtin function.
 /// Regenerate using python -c"print(set(sorted(__import__('keyword').kwlist)))"
 bool isPythonReserved(llvm::StringRef str);
+
+std::string getEnumAttributeNameSpace(const EnumAttr &enumAttr);
 
 } // namespace tblgen
 } // namespace mlir
