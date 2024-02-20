@@ -98,11 +98,11 @@ void UseDesignatedInitializersCheck::check(
                              utils::getUnwrittenDesignators(SyntacticInitList));
   };
   const unsigned NumberOfDesignated = getNumberOfDesignated(SyntacticInitList);
+  if (SyntacticInitList->getNumInits() - NumberOfDesignated >
+      LazyDesignators()->size())
+    return;
   if (0 == NumberOfDesignated) {
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
-      return;
-    if (SyntacticInitList->getNumInits() - NumberOfDesignated >
-        LazyDesignators()->size())
       return;
     {
       DiagnosticBuilder Diag =
