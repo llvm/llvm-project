@@ -315,6 +315,8 @@ public:
     return false;
   }
 
+  bool VisitAtomicExpr(const AtomicExpr *E) { return VisitChildren(E); }
+
   bool VisitStaticAssertDecl(const StaticAssertDecl *SAD) {
     // Any static_assert is considered trivial.
     return true;
@@ -330,10 +332,16 @@ public:
     const auto &Name = safeGetName(Callee);
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
+        Name == "WTFReportAssertionFailure" ||
         Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+  }
+
+  bool VisitPredefinedExpr(const PredefinedExpr *E) {
+    // A predefined identifier such as "func" is considered trivial.
+    return true;
   }
 
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
@@ -354,6 +362,14 @@ public:
 
     // Recursively descend into the callee to confirm that it's trivial as well.
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+  }
+
+  bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
+    if (auto *Expr = E->getExpr()) {
+      if (!Visit(Expr))
+        return false;
+    }
+    return true;
   }
 
   bool checkArguments(const CallExpr *CE) {
