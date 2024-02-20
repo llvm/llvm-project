@@ -1355,8 +1355,10 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
                           << "2addr:    NEW INST: " << *NewMIs[1]);
 
         // Transform the instruction, now that it no longer has a load.
-        unsigned NewDstIdx = NewMIs[1]->findRegisterDefOperandIdx(regA);
-        unsigned NewSrcIdx = NewMIs[1]->findRegisterUseOperandIdx(regB);
+        unsigned NewDstIdx =
+            NewMIs[1]->findRegisterDefOperandIdx(regA, false, TRI);
+        unsigned NewSrcIdx =
+            NewMIs[1]->findRegisterUseOperandIdx(regB, false, TRI);
         MachineBasicBlock::iterator NewMI = NewMIs[1];
         bool TransformResult =
           tryInstructionTransform(NewMI, mi, NewSrcIdx, NewDstIdx, Dist, true);

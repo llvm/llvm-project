@@ -3711,7 +3711,8 @@ bool X86InstrInfo::analyzeBranchImpl(
 
     // In practice we should never have an undef eflags operand, if we do
     // abort here as we are not prepared to preserve the flag.
-    if (I->findRegisterUseOperand(X86::EFLAGS)->isUndef())
+    if (I->findRegisterUseOperand(X86::EFLAGS, false, &getRegisterInfo())
+            ->isUndef())
       return true;
 
     // Working from the bottom, handle the first conditional branch.
@@ -5455,7 +5456,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
-  MachineOperand *FlagDef = Sub->findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *FlagDef = Sub->findRegisterDefOperand(
+      X86::EFLAGS, false, false, &getRegisterInfo());
   assert(FlagDef && "Unable to locate a def EFLAGS operand");
   FlagDef->setIsDead(false);
 
@@ -5608,7 +5610,8 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       return false;
   }
 
-  if (UseMI.findRegisterUseOperand(Reg)->getSubReg())
+  if (UseMI.findRegisterUseOperand(Reg, false, MRI->getTargetRegisterInfo())
+          ->getSubReg())
     return false;
   // Immediate has larger code size than register. So avoid folding the
   // immediate if it has more than 1 use and we are optimizing for size.
@@ -5655,7 +5658,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
         if (!MakeChange)
           return true;
         UseMI.setDesc(get(X86::MOV32r0));
-        UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
+        UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg, false, TRI));
         UseMI.addOperand(MachineOperand::CreateReg(X86::EFLAGS, /*isDef=*/true,
                                                    /*isImp=*/true,
                                                    /*isKill=*/false,
@@ -5677,17 +5680,18 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
        NewOpc == X86::SBB64ri32 || NewOpc == X86::SBB32ri ||
        NewOpc == X86::SUB64ri32_ND || NewOpc == X86::SUB32ri_ND ||
        NewOpc == X86::SBB64ri32_ND || NewOpc == X86::SBB32ri_ND) &&
-      UseMI.findRegisterUseOperandIdx(Reg) != 2)
+      UseMI.findRegisterUseOperandIdx(Reg, false, &getRegisterInfo()) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
   if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
-      UseMI.findRegisterUseOperandIdx(Reg) != 1)
+      UseMI.findRegisterUseOperandIdx(Reg, false, &getRegisterInfo()) != 1)
     return false;
 
   using namespace X86;
   if (isSHL(Opc) || isSHR(Opc) || isSAR(Opc) || isROL(Opc) || isROR(Opc) ||
       isRCL(Opc) || isRCR(Opc)) {
-    unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg);
+    unsigned RegIdx =
+        UseMI.findRegisterUseOperandIdx(Reg, false, &getRegisterInfo());
     if (RegIdx < 2)
       return false;
     if (!isInt<8>(ImmVal))
@@ -5716,8 +5720,10 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       //    ==>
       //          %100 = COPY %101
       UseMI.setDesc(get(TargetOpcode::COPY));
-      UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
-      UseMI.removeOperand(UseMI.findRegisterDefOperandIdx(X86::EFLAGS));
+      UseMI.removeOperand(
+          UseMI.findRegisterUseOperandIdx(Reg, false, &getRegisterInfo()));
+      UseMI.removeOperand(UseMI.findRegisterDefOperandIdx(
+          X86::EFLAGS, false, false, &getRegisterInfo()));
       UseMI.untieRegOperand(0);
       UseMI.clearFlag(MachineInstr::MIFlag::NoSWrap);
       UseMI.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -9516,7 +9522,8 @@ bool X86InstrInfo::hasReassociableOperands(const MachineInstr &Inst,
   // not change anything because rearranging the operands could affect other
   // instructions that depend on the exact status flags (zero, sign, etc.)
   // that are set by using these particular operands with this operation.
-  const MachineOperand *FlagDef = Inst.findRegisterDefOperand(X86::EFLAGS);
+  const MachineOperand *FlagDef = Inst.findRegisterDefOperand(
+      X86::EFLAGS, false, false, &getRegisterInfo());
   assert((Inst.getNumDefs() == 1 || FlagDef) && "Implicit def isn't flags?");
   if (FlagDef && !FlagDef->isDead())
     return false;
@@ -10038,8 +10045,10 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &NewMI1,
                                          MachineInstr &NewMI2) const {
   // Integer instructions may define an implicit EFLAGS dest register operand.
-  MachineOperand *OldFlagDef1 = OldMI1.findRegisterDefOperand(X86::EFLAGS);
-  MachineOperand *OldFlagDef2 = OldMI2.findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *OldFlagDef1 = OldMI1.findRegisterDefOperand(
+      X86::EFLAGS, false, false, &getRegisterInfo());
+  MachineOperand *OldFlagDef2 = OldMI2.findRegisterDefOperand(
+      X86::EFLAGS, false, false, &getRegisterInfo());
 
   assert(!OldFlagDef1 == !OldFlagDef2 &&
          "Unexpected instruction type for reassociation");
@@ -10050,8 +10059,10 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
   assert(OldFlagDef1->isDead() && OldFlagDef2->isDead() &&
          "Must have dead EFLAGS operand in reassociable instruction");
 
-  MachineOperand *NewFlagDef1 = NewMI1.findRegisterDefOperand(X86::EFLAGS);
-  MachineOperand *NewFlagDef2 = NewMI2.findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *NewFlagDef1 = NewMI1.findRegisterDefOperand(
+      X86::EFLAGS, false, false, &getRegisterInfo());
+  MachineOperand *NewFlagDef2 = NewMI2.findRegisterDefOperand(
+      X86::EFLAGS, false, false, &getRegisterInfo());
 
   assert(NewFlagDef1 && NewFlagDef2 &&
          "Unexpected operand in reassociable instruction");

@@ -1673,7 +1673,9 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
     // we don't need the phi anymore.
     if (getStage(Def) == Stage) {
       Register PhiReg = MI.getOperand(0).getReg();
-      assert(Def->findRegisterDefOperandIdx(MI.getOperand(1).getReg()) != -1);
+      assert(Def->findRegisterDefOperandIdx(MI.getOperand(1).getReg(), false,
+                                            false,
+                                            MRI.getTargetRegisterInfo()) != -1);
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
       MI.getOperand(0).setReg(PhiReg);
       PhiToDelete.push_back(&MI);
@@ -1899,7 +1901,8 @@ Register
 PeelingModuloScheduleExpander::getEquivalentRegisterIn(Register Reg,
                                                        MachineBasicBlock *BB) {
   MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
-  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg);
+  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg, false, false,
+                                                 MRI.getTargetRegisterInfo());
   return BlockMIs[{BB, CanonicalMIs[MI]}]->getOperand(OpIdx).getReg();
 }
 

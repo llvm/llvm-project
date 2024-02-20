@@ -347,6 +347,31 @@ static X86::CondCode getCondFromFCMOV(unsigned Opcode) {
   }
 }
 
+static bool checkEFLAGSLive(MachineInstr *MI) {
+  if (MI->killsRegister(X86::EFLAGS))
+    return false;
+
+  // The EFLAGS operand of MI might be missing a kill marker.
+  // Figure out whether EFLAGS operand should LIVE after MI instruction.
+  MachineBasicBlock *BB = MI->getParent();
+  MachineBasicBlock::iterator ItrMI = MI;
+
+  // Scan forward through BB for a use/def of EFLAGS.
+  for (auto I = std::next(ItrMI), E = BB->end(); I != E; ++I) {
+    if (I->readsRegister(X86::EFLAGS))
+      return true;
+    if (I->definesRegister(X86::EFLAGS))
+      return false;
+  }
+
+  // We hit the end of the block, check whether EFLAGS is live into a successor.
+  for (MachineBasicBlock *Succ : BB->successors())
+    if (Succ->isLiveIn(X86::EFLAGS))
+      return true;
+
+  return false;
+}
+
 bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
@@ -442,7 +467,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           llvm::reverse(llvm::make_range(Begin, End)), [&](MachineInstr &MI) {
             // Flag any instruction (other than the copy we are
             // currently rewriting) that defs EFLAGS.
-            return &MI != CopyI && MI.findRegisterDefOperand(X86::EFLAGS);
+            return &MI != CopyI &&
+                   MI.findRegisterDefOperand(X86::EFLAGS, false, false, TRI);
           });
     };
     auto HasEFLAGSClobberPath = [&](MachineBasicBlock *BeginMBB,
@@ -500,7 +526,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
       auto DefIt = llvm::find_if(
           llvm::reverse(llvm::make_range(TestMBB->instr_begin(), TestPos)),
           [&](MachineInstr &MI) {
-            return MI.findRegisterDefOperand(X86::EFLAGS);
+            return MI.findRegisterDefOperand(X86::EFLAGS, false, false, TRI);
           });
       if (DefIt.base() != TestMBB->instr_begin()) {
         dbgs() << "  Using EFLAGS defined by: ";
@@ -562,9 +588,10 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           break;
         }
 
-        MachineOperand *FlagUse = MI.findRegisterUseOperand(X86::EFLAGS);
+        MachineOperand *FlagUse =
+            MI.findRegisterUseOperand(X86::EFLAGS, false, TRI);
         if (!FlagUse) {
-          if (MI.findRegisterDefOperand(X86::EFLAGS)) {
+          if (MI.findRegisterDefOperand(X86::EFLAGS, false, false, TRI)) {
             // If EFLAGS are defined, it's as-if they were killed. We can stop
             // scanning here.
             //
@@ -614,7 +641,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           rewriteCopy(MI, *FlagUse, CopyDefI);
         } else {
           // We assume all other instructions that use flags also def them.
-          assert(MI.findRegisterDefOperand(X86::EFLAGS) &&
+          assert(MI.findRegisterDefOperand(X86::EFLAGS, false, false, TRI) &&
                  "Expected a def of EFLAGS for this instruction!");
 
           // NB!!! Several arithmetic instructions only *partially* update
@@ -683,6 +710,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
     // Now rewrite the jumps that use the flags. These we handle specially
     // because if there are multiple jumps in a single basic block we'll have
     // to do surgery on the CFG.
+    bool CopyDefIsKill = !checkEFLAGSLive(&CopyDefI);
+    MachineOperand *LastEflagsUse = nullptr;
     MachineBasicBlock *LastJmpMBB = nullptr;
     for (MachineInstr *JmpI : JmpIs) {
       // Past the first jump within a basic block we need to split the blocks
@@ -693,10 +722,12 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
         LastJmpMBB = JmpI->getParent();
 
       rewriteCondJmp(*TestMBB, TestPos, TestLoc, *JmpI, CondRegs);
+      if (CopyDefIsKill && JmpI->readsRegister(X86::EFLAGS))
+        LastEflagsUse = JmpI->findRegisterUseOperand(X86::EFLAGS, false, TRI);
     }
 
-    // FIXME: Mark the last use of EFLAGS before the copy's def as a kill if
-    // the copy's def operand is itself a kill.
+    if (LastEflagsUse && CopyDefIsKill)
+      LastEflagsUse->setIsKill(true);
   }
 
 #ifndef NDEBUG
@@ -733,7 +764,7 @@ CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
 
     // Stop scanning when we see the first definition of the EFLAGS as prior to
     // this we would potentially capture the wrong flag state.
-    if (MI.findRegisterDefOperand(X86::EFLAGS))
+    if (MI.findRegisterDefOperand(X86::EFLAGS, false, false, TRI))
       break;
   }
   return CondRegs;
@@ -911,7 +942,7 @@ void X86FlagsCopyLoweringPass::rewriteCondJmp(
   // Rewrite the jump to use the !ZF flag from the test, and kill its use of
   // flags afterward.
   JmpI.getOperand(1).setImm(Inverted ? X86::COND_E : X86::COND_NE);
-  JmpI.findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+  JmpI.findRegisterUseOperand(X86::EFLAGS, false, TRI)->setIsKill(true);
   LLVM_DEBUG(dbgs() << "    fixed jCC: "; JmpI.dump());
 }
 
