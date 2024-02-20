@@ -135,7 +135,7 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
     const APSInt Val = RHS.toAPSInt();
     QualType Ty = E->getType();
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return false;
+    return true; // We will do the shift anyway but fix up the shift amount.
   }
 
   if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
@@ -1579,6 +1579,11 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
+  if (LHS.isZero() && RHS.isZero()) {
+    S.Stk.push<T>();
+    return true;
+  }
+
   T A = T::from(LHS.getIndex());
   T B = T::from(RHS.getIndex());
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
@@ -1793,11 +1798,17 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
+  // Limit the shift amount to Bits - 1. If this happened,
+  // it has already been diagnosed by CheckShift() above,
+  // but we still need to handle it.
   typename LT::AsUnsigned R;
-  LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                             LT::AsUnsigned::from(RHS), Bits, &R);
+  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                               LT::AsUnsigned::from(Bits - 1), Bits, &R);
+  else
+    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                               LT::AsUnsigned::from(RHS, Bits), Bits, &R);
   S.Stk.push<LT>(LT::from(R));
-
   return true;
 }
 
@@ -1812,9 +1823,17 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
+  // Limit the shift amount to Bits - 1. If this happened,
+  // it has already been diagnosed by CheckShift() above,
+  // but we still need to handle it.
   typename LT::AsUnsigned R;
-  LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                            LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                              LT::AsUnsigned::from(Bits - 1), Bits, &R);
+  else
+    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                              LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+
   S.Stk.push<LT>(LT::from(R));
   return true;
 }

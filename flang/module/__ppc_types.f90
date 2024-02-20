@@ -7,7 +7,12 @@
 !===------------------------------------------------------------------------===!
 
 module __ppc_types
+  implicit none
+
+  ! Set PRIVATE by default to explicitly only export what is meant
+  ! to be exported by this MODULE.
   private
+
   ! Definition of derived-types that represent PowerPC vector types.
   type __builtin_ppc_intrinsic_vector(element_category, element_kind)
     integer, kind :: element_category, element_kind

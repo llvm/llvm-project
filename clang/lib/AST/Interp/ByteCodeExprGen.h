@@ -116,6 +116,7 @@ public:
   bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
   bool VisitRequiresExpr(const RequiresExpr *E);
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -288,6 +289,7 @@ private:
   }
 
   bool emitComplexReal(const Expr *SubExpr);
+  bool emitComplexBoolCast(const Expr *E);
 
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);

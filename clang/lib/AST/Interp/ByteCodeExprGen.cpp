@@ -241,57 +241,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralComplexToBoolean:
   case CK_FloatingComplexToBoolean: {
-    PrimType ElemT = classifyComplexElementType(SubExpr->getType());
-    // We emit the expression (__real(E) != 0 || __imag(E) != 0)
-    // for us, that means (bool)E[0] || (bool)E[1]
+    if (DiscardResult)
+      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
-    if (!this->emitConstUint8(0, CE))
-      return false;
-    if (!this->emitArrayElemPtrUint8(CE))
-      return false;
-    if (!this->emitLoadPop(ElemT, CE))
-      return false;
-    if (ElemT == PT_Float) {
-      if (!this->emitCastFloatingIntegral(PT_Bool, CE))
-        return false;
-    } else {
-      if (!this->emitCast(ElemT, PT_Bool, CE))
-        return false;
-    }
-
-    // We now have the bool value of E[0] on the stack.
-    LabelTy LabelTrue = this->getLabel();
-    if (!this->jumpTrue(LabelTrue))
-      return false;
-
-    if (!this->emitConstUint8(1, CE))
-      return false;
-    if (!this->emitArrayElemPtrPopUint8(CE))
-      return false;
-    if (!this->emitLoadPop(ElemT, CE))
-      return false;
-    if (ElemT == PT_Float) {
-      if (!this->emitCastFloatingIntegral(PT_Bool, CE))
-        return false;
-    } else {
-      if (!this->emitCast(ElemT, PT_Bool, CE))
-        return false;
-    }
-    // Leave the boolean value of E[1] on the stack.
-    LabelTy EndLabel = this->getLabel();
-    this->jump(EndLabel);
-
-    this->emitLabel(LabelTrue);
-    if (!this->emitPopPtr(CE))
-      return false;
-    if (!this->emitConstBool(true, CE))
-      return false;
-
-    this->fallthrough(EndLabel);
-    this->emitLabel(EndLabel);
-
-    return true;
+    return this->emitComplexBoolCast(SubExpr);
   }
 
   case CK_IntegralComplexToReal:
@@ -2156,6 +2110,12 @@ bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
   return this->emitConstBool(E->isSatisfied(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXRewrittenBinaryOperator(
+    const CXXRewrittenBinaryOperator *E) {
+  return this->delegate(E->getSemanticForm());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2217,8 +2177,15 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitBool(const Expr *E) {
   std::optional<PrimType> T = classify(E->getType());
-  if (!T)
+  if (!T) {
+    // Convert complex values to bool.
+    if (E->getType()->isAnyComplexType()) {
+      if (!this->visit(E))
+        return false;
+      return this->emitComplexBoolCast(E);
+    }
     return false;
+  }
 
   if (!this->visit(E))
     return false;
@@ -2470,17 +2437,6 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
       if (!this->emitSetGlobal(T, *Idx, LV))
         return false;
       return DiscardResult ? true : this->emitGetPtrGlobal(*Idx, LV);
-    }
-  }
-
-  // If the declaration is a constant value, emit it here even
-  // though the declaration was not evaluated in the current scope.
-  // The access mode can only be read in this case.
-  if (!DiscardResult && AK == DerefKind::Read) {
-    if (VD->hasLocalStorage() && VD->hasInit() && !VD->isConstexpr()) {
-      QualType VT = VD->getType();
-      if (VT.isConstQualified() && VT->isFundamentalType())
-        return this->visit(VD->getInit());
     }
   }
 
@@ -3388,6 +3344,63 @@ bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitComplexBoolCast(const Expr *E) {
+  assert(!DiscardResult);
+  PrimType ElemT = classifyComplexElementType(E->getType());
+  // We emit the expression (__real(E) != 0 || __imag(E) != 0)
+  // for us, that means (bool)E[0] || (bool)E[1]
+  if (!this->emitConstUint8(0, E))
+    return false;
+  if (!this->emitArrayElemPtrUint8(E))
+    return false;
+  if (!this->emitLoadPop(ElemT, E))
+    return false;
+  if (ElemT == PT_Float) {
+    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+      return false;
+  } else {
+    if (!this->emitCast(ElemT, PT_Bool, E))
+      return false;
+  }
+
+  // We now have the bool value of E[0] on the stack.
+  LabelTy LabelTrue = this->getLabel();
+  if (!this->jumpTrue(LabelTrue))
+    return false;
+
+  if (!this->emitConstUint8(1, E))
+    return false;
+  if (!this->emitArrayElemPtrPopUint8(E))
+    return false;
+  if (!this->emitLoadPop(ElemT, E))
+    return false;
+  if (ElemT == PT_Float) {
+    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+      return false;
+  } else {
+    if (!this->emitCast(ElemT, PT_Bool, E))
+      return false;
+  }
+  // Leave the boolean value of E[1] on the stack.
+  LabelTy EndLabel = this->getLabel();
+  this->jump(EndLabel);
+
+  this->emitLabel(LabelTrue);
+  if (!this->emitPopPtr(E))
+    return false;
+  if (!this->emitConstBool(true, E))
+    return false;
+
+  this->fallthrough(EndLabel);
+  this->emitLabel(EndLabel);
+
+  return true;
+}
+
+/// When calling this, we have a pointer of the local-to-destroy
+/// on the stack.
+/// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);

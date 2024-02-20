@@ -664,6 +664,7 @@ public:
     QualType Type = S->getType();
 
     if (Type->isUnionType()) {
+      // FIXME: Initialize unions properly.
       if (auto *Val = Env.createValue(Type))
         Env.setValue(*S, *Val);
       return;

@@ -250,8 +250,8 @@ private:
     assert(inserted.second && "expected newly created op");
   }
 
-  void notifyOperationRemoved(Operation *op) override {
-    ForwardingListener::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    ForwardingListener::notifyOperationErased(op);
     op->walk([&](Operation *op) { newOps.erase(op); });
   }
 
