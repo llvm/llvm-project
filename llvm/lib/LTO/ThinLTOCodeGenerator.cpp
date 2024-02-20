@@ -589,16 +589,21 @@ public:
         handleCASError(std::move(E), Logger);
         return Cb();
       }
-    }
 
-    ScopedDurationTimer ScopedTime([&](double Seconds) {
-      if (Logger) {
-        Logger([&](raw_ostream &OS) {
-          OS << "LTO cache update '" << ID << "' in "
-             << llvm::format("%.6fs", Seconds) << "\n";
-        });
-      }
-    });
+      cas::remote::KeyValueDBClient::ValueTy CompResult;
+      CompResult["Output"] = *WrittenCASID;
+
+      auto UpdateStart = std::chrono::steady_clock::now();
+      Service.KVDB->putValueAsync(ID, CompResult, [=](auto Err) {
+        if (Logger) {
+          auto UpdateEnd = std::chrono::steady_clock::now();
+          auto Seconds =
+              std::chrono::duration<double>(UpdateEnd - UpdateStart).count();
+          Logger([&](raw_ostream &OS) {
+            OS << "LTO cache update '" << ID << "' in "
+               << llvm::format("%.6fs", Seconds) << "\n";
+          });
+        }
 
         if (Err)
           report_fatal_error(std::move(Err));
@@ -701,18 +706,19 @@ public:
     if (Error E = ModuleCacheEntry::writeObject(OutputBuffer, TmpPath))
       report_fatal_error(std::move(E));
 
-    {
-      ScopedDurationTimer ScopedTime([&](double Seconds) {
-        if (Logger) {
-          Logger([&](raw_ostream &OS) {
-            OS << "LTO cache save '" << ID << "' in "
-               << llvm::format("%.6fs", Seconds) << "\n";
-          });
-        }
-      });
+    auto SaveStart = std::chrono::steady_clock::now();
+    Service.CASDB->saveFileAsync(TmpPath, [=](auto MaybeWrittenCASID) {
+      if (Logger) {
+        auto SaveEnd = std::chrono::steady_clock::now();
+        auto Seconds =
+            std::chrono::duration<double>(SaveEnd - SaveStart).count();
+        Logger([&](raw_ostream &OS) {
+          OS << "LTO cache save '" << ID << "' in "
+             << llvm::format("%.6fs", Seconds) << "\n";
+        });
+      }
 
-      if (Error E =
-              Service.CASDB->saveFileSync(TmpPath).moveInto(WrittenCASID)) {
+      if (Error E = std::move(MaybeWrittenCASID).moveInto(WrittenCASID)) {
         handleCASError(std::move(E), Logger);
         return Cb();
       }
@@ -729,13 +735,13 @@ public:
           });
         }
 
-    cas::remote::KeyValueDBClient::ValueTy CompResult;
-    CompResult["Output"] = *WrittenCASID;
-    if (auto Err = Service.KVDB->putValueSync(ID, CompResult))
-      handleCASError(std::move(Err), Logger);
+        if (Err)
+          handleCASError(std::move(Err), Logger);
 
-    sys::fs::rename(TmpPath, OutputPath);
-    return Cb();
+        sys::fs::rename(TmpPath, OutputPath);
+        return Cb();
+      });
+    });
   }
 
   bool areLoadedAndWrittenResultsIdentical() const override {

@@ -83,12 +83,22 @@ public:
   Error putValueSync(ArrayRef<uint8_t> Key, const ValueTy &Value) {
     return putValueSync(toStringRef(Key).str(), Value);
   }
+  void putValueAsync(std::string Key, const ValueTy &Value,
+                     std::function<void(Error)> Callback) {
+    return putValueAsyncImpl(std::move(Key), Value, std::move(Callback));
+  }
+  void putValueAsync(ArrayRef<uint8_t> Key, const ValueTy &Value,
+                     std::function<void(Error)> Callback) {
+    return putValueAsync(toStringRef(Key).str(), Value, std::move(Callback));
+  }
 
 protected:
   virtual Expected<std::optional<ValueTy>>
   getValueSyncImpl(std::string Key) = 0;
   virtual void getValueAsyncImpl(std::string Key, GetValueCb Callback) = 0;
   virtual Error putValueSyncImpl(std::string Key, const ValueTy &Value) = 0;
+  virtual void putValueAsyncImpl(std::string Key, const ValueTy &Value,
+                                 std::function<void(Error)> Callback) = 0;
 
 public:
   class GetValueAsyncQueue : public AsyncQueueBase {
@@ -214,6 +224,12 @@ public:
   Expected<std::string> saveFileSync(std::string FilePath) {
     return saveFileSyncImpl(std::move(FilePath));
   }
+
+  using SaveFileCb = std::function<void(Expected<std::string>)>;
+  void saveFileAsync(std::string FilePath, SaveFileCb Callback) {
+    return saveFileAsyncImpl(std::move(FilePath), std::move(Callback));
+  }
+
   Expected<GetResponse>
   getSync(std::string CASID,
           std::optional<std::string> OutFilePath = std::nullopt) {
@@ -243,6 +259,8 @@ protected:
 
   virtual Expected<std::string> saveDataSyncImpl(std::string BlobData) = 0;
   virtual Expected<std::string> saveFileSyncImpl(std::string FilePath) = 0;
+  virtual void saveFileAsyncImpl(std::string FilePath, SaveFileCb Callback) = 0;
+
   virtual Expected<GetResponse>
   getSyncImpl(std::string CASID, std::optional<std::string> OutFilePath) = 0;
   virtual Expected<std::string> putDataSyncImpl(std::string BlobData,
