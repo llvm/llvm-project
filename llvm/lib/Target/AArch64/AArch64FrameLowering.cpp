@@ -1512,8 +1512,9 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   case AArch64::PTRUE_C_B:
   case AArch64::LD1B_2Z_IMM:
   case AArch64::ST1B_2Z_IMM:
-    return I->getMF()->getSubtarget<AArch64Subtarget>().hasSVE2p1() ||
-           I->getMF()->getSubtarget<AArch64Subtarget>().hasSME2();
+    assert((I->getMF()->getSubtarget<AArch64Subtarget>().hasSVE2p1() ||
+            I->getMF()->getSubtarget<AArch64Subtarget>().hasSME2()) &&
+           "Expected SME2 or SVE2.1 Targer Architecture.");
   case AArch64::STR_ZXI:
   case AArch64::STR_PXI:
   case AArch64::LDR_ZXI:
