@@ -14123,6 +14123,8 @@ private:
 
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
+  bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
   bool SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall);
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);

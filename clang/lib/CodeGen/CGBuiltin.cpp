@@ -17977,26 +17977,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *T1 = Op1->getType();
     if (!T0->isVectorTy() && !T1->isVectorTy()) {
       if (T0->isFloatingPointTy()) {
-        return Builder.CreateFMul(Op0, Op1, "dx.dot");
+      return Builder.CreateFMul(Op0, Op1, "dx.dot");
       }
 
       if (T0->isIntegerTy()) {
-        return Builder.CreateMul(Op0, Op1, "dx.dot");
+      return Builder.CreateMul(Op0, Op1, "dx.dot");
       }
+      // Bools should have been promoted
       assert(
           false &&
           "Dot product on a scalar is only supported on integers and floats.");
     }
+    // A VectorSplat should have happened
     assert(T0->isVectorTy() && T1->isVectorTy() &&
            "Dot product of vector and scalar is not supported.");
 
-    // NOTE: this assert will need to be revisited after overload resoltion
-    //  PR merges.
+    // A vector sext or sitofp should have happened
     assert(T0->getScalarType() == T1->getScalarType() &&
            "Dot product of vectors need the same element types.");
 
     auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
     auto *VecTy1 = E->getArg(1)->getType()->getAs<VectorType>();
+    // A HLSLVectorTruncation should have happend
     assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
            "Dot product requires vectors to be of the same size.");
 
