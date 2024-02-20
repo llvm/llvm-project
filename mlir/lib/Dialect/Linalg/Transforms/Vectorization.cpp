@@ -1564,10 +1564,10 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
 ///   ShapeCastOp - Reshape the data based on the target.
 ///   vector::TransferWriteOp. - Write the result vector back to the destination
 ///   tensor
-static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
-                                         tensor::UnPackOp unpackOp,
-                                         ArrayRef<int64_t> inputVectorSizes,
-                                         SmallVectorImpl<Value> &newResults) {
+static LogicalResult
+vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
+                          ArrayRef<int64_t> inputVectorSizes,
+                          SmallVectorImpl<Value> &newResults) {
 
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unpackOp);
@@ -1580,12 +1580,7 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   SmallVector<int64_t> readMaskShape(inputVectorSizes.begin(),
                                      inputVectorSizes.end());
   ArrayRef<int64_t> outerDimsPerm = unpackOp.getOuterDimsPerm();
-  if (!outerDimsPerm.empty()) {
-    applyPermutationToVector(readMaskShape, outerDimsPerm);
-  }
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
-  readMaskShape.append(sourceShape.begin() + inputVectorSizes.size(),
-                       sourceShape.end());
 
   // ReadMask is the size of tensor used to read and apply mask. It is
   // set like this: Let's say the vectorSize (VS) array is size 'N' and
@@ -1593,22 +1588,28 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
   // size M-N
   // Thus:
   // - initially: ReadMaskShape = vectorInputSizes
-  // - if outer_dims_perms is present: do that permutation on readMaskShape.
-  // - Append the remaining shape from SS
   // - Divide all the readMaskShape locations pointed by innerDimPos
   //   by the innerTileSize attribute value.
+  // - if outer_dims_perms is present: do that permutation on readMaskShape.
+  // - Append the remaining shape from SS
   // E.g. let's say let's say unpackTensorType.getShape() = <8x8x32x16>
   // inner Dim Pos = [0, 1] and Inner Tiles = [32, 16], vector_sizes are [512,
   // 128] and outer_dims_perm is [1, 0] then read shape is:
   //   ReadMaskShape(initial): [512, 128]
-  //   After applying outer_dims_perm: [128, 512]
-  //   After appending the rest of the sourceShape: [128, 512, 32, 16]
-  //   Final Value(after innerDim Adjustment): [128/32, 512/16, 32, 16]
-  //                                           = [4, 32, 32, 16]
+  //   Final Value(after innerDim Adjustment): [512/32, 128/16]
+  //                                           = [16, 8]
+  //   After applying outer_dims_perm: [8, 16]
+  //   After appending the rest of the sourceShape: [8, 16, 32, 16]
+
   for (auto [index, size] : enumerate(innerTiles)) {
     readMaskShape[innerDimPos[index]] =
         llvm::divideCeil(readMaskShape[innerDimPos[index]], size);
   }
+  if (!outerDimsPerm.empty()) {
+    applyPermutationToVector(readMaskShape, outerDimsPerm);
+  }
+  readMaskShape.append(sourceShape.begin() + inputVectorSizes.size(),
+                       sourceShape.end());
 
   ReifiedRankedShapedTypeDims reifiedRetShapes;
   LogicalResult status =
@@ -1630,8 +1631,8 @@ static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
       ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
 
   PackingMetadata packMetadata;
-  SmallVector<int64_t> lastDimToInsertPosPerm = invertPermutationVector(
-      tensor::getUnPackInverseSrcPerm(unpackOp, packMetadata));
+  SmallVector<int64_t> lastDimToInsertPosPerm =
+      tensor::getUnPackInverseSrcPerm(unpackOp, packMetadata);
   ShapedType maskedOpShapedType = cast<ShapedType>(readResult.getType());
   SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
   mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
@@ -2031,8 +2032,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                            results);
           })
           .Case<tensor::UnPackOp>([&](auto unpackOp) {
-            return vectorizeAsUnpackOp(rewriter, unpackOp, inputVectorSizes,
-                                       results);
+            return vectorizeAsTensorUnpackOp(rewriter, unpackOp,
+                                             inputVectorSizes, results);
           })
           .Default([](auto) { return failure(); });
 
