@@ -160,3 +160,45 @@ class CRTP {
 
 class A : CRTP<A, A> {};
 } // namespace crtp_template2
+
+namespace template_derived {
+template <typename T>
+class CRTP {};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the implicit default constructor of the CRTP is publicly accessible [bugprone-unsafe-crtp]
+// CHECK-MESSAGES: :[[@LINE-2]]:7: note: consider making it private
+// CHECK-FIXES: CRTP() = default;
+
+template<typename T>
+class A : CRTP<A<T>> {};
+
+// FIXME: Ideally the warning should be triggered without instantiation.
+void foo() {
+  A<int> A;
+  (void) A;
+}
+} // namespace template_derived
+
+namespace template_derived_explicit_specialization {
+template <typename T>
+class CRTP {};
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the implicit default constructor of the CRTP is publicly accessible [bugprone-unsafe-crtp]
+// CHECK-MESSAGES: :[[@LINE-2]]:7: note: consider making it private
+// CHECK-FIXES: CRTP() = default;
+
+template<typename T>
+class A : CRTP<A<T>> {};
+
+template<>
+class A<int> : CRTP<A<int>> {};
+} // namespace template_derived_explicit_specialization
+
+namespace no_warning {
+template <typename T>
+class CRTP
+{
+    CRTP() = default;
+    friend T;
+};
+
+class A : CRTP<A> {};
+} // namespace no_warning
