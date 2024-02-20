@@ -77,12 +77,12 @@ behavior between Clang and DXC. Some examples include:
     halfOrInt16(I); // All: Resolves to halfOrInt16(uint16_t).
   #ifndef IGNORE_ERRORS
     half H = asfloat16(I); // DXC: Fails to resolve overload for int.
-                          // Clang: Resolves to halfOrInt16(uint16_t).
+                          // Clang: Resolves to asfloat16(uint16_t).
     half H = asfloat16(U); // DXC: Fails to resolve overload for int.
-                          // Clang: Resolves to halfOrInt16(uint16_t).
+                          // Clang: Resolves to asfloat16(uint16_t).
   #endif
-    half H = asfloat16(0x01); // DXC: Resolves to halfOrInt16(half).
-                              // Clang: Resolves to halfOrInt16(uint16_t).
+    half H = asfloat16(0x01); // DXC: Resolves to asfloat16(half).
+                              // Clang: Resolves to asfloat16(uint16_t).
 
     takesDoubles(X, Y, Z); // Works on all compilers
   #ifndef IGNORE_ERRORS
