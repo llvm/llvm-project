@@ -129,6 +129,19 @@ function(create_libc_unittest fq_target_name)
   list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
                            libc.test.UnitTest.ErrnoSetterMatcher)
   list(REMOVE_DUPLICATES fq_deps_list)
+
+  _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_FLAGS}")
+  list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding unit test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS LIBC_UNITTEST_DEPENDS)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
+  endif()
+
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
@@ -157,15 +170,6 @@ function(create_libc_unittest fq_target_name)
     return()
   endif()
 
-  if(SHOW_INTERMEDIATE_OBJECTS)
-    message(STATUS "Adding unit test ${fq_target_name}")
-    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
-      foreach(dep IN LISTS ADD_OBJECT_DEPENDS)
-        message(STATUS "  ${fq_target_name} depends on ${dep}")
-      endforeach()
-    endif()
-  endif()
-
   if(LIBC_UNITTEST_NO_RUN_POSTBUILD)
     set(fq_build_target_name ${fq_target_name})
   else()
@@ -180,22 +184,8 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_compile_options(
-    ${fq_build_target_name}
-    PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
-  )
-  if(LLVM_LIBC_FULL_BUILD)
-    target_compile_options(
-      ${fq_build_target_name}
-      PRIVATE -ffreestanding
-    )
-  endif()
-  if(LIBC_UNITTEST_COMPILE_OPTIONS)
-    target_compile_options(
-      ${fq_build_target_name}
-      PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
-    )
-  endif()
+  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
@@ -245,98 +235,11 @@ function(create_libc_unittest fq_target_name)
   add_dependencies(libc-unit-tests ${fq_target_name})
 endfunction(create_libc_unittest)
 
-# Internal function, used by `add_libc_unittest`.
-function(expand_flags_for_libc_unittest target_name flags)
-  cmake_parse_arguments(
-    "EXPAND_FLAGS"
-    "IGNORE_MARKER" # No Optional arguments
-    "" # No Single-value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  list(LENGTH flags nflags)
-  if(NOT ${nflags})
-    create_libc_unittest(
-      ${target_name}
-      DEPENDS "${EXPAND_FLAGS_DEPENDS}"
-      FLAGS "${EXPAND_FLAGS_FLAGS}"
-      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-    )
-    return()
-  endif()
-
-  list(GET flags 0 flag)
-  list(REMOVE_AT flags 0)
-  extract_flag_modifier(${flag} real_flag modifier)
-
-  if(NOT "${modifier}" STREQUAL "NO")
-    expand_flags_for_libc_unittest(
-      ${target_name}
-      "${flags}"
-      DEPENDS "${EXPAND_FLAGS_DEPENDS}" IGNORE_MARKER
-      FLAGS "${EXPAND_FLAGS_FLAGS}" IGNORE_MARKER
-      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-    )
-  endif()
-
-  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
-    return()
-  endif()
-
-  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
-  list(REMOVE_ITEM NEW_FLAGS ${flag})
-  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
-
-  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
-  # `flag__ONLY` do not.
-  if("${modifier}" STREQUAL "")
-    set(TARGET_NAME "${target_name}.__NO_${flag}")
-  else()
-    set(TARGET_NAME "${target_name}")
-  endif()
-
-  expand_flags_for_libc_unittest(
-    ${TARGET_NAME}
-    "${flags}"
-    DEPENDS "${NEW_DEPS}" IGNORE_MARKER
-    FLAGS "${NEW_FLAGS}" IGNORE_MARKER
-    "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
-  )
-endfunction(expand_flags_for_libc_unittest)
-
 function(add_libc_unittest target_name)
-  cmake_parse_arguments(
-    "ADD_TO_EXPAND"
-    "" # Optional arguments
-    "" # Single value arguments
-    "DEPENDS;FLAGS" # Multi-value arguments
+  add_target_with_flags(
+    ${target_name}
+    CREATE_TARGET create_libc_unittest
     ${ARGN}
-  )
-
-  get_fq_target_name(${target_name} fq_target_name)
-
-  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
-    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
-  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
-  
-  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
-  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
-  list(SORT flags)
-
-  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
-    message(STATUS "Unit test ${fq_target_name} has FLAGS: ${flags}")
-  endif()
-
-  expand_flags_for_libc_unittest(
-    ${fq_target_name}
-    "${flags}"
-    DEPENDS ${fq_deps_list} IGNORE_MARKER
-    FLAGS ${flags} IGNORE_MARKER
-    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
   )
 endfunction(add_libc_unittest)
 
@@ -435,6 +338,13 @@ function(add_libc_fuzzer target_name)
 
 endfunction(add_libc_fuzzer)
 
+# Get libgcc_s to be used in hermetic and integration tests.
+if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
+                  OUTPUT_VARIABLE LIBGCC_S_LOCATION)
+  string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
+endif()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
@@ -514,7 +424,7 @@ function(add_integration_test test_name)
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
-      set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+      set(msg "Skipping integration test ${fq_target_name} as it has missing deps: "
               "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
@@ -564,8 +474,13 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -603,20 +518,6 @@ function(add_integration_test test_name)
   )
   add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
 endfunction(add_integration_test)
-
-set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
-    -fpie -ffreestanding -fno-exceptions -fno-rtti)
-# The GPU build requires overriding the default CMake triple and architecture.
-if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-  list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-       --target=${LIBC_GPU_TARGET_TRIPLE}
-       -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
-elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
-  list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
-endif()
 
 # Rule to add a hermetic test. A hermetic test is one whose executable is fully
 # statically linked and consists of pieces drawn only from LLVM's libc. Nothing,
@@ -692,7 +593,7 @@ function(add_libc_hermetic_test test_name)
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
-    set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+    set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
             "${skipped_entrypoints_list}.")
     message(STATUS ${msg})
     return()
@@ -741,8 +642,13 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}

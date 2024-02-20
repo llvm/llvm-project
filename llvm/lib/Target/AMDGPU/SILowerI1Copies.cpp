@@ -31,9 +31,9 @@
 
 using namespace llvm;
 
-static Register insertUndefLaneMask(MachineBasicBlock *MBB,
-                                    MachineRegisterInfo *MRI,
-                                    Register LaneMaskRegAttrs);
+static Register
+insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
+                    MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs);
 
 namespace {
 
@@ -304,7 +304,8 @@ public:
   /// blocks, so that the SSA updater doesn't have to search all the way to the
   /// function entry.
   void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater &SSAUpdater,
-                      MachineRegisterInfo &MRI, Register LaneMaskRegAttrs,
+                      MachineRegisterInfo &MRI,
+                      MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs,
                       ArrayRef<Incoming> Incomings = {}) {
     assert(LoopLevel < CommonDominators.size());
 
@@ -411,14 +412,15 @@ FunctionPass *llvm::createSILowerI1CopiesPass() {
   return new SILowerI1Copies();
 }
 
-Register llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
-                                 Register LaneMaskRegAttrs) {
-  return MRI->cloneVirtualRegister(LaneMaskRegAttrs);
+Register
+llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
+                        MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
+  return MRI->createVirtualRegister(LaneMaskRegAttrs);
 }
 
-static Register insertUndefLaneMask(MachineBasicBlock *MBB,
-                                    MachineRegisterInfo *MRI,
-                                    Register LaneMaskRegAttrs) {
+static Register
+insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
+                    MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
   MachineFunction &MF = *MBB->getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -911,4 +913,4 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   }
 }
 
-void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) { return; }
+void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}

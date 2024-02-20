@@ -656,6 +656,40 @@ struct TensorInsertDemapper
   }
 };
 
+struct SparseAssembleDemapper : public OpRewritePattern<AssembleOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(AssembleOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!hasAnyNonIdentityOperandsOrResults(op))
+      return failure();
+
+    assert(hasAnySparseResult(op));
+    auto stt = getSparseTensorType(op.getResult());
+    rewriter.modifyOpInPlace(
+        op, [&op, &stt]() { op.getResult().setType(stt.getDemappedType()); });
+    rewriter.setInsertionPointAfter(op);
+    Value out = genRemap(rewriter, stt.getEncoding(), op.getResult());
+    rewriter.replaceAllUsesExcept(op, out, out.getDefiningOp());
+    return success();
+  }
+};
+
+struct SparseDisassembleDemapper
+    : public DemapInsRewriter<SparseDisassembleDemapper, DisassembleOp> {
+  using DemapInsRewriter::DemapInsRewriter;
+  LogicalResult rewriteOp(DisassembleOp op, OpAdaptor adaptor,
+                          PatternRewriter &rewriter) const {
+    if (!hasAnyNonIdentityOperandsOrResults(op))
+      return failure();
+
+    assert(hasAnySparseOperandOrResult(op));
+    rewriter.modifyOpInPlace(op, [&op, &adaptor]() {
+      op.getTensorMutable().assign(adaptor.getTensor());
+    });
+    return success();
+  }
+};
+
 struct ForeachOpDemapper
     : public DemapInsRewriter<ForeachOpDemapper, ForeachOp> {
   using DemapInsRewriter::DemapInsRewriter;
@@ -758,7 +792,8 @@ void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kExceptGeneric) {
     patterns.add<TensorAllocDemapper<bufferization::AllocTensorOp>,
-                 TensorAllocDemapper<tensor::EmptyOp>, TensorInsertDemapper,
+                 TensorAllocDemapper<tensor::EmptyOp>, SparseAssembleDemapper,
+                 SparseDisassembleDemapper, TensorInsertDemapper,
                  ForeachOpDemapper>(patterns.getContext());
   }
 }

@@ -35,6 +35,14 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+// Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
+// well.
+namespace mlir::sparse_tensor {
+llvm::hash_code hash_value(LevelType lt) {
+  return llvm::hash_value(static_cast<uint64_t>(lt));
+}
+} // namespace mlir::sparse_tensor
+
 //===----------------------------------------------------------------------===//
 // Local Convenience Methods.
 //===----------------------------------------------------------------------===//
@@ -83,11 +91,11 @@ void StorageLayout::foreachField(
   }
   // The values array.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::ValMemRef, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
   // Put metadata at the end.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::StorageSpec, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
 }
 
@@ -341,7 +349,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelType::Dense;
+    return LevelFormat::Dense;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -613,16 +621,28 @@ void SparseTensorEncodingAttr::printDimensions(
   }
 }
 
+std::string getNOutOfMString(LevelType lt) {
+  if (isNOutOfMLT(lt)) {
+    unsigned n = getN(lt);
+    unsigned m = getM(lt);
+    auto output = "[" + std::to_string(n) + ", " + std::to_string(m) + "]";
+    return output;
+  }
+  return "";
+}
+
 void SparseTensorEncodingAttr::printLevels(AffineMap &map, AsmPrinter &printer,
                                            ArrayRef<LevelType> lvlTypes) const {
   for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
     map.getResult(i).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
+    printer << " : " << toMLIRString(lvlTypes[i])
+            << getNOutOfMString(lvlTypes[i]) << ", ";
   }
   if (map.getNumResults() >= 1) {
     auto lastIndex = map.getNumResults() - 1;
     map.getResult(lastIndex).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[lastIndex]);
+    printer << " : " << toMLIRString(lvlTypes[lastIndex])
+            << getNOutOfMString(lvlTypes[lastIndex]);
   }
 }
 
@@ -644,6 +664,56 @@ LogicalResult SparseTensorEncodingAttr::verify(
                      [](LevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
+    // We can potentially support mixed SoA/AoS singleton levels.
+    if (!std::all_of(it, lvlTypes.end(), [it](LevelType i) {
+          return it->isa<LevelPropNonDefault::SoA>() ==
+                 i.isa<LevelPropNonDefault::SoA>();
+        })) {
+      return emitError() << "expected all singleton lvlTypes stored in the "
+                            "same memory layout (SoA vs AoS).";
+    }
+  }
+
+  // SoA property can only be applied on singleton level.
+  auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
+    return lt.isa<LevelPropNonDefault::SoA>();
+  });
+  if (llvm::any_of(soaLvls, [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      })) {
+    return emitError() << "SoA is only applicable to singleton lvlTypes.";
+  }
+
+  // TODO: audit formats that actually are supported by backend.
+  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
+      it != std::end(lvlTypes)) {
+    if (it != lvlTypes.end() - 1)
+      return emitError() << "expected n_out_of_m to be the last level type";
+    if (!std::all_of(lvlTypes.begin(), it,
+                     [](LevelType i) { return isDenseLT(i); }))
+      return emitError() << "expected all dense lvlTypes "
+                            "before a n_out_of_m level";
+    if (dimToLvl && (dimToLvl.getNumDims() != dimToLvl.getNumResults())) {
+      if (!isBlockSparsity(dimToLvl)) {
+        return emitError()
+               << "expected 1xm block structure for n_out_of_m level";
+      }
+      auto sizes = getBlockSize(dimToLvl);
+      unsigned coefficient = 0;
+      for (const auto &elem : sizes) {
+        if (elem != 0) {
+          if (elem != coefficient && coefficient != 0) {
+            return emitError() << "expected only one blocked level "
+                                  "with the same coefficients";
+          }
+          coefficient = elem;
+        }
+      }
+      if (coefficient != getM(*it)) {
+        return emitError() << "expected coeffiencts of Affine expressions "
+                              "to be equal to m of n_out_of_m level";
+      }
+    }
   }
   // Before we can check that the level-rank is consistent/coherent
   // across all fields, we need to define it.  The source-of-truth for
@@ -932,7 +1002,7 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<LevelType> lts;
   for (auto lt : enc.getLvlTypes())
-    lts.push_back(*buildLevelType(*getLevelFormat(lt), true, true));
+    lts.push_back(lt.stripProperties());
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), lts,
@@ -1016,8 +1086,6 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have static shape");
   if (!stt.hasEncoding())
     return op->emitError("the sparse-tensor must have an encoding attribute");
-  if (!stt.isIdentity())
-    return op->emitError("the sparse-tensor must have the identity mapping");
 
   // Verifies the trailing COO.
   Level cooStartLvl = stt.getCOOStart();

@@ -32,6 +32,16 @@ body:             |
     RET64 $rax
 ...
 ---
+name:            ndd_2_non_ndd_commutable_new_opcode
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: shldq   $52, %rsi, %rax                 # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xa4,0xf0,0x34]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SHRD64rri8_ND killed renamable $rsi, killed renamable $rax, 12, implicit-def dead $eflags
+    RET64 $rax
+...
+---
 name:            ndd_2_non_ndd_incommutable
 body:             |
   bb.0.entry:
@@ -60,4 +70,14 @@ body:             |
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
     renamable $rax = XOR64rr_NF_ND killed renamable $rax, killed renamable $r16
     RET64 $rax
+...
+---
+name:            bswapr_to_movberr
+body:             |
+  bb.0.entry:
+    liveins: $rax
+    ; CHECK: bswapq  %rax                            # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xc8]
+    renamable $rax = MOVBE64rr killed renamable $rax
+    RET64 killed $rax
+
 ...

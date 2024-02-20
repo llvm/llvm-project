@@ -476,9 +476,8 @@ public:
   }
 
 private:
-  template <class _OuterA2, __enable_if_t<is_constructible<outer_allocator_type, _OuterA2>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI scoped_allocator_adaptor(_OuterA2&& __o, const inner_allocator_type& __i) _NOEXCEPT
-      : base(std::forward<_OuterA2>(__o), __i) {}
+  _LIBCPP_HIDE_FROM_ABI explicit scoped_allocator_adaptor(
+      outer_allocator_type&& __o, inner_allocator_type&& __i) _NOEXCEPT : base(std::move(__o), std::move(__i)) {}
 
   template <class _Tp, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __construct(integral_constant<int, 0>, _Tp* __p, _Args&&... __args) {

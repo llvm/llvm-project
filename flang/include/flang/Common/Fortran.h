@@ -105,8 +105,8 @@ ENUM_CLASS(IgnoreTKR,
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
     Managed, // M - don't check managed storage
-    Contiguous) // C - legacy; disabled NVFORTRAN's convention that leading
-                // dimension of assumed-shape was contiguous
+    Contiguous) // C - don't check for storage sequence association with a
+                // potentially non-contiguous object
 using IgnoreTKRSet = EnumSet<IgnoreTKR, 8>;
 // IGNORE_TKR(A) = IGNORE_TKR(TKRDM)
 static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,

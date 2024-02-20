@@ -1195,6 +1195,15 @@ llvm::json::Value toJSON(const RenameParams &R) {
   };
 }
 
+llvm::json::Value toJSON(const PrepareRenameResult &PRR) {
+  if (PRR.placeholder.empty())
+    return toJSON(PRR.range);
+  return llvm::json::Object{
+      {"range", toJSON(PRR.range)},
+      {"placeholder", PRR.placeholder},
+  };
+}
+
 llvm::json::Value toJSON(const DocumentHighlight &DH) {
   return llvm::json::Object{
       {"range", toJSON(DH.range)},

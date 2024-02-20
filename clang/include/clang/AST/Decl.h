@@ -2294,8 +2294,8 @@ public:
 
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
-  bool isPure() const { return FunctionDeclBits.IsPure; }
-  void setPure(bool P = true);
+  bool isPureVirtual() const { return FunctionDeclBits.IsPureVirtual; }
+  void setIsPureVirtual(bool P = true);
 
   /// Whether this templated function will be late parsed.
   bool isLateTemplateParsed() const {
@@ -2615,9 +2615,17 @@ public:
   /// the target functionality.
   bool isTargetMultiVersion() const;
 
+  /// True if this function is the default version of a multiversioned dispatch
+  /// function as a part of the target functionality.
+  bool isTargetMultiVersionDefault() const;
+
   /// True if this function is a multiversioned dispatch function as a part of
   /// the target-clones functionality.
   bool isTargetClonesMultiVersion() const;
+
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the target-version functionality.
+  bool isTargetVersionMultiVersion() const;
 
   /// \brief Get the associated-constraints of this function declaration.
   /// Currently, this will either be a vector of size 1 containing the

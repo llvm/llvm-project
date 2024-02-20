@@ -722,8 +722,8 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
 
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
-  if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
-    dwarf_cu->SetUserData(comp_unit);
+  if (dwarf_cu && dwarf_cu->GetLLDBCompUnit() == nullptr)
+    dwarf_cu->SetLLDBCompUnit(comp_unit);
 
   // It must be DWARFCompileUnit when it created a CompileUnit.
   return llvm::cast_or_null<DWARFCompileUnit>(dwarf_cu);
@@ -771,7 +771,7 @@ static const char *GetDWOName(DWARFCompileUnit &dwarf_cu,
 
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
   CompUnitSP cu_sp;
-  CompileUnit *comp_unit = (CompileUnit *)dwarf_cu.GetUserData();
+  CompileUnit *comp_unit = dwarf_cu.GetLLDBCompUnit();
   if (comp_unit) {
     // We already parsed this compile unit, had out a shared pointer to it
     cu_sp = comp_unit->shared_from_this();
@@ -779,7 +779,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     if (GetDebugMapSymfile()) {
       // Let the debug map create the compile unit
       cu_sp = m_debug_map_symfile->GetCompileUnit(this, dwarf_cu);
-      dwarf_cu.SetUserData(cu_sp.get());
+      dwarf_cu.SetLLDBCompUnit(cu_sp.get());
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
@@ -792,7 +792,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
-          dwarf_cu.SetUserData(cu_sp.get());
+          dwarf_cu.SetLLDBCompUnit(cu_sp.get());
 
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
         };
@@ -1675,20 +1675,20 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
 
 CompileUnit *
 SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
+
   if (dwarf_cu.IsDWOUnit()) {
-    DWARFCompileUnit *non_dwo_cu =
-        static_cast<DWARFCompileUnit *>(dwarf_cu.GetUserData());
+    DWARFCompileUnit *non_dwo_cu = dwarf_cu.GetSkeletonUnit();
     assert(non_dwo_cu);
     return non_dwo_cu->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(
         *non_dwo_cu);
   }
   // Check if the symbol vendor already knows about this compile unit?
-  if (dwarf_cu.GetUserData() == nullptr) {
-    // The symbol vendor doesn't know about this compile unit, we need to parse
-    // and add it to the symbol vendor object.
-    return ParseCompileUnit(dwarf_cu).get();
-  }
-  return static_cast<CompileUnit *>(dwarf_cu.GetUserData());
+  CompileUnit *lldb_cu = dwarf_cu.GetLLDBCompUnit();
+  if (lldb_cu)
+    return lldb_cu;
+  // The symbol vendor doesn't know about this compile unit, we need to parse
+  // and add it to the symbol vendor object.
+  return ParseCompileUnit(dwarf_cu).get();
 }
 
 void SymbolFileDWARF::GetObjCMethods(
@@ -1750,7 +1750,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
     }
 
     if (*file_index == DIERef::k_file_index_mask)
-      symbol_file = m_dwp_symfile.get(); // DWP case
+      symbol_file = GetDwpSymbolFile().get(); // DWP case
     else
       symbol_file = this->DebugInfo()
                         .GetUnitAtIndex(*die_ref.file_index())
@@ -1783,6 +1783,10 @@ std::optional<uint64_t> SymbolFileDWARF::GetDWOId() {
           return ::GetDWOId(*cu, *cu_die);
   }
   return {};
+}
+
+DWARFUnit *SymbolFileDWARF::GetSkeletonUnit(DWARFUnit *dwo_unit) {
+  return DebugInfo().GetSkeletonUnit(dwo_unit);
 }
 
 std::shared_ptr<SymbolFileDWARFDwo>
@@ -2667,6 +2671,29 @@ static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
   }
   return any_context_updated;
 }
+
+uint64_t SymbolFileDWARF::GetDebugInfoSize(bool load_all_debug_info) {
+  DWARFDebugInfo &info = DebugInfo();
+  uint32_t num_comp_units = info.GetNumUnits();
+
+  uint64_t debug_info_size = SymbolFileCommon::GetDebugInfoSize();
+  // In dwp scenario, debug info == skeleton debug info + dwp debug info.
+  if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
+    return debug_info_size + dwp_sp->GetDebugInfoSize();
+
+  // In dwo scenario, debug info == skeleton debug info + all dwo debug info.
+  for (uint32_t i = 0; i < num_comp_units; i++) {
+    DWARFUnit *cu = info.GetUnitAtIndex(i);
+    if (cu == nullptr)
+      continue;
+
+    SymbolFileDWARFDwo *dwo = cu->GetDwoSymbolFile(load_all_debug_info);
+    if (dwo)
+      debug_info_size += dwo->GetDebugInfoSize();
+  }
+  return debug_info_size;
+}
+
 void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
 
   // Make sure we haven't already searched this SymbolFile before.

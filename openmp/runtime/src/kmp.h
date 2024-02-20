@@ -502,11 +502,6 @@ static inline kmp_sched_t __kmp_sched_without_mods(kmp_sched_t kind) {
 }
 
 /* Type to keep runtime schedule set via OMP_SCHEDULE or omp_set_schedule() */
-#if KMP_COMPILER_MSVC
-#pragma warning(push)
-// warning C4201: nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4201)
-#endif
 typedef union kmp_r_sched {
   struct {
     enum sched_type r_sched_type;
@@ -514,9 +509,6 @@ typedef union kmp_r_sched {
   };
   kmp_int64 sched;
 } kmp_r_sched_t;
-#if KMP_COMPILER_MSVC
-#pragma warning(pop)
-#endif
 
 extern enum sched_type __kmp_sch_map[]; // map OMP 3.0 schedule types with our
 // internal schedule types
@@ -610,8 +602,6 @@ typedef int PACKED_REDUCTION_METHOD_T;
 #pragma warning(push)
 #pragma warning(disable : 271 310)
 #endif
-// Don't include everything related to NT status code, we'll do that explicitely
-#define WIN32_NO_STATUS
 #include <windows.h>
 #if KMP_MSVC_COMPAT
 #pragma warning(pop)
@@ -1191,7 +1181,11 @@ extern void __kmp_init_target_task();
 #define KMP_MIN_STKSIZE ((size_t)(32 * 1024))
 #endif
 
+#if KMP_OS_AIX && KMP_ARCH_PPC
+#define KMP_MAX_STKSIZE 0x10000000 /* 256Mb max size on 32-bit AIX */
+#else
 #define KMP_MAX_STKSIZE (~((size_t)1 << ((sizeof(size_t) * (1 << 3)) - 1)))
+#endif
 
 #if KMP_ARCH_X86
 #define KMP_DEFAULT_STKSIZE ((size_t)(2 * 1024 * 1024))
@@ -1907,20 +1901,12 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   // Because of parm1-4 are used together, performance seems to be better
   // if they are on the same cache line (not measured though).
 
-#if KMP_COMPILER_MSVC
-#pragma warning(push)
-// warning C4201: nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4201)
-#endif
   struct KMP_ALIGN(32) {
     kmp_int32 parm1;
     kmp_int32 parm2;
     kmp_int32 parm3;
     kmp_int32 parm4;
   };
-#if KMP_COMPILER_MSVC
-#pragma warning(pop)
-#endif
 
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
   kmp_uint32 pchunks;
@@ -1954,20 +1940,12 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   //    b) all parm1-4 are in the same cache line.
   // Because of parm1-4 are used together, performance seems to be better
   // if they are in the same line (not measured though).
-#if KMP_COMPILER_MSVC
-#pragma warning(push)
-// warning C4201: nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4201)
-#endif
   struct KMP_ALIGN(32) {
     kmp_int64 parm1;
     kmp_int64 parm2;
     kmp_int64 parm3;
     kmp_int64 parm4;
   };
-#if KMP_COMPILER_MSVC
-#pragma warning(pop)
-#endif
 
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
   kmp_uint64 pchunks;
@@ -2249,11 +2227,6 @@ union KMP_ALIGN_CACHE kmp_barrier_union {
 
 typedef union kmp_barrier_union kmp_balign_t;
 
-#if KMP_COMPILER_MSVC
-#pragma warning(push)
-// warning C4201: nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4201)
-#endif
 /* Team barrier needs only non-volatile arrived counter */
 union KMP_ALIGN_CACHE kmp_barrier_team_union {
   double b_align; /* use worst case alignment */
@@ -2270,9 +2243,6 @@ union KMP_ALIGN_CACHE kmp_barrier_team_union {
 #endif
   };
 };
-#if KMP_COMPILER_MSVC
-#pragma warning(pop)
-#endif
 
 typedef union kmp_barrier_team_union kmp_balign_team_t;
 
@@ -2528,7 +2498,8 @@ typedef struct kmp_dephash_entry kmp_dephash_entry_t;
 #define KMP_DEP_MTX 0x4
 #define KMP_DEP_SET 0x8
 #define KMP_DEP_ALL 0x80
-// Compiler sends us this info:
+// Compiler sends us this info. Note: some test cases contain an explicit copy
+// of this struct and should be in sync with any changes here.
 typedef struct kmp_depend_info {
   kmp_intptr_t base_addr;
   size_t len;

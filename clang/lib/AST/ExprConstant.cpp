@@ -240,15 +240,19 @@ namespace {
     /// True if the subobject was named in a manner not supported by C++11. Such
     /// lvalues can still be folded, but they are not core constant expressions
     /// and we cannot perform lvalue-to-rvalue conversions on them.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Invalid : 1;
 
     /// Is this a pointer one past the end of an object?
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsOnePastTheEnd : 1;
 
     /// Indicator of whether the first entry is an unsized array.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned FirstEntryIsAnUnsizedArray : 1;
 
     /// Indicator of whether the most-derived object is an array element.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned MostDerivedIsArrayElement : 1;
 
     /// The length of the path to the most-derived object of which this is a
@@ -5839,7 +5843,7 @@ static const CXXMethodDecl *HandleVirtualDispatch(
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
   //   undefined
-  if (Callee->isPure()) {
+  if (Callee->isPureVirtual()) {
     Info.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << Callee;
     Info.Note(Callee->getLocation(), diag::note_declared_at);
     return nullptr;
@@ -7951,7 +7955,8 @@ public:
       // Overloaded operator calls to member functions are represented as normal
       // calls with '*this' as the first argument.
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isImplicitObjectMemberFunction()) {
+      if (MD &&
+          (MD->isImplicitObjectMemberFunction() || (OCE && MD->isStatic()))) {
         // FIXME: When selecting an implicit conversion for an overloaded
         // operator delete, we sometimes try to evaluate calls to conversion
         // operators without a 'this' parameter!
@@ -7960,7 +7965,11 @@ public:
 
         if (!EvaluateObjectArgument(Info, Args[0], ThisVal))
           return false;
-        This = &ThisVal;
+
+        // If we are calling a static operator, the 'this' argument needs to be
+        // ignored after being evaluated.
+        if (MD->isInstance())
+          This = &ThisVal;
 
         // If this is syntactically a simple assignment using a trivial
         // assignment operator, start the lifetimes of union members as needed,
@@ -8001,7 +8010,8 @@ public:
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
-          FD = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+          assert(isa<CXXMethodDecl>(CorrespondingCallOpSpecialization));
+          FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
       } else if (FD->isReplaceableGlobalAllocationFunction()) {
@@ -8252,6 +8262,10 @@ public:
     }
 
     llvm_unreachable("Return from function from the loop above.");
+  }
+
+  bool VisitPackIndexingExpr(const PackIndexingExpr *E) {
+    return StmtVisitorTy::Visit(E->getSelectedExpr());
   }
 
   /// Visit a value which is evaluated, but whose value is ignored.
@@ -11418,6 +11432,10 @@ class FixedPointExprEvaluator
     return true;
   }
 
+  bool ZeroInitialization(const Expr *E) {
+    return Success(0, E);
+  }
+
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
@@ -12678,6 +12696,59 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return BuiltinOp == Builtin::BI__atomic_always_lock_free ?
         Success(0, E) : Error(E);
   }
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll: {
+    LValue CarryOutLValue;
+    APSInt LHS, RHS, CarryIn, CarryOut, Result;
+    QualType ResultType = E->getArg(0)->getType();
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), CarryIn, Info) ||
+        !EvaluatePointer(E->getArg(3), CarryOutLValue, Info))
+      return false;
+    // Copy the number of bits and sign.
+    Result = LHS;
+    CarryOut = LHS;
+
+    bool FirstOverflowed = false;
+    bool SecondOverflowed = false;
+    switch (BuiltinOp) {
+    default:
+      llvm_unreachable("Invalid value for BuiltinOp");
+    case Builtin::BI__builtin_addcb:
+    case Builtin::BI__builtin_addcs:
+    case Builtin::BI__builtin_addc:
+    case Builtin::BI__builtin_addcl:
+    case Builtin::BI__builtin_addcll:
+      Result =
+          LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+      break;
+    case Builtin::BI__builtin_subcb:
+    case Builtin::BI__builtin_subcs:
+    case Builtin::BI__builtin_subc:
+    case Builtin::BI__builtin_subcl:
+    case Builtin::BI__builtin_subcll:
+      Result =
+          LHS.usub_ov(RHS, FirstOverflowed).usub_ov(CarryIn, SecondOverflowed);
+      break;
+    }
+
+    // It is possible for both overflows to happen but CGBuiltin uses an OR so
+    // this is consistent.
+    CarryOut = (uint64_t)(FirstOverflowed | SecondOverflowed);
+    APValue APV{CarryOut};
+    if (!handleAssignment(Info, E, CarryOutLValue, ResultType, APV))
+      return false;
+    return Success(Result, E);
+  }
   case Builtin::BI__builtin_add_overflow:
   case Builtin::BI__builtin_sub_overflow:
   case Builtin::BI__builtin_mul_overflow:
@@ -13909,6 +13980,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -14747,6 +14819,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
@@ -15439,10 +15512,12 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   if (Info.EnableNewConstInterp) {
     if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result))
       return false;
-  } else {
-    if (!::Evaluate(Result, Info, E))
-      return false;
+    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                   ConstantExprKind::Normal);
   }
+
+  if (!::Evaluate(Result, Info, E))
+    return false;
 
   // Implicit lvalue-to-rvalue cast.
   if (E->isGLValue()) {
@@ -15671,6 +15746,13 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val))
+      return false;
+    return CheckConstantExpression(Info, getExprLoc(),
+                                   getStorageType(Ctx, this), Result.Val, Kind);
+  }
+
   // The type of the object we're initializing is 'const T' for a class NTTP.
   QualType T = getType();
   if (Kind == ConstantExprKind::ClassTemplateArgument)
@@ -15746,10 +15828,16 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
 
+  SourceLocation DeclLoc = VD->getLocation();
+  QualType DeclTy = VD->getType();
+
   if (Info.EnableNewConstInterp) {
     auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, Value))
       return false;
+
+    return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+                                   ConstantExprKind::Normal);
   } else {
     LValue LVal;
     LVal.set(VD);
@@ -15779,8 +15867,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
 
-  SourceLocation DeclLoc = VD->getLocation();
-  QualType DeclTy = VD->getType();
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
                                  ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
@@ -16048,6 +16134,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
     return NoDiag();
+
+  case Expr::PackIndexingExprClass:
+    return CheckICE(cast<PackIndexingExpr>(E)->getSelectedExpr(), Ctx);
 
   case Expr::SubstNonTypeTemplateParmExprClass:
     return

@@ -2506,7 +2506,7 @@ void OpEmitter::genPopulateDefaultAttributes() {
       }))
     return;
 
-  if (op.getDialect().usePropertiesForAttributes()) {
+  if (emitHelper.hasProperties()) {
     SmallVector<MethodParameter> paramList;
     paramList.emplace_back("::mlir::OperationName", "opName");
     paramList.emplace_back("Properties &", "properties");
@@ -2953,8 +2953,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              operand->isOptional());
       continue;
     }
-    if ([[maybe_unused]] const auto *operand =
-            llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
+    if (llvm::isa_and_present<NamedProperty *>(arg)) {
       // TODO
       continue;
     }

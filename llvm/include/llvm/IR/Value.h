@@ -618,6 +618,9 @@ protected:
   /// \returns true if any metadata was removed.
   bool eraseMetadata(unsigned KindID);
 
+  /// Erase all metadata attachments matching the given predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
+
   /// Erase all metadata attached to this Value.
   void clearMetadata();
 

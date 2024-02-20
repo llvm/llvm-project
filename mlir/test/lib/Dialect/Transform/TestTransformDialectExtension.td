@@ -502,7 +502,8 @@ def ApplyTestConversionPatternsOp
 
 def TestTypeConverterOp
   : Op<Transform_Dialect, "apply_conversion_patterns.transform.test_type_converter",
-      [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface>]> {
+      [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                                 ["getTypeConverter"]>]> {
   let arguments = (ins);
   let results = (outs);
   let assemblyFormat = "attr-dict";

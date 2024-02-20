@@ -79,15 +79,15 @@ default:
   ret void
 }
 
-; We can replace the default branch with case 3 since it is the only case that is missing.
+; This one is a negative test - we know the value of the default,
+; but that's about it
 define void @test3(i2 %a) {
 ; CHECK-LABEL: define void @test3(
 ; CHECK-SAME: i2 [[A:%.*]]) {
-; CHECK-NEXT:    switch i2 [[A]], label [[DOTUNREACHABLEDEFAULT:%.*]] [
+; CHECK-NEXT:    switch i2 [[A]], label [[DEFAULT:%.*]] [
 ; CHECK-NEXT:      i2 0, label [[CASE0:%.*]]
 ; CHECK-NEXT:      i2 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:      i2 -2, label [[CASE2:%.*]]
-; CHECK-NEXT:      i2 -1, label [[DEFAULT:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -100,8 +100,6 @@ define void @test3(i2 %a) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    call void @foo(i32 2)
 ; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       .unreachabledefault:
-; CHECK-NEXT:    unreachable
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @foo(i32 3)
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -109,50 +107,6 @@ define void @test3(i2 %a) {
   switch i2 %a, label %default [i2 0, label %case0
   i2 1, label %case1
   i2 2, label %case2]
-
-case0:
-  call void @foo(i32 0)
-  ret void
-case1:
-  call void @foo(i32 1)
-  ret void
-case2:
-  call void @foo(i32 2)
-  ret void
-default:
-  call void @foo(i32 3)
-  ret void
-}
-
-define void @test3_prof(i2 %a) {
-; CHECK-LABEL: define void @test3_prof(
-; CHECK-SAME: i2 [[A:%.*]]) {
-; CHECK-NEXT:    switch i2 [[A]], label [[DOTUNREACHABLEDEFAULT:%.*]] [
-; CHECK-NEXT:      i2 0, label [[CASE0:%.*]]
-; CHECK-NEXT:      i2 1, label [[CASE1:%.*]]
-; CHECK-NEXT:      i2 -2, label [[CASE2:%.*]]
-; CHECK-NEXT:      i2 -1, label [[DEFAULT:%.*]]
-; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       case0:
-; CHECK-NEXT:    call void @foo(i32 0)
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       case1:
-; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       case2:
-; CHECK-NEXT:    call void @foo(i32 2)
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       .unreachabledefault:
-; CHECK-NEXT:    unreachable
-; CHECK:       default:
-; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    br label [[COMMON_RET]]
-;
-  switch i2 %a, label %default [i2 0, label %case0
-  i2 1, label %case1
-  i2 2, label %case2], !prof !0
 
 case0:
   call void @foo(i32 0)
@@ -313,40 +267,3 @@ default:
 
 declare void @llvm.assume(i1)
 
-define zeroext i1 @test8(i128 %a) {
-; We should not transform conditions wider than 64 bit.
-; CHECK-LABEL: define zeroext i1 @test8(
-; CHECK-SAME: i128 [[A:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i128 [[A]], 3894222643901120721397872246915072
-; CHECK-NEXT:    switch i128 [[TMP0]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:      i128 1298074214633706907132624082305024, label [[LOR_END:%.*]]
-; CHECK-NEXT:      i128 2596148429267413814265248164610048, label [[LOR_END]]
-; CHECK-NEXT:      i128 3894222643901120721397872246915072, label [[LOR_END]]
-; CHECK-NEXT:    ]
-; CHECK:       lor.rhs:
-; CHECK-NEXT:    br label [[LOR_END]]
-; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    ret i1 [[TMP1]]
-;
-entry:
-  %0 = and i128 %a, 3894222643901120721397872246915072
-  switch i128 %0, label %lor.rhs [
-  i128 1298074214633706907132624082305024, label %lor.end
-  i128 2596148429267413814265248164610048, label %lor.end
-  i128 3894222643901120721397872246915072, label %lor.end
-  ]
-
-lor.rhs:                                          ; preds = %entry
-  br label %lor.end
-
-lor.end:                                          ; preds = %entry, %entry, %entry, %lor.rhs
-  %1 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ]
-  ret i1 %1
-}
-
-!0 = !{!"branch_weights", i32 8, i32 4, i32 2, i32 1}
-;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 0, i32 4, i32 2, i32 1, i32 8}
-;.

@@ -17,6 +17,7 @@
 
 #include "AMDGPU.h"
 #include "SILowerI1Copies.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/InitializePasses.h"
@@ -60,6 +61,8 @@ public:
 
 private:
   MachineUniformityInfo *MUI = nullptr;
+  MachineIRBuilder B;
+  Register buildRegCopyToLaneMask(Register Reg);
 
 public:
   void markAsLaneMask(Register DstReg) const override;
@@ -80,15 +83,16 @@ public:
 DivergenceLoweringHelper::DivergenceLoweringHelper(
     MachineFunction *MF, MachineDominatorTree *DT,
     MachinePostDominatorTree *PDT, MachineUniformityInfo *MUI)
-    : PhiLoweringHelper(MF, DT, PDT), MUI(MUI) {}
+    : PhiLoweringHelper(MF, DT, PDT), MUI(MUI), B(*MF) {}
 
 // _(s1) -> SReg_32/64(s1)
 void DivergenceLoweringHelper::markAsLaneMask(Register DstReg) const {
   assert(MRI->getType(DstReg) == LLT::scalar(1));
 
   if (MRI->getRegClassOrNull(DstReg)) {
-    MRI->constrainRegClass(DstReg, ST->getBoolRC());
-    return;
+    if (MRI->constrainRegClass(DstReg, ST->getBoolRC()))
+      return;
+    llvm_unreachable("Failed to constrain register class");
   }
 
   MRI->setRegClass(DstReg, ST->getBoolRC());
@@ -122,35 +126,38 @@ void DivergenceLoweringHelper::replaceDstReg(Register NewReg, Register OldReg,
       .addReg(NewReg);
 }
 
-// Get pointers to build instruction just after MI (skips phis if needed)
-static std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>
-getInsertAfterPtrs(MachineInstr *MI) {
-  MachineBasicBlock *InsertMBB = MI->getParent();
-  return {InsertMBB,
-          InsertMBB->SkipPHIsAndLabels(std::next(MI->getIterator()))};
+// Copy Reg to new lane mask register, insert a copy after instruction that
+// defines Reg while skipping phis if needed.
+Register DivergenceLoweringHelper::buildRegCopyToLaneMask(Register Reg) {
+  Register LaneMask = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+  MachineInstr *Instr = MRI->getVRegDef(Reg);
+  MachineBasicBlock *MBB = Instr->getParent();
+  B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(Instr->getIterator())));
+  B.buildCopy(LaneMask, Reg);
+  return LaneMask;
 }
 
 // bb.previous
-// %PrevReg = ...
+//   %PrevReg = ...
 //
 // bb.current
-// %CurReg = ...
+//   %CurReg = ...
 //
-// %DstReg - not defined
+//   %DstReg - not defined
 //
 // -> (wave32 example, new registers have sreg_32 reg class and S1 LLT)
 //
 // bb.previous
-// %PrevReg = ...
-// %PrevRegCopy:sreg_32(s1) = COPY %PrevReg
+//   %PrevReg = ...
+//   %PrevRegCopy:sreg_32(s1) = COPY %PrevReg
 //
 // bb.current
-// %CurReg = ...
-// %CurRegCopy:sreg_32(s1) = COPY %CurReg
-// ...
-// %PrevMaskedReg:sreg_32(s1) = ANDN2 %PrevRegCopy, ExecReg - active lanes 0
-// %CurMaskedReg:sreg_32(s1)  = AND %ExecReg, CurRegCopy - inactive lanes to 0
-// %DstReg:sreg_32(s1)        = OR %PrevMaskedReg, CurMaskedReg
+//   %CurReg = ...
+//   %CurRegCopy:sreg_32(s1) = COPY %CurReg
+//   ...
+//   %PrevMaskedReg:sreg_32(s1) = ANDN2 %PrevRegCopy, ExecReg - active lanes 0
+//   %CurMaskedReg:sreg_32(s1)  = AND %ExecReg, CurRegCopy - inactive lanes to 0
+//   %DstReg:sreg_32(s1)        = OR %PrevMaskedReg, CurMaskedReg
 //
 // DstReg = for active lanes rewrite bit in PrevReg with bit from CurReg
 void DivergenceLoweringHelper::buildMergeLaneMasks(
@@ -159,27 +166,15 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
   // DstReg = (PrevReg & !EXEC) | (CurReg & EXEC)
   // TODO: check if inputs are constants or results of a compare.
 
-  Register PrevRegCopy = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  auto [PrevMBB, AfterPrevReg] = getInsertAfterPtrs(MRI->getVRegDef(PrevReg));
-  BuildMI(*PrevMBB, AfterPrevReg, DL, TII->get(AMDGPU::COPY), PrevRegCopy)
-      .addReg(PrevReg);
+  Register PrevRegCopy = buildRegCopyToLaneMask(PrevReg);
+  Register CurRegCopy = buildRegCopyToLaneMask(CurReg);
   Register PrevMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  BuildMI(MBB, I, DL, TII->get(AndN2Op), PrevMaskedReg)
-      .addReg(PrevRegCopy)
-      .addReg(ExecReg);
-
-  Register CurRegCopy = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  auto [CurMBB, AfterCurReg] = getInsertAfterPtrs(MRI->getVRegDef(CurReg));
-  BuildMI(*CurMBB, AfterCurReg, DL, TII->get(AMDGPU::COPY), CurRegCopy)
-      .addReg(CurReg);
   Register CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  BuildMI(MBB, I, DL, TII->get(AndOp), CurMaskedReg)
-      .addReg(ExecReg)
-      .addReg(CurRegCopy);
 
-  BuildMI(MBB, I, DL, TII->get(OrOp), DstReg)
-      .addReg(PrevMaskedReg)
-      .addReg(CurMaskedReg);
+  B.setInsertPt(MBB, I);
+  B.buildInstr(AndN2Op, {PrevMaskedReg}, {PrevRegCopy, ExecReg});
+  B.buildInstr(AndOp, {CurMaskedReg}, {ExecReg, CurRegCopy});
+  B.buildInstr(OrOp, {DstReg}, {PrevMaskedReg, CurMaskedReg});
 }
 
 void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) { return; }
@@ -212,7 +207,5 @@ bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(
 
   DivergenceLoweringHelper Helper(&MF, &DT, &PDT, &MUI);
 
-  bool Changed = false;
-  Changed |= Helper.lowerPhis();
-  return Changed;
+  return Helper.lowerPhis();
 }

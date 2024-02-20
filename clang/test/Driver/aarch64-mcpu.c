@@ -72,6 +72,9 @@
 // RUN: %clang --target=aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"
 
+// RUN: %clang --target=aarch64 -mcpu=cobalt-100 -### -c %s 2>&1 | FileCheck -check-prefix=COBALT-100 %s
+// COBALT-100: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
+
 // RUN: %clang --target=aarch64 -mcpu=grace -### -c %s 2>&1 | FileCheck -check-prefix=GRACE %s
 // GRACE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v2"
 

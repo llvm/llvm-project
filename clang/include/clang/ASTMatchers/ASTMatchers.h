@@ -6351,9 +6351,7 @@ AST_POLYMORPHIC_MATCHER(isFinal,
 ///   };
 /// \endcode
 ///   matches A::x
-AST_MATCHER(CXXMethodDecl, isPure) {
-  return Node.isPure();
-}
+AST_MATCHER(CXXMethodDecl, isPure) { return Node.isPureVirtual(); }
 
 /// Matches if the given method declaration is const.
 ///

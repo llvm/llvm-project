@@ -171,7 +171,8 @@ def parseScript(test, preamble):
                 "%dbg(MODULE std.compat) %{cxx} %{flags} "
                 f"{compileFlags} "
                 "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
-                "--precompile -o %T/std.compat.pcm -c %{module}/std.compat.cppm",
+                "-fmodule-file=std=%T/std.pcm " # The std.compat module imports std.
+                "--precompile -o %T/std.compat.pcm -c %{module-dir}/std.compat.cppm",
             )
             moduleCompileFlags.extend(
                 ["-fmodule-file=std.compat=%T/std.compat.pcm", "%T/std.compat.pcm"]
@@ -187,7 +188,7 @@ def parseScript(test, preamble):
             "%dbg(MODULE std) %{cxx} %{flags} "
             f"{compileFlags} "
             "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
-            "--precompile -o %T/std.pcm -c %{module}/std.cppm",
+            "--precompile -o %T/std.pcm -c %{module-dir}/std.cppm",
         )
         moduleCompileFlags.extend(["-fmodule-file=std=%T/std.pcm", "%T/std.pcm"])
 

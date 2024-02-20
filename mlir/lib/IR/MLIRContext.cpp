@@ -638,7 +638,7 @@ unsigned MLIRContext::getNumThreads() {
   if (isMultithreadingEnabled()) {
     assert(impl->threadPool &&
            "multi-threading is enabled but threadpool not set");
-    return impl->threadPool->getThreadCount();
+    return impl->threadPool->getMaxConcurrency();
   }
   // No multithreading or active thread pool. Return 1 thread.
   return 1;

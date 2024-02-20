@@ -4889,14 +4889,12 @@ struct OSEnv {
     case llvm::MachO::PLATFORM_WATCHOS:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
       return;
-    // TODO: add BridgeOS & DriverKit once in llvm/lib/Support/Triple.cpp
-    // NEED_BRIDGEOS_TRIPLE
-    // case llvm::MachO::PLATFORM_BRIDGEOS:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
-    //   return;
-    // case llvm::MachO::PLATFORM_DRIVERKIT:
-    //   os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
-    //   return;
+    case llvm::MachO::PLATFORM_BRIDGEOS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::BridgeOS);
+      return;
+    case llvm::MachO::PLATFORM_DRIVERKIT:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::DriverKit);
+      return;
     case llvm::MachO::PLATFORM_MACCATALYST:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::IOS);
       environment = llvm::Triple::getEnvironmentTypeName(llvm::Triple::MacABI);
@@ -4913,6 +4911,14 @@ struct OSEnv {
       return;
     case llvm::MachO::PLATFORM_WATCHOSSIMULATOR:
       os_type = llvm::Triple::getOSTypeName(llvm::Triple::WatchOS);
+      environment =
+          llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
+      return;
+    case llvm::MachO::PLATFORM_XROS:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::XROS);
+      return;
+    case llvm::MachO::PLATFORM_XROS_SIMULATOR:
+      os_type = llvm::Triple::getOSTypeName(llvm::Triple::XROS);
       environment =
           llvm::Triple::getEnvironmentTypeName(llvm::Triple::Simulator);
       return;
@@ -6483,7 +6489,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       (target_triple.getOS() == llvm::Triple::MacOSX ||
        target_triple.getOS() == llvm::Triple::IOS ||
        target_triple.getOS() == llvm::Triple::WatchOS ||
-       target_triple.getOS() == llvm::Triple::TvOS)) {
+       target_triple.getOS() == llvm::Triple::TvOS ||
+       target_triple.getOS() == llvm::Triple::XROS)) {
     // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
     // {
     bool make_core = false;

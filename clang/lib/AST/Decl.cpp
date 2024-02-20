@@ -343,6 +343,10 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
       LV.merge(getTypeLinkageAndVisibility(Arg.getNullPtrType()));
       continue;
 
+    case TemplateArgument::StructuralValue:
+      LV.merge(getLVForValue(Arg.getAsStructuralValue(), computation));
+      continue;
+
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =
@@ -3036,7 +3040,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
   FunctionDeclBits.IsVirtualAsWritten = false;
-  FunctionDeclBits.IsPure = false;
+  FunctionDeclBits.IsPureVirtual = false;
   FunctionDeclBits.HasInheritedPrototype = false;
   FunctionDeclBits.HasWrittenPrototype = true;
   FunctionDeclBits.IsDeleted = false;
@@ -3203,8 +3207,8 @@ void FunctionDecl::setBody(Stmt *B) {
     EndRangeLoc = B->getEndLoc();
 }
 
-void FunctionDecl::setPure(bool P) {
-  FunctionDeclBits.IsPure = P;
+void FunctionDecl::setIsPureVirtual(bool P) {
+  FunctionDeclBits.IsPureVirtual = P;
   if (P)
     if (auto *Parent = dyn_cast<CXXRecordDecl>(getDeclContext()))
       Parent->markedVirtualFunctionPure();
@@ -3533,8 +3537,21 @@ bool FunctionDecl::isTargetMultiVersion() const {
          (hasAttr<TargetAttr>() || hasAttr<TargetVersionAttr>());
 }
 
+bool FunctionDecl::isTargetMultiVersionDefault() const {
+  if (!isMultiVersion())
+    return false;
+  if (hasAttr<TargetAttr>())
+    return getAttr<TargetAttr>()->isDefaultVersion();
+  return hasAttr<TargetVersionAttr>() &&
+         getAttr<TargetVersionAttr>()->isDefaultVersion();
+}
+
 bool FunctionDecl::isTargetClonesMultiVersion() const {
   return isMultiVersion() && hasAttr<TargetClonesAttr>();
+}
+
+bool FunctionDecl::isTargetVersionMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetVersionAttr>();
 }
 
 void

@@ -108,7 +108,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMAND "${Python3_EXECUTABLE}" "-c"
       "import sys; \
        lines = ['    ' + l.rstrip() for l in sys.stdin] + ['  local: *;']; \
-       print('LLVM_${LLVM_VERSION_MAJOR} {'); \
+       print('LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} {'); \
        print('  global:') if len(lines) > 1 else None; \
        print(';\\n'.join(lines) + '\\n};')"
       < ${export_file} > ${native_export_file}
@@ -211,10 +211,10 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     )
 
   if(APPLE)
-    if("${stderr}" MATCHES "PROJECT:ld64")
+    if("${stderr}" MATCHES "PROGRAM:ld")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_LD64 YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: ld64")
+      set(LLVM_LINKER_IS_APPLE YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Apple")
     elseif("${stderr}" MATCHES "^LLD" OR
            "${stdout}" MATCHES "^LLD")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
@@ -646,9 +646,9 @@ function(llvm_add_library name)
     if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
       set_target_properties(${name}
         PROPERTIES
-        # Since 4.0.0, the ABI version is indicated by the major version
-        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        # Since 18.1.0, the ABI version is indicated by the major and minor version.
+        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
     endif()
   endif()
 

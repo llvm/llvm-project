@@ -12,6 +12,7 @@
 
 #include <__availability>
 #include <__config>
+#include <__locale_dir/locale_base_api.h>
 #include <__memory/shared_ptr.h> // __shared_count
 #include <__mutex/once_flag.h>
 #include <__type_traits/make_unsigned.h>
@@ -30,27 +31,6 @@
 #  include <cwchar>
 #else
 #  include <__std_mbstate_t.h>
-#endif
-
-#if defined(_LIBCPP_MSVCRT_LIKE)
-#  include <__support/win32/locale_win32.h>
-#elif defined(_AIX) || defined(__MVS__)
-#  include <__support/ibm/xlocale.h>
-#elif defined(__ANDROID__)
-#  include <__support/android/locale_bionic.h>
-#elif defined(_NEWLIB_VERSION)
-#  include <__support/newlib/xlocale.h>
-#elif defined(__OpenBSD__)
-#  include <__support/openbsd/xlocale.h>
-#elif (defined(__APPLE__) || defined(__FreeBSD__))
-#  include <xlocale.h>
-#elif defined(__Fuchsia__)
-#  include <__support/fuchsia/xlocale.h>
-#elif defined(__wasi__)
-// WASI libc uses musl's locales support.
-#  include <__support/musl/xlocale.h>
-#elif defined(_LIBCPP_HAS_MUSL_LIBC)
-#  include <__support/musl/xlocale.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

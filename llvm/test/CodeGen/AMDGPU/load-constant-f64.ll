@@ -48,10 +48,10 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ; GFX12-LABEL: constant_load_f64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_nop 0
@@ -138,10 +138,10 @@ define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocaptu
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b128 s[16:19], s[0:1], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b64 s[20:21], s[18:19], 0x0
 ; GFX12-NEXT:    s_load_b512 s[0:15], s[16:17], 0x0
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_f64_e64 v[0:1], s[0:1], s[20:21]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f64_e32 v[0:1], s[2:3], v[0:1]

@@ -97,10 +97,18 @@ QuasiPolynomial QuasiPolynomial::operator/(const Fraction x) const {
   return qp;
 }
 
-// Removes terms which evaluate to zero from the expression.
+// Removes terms which evaluate to zero from the expression and
+// integrate affine functions which are constants into the
+// coefficients.
 QuasiPolynomial QuasiPolynomial::simplify() {
+  Fraction newCoeff = 0;
   SmallVector<Fraction> newCoeffs({});
+
+  std::vector<SmallVector<Fraction>> newAffineTerm({});
   std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
+
+  unsigned numParam = getNumInputs();
+
   for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
     // A term is zero if its coefficient is zero, or
     if (coefficients[i] == Fraction(0, 1))
@@ -114,9 +122,46 @@ QuasiPolynomial QuasiPolynomial::simplify() {
         });
     if (product_is_zero)
       continue;
+
+    // Now, we know the term is nonzero.
+
+    // We now eliminate the affine functions which are constant
+    // by merging them into the coefficients.
+    newAffineTerm = {};
+    newCoeff = coefficients[i];
+    for (ArrayRef<Fraction> term : affine[i]) {
+      bool allCoeffsZero = llvm::all_of(
+          term.slice(0, numParam), [](const Fraction c) { return c == 0; });
+      if (allCoeffsZero)
+        newCoeff *= term[numParam];
+      else
+        newAffineTerm.push_back(SmallVector<Fraction>(term));
+    }
+
+    newCoeffs.push_back(newCoeff);
+    newAffine.push_back(newAffineTerm);
+  }
+  return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
+}
+
+QuasiPolynomial QuasiPolynomial::collectTerms() {
+  SmallVector<Fraction> newCoeffs({});
+  std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
+
+  for (unsigned i = 0, e = affine.size(); i < e; i++) {
+    bool alreadyPresent = false;
+    for (unsigned j = 0, f = newAffine.size(); j < f; j++) {
+      if (affine[i] == newAffine[j]) {
+        newCoeffs[j] += coefficients[i];
+        alreadyPresent = true;
+      }
+    }
+    if (alreadyPresent)
+      continue;
     newCoeffs.push_back(coefficients[i]);
     newAffine.push_back(affine[i]);
   }
+
   return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
 }
 

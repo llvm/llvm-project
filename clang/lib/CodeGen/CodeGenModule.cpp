@@ -30,6 +30,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -67,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/Triple.h"
@@ -722,43 +724,70 @@ void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
   }
 }
 
+static std::optional<llvm::GlobalValue::VisibilityTypes>
+getLLVMVisibility(clang::LangOptions::VisibilityFromDLLStorageClassKinds K) {
+  // Map to LLVM visibility.
+  switch (K) {
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Keep:
+    return std::nullopt;
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Default:
+    return llvm::GlobalValue::DefaultVisibility;
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Hidden:
+    return llvm::GlobalValue::HiddenVisibility;
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Protected:
+    return llvm::GlobalValue::ProtectedVisibility;
+  }
+  llvm_unreachable("unknown option value!");
+}
+
+void setLLVMVisibility(llvm::GlobalValue &GV,
+                       std::optional<llvm::GlobalValue::VisibilityTypes> V) {
+  if (!V)
+    return;
+
+  // Reset DSO locality before setting the visibility. This removes
+  // any effects that visibility options and annotations may have
+  // had on the DSO locality. Setting the visibility will implicitly set
+  // appropriate globals to DSO Local; however, this will be pessimistic
+  // w.r.t. to the normal compiler IRGen.
+  GV.setDSOLocal(false);
+  GV.setVisibility(*V);
+}
+
 static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
                                              llvm::Module &M) {
   if (!LO.VisibilityFromDLLStorageClass)
     return;
 
-  llvm::GlobalValue::VisibilityTypes DLLExportVisibility =
-      CodeGenModule::GetLLVMVisibility(LO.getDLLExportVisibility());
-  llvm::GlobalValue::VisibilityTypes NoDLLStorageClassVisibility =
-      CodeGenModule::GetLLVMVisibility(LO.getNoDLLStorageClassVisibility());
-  llvm::GlobalValue::VisibilityTypes ExternDeclDLLImportVisibility =
-      CodeGenModule::GetLLVMVisibility(LO.getExternDeclDLLImportVisibility());
-  llvm::GlobalValue::VisibilityTypes ExternDeclNoDLLStorageClassVisibility =
-      CodeGenModule::GetLLVMVisibility(
-          LO.getExternDeclNoDLLStorageClassVisibility());
+  std::optional<llvm::GlobalValue::VisibilityTypes> DLLExportVisibility =
+      getLLVMVisibility(LO.getDLLExportVisibility());
+
+  std::optional<llvm::GlobalValue::VisibilityTypes>
+      NoDLLStorageClassVisibility =
+          getLLVMVisibility(LO.getNoDLLStorageClassVisibility());
+
+  std::optional<llvm::GlobalValue::VisibilityTypes>
+      ExternDeclDLLImportVisibility =
+          getLLVMVisibility(LO.getExternDeclDLLImportVisibility());
+
+  std::optional<llvm::GlobalValue::VisibilityTypes>
+      ExternDeclNoDLLStorageClassVisibility =
+          getLLVMVisibility(LO.getExternDeclNoDLLStorageClassVisibility());
 
   for (llvm::GlobalValue &GV : M.global_values()) {
     if (GV.hasAppendingLinkage() || GV.hasLocalLinkage())
       continue;
 
-    // Reset DSO locality before setting the visibility. This removes
-    // any effects that visibility options and annotations may have
-    // had on the DSO locality. Setting the visibility will implicitly set
-    // appropriate globals to DSO Local; however, this will be pessimistic
-    // w.r.t. to the normal compiler IRGen.
-    GV.setDSOLocal(false);
-
-    if (GV.isDeclarationForLinker()) {
-      GV.setVisibility(GV.getDLLStorageClass() ==
-                               llvm::GlobalValue::DLLImportStorageClass
-                           ? ExternDeclDLLImportVisibility
-                           : ExternDeclNoDLLStorageClassVisibility);
-    } else {
-      GV.setVisibility(GV.getDLLStorageClass() ==
-                               llvm::GlobalValue::DLLExportStorageClass
-                           ? DLLExportVisibility
-                           : NoDLLStorageClassVisibility);
-    }
+    if (GV.isDeclarationForLinker())
+      setLLVMVisibility(GV, GV.getDLLStorageClass() ==
+                                    llvm::GlobalValue::DLLImportStorageClass
+                                ? ExternDeclDLLImportVisibility
+                                : ExternDeclNoDLLStorageClassVisibility);
+    else
+      setLLVMVisibility(GV, GV.getDLLStorageClass() ==
+                                    llvm::GlobalValue::DLLExportStorageClass
+                                ? DLLExportVisibility
+                                : NoDLLStorageClassVisibility);
 
     GV.setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   }
@@ -1017,21 +1046,31 @@ void CodeGenModule::Release() {
                               llvm::MDString::get(VMContext, "ascii"));
   }
 
-  llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
-  if (   Arch == llvm::Triple::arm
-      || Arch == llvm::Triple::armeb
-      || Arch == llvm::Triple::thumb
-      || Arch == llvm::Triple::thumbeb) {
+  llvm::Triple T = Context.getTargetInfo().getTriple();
+  if (T.isARM() || T.isThumb()) {
     // The minimum width of an enum in bytes
     uint64_t EnumWidth = Context.getLangOpts().ShortEnums ? 1 : 4;
     getModule().addModuleFlag(llvm::Module::Error, "min_enum_size", EnumWidth);
   }
 
-  if (Arch == llvm::Triple::riscv32 || Arch == llvm::Triple::riscv64) {
+  if (T.isRISCV()) {
     StringRef ABIStr = Target.getABI();
     llvm::LLVMContext &Ctx = TheModule.getContext();
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(Ctx, ABIStr));
+
+    // Add the canonical ISA string as metadata so the backend can set the ELF
+    // attributes correctly. We use AppendUnique so LTO will keep all of the
+    // unique ISA strings that were linked together.
+    const std::vector<std::string> &Features =
+        getTarget().getTargetOpts().Features;
+    auto ParseResult =
+        llvm::RISCVISAInfo::parseFeatures(T.isRISCV64() ? 64 : 32, Features);
+    if (!errorToBool(ParseResult.takeError()))
+      getModule().addModuleFlag(
+          llvm::Module::AppendUnique, "riscv-isa",
+          llvm::MDNode::get(
+              Ctx, llvm::MDString::get(Ctx, (*ParseResult)->toString())));
   }
 
   if (CodeGenOpts.SanitizeCfiCrossDso) {
@@ -1100,10 +1139,7 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Override,
                               "tag-stack-memory-buildattr", 1);
 
-  if (Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb ||
-      Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
-      Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
-      Arch == llvm::Triple::aarch64_be) {
+  if (T.isARM() || T.isThumb() || T.isAArch64()) {
     if (LangOpts.BranchTargetEnforcement)
       getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
                                 1);
@@ -1689,8 +1725,10 @@ static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
 static void AppendTargetVersionMangling(const CodeGenModule &CGM,
                                         const TargetVersionAttr *Attr,
                                         raw_ostream &Out) {
-  if (Attr->isDefaultVersion())
+  if (Attr->isDefaultVersion()) {
+    Out << ".default";
     return;
+  }
   Out << "._";
   const TargetInfo &TI = CGM.getTarget();
   llvm::SmallVector<StringRef, 8> Feats;
@@ -1753,8 +1791,10 @@ static void AppendTargetClonesMangling(const CodeGenModule &CGM,
   const TargetInfo &TI = CGM.getTarget();
   if (TI.getTriple().isAArch64()) {
     StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
-    if (FeatureStr == "default")
+    if (FeatureStr == "default") {
+      Out << ".default";
       return;
+    }
     Out << "._";
     SmallVector<StringRef, 8> Features;
     FeatureStr.split(Features, "+");
@@ -2383,7 +2423,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
   if (auto *Attr = D->getAttr<ArmNewAttr>()) {
     if (Attr->isNewZA())
-      B.addAttribute("aarch64_pstate_za_new");
+      B.addAttribute("aarch64_new_za");
+    if (Attr->isNewZT0())
+      B.addAttribute("aarch64_new_zt0");
   }
 
   // Track whether we need to add the optnone LLVM attribute,
@@ -3943,8 +3985,7 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
       M && M->getTopLevelModule()->isNamedModule() &&
-      getContext().getCurrentNamedModule() != M->getTopLevelModule() &&
-      !F->hasAttr<AlwaysInlineAttr>())
+      getContext().getCurrentNamedModule() != M->getTopLevelModule())
     return false;
 
   if (F->hasAttr<NoInlineAttr>())
@@ -4001,6 +4042,8 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
       if (Clone->isFirstOfVersion(I))
         EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
     // Ensure that the resolver function is also emitted.
+    GetOrCreateMultiVersionResolver(GD);
+  } else if (FD->hasAttr<TargetVersionAttr>()) {
     GetOrCreateMultiVersionResolver(GD);
   } else
     EmitGlobalFunctionDefinition(GD, GV);
@@ -4183,14 +4226,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      // In Aarch64, default versions of multiversioned functions are mangled to
-      // their 'normal' assembly name. This deviates from other targets which
-      // append a '.default' string. As a result we need to continue appending
-      // .ifunc in Aarch64.
-      // FIXME: Should Aarch64 mangling for 'default' multiversion function and
-      // in turn ifunc function match that of other targets?
-      if (FD->isTargetClonesMultiVersion() &&
-          !getTarget().getTriple().isAArch64()) {
+      if (FD->isTargetClonesMultiVersion() ||
+          FD->isTargetVersionMultiVersion()) {
         const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
         llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
@@ -4371,15 +4408,18 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // a separate resolver).
   std::string ResolverName = MangledName;
   if (getTarget().supportsIFunc()) {
-    // In Aarch64, default versions of multiversioned functions are mangled to
-    // their 'normal' assembly name. This deviates from other targets which
-    // append a '.default' string. As a result we need to continue appending
-    // .ifunc in Aarch64.
-    // FIXME: Should Aarch64 mangling for 'default' multiversion function and
-    // in turn ifunc function match that of other targets?
-    if (!FD->isTargetClonesMultiVersion() ||
-        getTarget().getTriple().isAArch64())
+    switch (FD->getMultiVersionKind()) {
+    case MultiVersionKind::None:
+      llvm_unreachable("unexpected MultiVersionKind::None for resolver");
+    case MultiVersionKind::Target:
+    case MultiVersionKind::CPUSpecific:
+    case MultiVersionKind::CPUDispatch:
       ResolverName += ".ifunc";
+      break;
+    case MultiVersionKind::TargetClones:
+    case MultiVersionKind::TargetVersion:
+      break;
+    }
   } else if (FD->isTargetMultiVersion()) {
     ResolverName += ".resolver";
   }
@@ -6309,7 +6349,8 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
 ConstantAddress
 CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                                   StringRef Name) {
-  CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(S->getType());
+  CharUnits Alignment =
+      getContext().getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
 
   llvm::Constant *C = GetConstantArrayFromStringLiteral(S);
   llvm::GlobalVariable **Entry = nullptr;
@@ -6372,8 +6413,8 @@ CodeGenModule::GetAddrOfConstantStringFromObjCEncode(const ObjCEncodeExpr *E) {
 ConstantAddress CodeGenModule::GetAddrOfConstantCString(
     const std::string &Str, const char *GlobalName) {
   StringRef StrWithNull(Str.c_str(), Str.size() + 1);
-  CharUnits Alignment =
-    getContext().getAlignOfGlobalVarInChars(getContext().CharTy);
+  CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(
+      getContext().CharTy, /*VD=*/nullptr);
 
   llvm::Constant *C =
       llvm::ConstantDataArray::getString(getLLVMContext(), StrWithNull, false);

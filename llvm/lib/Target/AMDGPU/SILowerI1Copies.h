@@ -31,7 +31,8 @@ struct Incoming {
       : Reg(Reg), Block(Block), UpdatedReg(UpdatedReg) {}
 };
 
-Register createLaneMaskReg(MachineRegisterInfo *MRI, Register LaneMaskRegAttrs);
+Register createLaneMaskReg(MachineRegisterInfo *MRI,
+                           MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs);
 
 class PhiLoweringHelper {
 public:
@@ -47,7 +48,7 @@ protected:
   MachineRegisterInfo *MRI = nullptr;
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
-  Register LaneMaskRegAttrs;
+  MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs;
 
 #ifndef NDEBUG
   DenseSet<Register> PhiRegisters;
@@ -68,7 +69,7 @@ public:
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
 
   void initializeLaneMaskRegisterAttributes(Register LaneMask) {
-    LaneMaskRegAttrs = LaneMask;
+    LaneMaskRegAttrs = MRI->getVRegAttrs(LaneMask);
   }
 
   bool isLaneMaskReg(Register Reg) const {

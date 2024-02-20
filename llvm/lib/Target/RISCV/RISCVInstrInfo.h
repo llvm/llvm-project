@@ -55,13 +55,13 @@ public:
   MCInst getNop() const override;
   const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
                                unsigned &MemBytes) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
   void copyPhysRegVector(MachineBasicBlock &MBB,
@@ -211,9 +211,6 @@ public:
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
-
-  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
-                               int64_t &ImmVal) const override;
 
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;

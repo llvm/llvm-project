@@ -155,6 +155,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -167,6 +168,10 @@ protected:
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
+  /// The maximum number of instructions that may be placed within an S_CLAUSE,
+  /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
+  /// indicates a lack of S_CLAUSE support.
+  unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
@@ -222,6 +227,8 @@ protected:
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
+
+  bool RequiresCOV6 = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -637,6 +644,12 @@ public:
     return GFX10_BEncoding;
   }
 
+  // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
+  bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
+
+  // DS_ADD_F64/DS_ADD_RTN_F64
+  bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
+
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
   }
@@ -780,6 +793,8 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -853,8 +868,6 @@ public:
   }
 
   bool hasInstPrefetch() const {
-    // GFX12 can still encode the s_set_inst_prefetch_distance instruction but
-    // it has no effect.
     return getGeneration() == GFX10 || getGeneration() == GFX11;
   }
 
@@ -1002,6 +1015,8 @@ public:
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
+
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
   unsigned getNSAMaxSize(bool HasSampler = false) const {
@@ -1134,7 +1149,7 @@ public:
 
   bool hasNSAClauseBug() const { return HasNSAClauseBug; }
 
-  bool hasHardClauses() const { return getGeneration() >= GFX10; }
+  bool hasHardClauses() const { return MaxHardClauseLength > 0; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
@@ -1155,6 +1170,8 @@ public:
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
+
+  bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
@@ -1194,6 +1211,15 @@ public:
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
+
+  /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
+  /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
+  bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
+
+  /// \returns The maximum number of instructions that can be enclosed in an
+  /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
+  /// instruction.
+  unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1241,12 +1267,6 @@ public:
   // \returns true if preloading kernel arguments is supported.
   bool hasKernargPreload() const { return KernargPreload; }
 
-  // \returns true if we need to generate backwards compatible code when
-  // preloading kernel arguments.
-  bool needsKernargPreloadBackwardsCompatibility() const {
-    return hasKernargPreload() && !hasGFX940Insts();
-  }
-
   // \returns true if the target has split barriers feature
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
@@ -1268,6 +1288,14 @@ public:
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
+  /// values.
+  bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
+
+  // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
+  // of sign-extending.
+  bool hasGetPCZeroExtension() const { return GFX12Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

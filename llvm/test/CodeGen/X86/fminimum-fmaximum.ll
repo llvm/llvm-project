@@ -119,12 +119,12 @@ define <4 x float> @test_fmaximum_scalarize(<4 x float> %x, <4 x float> %y) "no-
 define float @test_fmaximum_nan0(float %x, float %y) {
 ; SSE2-LABEL: test_fmaximum_nan0:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fmaximum_nan0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_nan0:
@@ -138,12 +138,12 @@ define float @test_fmaximum_nan0(float %x, float %y) {
 define float @test_fmaximum_nan1(float %x, float %y) {
 ; SSE2-LABEL: test_fmaximum_nan1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fmaximum_nan1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_nan1:
@@ -608,12 +608,12 @@ define <2 x double> @test_fminimum_scalarize(<2 x double> %x, <2 x double> %y) "
 define float @test_fminimum_nan0(float %x, float %y) {
 ; SSE2-LABEL: test_fminimum_nan0:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_nan0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_nan0:
@@ -627,12 +627,12 @@ define float @test_fminimum_nan0(float %x, float %y) {
 define float @test_fminimum_nan1(float %x, float %y) {
 ; SSE2-LABEL: test_fminimum_nan1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_nan1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_nan1:
@@ -816,12 +816,12 @@ define double @test_fminimum_zero1(double %x, double %y) nounwind {
 define double @test_fminimum_zero2(double %x, double %y) {
 ; SSE2-LABEL: test_fminimum_zero2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_zero2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_zero2:
@@ -1187,7 +1187,7 @@ define <4 x float> @test_fmaximum_vector_non_zero(<4 x float> %x) {
 define <2 x double> @test_fminimum_vector_nan(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_nan:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [NaN,0.0E+0]
 ; SSE2-NEXT:    xorpd %xmm1, %xmm1
 ; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    minpd %xmm0, %xmm1
@@ -1197,7 +1197,7 @@ define <2 x double> @test_fminimum_vector_nan(<2 x double> %x) {
 ;
 ; AVX-LABEL: test_fminimum_vector_nan:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [NaN,0.0E+0]
 ; AVX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; AVX-NEXT:    vminpd %xmm0, %xmm2, %xmm0

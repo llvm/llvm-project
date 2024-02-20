@@ -1558,7 +1558,7 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMEHeader(raw_ostream &OS) {
-  OS << "/*===---- arm_sme_draft_spec_subject_to_change.h - ARM SME intrinsics "
+  OS << "/*===---- arm_sme.h - ARM SME intrinsics "
         "------===\n"
         " *\n"
         " *\n"
@@ -1575,7 +1575,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#define __ARM_SME_H\n\n";
 
   OS << "#if !defined(__LITTLE_ENDIAN__)\n";
-  OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
+  OS << "#error \"Big endian is currently not supported for arm_sme.h\"\n";
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
@@ -1720,21 +1720,36 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
-  std::map<bool, std::set<std::string>> DefsZAState;
-
-  uint64_t IsSharedZAFlag = getEnumValueForFlag("IsSharedZA");
+  std::map<std::string, std::set<std::string>> IntrinsicsPerState;
   for (auto &Def : Defs) {
-    bool HasZAState = Def->isFlagSet(IsSharedZAFlag);
-    DefsZAState[HasZAState].insert(Def->getMangledName());
+    std::string Key;
+    auto AddToKey = [&Key](const std::string &S) -> void {
+      Key = Key.empty() ? S : (Key + " | " + S);
+    };
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZA")))
+      AddToKey("ArmInZA");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZA")))
+      AddToKey("ArmOutZA");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZA")))
+      AddToKey("ArmInOutZA");
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZT0")))
+      AddToKey("ArmInZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZT0")))
+      AddToKey("ArmOutZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZT0")))
+      AddToKey("ArmInOutZT0");
+
+    if (!Key.empty())
+      IntrinsicsPerState[Key].insert(Def->getMangledName());
   }
 
-  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
-
-  for (auto HasZA : {true, false}) {
-    auto Names = DefsZAState[HasZA];
-    for (auto Name : Names)
+  OS << "#ifdef GET_SME_BUILTIN_GET_STATE\n";
+  for (auto &KV : IntrinsicsPerState) {
+    for (StringRef Name : KV.second)
       OS << "case SME::BI__builtin_sme_" << Name << ":\n";
-    OS << "  return " << (HasZA ? "true" : "false") << ";\n";
+    OS << "  return " << KV.first << ";\n";
   }
   OS << "#endif\n\n";
 }

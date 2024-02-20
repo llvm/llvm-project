@@ -99,6 +99,28 @@ constexpr bool test() {
     assert(state.copyAssignCalled);
   }
 
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true, true> e1;
+      CheckForInvalidWrites<true, true> e2(std::unexpect);
+
+      e1 = e2;
+
+      assert(e1.check());
+      assert(e2.check());
+    }
+    {
+      CheckForInvalidWrites<false, true> e1;
+      CheckForInvalidWrites<false, true> e2(std::unexpect);
+
+      e1 = e2;
+
+      assert(e1.check());
+      assert(e2.check());
+    }
+  }
+
   return true;
 }
 

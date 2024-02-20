@@ -701,6 +701,18 @@ func.func @extFPConstant() -> f64 {
   return %0 : f64
 }
 
+// CHECK-LABEL: @extFPVectorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf128>
+//       CHECK:   return %[[cres]]
+func.func @extFPVectorConstant() -> vector<2xf128> {
+  %cst = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf80>
+  %0 = arith.extf %cst : vector<2xf80> to vector<2xf128>
+  return %0 : vector<2xf128>
+}
+
+// TODO: We should also add a test for not folding arith.extf on information loss.
+// This may happen when extending f8E5M2FNUZ to f16.
+
 // CHECK-LABEL: @truncConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
 //       CHECK:   return %[[cres]]
@@ -823,6 +835,15 @@ func.func @truncFPConstant() -> bf16 {
   %cst = arith.constant 1.000000e+00 : f32
   %0 = arith.truncf %cst : f32 to bf16
   return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPVectorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xbf16>
+//       CHECK:   return %[[cres]]
+func.func @truncFPVectorConstant() -> vector<2xbf16> {
+  %cst = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf32>
+  %0 = arith.truncf %cst : vector<2xf32> to vector<2xbf16>
+  return %0 : vector<2xbf16>
 }
 
 // Test that cases with rounding are NOT propagated
@@ -2158,6 +2179,17 @@ func.func @nofoldShl2() -> i64 {
   return %r : i64
 }
 
+// CHECK-LABEL: @nofoldShl3(
+// CHECK: %[[res:.+]] = arith.shli
+// CHECK: return %[[res]]
+func.func @nofoldShl3() -> i64 {
+  %c1 = arith.constant 1 : i64
+  %c64 = arith.constant 64 : i64
+  // Note that this should return Poison in the future.
+  %r = arith.shli %c1, %c64 : i64
+  return %r : i64
+}
+
 // CHECK-LABEL: @foldShru(
 // CHECK: %[[res:.+]] = arith.constant 2 : i64
 // CHECK: return %[[res]]
@@ -2198,6 +2230,17 @@ func.func @nofoldShru2() -> i64 {
   return %r : i64
 }
 
+// CHECK-LABEL: @nofoldShru3(
+// CHECK: %[[res:.+]] = arith.shrui
+// CHECK: return %[[res]]
+func.func @nofoldShru3() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c64 = arith.constant 64 : i64
+  // Note that this should return Poison in the future.
+  %r = arith.shrui %c1, %c64 : i64
+  return %r : i64
+}
+
 // CHECK-LABEL: @foldShrs(
 // CHECK: %[[res:.+]] = arith.constant 2 : i64
 // CHECK: return %[[res]]
@@ -2235,6 +2278,17 @@ func.func @nofoldShrs2() -> i64 {
   %c1 = arith.constant 8 : i64
   %cm32 = arith.constant -32 : i64
   %r = arith.shrsi %c1, %cm32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShrs3(
+// CHECK: %[[res:.+]] = arith.shrsi
+// CHECK: return %[[res]]
+func.func @nofoldShrs3() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c64 = arith.constant 64 : i64
+  // Note that this should return Poison in the future.
+  %r = arith.shrsi %c1, %c64 : i64
   return %r : i64
 }
 

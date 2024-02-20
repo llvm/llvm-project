@@ -26,17 +26,17 @@ class Mesh_Op<string mnemonic, list<Trait> traits = []> :
     Op<Mesh_Dialect, mnemonic, traits> {
 }
 
-def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
-  let summary = "representing a mesh cluster";
+def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol]> {
+  let summary = "Description of a device/process mesh.";
   let description = [{
-    The mesh.cluster operation is a symbol operation that identifies a specific
-    mesh cluster. The operation has three attributes:
+    The mesh.mesh operation is a symbol operation that identifies a specific
+    mesh. The operation has three attributes:
 
-    1. `sym_name`: This attribute uniquely identifies the name of the mesh
-    cluster. This name serves as a symbolic reference to the cluster throughout
+    1. `sym_name`: This attribute uniquely identifies the name of the mesh.
+    This name serves as a symbolic reference to the mesh throughout
     the MLIR module, allowing for consistent referencing and easier debugging.
 
-    2. `shape`: This attribute represents the shape of the device cluster.
+    2. `shape`: This attribute represents the shape of the device mesh.
     It uses the same notation as a tensor shape. Also allowing for dynamic
     dimensions.
     This flexibility allows for dynamic device assignment or configurations
@@ -46,25 +46,21 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
 
     Example:
     ```
-    // A device mesh cluster with 3 axes, the total device number is 4 * 8 * 12
+    // A device mesh with 3 axes, the total device number is 4 * 8 * 12
     // The dimension sizes are 4, 8, 12 
-    mesh.cluster @mesh0(shape = 4x8x12)
+    mesh.mesh @mesh0(shape = 4x8x12)
 
-    // A device mesh cluster with 2 axes, the total device number is unknown
+    // A device mesh with 2 axes, the total device number is unknown
     // The first dimension size is 4 and the second is unknown
-    mesh.cluster @mesh1(shape = 4x?)
+    mesh.mesh @mesh1(shape = 4x?)
 
-    // A device mesh cluster with 2 axes, the total device number is unknown
+    // A device mesh with 2 axes, the total device number is unknown
     // The first dimension size is unknown and the second is 4
-    mesh.cluster @mesh2(shape = ?x4)
+    mesh.mesh @mesh2(shape = ?x4)
 
-    // A device mesh cluster with 2 axes, the number of devices along both axes
+    // A device mesh with 2 axes, the number of devices along both axes
     // is unknown
-    mesh.cluster @mesh3(shape = ?x?)
-
-    // Used in the mesh sharding attribute to extend the standard tensor to
-    // distributed
-    tensor<4x8xf32, #mesh.shard<@mesh0, [[0]]>>
+    mesh.mesh @mesh3(shape = ?x?)
     ```
   }];
   let arguments = (ins
@@ -81,9 +77,9 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
   let hasVerifier = 1;
 }
 
-def Mesh_ClusterShapeOp : Mesh_Op<"cluster_shape", [
+def Mesh_MeshShapeOp : Mesh_Op<"mesh_shape", [
   Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let summary = "Get the shape of the cluster.";
+  let summary = "Get the shape of the mesh.";
   let arguments = (ins
     FlatSymbolRefAttr:$mesh,
     DefaultValuedAttr<Mesh_MeshAxesAttr, "{}">:$axes
@@ -99,13 +95,14 @@ def Mesh_ClusterShapeOp : Mesh_Op<"cluster_shape", [
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>,
+    OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh)>,
+    OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh, "ArrayRef<MeshAxis>":$axes)>,
     OpBuilder<(ins "StringRef":$mesh, "ArrayRef<MeshAxis>":$axes)>
   ];
 }
 
 def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
-  let summary = "Annotate on how a tensor is sharded across a mesh cluster.";
+  let summary = "Annotate on how a tensor is sharded across a mesh.";
   let description = [{
     The mesh.shard operation is designed to specify and guide the sharding
     behavior of a tensor value across a mesh topology. This operation has one
@@ -115,7 +112,7 @@ def Mesh_ShardOp : Mesh_Op<"shard", [Pure, SameOperandsAndResultType]> {
     annotated for sharding.
 
     2. `shard`: This attribute is type of `MeshSharding`, which is the core data
-    structure to represent distributed tensor in mesh cluster.
+    structure to represent distribution of a tensor on a mesh.
 
     3. `annotate_for_users`: A unit attribute addressing the scenario when a
     tensor's sharding annotation differs based on its context of use (either as
@@ -217,7 +214,7 @@ def Mesh_ProcessMultiIndexOp : Mesh_Op<"process_multi_index", [
     attr-dict `:` type($result)
   }];
   let builders = [
-    OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>,
+    OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh)>,
     OpBuilder<(ins "StringRef":$mesh, "ArrayRef<MeshAxis>":$axes)>
   ];
 }
@@ -239,7 +236,7 @@ def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
   let results = (outs Index:$result);
   let assemblyFormat = "`on` $mesh attr-dict `:` type($result)";
   let builders = [
-    OpBuilder<(ins "::mlir::mesh::ClusterOp":$mesh)>
+    OpBuilder<(ins "::mlir::mesh::MeshOp":$mesh)>
   ];
 }
 
@@ -259,6 +256,7 @@ class Mesh_CollectiveCommunicationOpBase<
 }
 
 def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
+    Pure,
     SameOperandsAndResultElementType,
     SameOperandsAndResultRank
   ]> {
@@ -268,7 +266,7 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
 
     Example:
     ```mlir
-    mesh.cluster @mesh0(shape = 2x2)
+    mesh.mesh @mesh0(shape = 2x2)
     ...
     %1 = mesh.all_gather %0 on @mesh0 mesh_axes = [1] gather_axis = 1
       : tensor<2x2xi8> -> tensor<2x4xi8>
@@ -312,6 +310,7 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
 }
 
 def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
+    Pure,
     SameOperandsAndResultShape]> {
   let summary = "All-reduce over a device mesh.";
   let description = [{
@@ -331,7 +330,7 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
   }];
   let arguments = !con(commonArgs, (ins
     AnyRankedTensor:$input,
-    DefaultValuedAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction
+    DefaultValuedAttr<Mesh_ReductionKindAttr, "::mlir::mesh::ReductionKind::Sum">:$reduction
   ));
   let results = (outs
     AnyRankedTensor:$result
@@ -343,7 +342,70 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
   let hasCanonicalizer = 1;
 }
 
+def Mesh_AllSliceOp : Mesh_CollectiveCommunicationOpBase<"all_slice", [
+    Pure,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank
+  ]> {
+  let summary = "All-slice over a device mesh. This is the inverse of all-gather.";
+  let description = [{
+    Slice along the `slice_axis` tensor axis.
+    This operation can be thought of as the inverse of all-gather.
+    Technically, it is not required that all processes have the same input tensor.
+    Each process will slice a piece of its local tensor based on its in-group device index.
+    The operation does not communicate data between devices. 
+
+    Example:
+    ```mlir
+    mesh.mesh @mesh0(shape = 2x2)
+    ...
+    %1 = mesh.all_slice %0 on @mesh0 mesh_axes = [1] slice_axis = 1
+      : tensor<2x4xi8> -> tensor<2x2xi8>
+    ```
+    Input:
+    ```
+    +-------------+
+    |  1  2  5  6 | <- devices (0, 0) and (0, 1)
+    |  3  4  7  8 |
+    +-------------+
+    |  9 10 13 14 | <- devices (1, 0) and (1, 1)
+    | 11 12 15 16 |
+    +-------------+
+    ```
+    Result:
+    ```
+    gather tensor
+    axis 1
+    ------------>
+                     +-------+-------+
+    device (0, 0) -> |  1  2 |  5  6 | <- device (0, 1)
+                     |  3  4 |  7  8 |
+                     +-------+-------+
+    device (1, 0) -> |  9 10 | 13 14 | <- device (1, 1)
+                     | 11 12 | 15 16 |
+                     +-------+-------+
+    ```
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyNon0RankedTensor:$input,
+    IndexAttr:$slice_axis
+  ));
+  let results = (outs
+    AnyNon0RankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)? `slice_axis` `=` $slice_axis
+    attr-dict `:` type($input) `->` type($result)
+  }];
+  let hasCanonicalizer = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$input, "MeshOp":$mesh, "ArrayRef<MeshAxis>":$meshAxes, "int64_t":$sliceAxis)>,
+    OpBuilder<(ins "Type":$result_type, "Value":$input, "StringRef":$mesh, "ArrayRef<MeshAxis>":$meshAxes, "int64_t":$sliceAxis)>
+  ];
+}
+
 def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
+    Pure,
     SameOperandsAndResultElementType,
     SameOperandsAndResultRank]> {
   let summary = "All-to-all over a device mesh.";
@@ -353,7 +415,7 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
 
     Example:
     ```
-    mesh.cluster @mesh0(shape = 3)
+    mesh.mesh @mesh0(shape = 3)
     ...
     %1 = mesh.all_to_all %0 on @mesh0 mesh_axes = [0]
       split_axis = 0 concat_axis = 0
@@ -398,6 +460,7 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
 }
 
 def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
+    Pure,
     AllShapesMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
@@ -410,7 +473,7 @@ def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
     
     Example:
     ```
-    mesh.cluster @mesh0(shape = 2x2)
+    mesh.mesh @mesh0(shape = 2x2)
 
     %1 = mesh.broadcast %0 on @mesh0
       mesh_axes = [0]
@@ -453,6 +516,7 @@ def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
 }
 
 def Mesh_GatherOp : Mesh_CollectiveCommunicationOpBase<"gather", [
+    Pure,
     AllRanksMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
@@ -466,7 +530,7 @@ def Mesh_GatherOp : Mesh_CollectiveCommunicationOpBase<"gather", [
 
     Example:
     ```mlir
-    mesh.cluster @mesh0(shape = 2x2)
+    mesh.mesh @mesh0(shape = 2x2)
     ...
     %1 = mesh.gather %0 on @mesh0 mesh_axes = [1]
       gather_axis = 1 root = [1]
@@ -540,6 +604,7 @@ def Mesh_RecvOp : Mesh_CollectiveCommunicationOpBase<"recv", [
 }
 
 def Mesh_ReduceOp : Mesh_CollectiveCommunicationOpBase<"reduce", [
+    Pure,
     AllShapesMatch<["input", "result"]>
   ]> {
   let summary = "Reduce over a device mesh.";
@@ -564,7 +629,7 @@ def Mesh_ReduceOp : Mesh_CollectiveCommunicationOpBase<"reduce", [
   }];
   let arguments = !con(commonArgs, (ins
     AnyRankedTensor:$input,
-    DefaultValuedAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction,
+    DefaultValuedAttr<Mesh_ReductionKindAttr, "::mlir::mesh::ReductionKind::Sum">:$reduction,
     DenseI64ArrayAttr:$root,
     Variadic<Index>:$root_dynamic
   ));
@@ -581,6 +646,7 @@ def Mesh_ReduceOp : Mesh_CollectiveCommunicationOpBase<"reduce", [
 }
 
 def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", [
+    Pure,
     SameOperandsAndResultRank]> {
   let summary = "Reduce-scatter over a device mesh.";
   let description = [{
@@ -589,7 +655,7 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     across the device group.
     Example:
     ```
-    mesh.cluster @mesh0(shape = 2x2)
+    mesh.mesh @mesh0(shape = 2x2)
     ...
     %1 = mesh.reduce_scatter %0 on @mesh0 mesh_axes = [1]
       reduction = <max> scatter_axis = 0
@@ -626,7 +692,7 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
-    DefaultValuedAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction,
+    DefaultValuedAttr<Mesh_ReductionKindAttr, "::mlir::mesh::ReductionKind::Sum">:$reduction,
     IndexAttr:$scatter_axis
   ));
   let results = (outs
@@ -642,6 +708,7 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
 }
 
 def Mesh_ScatterOp : Mesh_CollectiveCommunicationOpBase<"scatter", [
+    Pure,
     AllRanksMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
@@ -652,7 +719,7 @@ def Mesh_ScatterOp : Mesh_CollectiveCommunicationOpBase<"scatter", [
 
     Example:
     ```
-    mesh.cluster @mesh0(shape = 2x2)
+    mesh.mesh @mesh0(shape = 2x2)
     %1 = mesh.scatter %0 on @mesh0 mesh_axes = [0]
       scatter_axis = 0
       root = [1]
@@ -734,6 +801,7 @@ def Mesh_SendOp : Mesh_CollectiveCommunicationOpBase<"send", [
 }
 
 def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
+    Pure,
     SameOperandsAndResultElementType,
     SameOperandsAndResultShape
   ]> {
@@ -748,7 +816,7 @@ def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
 
     Example:
     ```
-    mesh.cluster @mesh0(shape = 2x4)
+    mesh.mesh @mesh0(shape = 2x4)
     %1 = mesh.shift on @mesh0 mesh_axes = [1]
       shift_axis = 1 offset = 2 rotate
       : tensor<2xi8> -> tensor<2xi8>

@@ -43,7 +43,6 @@ class Handle(ir.Value):
         self.parent = parent
         self.children = children if children is not None else []
 
-
 @ir.register_value_caster(AnyOpType.get_static_typeid())
 @ir.register_value_caster(OperationType.get_static_typeid())
 class OpHandle(Handle):
@@ -61,16 +60,16 @@ class OpHandle(Handle):
     ):
         super().__init__(v, parent=parent, children=children)
 
-    def get_result(self, idx: int = 0) -> "ValueHandle":
+    def get_result(self, indices: Sequence[int] = [0]) -> "ValueHandle":
         """
         Emits a `transform.GetResultOp`.
         Returns a handle to the result of the payload operation at the given
-        index.
+        indices.
         """
         get_result_op = transform.GetResultOp(
             AnyValueType.get(),
             self,
-            idx,
+            indices,
         )
         return get_result_op.result
 

@@ -37,6 +37,7 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <map>
@@ -106,6 +107,14 @@ public:
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
+
+/// Prints a welcome message on the editor if the preprocessor variable
+/// LLDB_DAP_WELCOME_MESSAGE is defined.
+static void PrintWelcomeMessage() {
+#ifdef LLDB_DAP_WELCOME_MESSAGE
+  g_dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+#endif
+}
 
 lldb::SBValueList *GetTopLevelScope(int64_t variablesReference) {
   switch (variablesReference) {
@@ -516,7 +525,8 @@ void EventThreadFunction() {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
-          auto bp = lldb::SBBreakpoint::GetBreakpointFromEvent(event);
+          auto bp =
+              Breakpoint(lldb::SBBreakpoint::GetBreakpointFromEvent(event));
           // If the breakpoint was originated from the IDE, it will have the
           // BreakpointBase::GetBreakpointLabel() label attached. Regardless
           // of wether the locations were added or removed, the breakpoint
@@ -532,7 +542,7 @@ void EventThreadFunction() {
             // mapped. Note that CreateBreakpoint doesn't apply source mapping.
             // Besides, the current implementation of VSCode ignores the
             // "source" element of breakpoint events.
-            llvm::json::Value source_bp = CreateBreakpoint(bp);
+            llvm::json::Value source_bp = CreateBreakpoint(&bp);
             source_bp.getAsObject()->erase("source");
 
             body.try_emplace("breakpoint", source_bp);
@@ -655,6 +665,8 @@ void request_attach(const llvm::json::Object &request) {
       GetString(arguments, "commandEscapePrefix", "`");
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
+
+  PrintWelcomeMessage();
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1126,21 +1138,33 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (g_dap.DetectExpressionContext(frame, text) ==
-      ExpressionContext::Variable) {
-    char command[] = "expression -- ";
-    text = command + text;
-    offset += strlen(command);
+  if (!text.empty() &&
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
+    text = text.substr(g_dap.command_escape_prefix.size());
   }
-  lldb::SBStringList matches;
-  lldb::SBStringList descriptions;
 
-  if (g_dap.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
-          text.c_str(), offset, 0, 100, matches, descriptions)) {
+  // While the user is typing then we likely have an incomplete input and cannot
+  // reliably determine the precise intent (command vs variable), try completing
+  // the text as both a command and variable expression, if applicable.
+  const std::string expr_prefix = "expression -- ";
+  std::array<std::tuple<ReplMode, std::string, uint64_t>, 2> exprs = {
+      {std::make_tuple(ReplMode::Command, text, offset),
+       std::make_tuple(ReplMode::Variable, expr_prefix + text,
+                       offset + expr_prefix.size())}};
+  for (const auto &[mode, line, cursor] : exprs) {
+    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+      continue;
+
+    lldb::SBStringList matches;
+    lldb::SBStringList descriptions;
+    if (!g_dap.debugger.GetCommandInterpreter()
+             .HandleCompletionWithDescriptions(line.c_str(), cursor, 0, 100,
+                                               matches, descriptions))
+      continue;
+
     // The first element is the common substring after the cursor position for
     // all the matches. The rest of the elements are the matches so ignore the
     // first result.
-    targets.reserve(matches.GetSize() - 1);
     for (size_t i = 1; i < matches.GetSize(); i++) {
       std::string match = matches.GetStringAtIndex(i);
       std::string description = descriptions.GetStringAtIndex(i);
@@ -1825,10 +1849,12 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
+  PrintWelcomeMessage();
+
   // This is a hack for loading DWARF in .o files on Mac where the .o files
-  // in the debug map of the main executable have relative paths which require
-  // the lldb-dap binary to have its working directory set to that relative
-  // root for the .o files in order to be able to load debug info.
+  // in the debug map of the main executable have relative paths which
+  // require the lldb-dap binary to have its working directory set to that
+  // relative root for the .o files in order to be able to load debug info.
   if (!debuggerRoot.empty())
     llvm::sys::fs::set_current_path(debuggerRoot);
 
@@ -2320,7 +2346,7 @@ void request_setBreakpoints(const llvm::json::Object &request) {
               existing_source_bps->second.find(src_bp.line);
           if (existing_bp != existing_source_bps->second.end()) {
             existing_bp->second.UpdateBreakpoint(src_bp);
-            AppendBreakpoint(existing_bp->second.bp, response_breakpoints, path,
+            AppendBreakpoint(&existing_bp->second, response_breakpoints, path,
                              src_bp.line);
             continue;
           }
@@ -2329,7 +2355,7 @@ void request_setBreakpoints(const llvm::json::Object &request) {
         g_dap.source_breakpoints[path][src_bp.line] = src_bp;
         SourceBreakpoint &new_bp = g_dap.source_breakpoints[path][src_bp.line];
         new_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(new_bp.bp, response_breakpoints, path, new_bp.line);
+        AppendBreakpoint(&new_bp, response_breakpoints, path, new_bp.line);
       }
     }
   }
@@ -2542,7 +2568,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
       // handled it here and we don't need to set a new breakpoint below.
       request_bps.erase(request_pos);
       // Add this breakpoint info to the response
-      AppendBreakpoint(pair.second.bp, response_breakpoints);
+      AppendBreakpoint(&pair.second, response_breakpoints);
     }
   }
   // Remove any breakpoints that are no longer in our list
@@ -2556,7 +2582,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
     g_dap.function_breakpoints[pair.first()] = std::move(pair.second);
     FunctionBreakpoint &new_bp = g_dap.function_breakpoints[pair.first()];
     new_bp.SetBreakpoint();
-    AppendBreakpoint(new_bp.bp, response_breakpoints);
+    AppendBreakpoint(&new_bp, response_breakpoints);
   }
 
   llvm::json::Object body;
@@ -3557,8 +3583,8 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; g_dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = g_dap.target.GetBreakpointAtIndex(i);
-    AppendBreakpoint(bp, response_breakpoints);
+    auto bp = Breakpoint(g_dap.target.GetBreakpointAtIndex(i));
+    AppendBreakpoint(&bp, response_breakpoints);
   }
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));

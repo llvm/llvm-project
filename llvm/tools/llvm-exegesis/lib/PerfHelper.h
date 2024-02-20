@@ -83,7 +83,7 @@ class ConfiguredEvent {
 public:
   ConfiguredEvent(PerfEvent &&EventToConfigure);
 
-  void initRealEvent(const pid_t ProcessID);
+  void initRealEvent(const pid_t ProcessID, const int GroupFD = -1);
   Expected<SmallVector<int64_t>> readOrError(StringRef FunctionBytes) const;
   int getFileDescriptor() const { return FileDescriptor; }
   bool isDummyEvent() const {
@@ -107,7 +107,8 @@ private:
 class CounterGroup {
 public:
   // event: the PerfEvent to measure.
-  explicit CounterGroup(PerfEvent &&event, pid_t ProcessID = 0);
+  explicit CounterGroup(PerfEvent &&event, std::vector<PerfEvent> &&ValEvents,
+                        pid_t ProcessID = 0);
 
   CounterGroup(const CounterGroup &) = delete;
   CounterGroup(CounterGroup &&other) = default;
@@ -126,8 +127,10 @@ public:
   /// within the benchmarked code.
   /// If empty (or not specified), then no filtering will be done.
   /// Not all counters choose to use this.
-  virtual llvm::Expected<llvm::SmallVector<int64_t, 4>>
+  virtual Expected<SmallVector<int64_t, 4>>
   readOrError(StringRef FunctionBytes = StringRef()) const;
+
+  virtual Expected<SmallVector<int64_t>> readValidationCountersOrError() const;
 
   virtual int numValues() const;
 
@@ -136,6 +139,7 @@ public:
 protected:
   ConfiguredEvent EventCounter;
   bool IsDummyEvent;
+  std::vector<ConfiguredEvent> ValidationEventCounters;
 
 private:
   void initRealEvent(pid_t ProcessID);

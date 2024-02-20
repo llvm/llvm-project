@@ -1,7 +1,7 @@
 name: Release Task
 
 permissions:
-  contents: read
+  contents: write
 
 on:
   push:
@@ -10,112 +10,70 @@ on:
       - 'llvmorg-*'
 
 jobs:
-  release-tasks:
-    permissions:
-      contents: write # To upload assets to release.
+  validate-tag:
+    name: Validate Tag
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
+    outputs:
+      release-version: ${{ steps.validate-tag.outputs.release-version }}
     steps:
       - name: Validate Tag
         id: validate-tag
         run: |
-          test "${{ github.actor }}" = "tstellar" || test "${{ github.actor }}" = "tru"
           echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
           release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
           echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
+  release-create:
+    name: Create a New Release
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    steps:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-              doxygen \
-              graphviz \
-              python3-github \
-              ninja-build \
-              texlive-font-utils
-          pip3 install --user --require-hashes -r ./llvm/docs/requirements-hashed.txt
+          sudo apt-get install python3-github
 
-      - name: Create Release
-        run: |
-          ./llvm/utils/release/./github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} create
-
-      - name: Build Documentation
-        run: |
-          ./llvm/utils/release/build-docs.sh -release ${{ steps.validate-tag.outputs.release-version }}
-          ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files ./*doxygen*.tar.xz
-
-      - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
-        with:
-          name: release-notes
-          path: docs-build/html-export/
-
-      - name: Clone www-releases
-        if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          repository: ${{ github.repository_owner }}/www-releases
-          ref: main
-          fetch-depth: 0
-          path: www-releases
-
-      - name: Upload Release Notes
-        if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-        run: |
-          mkdir -p ../www-releases/${{ steps.validate-tag.outputs.release-version }}
-          mv ./docs-build/html-export/* ../www-releases/${{ steps.validate-tag.outputs.release-version }}
-          cd ../www-releases
-          git add ${{ steps.validate-tag.outputs.release-version }}
-          git config user.email "llvmbot@llvm.org"
-          git config user.name "llvmbot"
-          git commit -a -m "Add ${{ steps.validate-tag.outputs.release-version }} documentation"
-          git push https://${{ secrets.WWW_RELEASES_TOKEN }}@github.com/${{ github.repository_owner }}/www-releases main:main
-
-  release-lit:
-    runs-on: ubuntu-latest
-    if: github.repository == 'llvm/llvm-project'
-    steps:
       - name: Checkout LLVM
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Setup Cpp
-        uses: aminya/setup-cpp@6e563b8e5f796db317104d19605a414345807897 # v1
-        with:
-          compiler: llvm-16.0.6
-          cmake: true
-          ninja: true
-
-      - name: Install dependencies
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-setuptools python3-psutil
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release ${{ needs.validate-tag.outputs.release-version }} --user ${{ github.actor }} create
+  release-documentation:
+    name: Build and Upload Release Documentation
+    needs:
+      - validate-tag
+    uses: ./.github/workflows/release-documentation.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+      upload: true
 
-      - name: Test lit
-        run: |
-          mkdir build && cd build
-          export FILECHECK_OPTS='-dump-input-filter=all -vv -color'
-          cmake ../llvm -DCMAKE_BUILD_TYPE=Release -G Ninja
-          ninja -v -j $(nproc) check-lit
+  release-doxygen:
+    name: Build and Upload Release Doxygen
+    needs:
+      - validate-tag
+      - release-create
+    uses: ./.github/workflows/release-doxygen.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+      upload: true
 
-      - name: Package lit
-        run: |
-          cd llvm/utils/lit
-          # Remove 'dev' suffix from lit version.
-          sed -i 's/ + "dev"//g' lit/__init__.py
-          python3 setup.py sdist
+  release-lit:
+    name: Release Lit
+    needs: validate-tag
+    uses: ./.github/workflows/release-lit.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
 
-      - name: Upload lit to test.pypi.org
-        uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf # release/v1
-        with:
-          password: ${{ secrets.LLVM_LIT_TEST_PYPI_API_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: llvm/utils/lit/dist/
-
-      - name: Upload lit to pypi.org
-        uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf # release/v1
-        with:
-          password: ${{ secrets.LLVM_LIT_PYPI_API_TOKEN }}
-          packages-dir: llvm/utils/lit/dist/
+  release-binaries:
+    name: Build Release Binaries
+    needs:
+      - validate-tag
+      - release-create
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+      upload: true

@@ -106,7 +106,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
+  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -145,7 +145,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
     // Try to preload this argument into user SGPRs.
     if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !ST.needsKernargPreloadBackwardsCompatibility() &&
         !Arg.getType()->isAggregateType())
       if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
                                            LastExplicitArgOffset))

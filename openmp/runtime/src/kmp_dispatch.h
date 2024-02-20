@@ -81,11 +81,6 @@ template <typename T> struct dispatch_private_infoXX_template {
 
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
-#if KMP_COMPILER_MSVC
-#pragma warning(push)
-// warning C4201: nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4201)
-#endif
   // KMP_ALIGN(32) ensures ( if the KMP_ALIGN macro is turned on )
   //    a) parm3 is properly aligned and
   //    b) all parm1-4 are in the same cache line.
@@ -97,9 +92,6 @@ template <typename T> struct dispatch_private_infoXX_template {
     T parm3;
     T parm4;
   };
-#if KMP_COMPILER_MSVC
-#pragma warning(pop)
-#endif
 
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
   UT pchunks; // total number of chunks for processes with p-core

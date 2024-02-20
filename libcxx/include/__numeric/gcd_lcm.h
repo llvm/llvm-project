@@ -77,7 +77,7 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up
   using _Rp  = common_type_t<_Tp, _Up>;
   _Rp __val1 = __ct_abs<_Rp, _Tp>()(__m) / std::gcd(__m, __n);
   _Rp __val2 = __ct_abs<_Rp, _Up>()(__n);
-  _LIBCPP_ASSERT_UNCATEGORIZED((numeric_limits<_Rp>::max() / __val1 > __val2), "Overflow in lcm");
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN((numeric_limits<_Rp>::max() / __val1 > __val2), "Overflow in lcm");
   return __val1 * __val2;
 }
 
