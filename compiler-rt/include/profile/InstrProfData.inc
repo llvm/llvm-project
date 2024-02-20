@@ -62,7 +62,7 @@
 #define INSTR_PROF_VISIBILITY
 #endif
 
-/* clang-format off */
+// clang-format off:re-enable clang-format after `issue #82426` is fixed
 /* INSTR_PROF_DATA start. */
 /* Definition of member fields of the per-function control structure. */
 #ifndef INSTR_PROF_DATA
@@ -308,6 +308,7 @@ INSTR_PROF_SECT_ENTRY(IPSK_covname, \
 #undef INSTR_PROF_SECT_ENTRY
 #endif
 
+
 #ifdef INSTR_PROF_VALUE_PROF_DATA
 #define INSTR_PROF_DATA_DEFINED
 
@@ -494,7 +495,7 @@ getValueProfRecordHeaderSize(uint32_t NumValueSites);
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 #endif
 
-/* clang-format on */
+// clang-format on
 
 /*!
  * Return the \c ValueProfRecord header size including the
@@ -638,7 +639,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 
 /*============================================================================*/
 
-/* clang-format off */
+// clang-format off:re-enable clang-format after `issue #82426` is fixed
 #ifndef INSTR_PROF_DATA_DEFINED
 
 #ifndef INSTR_PROF_DATA_INC
@@ -905,7 +906,7 @@ int InstProfPopcountll(unsigned long long X) { return __builtin_popcountll(X); }
 
 #endif  /* defined(_MSC_VER) && !defined(__clang__) */
 
-/* clang-format on */
+// clang-format on
 
 /* Map an (observed) memop size value to the representative value of its range.
  * For example, 5 -> 5, 22 -> 17, 99 -> 65, 256 -> 256, 1001 -> 513. */
