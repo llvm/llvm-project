@@ -6354,6 +6354,23 @@ CombinerHelper::getConstantOrConstantSplatVector(Register Src) {
   return Value;
 }
 
+bool CombinerHelper::isConstantOrConstantVectorI(Register Src) {
+  auto IConstant = getIConstantVRegValWithLookThrough(Src, MRI);
+  if (IConstant)
+    return true;
+  GBuildVector *BuildVector = getOpcodeDef<GBuildVector>(Src, MRI);
+  if (!BuildVector)
+    return false;
+  unsigned NumSources = BuildVector->getNumSources();
+  for (unsigned I = 0; I < NumSources; ++I) {
+    std::optional<ValueAndVReg> IConstant =
+        getIConstantVRegValWithLookThrough(BuildVector->getSourceReg(I), MRI);
+    if (!IConstant)
+      return false;
+  }
+  return true; // FIXME: G_SPLAT_VECTOR
+}
+
 // TODO: use knownbits to determine zeros
 bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
                                               BuildFnTy &MatchInfo) {
@@ -6915,6 +6932,198 @@ bool CombinerHelper::matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) {
 
   if (tryFoldLogicOfFCmps(Or, MatchInfo))
     return true;
+
+  return false;
+}
+
+bool CombinerHelper::isZExtOrTruncLegal(LLT ToTy, LLT FromTy) const {
+  // Copy.
+  if (ToTy == FromTy)
+    return true;
+
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {ToTy, FromTy}}))
+    return true;
+
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {ToTy, FromTy}}))
+    return true;
+
+  return false;
+}
+
+bool CombinerHelper::matchAddCarryInOut(MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) {
+  GAddCarryInOut *Add = cast<GAddCarryInOut>(&MI);
+
+  // adde has no flags.
+  Register Dst = Add->getDstReg();
+  Register Carry = Add->getCarryOutReg();
+  Register CarryIn = Add->getCarryInReg();
+  Register LHS = Add->getLHSReg();
+  Register RHS = Add->getRHSReg();
+  bool IsSigned = Add->isSigned();
+  LLT DstTy = MRI.getType(Dst);
+  LLT CarryTy = MRI.getType(Carry);
+  LLT OperandTy = MRI.getType(LHS);
+  LLT CarryInTy = MRI.getType(CarryIn);
+
+  // FIXME: handle undef
+
+  // fold sadde, if the carry is dead -> add(add(LHS, RHS),
+  // zextOrTrunc(CarryIn)), undef.
+  if (MRI.use_nodbg_empty(Carry) && IsSigned && MRI.hasOneNonDBGUse(Dst) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, {DstTy}}) &&
+      isZExtOrTruncLegal(DstTy, CarryInTy)) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto A = B.buildAdd(DstTy, LHS, RHS);
+      Register AReg = A.getReg(0);
+      auto ZextCarryIn = B.buildZExtOrTrunc(DstTy, CarryIn);
+      Register ZextCarryInReg = ZextCarryIn.getReg(0);
+      B.buildAdd(Dst, AReg, ZextCarryInReg);
+      B.buildUndef(Carry);
+    };
+    return true;
+  }
+
+  // We want do fold the [u|s]adde.
+  if (!MRI.hasOneNonDBGUse(Dst) || !MRI.hasOneNonDBGUse(Carry))
+    return false;
+
+  // The parameters of the adde must be integer-like.
+  std::optional<APInt> MaybeLHS = getConstantOrConstantSplatVector(LHS);
+  std::optional<APInt> MaybeRHS = getConstantOrConstantSplatVector(RHS);
+  std::optional<APInt> MaybeCarryIn = getConstantOrConstantSplatVector(CarryIn);
+
+  // fold adde(c, c, c) -> c, carry
+  if (MaybeLHS && MaybeRHS && MaybeCarryIn &&
+      isConstantLegalOrBeforeLegalizer(DstTy) &&
+      isConstantLegalOrBeforeLegalizer(CarryTy)) {
+    // They must all have the same bitwidth. Otherwise APInt might
+    // assert. Prelegalization, they may have widely different bitwidths.
+    unsigned BitWidth =
+        std::max(std::max(MaybeLHS->getBitWidth(), MaybeRHS->getBitWidth()),
+                 MaybeCarryIn->getBitWidth());
+    if (IsSigned) {
+      APInt LHS = MaybeLHS->sext(BitWidth);
+      APInt RHS = MaybeRHS->sext(BitWidth);
+      APInt CarryIn = MaybeCarryIn->zext(BitWidth);
+      bool FirstOverflowed = false;
+      bool SecondOverflowed = false;
+      APInt Result =
+          LHS.sadd_ov(RHS, FirstOverflowed).sadd_ov(CarryIn, SecondOverflowed);
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildConstant(Dst, Result);
+        B.buildConstant(Carry, FirstOverflowed | SecondOverflowed);
+      };
+      return true;
+    } else if (!IsSigned) {
+      APInt LHS = MaybeLHS->zext(BitWidth);
+      APInt RHS = MaybeRHS->zext(BitWidth);
+      APInt CarryIn = MaybeCarryIn->zext(BitWidth);
+      bool FirstOverflowed = false;
+      bool SecondOverflowed = false;
+      APInt Result =
+          LHS.uadd_ov(RHS, FirstOverflowed).uadd_ov(CarryIn, SecondOverflowed);
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildConstant(Dst, Result);
+        B.buildConstant(Carry, FirstOverflowed | SecondOverflowed);
+      };
+      return true;
+    }
+  }
+
+  // canonicalize constant to RHS.
+  if (isConstantOrConstantVectorI(LHS) && !isConstantOrConstantVectorI(RHS)) {
+    if (IsSigned) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSAdde(Dst, Carry, RHS, LHS, CarryIn);
+      };
+      return true;
+    } else {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUAdde(Dst, Carry, RHS, LHS, CarryIn);
+      };
+      return true;
+    }
+  }
+
+  // fold adde(LHS, RHS, 0) -> addo(LHS, RHS)
+  if (MaybeCarryIn && *MaybeCarryIn == 0) {
+    if (IsSigned && isLegalOrBeforeLegalizer(
+                        {TargetOpcode::G_SADDO, {DstTy, CarryTy, OperandTy}})) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSAddo(Dst, Carry, LHS, RHS);
+      };
+      return true;
+    } else if (!IsSigned &&
+               isLegalOrBeforeLegalizer(
+                   {TargetOpcode::G_UADDO, {DstTy, CarryTy, OperandTy}}))
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUAddo(Dst, Carry, LHS, RHS);
+      };
+    return true;
+  }
+
+  // fold adde(LHS, 0, Carry) -> addo(LHS, Carry)
+  if (MaybeRHS && *MaybeRHS == 0) {
+    if (IsSigned &&
+        isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_SADDO, {DstTy, CarryTy, OperandTy}}) &&
+        isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+        Register ZextCarryInReg = ZextCarryIn.getReg(0);
+        B.buildSAddo(Dst, Carry, LHS, ZextCarryInReg);
+      };
+      return true;
+    } else if (!IsSigned &&
+               isLegalOrBeforeLegalizer(
+                   {TargetOpcode::G_UADDO, {DstTy, CarryTy, OperandTy}}) &&
+               isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+        Register ZextCarryInReg = ZextCarryIn.getReg(0);
+        B.buildUAddo(Dst, Carry, LHS, ZextCarryInReg);
+      };
+      return true;
+    }
+  }
+
+  // We lower to 2*addo + 1*or.
+  if (IsSigned &&
+      isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SADDO, {DstTy, CarryTy, OperandTy}}) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_OR, {DstTy}}) &&
+      isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto First = B.buildSAddo(DstTy, CarryTy, LHS, RHS);
+      Register FirstResult = First.getReg(0);
+      Register FirstCarry = First.getReg(1);
+      auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+      auto Second = B.buildSAddo(DstTy, CarryTy, FirstResult, ZextCarryIn);
+      Register Result = Second.getReg(0);
+      Register SecondCarry = Second.getReg(1);
+      B.buildCopy(Dst, Result);
+      B.buildOr(Carry, FirstCarry, SecondCarry);
+    };
+    return true;
+  } else if (!IsSigned &&
+             isLegalOrBeforeLegalizer(
+                 {TargetOpcode::G_UADDO, {DstTy, CarryTy, OperandTy}}) &&
+             isLegalOrBeforeLegalizer({TargetOpcode::G_OR, {DstTy}}) &&
+             isZExtOrTruncLegal(OperandTy, CarryInTy)) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto First = B.buildUAddo(DstTy, CarryTy, LHS, RHS);
+      Register FirstResult = First.getReg(0);
+      Register FirstCarry = First.getReg(1);
+      auto ZextCarryIn = B.buildZExtOrTrunc(OperandTy, CarryIn);
+      auto Second = B.buildUAddo(DstTy, CarryTy, FirstResult, ZextCarryIn);
+      Register Result = Second.getReg(0);
+      Register SecondCarry = Second.getReg(1);
+      B.buildCopy(Dst, Result);
+      B.buildOr(Carry, FirstCarry, SecondCarry);
+    };
+    return true;
+  }
 
   return false;
 }
