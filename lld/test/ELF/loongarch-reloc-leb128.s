@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax a.s -o a.o
 # RUN: llvm-readobj -r -x .gcc_except_table -x .debug_rnglists -x .debug_loclists a.o | FileCheck %s --check-prefix=REL
-# RUN: ld.lld -shared --gc-sections --noinhibit-exec a.o -o a.so
+# RUN: ld.lld -shared --gc-sections a.o -o a.so
 # RUN: llvm-readelf -x .gcc_except_table -x .debug_rnglists -x .debug_loclists a.so | FileCheck %s
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax extraspace.s -o extraspace32.o
