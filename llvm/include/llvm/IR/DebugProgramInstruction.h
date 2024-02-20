@@ -97,7 +97,8 @@ public:
   DbgRecord(Kind RecordKind, DebugLoc DL)
       : DbgLoc(DL), RecordKind(RecordKind) {}
 
-  /// Methods requiring subclass implementations.
+  /// Methods that dispatch to subclass implementations. These need to be
+  /// manually updated when a new subclass is added.
   ///@{
   void deleteRecord();
   DbgRecord *clone() const;
@@ -488,7 +489,7 @@ public:
   /// Erase a single DbgRecord from this marker. In an ideal future, we would
   /// never erase an assignment in this way, but it's the equivalent to
   /// erasing a debug intrinsic from a block.
-  void dropOneDbgValue(DbgRecord *DPE);
+  void dropOneDbgValue(DbgRecord *DR);
 
   /// We generally act like all llvm Instructions have a range of DPValues
   /// attached to them, but in reality sometimes we don't allocate the DPMarker

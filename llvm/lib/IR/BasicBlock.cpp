@@ -107,12 +107,12 @@ void BasicBlock::convertFromNewDbgValues() {
       continue;
 
     DPMarker &Marker = *Inst.DbgMarker;
-    for (DbgRecord &DPR : Marker.getDbgValueRange()) {
-      if (auto *DPV = dyn_cast<DPValue>(&DPR))
+    for (DbgRecord &DR : Marker.getDbgValueRange()) {
+      if (auto *DPV = dyn_cast<DPValue>(&DR))
         InstList.insert(Inst.getIterator(),
                         DPV->createDebugIntrinsic(getModule(), nullptr));
       else
-        llvm_unreachable("unsupported entity kind");
+        llvm_unreachable("unsupported DbgRecord kind");
     }
 
     Marker.eraseFromParent();

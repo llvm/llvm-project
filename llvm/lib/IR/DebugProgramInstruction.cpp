@@ -65,7 +65,7 @@ void DbgRecord::deleteRecord() {
     delete cast<DPValue>(this);
     break;
   default:
-    llvm_unreachable("unsupported record kind");
+    llvm_unreachable("unsupported DbgRecord kind");
   }
 }
 
@@ -315,7 +315,7 @@ DbgRecord *DbgRecord::clone() const {
   case ValueKind:
     return cast<DPValue>(this)->clone();
   default:
-    llvm_unreachable("unsupported record kind");
+    llvm_unreachable("unsupported DbgRecord kind");
   };
 }
 
@@ -472,16 +472,16 @@ DPMarker DPMarker::EmptyDPMarker;
 void DPMarker::dropDbgValues() {
   while (!StoredDPValues.empty()) {
     auto It = StoredDPValues.begin();
-    DbgRecord *DPE = &*It;
+    DbgRecord *DR = &*It;
     StoredDPValues.erase(It);
-    DPE->deleteRecord();
+    DR->deleteRecord();
   }
 }
 
-void DPMarker::dropOneDbgValue(DbgRecord *DPE) {
-  assert(DPE->getMarker() == this);
-  StoredDPValues.erase(DPE->getIterator());
-  DPE->deleteRecord();
+void DPMarker::dropOneDbgValue(DbgRecord *DR) {
+  assert(DR->getMarker() == this);
+  StoredDPValues.erase(DR->getIterator());
+  DR->deleteRecord();
 }
 
 const BasicBlock *DPMarker::getParent() const {
@@ -580,8 +580,8 @@ void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
 
 void DPMarker::absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
                                  DPMarker &Src, bool InsertAtHead) {
-  for (DbgRecord &DPE : Range)
-    DPE.setMarker(this);
+  for (DbgRecord &DR : Range)
+    DR.setMarker(this);
 
   auto InsertPos =
       (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
@@ -605,8 +605,8 @@ iterator_range<simple_ilist<DbgRecord>::iterator> DPMarker::cloneDebugInfoFrom(
   // Clone each DPValue and insert into StoreDPValues; optionally place them at
   // the start or the end of the list.
   auto Pos = (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
-  for (DbgRecord &DPE : Range) {
-    DbgRecord *New = DPE.clone();
+  for (DbgRecord &DR : Range) {
+    DbgRecord *New = DR.clone();
     New->setMarker(this);
     StoredDPValues.insert(Pos, *New);
     if (!First)
