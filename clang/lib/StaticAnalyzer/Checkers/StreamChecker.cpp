@@ -265,6 +265,11 @@ struct StreamOperationEvaluator {
                            SVB.makeIntVal(Val, CE->getCallReturnType(ACtx)));
   }
 
+  ProgramStateRef bindReturnValue(ProgramStateRef State, CheckerContext &C,
+                                  SVal Val) {
+    return State->BindExpr(CE, C.getLocationContext(), Val);
+  }
+
   ProgramStateRef bindNullReturnValue(ProgramStateRef State,
                                       CheckerContext &C) {
     return State->BindExpr(CE, C.getLocationContext(),
@@ -279,6 +284,13 @@ struct StreamOperationEvaluator {
     if (!Cond)
       return nullptr;
     return State->assume(*Cond, true);
+  }
+
+  ConstraintManager::ProgramStatePair
+  makeRetValAndAssumeDual(ProgramStateRef State, CheckerContext &C) {
+    DefinedSVal RetVal = makeRetVal(C, CE);
+    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    return C.getConstraintManager().assumeDual(State, RetVal);
   }
 };
 
@@ -937,67 +949,46 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
 void StreamChecker::evalFprintf(const FnDescription *Desc,
                                 const CallEvent &Call,
                                 CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
   if (Call.getNumArgs() < 2)
     return;
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+
+  ProgramStateRef State = C.getState();
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
-  if (!OldSS)
-    return;
-
-  assertStreamStateOpened(OldSS);
-
-  NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
-  SValBuilder &SVB = C.getSValBuilder();
-  auto &ACtx = C.getASTContext();
-  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(ACtx.IntTy),
-                            SVB.getConditionType())
-                  .getAs<DefinedOrUnknownSVal>();
+  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+  State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+  auto Cond =
+      E.SVB
+          .evalBinOp(State, BO_GE, RetVal, E.SVB.makeZeroVal(E.ACtx.IntTy),
+                     E.SVB.getConditionType())
+          .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
   ProgramStateRef StateNotFailed, StateFailed;
   std::tie(StateNotFailed, StateFailed) = State->assume(*Cond);
 
   StateNotFailed =
-      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+      E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
   C.addTransition(StateNotFailed);
 
   // Add transition for the failed state. The resulting value of the file
   // position indicator for the stream is indeterminate.
-  StateFailed = StateFailed->set<StreamMap>(
-      StreamSym, StreamState::getOpened(Desc, ErrorFError, true));
+  StateFailed = E.setStreamState(
+      StateFailed, StreamState::getOpened(Desc, ErrorFError, true));
   C.addTransition(StateFailed);
 }
 
 void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
   if (Call.getNumArgs() < 2)
     return;
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+
+  ProgramStateRef State = C.getState();
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
-
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
-  if (!OldSS)
-    return;
-
-  assertStreamStateOpened(OldSS);
-
-  SValBuilder &SVB = C.getSValBuilder();
-  ASTContext &ACtx = C.getASTContext();
 
   // Add the success state.
   // In this context "success" means there is not an EOF or other read error
@@ -1007,19 +998,15 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   // then EOF or read error happens. Now this case is handled like a "success"
   // case, and no error flags are set on the stream. This is probably not
   // accurate, and the POSIX documentation does not tell more.
-  if (OldSS->ErrorState != ErrorFEof) {
-    NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+  if (!E.isStreamEof()) {
+    NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
-        State->BindExpr(CE, C.getLocationContext(), RetVal);
-    auto RetGeZero =
-        SVB.evalBinOp(StateNotFailed, BO_GE, RetVal,
-                      SVB.makeZeroVal(ACtx.IntTy), SVB.getConditionType())
-            .getAs<DefinedOrUnknownSVal>();
-    if (!RetGeZero)
-      return;
-    StateNotFailed = StateNotFailed->assume(*RetGeZero, true);
-
-    C.addTransition(StateNotFailed);
+        State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+    StateNotFailed =
+        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
+                        *E.SVB.makeZeroVal(E.ACtx.IntTy).getAs<NonLoc>());
+    if (StateNotFailed)
+      C.addTransition(StateNotFailed);
   }
 
   // Add transition for the failed state.
@@ -1028,14 +1015,13 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   // be set but it is not further specified if all are required to be set.
   // Documentation does not mention, but file position will be set to
   // indeterminate similarly as at 'fread'.
-  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
-  StreamErrorState NewES = (OldSS->ErrorState == ErrorFEof)
-                               ? ErrorFEof
-                               : ErrorNone | ErrorFEof | ErrorFError;
-  StreamState NewSS = StreamState::getOpened(Desc, NewES, !NewES.isFEof());
-  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
-  if (OldSS->ErrorState != ErrorFEof)
-    C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, *EofVal);
+  StreamErrorState NewES =
+      E.isStreamEof() ? ErrorFEof : ErrorNone | ErrorFEof | ErrorFError;
+  StateFailed = E.setStreamState(
+      StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
+  if (!E.isStreamEof())
+    C.addTransition(StateFailed, constructSetEofNoteTag(C, E.StreamSym));
   else
     C.addTransition(StateFailed);
 }
@@ -1043,28 +1029,17 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
 void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
-
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
-  if (!OldSS)
-    return;
-
-  assertStreamStateOpened(OldSS);
 
   // Generate a transition for the success state.
   std::optional<NonLoc> PutVal = Call.getArgSVal(0).getAs<NonLoc>();
   if (!PutVal)
     return;
-  ProgramStateRef StateNotFailed =
-      State->BindExpr(CE, C.getLocationContext(), *PutVal);
+  ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, *PutVal);
   StateNotFailed =
-      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+      E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
   C.addTransition(StateNotFailed);
 
   // Add transition for the failed state.
@@ -1073,9 +1048,8 @@ void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
   // the same transition as the success state.
   // In this case only one state transition is added by the analyzer (the two
   // new states may be similar).
-  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
-  StateFailed =
-      StateFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, *EofVal);
+  StateFailed = E.setStreamState(StateFailed, StreamState::getOpened(Desc));
   C.addTransition(StateFailed);
 }
 
@@ -1083,19 +1057,9 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
                                  const CallEvent &Call,
                                  CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
-
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
-  if (!OldSS)
-    return;
-
-  assertStreamStateOpened(OldSS);
 
   // Upon successful completion, the getline() and getdelim() functions shall
   // return the number of bytes written into the buffer.
@@ -1104,18 +1068,13 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
   // If an error occurs, the function shall return -1 and set 'errno'.
 
   // Add transition for the successful state.
-  if (OldSS->ErrorState != ErrorFEof) {
-    NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+  if (!E.isStreamEof()) {
+    NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
-        State->BindExpr(CE, C.getLocationContext(), RetVal);
-    SValBuilder &SVB = C.getSValBuilder();
-    auto Cond =
-        SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(CE->getType()),
-                      SVB.getConditionType())
-            .getAs<DefinedOrUnknownSVal>();
-    if (!Cond)
-      return;
-    StateNotFailed = StateNotFailed->assume(*Cond, true);
+        State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+    StateNotFailed =
+        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
+                        *E.SVB.makeZeroVal(E.CE->getType()).getAs<NonLoc>());
     if (!StateNotFailed)
       return;
     C.addTransition(StateNotFailed);
@@ -1124,13 +1083,13 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
   // Add transition for the failed state.
   // If a (non-EOF) error occurs, the resulting value of the file position
   // indicator for the stream is indeterminate.
-  ProgramStateRef StateFailed = bindInt(-1, State, C, CE);
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, -1);
   StreamErrorState NewES =
-      OldSS->ErrorState == ErrorFEof ? ErrorFEof : ErrorFEof | ErrorFError;
-  StreamState NewSS = StreamState::getOpened(Desc, NewES, !NewES.isFEof());
-  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
-  if (OldSS->ErrorState != ErrorFEof)
-    C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
+      E.isStreamEof() ? ErrorFEof : ErrorFEof | ErrorFError;
+  StateFailed = E.setStreamState(
+      StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
+  if (E.isStreamEof())
+    C.addTransition(StateFailed, constructSetEofNoteTag(C, E.StreamSym));
   else
     C.addTransition(StateFailed);
 }
@@ -1156,16 +1115,8 @@ void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
 void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
-    return;
-
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  // Ignore the call if the stream is not tracked.
-  if (!State->get<StreamMap>(StreamSym))
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
   const llvm::APSInt *PosV =
@@ -1173,56 +1124,38 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
   const llvm::APSInt *WhenceV =
       C.getSValBuilder().getKnownValue(State, Call.getArgSVal(2));
 
-  DefinedSVal RetVal = makeRetVal(C, CE);
-
-  // Make expression result.
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
-
   // Bifurcate the state into failed and non-failed.
   // Return zero on success, nonzero on error.
   ProgramStateRef StateNotFailed, StateFailed;
-  std::tie(StateFailed, StateNotFailed) =
-      C.getConstraintManager().assumeDual(State, RetVal);
+  std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
 
-  // Reset the state to opened with no error.
+  // No failure: Reset the state to opened with no error.
   StateNotFailed =
-      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
-  // We get error.
-  // It is possible that fseek fails but sets none of the error flags.
+      E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+  C.addTransition(StateNotFailed);
+
+  // At error it is possible that fseek fails but sets none of the error flags.
   // If fseek failed, assume that the file position becomes indeterminate in any
   // case.
   StreamErrorState NewErrS = ErrorNone | ErrorFError;
   // Setting the position to start of file never produces EOF error.
   if (!(PosV && *PosV == 0 && WhenceV && *WhenceV == SeekSetVal))
     NewErrS = NewErrS | ErrorFEof;
-  StateFailed = StateFailed->set<StreamMap>(
-      StreamSym, StreamState::getOpened(Desc, NewErrS, true));
-
-  C.addTransition(StateNotFailed);
-  C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
+  StateFailed = E.setStreamState(StateFailed,
+                                 StreamState::getOpened(Desc, NewErrS, true));
+  C.addTransition(StateFailed, constructSetEofNoteTag(C, E.StreamSym));
 }
 
 void StreamChecker::evalFgetpos(const FnDescription *Desc,
                                 const CallEvent &Call,
                                 CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef Sym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!Sym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  // Do not evaluate if stream is not found.
-  if (!State->get<StreamMap>(Sym))
-    return;
-
-  auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  DefinedSVal RetVal = makeRetVal(C, CE);
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
   ProgramStateRef StateNotFailed, StateFailed;
-  std::tie(StateFailed, StateNotFailed) =
-      C.getConstraintManager().assumeDual(State, RetVal);
+  std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.
@@ -1235,35 +1168,22 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
                                 const CallEvent &Call,
                                 CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  const StreamState *SS = State->get<StreamMap>(StreamSym);
-  if (!SS)
-    return;
-
-  auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  assertStreamStateOpened(SS);
-
-  DefinedSVal RetVal = makeRetVal(C, CE);
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
   ProgramStateRef StateNotFailed, StateFailed;
-  std::tie(StateFailed, StateNotFailed) =
-      C.getConstraintManager().assumeDual(State, RetVal);
+  std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
 
-  StateNotFailed = StateNotFailed->set<StreamMap>(
-      StreamSym, StreamState::getOpened(Desc, ErrorNone, false));
+  StateNotFailed = E.setStreamState(
+      StateNotFailed, StreamState::getOpened(Desc, ErrorNone, false));
 
   // At failure ferror could be set.
   // The standards do not tell what happens with the file position at failure.
   // But we can assume that it is dangerous to make a next I/O operation after
   // the position was not set correctly (similar to 'fseek').
-  StateFailed = StateFailed->set<StreamMap>(
-      StreamSym, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
+  StateFailed = E.setStreamState(
+      StateFailed, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
 
   C.addTransition(StateNotFailed);
   C.addTransition(StateFailed);
@@ -1272,33 +1192,20 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
 void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef Sym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!Sym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  if (!State->get<StreamMap>(Sym))
-    return;
-
-  auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  SValBuilder &SVB = C.getSValBuilder();
-  NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
-      State->BindExpr(CE, C.getLocationContext(), RetVal);
-  auto Cond =
-      SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(Call.getResultType()),
-                    SVB.getConditionType())
-          .getAs<DefinedOrUnknownSVal>();
-  if (!Cond)
-    return;
-  StateNotFailed = StateNotFailed->assume(*Cond, true);
+      State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+  StateNotFailed =
+      E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
+                      *E.SVB.makeZeroVal(Call.getResultType()).getAs<NonLoc>());
   if (!StateNotFailed)
     return;
 
-  ProgramStateRef StateFailed = State->BindExpr(
-      CE, C.getLocationContext(), SVB.makeIntVal(-1, Call.getResultType()));
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, -1);
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.
@@ -1310,23 +1217,12 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
 void StreamChecker::evalRewind(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  const StreamState *SS = State->get<StreamMap>(StreamSym);
-  if (!SS)
-    return;
-
-  auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  assertStreamStateOpened(SS);
-
-  State = State->set<StreamMap>(StreamSym,
-                                StreamState::getOpened(Desc, ErrorNone, false));
-
+  State =
+      E.setStreamState(State, StreamState::getOpened(Desc, ErrorNone, false));
   C.addTransition(State);
 }
 
@@ -1334,20 +1230,14 @@ void StreamChecker::evalClearerr(const FnDescription *Desc,
                                  const CallEvent &Call,
                                  CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
-
-  const StreamState *SS = State->get<StreamMap>(StreamSym);
-  if (!SS)
-    return;
-
-  assertStreamStateOpened(SS);
 
   // FilePositionIndeterminate is not cleared.
-  State = State->set<StreamMap>(
-      StreamSym,
-      StreamState::getOpened(Desc, ErrorNone, SS->FilePositionIndeterminate));
+  State = E.setStreamState(
+      State,
+      StreamState::getOpened(Desc, ErrorNone, E.SS->FilePositionIndeterminate));
   C.addTransition(State);
 }
 
@@ -1355,39 +1245,29 @@ void StreamChecker::evalFeofFerror(const FnDescription *Desc,
                                    const CallEvent &Call, CheckerContext &C,
                                    const StreamErrorState &ErrorKind) const {
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  const StreamState *SS = State->get<StreamMap>(StreamSym);
-  if (!SS)
-    return;
-
-  assertStreamStateOpened(SS);
-
-  if (SS->ErrorState & ErrorKind) {
+  if (E.SS->ErrorState & ErrorKind) {
     // Execution path with error of ErrorKind.
     // Function returns true.
     // From now on it is the only one error state.
-    ProgramStateRef TrueState = bindAndAssumeTrue(State, C, CE);
-    C.addTransition(TrueState->set<StreamMap>(
-        StreamSym, StreamState::getOpened(Desc, ErrorKind,
-                                          SS->FilePositionIndeterminate &&
+    ProgramStateRef TrueState = bindAndAssumeTrue(State, C, E.CE);
+    C.addTransition(E.setStreamState(
+        TrueState, StreamState::getOpened(Desc, ErrorKind,
+                                          E.SS->FilePositionIndeterminate &&
                                               !ErrorKind.isFEof())));
   }
-  if (StreamErrorState NewES = SS->ErrorState & (~ErrorKind)) {
+  if (StreamErrorState NewES = E.SS->ErrorState & (~ErrorKind)) {
     // Execution path(s) with ErrorKind not set.
     // Function returns false.
     // New error state is everything before minus ErrorKind.
-    ProgramStateRef FalseState = bindInt(0, State, C, CE);
-    C.addTransition(FalseState->set<StreamMap>(
-        StreamSym,
+    ProgramStateRef FalseState = E.bindReturnValue(State, C, 0);
+    C.addTransition(E.setStreamState(
+        FalseState,
         StreamState::getOpened(
-            Desc, NewES, SS->FilePositionIndeterminate && !NewES.isFEof())));
+            Desc, NewES, E.SS->FilePositionIndeterminate && !NewES.isFEof())));
   }
 }
 

@@ -3916,14 +3916,14 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       continue;
     }
     const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVA);
-    if (!Diff || isa<SCEVCouldNotCompute>(Diff))
+    if (isa<SCEVCouldNotCompute>(Diff))
       return std::nullopt;
     if (Diff->isNonConstantNegative()) {
       PtrSCEVA = PtrSCEV;
       continue;
     }
     const SCEV *Diff1 = SE.getMinusSCEV(PtrSCEVB, PtrSCEV);
-    if (!Diff1 || isa<SCEVCouldNotCompute>(Diff1))
+    if (isa<SCEVCouldNotCompute>(Diff1))
       return std::nullopt;
     if (Diff1->isNonConstantNegative()) {
       PtrSCEVB = PtrSCEV;
@@ -3931,7 +3931,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
     }
   }
   const SCEV *Stride = SE.getMinusSCEV(PtrSCEVB, PtrSCEVA);
-  if (!Stride)
+  if (isa<SCEVCouldNotCompute>(Stride))
     return std::nullopt;
   int Size = DL.getTypeStoreSize(ElemTy);
   auto TryGetStride = [&](const SCEV *Dist,
@@ -16221,19 +16221,29 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
         if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
           continue;
-        if (isa<Instruction>(Opcodes1[I]))
+        if (isa<Instruction>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Instruction>(Opcodes2[I]))
+        }
+        if (isa<Instruction>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]))
+        }
+        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<UndefValue>(Opcodes1[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (!isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
-          return true;
-        continue;
+        }
+        assert(!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]) &&
+               "Expected 1st non-undef and 2nd undef value");
+        return true;
       }
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {

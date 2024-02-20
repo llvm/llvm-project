@@ -5325,7 +5325,7 @@ def err_alias_template_extra_headers : Error<
 def err_template_spec_extra_headers : Error<
   "extraneous template parameter list in template specialization or "
   "out-of-line template definition">;
-def warn_template_spec_extra_headers : Warning<
+def ext_template_spec_extra_headers : ExtWarn<
   "extraneous template parameter list in template specialization">;
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
@@ -8255,6 +8255,9 @@ def err_not_tag_in_scope : Error<
 def ext_template_after_declarative_nns : ExtWarn<
     "'template' cannot be used after a declarative nested name specifier">,
     InGroup<DiagGroup<"template-in-declaration-name">>;
+def ext_alias_template_in_declarative_nns : ExtWarn<
+  "a declarative nested name specifier cannot name an alias template">,
+  InGroup<DiagGroup<"alias-template-in-declaration-name">>;
 
 def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;
