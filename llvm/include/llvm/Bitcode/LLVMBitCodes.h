@@ -399,7 +399,7 @@ enum ConstantsCodes {
   CST_CODE_DATA = 22,            // DATA:          [n x elements]
   CST_CODE_INLINEASM_OLD2 = 23,  // INLINEASM:     [sideeffect|alignstack|
                                  //                 asmdialect,asmstr,conststr]
-  CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
+  CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD = 24, //  [opty, flags, n x operands]
   CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
   CST_CODE_POISON = 26,                    // POISON
   CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
@@ -411,6 +411,7 @@ enum ConstantsCodes {
                               //                 sideeffect|alignstack|
                               //                 asmdialect|unwind,
                               //                 asmstr,conststr]
+  CST_CODE_CE_GEP_WITH_INRANGE = 31, // [opty, flags, range, n x operands]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
