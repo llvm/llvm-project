@@ -211,6 +211,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses extraneous template parameter lists as a language extension.
 
+- Clang now diagnoses declarative nested name specifiers that name alias templates.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
