@@ -147,6 +147,7 @@ int llvm::compileModuleWithNewPM(
       return 1;
     }
 
+    // FIXME: verify that there are no IR passes.
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
     MPM.addPass(PrintMIRPreparePass(*OS));
     MachineFunctionPassManager MFPM;
@@ -171,14 +172,6 @@ int llvm::compileModuleWithNewPM(
     outs() << PipelineStr << '\n';
     return 0;
   }
-
-  // Before executing passes, print the final values of the LLVM options.
-  cl::PrintOptionValues();
-
-  MPM.run(*M, MAM);
-
-  if (Context.getDiagHandlerPtr()->HasErrors)
-    exit(1);
 
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();
