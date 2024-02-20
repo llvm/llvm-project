@@ -100,6 +100,14 @@ struct AtomicFloatingBuiltin {
 
 #define GET_AtomicFloatingBuiltins_DECL
 #define GET_AtomicFloatingBuiltins_IMPL
+struct GroupUniformBuiltin {
+  StringRef Name;
+  uint32_t Opcode;
+  bool IsLogical;
+};
+
+#define GET_GroupUniformBuiltins_DECL
+#define GET_GroupUniformBuiltins_IMPL
 
 struct GetBuiltin {
   StringRef Name;
@@ -1010,6 +1018,57 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
     MIB.addUse(Call->Arguments[i]);
     MRI->setRegClass(Call->Arguments[i], &SPIRV::IDRegClass);
   }
+
+  return true;
+}
+
+static bool generateGroupUniformInst(const SPIRV::IncomingCall *Call,
+                                     MachineIRBuilder &MIRBuilder,
+                                     SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
+  if (!ST->canUseExtension(
+          SPIRV::Extension::SPV_KHR_uniform_group_instructions)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_KHR_uniform_group_instructions";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+  const SPIRV::GroupUniformBuiltin *GroupUniform =
+      SPIRV::lookupGroupUniformBuiltin(Builtin->Name);
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  Register GroupResultReg = Call->ReturnRegister;
+  MRI->setRegClass(GroupResultReg, &SPIRV::IDRegClass);
+
+  // Scope
+  Register ScopeReg = Call->Arguments[0];
+  MRI->setRegClass(ScopeReg, &SPIRV::IDRegClass);
+
+  // Group Operation
+  Register ConstGroupOpReg = Call->Arguments[1];
+  const MachineInstr *Const = getDefInstrMaybeConstant(ConstGroupOpReg, MRI);
+  if (!Const || Const->getOpcode() != TargetOpcode::G_CONSTANT)
+    report_fatal_error(
+        "expect a constant group operation for a uniform group instruction",
+        false);
+  const MachineOperand &ConstOperand = Const->getOperand(1);
+  if (!ConstOperand.isCImm())
+    report_fatal_error("uniform group instructions: group operation must be an "
+                       "integer constant",
+                       false);
+
+  // Value
+  Register ValueReg = Call->Arguments[2];
+  MRI->setRegClass(ValueReg, &SPIRV::IDRegClass);
+
+  auto MIB = MIRBuilder.buildInstr(GroupUniform->Opcode)
+                 .addDef(GroupResultReg)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+                 .addUse(ScopeReg);
+  addNumImm(ConstOperand.getCImm()->getValue(), MIB);
+  MIB.addUse(ValueReg);
 
   return true;
 }
@@ -2112,6 +2171,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateLoadStoreInst(Call.get(), MIRBuilder, GR);
   case SPIRV::IntelSubgroups:
     return generateIntelSubgroupsInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::GroupUniform:
+    return generateGroupUniformInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

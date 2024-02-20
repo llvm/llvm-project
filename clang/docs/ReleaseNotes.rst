@@ -96,6 +96,12 @@ C++20 Feature Support
   behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
 
+- Implemented the `__is_layout_compatible` intrinsic to support
+  `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
+  Note: `CWG1719: Layout compatibility and cv-qualification revisited  <https://cplusplus.github.io/CWG/issues/1719.html>`_
+  and `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
+  are not yet implemented.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -135,6 +141,11 @@ C23 Feature Support
 
   Fixes (`#81472 <https://github.com/llvm/llvm-project/issues/81472>`_).
 
+- Clang now generates predefined macros of the form ``__TYPE_FMTB__`` and
+  ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
+  macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
+  (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -166,6 +177,8 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+
+- The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
 
 Attribute Changes in Clang
 --------------------------

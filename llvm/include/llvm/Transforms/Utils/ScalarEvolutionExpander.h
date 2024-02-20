@@ -258,6 +258,14 @@ public:
   bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
                   bool RecomputePoisonFlags = false);
 
+  /// Return true if both increments directly increment the corresponding IV PHI
+  /// nodes and have the same opcode. It is not safe to re-use the flags from
+  /// the original increment, if it is more complex and SCEV expansion may have
+  /// yielded a more simplified wider increment.
+  static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi, PHINode *WidePhi,
+                                             Instruction *OrigInc,
+                                             Instruction *WideInc);
+
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.
   unsigned replaceCongruentIVs(Loop *L, const DominatorTree *DT,

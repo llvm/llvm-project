@@ -396,7 +396,7 @@ defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
 } // End OtherPredicates = [HasDot1Insts]
 
 def DOT2_BF16_Profile
-  : VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
+  : VOP3P_Profile<VOP_F32_V2BF16_V2BF16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
   let HasSrc1Mods = 1;
 }
 
