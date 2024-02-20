@@ -176,8 +176,8 @@ template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 class DirectiveStructureChecker : public virtual BaseChecker {
 protected:
   DirectiveStructureChecker(SemanticsContext &context,
-      std::unordered_map<D, DirectiveClauses<C, ClauseEnumSize>>
-          directiveClausesMap)
+      const std::unordered_map<D, DirectiveClauses<C, ClauseEnumSize>>
+          &directiveClausesMap)
       : context_{context}, directiveClausesMap_(directiveClausesMap) {}
   virtual ~DirectiveStructureChecker() {}
 
