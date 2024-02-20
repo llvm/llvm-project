@@ -4,8 +4,8 @@
 # RUN: ld.lld -shared %t.so.o -soname=so -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 
-# RUN: ld.lld -pie -z nopack-relative-relocs %t.o %t.so -o %t2
-# RUN: llvm-readobj -r %t2 | FileCheck --check-prefix=UNPACKED %s
+# RUN: ld.lld -pie %t.o %t.so -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=UNPACKED %s
 
 # UNPACKED:          Section ({{.+}}) .rela.dyn {
 # UNPACKED-NEXT:       0x30440 R_AARCH64_AUTH_RELATIVE - 0x1
@@ -20,16 +20,35 @@
 # UNPACKED-NEXT:     }
 
 # RUN: ld.lld -pie -z pack-relative-relocs %t.o %t.so -o %t2
-# RUN: llvm-readelf -S --dynamic-table %t2 | FileCheck --check-prefix=RELR-HEADERS %s
+# RUN: llvm-readelf -S -d -r -x .test %t2 | FileCheck --check-prefixes=RELR,HEX %s
 
-# RELR-HEADERS:      Section Headers:
-# RELR-HEADERS-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
-# RELR-HEADERS:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR:.*]] {{0*}}[[ADDR]] 000018 08 A 0 0 8
+# RELR:      Section Headers:
+# RELR-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
+# RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR:.*]] {{0*}}[[ADDR]] 000018 08 A 0 0 8
 
-# RELR-HEADERS:      Dynamic section at offset 0x310 contains 16 entries
-# RELR-HEADERS:      0x0000000070000012 (AARCH64_AUTH_RELR) 0x[[ADDR]]
-# RELR-HEADERS-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 24 (bytes)
-# RELR-HEADERS-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
+# RELR:      Dynamic section at offset 0x310 contains 16 entries
+# RELR:      0x0000000070000012 (AARCH64_AUTH_RELR) 0x[[ADDR]]
+# RELR-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 24 (bytes)
+# RELR-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
+
+## Decoded SHT_RELR section is same as UNPACKED,
+## but contains only the relative relocations.
+## Any relative relocations with odd offset stay in SHT_RELA.
+
+# RELR:      Relocation section '.rela.dyn' at offset {{.*}} contains 4 entries:
+# RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# RELR-NEXT: 0000000000030430  0000000000000411 R_AARCH64_AUTH_RELATIVE           123456789a
+# RELR-NEXT: 0000000000030449  0000000000000411 R_AARCH64_AUTH_RELATIVE           4
+# RELR-NEXT: 0000000000030438  0000000100000244 R_AARCH64_AUTH_ABS64   0000000000000000 zed2 + 0
+# RELR-NEXT: 0000000000030440  0000000200000244 R_AARCH64_AUTH_ABS64   0000000000000000 bar2 + 0
+# RELR-EMPTY:
+# RELR-NEXT: Relocation section '.relr.auth.dyn' at offset {{.*}} contains 5 entries:
+# RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# RELR-NEXT: 0000000000030410  0000000000000403 R_AARCH64_RELATIVE
+# RELR-NEXT: 0000000000030418  0000000000000403 R_AARCH64_RELATIVE
+# RELR-NEXT: 0000000000030420  0000000000000403 R_AARCH64_RELATIVE
+# RELR-NEXT: 0000000000030428  0000000000000403 R_AARCH64_RELATIVE
+# RELR-NEXT: 0000000000030452  0000000000000403 R_AARCH64_RELATIVE
 
 # RUN: llvm-readobj -r --raw-relr %t2 | FileCheck --check-prefix=RAW-RELR %s
 
@@ -41,28 +60,6 @@
 # RAW-RELR-NEXT:      0xF
 # RAW-RELR-NEXT:      0x30452
 # RAW-RELR-NEXT:      }
-
-# RUN: llvm-readobj -r %t2 | FileCheck --check-prefix=RELR %s
-
-## Decoded SHT_RELR section is same as UNPACKED,
-## but contains only the relative relocations.
-## Any relative relocations with odd offset stay in SHT_RELA.
-
-# RELR:      Section ({{.+}}) .rela.dyn {
-# RELR-NEXT:   0x30430 R_AARCH64_AUTH_RELATIVE - 0x123456789A
-# RELR-NEXT:   0x30449 R_AARCH64_AUTH_RELATIVE - 0x4
-# RELR-NEXT:   0x30438 R_AARCH64_AUTH_ABS64 zed2 0x0
-# RELR-NEXT:   0x30440 R_AARCH64_AUTH_ABS64 bar2 0x0
-# RELR-NEXT: }
-# RELR-NEXT: Section ({{.+}}) .relr.auth.dyn {
-# RELR-NEXT:   0x30410 R_AARCH64_RELATIVE -
-# RELR-NEXT:   0x30418 R_AARCH64_RELATIVE -
-# RELR-NEXT:   0x30420 R_AARCH64_RELATIVE -
-# RELR-NEXT:   0x30428 R_AARCH64_RELATIVE -
-# RELR-NEXT:   0x30452 R_AARCH64_RELATIVE -
-# RELR-NEXT: }
-
-# RUN: llvm-readobj -x .test %t2 | FileCheck --check-prefix=HEX %s
 
 # HEX:      Hex dump of section '.test':
 # HEX-NEXT: 0x00030410 01000000 2a000020 02000000 2b000000
