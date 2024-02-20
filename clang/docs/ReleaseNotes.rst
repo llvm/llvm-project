@@ -119,8 +119,8 @@ Resolutions to C++ Defect Reports
   in the template parameters, but is deduced from a previous argument.
   (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
 
-- ``const`` and ``volatile`` qualifiers are now ignored when evaluating
-  layout compatibility of two types.
+- Type qualifications are now ignored when evaluating layout compatibility
+  of two types.
   (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
 
 C Language Changes

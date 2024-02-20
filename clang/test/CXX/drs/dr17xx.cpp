@@ -70,6 +70,7 @@ static_assert(__is_layout_compatible(int, const int), "");
 static_assert(__is_layout_compatible(int, volatile int), "");
 static_assert(__is_layout_compatible(const int, volatile int), "");
 static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers), "");
+static_assert(__is_layout_compatible(int[], const volatile int[]), "");
 #endif
 } // namespace dr1719
 

@@ -1718,6 +1718,10 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(int, const int), "");
   static_assert(__is_layout_compatible(int, volatile int), "");
   static_assert(__is_layout_compatible(const int, volatile int), "");
+  static_assert(__is_layout_compatible(int *, int * __restrict), "");
+  // Note: atomic qualification matters for layout compatibility.
+  static_assert(!__is_layout_compatible(int, _Atomic int), "");
+  static_assert(__is_layout_compatible(_Atomic(int), _Atomic int), "");
   static_assert(!__is_layout_compatible(int, unsigned int), "");
   static_assert(!__is_layout_compatible(char, unsigned char), "");
   static_assert(!__is_layout_compatible(char, signed char), "");
