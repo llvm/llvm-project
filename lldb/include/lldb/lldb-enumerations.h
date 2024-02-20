@@ -664,6 +664,9 @@ enum CommandArgumentType {
   eArgTypeBindGenTypeParamValue,
   // END SWIFT
   eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
