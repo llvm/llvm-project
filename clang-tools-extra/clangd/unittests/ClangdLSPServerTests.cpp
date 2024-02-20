@@ -195,6 +195,67 @@ TEST_F(LSPTest, RecordsLatencies) {
   EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(1));
 }
 
+// clang-tidy's renames are converted to clangd's internal rename functionality,
+// see clangd#1589 and clangd#741
+TEST_F(LSPTest, ClangTidyRename) {
+  Annotations Header(R"cpp(
+    void [[foo]]();
+  )cpp");
+  Annotations Source(R"cpp(
+    void [[foo]]() {}
+  )cpp");
+  Opts.ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                              llvm::StringRef) {
+    ClangTidyOpts.Checks = {"-*,readability-identifier-naming"};
+    ClangTidyOpts.CheckOptions["readability-identifier-naming.FunctionCase"] =
+        "CamelCase";
+  };
+  auto &Client = start();
+  Client.didOpen("foo.hpp", Header.code());
+  Client.didOpen("foo.cpp", Source.code());
+
+  auto RenameDiag = Client.diagnostics("foo.cpp").value().at(0);
+
+  auto RenameCommand =
+      (*Client
+            .call("textDocument/codeAction",
+                  llvm::json::Object{
+                      {"textDocument", Client.documentID("foo.cpp")},
+                      {"context",
+                       llvm::json::Object{
+                           {"diagnostics", llvm::json::Array{RenameDiag}}}},
+                      {"range", Source.range()}})
+            .takeValue()
+            .getAsArray())[0];
+
+  ASSERT_EQ((*RenameCommand.getAsObject())["title"], "change 'foo' to 'Foo'");
+
+  Client.expectServerCall("workspace/applyEdit");
+  Client.call("workspace/executeCommand", RenameCommand);
+  Client.sync();
+
+  auto Params = Client.takeCallParams("workspace/applyEdit");
+  auto Uri = [&](llvm::StringRef Path) {
+    return Client.uri(Path).getAsString().value().str();
+  };
+  llvm::json::Object ExpectedEdit = llvm::json::Object{
+      {"edit", llvm::json::Object{
+                   {"changes",
+                    llvm::json::Object{
+                        {Uri("foo.hpp"), llvm::json::Array{llvm::json::Object{
+                                             {"range", Header.range()},
+                                             {"newText", "Foo"},
+                                         }}},
+
+                        {Uri("foo.cpp"), llvm::json::Array{llvm::json::Object{
+                                             {"range", Source.range()},
+                                             {"newText", "Foo"},
+                                         }}}
+
+                    }}}}};
+  EXPECT_EQ(Params, std::vector{llvm::json::Value(std::move(ExpectedEdit))});
+}
+
 TEST_F(LSPTest, IncomingCalls) {
   Annotations Code(R"cpp(
     void calle^e(int);
