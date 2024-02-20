@@ -83,8 +83,8 @@ template <> struct IntLogbConstants<int> {
 template <> struct IntLogbConstants<long> {
   LIBC_INLINE_VAR static constexpr long FP_LOGB0 = FP_ILOGB0;
   LIBC_INLINE_VAR static constexpr long FP_LOGBNAN = FP_ILOGBNAN;
-  LIBC_INLINE_VAR static constexpr long T_MAX = INT_MAX;
-  LIBC_INLINE_VAR static constexpr long T_MIN = INT_MIN;
+  LIBC_INLINE_VAR static constexpr long T_MAX = LONG_MAX;
+  LIBC_INLINE_VAR static constexpr long T_MIN = LONG_MIN;
 };
 
 template <typename T, typename U>
