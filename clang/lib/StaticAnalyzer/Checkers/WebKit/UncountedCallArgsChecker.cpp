@@ -73,6 +73,11 @@ public:
       unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
+        if (auto *MD = MemberCallExpr->getMethodDecl()) {
+          auto name = safeGetName(MD);
+          if (name == "ref" || name == "deref")
+            return;
+        }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
         QualType ArgType = MemberCallExpr->getObjectType();
         std::optional<bool> IsUncounted =
