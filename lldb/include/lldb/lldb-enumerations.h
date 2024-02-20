@@ -651,9 +651,6 @@ enum CommandArgumentType {
   eArgTypeTargetID,
   eArgTypeStopHookID,
   eArgTypeCompletionType,
-  eArgTypeRemotePath,
-  eArgTypeRemoteFilename,
-  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
