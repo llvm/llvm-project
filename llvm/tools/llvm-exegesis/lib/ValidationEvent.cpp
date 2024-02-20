@@ -16,17 +16,20 @@ struct ValidationEventInfo {
 
 // Information about validation events, indexed by `ValidationEvent` enum
 // value.
-static constexpr ValidationEventInfo ValidationEventInfos[NumValidationEvents] =
-    {
-        {"instructions-retired", "Count retired instructions"},
-        {"l1d-cache-load-misses", "Count L1D load cache misses"},
-        {"l1d-cache-store-misses", "Count L1D store cache misses"},
-        {"l1i-cache-load-misses", "Count L1I load cache misses"},
-        {"data-tlb-load-misses", "Count DTLB load misses"},
-        {"data-tlb-store-misses", "Count DTLB store misses"},
-        {"instruction-tlb-load-misses", "Count ITLB load misses"},
-        {"branch-prediction-misses", "Branch prediction misses"},
+static constexpr ValidationEventInfo ValidationEventInfos[] = {
+    {"instructions-retired", "Count retired instructions"},
+    {"l1d-cache-load-misses", "Count L1D load cache misses"},
+    {"l1d-cache-store-misses", "Count L1D store cache misses"},
+    {"l1i-cache-load-misses", "Count L1I load cache misses"},
+    {"data-tlb-load-misses", "Count DTLB load misses"},
+    {"data-tlb-store-misses", "Count DTLB store misses"},
+    {"instruction-tlb-load-misses", "Count ITLB load misses"},
+    {"branch-prediction-misses", "Branch prediction misses"},
 };
+
+static_assert(sizeof(ValidationEventInfos) ==
+                  NumValidationEvents * sizeof(ValidationEventInfo),
+              "please update ValidationEventInfos");
 
 } // namespace
 
