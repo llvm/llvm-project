@@ -142,12 +142,6 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
-// TODO: Remove this option
-static cl::opt<bool> EnableSimplifyDemandedUseFPClass(
-    "instcombine-simplify-demanded-fp-class",
-    cl::desc("Enable demanded floating-point class optimizations"),
-    cl::init(false));
-
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
 // increases variable availability at the cost of accuracy. Variables that
@@ -2621,10 +2615,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *V;
         if ((has_single_bit(TyAllocSize) &&
              match(GEP.getOperand(1),
-                   m_Exact(m_AShr(m_Value(V),
-                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+                   m_Exact(m_Shr(m_Value(V),
+                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
-                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               Builder.getInt8Ty(), GEP.getPointerOperand(), V);
           NewGEP->setIsInBounds(GEP.isInBounds());
@@ -3111,9 +3105,6 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  if (!EnableSimplifyDemandedUseFPClass)
-    return nullptr;
-
   Value *RetVal = RI.getReturnValue();
   if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
     return nullptr;

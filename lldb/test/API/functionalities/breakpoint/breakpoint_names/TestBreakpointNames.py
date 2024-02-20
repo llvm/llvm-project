@@ -130,12 +130,12 @@ class BreakpointNames(TestBase):
         name_list = lldb.SBStringList()
         bkpt.GetNames(name_list)
         num_names = name_list.GetSize()
-        self.assertEquals(
+        self.assertEqual(
             num_names, 1, "Name list has %d items, expected 1." % (num_names)
         )
 
         name = name_list.GetStringAtIndex(0)
-        self.assertEquals(
+        self.assertEqual(
             name,
             other_bkpt_name,
             "Remaining name was: %s expected %s." % (name, other_bkpt_name),
@@ -190,10 +190,10 @@ class BreakpointNames(TestBase):
         bkpts = lldb.SBBreakpointList(self.target)
         self.target.FindBreakpointsByName(bkpt_name, bkpts)
 
-        self.assertEquals(bkpts.GetSize(), 1, "One breakpoint matched.")
+        self.assertEqual(bkpts.GetSize(), 1, "One breakpoint matched.")
         found_bkpt = bkpts.GetBreakpointAtIndex(0)
-        self.assertEquals(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
-        self.assertEquals(bkpt.GetID(), bkpt_id, "With the same ID as before.")
+        self.assertEqual(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
+        self.assertEqual(bkpt.GetID(), bkpt_id, "With the same ID as before.")
 
         retval = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand(

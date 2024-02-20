@@ -82,10 +82,11 @@ func.func @sparse_constant_csc() -> tensor<8x7xf32, #CSC>{
 // CHECK:             scf.if
 // CHECK:               tensor.insert
 // CHECK:           sparse_tensor.load
-// CHECK:           sparse_tensor.reorder_coo
+// CHECK:           %[[TMP:.*]] = sparse_tensor.reorder_coo
 // CHECK:           sparse_tensor.foreach
 // CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
+// CHECK:           bufferization.dealloc_tensor %[[TMP]]
 func.func @sparse_convert_3d(%arg0: tensor<?x?x?xf64>) -> tensor<?x?x?xf64, #SparseTensor> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?x?xf64> to tensor<?x?x?xf64, #SparseTensor>
   return %0 : tensor<?x?x?xf64, #SparseTensor>

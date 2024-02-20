@@ -37,22 +37,22 @@ HwMode::HwMode(Record *R) {
 }
 
 LLVM_DUMP_METHOD
-void HwMode::dump() const {
-  dbgs() << Name << ": " << Features << '\n';
-}
+void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 
 HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
-  std::vector<Record*> Modes = R->getValueAsListOfDefs("Modes");
-  std::vector<Record*> Objects = R->getValueAsListOfDefs("Objects");
+  std::vector<Record *> Modes = R->getValueAsListOfDefs("Modes");
+  std::vector<Record *> Objects = R->getValueAsListOfDefs("Objects");
   if (Modes.size() != Objects.size()) {
-    PrintError(R->getLoc(), "in record " + R->getName() +
-        " derived from HwModeSelect: the lists Modes and Objects should "
-        "have the same size");
+    PrintError(
+        R->getLoc(),
+        "in record " + R->getName() +
+            " derived from HwModeSelect: the lists Modes and Objects should "
+            "have the same size");
     report_fatal_error("error in target description.");
   }
   for (unsigned i = 0, e = Modes.size(); i != e; ++i) {
     unsigned ModeId = CGH.getHwModeId(Modes[i]);
-    Items.push_back(std::make_pair(ModeId, Objects[i]));
+    Items.push_back(std::pair(ModeId, Objects[i]));
   }
 }
 
@@ -71,11 +71,11 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
     if (R->getName() == DefaultModeName)
       continue;
     Modes.emplace_back(R);
-    ModeIds.insert(std::make_pair(R, Modes.size()));
+    ModeIds.insert(std::pair(R, Modes.size()));
   }
 
   for (Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
-    auto P = ModeSelects.emplace(std::make_pair(R, HwModeSelect(R, *this)));
+    auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
     assert(P.second);
     (void)P;
   }

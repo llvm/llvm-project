@@ -1034,6 +1034,13 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     if (Reloc.Offset < PreviousOffset)
       return make_error<GenericBinaryError>("relocations not in offset order",
                                             object_error::parse_failed);
+
+    auto badReloc = [&](StringRef msg) {
+      return make_error<GenericBinaryError>(
+          msg + ": " + Twine(Symbols[Reloc.Index].Info.Name),
+          object_error::parse_failed);
+    };
+
     PreviousOffset = Reloc.Offset;
     Reloc.Index = readVaruint32(Ctx);
     switch (type) {
@@ -1046,18 +1053,15 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB64:
       if (!isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation function index", object_error::parse_failed);
+        return badReloc("invalid function relocation");
       break;
     case wasm::R_WASM_TABLE_NUMBER_LEB:
       if (!isValidTableSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation table index",
-                                              object_error::parse_failed);
+        return badReloc("invalid table relocation");
       break;
     case wasm::R_WASM_TYPE_INDEX_LEB:
       if (Reloc.Index >= Signatures.size())
-        return make_error<GenericBinaryError>("invalid relocation type index",
-                                              object_error::parse_failed);
+        return badReloc("invalid relocation type index");
       break;
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
       // R_WASM_GLOBAL_INDEX_LEB are can be used against function and data
@@ -1065,18 +1069,15 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
       if (!isValidGlobalSymbol(Reloc.Index) &&
           !isValidDataSymbol(Reloc.Index) &&
           !isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation global index",
-                                              object_error::parse_failed);
+        return badReloc("invalid global relocation");
       break;
     case wasm::R_WASM_GLOBAL_INDEX_I32:
       if (!isValidGlobalSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation global index",
-                                              object_error::parse_failed);
+        return badReloc("invalid global relocation");
       break;
     case wasm::R_WASM_TAG_INDEX_LEB:
       if (!isValidTagSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation tag index",
-                                              object_error::parse_failed);
+        return badReloc("invalid tag relocation");
       break;
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
@@ -1085,8 +1086,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32:
       if (!isValidDataSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation data index",
-                                              object_error::parse_failed);
+        return badReloc("invalid data relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
     case wasm::R_WASM_MEMORY_ADDR_LEB64:
@@ -1095,26 +1095,22 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
       if (!isValidDataSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>("invalid relocation data index",
-                                              object_error::parse_failed);
+        return badReloc("invalid data relocation");
       Reloc.Addend = readVarint64(Ctx);
       break;
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
       if (!isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation function index", object_error::parse_failed);
+        return badReloc("invalid function relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
     case wasm::R_WASM_FUNCTION_OFFSET_I64:
       if (!isValidFunctionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation function index", object_error::parse_failed);
+        return badReloc("invalid function relocation");
       Reloc.Addend = readVarint64(Ctx);
       break;
     case wasm::R_WASM_SECTION_OFFSET_I32:
       if (!isValidSectionSymbol(Reloc.Index))
-        return make_error<GenericBinaryError>(
-            "invalid relocation section index", object_error::parse_failed);
+        return badReloc("invalid section relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
     default:
@@ -1404,18 +1400,20 @@ Error WasmObjectFile::parseTagSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
   GlobalSection = Sections.size();
+  const uint8_t *SectionStart = Ctx.Ptr;
   uint32_t Count = readVaruint32(Ctx);
   Globals.reserve(Count);
   while (Count--) {
     wasm::WasmGlobal Global;
     Global.Index = NumImportedGlobals + Globals.size();
+    const uint8_t *GlobalStart = Ctx.Ptr;
+    Global.Offset = static_cast<uint32_t>(GlobalStart - SectionStart);
     auto GlobalOpcode = readVaruint32(Ctx);
-    auto GlobalType = parseValType(Ctx, GlobalOpcode);
-    // assert(GlobalType <= std::numeric_limits<wasm::ValType>::max());
-    Global.Type.Type = (uint8_t)GlobalType;
+    Global.Type.Type = (uint8_t)parseValType(Ctx, GlobalOpcode);
     Global.Type.Mutable = readVaruint1(Ctx);
     if (Error Err = readInitExpr(Global.InitExpr, Ctx))
       return Err;
+    Global.Size = static_cast<uint32_t>(Ctx.Ptr - GlobalStart);
     Globals.push_back(Global);
   }
   if (Ctx.Ptr != Ctx.End)
@@ -1568,7 +1566,7 @@ WasmObjectFile::getDefinedFunction(uint32_t Index) const {
   return Functions[Index - NumImportedFunctions];
 }
 
-wasm::WasmGlobal &WasmObjectFile::getDefinedGlobal(uint32_t Index) {
+const wasm::WasmGlobal &WasmObjectFile::getDefinedGlobal(uint32_t Index) const {
   assert(isDefinedGlobalIndex(Index));
   return Globals[Index - NumImportedGlobals];
 }
@@ -1819,18 +1817,22 @@ Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {
 
 Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   auto &Sym = getWasmSymbol(Symb);
+  if (!Sym.isDefined())
+    return 0;
+  Expected<section_iterator> Sec = getSymbolSection(Symb);
+  if (!Sec)
+    return Sec.takeError();
+  uint32_t SectionAddress = getSectionAddress(Sec.get()->getRawDataRefImpl());
   if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
       isDefinedFunctionIndex(Sym.Info.ElementIndex)) {
-    // For object files, use the section offset. The linker relies on this.
-    // For linked files, use the file offset. This behavior matches the way
-    // browsers print stack traces and is useful for binary size analysis.
-    // (see https://webassembly.github.io/spec/web-api/index.html#conventions)
-    uint32_t Adjustment = isRelocatableObject() || isSharedObject()
-                              ? 0
-                              : Sections[CodeSection].Offset;
     return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset +
-           Adjustment;
+           SectionAddress;
   }
+  if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_GLOBAL &&
+      isDefinedGlobalIndex(Sym.Info.ElementIndex)) {
+    return getDefinedGlobal(Sym.Info.ElementIndex).Offset + SectionAddress;
+  }
+
   return getSymbolValue(Symb);
 }
 
@@ -1934,6 +1936,22 @@ uint32_t WasmObjectFile::getSymbolSectionIdImpl(const WasmSymbol &Sym) const {
   default:
     llvm_unreachable("unknown WasmSymbol::SymbolType");
   }
+}
+
+uint32_t WasmObjectFile::getSymbolSize(SymbolRef Symb) const {
+  const WasmSymbol &Sym = getWasmSymbol(Symb);
+  if (!Sym.isDefined())
+    return 0;
+  if (Sym.isTypeGlobal())
+    return getDefinedGlobal(Sym.Info.ElementIndex).Size;
+  if (Sym.isTypeData())
+    return Sym.Info.DataRef.Size;
+  if (Sym.isTypeFunction())
+    return functions()[Sym.Info.ElementIndex - getNumImportedFunctions()].Size;
+  // Currently symbol size is only tracked for data segments and functions. In
+  // principle we could also track size (e.g. binary size) for tables, globals
+  // and element segments etc too.
+  return 0;
 }
 
 void WasmObjectFile::moveSectionNext(DataRefImpl &Sec) const { Sec.d.a++; }
