@@ -31,9 +31,8 @@ public:
     return true;
   }
 
-  // Set the lower limit for number of blocks in a jump table in such a way to
-  // prevent creation of jump tables from switch
-  unsigned getMinimumJumpTableEntries() const override { return 0xffffffff; }
+  // prevent creation of jump tables
+  bool areJTsAllowed(const Function *) const override { return false; }
 
   // This is to prevent sexts of non-i64 vector indices which are generated
   // within general IRTranslator hence type generation for it is omitted.
