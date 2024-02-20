@@ -35,7 +35,7 @@ define i1 @cmp_sext_positive_increment(i32 %a, i32 %b, i64 %c){
 ; CHECK-LABEL: define i1 @cmp_sext_positive_increment(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i64 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[C]], -1
+; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[C]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -49,7 +49,7 @@ define i1 @cmp_sext_positive_increment(i32 %a, i32 %b, i64 %c){
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
-  %pos = icmp sgt i64 %c, -1
+  %pos = icmp sgt i64 %c, 0
   call void @llvm.assume(i1 %pos)
   %cmp = icmp slt i32 %a, %b
   br i1 %cmp, label %then, label %else
