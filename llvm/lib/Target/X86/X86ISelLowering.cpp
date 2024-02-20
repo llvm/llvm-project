@@ -54560,6 +54560,20 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
 
+  // add(psadbw(X,0),psadbw(Y,0)) -> psadbw(add(X,Y),0)
+  // iff X and Y won't overflow.
+  if (Op0.getOpcode() == X86ISD::PSADBW && Op1.getOpcode() == X86ISD::PSADBW &&
+      ISD::isBuildVectorAllZeros(Op0.getOperand(1).getNode()) &&
+      ISD::isBuildVectorAllZeros(Op1.getOperand(1).getNode())) {
+    if (DAG.willNotOverflowAdd(false, Op0.getOperand(0), Op1.getOperand(0))) {
+      MVT OpVT = Op0.getOperand(1).getSimpleValueType();
+      SDValue Sum =
+          DAG.getNode(ISD::ADD, DL, OpVT, Op0.getOperand(0), Op1.getOperand(0));
+      return DAG.getNode(X86ISD::PSADBW, DL, VT, Sum,
+                         getZeroVector(OpVT, Subtarget, DAG, DL));
+    }
+  }
+
   // If vectors of i1 are legal, turn (add (zext (vXi1 X)), Y) into
   // (sub Y, (sext (vXi1 X))).
   // FIXME: We have the (sub Y, (zext (vXi1 X))) -> (add (sext (vXi1 X)), Y) in
