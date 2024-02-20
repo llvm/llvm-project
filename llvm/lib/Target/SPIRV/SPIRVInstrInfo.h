@@ -59,7 +59,7 @@ enum AsmComments {
   // It is a half type
   ASM_PRINTER_WIDTH16 = MachineInstr::TAsmComments
 };
-}; // namespace SPIRV
+} // namespace SPIRV
 
 } // namespace llvm
 
