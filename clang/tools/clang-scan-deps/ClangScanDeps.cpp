@@ -366,7 +366,7 @@ static bool emitCompilationDBWithCASTreeArguments(
         : Worker(Service, std::move(FS)), Saver(Alloc) {}
   };
   std::vector<std::unique_ptr<PerThreadState>> PerThreadStates;
-  for (unsigned I = 0, E = Pool.getThreadCount(); I != E; ++I) {
+  for (unsigned I = 0, E = Pool.getMaxConcurrency(); I != E; ++I) {
     std::unique_ptr<llvm::vfs::FileSystem> FS =
         llvm::cas::createCASProvidingFileSystem(
             DB, llvm::vfs::createPhysicalFileSystem());
@@ -386,7 +386,7 @@ static bool emitCompilationDBWithCASTreeArguments(
   };
   std::vector<CompDBEntry> CompDBEntries;
 
-  for (unsigned I = 0, E = Pool.getThreadCount(); I != E; ++I) {
+  for (unsigned I = 0, E = Pool.getMaxConcurrency(); I != E; ++I) {
     Pool.async([&, I]() {
       while (true) {
         const tooling::CompileCommand *Input;
@@ -1196,7 +1196,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
+  for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I) {
     std::unique_ptr<llvm::vfs::FileSystem> FS =
         llvm::vfs::createPhysicalFileSystem();
     if (CAS)
@@ -1249,13 +1249,13 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (Verbose) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << Pool.getThreadCount() << " workers\n";
+                 << " files using " << Pool.getMaxConcurrency() << " workers\n";
   }
 
   llvm::Timer T;
   T.startTimer();
 
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
+  for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I) {
     Pool.async([&, I]() {
       llvm::DenseSet<ModuleID> AlreadySeenModules;
       while (auto MaybeInputIndex = GetNextInputIndex()) {

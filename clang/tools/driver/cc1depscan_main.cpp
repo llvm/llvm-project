@@ -995,7 +995,7 @@ int ScanServer::listen() {
     }
   };
 
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
+  for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
     Pool.async(ServiceLoop, I);
 
   if (!TimeoutSeconds) {
