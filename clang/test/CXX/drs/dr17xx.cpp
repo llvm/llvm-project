@@ -46,6 +46,34 @@ namespace dr1715 { // dr1715: 3.9
 #endif
 }
 
+namespace dr1719 { // dr1719: no
+#if __cplusplus >= 201103L
+struct CStruct {
+  int one;
+  int two;
+};
+
+struct CStruct2 {
+  int one;
+  int two;
+};
+
+struct CStructWithQualifiers {
+  const int one;
+  volatile int two;
+};
+
+static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
+static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
+static_assert(__is_layout_compatible(const CStruct, volatile CStruct2), "");
+// FIXME: all of the following pairs of types are layout-compatible
+static_assert(!__is_layout_compatible(int, const int), "");
+static_assert(!__is_layout_compatible(int, volatile int), "");
+static_assert(!__is_layout_compatible(const int, volatile int), "");
+static_assert(!__is_layout_compatible(CStruct, CStructWithQualifiers), "");
+#endif
+} // namespace dr1719
+
 namespace dr1722 { // dr1722: 9
 #if __cplusplus >= 201103L
 void f() {

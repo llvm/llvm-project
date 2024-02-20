@@ -135,20 +135,8 @@ function(_get_common_test_compile_options output_var flags)
     #   list(APPEND compile_options "-Wglobal-constructors")
     # endif()
   endif()
-  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    # TODO: Set these flags
-    # list(APPEND compile_options "-nogpulib")
-    # list(APPEND compile_options "-fvisibility=hidden")
-    # list(APPEND compile_options "-fconvergent-functions")
-
-    # # Manually disable all standard include paths and include the resource
-    # # directory to prevent system headers from being included.
-    # list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    # list(APPEND compile_options "-nostdinc")
-  endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
-
 
 # Obtains NVPTX specific arguments for compilation.
 # The PTX feature is primarily based on the CUDA toolchain version. We want to
@@ -202,19 +190,21 @@ function(get_nvptx_compile_options output_var gpu_arch)
   set(${output_var} ${nvptx_options} PARENT_SCOPE)
 endfunction()
 
-#TODO: Fold this into a function to get test framework compile options (which
-# need to be separate from the main test compile options because otherwise they
-# error)
-set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
-    -fpie -ffreestanding -fno-exceptions -fno-rtti)
-# The GPU build requires overriding the default CMake triple and architecture.
-if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-  list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-       --target=${LIBC_GPU_TARGET_TRIPLE}
-       -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
-elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
-  list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
-endif()
+function(_get_hermetic_test_compile_options output_var flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  list(APPEND compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags}
+       ${flags} -fpie -ffreestanding -fno-exceptions -fno-rtti)
+
+  # The GPU build requires overriding the default CMake triple and architecture.
+  if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
+    list(APPEND compile_options
+         -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+         --target=${LIBC_GPU_TARGET_TRIPLE}
+         -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
+  elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+    get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
+    list(APPEND compile_options
+         -nogpulib ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
+  endif()
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()

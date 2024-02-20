@@ -457,8 +457,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
                                                 raw_ostream &CS) const {
-  bool IsSDWA = false;
-
   unsigned MaxInstBytesNum = std::min((size_t)TargetMaxInstBytes, Bytes_.size());
   Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
@@ -572,15 +570,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
       }
 
-      Res = tryDecodeInst(DecoderTableSDWA64, MI, QW, Address, CS);
-      if (Res) { IsSDWA = true;  break; }
-
-      Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address, CS);
-      if (Res) { IsSDWA = true;  break; }
-
-      Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address, CS);
-      if (Res) { IsSDWA = true;  break; }
-
       if (STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem)) {
         Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS);
         if (Res)
@@ -595,6 +584,48 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         if (Res)
           break;
       }
+
+      if (STI.hasFeature(AMDGPU::FeatureGFX940Insts)) {
+        Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address, CS);
+        if (Res)
+          break;
+      }
+
+      if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts)) {
+        Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS);
+        if (Res)
+          break;
+      }
+
+      Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS);
+      if (Res)
+        break;
+
+      Res = tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS);
+      if (Res)
+        break;
+
+      Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS);
+      if (Res)
+        break;
+
+      Res = tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI,
+                          QW, Address, CS);
+      if (Res)
+        break;
+
+      Res = tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI,
+                          QW, Address, CS);
+      if (Res)
+        break;
+
+      Res = tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS);
+      if (Res)
+        break;
+
+      Res = tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS);
+      if (Res)
+        break;
     }
 
     // Reinitialize Bytes as DPP64 could have eaten too much
@@ -632,48 +663,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Res = tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
                         Address, CS);
-    if (Res)
-      break;
-
-    if (Bytes.size() < 4) break;
-    const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
-
-    if (STI.hasFeature(AMDGPU::FeatureGFX940Insts)) {
-      Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address, CS);
-      if (Res)
-        break;
-    }
-
-    if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts)) {
-      Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS);
-      if (Res)
-        break;
-    }
-
-    Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS);
-    if (Res) break;
-
-    Res = tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS);
-    if (Res) break;
-
-    Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS);
-    if (Res) break;
-
-    Res = tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
-                        Address, CS);
-    if (Res)
-      break;
-
-    Res = tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
-                        Address, CS);
-    if (Res)
-      break;
-
-    Res = tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS);
-    if (Res)
-      break;
-
-    Res = tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS);
   } while (false);
 
   if (Res && AMDGPU::isMAC(MI.getOpcode())) {
@@ -771,7 +760,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VINTERP))
     Res = convertVINTERPInst(MI);
 
-  if (Res && IsSDWA)
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::SDWA))
     Res = convertSDWAInst(MI);
 
   int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
