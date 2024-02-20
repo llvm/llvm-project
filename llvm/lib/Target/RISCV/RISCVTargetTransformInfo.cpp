@@ -326,18 +326,18 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     switch (Kind) {
     default:
       break;
-    case TTI::SK_InsertSubvector:
-      if (auto *FSubTy = dyn_cast<FixedVectorType>(SubTp)) {
-        unsigned TpRegs = getRegUsageForType(Tp);
-        unsigned SubTpRegs = getRegUsageForType(SubTp);
-        unsigned NextSubTpRegs = getRegUsageForType(FixedVectorType::get(
-            Tp->getElementType(), FSubTy->getNumElements() + 1));
-        // Whole vector insert - just the vector itself.
-        if (Index == 0 && SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
-            TpRegs >= SubTpRegs)
-          return TTI::TCC_Free;
-      }
+    case TTI::SK_InsertSubvector: {
+      auto *FSubTy = dyn_cast<FixedVectorType>(SubTp);
+      unsigned TpRegs = getRegUsageForType(Tp);
+      unsigned SubTpRegs = getRegUsageForType(SubTp);
+      unsigned NextSubTpRegs = getRegUsageForType(FixedVectorType::get(
+          Tp->getElementType(), FSubTy->getNumElements() + 1));
+      // Whole vector insert - just the vector itself.
+      if (Index == 0 && SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
+          TpRegs >= SubTpRegs)
+        return TTI::TCC_Free;
       break;
+    }
     case TTI::SK_PermuteSingleSrc: {
       if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
         MVT EltTp = LT.second.getVectorElementType();

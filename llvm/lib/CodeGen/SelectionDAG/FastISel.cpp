@@ -1188,9 +1188,11 @@ void FastISel::handleDbgInfo(const Instruction *II) {
   MIMD = MIMetadata();
 
   // Reverse order of debug records, because fast-isel walks through backwards.
-  for (DPValue &DPV : llvm::reverse(II->getDbgValueRange())) {
+  for (DbgRecord &DPR : llvm::reverse(II->getDbgValueRange())) {
     flushLocalValueMap();
     recomputeInsertPt();
+
+    DPValue &DPV = cast<DPValue>(DPR);
 
     Value *V = nullptr;
     if (!DPV.hasArgList())
