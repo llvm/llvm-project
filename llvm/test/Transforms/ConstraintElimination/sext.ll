@@ -31,6 +31,40 @@ else:
   ret i1 false
 }
 
+define i1 @cmp_sext_positive_increment(i32 %a, i32 %b, i64 %c){
+; CHECK-LABEL: define i1 @cmp_sext_positive_increment(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i64 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[C]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], [[C]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %pos = icmp sgt i64 %c, -1
+  call void @llvm.assume(i1 %pos)
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sa = sext i32 %a to i64
+  %sb = sext i32 %b to i64
+  %add = add nsw i64 %sa, %c
+  %cmp2 = icmp sge i64 %sb, %add
+  ret i1 %cmp2
+
+else:
+  ret i1 false
+}
+
 define i1 @cmp_sext_sgt(i32 %a, i32 %b){
 ; CHECK-LABEL: define i1 @cmp_sext_sgt(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
@@ -146,6 +180,36 @@ then:
   %sa = zext i32 %a to i64
   %sb = zext i32 %b to i64
   %add = add nsw i64 %sa, 1
+  %cmp2 = icmp sge i64 %sb, %add
+  ret i1 %cmp2
+
+else:
+  ret i1 false
+}
+
+define i1 @cmp_sext_unknown_increment(i32 %a, i32 %b, i64 %c){
+; CHECK-LABEL: define i1 @cmp_sext_unknown_increment(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i64 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SA:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[SB:%.*]] = sext i32 [[B]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], [[C]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i64 [[SB]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sa = sext i32 %a to i64
+  %sb = sext i32 %b to i64
+  %add = add nsw i64 %sa, %c
   %cmp2 = icmp sge i64 %sb, %add
   ret i1 %cmp2
 
