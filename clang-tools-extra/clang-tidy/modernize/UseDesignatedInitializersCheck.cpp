@@ -118,7 +118,7 @@ void UseDesignatedInitializersCheck::check(
                                              Designator + "=");
       }
     }
-    diag(Type->getBeginLoc(), "this is the type to initialize",
+    diag(Type->getBeginLoc(), "aggregate type is defined here",
          DiagnosticIDs::Note);
     return;
   }
