@@ -299,6 +299,8 @@ static const StringMap<MachineInfo> TargetMap{
     // LoongArch
     {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
+    // SystemZ
+    {"elf64-s390", {ELF::EM_S390, true, false}},
 };
 
 static Expected<TargetInfo>

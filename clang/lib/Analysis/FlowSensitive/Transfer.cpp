@@ -663,10 +663,18 @@ public:
   void VisitInitListExpr(const InitListExpr *S) {
     QualType Type = S->getType();
 
-    if (!Type->isStructureOrClassType()) {
+    if (Type->isUnionType()) {
+      // FIXME: Initialize unions properly.
       if (auto *Val = Env.createValue(Type))
         Env.setValue(*S, *Val);
+      return;
+    }
 
+    if (!Type->isStructureOrClassType()) {
+      // Until array initialization is implemented, we don't need to care about
+      // cases where `getNumInits() > 1`.
+      if (S->getNumInits() == 1)
+        propagateValueOrStorageLocation(*S->getInit(0), *S, Env);
       return;
     }
 

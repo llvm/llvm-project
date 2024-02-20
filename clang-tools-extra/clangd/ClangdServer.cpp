@@ -625,9 +625,10 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
   WorkScheduler->runWithAST("Rename", File, std::move(Action));
 }
 
+namespace {
 // May generate several candidate selections, due to SelectionTree ambiguity.
 // vector of pointers because GCC doesn't like non-copyable Selection.
-static llvm::Expected<std::vector<std::unique_ptr<Tweak::Selection>>>
+llvm::Expected<std::vector<std::unique_ptr<Tweak::Selection>>>
 tweakSelection(const Range &Sel, const InputsAndAST &AST,
                llvm::vfs::FileSystem *FS) {
   auto Begin = positionToOffset(AST.Inputs.Contents, Sel.start);
@@ -647,6 +648,27 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST,
   assert(!Result.empty() && "Expected at least one SelectionTree");
   return std::move(Result);
 }
+
+// Some fixes may perform local renaming, we want to convert those to clangd
+// rename commands, such that we can leverage the index for more accurate
+// results.
+std::optional<ClangdServer::CodeActionResult::Rename>
+tryConvertToRename(const Diag *Diag, const Fix &Fix) {
+  bool IsClangTidyRename = Diag->Source == Diag::ClangTidy &&
+                           Diag->Name == "readability-identifier-naming" &&
+                           !Fix.Edits.empty();
+  if (IsClangTidyRename && Diag->InsideMainFile) {
+    ClangdServer::CodeActionResult::Rename R;
+    R.NewName = Fix.Edits.front().newText;
+    R.FixMessage = Fix.Message;
+    R.Diag = {Diag->Range, Diag->Message};
+    return R;
+  }
+
+  return std::nullopt;
+}
+
+} // namespace
 
 void ClangdServer::codeAction(const CodeActionInputs &Params,
                               Callback<CodeActionResult> CB) {
@@ -668,16 +690,22 @@ void ClangdServer::codeAction(const CodeActionInputs &Params,
     CodeActionResult Result;
     Result.Version = InpAST->AST.version().str();
     if (KindAllowed(CodeAction::QUICKFIX_KIND)) {
-      auto FindMatchedFixes =
-          [&InpAST](const DiagRef &DR) -> llvm::ArrayRef<Fix> {
+      auto FindMatchedDiag = [&InpAST](const DiagRef &DR) -> const Diag * {
         for (const auto &Diag : InpAST->AST.getDiagnostics())
           if (Diag.Range == DR.Range && Diag.Message == DR.Message)
-            return Diag.Fixes;
-        return {};
+            return &Diag;
+        return nullptr;
       };
-      for (const auto &Diag : Params.Diagnostics)
-        for (const auto &Fix : FindMatchedFixes(Diag))
-          Result.QuickFixes.push_back({Diag, Fix});
+      for (const auto &DiagRef : Params.Diagnostics) {
+        if (const auto *Diag = FindMatchedDiag(DiagRef))
+          for (const auto &Fix : Diag->Fixes) {
+            if (auto Rename = tryConvertToRename(Diag, Fix)) {
+              Result.Renames.emplace_back(std::move(*Rename));
+            } else {
+              Result.QuickFixes.push_back({DiagRef, Fix});
+            }
+          }
+      }
     }
 
     // Collect Tweaks

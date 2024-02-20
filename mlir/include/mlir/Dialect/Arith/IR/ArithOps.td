@@ -788,7 +788,7 @@ def Arith_ShLIOp : Arith_IntBinaryOpWithOverflowFlags<"shli"> {
     The `shli` operation shifts the integer value of the first operand to the left 
     by the integer value of the second operand. The second operand is interpreted as 
     unsigned. The low order bits are filled with zeros. If the value of the second 
-    operand is greater than the bitwidth of the first operand, then the 
+    operand is greater or equal than the bitwidth of the first operand, then the
     operation returns poison.
 
     This op supports `nuw`/`nsw` overflow flags which stands stand for
@@ -818,8 +818,8 @@ def Arith_ShRUIOp : Arith_TotalIntBinaryOp<"shrui"> {
     The `shrui` operation shifts an integer value of the first operand to the right 
     by the value of the second operand. The first operand is interpreted as unsigned,
     and the second operand is interpreted as unsigned. The high order bits are always 
-    filled with zeros. If the value of the second operand is greater than the bitwidth
-    of the first operand, then the operation returns poison.
+    filled with zeros. If the value of the second operand is greater or equal than the
+    bitwidth of the first operand, then the operation returns poison.
 
     Example:
 
@@ -844,8 +844,8 @@ def Arith_ShRSIOp : Arith_TotalIntBinaryOp<"shrsi"> {
     and the second operand is interpreter as unsigned. The high order bits in the 
     output are filled with copies of the most-significant bit of the shifted value 
     (which means that the sign of the value is preserved). If the value of the second 
-    operand is greater than bitwidth of the first operand, then the operation returns 
-    poison.
+    operand is greater or equal than bitwidth of the first operand, then the operation
+    returns poison.
 
     Example:
 

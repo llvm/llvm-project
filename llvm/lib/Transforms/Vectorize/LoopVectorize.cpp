@@ -60,6 +60,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanHCFGBuilder.h"
 #include "VPlanTransforms.h"
+#include "VPlanVerifier.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -2010,16 +2011,18 @@ public:
               BestTripCount = *EstimatedTC;
           }
 
+          BestTripCount = std::max(BestTripCount, 1U);
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
           NewMemCheckCost = std::max(*NewMemCheckCost.getValue(),
                                      (InstructionCost::CostType)1);
 
-          LLVM_DEBUG(dbgs()
-                     << "We expect runtime memory checks to be hoisted "
-                     << "out of the outer loop. Cost reduced from "
-                     << MemCheckCost << " to " << NewMemCheckCost << '\n');
+          if (BestTripCount > 1)
+            LLVM_DEBUG(dbgs()
+                       << "We expect runtime memory checks to be hoisted "
+                       << "out of the outer loop. Cost reduced from "
+                       << MemCheckCost << " to " << NewMemCheckCost << '\n');
 
           MemCheckCost = NewMemCheckCost;
         }
@@ -8488,7 +8491,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::truncateToMinimalBitwidths(
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
-      assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
+      assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
     VF = SubRange.End;
@@ -8508,21 +8511,16 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
   Header->insert(CanonicalIVPHI, Header->begin());
 
-  // Add a CanonicalIVIncrement{NUW} VPInstruction to increment the scalar
-  // IV by VF * UF.
-  auto *CanonicalIVIncrement =
-      new VPInstruction(Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()},
-                        {HasNUW, false}, DL, "index.next");
+  VPBuilder Builder(TopRegion->getExitingBasicBlock());
+  // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
+  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
+      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {HasNUW, false}, DL,
+      "index.next");
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
-  VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
-  EB->appendRecipe(CanonicalIVIncrement);
-
   // Add the BranchOnCount VPInstruction to the latch.
-  VPInstruction *BranchBack =
-      new VPInstruction(VPInstruction::BranchOnCount,
-                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
-  EB->appendRecipe(BranchBack);
+  Builder.createNaryOp(VPInstruction::BranchOnCount,
+                       {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
 // Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
@@ -8828,6 +8826,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   bool HasNUW = true;
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW,
                         DebugLoc());
+  assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }
 

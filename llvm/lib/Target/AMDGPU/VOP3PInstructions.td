@@ -396,7 +396,7 @@ defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
 } // End OtherPredicates = [HasDot1Insts]
 
 def DOT2_BF16_Profile
-  : VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
+  : VOP3P_Profile<VOP_F32_V2BF16_V2BF16_F32, VOP3_REGULAR, /*HasDPP*/ 1> {
   let HasSrc1Mods = 1;
 }
 
@@ -1414,7 +1414,7 @@ multiclass VOP3P_Real_WMMA_gfx12 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
 }
 
 multiclass VOP3P_Real_WMMA_gfx12w64 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
-  let WaveSizePredicate = isWave64, DecoderNamespace = "WMMAGFX12" in {
+  let WaveSizePredicate = isWave64, DecoderNamespace = "GFX12W64" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
 }
@@ -1544,7 +1544,7 @@ multiclass VOP3P_Real_WMMA <bits<7> op> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
     defm _twoaddr_w32 : VOP3P_Real_Base <GFX11Gen, op>;
   }
-  let WaveSizePredicate = isWave64, DecoderNamespace = "WMMAGFX11" in {
+  let WaveSizePredicate = isWave64, DecoderNamespace = "GFX11W64" in {
     defm _twoaddr_w64 : VOP3P_Real_Base <GFX11Gen, op>;
   }
 }
