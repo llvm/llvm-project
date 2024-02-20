@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidReturnWithVoidValueCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -51,10 +52,9 @@ void AvoidReturnWithVoidValueCheck::check(
   DiagnosticBuilder Diag = diag(VoidReturn->getBeginLoc(),
                                 "return statement within a void function "
                                 "should not have a specified return value");
-  std::optional<Token> SemicolonPos =
-      Lexer::findNextToken(VoidReturn->getRetValue()->getEndLoc(),
-                           *Result.SourceManager, getLangOpts());
-  if (!SemicolonPos)
+  const SourceLocation SemicolonPos = utils::lexer::findNextTerminator(
+      VoidReturn->getEndLoc(), *Result.SourceManager, getLangOpts());
+  if (SemicolonPos.isInvalid())
     return;
   const StringRef ReturnExpr =
       Lexer::getSourceText(CharSourceRange::getTokenRange(
@@ -64,8 +64,7 @@ void AvoidReturnWithVoidValueCheck::check(
   if (!SurroundingBlock)
     Replacement = "{" + Replacement + "}";
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(VoidReturn->getBeginLoc(),
-                                     SemicolonPos->getEndLoc()),
+      CharSourceRange::getTokenRange(VoidReturn->getBeginLoc(), SemicolonPos),
       Replacement);
 }
 
