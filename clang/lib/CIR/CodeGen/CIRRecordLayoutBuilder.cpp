@@ -500,9 +500,14 @@ void CIRRecordLowering::accumulateBitFields(
   // bitfield a separate storage component so as it can be accessed directly
   // with lower cost.
   auto IsBetterAsSingleFieldRun = [&](uint64_t OffsetInRecord,
-                                      uint64_t StartBitOffset) {
-    if (OffsetInRecord >= 64) // See IntType::verify
+                                      uint64_t StartBitOffset,
+                                      uint64_t nextTail = 0) {
+    if (OffsetInRecord >= 64 ||
+        (nextTail > StartBitOffset &&
+         nextTail - StartBitOffset >= 64)) { // See IntType::verify
       return true;
+    }
+
     if (!cirGenTypes.getModule().getCodeGenOpts().FineGrainedBitfieldAccesses)
       return false;
     llvm_unreachable("NYI");
@@ -545,13 +550,18 @@ void CIRRecordLowering::accumulateBitFields(
     // field is inconsistent with the offset of previous field plus its offset,
     // skip the block below and go ahead to emit the storage. Otherwise, try to
     // add bitfields to the run.
+    uint64_t nextTail = Tail;
+    if (Field != FieldEnd)
+      nextTail += Field->getBitWidthValue(astContext);
+
     if (!StartFieldAsSingleRun && Field != FieldEnd &&
-        !IsBetterAsSingleFieldRun(Tail - StartBitOffset, StartBitOffset) &&
+        !IsBetterAsSingleFieldRun(Tail - StartBitOffset, StartBitOffset,
+                                  nextTail) &&
         (!Field->isZeroLengthBitField(astContext) ||
          (!astContext.getTargetInfo().useZeroLengthBitfieldAlignment() &&
           !astContext.getTargetInfo().useBitFieldTypeAlignment())) &&
         Tail == getFieldBitOffset(*Field)) {
-      Tail += Field->getBitWidthValue(astContext);
+      Tail = nextTail;
       ++Field;
       continue;
     }
