@@ -337,10 +337,10 @@ public:
   }
 
   template <class _Tp,
-            class = __enable_if_t<
-                _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t)
-      _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
+            __enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value,
+                           int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
       : __value_(std::forward<_Tp>(__t)) {
     static_assert(__can_bind_reference<_Tp&&>(),
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
@@ -405,10 +405,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a) : _Hp(__a) {}
 
   template <class _Tp,
-            class = __enable_if_t<
-                _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value > >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t)
-      _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
+            __enable_if_t< _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value,
+                           int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_(is_nothrow_constructible<_Hp, _Tp>::value)
       : _Hp(std::forward<_Tp>(__t)) {}
 
   template <class _Tp, class _Alloc>
@@ -483,7 +483,7 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
       : __tuple_leaf<_Uf, _Tf>(__uses_alloc_ctor<_Tf, _Alloc, _Up>(), __a, std::forward<_Up>(__u))...,
         __tuple_leaf<_Ul, _Tl>(__uses_alloc_ctor<_Tl, _Alloc>(), __a)... {}
 
-  template <class _Tuple, class = __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value> >
+  template <class _Tuple, __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_impl(_Tuple&& __t) _NOEXCEPT_(
       (__all<is_nothrow_constructible<
            _Tp,
@@ -492,7 +492,7 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
             std::forward<typename tuple_element<_Indx, typename __make_tuple_types<_Tuple>::type>::type>(
                 std::get<_Indx>(__t)))... {}
 
-  template <class _Alloc, class _Tuple, class = __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value> >
+  template <class _Alloc, class _Tuple, __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_impl(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
       : __tuple_leaf<_Indx, _Tp>(
             __uses_alloc_ctor<_Tp,
@@ -966,7 +966,7 @@ public:
   template <
       class _Up,
       size_t _Np,
-      class = __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value > >
+      __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(array<_Up, _Np> const& __array)
       _NOEXCEPT_(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
     std::__memberwise_copy_assign(*this, __array, typename __make_tuple_indices<sizeof...(_Tp)>::type());
@@ -977,7 +977,7 @@ public:
   template <class _Up,
             size_t _Np,
             class = void,
-            class = __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up>... >::value > >
+            __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple& operator=(array<_Up, _Np>&& __array)
       _NOEXCEPT_(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
