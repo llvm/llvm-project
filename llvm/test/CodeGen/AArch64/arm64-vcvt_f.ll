@@ -217,8 +217,6 @@ define half @test_vcvt_f16_f32(<1 x float> %x) {
 ;
 ; GISEL-LABEL: test_vcvt_f16_f32:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov s0, w8
 ; GISEL-NEXT:    fcvt h0, s0
 ; GISEL-NEXT:    ret
   %tmp = fptrunc <1 x float> %x to <1 x half>
