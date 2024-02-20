@@ -49,7 +49,7 @@ In the OpenMP Dialect `declare target` is not represented by a specific `operati
 
 The `attribute` is composed of multiple fields representing the clauses you would find on the `declare target` directive i.e. device type (`nohost`, `any`, `host`) or the capture clause (`link` or `to`). A small example of `declare target` applied to an Fortran `real` can be found below:
 
-```MLIR
+```
 fir.global internal @_QFEi {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : f32 {
     %0 = fir.undefined f32
     fir.has_value %0 : f32

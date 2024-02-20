@@ -69,6 +69,7 @@ on how to get in touch with us and to learn more about the current status.
    OpenACC-descriptor-management.md
    OpenMP-4.5-grammar.md
    OpenMP-descriptor-management
+   OpenMP-declare-target
    OpenMP-semantics
    OptionComparison
    Overview
