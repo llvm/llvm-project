@@ -2640,7 +2640,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
           ? nullptr
           : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                                  reductionDeclSymbols),
-      procBindKindAttr);
+      procBindKindAttr, /*private_vars=*/llvm::SmallVector<mlir::Value>{},
+      /*privatizers=*/nullptr);
 }
 
 static mlir::omp::SectionOp

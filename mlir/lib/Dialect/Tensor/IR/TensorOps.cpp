@@ -3746,15 +3746,29 @@ SmallVector<int64_t> PackOp::getStaticTiles() {
 
 bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
                                  ArrayRef<int64_t> innerDimsPos,
+                                 ArrayRef<int64_t> outputShape,
+                                 ArrayRef<int64_t> outerDimsPerm,
                                  ArrayRef<OpFoldResult> innerTiles) {
+  SmallVector<int64_t> outputTileSizes(
+      outputShape.take_front(inputShape.size()));
+  if (!outerDimsPerm.empty()) {
+    assert(outerDimsPerm.size() == outputTileSizes.size() &&
+           "expected output and outer_dims_perm to have same size");
+    applyPermutationToVector(outputTileSizes,
+                             invertPermutationVector(outerDimsPerm));
+  }
   for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
     if (ShapedType::isDynamic(inputShape[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-    if (!constantTile)
-      continue;
-    if (inputShape[pos] % (*constantTile) != 0)
+
+    if (!constantTile) {
+      if (!ShapedType::isDynamic(outputTileSizes[pos]) &&
+          (inputShape[pos] % outputTileSizes[pos] != 0))
+        return true;
+    } else if (inputShape[pos] % (*constantTile) != 0) {
       return true;
+    }
   }
   return false;
 }
@@ -3776,9 +3790,11 @@ LogicalResult PackOp::verify() {
 
   if (!paddingValue &&
       requirePaddingValue(getSourceType().getShape(), getInnerDimsPos(),
+                          getDestType().getShape(), getOuterDimsPerm(),
                           getMixedTiles())) {
-    return emitOpError("invalid tile factor provided. Only full tiles are "
-                       "supported when padding_value is not set");
+    return emitOpError(
+        "invalid tile factor or output size provided. Only full tiles are "
+        "supported when padding_value is not set");
   }
   return success();
 }
@@ -3979,8 +3995,9 @@ static bool paddingIsNotNeeded(PackOp op) {
     return false;
   if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
     return false;
-  return !PackOp::requirePaddingValue(srcType.getShape(), op.getInnerDimsPos(),
-                                      op.getMixedTiles());
+  return !PackOp::requirePaddingValue(
+      srcType.getShape(), op.getInnerDimsPos(), op.getDestType().getShape(),
+      op.getOuterDimsPerm(), op.getMixedTiles());
 }
 
 /// Returns true if the `srcShape` or `destShape` is different from the one in
@@ -4212,6 +4229,40 @@ UnPackOp UnPackOp::createTransposedClone(OpBuilder &b, Location loc,
                             metadata.outerDimsPerm);
 }
 
+/// Returns true if the `srcShape` or `destShape` is different from the one in
+/// `op` and populates each with the inferred static shape.
+static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
+                             SmallVectorImpl<int64_t> &destShape) {
+  bool changeNeeded = false;
+  srcShape.assign(op.getSourceType().getShape().begin(),
+                  op.getSourceType().getShape().end());
+  destShape.assign(op.getDestType().getShape().begin(),
+                   op.getDestType().getShape().end());
+  llvm::SmallSetVector<int64_t, 4> innerDims;
+  innerDims.insert(op.getInnerDimsPos().begin(), op.getInnerDimsPos().end());
+  auto outerDimsPerm = op.getOuterDimsPerm();
+  int destRank = op.getDestRank();
+  for (auto i : llvm::seq<int64_t>(0, destRank)) {
+    if (innerDims.contains(i))
+      continue;
+    int64_t srcPos = i;
+    int64_t destPos = i;
+    if (!outerDimsPerm.empty())
+      srcPos = outerDimsPerm[destPos];
+    if (ShapedType::isDynamic(srcShape[srcPos]) ==
+        ShapedType::isDynamic(destShape[destPos])) {
+      continue;
+    }
+    int64_t size = srcShape[srcPos];
+    if (ShapedType::isDynamic(size))
+      size = destShape[destPos];
+    srcShape[srcPos] = size;
+    destShape[destPos] = size;
+    changeNeeded = true;
+  }
+  return changeNeeded;
+}
+
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
   /// pack(unpack(x)) -> x
@@ -4234,6 +4285,31 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
   }
+
+  // Insert tensor.cast ops if static shape inference is available..
+  SmallVector<int64_t> srcShape, destShape;
+  if (inferStaticShape(unPackOp, srcShape, destShape)) {
+    Location loc = unPackOp.getLoc();
+    Value source = unPackOp.getSource();
+    if (srcShape != unPackOp.getSourceType().getShape()) {
+      auto newSrcType = unPackOp.getSourceType().clone(srcShape);
+      source = rewriter.create<tensor::CastOp>(loc, newSrcType,
+                                               unPackOp.getSource());
+    }
+    Value dest = unPackOp.getDest();
+    if (destShape != unPackOp.getDestType().getShape()) {
+      auto newDestType = unPackOp.getDestType().clone(destShape);
+      dest =
+          rewriter.create<tensor::CastOp>(loc, newDestType, unPackOp.getDest());
+    }
+    Value newOp = rewriter.create<tensor::UnPackOp>(
+        loc, source, dest, unPackOp.getInnerDimsPos(), unPackOp.getMixedTiles(),
+        unPackOp.getOuterDimsPerm());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(
+        unPackOp, unPackOp.getResult().getType(), newOp);
+    return success();
+  }
+
   return failure();
 }
 

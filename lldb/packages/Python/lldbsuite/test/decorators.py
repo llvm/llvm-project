@@ -1,6 +1,6 @@
 # System modules
-from distutils.version import LooseVersion
 from functools import wraps
+from pkg_resources import packaging
 import ctypes
 import locale
 import os
@@ -65,10 +65,10 @@ def _check_expected_version(comparison, expected, actual):
         ">=": fn_geq,
         "<=": fn_leq,
     }
-    expected_str = ".".join([str(x) for x in expected])
-    actual_str = ".".join([str(x) for x in actual])
 
-    return op_lookup[comparison](LooseVersion(actual_str), LooseVersion(expected_str))
+    return op_lookup[comparison](
+        packaging.version.parse(actual), packaging.version.parse(expected)
+    )
 
 
 def _match_decorator_property(expected, actual):
@@ -238,7 +238,9 @@ def _decorateTest(
             )
         )
         skip_for_py_version = (py_version is None) or _check_expected_version(
-            py_version[0], py_version[1], sys.version_info
+            py_version[0],
+            py_version[1],
+            "{}.{}".format(sys.version_info.major, sys.version_info.minor),
         )
         skip_for_macos_version = (macos_version is None) or (
             (platform.mac_ver()[0] != "")
@@ -746,18 +748,14 @@ def skipUnlessTargetAndroid(func):
     )(func)
 
 
-def skipIfHostIncompatibleWithRemote(func):
-    """Decorate the item to skip tests if binaries built on this host are incompatible."""
+def skipIfHostIncompatibleWithTarget(func):
+    """Decorate the item to skip tests when the host and target are incompatible."""
 
     def is_host_incompatible_with_remote():
         host_arch = lldbplatformutil.getLLDBArchitecture()
         host_platform = lldbplatformutil.getHostPlatform()
         target_arch = lldbplatformutil.getArchitecture()
-        target_platform = (
-            "darwin"
-            if lldbplatformutil.platformIsDarwin()
-            else lldbplatformutil.getPlatform()
-        )
+        target_platform = lldbplatformutil.getPlatform()
         if (
             not (target_arch == "x86_64" and host_arch == "i386")
             and host_arch != target_arch

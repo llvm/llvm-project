@@ -209,7 +209,7 @@ void RewriterBase::eraseOp(Operation *op) {
       assert(mayBeGraphRegion(*op->getParentRegion()) &&
              "expected that op has no uses");
 #endif // NDEBUG
-    rewriteListener->notifyOperationRemoved(op);
+    rewriteListener->notifyOperationErased(op);
 
     // Explicitly drop all uses in case the op is in a graph region.
     op->dropAllUses();
@@ -265,7 +265,7 @@ void RewriterBase::eraseBlock(Block *block) {
 
   // Notify the listener that the block is about to be removed.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyBlockRemoved(block);
+    rewriteListener->notifyBlockErased(block);
 
   block->erase();
 }

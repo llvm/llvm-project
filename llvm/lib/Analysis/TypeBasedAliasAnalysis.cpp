@@ -821,7 +821,7 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   AAMDNodes New = *this;
   MDNode *M = New.TBAAStruct;
-  if (M && M->getNumOperands() == 3 && M->getOperand(0) &&
+  if (M && M->getNumOperands() >= 3 && M->getOperand(0) &&
       mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
       mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
       M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
@@ -832,4 +832,21 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
     New.TBAA = cast<MDNode>(M->getOperand(2));
   }
   return New;
+}
+
+AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, Type *AccessTy,
+                                     const DataLayout &DL) {
+  AAMDNodes New = shift(Offset);
+  if (!DL.typeSizeEqualsStoreSize(AccessTy))
+    return New;
+  TypeSize Size = DL.getTypeStoreSize(AccessTy);
+  if (Size.isScalable())
+    return New;
+
+  return New.adjustForAccess(Size.getKnownMinValue());
+}
+
+AAMDNodes AAMDNodes::adjustForAccess(size_t Offset, unsigned AccessSize) {
+  AAMDNodes New = shift(Offset);
+  return New.adjustForAccess(AccessSize);
 }

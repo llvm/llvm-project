@@ -113,10 +113,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 
-/// Checks if reinterpret casts are legal in the current context.
-bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
-                                   const Pointer &Ptr);
-
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
@@ -1583,6 +1579,11 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
+  if (LHS.isZero() && RHS.isZero()) {
+    S.Stk.push<T>();
+    return true;
+  }
+
   T A = T::from(LHS.getIndex());
   T B = T::from(RHS.getIndex());
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
@@ -1722,8 +1723,9 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckPotentialReinterpretCast(S, OpPC, Ptr))
-    return false;
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
   return true;

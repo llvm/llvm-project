@@ -241,57 +241,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralComplexToBoolean:
   case CK_FloatingComplexToBoolean: {
-    PrimType ElemT = classifyComplexElementType(SubExpr->getType());
-    // We emit the expression (__real(E) != 0 || __imag(E) != 0)
-    // for us, that means (bool)E[0] || (bool)E[1]
+    if (DiscardResult)
+      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
-    if (!this->emitConstUint8(0, CE))
-      return false;
-    if (!this->emitArrayElemPtrUint8(CE))
-      return false;
-    if (!this->emitLoadPop(ElemT, CE))
-      return false;
-    if (ElemT == PT_Float) {
-      if (!this->emitCastFloatingIntegral(PT_Bool, CE))
-        return false;
-    } else {
-      if (!this->emitCast(ElemT, PT_Bool, CE))
-        return false;
-    }
-
-    // We now have the bool value of E[0] on the stack.
-    LabelTy LabelTrue = this->getLabel();
-    if (!this->jumpTrue(LabelTrue))
-      return false;
-
-    if (!this->emitConstUint8(1, CE))
-      return false;
-    if (!this->emitArrayElemPtrPopUint8(CE))
-      return false;
-    if (!this->emitLoadPop(ElemT, CE))
-      return false;
-    if (ElemT == PT_Float) {
-      if (!this->emitCastFloatingIntegral(PT_Bool, CE))
-        return false;
-    } else {
-      if (!this->emitCast(ElemT, PT_Bool, CE))
-        return false;
-    }
-    // Leave the boolean value of E[1] on the stack.
-    LabelTy EndLabel = this->getLabel();
-    this->jump(EndLabel);
-
-    this->emitLabel(LabelTrue);
-    if (!this->emitPopPtr(CE))
-      return false;
-    if (!this->emitConstBool(true, CE))
-      return false;
-
-    this->fallthrough(EndLabel);
-    this->emitLabel(EndLabel);
-
-    return true;
+    return this->emitComplexBoolCast(SubExpr);
   }
 
   case CK_IntegralComplexToReal:
@@ -1157,8 +1111,13 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  if (!this->delegate(Base))
-    return false;
+  if (Initializing) {
+    if (!this->delegate(Base))
+      return false;
+  } else {
+    if (!this->visit(Base))
+      return false;
+  }
 
   // Base above gives us a pointer on the stack.
   // TODO: Implement non-FieldDecl members.
@@ -1468,7 +1427,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   std::optional<PrimType> LHSComputationT =
       classify(E->getComputationLHSType());
   std::optional<PrimType> LT = classify(LHS->getType());
-  std::optional<PrimType> RT = classify(E->getComputationResultType());
+  std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> ResultT = classify(E->getType());
 
   if (!LT || !RT || !ResultT || !LHSComputationT)
@@ -1716,6 +1675,9 @@ bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
+  if (DiscardResult)
+    return true;
+
   assert(Initializing);
   const Record *R = P.getOrCreateRecord(E->getLambdaClass());
 
@@ -1848,6 +1810,8 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
 
     // Immediately call the destructor if we have to.
     if (DiscardResult) {
+      if (!this->emitRecordDestruction(getRecord(E->getType())))
+        return false;
       if (!this->emitPopPtr(E))
         return false;
     }
@@ -2146,6 +2110,12 @@ bool ByteCodeExprGen<Emitter>::VisitConceptSpecializationExpr(
   return this->emitConstBool(E->isSatisfied(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXRewrittenBinaryOperator(
+    const CXXRewrittenBinaryOperator *E) {
+  return this->delegate(E->getSemanticForm());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2207,8 +2177,15 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitBool(const Expr *E) {
   std::optional<PrimType> T = classify(E->getType());
-  if (!T)
+  if (!T) {
+    // Convert complex values to bool.
+    if (E->getType()->isAnyComplexType()) {
+      if (!this->visit(E))
+        return false;
+      return this->emitComplexBoolCast(E);
+    }
     return false;
+  }
 
   if (!this->visit(E))
     return false;
@@ -2460,17 +2437,6 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
       if (!this->emitSetGlobal(T, *Idx, LV))
         return false;
       return DiscardResult ? true : this->emitGetPtrGlobal(*Idx, LV);
-    }
-  }
-
-  // If the declaration is a constant value, emit it here even
-  // though the declaration was not evaluated in the current scope.
-  // The access mode can only be read in this case.
-  if (!DiscardResult && AK == DerefKind::Read) {
-    if (VD->hasLocalStorage() && VD->hasInit() && !VD->isConstexpr()) {
-      QualType VT = VD->getType();
-      if (VT.isConstQualified() && VT->isFundamentalType())
-        return this->visit(VD->getInit());
     }
   }
 
@@ -2744,10 +2710,9 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
         return this->emitSetLocal(*VarT, Offset, VD);
       }
     } else {
-      if (std::optional<unsigned> Offset = this->allocateLocal(VD)) {
-        if (Init)
-          return this->visitLocalInitializer(Init, *Offset);
-      }
+      if (std::optional<unsigned> Offset = this->allocateLocal(VD))
+        return !Init || this->visitLocalInitializer(Init, *Offset);
+      return false;
     }
     return true;
   }
@@ -2822,6 +2787,20 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
+  auto Args = E->arguments();
+  // Calling a static operator will still
+  // pass the instance, but we don't need it.
+  // Discard it here.
+  if (isa<CXXOperatorCallExpr>(E)) {
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(E->getDirectCallee());
+        MD && MD->isStatic()) {
+      if (!this->discard(E->getArg(0)))
+        return false;
+      Args = drop_begin(Args, 1);
+    }
+  }
+
   // Add the (optional, implicit) This pointer.
   if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
     if (!this->visit(MC->getImplicitObjectArgument()))
@@ -2829,7 +2808,7 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   // Put arguments on the stack.
-  for (const auto *Arg : E->arguments()) {
+  for (const auto *Arg : Args) {
     if (!this->visit(Arg))
       return false;
   }
@@ -3163,6 +3142,10 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
     const Function *F = getFunction(FuncDecl);
     return F && this->emitGetFnPtr(F, E);
+  } else if (isa<TemplateParamObjectDecl>(D)) {
+    if (std::optional<unsigned> Index = P.getOrCreateGlobal(D))
+      return this->emitGetPtrGlobal(*Index, E);
+    return false;
   }
 
   // References are implemented via pointers, so when we see a DeclRefExpr
@@ -3361,45 +3344,65 @@ bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitComplexBoolCast(const Expr *E) {
+  assert(!DiscardResult);
+  PrimType ElemT = classifyComplexElementType(E->getType());
+  // We emit the expression (__real(E) != 0 || __imag(E) != 0)
+  // for us, that means (bool)E[0] || (bool)E[1]
+  if (!this->emitConstUint8(0, E))
+    return false;
+  if (!this->emitArrayElemPtrUint8(E))
+    return false;
+  if (!this->emitLoadPop(ElemT, E))
+    return false;
+  if (ElemT == PT_Float) {
+    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+      return false;
+  } else {
+    if (!this->emitCast(ElemT, PT_Bool, E))
+      return false;
+  }
+
+  // We now have the bool value of E[0] on the stack.
+  LabelTy LabelTrue = this->getLabel();
+  if (!this->jumpTrue(LabelTrue))
+    return false;
+
+  if (!this->emitConstUint8(1, E))
+    return false;
+  if (!this->emitArrayElemPtrPopUint8(E))
+    return false;
+  if (!this->emitLoadPop(ElemT, E))
+    return false;
+  if (ElemT == PT_Float) {
+    if (!this->emitCastFloatingIntegral(PT_Bool, E))
+      return false;
+  } else {
+    if (!this->emitCast(ElemT, PT_Bool, E))
+      return false;
+  }
+  // Leave the boolean value of E[1] on the stack.
+  LabelTy EndLabel = this->getLabel();
+  this->jump(EndLabel);
+
+  this->emitLabel(LabelTrue);
+  if (!this->emitPopPtr(E))
+    return false;
+  if (!this->emitConstBool(true, E))
+    return false;
+
+  this->fallthrough(EndLabel);
+  this->emitLabel(EndLabel);
+
+  return true;
+}
+
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
-  assert(Desc);
-  assert(!Desc->isPrimitive());
-  assert(!Desc->isPrimitiveArray());
-
-  // Arrays.
-  if (Desc->isArray()) {
-    const Descriptor *ElemDesc = Desc->ElemDesc;
-    assert(ElemDesc);
-
-    // Don't need to do anything for these.
-    if (ElemDesc->isPrimitiveArray())
-      return this->emitPopPtr(SourceInfo{});
-
-    // If this is an array of record types, check if we need
-    // to call the element destructors at all. If not, try
-    // to save the work.
-    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
-      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-          !Dtor || Dtor->isTrivial())
-        return this->emitPopPtr(SourceInfo{});
-    }
-
-    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-      if (!this->emitConstUint64(I, SourceInfo{}))
-        return false;
-      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
-        return false;
-      if (!this->emitRecordDestruction(ElemDesc))
-        return false;
-    }
-    return this->emitPopPtr(SourceInfo{});
-  }
-
-  const Record *R = Desc->ElemRecord;
+bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);
   // First, destroy all fields.
   for (const Record::Field &Field : llvm::reverse(R->fields())) {
@@ -3409,7 +3412,9 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
         return false;
       if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
         return false;
-      if (!this->emitRecordDestruction(D))
+      if (!this->emitDestruction(D))
+        return false;
+      if (!this->emitPopPtr(SourceInfo{}))
         return false;
     }
   }
@@ -3433,13 +3438,57 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
-    if (!this->emitRecordDestruction(Base.Desc))
+    if (!this->emitRecordDestruction(Base.R))
+      return false;
+    if (!this->emitPopPtr(SourceInfo{}))
       return false;
   }
-  // FIXME: Virtual bases.
 
-  // Remove the instance pointer.
-  return this->emitPopPtr(SourceInfo{});
+  // FIXME: Virtual bases.
+  return true;
+}
+/// When calling this, we have a pointer of the local-to-destroy
+/// on the stack.
+/// Emit destruction of record types (or arrays of record types).
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitDestruction(const Descriptor *Desc) {
+  assert(Desc);
+  assert(!Desc->isPrimitive());
+  assert(!Desc->isPrimitiveArray());
+
+  // Arrays.
+  if (Desc->isArray()) {
+    const Descriptor *ElemDesc = Desc->ElemDesc;
+    assert(ElemDesc);
+
+    // Don't need to do anything for these.
+    if (ElemDesc->isPrimitiveArray())
+      return true;
+
+    // If this is an array of record types, check if we need
+    // to call the element destructors at all. If not, try
+    // to save the work.
+    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
+      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+          !Dtor || Dtor->isTrivial())
+        return true;
+    }
+
+    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
+      if (!this->emitConstUint64(I, SourceInfo{}))
+        return false;
+      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+        return false;
+      if (!this->emitDestruction(ElemDesc))
+        return false;
+      if (!this->emitPopPtr(SourceInfo{}))
+        return false;
+    }
+    return true;
+  }
+
+  assert(Desc->ElemRecord);
+  return this->emitRecordDestruction(Desc->ElemRecord);
 }
 
 namespace clang {
