@@ -103,6 +103,10 @@ public:
     auto type = adaptor.getAllocaType();
     auto mlirType = getTypeConverter()->convertType(type);
 
+    // FIXME: Some types can not be converted yet (e.g. struct)
+    if (!mlirType)
+      return mlir::LogicalResult::failure();
+
     auto memreftype = mlir::MemRefType::get({}, mlirType);
     rewriter.replaceOpWithNewOp<mlir::memref::AllocaOp>(op, memreftype,
                                                         op.getAlignmentAttr());
@@ -615,6 +619,9 @@ static mlir::TypeConverter prepareTypeConverter() {
   mlir::TypeConverter converter;
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
     auto ty = converter.convertType(type.getPointee());
+    // FIXME: The pointee type might not be converted (e.g. struct)
+    if (!ty)
+      return nullptr;
     return mlir::MemRefType::get({}, ty);
   });
   converter.addConversion(
