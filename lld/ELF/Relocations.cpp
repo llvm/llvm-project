@@ -1137,29 +1137,6 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                     (isa<EhInputSection>(sec) && config->emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = target->getDynRel(type);
-    if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-      std::lock_guard<std::mutex> lock(relocMutex);
-      // For a preemptible symbol, we can't use a relative relocation. For an
-      // undefined symbol, we can't compute offset at link-time and use a
-      // relative relocation. Use a symbolic relocation instead.
-      Partition &part = sec->getPartition();
-      if (sym.isPreemptible) {
-        part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-      } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0 &&
-                 isInt<32>(sym.getVA(addend))) {
-        // Implicit addend is below 32-bits so we can use the compressed
-        // relative relocation section. The R_AARCH64_AUTH_RELATIVE
-        // has a smaller addend field as bits [63:32] encode the signing-schema.
-        sec->addReloc({expr, type, offset, addend, &sym});
-        part.relrAuthDyn->relocsVec[parallel::getThreadIndex()].push_back(
-            {sec, offset});
-      } else {
-        part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
-                                DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                addend, R_ABS});
-      }
-      return;
-    }
     if (oneof<R_GOT, R_LOONGARCH_GOT>(expr) ||
         (rel == target->symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
@@ -1169,8 +1146,29 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       if (config->emachine == EM_MIPS && rel == target->symbolicRel)
         rel = target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
-      sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
-                                                  addend, type);
+      Partition &part = sec->getPartition();
+      if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
+        // For a preemptible symbol, we can't use a relative relocation. For an
+        // undefined symbol, we can't compute offset at link-time and use a
+        // relative relocation. Use a symbolic relocation instead.
+        if (sym.isPreemptible) {
+          part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0 &&
+                   isInt<32>(sym.getVA(addend))) {
+          // Implicit addend is below 32-bits so we can use the compressed
+          // relative relocation section. The R_AARCH64_AUTH_RELATIVE has a
+          // smaller addend field as bits [63:32] encode the signing-schema.
+          sec->addReloc({expr, type, offset, addend, &sym});
+          part.relrAuthDyn->relocsVec[parallel::getThreadIndex()].push_back(
+              {sec, offset});
+        } else {
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
+                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
+                                  addend, R_ABS});
+        }
+        return;
+      }
+      part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
