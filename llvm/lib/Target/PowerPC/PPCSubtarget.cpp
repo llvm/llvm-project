@@ -202,11 +202,9 @@ void PPCSubtarget::tocDataChecks(unsigned PointerSize,
     report_fatal_error(
         "A GlobalVariable with size larger than a TOC entry is not currently "
         "supported by the toc data transformation.");
-  if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
-    report_fatal_error("A GlobalVariable with private or local linkage is not "
+  if (GV->hasPrivateLinkage())
+    report_fatal_error("A GlobalVariable with private linkage is not "
                        "currently supported by the toc data transformation.");
-  assert(!GV->hasCommonLinkage() &&
-         "Tentative definitions cannot have the mapping class XMC_TD.");
 }
 
 bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {

@@ -34,15 +34,14 @@ attributes #1 = { noinline }
 ; CHECK-NEXT: .space    4
 
 ; OBJ32:  Symbol {
-; OBJ32:    Index: 9
-; OBJ32-NEXT:    Name: a
+; OBJ32:    Name: a
 ; OBJ32-NEXT:    Value (RelocatableAddress): 0x3C
 ; OBJ32-NEXT:    Section: .data
 ; OBJ32-NEXT:    Type: 0x0
 ; OBJ32-NEXT:    StorageClass: C_EXT (0x2)
 ; OBJ32-NEXT:    NumberOfAuxEntries: 1
 ; OBJ32-NEXT:    CSECT Auxiliary Entry {
-; OBJ32-NEXT:      Index: 10
+; OBJ32-NEXT:      Index: {{[0-9]+}}
 ; OBJ32-NEXT:      SectionLen: 2
 ; OBJ32-NEXT:      ParameterHashIndex: 0x0
 ; OBJ32-NEXT:      TypeChkSectNum: 0x0
@@ -54,15 +53,14 @@ attributes #1 = { noinline }
 ; OBJ32-NEXT:    }
 ; OBJ32-NEXT:  }
 ; OBJ32-NEXT:  Symbol {
-; OBJ32-NEXT:    Index: 11
-; OBJ32-NEXT:    Name: b
+; OBJ32:    Name: b
 ; OBJ32-NEXT:    Value (RelocatableAddress): 0x40
 ; OBJ32-NEXT:    Section: .data
 ; OBJ32-NEXT:    Type: 0x0
 ; OBJ32-NEXT:    StorageClass: C_EXT (0x2)
 ; OBJ32-NEXT:    NumberOfAuxEntries: 1
 ; OBJ32-NEXT:    CSECT Auxiliary Entry {
-; OBJ32-NEXT:      Index: 12
+; OBJ32-NEXT:      Index: {{[0-9]+}}
 ; OBJ32-NEXT:      SectionLen: 4
 ; OBJ32-NEXT:      ParameterHashIndex: 0x0
 ; OBJ32-NEXT:      TypeChkSectNum: 0x0
@@ -75,15 +73,14 @@ attributes #1 = { noinline }
 ; OBJ32-NEXT:  }
 
 ; OBJ64:  Symbol {
-; OBJ64:    Index: 9
-; OBJ64-NEXT:    Name: a
+; OBJ64:    Name: a
 ; OBJ64-NEXT:    Value (RelocatableAddress): 0x48
 ; OBJ64-NEXT:    Section: .data
 ; OBJ64-NEXT:    Type: 0x0
 ; OBJ64-NEXT:    StorageClass: C_EXT (0x2)
 ; OBJ64-NEXT:    NumberOfAuxEntries: 1
 ; OBJ64-NEXT:    CSECT Auxiliary Entry {
-; OBJ64-NEXT:      Index: 10
+; OBJ64-NEXT:      Index: {{[0-9]+}}
 ; OBJ64-NEXT:      SectionLen: 2
 ; OBJ64-NEXT:      ParameterHashIndex: 0x0
 ; OBJ64-NEXT:      TypeChkSectNum: 0x0
@@ -94,15 +91,14 @@ attributes #1 = { noinline }
 ; OBJ64-NEXT:    }
 ; OBJ64-NEXT:  }
 ; OBJ64-NEXT:  Symbol {
-; OBJ64-NEXT:    Index: 11
-; OBJ64-NEXT:    Name: b
+; OBJ64:    Name: b
 ; OBJ64-NEXT:    Value (RelocatableAddress): 0x4C
 ; OBJ64-NEXT:    Section: .data
 ; OBJ64-NEXT:    Type: 0x0
 ; OBJ64-NEXT:    StorageClass: C_EXT (0x2)
 ; OBJ64-NEXT:    NumberOfAuxEntries: 1
 ; OBJ64-NEXT:    CSECT Auxiliary Entry {
-; OBJ64-NEXT:      Index: 12
+; OBJ64-NEXT:      Index: {{[0-9]+}}
 ; OBJ64-NEXT:      SectionLen: 4
 ; OBJ64-NEXT:      ParameterHashIndex: 0x0
 ; OBJ64-NEXT:      TypeChkSectNum: 0x0

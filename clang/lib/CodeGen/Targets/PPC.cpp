@@ -302,26 +302,25 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
         M.getDiags().Report(D->getLocation(), diag::warn_toc_unsupported_type)
             << GVId << Msg;
     };
-    if (!Ty || Ty->isIncompleteType()) {
+    if (!Ty || Ty->isIncompleteType())
       reportUnsupportedWarning(EmitDiagnostic, "of incomplete type");
-    } else if (RDecl && RDecl->hasFlexibleArrayMember()) {
+    else if (RDecl && RDecl->hasFlexibleArrayMember())
       reportUnsupportedWarning(EmitDiagnostic,
                                "it contains a flexible array member");
-    } else if (VarD->getTLSKind() != VarDecl::TLS_None) {
+    else if (VarD->getTLSKind() != VarDecl::TLS_None)
       reportUnsupportedWarning(EmitDiagnostic, "of thread local storage");
-    } else if (PointerSize < Context.getTypeInfo(VarD->getType()).Width / 8) {
+    else if (PointerSize < Context.getTypeInfo(VarD->getType()).Width / 8)
       reportUnsupportedWarning(EmitDiagnostic,
                                "variable is larger than a pointer");
-    } else if (PointerSize < Alignment) {
+    else if (PointerSize < Alignment)
       reportUnsupportedWarning(EmitDiagnostic,
                                "variable is aligned wider than a pointer");
-    } else if (D->hasAttr<SectionAttr>()) {
+    else if (D->hasAttr<SectionAttr>())
       reportUnsupportedWarning(EmitDiagnostic,
                                "variable has a section attribute");
-    } else if (GV->hasExternalLinkage() ||
-               (M.getCodeGenOpts().AllTocData && !GV->hasLocalLinkage())) {
+    else if (GV->hasExternalLinkage() ||
+             (M.getCodeGenOpts().AllTocData && !GV->hasLocalLinkage()))
       GVar->addAttribute("toc-data");
-    }
   }
 }
 
