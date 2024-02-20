@@ -51,21 +51,24 @@ protected:
 
 TEST_F(PythonDataObjectsTest, TestOwnedReferences) {
   // After creating a new object, the refcount should be >= 1
-  PyObject *obj = PyLong_FromLong(3);
-  Py_ssize_t original_refcnt = obj->ob_refcnt;
+  PyObject *obj = PyBytes_FromString("foo");
+  Py_ssize_t original_refcnt = Py_REFCNT(obj);
   EXPECT_LE(1, original_refcnt);
 
   // If we take an owned reference, the refcount should be the same
-  PythonObject owned_long(PyRefType::Owned, obj);
-  EXPECT_EQ(original_refcnt, owned_long.get()->ob_refcnt);
+  PythonObject owned(PyRefType::Owned, obj);
+  Py_ssize_t owned_refcnt = Py_REFCNT(owned.get());
+  EXPECT_EQ(original_refcnt, owned_refcnt);
 
   // Take another reference and verify that the refcount increases by 1
-  PythonObject strong_ref(owned_long);
-  EXPECT_EQ(original_refcnt + 1, strong_ref.get()->ob_refcnt);
+  PythonObject strong_ref(owned);
+  Py_ssize_t strong_refcnt = Py_REFCNT(strong_ref.get());
+  EXPECT_EQ(original_refcnt + 1, strong_refcnt);
 
   // If we reset the first one, the refcount should be the original value.
-  owned_long.Reset();
-  EXPECT_EQ(original_refcnt, strong_ref.get()->ob_refcnt);
+  owned.Reset();
+  strong_refcnt = Py_REFCNT(strong_ref.get());
+  EXPECT_EQ(original_refcnt, strong_refcnt);
 }
 
 TEST_F(PythonDataObjectsTest, TestResetting) {
@@ -82,12 +85,15 @@ TEST_F(PythonDataObjectsTest, TestResetting) {
 }
 
 TEST_F(PythonDataObjectsTest, TestBorrowedReferences) {
-  PythonInteger long_value(PyRefType::Owned, PyLong_FromLong(3));
-  Py_ssize_t original_refcnt = long_value.get()->ob_refcnt;
+  PythonByteArray byte_value(PyRefType::Owned,
+                             PyByteArray_FromStringAndSize("foo", 3));
+  Py_ssize_t original_refcnt = Py_REFCNT(byte_value.get());
   EXPECT_LE(1, original_refcnt);
 
-  PythonInteger borrowed_long(PyRefType::Borrowed, long_value.get());
-  EXPECT_EQ(original_refcnt + 1, borrowed_long.get()->ob_refcnt);
+  PythonByteArray borrowed_byte(PyRefType::Borrowed, byte_value.get());
+  Py_ssize_t borrowed_refcnt = Py_REFCNT(borrowed_byte.get());
+
+  EXPECT_EQ(original_refcnt + 1, borrowed_refcnt);
 }
 
 TEST_F(PythonDataObjectsTest, TestGlobalNameResolutionNoDot) {

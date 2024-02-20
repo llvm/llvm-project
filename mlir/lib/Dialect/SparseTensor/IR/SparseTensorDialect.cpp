@@ -35,6 +35,14 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+// Support hashing LevelType such that SparseTensorEncodingAttr can be hashed as
+// well.
+namespace mlir::sparse_tensor {
+llvm::hash_code hash_value(LevelType lt) {
+  return llvm::hash_value(static_cast<uint64_t>(lt));
+}
+} // namespace mlir::sparse_tensor
+
 //===----------------------------------------------------------------------===//
 // Local Convenience Methods.
 //===----------------------------------------------------------------------===//
@@ -83,11 +91,11 @@ void StorageLayout::foreachField(
   }
   // The values array.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::ValMemRef, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
   // Put metadata at the end.
   if (!(callback(fieldIdx++, SparseTensorFieldKind::StorageSpec, kInvalidLevel,
-                 LevelType::Undef)))
+                 LevelFormat::Undef)))
     return;
 }
 
@@ -341,7 +349,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelType::Dense;
+    return LevelFormat::Dense;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -656,7 +664,26 @@ LogicalResult SparseTensorEncodingAttr::verify(
                      [](LevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
+    // We can potentially support mixed SoA/AoS singleton levels.
+    if (!std::all_of(it, lvlTypes.end(), [it](LevelType i) {
+          return it->isa<LevelPropNonDefault::SoA>() ==
+                 i.isa<LevelPropNonDefault::SoA>();
+        })) {
+      return emitError() << "expected all singleton lvlTypes stored in the "
+                            "same memory layout (SoA vs AoS).";
+    }
   }
+
+  // SoA property can only be applied on singleton level.
+  auto soaLvls = llvm::make_filter_range(lvlTypes, [](LevelType lt) {
+    return lt.isa<LevelPropNonDefault::SoA>();
+  });
+  if (llvm::any_of(soaLvls, [](LevelType lt) {
+        return !lt.isa<LevelFormat::Singleton>();
+      })) {
+    return emitError() << "SoA is only applicable to singleton lvlTypes.";
+  }
+
   // TODO: audit formats that actually are supported by backend.
   if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isNOutOfMLT);
       it != std::end(lvlTypes)) {
@@ -975,7 +1002,7 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<LevelType> lts;
   for (auto lt : enc.getLvlTypes())
-    lts.push_back(*buildLevelType(*getLevelFormat(lt), true, true));
+    lts.push_back(lt.stripProperties());
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), lts,

@@ -271,9 +271,8 @@ static MLIRContext *getContext(OpFoldResult val) {
   assert(val && "Invalid value");
   if (auto attr = dyn_cast<Attribute>(val)) {
     return attr.getContext();
-  } else {
-    return cast<Value>(val).getContext();
   }
+  return cast<Value>(val).getContext();
 }
 
 std::pair<AffineExpr, SmallVector<OpFoldResult>>

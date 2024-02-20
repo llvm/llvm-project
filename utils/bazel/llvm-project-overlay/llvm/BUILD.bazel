@@ -4860,7 +4860,7 @@ cc_library(
 cc_binary(
     name = "opt",
     stamp = 0,
-    deps = [":opt-driver"]
+    deps = [":opt-driver"],
 )
 
 gentbl(
@@ -4979,9 +4979,9 @@ py_binary(
     srcs = [
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
-        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py"
+        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
     ],
-    imports = ["utils/mlgo-utils"]
+    imports = ["utils/mlgo-utils"],
 )
 
 py_binary(
@@ -4989,9 +4989,9 @@ py_binary(
     srcs = [
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
-        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py"
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
     ],
-    imports = ["utils/mlgo-utils"]
+    imports = ["utils/mlgo-utils"],
 )
 
 py_binary(
@@ -4999,9 +4999,9 @@ py_binary(
     srcs = [
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
-        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py"
+        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py",
     ],
-    imports = ["utils/mlgo-utils"]
+    imports = ["utils/mlgo-utils"],
 )
 
 cc_library(

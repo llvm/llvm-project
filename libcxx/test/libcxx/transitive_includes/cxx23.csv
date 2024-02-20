@@ -87,6 +87,7 @@ chrono stdexcept
 chrono string
 chrono string_view
 chrono tuple
+chrono vector
 chrono version
 cinttypes cstdint
 cmath limits
@@ -110,6 +111,7 @@ compare cstdint
 compare limits
 compare version
 complex cmath
+complex cstddef
 complex sstream
 complex version
 concepts cstddef
@@ -282,6 +284,7 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
+istream bitset
 istream cstddef
 istream ostream
 istream version

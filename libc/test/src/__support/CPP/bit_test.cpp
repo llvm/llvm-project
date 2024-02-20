@@ -206,4 +206,30 @@ TEST(LlvmLibcBitTest, Rotr) {
             rotr<uint64_t>(0x12345678deadbeefULL, -19));
 }
 
+TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypes) {
+  EXPECT_EQ(first_leading_zero<T>(cpp::numeric_limits<T>::max()), 0);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
+    EXPECT_EQ(first_leading_zero<T>(~(T(1) << i)),
+              cpp::numeric_limits<T>::digits - i);
+}
+
+TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypes) {
+  EXPECT_EQ(first_leading_one<T>(static_cast<T>(0)), 0);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
+    EXPECT_EQ(first_leading_one<T>(T(1) << i),
+              cpp::numeric_limits<T>::digits - i);
+}
+
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypes) {
+  EXPECT_EQ(first_trailing_zero<T>(cpp::numeric_limits<T>::max()), 0);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
+    EXPECT_EQ(first_trailing_zero<T>(~(T(1) << i)), i + 1);
+}
+
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypes) {
+  EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
+    EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
+}
+
 } // namespace LIBC_NAMESPACE::cpp

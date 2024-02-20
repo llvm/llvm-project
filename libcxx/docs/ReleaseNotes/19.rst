@@ -40,6 +40,7 @@ Implemented Papers
 
 - P2637R3 - Member ``visit``
 - P2652R2 - Disallow User Specialization of ``allocator_traits``
+- P2819R2 - Add ``tuple`` protocol to ``complex``
 
 
 Improvements and New Features

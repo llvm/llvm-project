@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -222,21 +223,11 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   replaceRegWith(MRI, DstReg, SrcReg);
 }
 
-bool CombinerHelper::tryCombineConcatVectors(MachineInstr &MI) {
-  bool IsUndef = false;
-  SmallVector<Register, 4> Ops;
-  if (matchCombineConcatVectors(MI, IsUndef, Ops)) {
-    applyCombineConcatVectors(MI, IsUndef, Ops);
-    return true;
-  }
-  return false;
-}
-
-bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                               SmallVectorImpl<Register> &Ops) {
+bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS &&
          "Invalid instruction");
-  IsUndef = true;
+  bool IsUndef = true;
   MachineInstr *Undef = nullptr;
 
   // Walk over all the operands of concat vectors and check if they are
@@ -246,6 +237,8 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
     Register Reg = MO.getReg();
     MachineInstr *Def = MRI.getVRegDef(Reg);
     assert(Def && "Operand not defined");
+    if (!MRI.hasOneNonDBGUse(Reg))
+      return false;
     switch (Def->getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
       IsUndef = false;
@@ -275,10 +268,21 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
       return false;
     }
   }
+
+  // Check if the combine is illegal
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, MRI.getType(Ops[0])}})) {
+    return false;
+  }
+
+  if (IsUndef)
+    Ops.clear();
+
   return true;
 }
-void CombinerHelper::applyCombineConcatVectors(
-    MachineInstr &MI, bool IsUndef, const ArrayRef<Register> Ops) {
+void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   // We determined that the concat_vectors can be flatten.
   // Generate the flattened build_vector.
   Register DstReg = MI.getOperand(0).getReg();
@@ -289,9 +293,9 @@ void CombinerHelper::applyCombineConcatVectors(
   // checking that at all Ops are undef.  Alternatively, we could have
   // generate a build_vector of undefs and rely on another combine to
   // clean that up.  For now, given we already gather this information
-  // in tryCombineConcatVectors, just save compile time and issue the
+  // in matchCombineConcatVectors, just save compile time and issue the
   // right thing.
-  if (IsUndef)
+  if (Ops.empty())
     Builder.buildUndef(NewDstReg);
   else
     Builder.buildBuildVector(NewDstReg, Ops);
@@ -2074,6 +2078,9 @@ bool CombinerHelper::matchCombineUnmergeUndef(
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
+  if (MRI.getType(MI.getOperand(0).getReg()).isVector() ||
+      MRI.getType(MI.getOperand(MI.getNumDefs()).getReg()).isVector())
+    return false;
   // Check that all the lanes are dead except the first one.
   for (unsigned Idx = 1, EndIdx = MI.getNumDefs(); Idx != EndIdx; ++Idx) {
     if (!MRI.use_nodbg_empty(MI.getOperand(Idx).getReg()))
@@ -2085,21 +2092,8 @@ bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
 void CombinerHelper::applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   Builder.setInstrAndDebugLoc(MI);
   Register SrcReg = MI.getOperand(MI.getNumDefs()).getReg();
-  // Truncating a vector is going to truncate every single lane,
-  // whereas we want the full lowbits.
-  // Do the operation on a scalar instead.
-  LLT SrcTy = MRI.getType(SrcReg);
-  if (SrcTy.isVector())
-    SrcReg =
-        Builder.buildCast(LLT::scalar(SrcTy.getSizeInBits()), SrcReg).getReg(0);
-
   Register Dst0Reg = MI.getOperand(0).getReg();
-  LLT Dst0Ty = MRI.getType(Dst0Reg);
-  if (Dst0Ty.isVector()) {
-    auto MIB = Builder.buildTrunc(LLT::scalar(Dst0Ty.getSizeInBits()), SrcReg);
-    Builder.buildCast(Dst0Reg, MIB);
-  } else
-    Builder.buildTrunc(Dst0Reg, SrcReg);
+  Builder.buildTrunc(Dst0Reg, SrcReg);
   MI.eraseFromParent();
 }
 
@@ -6814,10 +6808,88 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   return true;
 }
 
+bool CombinerHelper::tryFoldLogicOfFCmps(GLogicalBinOp *Logic,
+                                         BuildFnTy &MatchInfo) {
+  assert(Logic->getOpcode() != TargetOpcode::G_XOR && "unexpecte xor");
+  Register DestReg = Logic->getReg(0);
+  Register LHS = Logic->getLHSReg();
+  Register RHS = Logic->getRHSReg();
+  bool IsAnd = Logic->getOpcode() == TargetOpcode::G_AND;
+
+  // We need a compare on the LHS register.
+  GFCmp *Cmp1 = getOpcodeDef<GFCmp>(LHS, MRI);
+  if (!Cmp1)
+    return false;
+
+  // We need a compare on the RHS register.
+  GFCmp *Cmp2 = getOpcodeDef<GFCmp>(RHS, MRI);
+  if (!Cmp2)
+    return false;
+
+  LLT CmpTy = MRI.getType(Cmp1->getReg(0));
+  LLT CmpOperandTy = MRI.getType(Cmp1->getLHSReg());
+
+  // We build one fcmp, want to fold the fcmps, replace the logic op,
+  // and the fcmps must have the same shape.
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_FCMP, {CmpTy, CmpOperandTy}}) ||
+      !MRI.hasOneNonDBGUse(Logic->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp2->getReg(0)) ||
+      MRI.getType(Cmp1->getLHSReg()) != MRI.getType(Cmp2->getLHSReg()))
+    return false;
+
+  CmpInst::Predicate PredL = Cmp1->getCond();
+  CmpInst::Predicate PredR = Cmp2->getCond();
+  Register LHS0 = Cmp1->getLHSReg();
+  Register LHS1 = Cmp1->getRHSReg();
+  Register RHS0 = Cmp2->getLHSReg();
+  Register RHS1 = Cmp2->getRHSReg();
+
+  if (LHS0 == RHS1 && LHS1 == RHS0) {
+    // Swap RHS operands to match LHS.
+    PredR = CmpInst::getSwappedPredicate(PredR);
+    std::swap(RHS0, RHS1);
+  }
+
+  if (LHS0 == RHS0 && LHS1 == RHS1) {
+    // We determine the new predicate.
+    unsigned CmpCodeL = getFCmpCode(PredL);
+    unsigned CmpCodeR = getFCmpCode(PredR);
+    unsigned NewPred = IsAnd ? CmpCodeL & CmpCodeR : CmpCodeL | CmpCodeR;
+    unsigned Flags = Cmp1->getFlags() | Cmp2->getFlags();
+    MatchInfo = [=](MachineIRBuilder &B) {
+      // The fcmp predicates fill the lower part of the enum.
+      FCmpInst::Predicate Pred = static_cast<FCmpInst::Predicate>(NewPred);
+      if (Pred == FCmpInst::FCMP_FALSE &&
+          isConstantLegalOrBeforeLegalizer(CmpTy)) {
+        auto False = B.buildConstant(CmpTy, 0);
+        B.buildZExtOrTrunc(DestReg, False);
+      } else if (Pred == FCmpInst::FCMP_TRUE &&
+                 isConstantLegalOrBeforeLegalizer(CmpTy)) {
+        auto True =
+            B.buildConstant(CmpTy, getICmpTrueVal(getTargetLowering(),
+                                                  CmpTy.isVector() /*isVector*/,
+                                                  true /*isFP*/));
+        B.buildZExtOrTrunc(DestReg, True);
+      } else { // We take the predicate without predicate optimizations.
+        auto Cmp = B.buildFCmp(Pred, CmpTy, LHS0, LHS1, Flags);
+        B.buildZExtOrTrunc(DestReg, Cmp);
+      }
+    };
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo) {
   GAnd *And = cast<GAnd>(&MI);
 
   if (tryFoldAndOrOrICmpsUsingRanges(And, MatchInfo))
+    return true;
+
+  if (tryFoldLogicOfFCmps(And, MatchInfo))
     return true;
 
   return false;
@@ -6827,6 +6899,9 @@ bool CombinerHelper::matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) {
   GOr *Or = cast<GOr>(&MI);
 
   if (tryFoldAndOrOrICmpsUsingRanges(Or, MatchInfo))
+    return true;
+
+  if (tryFoldLogicOfFCmps(Or, MatchInfo))
     return true;
 
   return false;

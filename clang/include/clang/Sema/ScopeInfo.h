@@ -942,8 +942,8 @@ public:
   /// that were defined in parent contexts. Used to avoid warnings when the
   /// shadowed variables are uncaptured by this lambda.
   struct ShadowedOuterDecl {
-    const VarDecl *VD;
-    const VarDecl *ShadowedDecl;
+    const NamedDecl *VD;
+    const NamedDecl *ShadowedDecl;
   };
   llvm::SmallVector<ShadowedOuterDecl, 4> ShadowingDecls;
 

@@ -13,6 +13,25 @@
 // Include the common option parsing interfaces.
 include "llvm/Option/OptParser.td"
 
+// When generating documentation, we expect there to be a GlobalDocumentation
+// def containing the program name that we are generating documentation for.
+// This object should only be used by things that are used in documentation,
+// such as the group descriptions.
+#ifndef GENERATING_DOCS
+// So that this file can still be parsed without such a def, define one if there
+// isn't one provided.
+def GlobalDocumentation {
+  // Sensible default in case of mistakes.
+  string Program = "Clang";
+}
+#endif
+
+// Use this to generate program specific documentation, for example:
+// StringForProgram<"Control how %Program behaves.">.str
+class StringForProgram<string _str> {
+  string str = !subst("%Program", GlobalDocumentation.Program, _str);
+}
+
 /////////
 // Flags
 
@@ -100,14 +119,16 @@ def Action_Group : OptionGroup<"<action group>">, DocName<"Actions">,
 // Meta-group for options which are only used for compilation,
 // and not linking etc.
 def CompileOnly_Group : OptionGroup<"<CompileOnly group>">,
-                        DocName<"Compilation options">, DocBrief<[{
-Flags controlling the behavior of Clang during compilation. These flags have
-no effect during actions that do not perform compilation.}]>;
+                        DocName<"Compilation options">,
+                        DocBrief<StringForProgram<[{
+Flags controlling the behavior of %Program during compilation. These flags have
+no effect during actions that do not perform compilation.}]>.str>;
 
 def Preprocessor_Group : OptionGroup<"<Preprocessor group>">,
                          Group<CompileOnly_Group>,
-                         DocName<"Preprocessor options">, DocBrief<[{
-Flags controlling the behavior of the Clang preprocessor.}]>;
+                         DocName<"Preprocessor options">,
+                         DocBrief<StringForProgram<[{
+Flags controlling the behavior of the %Program preprocessor.}]>.str>;
 
 def IncludePath_Group : OptionGroup<"<I/i group>">, Group<Preprocessor_Group>,
                         DocName<"Include path management">,
@@ -128,9 +149,15 @@ def d_Group : OptionGroup<"<d group>">, Group<Preprocessor_Group>,
 Flags allowing the state of the preprocessor to be dumped in various ways.}]>;
 
 def Diag_Group : OptionGroup<"<W/R group>">, Group<CompileOnly_Group>,
-                 DocName<"Diagnostic options">, DocBrief<[{
-Flags controlling which warnings, errors, and remarks Clang will generate.
-See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.}]>;
+                 DocName<"Diagnostic options">,
+                 DocBrief<!strconcat(StringForProgram<
+"Flags controlling which warnings, errors, and remarks %Program will generate. ">.str,
+                  // When in clang link directly to the page.
+                  !cond(!eq(GlobalDocumentation.Program, "Clang"):
+"See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.",
+                  // When elsewhere the link will not work.
+                  true:
+"See Clang's Diagnostic Reference for a full list of warning and remark flags."))>;
 
 def R_Group : OptionGroup<"<R group>">, Group<Diag_Group>, DocFlatten;
 def R_value_Group : OptionGroup<"<R (with value) group>">, Group<R_Group>,
@@ -309,6 +336,8 @@ class AnalyzerOpts<string base>
   : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
+class InstallAPIOpts<string base>
+  : KeyPathAndMacro<"InstallAPIOpts.", base, "INSTALLAPI_"> {}
 
 // A boolean option which is opt-in in CC1. The positive option exists in CC1 and
 // Args.hasArg(OPT_ffoo) can be used to check that the flag is enabled.
@@ -1114,7 +1143,8 @@ def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
   Visibility<[ClangOption, CLOption]>;
 def cpp_precomp : Flag<["-"], "cpp-precomp">, Group<clang_ignored_f_Group>;
-def current__version : JoinedOrSeparate<["-"], "current_version">;
+def current__version : JoinedOrSeparate<["-"], "current_version">,
+  Visibility<[ClangOption, CC1Option]>;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   HelpText<"Add directory to the C++ SYSTEM include search path">,
   Visibility<[ClangOption, CC1Option]>,
@@ -1529,6 +1559,9 @@ def static_libsan : Flag<["-"], "static-libsan">,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
+def installapi : Flag<["-"], "installapi">,
+  Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
+  HelpText<"Create a text-based stub file by scanning header files">;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
   CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
@@ -3198,10 +3231,10 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"Use the given vector functions library">,
-    Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,none">,
+    Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM,none">,
     NormalizedValuesScope<"llvm::driver::VectorLibrary">,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
-                      "Darwin_libsystem_m", "ArmPL", "NoLibrary"]>,
+                      "Darwin_libsystem_m", "ArmPL", "AMDLIBM", "NoLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
@@ -3838,10 +3871,6 @@ def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
   HelpText<"Turn off loop unroller">, Visibility<[ClangOption, CC1Option]>;
-defm reroll_loops : BoolFOption<"reroll-loops",
-  CodeGenOpts<"RerollLoops">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Turn on loop reroller">,
-  NegFlag<SetFalse>>;
 def ffinite_loops: Flag<["-"],  "ffinite-loops">, Group<f_Group>,
   HelpText<"Assume all loops are finite.">, Visibility<[ClangOption, CC1Option]>;
 def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
@@ -4291,7 +4320,9 @@ def verify_pch : Flag<["-"], "verify-pch">, Group<Action_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Load and verify that a pre-compiled header file is not stale">;
 def init : Separate<["-"], "init">;
-def install__name : Separate<["-"], "install_name">;
+def install__name : Separate<["-"], "install_name">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<InstallAPIOpts<"InstallName">>;
 def iprefix : JoinedOrSeparate<["-"], "iprefix">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the -iwithprefix/-iwithprefixbefore prefix">, MetaVarName<"<dir>">;
@@ -4414,7 +4445,7 @@ def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
-def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>;
+def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Visibility<[ClangOption, FlangOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   Values<"att,intel">,
@@ -4625,11 +4656,15 @@ def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensio
 def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an RVV vector register">,
-  DocBrief<"Defaults to the vector length agnostic value of \"scalable\". "
-           "Accepts power of 2 values between 64 and 65536. Also accepts "
-           "\"zvl\" to use the value implied by -march/-mcpu. On Clang, value "
-           "will be reflected in __riscv_v_fixed_vlen preprocessor define "
-           "(RISC-V only)">;
+  DocBrief<!strconcat(
+    "Defaults to the vector length agnostic value of \"scalable\". "
+    "Accepts power of 2 values between 64 and 65536. Also accepts "
+    "\"zvl\" to use the value implied by -march/-mcpu.",
+    !cond(
+      // Flang does not set the preprocessor define.
+      !eq(GlobalDocumentation.Program, "Flang") : "",
+      true: " The value will be reflected in __riscv_v_fixed_vlen preprocessor define"),
+    " (RISC-V only)")>;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64/LoongArch/RISC-V only)">;
@@ -5339,7 +5374,7 @@ def print_rocm_search_dirs : Flag<["-", "--"], "print-rocm-search-dirs">,
   HelpText<"Print the paths used for finding ROCm installation">,
   Visibility<[ClangOption, CLOption]>;
 def print_runtime_dir : Flag<["-", "--"], "print-runtime-dir">,
-  HelpText<"Print the directory pathname containing clangs runtime libraries">,
+  HelpText<"Print the directory pathname containing Clang's runtime libraries">,
   Visibility<[ClangOption, CLOption]>;
 def print_diagnostic_options : Flag<["-", "--"], "print-diagnostic-options">,
   HelpText<"Print all of Clang's warning options">,
@@ -8466,8 +8501,8 @@ def _SLASH_ZW : CLJoined<"ZW">;
 // clang-dxc Options
 //===----------------------------------------------------------------------===//
 
-def dxc_Group : OptionGroup<"<clang-dxc options>">, Visibility<[DXCOption]>,
-  HelpText<"dxc compatibility options">;
+def dxc_Group : OptionGroup<"clang-dxc options">, Visibility<[DXCOption]>,
+  HelpText<"dxc compatibility options.">;
 class DXCFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
   Group<dxc_Group>, Visibility<[DXCOption]>;
 class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
