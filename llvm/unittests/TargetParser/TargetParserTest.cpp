@@ -439,7 +439,7 @@ INSTANTIATE_TEST_SUITE_P(
                              ARM::AEK_HWDIVARM | ARM::AEK_MP | ARM::AEK_SEC |
                              ARM::AEK_VIRT | ARM::AEK_DSP | ARM::AEK_BF16 |
                              ARM::AEK_DOTPROD | ARM::AEK_RAS | ARM::AEK_I8MM |
-                             ARM::AEK_SB,
+                             ARM::AEK_FP16FML | ARM::AEK_SB,
             "9-A"),
         ARMCPUTestParams<uint64_t>("neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
             ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
@@ -1575,8 +1575,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SB,          AArch64::AEK_SVE2,
                  AArch64::AEK_SVE2BITPERM, AArch64::AEK_BF16,
                  AArch64::AEK_I8MM,        AArch64::AEK_JSCVT,
-                 AArch64::AEK_FCMA,        AArch64::AEK_PAUTH})),
-            "8.5-A"),
+                 AArch64::AEK_FCMA,        AArch64::AEK_PAUTH,
+                 AArch64::AEK_FP16FML})),
+            "9-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "ampere1", "armv8.6-a", "crypto-neon-fp-armv8",
             (AArch64::ExtensionBitset(

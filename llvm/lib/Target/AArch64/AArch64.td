@@ -684,7 +684,7 @@ def HasV8_9aOps : SubtargetFeature<
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
-  [HasV8_5aOps, FeatureMEC, FeatureSVE2]>;
+  [HasV8_5aOps, FeatureSVE2]>;
 
 def HasV9_1aOps : SubtargetFeature<
   "v9.1a", "HasV9_1aOps", "true", "Support ARM v9.1a instructions",
@@ -1516,7 +1516,7 @@ def ProcessorFeatures {
                                        FeaturePerfMon];
   list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
-                                       FeatureSVE2BitPerm, FeatureTRBE,
+                                       FeatureSVE2BitPerm, FeatureTRBE, FeatureFP16FML,
                                        FeaturePerfMon];
   list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                            FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
