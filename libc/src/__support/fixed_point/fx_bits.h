@@ -14,6 +14,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math_extras.h"
 
 #include "fx_rep.h"
 
@@ -31,16 +32,19 @@ private:
   static_assert(fx_rep::FRACTION_LEN > 0);
 
   static constexpr size_t FRACTION_OFFSET = 0; // Just for completeness
-  static constexpr size_t INTEGRAL_OFFSET = fx_rep::FRACTION_LEN;
+  static constexpr size_t INTEGRAL_OFFSET =
+      fx_rep::INTEGRAL_LEN == 0 ? 0 : fx_rep::FRACTION_LEN;
   static constexpr size_t SIGN_OFFSET =
       fx_rep::SIGN_LEN == 0
           ? 0
           : ((sizeof(StorageType) * CHAR_BIT) - fx_rep::SIGN_LEN);
 
   static constexpr StorageType FRACTION_MASK =
-      (StorageType(1) << fx_rep::FRACTION_LEN) - 1;
+      mask_trailing_ones<StorageType, fx_rep::FRACTION_LEN>()
+      << FRACTION_OFFSET;
   static constexpr StorageType INTEGRAL_MASK =
-      ((StorageType(1) << fx_rep::INTEGRAL_LEN) - 1) << INTEGRAL_OFFSET;
+      mask_trailing_ones<StorageType, fx_rep::INTEGRAL_LEN>()
+      << INTEGRAL_OFFSET;
   static constexpr StorageType SIGN_MASK =
       (fx_rep::SIGN_LEN == 0 ? 0 : StorageType(1) << SIGN_OFFSET);
 
@@ -68,8 +72,9 @@ public:
     return (value & INTEGRAL_MASK) >> INTEGRAL_OFFSET;
   }
 
-  LIBC_INLINE constexpr StorageType get_sign() {
-    return (value & SIGN_MASK) >> SIGN_OFFSET;
+  // TODO: replace bool with Sign
+  LIBC_INLINE constexpr bool get_sign() {
+    return static_cast<bool>((value & SIGN_MASK) >> SIGN_OFFSET);
   }
 
   LIBC_INLINE constexpr void set_fraction(StorageType fraction) {
@@ -82,8 +87,10 @@ public:
             ((integral << INTEGRAL_OFFSET) & INTEGRAL_MASK);
   }
 
-  LIBC_INLINE constexpr void set_sign(StorageType sign) {
-    value = (value & (~SIGN_MASK)) | ((sign << SIGN_OFFSET) & SIGN_MASK);
+  // TODO: replace bool with Sign
+  LIBC_INLINE constexpr void set_sign(bool sign) {
+    value = (value & (~SIGN_MASK)) |
+            ((static_cast<StorageType>(sign) << SIGN_OFFSET) & SIGN_MASK);
   }
 
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(value); }
