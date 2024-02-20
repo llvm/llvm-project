@@ -92,14 +92,14 @@ void UseDesignatedInitializersCheck::check(
     return;
   std::optional<llvm::DenseMap<clang::SourceLocation, std::string>>
       Designators{};
-  const auto LazyDesignators = [SyntacticInitList, &Designators] {
-    return Designators ? Designators
+  const auto LazyDesignators = [SyntacticInitList, &Designators]() -> auto & {
+    return Designators ? *Designators
                        : Designators.emplace(
                              utils::getUnwrittenDesignators(SyntacticInitList));
   };
   const unsigned NumberOfDesignated = getNumberOfDesignated(SyntacticInitList);
   if (SyntacticInitList->getNumInits() - NumberOfDesignated >
-      LazyDesignators()->size())
+      LazyDesignators().size())
     return;
   if (0 == NumberOfDesignated) {
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
@@ -111,8 +111,8 @@ void UseDesignatedInitializersCheck::check(
       Diag << Type->getDeclName();
       Diag << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
-        const std::string Designator =
-            LazyDesignators()->at(InitExpr->getBeginLoc());
+        const std::string &Designator =
+            LazyDesignators().at(InitExpr->getBeginLoc());
         if (!Designator.empty())
           Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
                                              Designator + "=");
@@ -127,14 +127,14 @@ void UseDesignatedInitializersCheck::check(
       continue;
     if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID())
       continue;
-    const std::string Designator =
-        LazyDesignators()->at(InitExpr->getBeginLoc());
+    const std::string &Designator =
+        LazyDesignators().at(InitExpr->getBeginLoc());
     DiagnosticBuilder Diag =
         diag(InitExpr->getBeginLoc(),
              "use designated init expression to initialize field '%0'");
     Diag << InitExpr->getSourceRange();
     if (!Designator.empty() && Designator.front() == '.') {
-      Diag << Designator.substr(1); // Strip leading dot
+      Diag << StringRef(Designator).substr(1); // Strip leading dot
       Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
                                          Designator + "=");
     }
