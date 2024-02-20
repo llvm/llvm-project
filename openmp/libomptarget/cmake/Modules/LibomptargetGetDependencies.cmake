@@ -101,12 +101,10 @@ if(LIBOMPTARGET_AMDGPU_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_AMDGPU_ARCH}
                   OUTPUT_VARIABLE LIBOMPTARGET_AMDGPU_ARCH_OUTPUT
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(FIND "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" "\n" first_arch_string)
-  string(SUBSTRING "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" 0 ${first_arch_string}
-         arch_string)
-  if(arch_string)
+  string(REPLACE "\n" ";" amdgpu_arch_list "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}")
+  if(amdgpu_arch_list)
     set(LIBOMPTARGET_FOUND_AMDGPU_GPU TRUE)
-    set(LIBOMPTARGET_DEP_AMDGPU_ARCH "${arch_string}")
+    set(LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST "${amdgpu_arch_list}")
   endif()
 endif()
 
