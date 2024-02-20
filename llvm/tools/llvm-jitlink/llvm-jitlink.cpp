@@ -165,7 +165,7 @@ static cl::list<std::string>
 
 static cl::list<std::string>
     SectCreate("sectcreate",
-               cl::desc("given <sectname>,<filename>[:<sym>=<offset>,...]  "
+               cl::desc("given <sectname>,<filename>[@<sym>=<offset>,...]  "
                         "add the content of <filename> to <sectname>"),
                cl::cat(JITLinkCategory));
 
@@ -1683,7 +1683,7 @@ static Error addSectCreates(Session &S,
 
     StringRef SCArg(*SCItr);
 
-    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split(':');
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
     auto [SectName, FileName] = SectAndFileName.rsplit(',');
     if (SectName.empty())
       return make_error<StringError>("In -sectcreate=" + SCArg +
