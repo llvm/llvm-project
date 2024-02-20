@@ -706,21 +706,17 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit list(size_type __n, const allocator_type& __a);
 #endif
   _LIBCPP_HIDE_FROM_ABI list(size_type __n, const value_type& __x);
-  template <class = __enable_if_t<__is_allocator<_Alloc>::value> >
+  template <__enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI list(size_type __n, const value_type& __x, const allocator_type& __a) : base(__a) {
     for (; __n > 0; --__n)
       push_back(__x);
   }
 
-  template <class _InpIter>
-  _LIBCPP_HIDE_FROM_ABI
-  list(_InpIter __f, _InpIter __l, __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
-  template <class _InpIter>
-  _LIBCPP_HIDE_FROM_ABI
-  list(_InpIter __f,
-       _InpIter __l,
-       const allocator_type& __a,
-       __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
+  template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI list(_InpIter __f, _InpIter __l);
+
+  template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI list(_InpIter __f, _InpIter __l, const allocator_type& __a);
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
@@ -750,9 +746,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI void assign(initializer_list<value_type> __il) { assign(__il.begin(), __il.end()); }
 #endif // _LIBCPP_CXX03_LANG
 
-  template <class _InpIter>
-  _LIBCPP_HIDE_FROM_ABI void
-  assign(_InpIter __f, _InpIter __l, __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
+  template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI void assign(_InpIter __f, _InpIter __l);
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
@@ -854,12 +849,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __x);
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, size_type __n, const value_type& __x);
-  template <class _InpIter>
-  _LIBCPP_HIDE_FROM_ABI iterator
-  insert(const_iterator __p,
-         _InpIter __f,
-         _InpIter __l,
-         __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
+
+  template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InpIter __f, _InpIter __l);
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
@@ -1024,19 +1016,15 @@ list<_Tp, _Alloc>::list(size_type __n, const value_type& __x) {
 }
 
 template <class _Tp, class _Alloc>
-template <class _InpIter>
-list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, __enable_if_t<__has_input_iterator_category<_InpIter>::value>*) {
+template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> >
+list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l) {
   for (; __f != __l; ++__f)
     __emplace_back(*__f);
 }
 
 template <class _Tp, class _Alloc>
-template <class _InpIter>
-list<_Tp, _Alloc>::list(_InpIter __f,
-                        _InpIter __l,
-                        const allocator_type& __a,
-                        __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
-    : base(__a) {
+template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> >
+list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, const allocator_type& __a) : base(__a) {
   for (; __f != __l; ++__f)
     __emplace_back(*__f);
 }
@@ -1121,9 +1109,8 @@ inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(const list& __c) {
 }
 
 template <class _Tp, class _Alloc>
-template <class _InpIter>
-void list<_Tp, _Alloc>::assign(
-    _InpIter __f, _InpIter __l, __enable_if_t<__has_input_iterator_category<_InpIter>::value>*) {
+template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> >
+void list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l) {
   __assign_with_sentinel(__f, __l);
 }
 
@@ -1201,9 +1188,8 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
 }
 
 template <class _Tp, class _Alloc>
-template <class _InpIter>
-typename list<_Tp, _Alloc>::iterator list<_Tp, _Alloc>::insert(
-    const_iterator __p, _InpIter __f, _InpIter __l, __enable_if_t<__has_input_iterator_category<_InpIter>::value>*) {
+template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> >
+typename list<_Tp, _Alloc>::iterator list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l) {
   return __insert_with_sentinel(__p, __f, __l);
 }
 

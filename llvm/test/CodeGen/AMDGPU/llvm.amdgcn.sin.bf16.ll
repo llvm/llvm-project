@@ -14,7 +14,7 @@ define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 }
 
 ; GCN-LABEL: {{^}}sin_bf16_constant_4
-; GCN: v_sin_bf16_e32 {{v[0-9]+}}, 0x4080
+; GCN: v_sin_bf16_e32 v0, 4.0
 define amdgpu_kernel void @sin_bf16_constant_4(ptr addrspace(1) %out) #1 {
   %sin = call bfloat @llvm.amdgcn.sin.bf16(bfloat 4.0) #0
   store bfloat %sin, ptr addrspace(1) %out, align 2

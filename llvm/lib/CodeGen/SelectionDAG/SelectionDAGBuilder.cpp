@@ -6956,11 +6956,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::stackguard: {
     MachineFunction &MF = DAG.getMachineFunction();
     const Module &M = *MF.getFunction().getParent();
+    EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Chain = getRoot();
     if (TLI.useLoadStackGuardNode()) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
+      Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
-      EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
       const Value *Global = TLI.getSDagStackGuard(M);
       Align Align = DAG.getDataLayout().getPrefTypeAlign(Global->getType());
       Res = DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),

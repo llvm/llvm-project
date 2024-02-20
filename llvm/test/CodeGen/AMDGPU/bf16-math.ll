@@ -44,7 +44,7 @@ define amdgpu_ps void @v_test_add_v2bf16_vc(<2 x bfloat> %a, ptr addrspace(1) %o
 ; GCN-LABEL: v_test_add_v2bf16_vc:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GCN-NEXT:    v_pk_add_bf16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GCN-NEXT:    v_pk_add_bf16 v0, 0x40004000, v0
 ; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm

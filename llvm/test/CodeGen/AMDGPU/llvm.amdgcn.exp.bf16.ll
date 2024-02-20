@@ -14,7 +14,7 @@ define amdgpu_kernel void @exp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 }
 
 ; GCN-LABEL: {{^}}exp_bf16_constant_4
-; GCN: v_exp_bf16_e32 {{v[0-9]+}}, 0x4080
+; GCN: v_exp_bf16_e32 v0, 4.0
 define amdgpu_kernel void @exp_bf16_constant_4(ptr addrspace(1) %out) #1 {
   %exp = call bfloat @llvm.amdgcn.exp2.bf16(bfloat 4.0) #0
   store bfloat %exp, ptr addrspace(1) %out, align 2

@@ -2187,6 +2187,11 @@ inline const APInt &umax(const APInt &A, const APInt &B) {
   return A.ugt(B) ? A : B;
 }
 
+/// Determine the absolute difference of two APInts considered to be unsigned.
+inline const APInt absdiff(const APInt &A, const APInt &B) {
+  return A.uge(B) ? (A - B) : (B - A);
+}
+
 /// Compute GCD of two unsigned APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values

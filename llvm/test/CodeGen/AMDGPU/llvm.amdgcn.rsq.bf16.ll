@@ -14,7 +14,7 @@ define amdgpu_kernel void @rsq_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 }
 
 ; GCN-LABEL: {{^}}rsq_bf16_constant_4
-; GCN: v_rsq_bf16_e32 {{v[0-9]+}}, 0x4080
+; GCN: v_rsq_bf16_e32 v0, 4.0
 define amdgpu_kernel void @rsq_bf16_constant_4(ptr addrspace(1) %out) #1 {
   %rsq = call bfloat @llvm.amdgcn.rsq.bf16(bfloat 4.0) #0
   store bfloat %rsq, ptr addrspace(1) %out, align 2

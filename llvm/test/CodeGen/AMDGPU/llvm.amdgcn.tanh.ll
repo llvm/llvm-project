@@ -81,7 +81,7 @@ define amdgpu_kernel void @tanh_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 }
 
 ; GCN-LABEL: {{^}}tanh_bf16_constant_4
-; GCN: v_tanh_bf16_e32 {{v[0-9]+}}, 0x4080
+; GCN: v_tanh_bf16_e32 v0, 4.0
 define amdgpu_kernel void @tanh_bf16_constant_4(ptr addrspace(1) %out) #1 {
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat 4.0) #0
   store bfloat %tanh, ptr addrspace(1) %out, align 2
