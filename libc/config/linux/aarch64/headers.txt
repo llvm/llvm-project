@@ -10,6 +10,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.math
     libc.include.pthread
     libc.include.signal
+    libc.include.stdckdint
     libc.include.stdbit
     libc.include.stdio
     libc.include.stdlib
