@@ -10,6 +10,7 @@ from mlir.dialects import llvm
 from mlir.dialects import builtin
 from mlir.dialects import scf
 from mlir.dialects import vector
+from mlir.extras import types as T
 
 TMA_LAST_DIM_F16 = 64  # 128B flaot16
 WARP_SIZE = 32
@@ -22,12 +23,8 @@ PRODUCER_PRIMARY_THREAD = 128
 CONSUMER_PRIMARY_THREAD = 0
 
 MLIR_DYNAMIC = -9223372036854775808
-f16_byte = 2
-f32_byte = 4
 
 DEBUG = False
-
-
 def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
     if not DEBUG and not forcePrint:
         return
@@ -59,10 +56,51 @@ def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
         scf.yield_([])
 
 
-def c(value, ty=None):
-    ty = ir.IndexType.get() if ty is None else ty
-    return arith.constant(ty, value)
+def get_type_str(ty):
+    if ir.F16Type.isinstance(ty):
+        return "f16"
+    if ir.F32Type.isinstance(ty):
+        return "f32"
+    if ir.F64Type.isinstance(ty):
+        return "f64"
+    if ir.IntegerType.isinstance(ty):
+        return "i" + str(ir.IntegerType(ty).width)
+    if ir.IndexType.isinstance(ty):
+        return "T.index()"
+    raise NotImplementedError(ty)
 
+
+def get_type_size(ty):
+    if ir.F16Type.isinstance(ty):
+        return 2
+    if ir.F32Type.isinstance(ty):
+        return 4
+    if ir.F64Type.isinstance(ty):
+        return 8
+    if ir.IntegerType.isinstance(ty):
+        return ir.IntegerType(ty).width // 8
+    if ir.IndexType.isinstance(ty):
+        return 8
+    raise NotImplementedError(ty)
+
+
+def get_mlir_ty(dtype):
+    if dtype == np.float16:
+        return T.f16()
+    if dtype == np.float32:
+        return T.f32()
+    if dtype == np.float64:
+        return T.f64()
+    if dtype == np.int32:
+        return T.i32()
+    if dtype == np.int64:
+        return T.i64()
+    raise NotImplementedError(dtype)
+
+
+def c(value, ty=None):
+    ty = T.index() if ty is None else ty
+    return arith.constant(ty, value)
 
 def generate_matmul_ws(
     input_type=np.float16,
@@ -86,27 +124,21 @@ def generate_matmul_ws(
     num_stages = min(required_stages, max_num_stages)
 
     module = ir.Module.create()
-    f16 = ir.F16Type.get()
-    f32 = ir.F32Type.get()
-    i1 = ir.IntegerType.get_signless(1)
-    i32 = ir.IntegerType.get_signless(32)
-    index = ir.IndexType.get()
-    i8 = ir.IntegerType.get_signless(8)
     token_ty = ir.Type.parse("!gpu.async.token")
-    a_ty = ir.MemRefType.get([M, K], f16)
-    b_ty = ir.MemRefType.get((K, N), f16)
-    c_elem_ty = f16 if output_type == np.float16 else f32
+    a_elem_ty = get_mlir_ty(input_type)
+    b_elem_ty = get_mlir_ty(input_type)
+    c_elem_ty = get_mlir_ty(output_type)
+    a_ty = ir.MemRefType.get([M, K], a_elem_ty)
+    b_ty = ir.MemRefType.get((K, N), b_elem_ty)
     c_ty = ir.MemRefType.get((M, N), c_elem_ty)
     a_tile_shape = a_tma_shape = (BLOCK_M, TMA_LAST_DIM_F16)
     b_tma_shape = (BLOCK_K, TMA_LAST_DIM_F16)
     b_tile_shape = (BLOCK_K, BLOCK_N)
-    txcount = (
-        (b_tile_shape[0] * b_tile_shape[1]) + (a_tile_shape[0] * a_tile_shape[1])
-    ) * f16_byte
+    txcount = (b_tile_shape[0] * b_tile_shape[1] * get_type_size(a_elem_ty)) + (
+        a_tile_shape[0] * a_tile_shape[1] * get_type_size(b_elem_ty)
+    )
     smem_space_str = "#gpu.address_space<workgroup>"
     smem_space = ir.Attribute.parse(smem_space_str)
-    input_type_str = "f16" if input_type == np.float16 else "f32"
-    output_type_str = "f16" if output_type == np.float16 else "f32"
     mbar_ty = ir.Type.parse(
         "!nvgpu.mbarrier.group<memorySpace = "
         + str(smem_space)
@@ -120,7 +152,7 @@ def generate_matmul_ws(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + str(input_type_str)
+        + get_type_str(a_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -131,7 +163,7 @@ def generate_matmul_ws(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + str(input_type_str)
+        + get_type_str(b_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -142,7 +174,7 @@ def generate_matmul_ws(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + str(output_type_str)
+        + get_type_str(c_elem_ty)
         + ">>"
     )
     a_wgmma_ty = ir.Type.parse(
@@ -151,7 +183,7 @@ def generate_matmul_ws(
         + "x"
         + str(BLOCK_K)
         + "x"
-        + str(input_type_str)
+        + get_type_str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -162,7 +194,7 @@ def generate_matmul_ws(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + str(input_type_str)
+        + get_type_str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -172,10 +204,10 @@ def generate_matmul_ws(
 
         @func.FuncOp.from_py_func(a_ty, b_ty, c_ty)
         def mlir_matmul_warpspecialized(a_host, b_host, c_host):
-            lhs_tile_bytes = BLOCK_M * BLOCK_K * f16_byte
-            rhs_tile_bytes = BLOCK_N * BLOCK_K * f16_byte
+            lhs_tile_bytes = BLOCK_M * BLOCK_K * get_type_size(a_elem_ty)
+            rhs_tile_bytes = BLOCK_N * BLOCK_K * get_type_size(b_elem_ty)
             smem_size_input = (lhs_tile_bytes + rhs_tile_bytes) * num_stages
-            smem_size_output = BLOCK_M * BLOCK_N * f32_byte
+            smem_size_output = BLOCK_M * BLOCK_N * get_type_size(c_elem_ty)
             smem_size = max(smem_size_input, smem_size_output)
 
             # Step 1. Allocate device memory and memcpy
@@ -195,7 +227,7 @@ def generate_matmul_ws(
             tma_descs = []
             for x_device, tensor_map_ty, tile_shape in tma_specs:
                 x_unranked = memref.cast(
-                    ir.UnrankedMemRefType.get(f16, a_ty.memory_space), x_device
+                    ir.UnrankedMemRefType.get(a_elem_ty, a_ty.memory_space), x_device
                 )
                 tma_descs.append(
                     nvgpu.TmaCreateDescriptorOp(
@@ -215,14 +247,14 @@ def generate_matmul_ws(
                 [t7],
                 *map(c, grid),
                 *map(c, block),
-                dynamicSharedMemorySize=c(smem_size, ty=i32)
+                dynamicSharedMemorySize=c(smem_size, ty=T.i32())
             )
-            launch_op.body.blocks.append(*([index] * 12))
+            launch_op.body.blocks.append(*([T.index()] * 12))
             with ir.InsertionPoint(launch_op.body.blocks[0]):
                 # GPU Step 0. This is need for vectorized ld/st
                 memref.assume_alignment(c_device, 16)
                 dynamic_smem = gpu.dynamic_shared_memory(
-                    ir.MemRefType.get((MLIR_DYNAMIC,), i8, memory_space=smem_space)
+                    ir.MemRefType.get((MLIR_DYNAMIC,), T.i8(), memory_space=smem_space)
                 )
                 ticks = c(10000000)
 
@@ -275,7 +307,7 @@ def generate_matmul_ws(
 
                     # Step 5.2. TMA Main Loop
                     for_op = scf.ForOp(
-                        c(0), c(K // BLOCK_K), c(1), [arith.constant(i1, 1)]
+                        c(0), c(K // BLOCK_K), c(1), [arith.constant(T.bool(), 1)]
                     )
                     with ir.InsertionPoint(for_op.body):
                         phaseParity = for_op.inner_iter_args[0]
@@ -303,7 +335,7 @@ def generate_matmul_ws(
                         p = arith.cmpi(arith.CmpIPredicate.eq, stage, c(num_stages - 1))
                         phaseParity = arith.select(
                             p,
-                            arith.xori(phaseParity, arith.constant(i1, 1)),
+                            arith.xori(phaseParity, arith.constant(T.bool(), 1)),
                             phaseParity,
                         )
 
@@ -311,7 +343,7 @@ def generate_matmul_ws(
                         a_offset = arith.muli(stage, c(lhs_tile_bytes))
                         a_tma_slice = memref.view(
                             ir.MemRefType.get(
-                                a_tma_shape, f16, memory_space=smem_space
+                                a_tma_shape, a_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             a_offset,
@@ -323,18 +355,19 @@ def generate_matmul_ws(
                         )
                         b_tma_slice_1 = memref.view(
                             ir.MemRefType.get(
-                                b_tma_shape, f16, memory_space=smem_space
+                                b_tma_shape, b_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             b_offset,
                             [],
                         )
                         b_offset2 = arith.addi(
-                            b_offset, c(BLOCK_K * TMA_LAST_DIM_F16 * f16_byte)
+                            b_offset,
+                            c(BLOCK_K * TMA_LAST_DIM_F16 * get_type_size(b_elem_ty)),
                         )
                         b_tma_slice_2 = memref.view(
                             ir.MemRefType.get(
-                                b_tma_shape, f16, memory_space=smem_space
+                                b_tma_shape, b_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             b_offset2,
@@ -406,7 +439,7 @@ def generate_matmul_ws(
 
                     # Step 6.3. MMA Main Loop
                     for_op = scf.ForOp(
-                        c(0), c(K // BLOCK_K), c(1), [acc, arith.constant(i1, 0)]
+                        c(0), c(K // BLOCK_K), c(1), [acc, arith.constant(T.bool(), 0)]
                     )
                     with ir.InsertionPoint(for_op.body):
                         # Step 6.3.1. Wait mbar1
@@ -435,7 +468,7 @@ def generate_matmul_ws(
                         a_offset = arith.muli(stage, c(lhs_tile_bytes))
                         a_tile_slice = memref.view(
                             ir.MemRefType.get(
-                                a_tile_shape, f16, memory_space=smem_space
+                                a_tile_shape, a_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             a_offset,
@@ -447,7 +480,7 @@ def generate_matmul_ws(
                         )
                         b_tile_slice = memref.view(
                             ir.MemRefType.get(
-                                b_tile_shape, f16, memory_space=smem_space
+                                b_tile_shape, b_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             b_offset,
@@ -506,7 +539,7 @@ def generate_matmul_ws(
                         p = arith.cmpi(arith.CmpIPredicate.eq, stage, c(num_stages - 1))
                         phaseParity = arith.select(
                             p,
-                            arith.xori(phaseParity, arith.constant(i1, 1)),
+                            arith.xori(phaseParity, arith.constant(T.bool(), 1)),
                             phaseParity,
                         )
 
@@ -604,27 +637,21 @@ def generate_matmul_multistage(
     num_stages = min(required_stages, max_num_stages)
 
     module = ir.Module.create()
-    f16 = ir.F16Type.get()
-    f32 = ir.F32Type.get()
-    i1 = ir.IntegerType.get_signless(1)
-    i32 = ir.IntegerType.get_signless(32)
-    index = ir.IndexType.get()
-    i8 = ir.IntegerType.get_signless(8)
     token_ty = ir.Type.parse("!gpu.async.token")
-    a_ty = ir.MemRefType.get([M, K], f16)
-    b_ty = ir.MemRefType.get((K, N), f16)
-    c_elem_ty = f16 if output_type == np.float16 else f32
+    a_elem_ty = get_mlir_ty(input_type)
+    b_elem_ty = get_mlir_ty(input_type)
+    c_elem_ty = get_mlir_ty(output_type)
+    a_ty = ir.MemRefType.get([M, K], a_elem_ty)
+    b_ty = ir.MemRefType.get((K, N), b_elem_ty)
     c_ty = ir.MemRefType.get((M, N), c_elem_ty)
     a_tile_shape = a_tma_shape = (BLOCK_M, TMA_LAST_DIM_F16)
     b_tma_shape = (BLOCK_K, TMA_LAST_DIM_F16)
     b_tile_shape = (BLOCK_K, BLOCK_N)
-    txcount = (
-        (b_tile_shape[0] * b_tile_shape[1]) + (a_tile_shape[0] * a_tile_shape[1])
-    ) * f16_byte
+    txcount = (b_tile_shape[0] * b_tile_shape[1] * get_type_size(a_elem_ty)) + (
+        a_tile_shape[0] * a_tile_shape[1] * get_type_size(b_elem_ty)
+    )
     smem_space_str = "#gpu.address_space<workgroup>"
     smem_space = ir.Attribute.parse(smem_space_str)
-    input_type_str = "f16" if input_type == np.float16 else "f32"
-    output_type_str = "f16" if output_type == np.float16 else "f32"
     mbar_ty = ir.Type.parse(
         "!nvgpu.mbarrier.group<memorySpace = "
         + str(smem_space)
@@ -638,7 +665,7 @@ def generate_matmul_multistage(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + str(input_type_str)
+        + get_type_str(a_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -649,7 +676,7 @@ def generate_matmul_multistage(
         + "x"
         + str(TMA_LAST_DIM_F16)
         + "x"
-        + str(input_type_str)
+        + get_type_str(b_elem_ty)
         + ", "
         + str(smem_space)
         + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
@@ -660,7 +687,7 @@ def generate_matmul_multistage(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + str(output_type_str)
+        + get_type_str(c_elem_ty)
         + ">>"
     )
     a_wgmma_ty = ir.Type.parse(
@@ -669,7 +696,7 @@ def generate_matmul_multistage(
         + "x"
         + str(BLOCK_K)
         + "x"
-        + str(input_type_str)
+        + get_type_str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -680,7 +707,7 @@ def generate_matmul_multistage(
         + "x"
         + str(BLOCK_N)
         + "x"
-        + str(input_type_str)
+        + get_type_str(a_elem_ty)
         + ", "
         + smem_space_str
         + ">>"
@@ -690,10 +717,10 @@ def generate_matmul_multistage(
 
         @func.FuncOp.from_py_func(a_ty, b_ty, c_ty)
         def mlir_matmul_multistage(a_host, b_host, c_host):
-            lhs_tile_bytes = BLOCK_M * BLOCK_K * f16_byte
-            rhs_tile_bytes = BLOCK_N * BLOCK_K * f16_byte
+            lhs_tile_bytes = BLOCK_M * BLOCK_K * get_type_size(a_elem_ty)
+            rhs_tile_bytes = BLOCK_N * BLOCK_K * get_type_size(b_elem_ty)
             smem_size_input = (lhs_tile_bytes + rhs_tile_bytes) * num_stages
-            smem_size_output = BLOCK_M * BLOCK_N * f32_byte
+            smem_size_output = BLOCK_M * BLOCK_N * get_type_size(c_elem_ty)
             smem_size = max(smem_size_input, smem_size_output)
 
             # Step 1. Allocate device memory and memcpy
@@ -713,7 +740,7 @@ def generate_matmul_multistage(
             tma_descs = []
             for x_device, tensor_map_ty, tile_shape in tma_specs:
                 x_unranked = memref.cast(
-                    ir.UnrankedMemRefType.get(f16, a_ty.memory_space), x_device
+                    ir.UnrankedMemRefType.get(a_elem_ty, a_ty.memory_space), x_device
                 )
                 tma_descs.append(
                     nvgpu.TmaCreateDescriptorOp(
@@ -733,14 +760,14 @@ def generate_matmul_multistage(
                 [t7],
                 *map(c, grid),
                 *map(c, block),
-                dynamicSharedMemorySize=c(smem_size, ty=i32)
+                dynamicSharedMemorySize=c(smem_size, ty=T.i32())
             )
-            launch_op.body.blocks.append(*([index] * 12))
+            launch_op.body.blocks.append(*([T.index()] * 12))
             with ir.InsertionPoint(launch_op.body.blocks[0]):
                 # GPU Step 0. Bootstrapping
                 memref.assume_alignment(c_device, 16)
                 dynamic_smem = gpu.dynamic_shared_memory(
-                    ir.MemRefType.get((MLIR_DYNAMIC,), i8, memory_space=smem_space)
+                    ir.MemRefType.get((MLIR_DYNAMIC,), T.i8(), memory_space=smem_space)
                 )
                 ticks = c(10000000)
                 tidx = gpu.thread_id(gpu.Dimension.x)
@@ -769,7 +796,9 @@ def generate_matmul_multistage(
                     # Step 3.1. Calculate offsets
                     a_offset = arith.muli(iv, c(lhs_tile_bytes))
                     a_tma_slice = memref.view(
-                        ir.MemRefType.get(a_tma_shape, f16, memory_space=smem_space),
+                        ir.MemRefType.get(
+                            a_tma_shape, a_elem_ty, memory_space=smem_space
+                        ),
                         dynamic_smem,
                         a_offset,
                         [],
@@ -779,16 +808,21 @@ def generate_matmul_multistage(
                         c(lhs_tile_bytes * num_stages),
                     )
                     b_tma_slice_1 = memref.view(
-                        ir.MemRefType.get(b_tma_shape, f16, memory_space=smem_space),
+                        ir.MemRefType.get(
+                            b_tma_shape, b_elem_ty, memory_space=smem_space
+                        ),
                         dynamic_smem,
                         b_offset,
                         [],
                     )
                     b_offset2 = arith.addi(
-                        b_offset, c(BLOCK_K * TMA_LAST_DIM_F16 * f16_byte)
+                        b_offset,
+                        c(BLOCK_K * TMA_LAST_DIM_F16 * get_type_size(b_elem_ty)),
                     )
                     b_tma_slice_2 = memref.view(
-                        ir.MemRefType.get(b_tma_shape, f16, memory_space=smem_space),
+                        ir.MemRefType.get(
+                            b_tma_shape, b_elem_ty, memory_space=smem_space
+                        ),
                         dynamic_smem,
                         b_offset2,
                         [],
@@ -850,7 +884,7 @@ def generate_matmul_multistage(
                 # GPU Step 4. Main Loop
                 acc = nvgpu.warpgroup_mma_init_accumulator(acc_ty)
                 for_op = scf.ForOp(
-                    c(0), c(K // BLOCK_K), c(1), [acc, arith.constant(i1, 0)]
+                    c(0), c(K // BLOCK_K), c(1), [acc, arith.constant(T.bool(), 0)]
                 )
                 with ir.InsertionPoint(for_op.body):
                     # Step 4.1. Wait mbarTMA
@@ -876,7 +910,9 @@ def generate_matmul_multistage(
                     # Step 4.2. Create WGMMA Descriptors
                     a_offset = arith.muli(stage, c(lhs_tile_bytes))
                     a_tile_slice = memref.view(
-                        ir.MemRefType.get(a_tile_shape, f16, memory_space=smem_space),
+                        ir.MemRefType.get(
+                            a_tile_shape, a_elem_ty, memory_space=smem_space
+                        ),
                         dynamic_smem,
                         a_offset,
                         [],
@@ -886,7 +922,9 @@ def generate_matmul_multistage(
                         c(lhs_tile_bytes * num_stages),
                     )
                     b_tile_slice = memref.view(
-                        ir.MemRefType.get(b_tile_shape, f16, memory_space=smem_space),
+                        ir.MemRefType.get(
+                            b_tile_shape, b_elem_ty, memory_space=smem_space
+                        ),
                         dynamic_smem,
                         b_offset,
                         [],
@@ -924,7 +962,7 @@ def generate_matmul_multistage(
                         a_offset = arith.muli(nextSlot, c(lhs_tile_bytes))
                         a_tma_slice = memref.view(
                             ir.MemRefType.get(
-                                a_tma_shape, f16, memory_space=smem_space
+                                a_tma_shape, a_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             a_offset,
@@ -936,18 +974,19 @@ def generate_matmul_multistage(
                         )
                         b_tma_slice_1 = memref.view(
                             ir.MemRefType.get(
-                                b_tma_shape, f16, memory_space=smem_space
+                                b_tma_shape, b_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             b_offset,
                             [],
                         )
                         b_offset2 = arith.addi(
-                            b_offset, c(BLOCK_K * TMA_LAST_DIM_F16 * f16_byte)
+                            b_offset,
+                            c(BLOCK_K * TMA_LAST_DIM_F16 * get_type_size(b_elem_ty)),
                         )
                         b_tma_slice_2 = memref.view(
                             ir.MemRefType.get(
-                                b_tma_shape, f16, memory_space=smem_space
+                                b_tma_shape, b_elem_ty, memory_space=smem_space
                             ),
                             dynamic_smem,
                             b_offset2,
@@ -1010,7 +1049,9 @@ def generate_matmul_multistage(
                     # Step 4.5. Change the phaseParity
                     p = arith.cmpi(arith.CmpIPredicate.eq, stage, c(num_stages - 1))
                     phaseParity = arith.select(
-                        p, arith.xori(phaseParity, arith.constant(i1, 1)), phaseParity
+                        p,
+                        arith.xori(phaseParity, arith.constant(T.bool(), 1)),
+                        phaseParity,
                     )
 
                     # Step 4.5. Yield
