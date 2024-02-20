@@ -495,6 +495,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_const_type:
   case DW_TAG_restrict_type:
   case DW_TAG_volatile_type:
+  case DW_TAG_LLVM_ptrauth_type:
   case DW_TAG_atomic_type:
   case DW_TAG_unspecified_type: {
     type_sp = ParseTypeModifier(sc, die, attrs);
@@ -676,6 +677,62 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   case DW_TAG_volatile_type:
     encoding_data_type = Type::eEncodingIsVolatileUID;
     break;
+  case DW_TAG_LLVM_ptrauth_type: {
+    DWARFDIE ptr_die = die.GetReferencedDIE(DW_AT_type);
+    // FIXME: Fully resolving the type here may affect performance.
+    Type *res_type = dwarf->ResolveType(ptr_die);
+    if (!res_type)
+      break;
+    attrs.type.Clear();
+    encoding_data_type = Type::eEncodingIsUID;
+    resolve_state = Type::ResolveState::Full;
+
+    // Apply the ptrauth qualifier to the resolved type.
+    auto *ptr_type =
+        (clang::Type *)res_type->GetForwardCompilerType().GetOpaqueQualType();
+    auto getAttr = [&](llvm::dwarf::Attribute Attr, unsigned defaultValue = 0) {
+      return die.GetAttributeValueAsUnsigned(Attr, defaultValue);
+    };
+    const unsigned key = getAttr(DW_AT_LLVM_ptrauth_key);
+    const bool addr_disc = getAttr(DW_AT_LLVM_ptrauth_address_discriminated);
+    const unsigned extra = getAttr(DW_AT_LLVM_ptrauth_extra_discriminator);
+    const bool isapointer = getAttr(DW_AT_LLVM_ptrauth_isa_pointer);
+    const bool authenticates_null_values =
+        getAttr(DW_AT_LLVM_ptrauth_authenticates_null_values, 0);
+    const bool is_restricted_integral = !ptr_type->isPointerType();
+    const unsigned authentication_mode_int = getAttr(
+        DW_AT_LLVM_ptrauth_authentication_mode,
+        static_cast<unsigned>(clang::PointerAuthenticationMode::SignAndAuth));
+    clang::PointerAuthenticationMode authentication_mode =
+        clang::PointerAuthenticationMode::SignAndAuth;
+    if (authentication_mode_int >=
+            static_cast<unsigned>(clang::PointerAuthenticationMode::None) &&
+        authentication_mode_int <=
+            static_cast<unsigned>(
+                clang::PointerAuthenticationMode::SignAndAuth)) {
+      authentication_mode = static_cast<clang::PointerAuthenticationMode>(
+          authentication_mode_int);
+    } else {
+      dwarf->GetObjectFile()->GetModule()->ReportError(
+          "[{0:x16}]: invalid pointer authentication mode method {1:x4}",
+          die.GetOffset(), authentication_mode_int);
+    }
+
+    // FIXME: Use these variables when PointerAuthQualifier is more complete
+    // upstream.
+    (void)is_restricted_integral;
+
+    clang::Qualifiers qualifiers;
+    auto ptr_auth = clang::PointerAuthQualifier::Create(
+        key, addr_disc, extra, authentication_mode, isapointer,
+        authenticates_null_values);
+    qualifiers.setPointerAuth(ptr_auth);
+    auto &ctx = m_ast.getASTContext();
+    auto qual_type = ctx.getQualifiedType(ptr_type, qualifiers);
+    clang_type =
+        CompilerType(m_ast.weak_from_this(), qual_type.getAsOpaquePtr());
+    break;
+  }
   case DW_TAG_atomic_type:
     encoding_data_type = Type::eEncodingIsAtomicUID;
     break;
