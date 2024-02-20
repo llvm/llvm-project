@@ -12,7 +12,13 @@ if(POLICY CMP0116)
 endif()
 
 +# Enable debug info compatible with SCCache
-+# https://github.com/mozilla/sccache?tab=readme-ov-file#usage
+# MSVC debug information format flags are selected by an
+# abstraction. New in CMake 3.25.
+#
+# Supports debug info with SCCache
+# (https://github.com/mozilla/sccache?tab=readme-ov-file#usage)
+# avoiding “fatal error C1041: cannot open program database; if
+# multiple CL.EXE write to the same .PDB file, please use /FS"
 +if(POLICY CMP0141)
 +  cmake_policy(SET CMP0141 NEW)
 +endif()
