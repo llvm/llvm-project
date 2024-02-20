@@ -1514,6 +1514,8 @@ public:
                                : ChosenTailFoldingStyle.second;
   }
 
+  /// Selects and saves TailFoldingStyle for 2 options - if IV may overflow or
+  /// not.
   void selectTailFoldinStyle() {
     if (!Legal->prepareToFoldTailByMasking())
       return;
@@ -1684,8 +1686,8 @@ private:
   /// iterations to execute in the scalar loop.
   ScalarEpilogueLowering ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
 
-  /// Control finally chosen tail folding style. The first element is used if iv
-  /// update may overflow, the second element - if it may not.
+  /// Control finally chosen tail folding style. The first element is used if IV
+  /// update may overflow, the second element - if it does not.
   std::pair<TailFoldingStyle, TailFoldingStyle> ChosenTailFoldingStyle =
       std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
 

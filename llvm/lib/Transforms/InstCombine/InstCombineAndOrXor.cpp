@@ -1685,7 +1685,7 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
     }
   }
 
-  if (match(Cast, m_OneUse(m_SExt(m_Value(X))))) {
+  if (match(Cast, m_OneUse(m_SExtLike(m_Value(X))))) {
     if (Constant *TruncC = IC.getLosslessSignedTrunc(C, SrcTy)) {
       // LogicOpc (sext X), C --> sext (LogicOpc X, C)
       Value *NewOp = IC.Builder.CreateBinOp(LogicOpc, X, TruncC);

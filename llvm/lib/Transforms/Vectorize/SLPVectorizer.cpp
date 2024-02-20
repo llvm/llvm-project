@@ -16069,19 +16069,29 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
         if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
           continue;
-        if (isa<Instruction>(Opcodes1[I]))
+        if (isa<Instruction>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Instruction>(Opcodes2[I]))
+        }
+        if (isa<Instruction>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]))
+        }
+        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<UndefValue>(Opcodes1[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (!isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
-          return true;
-        continue;
+        }
+        assert(!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]) &&
+               "Expected 1st non-undef and 2nd undef value");
+        return true;
       }
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {

@@ -1586,7 +1586,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   };
 
   auto UpdateDPValuesOnInst = [&](Instruction &I) -> void {
-    for (auto &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
       // Apply the two updates that dbg.values get: invalid operands, and
       // variable metadata fixup.
       if (any_of(DPV.location_ops(), IsInvalidLocation)) {

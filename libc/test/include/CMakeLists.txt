@@ -33,3 +33,13 @@ if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS)
       # to.
   )
 endif()
+
+add_libc_test(
+  stdckdint_test
+  SUITE
+    libc_include_tests
+  SRCS
+    stdckdint_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.stdckdint_macros
+)
