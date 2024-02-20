@@ -519,9 +519,9 @@ class MsvcBuilder(Builder):
 
             # Windows SDK version numbers consist of 4 dotted components, so we
             # have to use LooseVersion, as StrictVersion supports 3 or fewer.
-            from pkg_resources import packaging
+            from distutils.version import LooseVersion
 
-            sdk_versions.sort(key=lambda x: packaging.version.parse(x), reverse=True)
+            sdk_versions.sort(key=lambda x: LooseVersion(x), reverse=True)
             option_value_name = "OptionId.DesktopCPP" + self.msvc_arch_str
             for v in sdk_versions:
                 try:
