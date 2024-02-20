@@ -281,6 +281,8 @@ Bug Fixes to C++ Support
   a requires-clause lie at the same depth as those of the surrounding lambda. This,
   in turn, results in the wrong template argument substitution during constraint checking.
   (`#78524 <https://github.com/llvm/llvm-project/issues/78524>`_)
+- Clang no longer instantiates the exception specification of discarded candidate function
+  templates when determining the primary template of an explicit specialization.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
