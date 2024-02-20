@@ -50,9 +50,9 @@ cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
-      -D CMAKE_EXE_LINKER_FLAGS="/manifest:no" \
-      -D CMAKE_MODULE_LINKER_FLAGS="/manifest:no" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/manifest:no"
+      -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
