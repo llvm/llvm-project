@@ -679,6 +679,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     handler.SignalError(IostatRewindNonSequential,
         "REWIND(UNIT=%d) on non-sequential file", unitNumber());
   } else {
+    DoImpliedEndfile(handler);
     SetPosition(0, handler);
     currentRecordNumber = 1;
     leftTabLimit.reset();
@@ -687,7 +688,6 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
 }
 
 void ExternalFileUnit::SetPosition(std::int64_t pos, IoErrorHandler &handler) {
-  DoImpliedEndfile(handler);
   frameOffsetInFile_ = pos;
   recordOffsetInFrame_ = 0;
   if (access == Access::Direct) {
@@ -706,6 +706,12 @@ bool ExternalFileUnit::SetStreamPos(
     handler.SignalError(
         "POS=%zd is invalid", static_cast<std::intmax_t>(oneBasedPos));
     return false;
+  }
+  // A backwards POS= implies truncation after writing, at least in
+  // Intel and NAG.
+  if (static_cast<std::size_t>(oneBasedPos - 1) <
+      frameOffsetInFile_ + recordOffsetInFrame_) {
+    DoImpliedEndfile(handler);
   }
   SetPosition(oneBasedPos - 1, handler);
   // We no longer know which record we're in.  Set currentRecordNumber to
