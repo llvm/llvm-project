@@ -4344,8 +4344,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
       return QualType();
 
     InstantiatingTemplate InstTemplate(
-        *this, Pattern->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-        AliasTemplate, TemplateArgLists.getInnermost());
+        *this, /*PointOfInstantiation=*/AliasTemplate->getBeginLoc(),
+        /*Template=*/AliasTemplate,
+        /*TemplateArgs=*/TemplateArgLists.getInnermost());
     CanonType =
         SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
                   AliasTemplate->getLocation(), AliasTemplate->getDeclName());

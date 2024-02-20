@@ -767,8 +767,10 @@ public:
   /// the body.
   StmtResult SkipLambdaBody(LambdaExpr *E, Stmt *Body);
 
-  CXXRecordDecl::LambdaDependencyKind ComputeLambdaDependency(LambdaScopeInfo *LSI) {
-    return static_cast<CXXRecordDecl::LambdaDependencyKind>(LSI->Lambda->getLambdaDependencyKind());
+  CXXRecordDecl::LambdaDependencyKind
+  ComputeLambdaDependency(LambdaScopeInfo *LSI) {
+    return static_cast<CXXRecordDecl::LambdaDependencyKind>(
+        LSI->Lambda->getLambdaDependencyKind());
   }
 
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
@@ -13940,8 +13942,28 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                     /*IsInstantiation*/ true);
   SavedContext.pop();
 
+  // Recompute the dependency of the lambda so that we can defer the lambda call
+  // construction until after we have sufficient template arguments. For
+  // example, template <class> struct S {
+  //   template <class U>
+  //   using Type = decltype([](U){}(42.0));
+  // };
+  // void foo() {
+  //   using T = S<int>::Type<float>;
+  //             ^~~~~~
+  // }
+  // We would end up here from instantiating the S<int> as we're ensuring the
+  // completeness. That would make us transform the lambda call expression
+  // despite the fact that we don't see the argument for U yet. We have a
+  // mechanism that circumvents the semantic checking if the CallExpr is
+  // dependent. We can harness that by recomputing the lambda dependency from
+  // the instantiation arguments. I'm putting it here rather than the above
+  // since we can see transformed lambda parameters in case that they're
+  // useful for calculation.
   DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
   Class->setLambdaDependencyKind(DependencyKind);
+  // Clean up the type cache created previously. Then, we re-create a type for
+  // such Decl with the new DependencyKind.
   Class->setTypeForDecl(nullptr);
   getSema().Context.getTypeDeclType(Class);
 

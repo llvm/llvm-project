@@ -10146,6 +10146,7 @@ public:
       /// We are building deduction guides for a class.
       BuildingDeductionGuides,
 
+      /// We are instantiating a type alias template declaration.
       TypeAliasTemplateInstantiation,
     } Kind;
 

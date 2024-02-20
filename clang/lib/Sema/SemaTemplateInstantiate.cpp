@@ -283,8 +283,7 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
 }
 
-Response HandleRecordDecl(Sema &SemaRef,
-                          const CXXRecordDecl *Rec,
+Response HandleRecordDecl(Sema &SemaRef, const CXXRecordDecl *Rec,
                           MultiLevelTemplateArgumentList &Result,
                           ASTContext &Context,
                           bool ForConstraintInstantiation) {
@@ -318,35 +317,68 @@ Response HandleRecordDecl(Sema &SemaRef,
   if (Rec->isLambda()) {
     if (const Decl *LCD = Rec->getLambdaContextDecl())
       return Response::ChangeDecl(LCD);
+    // Attempt to retrieve the template arguments for a using alias declaration.
+    // This is necessary for constraint checking, since we always keep
+    // constraints relative to the primary template.
     if (ForConstraintInstantiation && !SemaRef.CodeSynthesisContexts.empty()) {
       for (auto &CSC : llvm::reverse(SemaRef.CodeSynthesisContexts)) {
-        if (CSC.Kind == Sema::CodeSynthesisContext::SynthesisKind::TypeAliasTemplateInstantiation) {
-          auto *TATD = cast<TypeAliasTemplateDecl>(CSC.Entity), *CurrentTATD = TATD;
-          FunctionDecl *LambdaCallOperator = Rec->getLambdaCallOperator();
-          while (true) {
-            auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(
-                LambdaCallOperator->getDescribedTemplate());
-            if (FTD && FTD->getInstantiatedFromMemberTemplate()) {
-              LambdaCallOperator =
-                  FTD->getInstantiatedFromMemberTemplate()->getTemplatedDecl();
-            } else if (auto *Prev = cast<CXXMethodDecl>(LambdaCallOperator)
-                                        ->getInstantiatedFromMemberFunction())
-              LambdaCallOperator = Prev;
-            else
-              break;
-          }
-          while (TATD->getInstantiatedFromMemberTemplate())
-            TATD = TATD->getInstantiatedFromMemberTemplate();
-          // Constraint template parameters have a deeper depth.
-          if (cast<CXXRecordDecl>(LambdaCallOperator->getDeclContext())
-                      ->getTemplateDepth() == TATD->getTemplateDepth() &&
-              getLambdaAwareParentOfDeclContext(LambdaCallOperator) ==
-                  TATD->getDeclContext()) {
-            Result.addOuterTemplateArguments(CurrentTATD,
-                                             CSC.template_arguments(),
-                                             /*Final=*/false);
-            return Response::ChangeDecl(CurrentTATD->getDeclContext());
-          }
+        if (CSC.Kind != Sema::CodeSynthesisContext::SynthesisKind::
+                            TypeAliasTemplateInstantiation)
+          continue;
+        auto *TATD = cast<TypeAliasTemplateDecl>(CSC.Entity),
+             *CurrentTATD = TATD;
+        FunctionDecl *LambdaCallOperator = Rec->getLambdaCallOperator();
+        // Retrieve the 'primary' template for a lambda call operator. It's
+        // unfortunate that we only have the mappings of call operators rather
+        // than lambda classes.
+        while (true) {
+          auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(
+              LambdaCallOperator->getDescribedTemplate());
+          if (FTD && FTD->getInstantiatedFromMemberTemplate()) {
+            LambdaCallOperator =
+                FTD->getInstantiatedFromMemberTemplate()->getTemplatedDecl();
+          } else if (auto *Prev = cast<CXXMethodDecl>(LambdaCallOperator)
+                                      ->getInstantiatedFromMemberFunction())
+            LambdaCallOperator = Prev;
+          else
+            break;
+        }
+        // Same applies for type alias Decl. We perform this to obtain the
+        // "canonical" template parameter depths.
+        while (TATD->getInstantiatedFromMemberTemplate())
+          TATD = TATD->getInstantiatedFromMemberTemplate();
+        // Tell if we're currently inside of a lambda expression that is
+        // surrounded by a using alias declaration. e.g.
+        //   template <class> using type = decltype([](auto) { ^ }());
+        // By checking if:
+        //  1. The lambda expression and the using alias declaration share the
+        //  same declaration context.
+        //  2. They have the same template depth.
+        // Then we assume the template arguments from the using alias
+        // declaration are essential for constraint instantiation. We have to do
+        // so since a TypeAliasTemplateDecl (or a TypeAliasDecl) is never a
+        // DeclContext, nor does it have an associated specialization Decl from
+        // which we could collect these template arguments.
+        if (cast<CXXRecordDecl>(LambdaCallOperator->getDeclContext())
+                    ->getTemplateDepth() == TATD->getTemplateDepth() &&
+            getLambdaAwareParentOfDeclContext(LambdaCallOperator) ==
+                TATD->getDeclContext()) {
+          Result.addOuterTemplateArguments(CurrentTATD,
+                                           CSC.template_arguments(),
+                                           /*Final=*/false);
+          // Visit the parent of the current type alias declaration rather than
+          // the lambda thereof. We have the following case:
+          // struct S {
+          //  template <class> using T = decltype([]<Concept> {} ());
+          // };
+          // void foo() {
+          //   S::T var;
+          // }
+          // The instantiated lambda expression (which we're visiting at 'var')
+          // has a function DeclContext 'foo' rather than the Record DeclContext
+          // S. This seems to be an oversight that we may want to set a Sema
+          // Context from the CXXScopeSpec before substituting into T to me.
+          return Response::ChangeDecl(CurrentTATD->getDeclContext());
         }
       }
     }
@@ -447,7 +479,8 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       R = HandleFunction(Function, Result, Pattern, RelativeToPrimary,
                          ForConstraintInstantiation);
     } else if (const auto *Rec = dyn_cast<CXXRecordDecl>(CurDecl)) {
-      R = HandleRecordDecl(*this, Rec, Result, Context, ForConstraintInstantiation);
+      R = HandleRecordDecl(*this, Rec, Result, Context,
+                           ForConstraintInstantiation);
     } else if (const auto *CSD =
                    dyn_cast<ImplicitConceptSpecializationDecl>(CurDecl)) {
       R = HandleImplicitConceptSpecializationDecl(CSD, Result);
@@ -1583,7 +1616,8 @@ namespace {
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
       auto &CCS = SemaRef.CodeSynthesisContexts.back();
-      if (CCS.Kind == Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation) {
+      if (CCS.Kind ==
+          Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation) {
         unsigned TypeAliasDeclDepth = CCS.Entity->getTemplateDepth();
         if (TypeAliasDeclDepth >= TemplateArgs.getNumSubstitutedLevels())
           return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
