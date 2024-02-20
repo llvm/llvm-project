@@ -38,6 +38,12 @@ targets="${2}"
 
 echo "--- cmake"
 pip install -q -r ${MONOREPO_ROOT}/mlir/python/requirements.txt
+
+# The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
+# on fixing a build reliability issue on the build server, please
+# see https://github.com/llvm/llvm-project/pull/82393 and
+# https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840/40
+# for further information.
 cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
