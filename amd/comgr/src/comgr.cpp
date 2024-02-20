@@ -2273,10 +2273,10 @@ amd_comgr_map_elf_virtual_address_to_code_object_offset(amd_comgr_data_t Data,
       ELFHeader.e_ident[llvm::ELF::EI_OSABI] != llvm::ELF::ELFOSABI_AMDGPU_HSA)
     return AMD_COMGR_STATUS_ERROR;
 
-  if (ELFHeader.e_ident[llvm::ELF::EI_ABIVERSION] !=
-      llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V4 &&
-      ELFHeader.e_ident[llvm::ELF::EI_ABIVERSION] !=
-      llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5)
+  unsigned EIdent = ELFHeader.e_ident[llvm::ELF::EI_ABIVERSION];
+  if (EIdent != llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V4 &&
+      EIdent != llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5 &&
+      EIdent != llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V6)
     return AMD_COMGR_STATUS_ERROR;
 
   if (ELFHeader.e_type != llvm::ELF::ET_DYN ||

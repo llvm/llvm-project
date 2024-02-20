@@ -733,7 +733,10 @@ getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
   }
 
   case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
-  case ELF::ELFABIVERSION_AMDGPU_HSA_V5: {
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
+    // Note for V6: generic version is not part of the ISA name so
+    // we don't have to parse it.
     switch (ElfHeader.e_flags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
       ElfIsaName += ":sramecc-";

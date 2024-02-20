@@ -35,6 +35,7 @@ implementation and tests.
 an std::scoped\_lock()
 - Added support for bitcode and archive unbundling during linking via the new
 llvm OffloadBundler API.
+- Added support for code object v6 and generic targets.
 
 Bug Fixes
 ---------
@@ -158,6 +159,10 @@ New Targets
  - gfx1036
  - gfx1150
  - gfx1151
+ - gfx9-generic
+ - gfx10-1-generic
+ - gfx10-3-generic
+ - gfx11-generic
 
 Removed Targets
 ---------------

@@ -56,54 +56,62 @@ typedef struct {
   feature_mode_t SrameccV2;
   bool XnackSupported;
   feature_mode_t XnackV2;
+  bool NeedsCOV6;
 } isa_features_t;
 
 /* Features supported based on https://llvm.org/docs/AMDGPUUsage.html . */
 static isa_features_t IsaFeatures[] = {
-  //        ISA Name             V2         ------ SRAMECC ------  ------- XNACK -------
-  //                             Supported  Supported  V2          Supported  V2
-  {"amdgcn-amd-amdhsa--gfx600",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx601",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx602",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx700",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx701",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx702",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx703",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx704",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx705",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx801",  true,      false,     none,       true,      on},
-  {"amdgcn-amd-amdhsa--gfx802",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx803",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx805",  true,      false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx810",  true,      false,     none,       true,      on},
-  {"amdgcn-amd-amdhsa--gfx900",  true,      false,     none,       true,      any},
-  {"amdgcn-amd-amdhsa--gfx902",  true,      false,     none,       true,      any},
-  {"amdgcn-amd-amdhsa--gfx904",  true,      false,     none,       true,      any},
-  {"amdgcn-amd-amdhsa--gfx906",  true,      true,      off,        true,      any},
-  {"amdgcn-amd-amdhsa--gfx908",  false,     true,      none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx909",  false,     false,     none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx90a",  false,     true,      none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx90c",  true,      false,     none,       true,      off},
-  {"amdgcn-amd-amdhsa--gfx940",  false,     true,      none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx941",  false,     true,      none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx942",  false,     true,      none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx1010", false,     false,     none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx1011", false,     false,     none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx1012", false,     false,     none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx1013", false,     false,     none,       true,      none},
-  {"amdgcn-amd-amdhsa--gfx1030", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1031", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1032", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1033", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1034", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1035", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1036", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1100", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1101", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1102", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1103", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1150", false,     false,     none,       false,     none},
-  {"amdgcn-amd-amdhsa--gfx1151", false,     false,     none,       false,     none},
+    // clang-format off
+  //        ISA Name                     V2         ------ SRAMECC ------  ------- XNACK ------- -- NeedsCOV6 --
+  //                                     Supported  Supported  V2          Supported  V2
+  {"amdgcn-amd-amdhsa--gfx600",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx601",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx602",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx700",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx701",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx702",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx703",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx704",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx705",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx801",          true,      false,     none,       true,      on,         false},
+  {"amdgcn-amd-amdhsa--gfx802",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx803",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx805",          true,      false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx810",          true,      false,     none,       true,      on,         false},
+  {"amdgcn-amd-amdhsa--gfx900",          true,      false,     none,       true,      any,        false},
+  {"amdgcn-amd-amdhsa--gfx902",          true,      false,     none,       true,      any,        false},
+  {"amdgcn-amd-amdhsa--gfx904",          true,      false,     none,       true,      any,        false},
+  {"amdgcn-amd-amdhsa--gfx906",          true,      true,      off,        true,      any,        false},
+  {"amdgcn-amd-amdhsa--gfx908",          false,     true,      none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx909",          false,     false,     none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx90a",          false,     true,      none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx90c",          true,      false,     none,       true,      off,        false},
+  {"amdgcn-amd-amdhsa--gfx940",          false,     true,      none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx941",          false,     true,      none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx942",          false,     true,      none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx1010",         false,     false,     none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx1011",         false,     false,     none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx1012",         false,     false,     none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx1013",         false,     false,     none,       true,      none,       false},
+  {"amdgcn-amd-amdhsa--gfx1030",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1031",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1032",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1033",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1034",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1035",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1036",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1100",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1101",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1102",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1103",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1150",         false,     false,     none,       false,     none,       false},
+  {"amdgcn-amd-amdhsa--gfx1151",         false,     false,     none,       false,     none,       false},
+
+  {"amdgcn-amd-amdhsa--gfx9-generic",    true,      false,     none,       true,      any,        true},
+  {"amdgcn-amd-amdhsa--gfx10-1-generic", false,     false,     none,       true,      none,       true},
+  {"amdgcn-amd-amdhsa--gfx10-3-generic", false,     false,     none,       false,     none,       true},
+  {"amdgcn-amd-amdhsa--gfx11-generic",   false,     false,     none,       false,     none,       true},
+    // clang-format on
 };
 
 static size_t IsaFeaturesSize = sizeof(IsaFeatures) / sizeof(IsaFeatures[0]);
@@ -113,7 +121,7 @@ bool hasSubString(const char *String, const char *Sub) {
 }
 
 bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
-                        char *ExpectedIsaName) {
+                        char *ExpectedIsaName, bool *needsCOV6) {
   char TokenizedIsaName[MAX_ISA_NAME_SIZE];
 
   strncpy(TokenizedIsaName, IsaName, MAX_ISA_NAME_SIZE);
@@ -133,6 +141,7 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
     exit(1);
   }
 
+  *needsCOV6 = Isa->NeedsCOV6;
   strncpy(ExpectedIsaName, Isa->IsaName, MAX_ISA_NAME_SIZE);
 
   feature_mode_t Sramecc = any;
@@ -211,10 +220,11 @@ bool getExpectedIsaName(unsigned CodeObjectVersion, const char *IsaName,
     break;
   }
 
-  case 4: {
+  case 4:
+  case 5:
+  case 6:
     // All ISA strings are valid.
     return true;
-  }
 
   default:
     printf("Code object V%u is not supported by the test (update the "
@@ -368,10 +378,19 @@ void testIsaName(char *Name, const char *Features) {
   const char *V4Options[] = {"-mcode-object-version=4"};
   size_t V4OptionsCount = sizeof(V4Options) / sizeof(V4Options[0]);
 
-  // Test object code v4.
-  if (getExpectedIsaName(4, IsaName, ExpectedIsaName)) {
-    printf("V4 : ");
-    compileAndTestIsaName(IsaName, IsaName, V4Options, V4OptionsCount);
+  const char *V6Options[] = {"-mcode-object-version=6"};
+  size_t V6OptionsCount = sizeof(V6Options) / sizeof(V6Options[0]);
+
+  // Test object code v6 so generic targets are available.
+  bool NeedsCOV6;
+  if (getExpectedIsaName(6, IsaName, ExpectedIsaName, &NeedsCOV6)) {
+    if (NeedsCOV6) {
+      printf("V6 : ");
+      compileAndTestIsaName(IsaName, IsaName, V6Options, V6OptionsCount);
+    } else {
+      printf("V4 : ");
+      compileAndTestIsaName(IsaName, IsaName, V4Options, V4OptionsCount);
+    }
   }
 }
 
