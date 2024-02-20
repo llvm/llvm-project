@@ -23,6 +23,7 @@ def format_register_value(val):
         shift += 8
     return result
 
+
 def make_code_address(module_id, offset):
     return 0x4000000000000000 | (module_id << 32) | offset
 

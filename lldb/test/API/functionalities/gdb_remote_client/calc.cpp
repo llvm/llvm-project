@@ -4,15 +4,11 @@ struct Number {
 };
 
 struct Calc {
-  void add(const Number& number) {
-    result_ += number.value_;
-  }
+  void add(const Number &number) { result_ += number.value_; }
 
-  Number result() const {
-    return Number(result_);
-  }
+  Number result() const { return Number(result_); }
 
- private:
+private:
   double result_ = 0;
 };
 
