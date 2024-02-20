@@ -437,9 +437,6 @@ void VPlanHCFGBuilder::buildHierarchicalCFG() {
   buildPlainCFG();
   LLVM_DEBUG(Plan.setName("HCFGBuilder: Plain CFG\n"); dbgs() << Plan);
 
-  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  Verifier.verifyHierarchicalCFG(TopRegion);
-
   // Compute plain CFG dom tree for VPLInfo.
   VPDomTree.recalculate(Plan);
   LLVM_DEBUG(dbgs() << "Dominator Tree after building the plain CFG.\n";
