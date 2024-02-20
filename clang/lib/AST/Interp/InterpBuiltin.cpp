@@ -841,6 +841,52 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+
+  // When the argument is 0, the result of GCC builtins is undefined, whereas
+  // for Microsoft intrinsics, the result is the bit-width of the argument.
+  bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
+                         BuiltinOp != Builtin::BI__lzcnt &&
+                         BuiltinOp != Builtin::BI__lzcnt64;
+
+  if (ZeroIsUndefined && Val == 0)
+    return false;
+
+  pushInt(S, Val.countl_zero());
+  return true;
+}
+
+static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+
+  if (Val == 0)
+    return false;
+
+  pushInt(S, Val.countr_zero());
+  return true;
+}
+
+static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const Function *Func, const CallExpr *Call) {
+  PrimType ReturnT = *S.getContext().classify(Call->getType());
+  PrimType ValT = *S.getContext().classify(Call->getArg(0));
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  assert(Val.getActiveBits() <= 64);
+
+  INT_TYPE_SWITCH(ReturnT,
+                  { S.Stk.push<T>(T::from(Val.byteSwap().getZExtValue())); });
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -1111,6 +1157,32 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_subcl:
   case Builtin::BI__builtin_subcll:
     if (!interp__builtin_carryop(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_clz:
+  case Builtin::BI__builtin_clzl:
+  case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
+  case Builtin::BI__lzcnt:
+  case Builtin::BI__lzcnt64:
+    if (!interp__builtin_clz(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ctz:
+  case Builtin::BI__builtin_ctzl:
+  case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzs:
+    if (!interp__builtin_ctz(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_bswap16:
+  case Builtin::BI__builtin_bswap32:
+  case Builtin::BI__builtin_bswap64:
+    if (!interp__builtin_bswap(S, OpPC, Frame, F, Call))
       return false;
     break;
 
