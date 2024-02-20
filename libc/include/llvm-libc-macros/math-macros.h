@@ -18,11 +18,11 @@
 #define INFINITY __builtin_inf()
 #define NAN __builtin_nanf("")
 
-#define FP_ILOGB0 (-__INT_MAX__ - 1)
-#define FP_ILOGBNAN __INT_MAX__
+#define FP_ILOGB0 (-INT_MAX - 1)
+#define FP_ILOGBNAN INT_MAX
 
-#define FP_LLOGB0 (-__LONG_MAX__ - 1)
-#define FP_LLOGBNAN __LONG_MAX__
+#define FP_LLOGB0 (-LONG_MAX - 1)
+#define FP_LLOGBNAN LONG_MAX
 
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
@@ -30,7 +30,7 @@
 
 #ifdef __FAST_MATH__
 #define math_errhandling 0
-#elif defined __NO_MATH_ERRNO__
+#elif defined(__NO_MATH_ERRNO__)
 #define math_errhandling (MATH_ERREXCEPT)
 #else
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
