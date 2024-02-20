@@ -457,8 +457,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
                                                 raw_ostream &CS) const {
-  bool IsSDWA = false;
-
   unsigned MaxInstBytesNum = std::min((size_t)TargetMaxInstBytes, Bytes_.size());
   Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
@@ -571,15 +569,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           convertVOPCDPPInst(MI);
         break;
       }
-
-      Res = tryDecodeInst(DecoderTableSDWA64, MI, QW, Address, CS);
-      if (Res) { IsSDWA = true;  break; }
-
-      Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address, CS);
-      if (Res) { IsSDWA = true;  break; }
-
-      Res = tryDecodeInst(DecoderTableSDWA1064, MI, QW, Address, CS);
-      if (Res) { IsSDWA = true;  break; }
 
       if (STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem)) {
         Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS);
@@ -771,7 +760,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VINTERP))
     Res = convertVINTERPInst(MI);
 
-  if (Res && IsSDWA)
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::SDWA))
     Res = convertSDWAInst(MI);
 
   int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
