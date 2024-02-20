@@ -1063,7 +1063,8 @@ bool AArch64FrameLowering::canUseAsPrologue(
 
   // Certain stack probing sequences might clobber flags, then we can't use
   // the block as a prologue if the flags register is a live-in.
-  if (TLI->hasInlineStackProbe(*MF) && MBB.isLiveIn(AArch64::NZCV))
+  if (MF->getInfo<AArch64FunctionInfo>()->hasStackProbing() &&
+      MBB.isLiveIn(AArch64::NZCV))
     return false;
 
   // Don't need a scratch register if we're not going to re-align the stack or
