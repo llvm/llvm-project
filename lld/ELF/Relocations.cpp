@@ -1191,16 +1191,12 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     }
   }
 
-  if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-    errorOrWarn("relocation " + toString(type) + " against symbol '" +
-                toString(sym) + "'" + " in read-only section" +
-                getLocation(*sec, sym, offset));
-    return;
-  }
-
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
-  if (!config->shared && sym.isShared()) {
+  // Copy relocations/canonical PLT entries are unsupported for
+  // R_AARCH64_AUTH_ABS64.
+  if (!config->shared && sym.isShared() &&
+      !(config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
                   getLocation(*sec, sym, offset));
