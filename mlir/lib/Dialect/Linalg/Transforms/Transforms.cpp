@@ -563,8 +563,10 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
             return getConstantIntValue(tile).has_value();
           });
       if (areConstantTiles && operandType.hasStaticShape() &&
-          !tensor::PackOp::requirePaddingValue(operandType.getShape(), innerPos,
-                                               innerPackSizes)) {
+          !tensor::PackOp::requirePaddingValue(
+              operandType.getShape(), innerPos,
+              dest.getType().cast<ShapedType>().getShape(), {},
+              innerPackSizes)) {
         packOps.push_back(rewriter.create<tensor::PackOp>(
             loc, operand, dest, innerPos, innerPackSizes));
       } else {

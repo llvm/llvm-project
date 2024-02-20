@@ -56,6 +56,7 @@ def VectorLoadStore : BuiltinGroup;
 def LoadStore : BuiltinGroup;
 def IntelSubgroups : BuiltinGroup;
 def AtomicFloating : BuiltinGroup;
+def GroupUniform : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -605,7 +606,10 @@ class GroupBuiltin<string name, Op operation> {
                             !eq(operation, OpGroupNonUniformBallotFindMSB));
   bit IsLogical = !or(!eq(operation, OpGroupNonUniformLogicalAnd),
                       !eq(operation, OpGroupNonUniformLogicalOr),
-                      !eq(operation, OpGroupNonUniformLogicalXor));
+                      !eq(operation, OpGroupNonUniformLogicalXor),
+                      !eq(operation, OpGroupLogicalAndKHR),
+                      !eq(operation, OpGroupLogicalOrKHR),
+                      !eq(operation, OpGroupLogicalXorKHR));
   bit NoGroupOperation = !or(IsElect, IsAllOrAny, IsAllEqual,
                              IsBallot, IsInverseBallot,
                              IsBallotBitExtract, IsBallotFindBit,
@@ -873,6 +877,51 @@ defm : DemangledGroupBuiltin<"group_non_uniform_scan_inclusive_logical_xors", Wo
 defm : DemangledGroupBuiltin<"group_non_uniform_scan_exclusive_logical_xors", WorkOrSub, OpGroupNonUniformLogicalXor>;
 defm : DemangledGroupBuiltin<"group_clustered_reduce_logical_xor", WorkOrSub, OpGroupNonUniformLogicalXor>;
 
+// cl_khr_work_group_uniform_arithmetic / SPV_KHR_uniform_group_instructions
+defm : DemangledGroupBuiltin<"group_reduce_imul", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_mulu", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_muls", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_imul", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_mulu", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_muls", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_exclusive_imul", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_exclusive_mulu", OnlyWork, OpGroupIMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_exclusive_muls", OnlyWork, OpGroupIMulKHR>;
+
+defm : DemangledGroupBuiltin<"group_reduce_mulf", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_mulh", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_muld", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_mulf", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_mulh", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_muld", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_exclusive_mulf", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_exclusive_mulh", OnlyWork, OpGroupFMulKHR>;
+defm : DemangledGroupBuiltin<"group_scan_exclusive_muld", OnlyWork, OpGroupFMulKHR>;
+
+defm : DemangledGroupBuiltin<"group_scan_exclusive_and", OnlyWork, OpGroupBitwiseAndKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_and", OnlyWork, OpGroupBitwiseAndKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_and", OnlyWork, OpGroupBitwiseAndKHR>;
+
+defm : DemangledGroupBuiltin<"group_scan_exclusive_or", OnlyWork, OpGroupBitwiseOrKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_or", OnlyWork, OpGroupBitwiseOrKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_or", OnlyWork, OpGroupBitwiseOrKHR>;
+
+defm : DemangledGroupBuiltin<"group_scan_exclusive_xor", OnlyWork, OpGroupBitwiseXorKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_xor", OnlyWork, OpGroupBitwiseXorKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_xor", OnlyWork, OpGroupBitwiseXorKHR>;
+
+defm : DemangledGroupBuiltin<"group_scan_exclusive_logical_and", OnlyWork, OpGroupLogicalAndKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_logical_and", OnlyWork, OpGroupLogicalAndKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_logical_and", OnlyWork, OpGroupLogicalAndKHR>;
+
+defm : DemangledGroupBuiltin<"group_scan_exclusive_logical_or", OnlyWork, OpGroupLogicalOrKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_logical_or", OnlyWork, OpGroupLogicalOrKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_logical_or", OnlyWork, OpGroupLogicalOrKHR>;
+
+defm : DemangledGroupBuiltin<"group_scan_exclusive_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
+defm : DemangledGroupBuiltin<"group_scan_inclusive_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
+defm : DemangledGroupBuiltin<"group_reduce_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
+
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
 //
@@ -966,6 +1015,52 @@ foreach i = ["", "2", "4", "8", "16"] in {
   }
 }
 // OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
+
+//===----------------------------------------------------------------------===//
+// Class defining a builtin for group operations within uniform control flow.
+// It should be translated into a SPIR-V instruction using
+// the SPV_KHR_uniform_group_instructions extension.
+//
+// name is the demangled name of the given builtin.
+// opcode specifies the SPIR-V operation code of the generated instruction.
+//===----------------------------------------------------------------------===//
+class GroupUniformBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+  bit IsLogical = !or(!eq(operation, OpGroupLogicalAndKHR),
+                      !eq(operation, OpGroupLogicalOrKHR),
+                      !eq(operation, OpGroupLogicalXorKHR));
+}
+
+// Table gathering all the Intel sub group builtins.
+def GroupUniformBuiltins : GenericTable {
+  let FilterClass = "GroupUniformBuiltin";
+  let Fields = ["Name", "Opcode", "IsLogical"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupGroupUniformBuiltin : SearchIndex {
+  let Table = GroupUniformBuiltins;
+  let Key = ["Name"];
+}
+
+// Multiclass used to define incoming builtin records for
+// the SPV_KHR_uniform_group_instructions extension
+// and corresponding work group builtin records.
+multiclass DemangledGroupUniformBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("__spirv_Group", name), OpenCL_std, GroupUniform, minNumArgs, maxNumArgs>;
+  def : GroupUniformBuiltin<!strconcat("__spirv_Group", name), operation>;
+}
+
+// cl_khr_work_group_uniform_arithmetic / SPV_KHR_uniform_group_instructions
+defm : DemangledGroupUniformBuiltin<"IMulKHR", 3, 3, OpGroupIMulKHR>;
+defm : DemangledGroupUniformBuiltin<"FMulKHR", 3, 3, OpGroupFMulKHR>;
+defm : DemangledGroupUniformBuiltin<"BitwiseAndKHR", 3, 3, OpGroupBitwiseAndKHR>;
+defm : DemangledGroupUniformBuiltin<"BitwiseOrKHR", 3, 3, OpGroupBitwiseOrKHR>;
+defm : DemangledGroupUniformBuiltin<"BitwiseXorKHR", 3, 3, OpGroupBitwiseXorKHR>;
+defm : DemangledGroupUniformBuiltin<"LogicalAndKHR", 3, 3, OpGroupLogicalAndKHR>;
+defm : DemangledGroupUniformBuiltin<"LogicalOrKHR", 3, 3, OpGroupLogicalOrKHR>;
+defm : DemangledGroupUniformBuiltin<"LogicalXorKHR", 3, 3, OpGroupLogicalXorKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a get builtin record used for lowering builtin calls such as
