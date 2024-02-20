@@ -42,31 +42,27 @@ void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
 void AvoidReturnWithVoidValueCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
-  if (IgnoreMacros && VoidReturn->getBeginLoc().isMacroID()) {
+  if (IgnoreMacros && VoidReturn->getBeginLoc().isMacroID())
     return;
-  }
   const auto *SurroundingBlock =
       Result.Nodes.getNodeAs<CompoundStmt>("compound_parent");
-  if (!StrictMode && !SurroundingBlock) {
+  if (!StrictMode && !SurroundingBlock)
     return;
-  }
   DiagnosticBuilder Diag = diag(VoidReturn->getBeginLoc(),
                                 "return statement within a void function "
                                 "should not have a specified return value");
   std::optional<Token> SemicolonPos =
       Lexer::findNextToken(VoidReturn->getRetValue()->getEndLoc(),
                            *Result.SourceManager, getLangOpts());
-  if (!SemicolonPos) {
+  if (!SemicolonPos)
     return;
-  }
   const StringRef ReturnExpr =
       Lexer::getSourceText(CharSourceRange::getTokenRange(
                                VoidReturn->getRetValue()->getSourceRange()),
                            *Result.SourceManager, getLangOpts());
   std::string Replacement = (ReturnExpr + "; return;").str();
-  if (!SurroundingBlock) {
+  if (!SurroundingBlock)
     Replacement = "{" + Replacement + "}";
-  }
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(VoidReturn->getBeginLoc(),
                                      SemicolonPos->getEndLoc()),
