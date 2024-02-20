@@ -56,8 +56,8 @@ DPValue::DPValue(Metadata *Value, DILocalVariable *Variable,
                  Metadata *Address, DIExpression *AddressExpression,
                  const DILocation *DI)
     : DbgRecord(ValueKind, DI), DebugValueUser({Value, Address, AssignID}),
-      Variable(Variable), Expression(Expression),
-      AddressExpression(AddressExpression), Type(LocationType::Assign) {}
+      Type(LocationType::Assign), Variable(Variable), Expression(Expression),
+      AddressExpression(AddressExpression) {}
 
 void DbgRecord::deleteRecord() {
   switch (RecordKind) {
@@ -95,7 +95,7 @@ bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
     return false;
   switch (RecordKind) {
   case ValueKind:
-    cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
+    return cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
     break;
   default:
     llvm_unreachable("unsupported DbgRecord kind");
@@ -107,7 +107,7 @@ bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
     return false;
   switch (RecordKind) {
   case ValueKind:
-    cast<DPValue>(this)->isEquivalentTo(*cast<DPValue>(&R));
+    return cast<DPValue>(this)->isEquivalentTo(*cast<DPValue>(&R));
     break;
   default:
     llvm_unreachable("unsupported DbgRecord kind");
