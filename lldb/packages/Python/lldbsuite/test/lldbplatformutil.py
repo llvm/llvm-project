@@ -311,7 +311,7 @@ def expectedCompilerVersion(compiler_version):
     test_compiler_version = packaging.version.parse(test_compiler_version_str)
 
     if operator == ">":
-        return test_compiler_version < version
+        return test_compiler_version > version
     if operator == ">=" or operator == "=>":
         return test_compiler_version >= version
     if operator == "<":

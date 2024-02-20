@@ -403,7 +403,10 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_all_options; }
@@ -659,6 +662,14 @@ public:
   }
 
   ~CommandObjectThreadContinue() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
+  }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();

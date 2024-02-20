@@ -800,11 +800,12 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
   BitsUnpacker EnumDeclBits(Record.readInt());
   ED->setNumPositiveBits(EnumDeclBits.getNextBits(/*Width=*/8));
   ED->setNumNegativeBits(EnumDeclBits.getNextBits(/*Width=*/8));
+  bool ShouldSkipCheckingODR = EnumDeclBits.getNextBit();
   ED->setScoped(EnumDeclBits.getNextBit());
   ED->setScopedUsingClassTag(EnumDeclBits.getNextBit());
   ED->setFixed(EnumDeclBits.getNextBit());
 
-  if (!shouldSkipCheckingODR(ED)) {
+  if (!ShouldSkipCheckingODR) {
     ED->setHasODRHash(true);
     ED->ODRHash = Record.readInt();
   }
@@ -1073,6 +1074,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   FD->setCachedLinkage((Linkage)FunctionDeclBits.getNextBits(/*Width=*/3));
   FD->setStorageClass((StorageClass)FunctionDeclBits.getNextBits(/*Width=*/3));
+  bool ShouldSkipCheckingODR = FunctionDeclBits.getNextBit();
   FD->setInlineSpecified(FunctionDeclBits.getNextBit());
   FD->setImplicitlyInline(FunctionDeclBits.getNextBit());
   FD->setHasSkippedBody(FunctionDeclBits.getNextBit());
@@ -1102,7 +1104,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   if (FD->isExplicitlyDefaulted())
     FD->setDefaultLoc(readSourceLocation());
 
-  if (!shouldSkipCheckingODR(FD)) {
+  if (!ShouldSkipCheckingODR) {
     FD->ODRHash = Record.readInt();
     FD->setHasODRHash(true);
   }
@@ -1973,6 +1975,8 @@ void ASTDeclReader::ReadCXXDefinitionData(
 
   BitsUnpacker CXXRecordDeclBits = Record.readInt();
 
+  bool ShouldSkipCheckingODR = CXXRecordDeclBits.getNextBit();
+
 #define FIELD(Name, Width, Merge)                                              \
   if (!CXXRecordDeclBits.canGetNextNBits(Width))                         \
     CXXRecordDeclBits.updateValue(Record.readInt());                           \
@@ -1982,7 +1986,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
 #undef FIELD
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D)) {
+  if (!ShouldSkipCheckingODR) {
     // Note: the caller has deserialized the IsLambda bit already.
     Data.ODRHash = Record.readInt();
     Data.HasODRHash = true;
