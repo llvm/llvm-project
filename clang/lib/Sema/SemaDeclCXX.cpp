@@ -9442,9 +9442,21 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
 
   int DiagKind = -1;
 
-  if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted)
-    DiagKind = !Decl ? 0 : 1;
-  else if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Ambiguous)
+  if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted) {
+    if (CSM == Sema::CXXDefaultConstructor && Field &&
+        Field->getParent()->isUnion()) {
+      // [class.default.ctor]p2:
+      //   A defaulted default constructor for class X is defined as deleted if
+      //   - X is a union that has a variant member with a non-trivial default
+      //     constructor and no variant member of X has a default member
+      //     initializer
+      const auto *RD = cast<CXXRecordDecl>(Field->getParent());
+      if (!RD->hasInClassInitializer())
+        DiagKind = !Decl ? 0 : 1;
+    } else {
+      DiagKind = !Decl ? 0 : 1;
+    }
+  } else if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Ambiguous)
     DiagKind = 2;
   else if (!isAccessible(Subobj, Decl))
     DiagKind = 3;

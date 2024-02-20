@@ -292,6 +292,9 @@ Bug Fixes to C++ Support
   was only accepted at namespace scope but not at local function scope.
 - Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
   (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
+- Fix for clang incorrectly rejecting the default construction of a union with
+  nontrivial member when another member has an initializer.
+  (`#81774 <https://github.com/llvm/llvm-project/issues/81774>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
