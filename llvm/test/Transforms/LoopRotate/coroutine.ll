@@ -21,8 +21,9 @@ define void @foo() #0 {
 ; CHECK-NEXT:    ret void
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @threadlocalint)
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END]], label [[WHILE_COND_COND_FALSE_CRIT_EDGE:%.*]]
 ;
 entry:
