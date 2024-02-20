@@ -437,8 +437,10 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   if (Ty->getNumParams())
     setValueSubclassData(1);   // Set the "has lazy arguments" bit.
 
-  if (ParentModule)
+  if (ParentModule) {
     ParentModule->getFunctionList().push_back(this);
+    IsNewDbgInfoFormat = ParentModule->IsNewDbgInfoFormat;
+  }
 
   HasLLVMReservedName = getName().starts_with("llvm.");
   // Ensure intrinsics have the right parameter attributes.
