@@ -55546,7 +55546,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 /// legal, but there is almost no integer math/logic available for 256-bit.
 /// This function should only be called with legal types (otherwise, the calls
 /// to get simple value types will assert).
-static SDValue narrowExtractedVectorSelect(SDNode *Ext, SelectionDAG &DAG) {
+static SDValue narrowExtractedVectorSelect(SDNode *Ext, const SDLoc &DL,
+                                           SelectionDAG &DAG) {
   SDValue Sel = Ext->getOperand(0);
   if (Sel.getOpcode() != ISD::VSELECT ||
       !isFreeToSplitVector(Sel.getOperand(0).getNode(), DAG))
@@ -55589,7 +55590,6 @@ static SDValue narrowExtractedVectorSelect(SDNode *Ext, SelectionDAG &DAG) {
   unsigned NarrowingFactor = WideVT.getSizeInBits() / VT.getSizeInBits();
   unsigned NarrowElts = SelElts / NarrowingFactor;
   MVT NarrowSelVT = MVT::getVectorVT(SelVT.getVectorElementType(), NarrowElts);
-  SDLoc DL(Ext);
   SDValue ExtCond = extract128BitVector(Sel.getOperand(0), ExtIdx, DAG, DL);
   SDValue ExtT = extract128BitVector(Sel.getOperand(1), ExtIdx, DAG, DL);
   SDValue ExtF = extract128BitVector(Sel.getOperand(2), ExtIdx, DAG, DL);
@@ -55622,6 +55622,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   unsigned InSizeInBits = InVecVT.getSizeInBits();
   unsigned NumSubElts = VT.getVectorNumElements();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
 
   if (Subtarget.hasAVX() && !Subtarget.hasAVX2() &&
       TLI.isTypeLegal(InVecVT) &&
@@ -55637,7 +55638,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         isConcatenatedNot(InVecBC.getOperand(1))) {
       // extract (and v4i64 X, (not (concat Y1, Y2))), n -> andnp v2i64 X(n), Y1
       SDValue Concat = splitVectorIntBinary(InVecBC, DAG);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT,
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT,
                          DAG.getBitcast(InVecVT, Concat), N->getOperand(1));
     }
   }
@@ -55645,21 +55646,20 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (SDValue V = narrowExtractedVectorSelect(N, DAG))
+  if (SDValue V = narrowExtractedVectorSelect(N, DL, DAG))
     return V;
 
   if (ISD::isBuildVectorAllZeros(InVec.getNode()))
-    return getZeroVector(VT, Subtarget, DAG, SDLoc(N));
+    return getZeroVector(VT, Subtarget, DAG, DL);
 
   if (ISD::isBuildVectorAllOnes(InVec.getNode())) {
     if (VT.getScalarType() == MVT::i1)
-      return DAG.getConstant(1, SDLoc(N), VT);
-    return getOnesVector(VT, DAG, SDLoc(N));
+      return DAG.getConstant(1, DL, VT);
+    return getOnesVector(VT, DAG, DL);
   }
 
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getBuildVector(VT, SDLoc(N),
-                              InVec->ops().slice(IdxVal, NumSubElts));
+    return DAG.getBuildVector(VT, DL, InVec->ops().slice(IdxVal, NumSubElts));
 
   // If we are extracting from an insert into a larger vector, replace with a
   // smaller insert if we don't access less than the original subvector. Don't
@@ -55669,7 +55669,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       InVec.getOpcode() == ISD::INSERT_SUBVECTOR && InVec.hasOneUse() &&
       IdxVal == InVec.getConstantOperandVal(2) &&
       InVec.getOperand(1).getValueSizeInBits() <= SizeInBits) {
-    SDLoc DL(N);
     SDValue NewExt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT,
                                  InVec.getOperand(0), N->getOperand(1));
     unsigned NewIdxVal = InVec.getConstantOperandVal(2) - IdxVal;
@@ -55684,12 +55683,12 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
                       InVec.getOpcode() == X86ISD::VBROADCAST_LOAD ||
                       DAG.isSplatValue(InVec, /*AllowUndefs*/ false)))
-    return extractSubVector(InVec, 0, DAG, SDLoc(N), SizeInBits);
+    return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
 
   // If we're extracting a broadcasted subvector, just use the lowest subvector.
   if (IdxVal != 0 && InVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
       cast<MemIntrinsicSDNode>(InVec)->getMemoryVT() == VT)
-    return extractSubVector(InVec, 0, DAG, SDLoc(N), SizeInBits);
+    return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
 
   // Attempt to extract from the source of a shuffle vector.
   if ((InSizeInBits % SizeInBits) == 0 && (IdxVal % NumSubElts) == 0) {
@@ -55704,13 +55703,13 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       if (ScaledMask[SubVecIdx] == SM_SentinelUndef)
         return DAG.getUNDEF(VT);
       if (ScaledMask[SubVecIdx] == SM_SentinelZero)
-        return getZeroVector(VT, Subtarget, DAG, SDLoc(N));
+        return getZeroVector(VT, Subtarget, DAG, DL);
       SDValue Src = ShuffleInputs[ScaledMask[SubVecIdx] / NumSubVecs];
       if (Src.getValueSizeInBits() == InSizeInBits) {
         unsigned SrcSubVecIdx = ScaledMask[SubVecIdx] % NumSubVecs;
         unsigned SrcEltIdx = SrcSubVecIdx * NumSubElts;
         return extractSubVector(DAG.getBitcast(InVecVT, Src), SrcEltIdx, DAG,
-                                SDLoc(N), SizeInBits);
+                                DL, SizeInBits);
       }
     }
   }
@@ -55723,24 +55722,23 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       // v2f64 CVTDQ2PD(v4i32).
       if (InOpcode == ISD::SINT_TO_FP &&
           InVec.getOperand(0).getValueType() == MVT::v4i32) {
-        return DAG.getNode(X86ISD::CVTSI2P, SDLoc(N), VT, InVec.getOperand(0));
+        return DAG.getNode(X86ISD::CVTSI2P, DL, VT, InVec.getOperand(0));
       }
       // v2f64 CVTUDQ2PD(v4i32).
       if (InOpcode == ISD::UINT_TO_FP && Subtarget.hasVLX() &&
           InVec.getOperand(0).getValueType() == MVT::v4i32) {
-        return DAG.getNode(X86ISD::CVTUI2P, SDLoc(N), VT, InVec.getOperand(0));
+        return DAG.getNode(X86ISD::CVTUI2P, DL, VT, InVec.getOperand(0));
       }
       // v2f64 CVTPS2PD(v4f32).
       if (InOpcode == ISD::FP_EXTEND &&
           InVec.getOperand(0).getValueType() == MVT::v4f32) {
-        return DAG.getNode(X86ISD::VFPEXT, SDLoc(N), VT, InVec.getOperand(0));
+        return DAG.getNode(X86ISD::VFPEXT, DL, VT, InVec.getOperand(0));
       }
     }
     if (IdxVal == 0 &&
         (ISD::isExtOpcode(InOpcode) || ISD::isExtVecInRegOpcode(InOpcode)) &&
         (SizeInBits == 128 || SizeInBits == 256) &&
         InVec.getOperand(0).getValueSizeInBits() >= SizeInBits) {
-      SDLoc DL(N);
       SDValue Ext = InVec.getOperand(0);
       if (Ext.getValueSizeInBits() > SizeInBits)
         Ext = extractSubVector(Ext, 0, DAG, DL, SizeInBits);
@@ -55751,7 +55749,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         InVec.getOperand(0).getValueType().is256BitVector() &&
         InVec.getOperand(1).getValueType().is256BitVector() &&
         InVec.getOperand(2).getValueType().is256BitVector()) {
-      SDLoc DL(N);
       SDValue Ext0 = extractSubVector(InVec.getOperand(0), 0, DAG, DL, 128);
       SDValue Ext1 = extractSubVector(InVec.getOperand(1), 0, DAG, DL, 128);
       SDValue Ext2 = extractSubVector(InVec.getOperand(2), 0, DAG, DL, 128);
@@ -55759,7 +55756,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
     if (IdxVal == 0 && InOpcode == ISD::TRUNCATE && Subtarget.hasVLX() &&
         (VT.is128BitVector() || VT.is256BitVector())) {
-      SDLoc DL(N);
       SDValue InVecSrc = InVec.getOperand(0);
       unsigned Scale = InVecSrc.getValueSizeInBits() / InSizeInBits;
       SDValue Ext = extractSubVector(InVecSrc, 0, DAG, DL, Scale * SizeInBits);
@@ -55767,7 +55763,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
     if (InOpcode == X86ISD::MOVDDUP &&
         (VT.is128BitVector() || VT.is256BitVector())) {
-      SDLoc DL(N);
       SDValue Ext0 =
           extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
       return DAG.getNode(InOpcode, DL, VT, Ext0);
@@ -55779,7 +55774,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if ((InOpcode == X86ISD::VSHLI || InOpcode == X86ISD::VSRLI) &&
       InVecVT.getScalarSizeInBits() == 64 &&
       InVec.getConstantOperandAPInt(1) == 32) {
-    SDLoc DL(N);
     SDValue Ext =
         extractSubVector(InVec.getOperand(0), IdxVal, DAG, DL, SizeInBits);
     return DAG.getNode(InOpcode, DL, VT, Ext, InVec.getOperand(1));
