@@ -121,10 +121,6 @@ static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
-static cl::opt<bool> DisableHexagonPostIncOpt(
-    "hexagon-postinc-opt", cl::Hidden,
-    cl::desc("Disable Hexagon post-increment optimization"));
-
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -161,7 +157,6 @@ namespace llvm {
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
-  void initializeHexagonPostIncOptPass(PassRegistry &);
   void initializeHexagonRDFOptPass(PassRegistry&);
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
   void initializeHexagonVExtractPass(PassRegistry &);
@@ -193,7 +188,6 @@ namespace llvm {
   FunctionPass *createHexagonOptimizeSZextends();
   FunctionPass *createHexagonPacketizer(bool Minimal);
   FunctionPass *createHexagonPeephole();
-  FunctionPass *createHexagonPostIncOpt();
   FunctionPass *createHexagonRDFOpt();
   FunctionPass *createHexagonSplitConst32AndConst64();
   FunctionPass *createHexagonSplitDoubleRegs();
@@ -223,7 +217,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
-  initializeHexagonPostIncOptPass(PR);
   initializeHexagonRDFOptPass(PR);
   initializeHexagonSplitDoubleRegsPass(PR);
   initializeHexagonVectorCombineLegacyPass(PR);
@@ -251,7 +244,6 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
-  initializeHexagonPostIncOptPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
 
@@ -424,11 +416,6 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops());
   }
-
-  if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive)
-    if (!DisableHexagonPostIncOpt)
-      addPass(createHexagonPostIncOpt());
-
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
 }
