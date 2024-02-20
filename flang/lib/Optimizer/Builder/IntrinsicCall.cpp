@@ -703,7 +703,7 @@ static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
       libFuncType);
   fir::emitFatalError(loc, message, /*genCrashDiag=*/false);
 #else  // FLANG_RUNTIME_F128_MATH_LIB
-  return genLibCall(builder, loc, libFuncName, libFuncType, args);
+  return genLibCall(builder, loc, mathOp, libFuncType, args);
 #endif // FLANG_RUNTIME_F128_MATH_LIB
 }
 
