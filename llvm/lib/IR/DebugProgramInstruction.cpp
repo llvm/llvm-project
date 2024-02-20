@@ -63,20 +63,18 @@ void DbgRecord::deleteRecord() {
   switch (RecordKind) {
   case ValueKind:
     delete cast<DPValue>(this);
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+    return;
   }
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 void DbgRecord::print(raw_ostream &O, bool IsForDebug) const {
   switch (RecordKind) {
   case ValueKind:
     cast<DPValue>(this)->print(O, IsForDebug);
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+    return;
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
@@ -84,10 +82,9 @@ void DbgRecord::print(raw_ostream &O, ModuleSlotTracker &MST,
   switch (RecordKind) {
   case ValueKind:
     cast<DPValue>(this)->print(O, MST, IsForDebug);
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
+    return;
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
@@ -96,10 +93,8 @@ bool DbgRecord::isIdenticalToWhenDefined(const DbgRecord &R) const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->isIdenticalToWhenDefined(*cast<DPValue>(&R));
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
@@ -108,10 +103,8 @@ bool DbgRecord::isEquivalentTo(const DbgRecord &R) const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->isEquivalentTo(*cast<DPValue>(&R));
-    break;
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
@@ -314,9 +307,8 @@ DbgRecord *DbgRecord::clone() const {
   switch (RecordKind) {
   case ValueKind:
     return cast<DPValue>(this)->clone();
-  default:
-    llvm_unreachable("unsupported DbgRecord kind");
   };
+  llvm_unreachable("unsupported DbgRecord kind");
 }
 
 DPValue *DPValue::clone() const { return new DPValue(*this); }
