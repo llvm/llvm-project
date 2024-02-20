@@ -618,7 +618,7 @@ public:
   // 23.3.5.1 constructors:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset(unsigned long long __v) _NOEXCEPT : base(__v) {}
-  template <class _CharT, class = __enable_if_t<_IsCharLikeType<_CharT>::value> >
+  template <class _CharT, __enable_if_t<_IsCharLikeType<_CharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
       const _CharT* __str,
 #if _LIBCPP_STD_VER >= 26
