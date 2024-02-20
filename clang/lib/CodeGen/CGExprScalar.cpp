@@ -724,7 +724,7 @@ public:
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
-              return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+          return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
         [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -2571,7 +2571,7 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
   case LangOptions::SOB_Defined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
-        return Builder.CreateAdd(InVal, Amount, Name);
+      return Builder.CreateAdd(InVal, Amount, Name);
     [[fallthrough]];
   case LangOptions::SOB_Undefined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
