@@ -1063,7 +1063,7 @@ bool AArch64FrameLowering::canUseAsPrologue(
 
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.
-  if (!RegInfo->hasStackRealignment(*MF) && TLI->hasInlineStackProbe(*MF))
+  if (!RegInfo->hasStackRealignment(*MF) && !TLI->hasInlineStackProbe(*MF))
     return true;
   // Otherwise, we can use any block as long as it has a scratch register
   // available.

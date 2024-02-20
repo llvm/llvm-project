@@ -232,6 +232,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   if (!RD)
     return nullptr;
 
+  if (!RD->isCompleteDefinition())
+    return nullptr;
+
   // Deduplicate records.
   if (auto It = Records.find(RD); It != Records.end())
     return It->second;

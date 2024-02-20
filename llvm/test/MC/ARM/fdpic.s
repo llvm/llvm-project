@@ -19,13 +19,15 @@
 # CHECK-NEXT: R_ARM_TLS_IE32_FDPIC  00000000 tls
 
 .data
-# ERR: [[#@LINE+1]]:7: error: relocation only supported in FDPIC mode
+# ERR: [[#@LINE+1]]:7: error: relocation R_ARM_FUNCDESC only supported in FDPIC mode
 .long f(FUNCDESC)
-# ERR: [[#@LINE+1]]:7: error: relocation only supported in FDPIC mode
+# ERR: [[#@LINE+1]]:7: error: relocation R_ARM_GOTFUNCDESC only supported in FDPIC mode
 .long f(GOTFUNCDESC)
-# ERR: [[#@LINE+1]]:7: error: relocation only supported in FDPIC mode
+# ERR: [[#@LINE+1]]:7: error: relocation R_ARM_GOTOFFFUNCDESC only supported in FDPIC mode
 .long f(GOTOFFFUNCDESC)
-# ERR: [[#@LINE+1]]:7: error: relocation only supported in FDPIC mode
+# ERR: [[#@LINE+1]]:7: error: relocation R_ARM_TLS_GD32_FDPIC only supported in FDPIC mode
 .long tls(tlsgd_fdpic)
+# ERR: [[#@LINE+1]]:7: error: relocation R_ARM_TLS_LDM32_FDPIC only supported in FDPIC mode
 .long tls(tlsldm_fdpic)
+# ERR: [[#@LINE+1]]:7: error: relocation R_ARM_TLS_IE32_FDPIC only supported in FDPIC mode
 .long tls(gottpoff_fdpic)
