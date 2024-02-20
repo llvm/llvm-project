@@ -167,6 +167,8 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
+- The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+
 Attribute Changes in Clang
 --------------------------
 
