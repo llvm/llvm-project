@@ -748,6 +748,10 @@ Error RewriteInstance::run() {
 
   processProfileData();
 
+  // Save input binary metadata if BAT section needs to be emitted
+  if (opts::EnableBAT)
+    BAT->saveMetadata(*BC);
+
   postProcessFunctions();
 
   processMetadataPostCFG();

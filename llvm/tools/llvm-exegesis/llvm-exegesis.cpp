@@ -293,7 +293,9 @@ static cl::list<ValidationEvent> ValidationCounters(
         clEnumValN(ValidationEvent::DataTLBStoreMiss, "data-tlb-store-misses",
                    "Count DTLB store misses"),
         clEnumValN(ValidationEvent::InstructionTLBLoadMiss,
-                   "instruction-tlb-load-misses", "Count ITLB load misses")));
+                   "instruction-tlb-load-misses", "Count ITLB load misses"),
+        clEnumValN(ValidationEvent::BranchPredictionMiss,
+                   "branch-prediction-misses", "Branch prediction misses")));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 

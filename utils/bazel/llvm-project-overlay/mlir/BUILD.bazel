@@ -1042,6 +1042,25 @@ cc_binary(
 )
 
 cc_binary(
+    name = "_mlirDialectsLLVM.so",
+    srcs = ["lib/Bindings/Python/DialectLLVM.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPILLVM",
+        ":MLIRBindingsPythonHeadersAndDeps",
+        "@pybind11",
+    ],
+)
+
+cc_binary(
     name = "_mlirDialectsQuant.so",
     srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
     copts = PYBIND11_COPTS,
@@ -1508,6 +1527,57 @@ cc_library(
         ":SideEffectInterfaces",
         "//llvm:Core",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "AMDGPUTransformOps",
+    srcs = glob([
+        "lib/Dialect/AMDGPU/TransformOps/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/AMDGPU/TransformOps/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMDGPUDialect",
+        ":AMDGPUTransformOpsIncGen",
+        ":AMDGPUTransforms",
+        ":AffineDialect",
+        ":FuncDialect",
+        ":IR",
+        ":TransformDialect",
+        ":VectorDialect",
+    ],
+)
+
+td_library(
+    name = "AMDGPUTransformOpsTdFiles",
+    srcs = glob([
+        "include/mlir/Dialect/AMDGPU/TransformOps/*.td",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUTransformOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.td",
+    deps = [
+        ":AMDGPUTransformOpsTdFiles",
     ],
 )
 
@@ -3314,7 +3384,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineUtils",
         ":ArithDialect",
+        ":ArithUtils",
         ":ControlFlowDialect",
         ":DialectUtils",
         ":FuncDialect",
@@ -4614,6 +4686,7 @@ cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
+        ":AMDGPUTransformOps",
         ":AffineTransformOps",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
@@ -8961,6 +9034,7 @@ cc_library(
     deps = [
         ":AMDGPUDialect",
         ":AMDGPUToROCDL",
+        ":AMDGPUTransformOps",
         ":AMDGPUTransforms",
         ":AMXDialect",
         ":AMXTransforms",
@@ -9029,6 +9103,7 @@ cc_library(
         ":LinalgTransforms",
         ":MLProgramDialect",
         ":MLProgramTransforms",
+        ":MPIDialect",
         ":MathDialect",
         ":MathToFuncs",
         ":MathToLLVM",
@@ -12978,6 +13053,127 @@ cc_library(
         ":TransformUtils",
     ],
 )
+
+##---------------------------------------------------------------------------##
+# MPI dialect
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "MPITdFiles",
+    srcs = [
+        "include/mlir/Dialect/MPI/IR/MPI.td",
+        "include/mlir/Dialect/MPI/IR/MPIOps.td",
+        "include/mlir/Dialect/MPI/IR/MPITypes.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AttrTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "MPIIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/MPI/IR/MPI.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/MPI/IR/MPI.cpp.inc",
+        ),
+        (
+            ["-gen-dialect-decls"],
+            "include/mlir/Dialect/MPI/IR/MPIDialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "include/mlir/Dialect/MPI/IR/MPIDialect.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MPI/IR/MPI.td",
+    deps = [":MPITdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MPIOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/MPI/IR/MPIOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/MPI/IR/MPIOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MPI/IR/MPIOps.td",
+    deps = [":MPITdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MPITypesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/MPI/IR/MPITypesGen.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/MPI/IR/MPITypesGen.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MPI/IR/MPITypes.td",
+    deps = [":MPITdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MPIAttrsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/MPI/IR/MPIEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/MPI/IR/MPIEnums.cpp.inc",
+        ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/MPI/IR/MPIAttrDefs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/MPI/IR/MPIAttrDefs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MPI/IR/MPI.td",
+    deps = [":MPITdFiles"],
+)
+
+cc_library(
+    name = "MPIDialect",
+    srcs = glob(["lib/Dialect/MPI/IR/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/MPI/IR/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Dialect",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":MPIAttrsIncGen",
+        ":MPIIncGen",
+        ":MPIOpsIncGen",
+        ":MPITypesIncGen",
+        ":SideEffectInterfaces",
+        "//llvm:Support",
+    ],
+)
+
 
 ##---------------------------------------------------------------------------##
 # Allocation interfaces

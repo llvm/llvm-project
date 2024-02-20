@@ -4939,6 +4939,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *ExtractAPIIgnoresFileArg =
             Args.getLastArg(options::OPT_extract_api_ignores_EQ))
       ExtractAPIIgnoresFileArg->render(Args, CmdArgs);
+  } else if (isa<InstallAPIJobAction>(JA)) {
+    if (!Triple.isOSDarwin())
+      D.Diag(diag::err_drv_installapi_unsupported) << Triple.str();
+
+    CmdArgs.push_back("-installapi");
+    // Add necessary library arguments for InstallAPI.
+    if (const Arg *A = Args.getLastArg(options::OPT_install__name))
+      A->render(Args, CmdArgs);
+    if (const Arg *A = Args.getLastArg(options::OPT_current__version))
+      A->render(Args, CmdArgs);
+
   } else {
     assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
            "Invalid action for clang tool.");
@@ -6648,11 +6659,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_fno_strict_overflow))
       CmdArgs.push_back("-fwrapv");
   }
-
-  if (Arg *A = Args.getLastArg(options::OPT_freroll_loops,
-                               options::OPT_fno_reroll_loops))
-    if (A->getOption().matches(options::OPT_freroll_loops))
-      CmdArgs.push_back("-freroll-loops");
 
   Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
                   options::OPT_fno_finite_loops);
