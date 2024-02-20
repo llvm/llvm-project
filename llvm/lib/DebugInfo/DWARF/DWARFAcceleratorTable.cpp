@@ -552,11 +552,11 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
   return Abbrev(Code, dwarf::Tag(Tag), AbbrevOffset, std::move(*AttrEncOr));
 }
 
-uint64_t
-llvm::FindDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
+void
+llvm::findDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
                             uint64_t HdrSize, dwarf::DwarfFormat Format,
                             const DWARFDebugNames::Header &Hdr) {
-  uint32_t DwarfSize = (Format == llvm::dwarf::DwarfFormat::DWARF32) ? 4 : 8;
+  uint32_t DwarfSize = (Format == llvm::dwarf::DwarfFormat::DWARF64) ? 8 : 4;
   uint64_t Offset = HdrSize;
   Offsets.CUsBase = Offset;
   Offset += Hdr.CompUnitCount * DwarfSize;
@@ -578,20 +578,18 @@ llvm::FindDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
 
   Offset += Hdr.AbbrevTableSize;
   Offsets.EntriesBase = Offset;
-
-  return Offset;
 }
 
 Error DWARFDebugNames::NameIndex::extract() {
   const DWARFDataExtractor &AS = Section.AccelSection;
-  uint64_t Offset = Base;
-  if (Error E = Hdr.extract(AS, &Offset))
+  uint64_t hdrSize = Base;
+  if (Error E = Hdr.extract(AS, &hdrSize))
     return E;
 
   const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
-  Offset = FindDebugNamesOffsets(Offsets, Offset, Hdr.Format, Hdr);
+  findDebugNamesOffsets(Offsets, hdrSize, Hdr.Format, Hdr);
 
-  Offset = Offsets.EntryOffsetsBase + (Hdr.NameCount * SectionOffsetSize);
+  uint64_t Offset = Offsets.EntryOffsetsBase + (Hdr.NameCount * SectionOffsetSize);
 
   if (!AS.isValidOffsetForDataOfSize(Offset, Hdr.AbbrevTableSize))
     return createStringError(errc::illegal_byte_sequence,

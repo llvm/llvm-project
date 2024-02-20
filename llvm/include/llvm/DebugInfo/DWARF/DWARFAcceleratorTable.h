@@ -562,8 +562,8 @@ public:
     uint64_t getEntryOffset() const { return EntryOffset; }
   };
 
-  // Offsets for the start of various important tables from the start of the
-  // section.
+  /// Offsets for the start of various important tables from the start of the
+  /// section.
   struct DWARFDebugNamesOffsets {
     uint64_t CUsBase;
     uint64_t BucketsBase;
@@ -799,13 +799,12 @@ public:
   const NameIndex *getCUNameIndex(uint64_t CUOffset);
 };
 
-// Calculates the starting offsets for various sections within the
-// debug_names section. This has been pulled out of DWARFDebugNames, to
-// allow easier sharing of the code with other tools, such as LLD.
-uint64_t FindDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
-                               uint64_t HdrSize,
-                               const dwarf::DwarfFormat Format,
-                               const DWARFDebugNames::Header &Hdr);
+/// Calculates the starting offsets for various sections within the
+/// .debug_names section.
+void findDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
+                           uint64_t HdrSize,
+                           const dwarf::DwarfFormat Format,
+                           const DWARFDebugNames::Header &Hdr);
 
 /// If `Name` is the name of a templated function that includes template
 /// parameters, returns a substring of `Name` containing no template
