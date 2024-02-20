@@ -79,7 +79,7 @@ def CallOpInterfaceHandle
       // The type must implement `TransformHandleTypeInterface`.
       [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
 
-  // The usual components of a type such as description, mnemonic and assembly format 
+  // The usual components of a type such as description, mnemonic and assembly format
   // should be provided.
   let summary = "handle to payload operations implementing CallOpInterface";
   let mnemonic = "my.call_op_interface";
@@ -87,7 +87,7 @@ def CallOpInterfaceHandle
 }
 ```
 
-We will omit the generation of declaration and definitions using Tablegen for brevity as it is identical to the regular case. 
+We will omit the generation of declaration and definitions using Tablegen for brevity as it is identical to the regular case.
 
 To finalize the definition of a transform type, one must implement the interface methods.
 
@@ -109,9 +109,9 @@ mlir::transform::CallOpInterfaceHandleType::checkPayload(
     if (llvm::isa<mlir::CallOpInterface>(op))
       continue;
 
-    // By convention, these verifiers always emit a silenceable failure since they are 
+    // By convention, these verifiers always emit a silenceable failure since they are
     // checking a precondition.
-    DiagnosedSilenceableFailure diag = emitSilenceableError(loc) 
+    DiagnosedSilenceableFailure diag = emitSilenceableError(loc)
         << "expected the payload operation to implement CallOpInterface";
     diag.attachNote(op->getLoc()) << "offending operation";
     return diag;
@@ -129,8 +129,8 @@ Additional attributes and types need to be registered in the extension, next to 
 // In MyExtension.cpp.
 
 void MyExtension::init() {
-  // …
-  
+  // ...
+
   registerTypes<
 #define GET_TYPEDEF_LIST
 #include "MyExtensionTypes.cpp.inc"

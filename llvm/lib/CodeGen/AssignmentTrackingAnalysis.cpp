@@ -82,7 +82,7 @@ template <> struct llvm::DenseMapInfo<VariableID> {
   }
 };
 
-using VarLocInsertPt = PointerUnion<const Instruction *, const DPValue *>;
+using VarLocInsertPt = PointerUnion<const Instruction *, const DbgRecord *>;
 
 namespace std {
 template <> struct hash<VarLocInsertPt> {
@@ -218,14 +218,14 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
   // block includes VarLocs for any DPValues attached to that instruction.
   for (auto &P : Builder.VarLocsBeforeInst) {
     // Process VarLocs attached to a DPValue alongside their marker Instruction.
-    if (isa<const DPValue *>(P.first))
+    if (isa<const DbgRecord *>(P.first))
       continue;
     const Instruction *I = cast<const Instruction *>(P.first);
     unsigned BlockStart = VarLocRecords.size();
     // Any VarLocInfos attached to a DPValue should now be remapped to their
     // marker Instruction, in order of DPValue appearance and prior to any
     // VarLocInfos attached directly to that instruction.
-    for (const DPValue &DPV : I->getDbgValueRange()) {
+    for (const DPValue &DPV : DPValue::filter(I->getDbgValueRange())) {
       // Even though DPV defines a variable location, VarLocsBeforeInst can
       // still be empty if that VarLoc was redundant.
       if (!Builder.VarLocsBeforeInst.count(&DPV))
@@ -829,7 +829,11 @@ class MemLocFragmentFill {
   void process(BasicBlock &BB, VarFragMap &LiveSet) {
     BBInsertBeforeMap[&BB].clear();
     for (auto &I : BB) {
-      for (auto &DPV : I.getDbgValueRange()) {
+      for (DbgRecord &DR : I.getDbgValueRange()) {
+        // FIXME: DPValue::filter usage needs attention in this file; we need
+        // to make sure dbg.labels are handled correctly in RemoveDIs mode.
+        // Cast below to ensure this gets fixed when DPLabels are introduced.
+        DPValue &DPV = cast<DPValue>(DR);
         if (const auto *Locs = FnVarLocs->getWedge(&DPV)) {
           for (const VarLocInfo &Loc : *Locs) {
             addDef(Loc, &DPV, *I.getParent(), LiveSet);
@@ -1492,7 +1496,7 @@ const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
 }
 #endif
 
-VarLocInsertPt getNextNode(const DPValue *DPV) {
+VarLocInsertPt getNextNode(const DbgRecord *DPV) {
   auto NextIt = ++(DPV->getIterator());
   if (NextIt == DPV->getMarker()->getDbgValueRange().end())
     return DPV->getMarker()->MarkedInstr;
@@ -1507,7 +1511,7 @@ VarLocInsertPt getNextNode(const Instruction *Inst) {
 VarLocInsertPt getNextNode(VarLocInsertPt InsertPt) {
   if (isa<const Instruction *>(InsertPt))
     return getNextNode(cast<const Instruction *>(InsertPt));
-  return getNextNode(cast<const DPValue *>(InsertPt));
+  return getNextNode(cast<const DbgRecord *>(InsertPt));
 }
 
 DbgAssignIntrinsic *CastToDbgAssign(DbgVariableIntrinsic *DVI) {
@@ -1915,7 +1919,7 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
     // attached DPValues, or a non-debug instruction with attached unprocessed
     // DPValues.
     if (II != EI && II->hasDbgValues()) {
-      for (DPValue &DPV : II->getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(II->getDbgValueRange())) {
         resetInsertionPoint(DPV);
         processDPValue(DPV, LiveSet);
         assert(LiveSet->isValid());
@@ -2172,7 +2176,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   };
   for (auto &BB : Fn) {
     for (auto &I : BB) {
-      for (auto &DPV : I.getDbgValueRange())
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
         ProcessDbgRecord(&DPV, DPDeclares);
       if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         ProcessDbgRecord(DII, InstDeclares);
@@ -2462,7 +2466,7 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
   for (auto &BB : Fn) {
     for (auto &I : BB) {
       // Skip instructions other than dbg.values and dbg.assigns.
-      for (DPValue &DPV : I.getDbgValueRange())
+      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
         if (DPV.isDbgValue() || DPV.isDbgAssign())
           TranslateDbgRecord(&DPV);
       auto *DVI = dyn_cast<DbgValueInst>(&I);
@@ -2564,7 +2568,7 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
       }
     };
     HandleLocsForWedge(&I);
-    for (DPValue &DPV : reverse(I.getDbgValueRange()))
+    for (DPValue &DPV : reverse(DPValue::filter(I.getDbgValueRange())))
       HandleLocsForWedge(&DPV);
   }
 
@@ -2629,7 +2633,7 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
       }
     };
 
-    for (DPValue &DPV : I.getDbgValueRange())
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
       HandleLocsForWedge(&DPV);
     HandleLocsForWedge(&I);
   }
@@ -2715,7 +2719,7 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
         Changed = true;
       }
     };
-    for (DPValue &DPV : I.getDbgValueRange())
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
       HandleLocsForWedge(&DPV);
     HandleLocsForWedge(&I);
   }

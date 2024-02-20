@@ -46,6 +46,34 @@ namespace dr1715 { // dr1715: 3.9
 #endif
 }
 
+namespace dr1719 { // dr1719: no
+#if __cplusplus >= 201103L
+struct CStruct {
+  int one;
+  int two;
+};
+
+struct CStruct2 {
+  int one;
+  int two;
+};
+
+struct CStructWithQualifiers {
+  const int one;
+  volatile int two;
+};
+
+static_assert(__is_layout_compatible(CStruct, const CStruct2), "");
+static_assert(__is_layout_compatible(CStruct, volatile CStruct2), "");
+static_assert(__is_layout_compatible(const CStruct, volatile CStruct2), "");
+// FIXME: all of the following pairs of types are layout-compatible
+static_assert(!__is_layout_compatible(int, const int), "");
+static_assert(!__is_layout_compatible(int, volatile int), "");
+static_assert(!__is_layout_compatible(const int, volatile int), "");
+static_assert(!__is_layout_compatible(CStruct, CStructWithQualifiers), "");
+#endif
+} // namespace dr1719
+
 namespace dr1722 { // dr1722: 9
 #if __cplusplus >= 201103L
 void f() {
@@ -86,6 +114,23 @@ struct S {
 };
 struct Q { typedef int type; } q;
 S s(q); // #dr1736-s
+#endif
+}
+
+namespace dr1738 { // dr1738: sup P0136R1
+#if __cplusplus >= 201103L
+struct A {
+  template <typename T>
+  A(int, T) {}
+};
+
+struct B : A {
+  using A::A;
+};
+
+// FIXME: this is well-formed since P0136R1
+template B::B(int, double);
+// since-cxx11-error@-1 {{explicit instantiation of 'B' does not refer to a function template, variable template, member function, member class, or static data member}}
 #endif
 }
 

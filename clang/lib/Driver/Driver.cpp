@@ -4189,6 +4189,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
       }
 
+      if (isa<InstallAPIJobAction>(Current)) {
+        Current = nullptr;
+        break;
+      }
+
       // FIXME: Should we include any prior module file outputs as inputs of
       // later actions in the same command line?
 
@@ -4319,6 +4324,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (!MergerInputs.empty())
       Actions.push_back(
           C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
+  } else if (Args.hasArg(options::OPT_installapi)) {
+    // TODO: Lift restriction once operation can handle multiple inputs.
+    assert(Inputs.size() == 1 && "InstallAPI action can only handle 1 input");
+    const auto [InputType, InputArg] = Inputs.front();
+    Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
+    Actions.push_back(
+        C.MakeAction<InstallAPIJobAction>(Current, types::TY_TextAPI));
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
@@ -4762,6 +4774,8 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
+    if (Args.hasArg(options::OPT_installapi))
+      return C.MakeAction<InstallAPIJobAction>(Input, types::TY_TextAPI);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
@@ -6441,7 +6455,7 @@ bool Driver::ShouldUseClangCompiler(const JobAction &JA) const {
   // And say "no" if this is not a kind of action clang understands.
   if (!isa<PreprocessJobAction>(JA) && !isa<PrecompileJobAction>(JA) &&
       !isa<CompileJobAction>(JA) && !isa<BackendJobAction>(JA) &&
-      !isa<ExtractAPIJobAction>(JA))
+      !isa<ExtractAPIJobAction>(JA) && !isa<InstallAPIJobAction>(JA))
     return false;
 
   return true;

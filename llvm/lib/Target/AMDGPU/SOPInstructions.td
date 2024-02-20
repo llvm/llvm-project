@@ -1078,14 +1078,12 @@ def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32", "s_cmp_ge_i32", 1>;
 def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32", "s_cmp_lt_i32", 1>;
 def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32", "s_cmp_le_i32", 1>;
 
-let SOPKZext = 1 in {
 def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32", "s_cmp_eq_u32", 0>;
 def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32", "s_cmp_lg_u32", 0>;
 def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32", "s_cmp_gt_u32", 0>;
 def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32", "s_cmp_ge_u32", 0>;
 def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32", 0>;
 def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
-} // End SOPKZext = 1
 } // End isCompare = 1
 
 let isCommutable = 1, DisableEncoding = "$src0",
@@ -1111,7 +1109,6 @@ def S_GETREG_B32 : SOPK_Pseudo <
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
   "$sdst, $simm16",
   [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
-  let SOPKZext = 1;
   let hasSideEffects = 1;
 }
 
@@ -2574,11 +2571,13 @@ multiclass SOPP_Real_32_gfx11_Renamed_gfx12<bits<7> op, string gfx12_name> :
 
 multiclass SOPP_Real_With_Relaxation_gfx12<bits<7> op> {
   defm "" : SOPP_Real_32_gfx12<op>;
+  let isCodeGenOnly = 1 in
   defm _pad_s_nop : SOPP_Real_64_gfx12<op>;
 }
 
 multiclass SOPP_Real_With_Relaxation_gfx11<bits<7> op> {
   defm "" : SOPP_Real_32_gfx11<op>;
+  let isCodeGenOnly = 1 in
   defm _pad_s_nop : SOPP_Real_64_gfx11<op>;
 }
 
@@ -2620,7 +2619,8 @@ defm S_DECPERFLEVEL               : SOPP_Real_32_gfx11_gfx12<0x039>;
 defm S_TTRACEDATA                 : SOPP_Real_32_gfx11_gfx12<0x03a>;
 defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
-defm S_BARRIER                    : SOPP_Real_32_gfx11_gfx12<0x03d>;
+
+defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX1150, GFX12.
@@ -2699,6 +2699,7 @@ multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> :
 //relaxation for insts with no operands not implemented
 multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
   defm "" : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<op>;
+  let isCodeGenOnly = 1 in
   defm _pad_s_nop : SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<op>;
 }
 

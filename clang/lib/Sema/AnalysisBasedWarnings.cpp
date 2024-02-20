@@ -2297,7 +2297,8 @@ public:
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,
                                  const VariableGroupsManager &VarGrpMgr,
-                                 FixItList &&Fixes, const Decl *D) override {
+                                 FixItList &&Fixes, const Decl *D,
+                                 const FixitStrategy &VarTargetTypes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
@@ -2312,7 +2313,18 @@ public:
       // NOT explain how the variables are grouped as the reason is non-trivial
       // and irrelavant to users' experience:
       const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
-      unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
+      unsigned FixItStrategy = 0;
+      switch (VarTargetTypes.lookup(Variable)) {
+      case clang::FixitStrategy::Kind::Span:
+        FixItStrategy = 0;
+        break;
+      case clang::FixitStrategy::Kind::Array:
+        FixItStrategy = 1;
+        break;
+      default:
+        assert(false && "We support only std::span and std::array");
+      };
+
       const auto &FD =
           S.Diag(Variable->getLocation(),
                  BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together

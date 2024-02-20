@@ -1885,6 +1885,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_INTRINSIC_TRUNC;
     case Intrinsic::readcyclecounter:
       return TargetOpcode::G_READCYCLECOUNTER;
+    case Intrinsic::readsteadycounter:
+      return TargetOpcode::G_READSTEADYCOUNTER;
     case Intrinsic::ptrmask:
       return TargetOpcode::G_PTRMASK;
     case Intrinsic::lrint:
@@ -2120,6 +2122,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                                 ListSize, Alignment));
     return true;
   }
+  case Intrinsic::dbg_assign:
+    // A dbg.assign is a dbg.value with more information about stack locations,
+    // typically produced during optimisation of variables with leaked
+    // addresses. We can treat it like a normal dbg_value intrinsic here; to
+    // benefit from the full analysis of stack/SSA locations, GlobalISel would
+    // need to register for and use the AssignmentTrackingAnalysis pass.
+    LLVM_FALLTHROUGH;
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);
@@ -2956,7 +2965,8 @@ bool IRTranslator::translateInsertElement(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
   // not a legal vector type in LLT.
-  if (cast<FixedVectorType>(U.getType())->getNumElements() == 1)
+  if (auto *FVT = dyn_cast<FixedVectorType>(U.getType());
+      FVT && FVT->getNumElements() == 1)
     return translateCopy(U, *U.getOperand(1), MIRBuilder);
 
   Register Res = getOrCreateVReg(U);
@@ -3265,7 +3275,7 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
-  for (DPValue &DPV : Inst.getDbgValueRange()) {
+  for (DPValue &DPV : DPValue::filter(Inst.getDbgValueRange())) {
     const DILocalVariable *Variable = DPV.getVariable();
     const DIExpression *Expression = DPV.getExpression();
     Value *V = DPV.getVariableLocationOp(0);

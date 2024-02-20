@@ -1253,6 +1253,14 @@ def match_ors : GICombineRule<
         [{ return Helper.matchOr(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// Combines concat operations
+def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
+def combine_concat_vector : GICombineRule<
+  (defs root:$root, concat_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_CONCAT_VECTORS):$root,
+        [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -1326,11 +1334,12 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
-    fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors]>;
+    fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors, 
+    combine_concat_vector]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
 // compile time performance.
 def optnone_combines : GICombineGroup<[trivial_combines,
     ptr_add_immed_chain, combines_for_extload,
-    not_cmp_fold, opt_brcond_by_inverting_cond]>;
+    not_cmp_fold, opt_brcond_by_inverting_cond, combine_concat_vector]>;

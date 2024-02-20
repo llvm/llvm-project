@@ -449,6 +449,17 @@ private:
     return "** External Symbol **";
   }
 
+  // Returns the canonial name of the given PGOName. In a canonical name, all
+  // suffixes that begins with "." except ".__uniq." are stripped.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  static StringRef getCanonicalName(StringRef PGOName);
+
+  // Add the function into the symbol table, by creating the following
+  // map entries:
+  // name-set = {PGOFuncName} + {getCanonicalName(PGOFuncName)} if the canonical
+  // name is different from pgo name
+  // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c

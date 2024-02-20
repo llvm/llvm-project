@@ -797,16 +797,8 @@ def i64imm_32bit : ImmLeaf<i64, [{
   return (Imm & 0xffffffffULL) == static_cast<uint64_t>(Imm);
 }]>;
 
-def InlineImm16 : ImmLeaf<i16, [{
-  return isInlineImmediate16(Imm);
-}]>;
-
-def InlineImm32 : ImmLeaf<i32, [{
-  return isInlineImmediate32(Imm);
-}]>;
-
-def InlineImm64 : ImmLeaf<i64, [{
-  return isInlineImmediate64(Imm);
+def InlineImm64 : IntImmLeaf<i64, [{
+  return isInlineImmediate(Imm);
 }]>;
 
 def InlineImmFP32 : FPImmLeaf<f32, [{
@@ -1148,7 +1140,13 @@ def FPT16InputModsMatchClass : FPInputModsMatchClass<16> {
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
-def FP16VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<16>;
+class FP16VCSrcInputModsMatchClass<bit IsFake16>
+    : FPVCSrcInputModsMatchClass<16> {
+  let Name = !if(IsFake16, "RegOrInlineImmWithFPFake16InputMods",
+                 "RegOrInlineImmWithFPT16InputMods");
+  let PredicateMethod = "isRegOrInlineImmWithFP16InputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
+}
 def FP32VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<32>;
 
 class InputMods <AsmOperandClass matchClass> : Operand <i32> {
@@ -1166,7 +1164,8 @@ def FPT16InputMods : FPInputMods<FPT16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
-def FP16VCSrcInputMods : FPInputMods<FP16VCSrcInputModsMatchClass>;
+class FP16VCSrcInputMods<bit IsFake16>
+  : FPInputMods<FP16VCSrcInputModsMatchClass<IsFake16>>;
 def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
 
 class IntInputModsMatchClass <int opSize> : AsmOperandClass {
@@ -1461,11 +1460,12 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
-  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
-                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
-                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
-                              !if(!eq(VT.Size, 16), op16,
-                              VOPDstS64orS32)))); // else VT == i1
+  RegisterOperand ret = !cond(!eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
+                              !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
+                              !eq(VT.Size, 16)  : op16,
+                              1                 : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
@@ -1488,37 +1488,25 @@ class getSDWADstForVT<ValueType VT> {
 // instructions for the given VT.
 class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
   RegisterOperand ret =
-    !if(VT.isFP,
-      !if(!eq(VT.Size, 64),
-         VSrc_f64,
-         !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-            !if(IsTrue16,
-              !if(IsFake16, VSrcFake16_f16_Lo128, VSrcT_f16_Lo128),
-              VSrc_f16
-            ),
-            !if(!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)),
-               VSrc_v2f16,
-               !if(!or(!eq(VT.Value, v4f16.Value), !eq(VT.Value, v4bf16.Value)),
-                 AVSrc_64,
-                 VSrc_f32
-               )
-            )
-         )
-       ),
-       !if(!eq(VT.Size, 64),
-          VSrc_b64,
-          !if(!eq(VT.Value, i16.Value),
-            !if(IsTrue16,
-              !if(IsFake16, VSrcFake16_b16_Lo128, VSrcT_b16_Lo128),
-              VSrc_b16
-            ),
-             !if(!eq(VT.Value, v2i16.Value),
-                VSrc_v2b16,
-                VSrc_b32
-             )
-          )
-       )
-    );
+  !cond(!eq(VT, i64)    : VSrc_b64,
+        !eq(VT, f64)    : VSrc_f64,
+        !eq(VT, i32)    : VSrc_b32,
+        !eq(VT, f32)    : VSrc_f32,
+        !eq(VT, i16)    : !if(IsTrue16,
+                              !if(IsFake16, VSrcFake16_b16_Lo128, VSrcT_b16_Lo128),
+                              VSrc_b16),
+        !eq(VT, f16)    : !if(IsTrue16,
+                              !if(IsFake16, VSrcFake16_f16_Lo128, VSrcT_f16_Lo128),
+                              VSrc_f16),
+        !eq(VT, bf16)   : !if(IsTrue16,
+                              !if(IsFake16, VSrcFake16_bf16_Lo128, VSrcT_bf16_Lo128),
+                              VSrc_bf16),
+        !eq(VT, v2i16)  : VSrc_v2b16,
+        !eq(VT, v2f16)  : VSrc_v2f16,
+        !eq(VT, v2bf16) : VSrc_v2bf16,
+        !eq(VT, v4f16)  : AVSrc_64,
+        !eq(VT, v4bf16) : AVSrc_64,
+        1               : VSrc_b32);
 }
 
 class getSOPSrcForVT<ValueType VT> {
@@ -1528,15 +1516,14 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
   RegisterOperand ret =
-      !if (!eq(VT.Size, 128), RegisterOperand<VReg_128>,
-           !if (!eq(VT.Size, 96), RegisterOperand<VReg_96>,
-                !if (!eq(VT.Size, 64), RegisterOperand<VReg_64>,
-                     !if (!eq(VT.Size, 48), RegisterOperand<VReg_64>,
-                          !if (!eq(VT.Size, 16),
-                               !if (IsTrue16,
-                                    !if (IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
-                                    RegisterOperand<VGPR_32>),
-                               RegisterOperand<VGPR_32>)))));
+  !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+        !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+        !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+        !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+        !eq(VT.Size, 16)  : !if(IsTrue16,
+                                !if(IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
+                                RegisterOperand<VGPR_32>),
+        1                 : RegisterOperand<VGPR_32>);
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -1549,52 +1536,37 @@ class getSDWASrcForVT <ValueType VT> {
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
   RegisterOperand ret =
-  !if(!eq(VT.Size, 128),
-     VRegSrc_128,
-     !if(!eq(VT.Size, 64),
-        !if(VT.isFP,
-           !if(!eq(VT.Value, v2f32.Value),
-               VSrc_v2f32,
-               VSrc_f64),
-           !if(!eq(VT.Value, v2i32.Value),
-               VSrc_v2b32,
-           VSrc_b64)),
-        !if(!eq(VT.Value, i1.Value),
-           SSrc_i1,
-           !if(VT.isFP,
-              !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                 !if(IsTrue16, VSrcT_f16, VSrc_f16),
-                 !if(!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)),
-                    VSrc_v2f16,
-                    !if(!or(!eq(VT.Value, v4f16.Value), !eq(VT.Value, v4bf16.Value)),
-                      AVSrc_64,
-                      VSrc_f32
-                    )
-                 )
-              ),
-              !if(!eq(VT.Value, i16.Value),
-                 !if(IsTrue16, VSrcT_b16, VSrc_b16),
-                 !if(!eq(VT.Value, v2i16.Value),
-                    VSrc_v2b16,
-                    VSrc_b32
-                 )
-              )
-           )
-        )
-     )
-  );
+  !cond(!eq(VT, f64)      : VSrc_f64,
+        !eq(VT, f32)      : VSrc_f32,
+        !eq(VT, f16)      : !if(IsTrue16, VSrcT_f16, VSrc_f16),
+        !eq(VT, bf16)     : !if(IsTrue16, VSrcT_bf16, VSrc_bf16),
+        !eq(VT, i16)      : !if(IsTrue16, VSrcT_b16, VSrc_b16),
+        !eq(VT, i1)       : SSrc_i1,
+        !eq(VT, v2f32)    : VSrc_v2f32,
+        !eq(VT, v2i32)    : VSrc_v2b32,
+        !eq(VT, v2f16)    : VSrc_v2f16,
+        !eq(VT, v2bf16)   : VSrc_v2bf16,
+        !eq(VT, v2i16)    : VSrc_v2b16,
+        !eq(VT, v4f16)    : AVSrc_64,
+        !eq(VT, v4bf16)   : AVSrc_64,
+        !eq(VT.Size, 128) : VRegSrc_128,
+        !eq(VT.Size, 96)  : VRegSrc_96,
+        !eq(VT.Size, 64)  : VSrc_b64,
+        1                 : VSrc_b32);
 }
 
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT> {
   RegisterOperand ret =
-      !if (!eq(VT.Value, i1.Value), SSrc_i1,
-           !if (VT.isFP,
-                !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)), VCSrc_f16,
-                     !if (!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)), VCSrc_v2f16, VCSrc_f32)),
-                !if (!eq(VT.Value, i16.Value), VCSrc_b16,
-                     !if (!eq(VT.Value, v2i16.Value), VCSrc_v2b16,
-                          VCSrc_b32))));
+  !cond(!eq(VT, i1)     : SSrc_i1,
+        !eq(VT, i16)    : VCSrc_b16,
+        !eq(VT, f16)    : VCSrc_f16,
+        !eq(VT, bf16)   : VCSrc_bf16,
+        !eq(VT, v2i16)  : VCSrc_v2b16,
+        !eq(VT, v2f16)  : VCSrc_v2f16,
+        !eq(VT, v2bf16) : VCSrc_v2bf16,
+        !eq(VT, f32)    : VCSrc_f32,
+        1               : VCSrc_b32);
 }
 
 // Float or packed int
@@ -1653,11 +1625,11 @@ class getSrcModDPP_t16 <ValueType VT, bit IsFake16 = 1> {
 }
 
 // Return type of input modifiers operand for specified input operand for DPP
-class getSrcModVOP3DPP <ValueType VT> {
+class getSrcModVOP3DPP <ValueType VT, bit IsFake16 = 1> {
   Operand ret =
       !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                FP16VCSrcInputMods, FP32VCSrcInputMods),
+                FP16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
            Int32VCSrcInputMods);
 }
 
@@ -2359,7 +2331,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
   field dag Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                             HasIntClamp, HasModifiers, HasSrc2Mods,
+                             HasClamp, HasModifiers, HasSrc2Mods,
                              HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
   field dag InsVOP3P = getInsVOP3P<Src0RC64, Src1RC64, Src2RC64,
                                    NumSrcArgs, HasClamp, HasOpSel,
@@ -2450,6 +2422,10 @@ class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.
 class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
+
+  let HasOpSel = 1;
+  let HasModifiers = 1; // All instructions at least have OpSel.
+
   // Most DstVT are 16-bit, but not all.
   let DstRC = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 0 /*IsVOP3Encoding*/>.ret;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
@@ -2461,6 +2437,10 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src0ModDPP = getSrcModDPP_t16<Src0VT, 0 /*IsFake16*/>.ret;
   let Src1ModDPP = getSrcModDPP_t16<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModDPP = getSrcModDPP_t16<Src2VT, 0 /*IsFake16*/>.ret;
+  let Src0VOP3DPP = VGPRSrc_16;
+  let Src0ModVOP3DPP = getSrcModVOP3DPP<Src0VT, 0 /*IsFake16*/>.ret;
+  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0 /*IsFake16*/>.ret;
+  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0 /*IsFake16*/>.ret;
 
   let DstRC64 = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
   let Src0RC64 = getVOP3SrcForVT<Src0VT, 1 /*IsTrue16*/>.ret;
@@ -2513,8 +2493,8 @@ def VOP_V2I16_F32_F32 : VOPProfile <[v2i16, f32, f32, untyped]>;
 def VOP_V2I16_I32_I32 : VOPProfile <[v2i16, i32, i32, untyped]>;
 
 def VOP_F16_V2F16_V2F16_F16 : VOPProfile <[f16, v2f16, v2f16, f16]>;
-def VOP_I16_V2I16_V2I16_I16 : VOPProfile <[i16, v2i16, v2i16, i16]>;
-def VOP_F32_V2I16_V2I16_F32 : VOPProfile <[f32, v2i16, v2i16, f32]>;
+def VOP_BF16_V2BF16_V2BF16_BF16: VOPProfile <[bf16, v2bf16, v2bf16, bf16]>;
+def VOP_F32_V2BF16_V2BF16_F32 : VOPProfile <[f32, v2bf16, v2bf16, f32]>;
 
 def VOP_F32_V2F16_V2F16_V2F16 : VOPProfile <[f32, v2f16, v2f16, v2f16]>;
 

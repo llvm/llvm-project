@@ -190,7 +190,7 @@ FileHeader:
 # RUN: llvm-readelf --file-headers %t.osabi.arm | FileCheck %s --match-full-lines --check-prefix=OSABI-ARM-GNU
 
 # OSABI-ARM-LLVM: OS/ABI: ARM (0x61)
-# OSABI-ARM-GNU:  OS/ABI: 61
+# OSABI-ARM-GNU:  OS/ABI: ARM
 
 ## Check all EM_TI_C6000 specific values.
 

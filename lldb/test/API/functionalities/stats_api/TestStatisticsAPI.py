@@ -117,3 +117,42 @@ class TestStatsAPI(TestBase):
         self.assertNotIn("bt", command_stats)
         # Verify bt's regex command is not duplicatedly captured.
         self.assertNotIn("_regexp-bt", command_stats)
+
+    @add_test_categories(["dwo"])
+    def test_command_stats_force(self):
+        """
+        Test reporting all pssible debug info stats by force loading all debug
+        info. For example, dwo files
+        """
+        src_dir = self.getSourceDir()
+        dwo_yaml_path = os.path.join(src_dir, "main-main.dwo.yaml")
+        exe_yaml_path = os.path.join(src_dir, "main.yaml")
+        dwo_path = self.getBuildArtifact("main-main.dwo")
+        exe_path = self.getBuildArtifact("main")
+        self.yaml2obj(dwo_yaml_path, dwo_path)
+        self.yaml2obj(exe_yaml_path, exe_path)
+
+        # Turn on symbols on-demand loading
+        self.runCmd("settings set symbols.load-on-demand true")
+
+        # We need the current working directory to be set to the build directory
+        os.chdir(self.getBuildDir())
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(exe_path)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Get statistics
+        stats_options = lldb.SBStatisticsOptions()
+        stats = target.GetStatistics(stats_options)
+        stream = lldb.SBStream()
+        stats.GetAsJSON(stream)
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual(debug_stats["totalDebugInfoByteSize"], 193)
+
+        # Get statistics with force loading
+        stats_options.SetReportAllAvailableDebugInfo(True)
+        stats_force = target.GetStatistics(stats_options)
+        stream_force = lldb.SBStream()
+        stats_force.GetAsJSON(stream_force)
+        debug_stats_force = json.loads(stream_force.GetData())
+        self.assertEqual(debug_stats_force["totalDebugInfoByteSize"], 445)

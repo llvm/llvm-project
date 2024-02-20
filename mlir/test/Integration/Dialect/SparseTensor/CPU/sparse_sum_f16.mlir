@@ -93,6 +93,7 @@ module {
     vector.print %vf : f32
 
     // Release the resources.
+    bufferization.dealloc_tensor %0 : tensor<f16>
     bufferization.dealloc_tensor %a : tensor<?x?xf16, #SparseMatrix>
 
     return
