@@ -25,6 +25,8 @@ CONSUMER_PRIMARY_THREAD = 0
 MLIR_DYNAMIC = -9223372036854775808
 
 DEBUG = False
+
+
 def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
     if not DEBUG and not forcePrint:
         return
@@ -101,6 +103,7 @@ def get_mlir_ty(dtype):
 def c(value, ty=None):
     ty = T.index() if ty is None else ty
     return arith.constant(ty, value)
+
 
 def generate_matmul_ws(
     input_type=np.float16,
