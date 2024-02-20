@@ -249,6 +249,10 @@ struct StreamOperationEvaluator {
 
   bool isStreamEof() const { return SS->ErrorState == ErrorFEof; }
 
+  NonLoc getZeroVal(const CallEvent &Call) {
+    return *SVB.makeZeroVal(Call.getResultType()).getAs<NonLoc>();
+  }
+
   ProgramStateRef setStreamState(ProgramStateRef State,
                                  const StreamState &NewSS) {
     return State->set<StreamMap>(StreamSym, NewSS);
@@ -933,8 +937,7 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
-        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
-                        *E.SVB.makeZeroVal(E.ACtx.IntTy).getAs<NonLoc>());
+        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
       return;
     StateNotFailed =
@@ -1007,8 +1010,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
-        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
-                        *E.SVB.makeZeroVal(E.ACtx.IntTy).getAs<NonLoc>());
+        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (StateNotFailed)
       C.addTransition(StateNotFailed);
   }
@@ -1077,8 +1079,7 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
-        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
-                        *E.SVB.makeZeroVal(E.CE->getType()).getAs<NonLoc>());
+        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
       return;
     C.addTransition(StateNotFailed);
@@ -1204,8 +1205,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateNotFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
   StateNotFailed =
-      E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
-                      *E.SVB.makeZeroVal(Call.getResultType()).getAs<NonLoc>());
+      E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
   if (!StateNotFailed)
     return;
 
@@ -1357,37 +1357,21 @@ void StreamChecker::evalFileno(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   // Fileno should fail only if the passed pointer is invalid.
   // Some of the preconditions are checked already in preDefault.
-  // Here we can assume that the operation does not fail.
-  // An added failure case causes many unexpected warnings because a file number
-  // becomes -1 that is not expected by the program.
-  // The stream error states are not modified by 'fileno', and not the 'errno'.
-  // (To ensure that errno is not changed, this evalCall is needed to not
-  // invalidate 'errno' like in a default case.)
+  // Here we can assume that the operation does not fail, because if we
+  // introduced a separate branch where fileno() returns -1, then it would cause
+  // many unexpected and unwanted warnings in situations where fileno() is
+  // called on valid streams.
+  // The stream error states are not modified by 'fileno', and 'errno' is also
+  // left unchanged (so this evalCall does not invalidate it, but we have a
+  // custom evalCall instead of the default that would invalidate it).
   ProgramStateRef State = C.getState();
-  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
-  if (!StreamSym)
+  StreamOperationEvaluator E(C);
+  if (!E.Init(Desc, Call, C, State))
     return;
 
-  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
-  if (!CE)
-    return;
-
-  const StreamState *SS = State->get<StreamMap>(StreamSym);
-  if (!SS)
-    return;
-
-  assertStreamStateOpened(SS);
-
-  SValBuilder &SVB = C.getSValBuilder();
-  NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
-  auto Cond =
-      SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(Call.getResultType()),
-                    SVB.getConditionType())
-          .getAs<DefinedOrUnknownSVal>();
-  if (!Cond)
-    return;
-  State = State->assume(*Cond, true);
+  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+  State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+  State = E.assumeBinOpNN(State, BO_GE, RetVal, E.getZeroVal(Call));
   if (!State)
     return;
 
