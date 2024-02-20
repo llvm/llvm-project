@@ -209,6 +209,8 @@ Improvements to Clang's diagnostics
   `WG14 N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_.
   Fixes `#69352 <https://github.com/llvm/llvm-project/issues/69352>`_.
 
+- Clang now diagnoses extraneous template parameter lists as a language extension.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

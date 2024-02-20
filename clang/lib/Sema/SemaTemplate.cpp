@@ -3667,7 +3667,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
     if (!SuppressDiagnostic)
       Diag(ParamLists[ParamIdx]->getTemplateLoc(),
-           AllExplicitSpecHeaders ? diag::warn_template_spec_extra_headers
+           AllExplicitSpecHeaders ? diag::ext_template_spec_extra_headers
                                   : diag::err_template_spec_extra_headers)
           << SourceRange(ParamLists[ParamIdx]->getTemplateLoc(),
                          ParamLists[ParamLists.size() - 2]->getRAngleLoc());
