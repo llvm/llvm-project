@@ -13503,6 +13503,9 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyFormat("{");
   verifyFormat("#})");
   verifyNoCrash("(/**/[:!] ?[).");
+  verifyNoCrash("struct X{"
+                "  operator iunt("
+                "};");
 }
 
 TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
