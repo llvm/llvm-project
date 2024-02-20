@@ -286,16 +286,6 @@ public:
 
   ~CommandObjectFrameSelect() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex() != 0)
-      return;
-
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eFrameIndexCompletion, request, nullptr);
-  }
-
   Options *GetOptions() override { return &m_options; }
 
 protected:
@@ -445,15 +435,6 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    // Arguments are the standard source file completer.
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eVariablePathCompletion, request,
-        nullptr);
-  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {
