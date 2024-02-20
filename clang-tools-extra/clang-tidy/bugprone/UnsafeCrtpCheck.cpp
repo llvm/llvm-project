@@ -34,12 +34,22 @@ bool hasPrivateConstructor(const CXXRecordDecl *RD) {
 }
 
 bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
-                                  const NamedDecl *Derived) {
+                                  const NamedDecl *Param) {
   for (auto &&Friend : CRTP->friends()) {
     const auto *TTPT =
         dyn_cast<TemplateTypeParmType>(Friend->getFriendType()->getType());
 
-    if (TTPT && TTPT->getDecl() == Derived)
+    if (TTPT && TTPT->getDecl() == Param)
+      return true;
+  }
+
+  return false;
+}
+
+bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
+                              const CXXRecordDecl *Derived) {
+  for (auto &&Friend : CRTP->friends()) {
+    if (Friend->getFriendType()->getType()->getAsCXXRecordDecl() == Derived)
       return true;
   }
 
@@ -99,7 +109,7 @@ void UnsafeCrtpCheck::registerMatchers(MatchFinder *Finder) {
 void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CRTPInstantiation =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("crtp");
-  const auto *Derived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
+  const auto *DerivedRecord = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
   const CXXRecordDecl *CRTPDeclaration =
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
@@ -119,11 +129,12 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *DerivedTemplateParameter =
-      *getDerivedParameter(CRTPInstantiation, Derived);
+      *getDerivedParameter(CRTPInstantiation, DerivedRecord);
 
   if (hasPrivateConstructor(CRTPDeclaration) &&
       !isDerivedParameterBefriended(CRTPDeclaration,
-                                    DerivedTemplateParameter)) {
+                                    DerivedTemplateParameter) &&
+      !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord)) {
     diag(CRTPDeclaration->getLocation(),
          "the CRTP cannot be constructed from the derived class")
         << CRTPDeclaration

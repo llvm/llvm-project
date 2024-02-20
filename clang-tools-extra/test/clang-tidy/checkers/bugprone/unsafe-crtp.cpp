@@ -192,6 +192,34 @@ template<>
 class A<int> : CRTP<A<int>> {};
 } // namespace template_derived_explicit_specialization
 
+namespace explicit_derived_friend {
+class A;
+
+template <typename T>
+class CRTP {
+    CRTP() = default;
+    friend A;
+};
+
+class A : CRTP<A> {};
+} // namespace explicit_derived_friend
+
+namespace explicit_derived_friend_multiple {
+class A;
+
+template <typename T>
+class CRTP {
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the CRTP cannot be constructed from the derived class [bugprone-unsafe-crtp]
+// CHECK-MESSAGES: :[[@LINE-2]]:7: note: consider declaring the derived class as friend
+// CHECK-FIXES: friend T;
+    CRTP() = default;
+    friend A;
+};
+
+class A : CRTP<A> {};
+class B : CRTP<B> {};
+} // namespace explicit_derived_friend_multiple
+
 namespace no_warning {
 template <typename T>
 class CRTP
