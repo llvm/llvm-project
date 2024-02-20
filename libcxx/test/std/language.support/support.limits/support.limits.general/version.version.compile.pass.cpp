@@ -153,7 +153,7 @@
     __cpp_lib_polymorphic_allocator                  201902L [C++20]
     __cpp_lib_print                                  202207L [C++23]
     __cpp_lib_quoted_string_io                       201304L [C++14]
-    __cpp_lib_ranges                                 202211L [C++20]
+    __cpp_lib_ranges                                 202110L [C++20]
     __cpp_lib_ranges_as_const                        202207L [C++23]
     __cpp_lib_ranges_as_rvalue                       202207L [C++23]
     __cpp_lib_ranges_chunk                           202202L [C++23]
@@ -3845,8 +3845,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202211L
-#   error "__cpp_lib_ranges should have the value 202211L in c++20"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_ranges_as_const
@@ -5277,8 +5277,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202211L
-#   error "__cpp_lib_ranges should have the value 202211L in c++23"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6976,8 +6976,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202211L
-#   error "__cpp_lib_ranges should have the value 202211L in c++26"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

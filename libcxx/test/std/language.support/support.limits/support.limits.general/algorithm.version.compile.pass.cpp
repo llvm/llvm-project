@@ -20,7 +20,7 @@
     __cpp_lib_constexpr_algorithms           201806L [C++20]
     __cpp_lib_freestanding_algorithm         202311L [C++26]
     __cpp_lib_parallel_algorithm             201603L [C++17]
-    __cpp_lib_ranges                         202211L [C++20]
+    __cpp_lib_ranges                         202110L [C++20]
     __cpp_lib_ranges_starts_ends_with        202106L [C++23]
     __cpp_lib_robust_nonmodifying_seq_ops    201304L [C++14]
     __cpp_lib_sample                         201603L [C++17]
@@ -201,8 +201,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202211L
-#   error "__cpp_lib_ranges should have the value 202211L in c++20"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_ranges_starts_ends_with
@@ -266,8 +266,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202211L
-#   error "__cpp_lib_ranges should have the value 202211L in c++23"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -349,8 +349,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202211L
-#   error "__cpp_lib_ranges should have the value 202211L in c++26"
+# if __cpp_lib_ranges != 202110L
+#   error "__cpp_lib_ranges should have the value 202110L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
