@@ -1452,6 +1452,7 @@ struct RenameParams {
   std::string newName;
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
+llvm::json::Value toJSON(const RenameParams &);
 
 struct PrepareRenameResult {
   /// Range of the string to rename.
