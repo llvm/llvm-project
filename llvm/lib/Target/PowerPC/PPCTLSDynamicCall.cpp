@@ -216,15 +216,15 @@ protected:
                     }
                   }
 
-                // Check the two Load@toc: one should be _$TLSML, and the other
-                // will be moved before the node that uses the OutReg of the
-                // .__tls_get_mod node.
+                // Check the two Load@toc nodes: one should be _$TLSML, and the
+                // other will be moved before the node that uses the OutReg of
+                // the .__tls_get_mod node.
                 if (LoadFromTocs.size() == 2) {
                   MachineBasicBlock::iterator TLSMLIter = MBB.end();
                   MachineBasicBlock::iterator OffsetIter = MBB.end();
-                  // Make sure the two LoadFromTocs are within current BB, and
-                  // one of them from the "_$TLSML" pseudo symbol, while the
-                  // other from the variable.
+                  // Make sure the two LoadFromToc nodes are within the current
+                  // BB, and that one of them is from the "_$TLSML" pseudo
+                  // symbol, while the other is from the variable.
                   for (MachineBasicBlock::iterator I = MBB.begin(),
                                                    IE = MBB.end();
                        I != IE; ++I)
@@ -236,8 +236,9 @@ protected:
                       else
                         OffsetIter = I;
                     }
-                  // If both two iterators are valid, we should have identified
-                  // the scenario, and do the movement.
+                  // Perform the movement when the desired scenario has been
+                  // identified, which should be when both of the iterators are
+                  // valid.
                   if (TLSMLIter != MBB.end() && OffsetIter != MBB.end())
                     OffsetIter->moveBefore(&*UseIter);
                 }
