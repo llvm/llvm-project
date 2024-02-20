@@ -260,3 +260,149 @@ body:             |
     %zext:_(<2 x s64>) = G_ZEXT %and(<2 x s1>)
     $q0 = COPY %zext
 ...
+---
+# fcmp (x, y) || fcmp (x, y) -> fcmp(x, y)
+name:            test_fcmp_or_fcmp_with_x_y
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: test_fcmp_or_fcmp_with_x_y
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ueq), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT [[FCMP]](s1)
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %cmp1:_(s1) = G_FCMP floatpred(oeq), %0(s64), %1
+    %cmp2:_(s1) = G_FCMP floatpred(uno), %0(s64), %1
+    %or:_(s1) = G_OR %cmp1, %cmp2
+    %zext:_(s64) = G_ZEXT %or(s1)
+    $x0 = COPY %zext
+...
+---
+# fcmp (5, y) || fcmp (y, 5) -> fcmp(x, y)
+name:            test_fcmp_or_fcmp_with_5_y
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: test_fcmp_or_fcmp_with_5_y
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 5.000000e+00
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(une), [[COPY]](s64), [[C]]
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT [[FCMP]](s1)
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = G_FCONSTANT double 5.0
+    %cmp1:_(s1) = G_FCMP floatpred(one), %0(s64), %2
+    %cmp2:_(s1) = G_FCMP floatpred(uno), %0(s64), %2
+    %or:_(s1) = G_OR %cmp1, %cmp2
+    %zext:_(s64) = G_ZEXT %or(s1)
+    $x0 = COPY %zext
+...
+---
+# fcmp (x, y) || fcmp (y, x) -> fcmp(x, y)
+name:            test_fcmp_or_fcmp_with_anti
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: test_fcmp_or_fcmp_with_anti
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(une), [[COPY1]](s64), [[COPY]]
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT [[FCMP]](s1)
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %cmp1:_(s1) = G_FCMP floatpred(one), %1(s64), %0
+    %cmp2:_(s1) = G_FCMP floatpred(uno), %0(s64), %1
+    %or:_(s1) = G_OR %cmp1, %cmp2
+    %zext:_(s64) = G_ZEXT %or(s1)
+    $x0 = COPY %zext
+...
+---
+# fcmp (x, y) && fcmp (x, y) -> fcmp(x, y)
+name:            test_fcmp_and_fcmp_with_x_y
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: test_fcmp_and_fcmp_with_x_y
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(uno), [[COPY1]](s64), [[COPY]]
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT [[FCMP]](s1)
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %cmp1:_(s1) = G_FCMP floatpred(une), %1(s64), %0
+    %cmp2:_(s1) = G_FCMP floatpred(uno), %0(s64), %1
+    %and:_(s1) = G_AND %cmp1, %cmp2
+    %zext:_(s64) = G_ZEXT %and(s1)
+    $x0 = COPY %zext
+...
+---
+# fcmp (x, y) && fcmp (x, y) -> fcmp(x, y)
+name:            test_fcmp_and_fcmp_with_x_y_multi_use
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: test_fcmp_and_fcmp_with_x_y_multi_use
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: %cmp1:_(s1) = G_FCMP floatpred(ogt), [[COPY1]](s64), [[COPY]]
+    ; CHECK-NEXT: %cmp2:_(s1) = G_FCMP floatpred(ugt), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: %and:_(s1) = G_AND %cmp1, %cmp2
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT %and(s1)
+    ; CHECK-NEXT: %zext2:_(s64) = G_ZEXT %and(s1)
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
+    ; CHECK-NEXT: $x2 = COPY %zext2(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %cmp1:_(s1) = G_FCMP floatpred(ogt), %1(s64), %0
+    %cmp2:_(s1) = G_FCMP floatpred(ugt), %0(s64), %1
+    %and:_(s1) = G_AND %cmp1, %cmp2
+    %zext:_(s64) = G_ZEXT %and(s1)
+    %zext2:_(s64) = G_ZEXT %and(s1)
+    $x0 = COPY %zext
+    $x2 = COPY %zext2
+...
+---
+# fcmp (x, y) && fcmp (x, y) -> fcmp(x, y)
+name:            test_fcmp_and_fcmp_with_vectors
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: test_fcmp_and_fcmp_with_vectors
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
+    ; CHECK-NEXT: %zext:_(<2 x s64>) = G_ZEXT [[BUILD_VECTOR]](<2 x s1>)
+    ; CHECK-NEXT: $q0 = COPY %zext(<2 x s64>)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %5:_(s64) = COPY $x5
+    %6:_(s64) = COPY $x6
+    %7:_(s64) = COPY $x7
+    %v8:_(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64)
+    %v9:_(<2 x s64>) = G_BUILD_VECTOR %2(s64), %3(s64)
+    %cmp1:_(<2 x s1>) = G_FCMP floatpred(oeq), %v8(<2 x s64>), %v9
+    %cmp2:_(<2 x s1>) = G_FCMP floatpred(olt), %v8(<2 x s64>), %v9
+    %and:_(<2 x s1>) = G_AND %cmp1, %cmp2
+    %zext:_(<2 x s64>) = G_ZEXT %and(<2 x s1>)
+    $q0 = COPY %zext
+...
