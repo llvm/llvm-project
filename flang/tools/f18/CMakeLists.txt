@@ -20,7 +20,6 @@ set(MODULES
   "__fortran_builtins"
   "__fortran_type_info"
 )
-#"omp_lib"
 
 # Create module files directly from the top-level module source directory.
 # If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
@@ -75,7 +74,6 @@ if (NOT CMAKE_CROSSCOMPILING)
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
   # It also produces to module files: omp_lib.mod and omp_lib_kinds.mod.
-  message("MK: ${CMAKE_BINARY_DIR}")
   set(base ${FLANG_INTRINSIC_MODULES_DIR}/omp_lib)
   add_custom_command(OUTPUT ${base}.mod ${base}_kinds.mod
     COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
