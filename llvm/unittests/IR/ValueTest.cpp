@@ -379,8 +379,8 @@ TEST(ValueTest, replaceUsesOutsideBlockDPValue) {
   EXPECT_TRUE(Branch->hasDbgValues());
   EXPECT_TRUE(Ret->hasDbgValues());
 
-  DPValue *DPV1 = &*Branch->getDbgValueRange().begin();
-  DPValue *DPV2 = &*Ret->getDbgValueRange().begin();
+  DPValue *DPV1 = cast<DPValue>(&*Branch->getDbgValueRange().begin());
+  DPValue *DPV2 = cast<DPValue>(&*Ret->getDbgValueRange().begin());
 
   A->replaceUsesOutsideBlock(B, Entry);
   // These users are in Entry so shouldn't be changed.

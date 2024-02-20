@@ -70,7 +70,7 @@ void BasicBlock::convertToNewDbgValues() {
   // Iterate over all instructions in the instruction list, collecting dbg.value
   // instructions and converting them to DPValues. Once we find a "real"
   // instruction, attach all those DPValues to a DPMarker in that instruction.
-  SmallVector<DPValue *, 4> DPVals;
+  SmallVector<DbgRecord *, 4> DPVals;
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
     if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
@@ -88,7 +88,7 @@ void BasicBlock::convertToNewDbgValues() {
     createMarker(&I);
     DPMarker *Marker = I.DbgMarker;
 
-    for (DPValue *DPV : DPVals)
+    for (DbgRecord *DPV : DPVals)
       Marker->insertDPValue(DPV, false);
 
     DPVals.clear();
@@ -107,9 +107,13 @@ void BasicBlock::convertFromNewDbgValues() {
       continue;
 
     DPMarker &Marker = *Inst.DbgMarker;
-    for (DPValue &DPV : Marker.getDbgValueRange())
-      InstList.insert(Inst.getIterator(),
-                      DPV.createDebugIntrinsic(getModule(), nullptr));
+    for (DbgRecord &DR : Marker.getDbgValueRange()) {
+      if (auto *DPV = dyn_cast<DPValue>(&DR))
+        InstList.insert(Inst.getIterator(),
+                        DPV->createDebugIntrinsic(getModule(), nullptr));
+      else
+        llvm_unreachable("unsupported DbgRecord kind");
+    }
 
     Marker.eraseFromParent();
   };
@@ -163,9 +167,9 @@ bool BasicBlock::validateDbgValues(bool Assert, bool Msg, raw_ostream *OS) {
                 "Debug Marker points to incorrect instruction?");
 
     // Now validate any DPValues in the marker.
-    for (DPValue &DPV : CurrentDebugMarker->getDbgValueRange()) {
+    for (DbgRecord &DPR : CurrentDebugMarker->getDbgValueRange()) {
       // Validate DebugProgramValues.
-      TestFailure(DPV.getMarker() == CurrentDebugMarker,
+      TestFailure(DPR.getMarker() == CurrentDebugMarker,
                   "Not pointing at correct next marker!");
 
       // Verify that no DbgValues appear prior to PHIs.
@@ -1086,7 +1090,7 @@ void BasicBlock::splice(iterator Dest, BasicBlock *Src, iterator First,
   flushTerminatorDbgValues();
 }
 
-void BasicBlock::insertDPValueAfter(DPValue *DPV, Instruction *I) {
+void BasicBlock::insertDPValueAfter(DbgRecord *DPV, Instruction *I) {
   assert(IsNewDbgInfoFormat);
   assert(I->getParent() == this);
 
@@ -1095,7 +1099,7 @@ void BasicBlock::insertDPValueAfter(DPValue *DPV, Instruction *I) {
   NextMarker->insertDPValue(DPV, true);
 }
 
-void BasicBlock::insertDPValueBefore(DPValue *DPV,
+void BasicBlock::insertDPValueBefore(DbgRecord *DPV,
                                      InstListType::iterator Where) {
   // We should never directly insert at the end of the block, new DPValues
   // shouldn't be generated at times when there's no terminator.
