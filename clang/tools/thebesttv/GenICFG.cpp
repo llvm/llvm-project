@@ -61,12 +61,15 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     // CG.dump();
 
     CallGraphNode *N = CG.getNode(D->getCanonicalDecl());
-    requireTrue(N != nullptr, "N is null!");
-    for (CallGraphNode::const_iterator CI = N->begin(), CE = N->end(); CI != CE;
-         ++CI) {
-        FunctionDecl *callee = CI->Callee->getDecl()->getAsFunction();
-        requireTrue(callee != nullptr, "callee is null!");
-        Global.callGraph[fullSignature].insert(getFullSignature(callee));
+    if (N == nullptr) {
+        requireTrue(CG.size() == 1, "Empty call graph! (only root node)");
+    } else {
+        for (CallGraphNode::const_iterator CI = N->begin(), CE = N->end();
+             CI != CE; ++CI) {
+            FunctionDecl *callee = CI->Callee->getDecl()->getAsFunction();
+            requireTrue(callee != nullptr, "callee is null!");
+            Global.callGraph[fullSignature].insert(getFullSignature(callee));
+        }
     }
 
     std::unique_ptr<CFG> cfg = CFG::buildCFG(
