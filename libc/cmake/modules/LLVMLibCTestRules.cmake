@@ -457,20 +457,9 @@ function(add_integration_test test_name)
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_compile_options(${fq_build_target_name}
-      PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
-  # The GPU build requires overriding the default CMake triple and architecture.
-  if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-    target_compile_options(${fq_build_target_name} PRIVATE
-                           -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
-                           -flto --target=${LIBC_GPU_TARGET_TRIPLE}
-                           -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
-  elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-    get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
-    target_compile_options(${fq_build_target_name} PRIVATE
-                           -nogpulib ${nvptx_options} -fno-use-cxa-atexit
-                           --target=${LIBC_GPU_TARGET_TRIPLE})
-  endif()
+
+  _get_hermetic_test_compile_options(compile_options "${INTEGRATION_TEST_COMPILE_OPTIONS}")
+  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
@@ -628,8 +617,8 @@ function(add_libc_hermetic_test test_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_compile_options(${fq_build_target_name}
-      PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
+  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
+  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   set(link_libraries "")
   foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
