@@ -297,8 +297,8 @@ static opt<ErrorDetailLevel> ErrorDetails(
            clEnumValN(BothDetailsAndSummary, "full",
                       "Display each error as well as a summary. [default]")),
     cat(DwarfDumpCategory));
-static opt<std::string> JsonSummaryFile(
-    "json-summary-file", init(""),
+static opt<std::string> JsonErrSummaryFile(
+    "verify-json", init(""),
     desc("Output JSON-formatted error summary to the specified file. "
          "(Implies --verify)"),
     value_desc("filename.json"), cat(DwarfDumpCategory));
@@ -356,7 +356,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
                        ErrorDetails != NoDetailsOrSummary;
     DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
                                    ErrorDetails != NoDetailsOnlySummary;
-    DumpOpts.JsonSummaryFile = JsonSummaryFile;
+    DumpOpts.JsonErrSummaryFile = JsonErrSummaryFile;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -843,7 +843,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   // -error-detail and -json-summary-file both imply -verify
-  if (ErrorDetails != Unspecified || !JsonSummaryFile.empty()) {
+  if (ErrorDetails != Unspecified || !JsonErrSummaryFile.empty()) {
     Verify = true;
   }
 

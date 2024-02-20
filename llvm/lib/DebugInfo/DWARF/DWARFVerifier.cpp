@@ -2034,13 +2034,14 @@ void DWARFVerifier::summarize() {
       error() << s << " occurred " << count << " time(s).\n";
     });
   }
-  if (!DumpOpts.JsonSummaryFile.empty()) {
+  if (!DumpOpts.JsonErrSummaryFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream JsonStream(DumpOpts.JsonSummaryFile, EC, sys::fs::OF_Text);
+    raw_fd_ostream JsonStream(DumpOpts.JsonErrSummaryFile, EC,
+                              sys::fs::OF_Text);
     if (EC) {
       error() << "unable to open json summary file '"
-              << DumpOpts.JsonSummaryFile << "' for writing: " << EC.message()
-              << '\n';
+              << DumpOpts.JsonErrSummaryFile
+              << "' for writing: " << EC.message() << '\n';
       return;
     }
 
