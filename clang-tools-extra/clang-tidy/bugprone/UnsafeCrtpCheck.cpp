@@ -67,7 +67,7 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
 }
 
 std::vector<FixItHint> hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
-                                           std::string OriginalAccess,
+                                           const std::string &OriginalAccess,
                                            const SourceManager &SM,
                                            const LangOptions &LangOpts) {
   std::vector<FixItHint> Hints;
@@ -75,12 +75,12 @@ std::vector<FixItHint> hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
   Hints.emplace_back(FixItHint::CreateInsertion(
       Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
 
-  Hints.emplace_back(FixItHint::CreateInsertion(
+  SourceLocation CtorEndLoc =
       Ctor->isExplicitlyDefaulted()
           ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
-                .getLocWithOffset(1)
-          : Ctor->getEndLoc().getLocWithOffset(1),
-      '\n' + OriginalAccess + ':' + '\n'));
+          : Ctor->getEndLoc();
+  Hints.emplace_back(FixItHint::CreateInsertion(
+      CtorEndLoc.getLocWithOffset(1), '\n' + OriginalAccess + ':' + '\n'));
 
   return Hints;
 }
@@ -100,19 +100,20 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CRTPInstantiation =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("crtp");
   const auto *Derived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
-
   const CXXRecordDecl *CRTPDeclaration =
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
   if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
+    bool IsStruct = CRTPDeclaration->isStruct();
+
     diag(CRTPDeclaration->getLocation(),
          "the implicit default constructor of the CRTP is publicly accessible")
         << CRTPDeclaration
         << FixItHint::CreateInsertion(
                CRTPDeclaration->getBraceRange().getBegin().getLocWithOffset(1),
-               (CRTPDeclaration->isStruct() ? "\nprivate:\n" : "\n") +
-                   CRTPDeclaration->getNameAsString() + "() = default;" +
-                   (CRTPDeclaration->isStruct() ? "\npublic:\n" : "\n"));
+               (IsStruct ? "\nprivate:\n" : "\n") +
+                   CRTPDeclaration->getNameAsString() + "() = default;\n" +
+                   (IsStruct ? "public:\n" : ""));
     diag(CRTPDeclaration->getLocation(), "consider making it private",
          DiagnosticIDs::Note);
   }

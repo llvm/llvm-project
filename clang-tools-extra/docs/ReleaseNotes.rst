@@ -119,7 +119,7 @@ New checks
 - New :doc:`bugprone-unsafe-crtp
   <clang-tidy/checks/bugprone/unsafe-crtp>` check.
 
-  Detects error-prone CRTP.
+  Detects error-prone CRTP usage.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
