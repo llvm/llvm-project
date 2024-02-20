@@ -332,14 +332,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    func::ConstantOp constantOp) {
-  Operation *operation = constantOp.getOperation();
-  Attribute value = constantOp.getValueAttr();
-
-  return printConstantOp(emitter, operation, value);
-}
-
-static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::AssignOp assignOp) {
   auto variableOp = cast<emitc::VariableOp>(assignOp.getVar().getDefiningOp());
   OpResult result = variableOp->getResult(0);
@@ -1296,7 +1288,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::SubOp, emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
-          .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(
+          .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops.
           .Case<arith::ConstantOp>(
