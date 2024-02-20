@@ -51,6 +51,12 @@ static cl::opt<bool> Widen16BitOps(
   cl::ReallyHidden,
   cl::init(true));
 
+static cl::opt<bool> LowerAddrSpaceCast(
+    "amdgpu-codegenprepare-addrspacecast",
+    cl::desc("Detect non-null addrspacecast source and lower them early to "
+             "avoid the null pointer check"),
+    cl::ReallyHidden, cl::init(true));
+
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
                    cl::desc("Break large PHI nodes for DAGISel"),
@@ -99,6 +105,7 @@ class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
   const GCNSubtarget *ST = nullptr;
+  const AMDGPUTargetMachine *TM = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
@@ -310,6 +317,7 @@ public:
   bool visitICmpInst(ICmpInst &I);
   bool visitSelectInst(SelectInst &I);
   bool visitPHINode(PHINode &I);
+  bool visitAddrSpaceCastInst(AddrSpaceCastInst &I);
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
@@ -2013,6 +2021,78 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   return true;
 }
 
+bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+  if (!LowerAddrSpaceCast)
+    return false;
+
+  // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
+  // This is only worthwhile for casts from/to priv/local to flat.
+  const unsigned SrcAS = I.getSrcAddressSpace();
+  const unsigned DstAS = I.getDestAddressSpace();
+
+  bool CanLower = false;
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    CanLower = (DstAS == AMDGPUAS::LOCAL_ADDRESS ||
+                DstAS == AMDGPUAS::PRIVATE_ADDRESS);
+  else if (DstAS == AMDGPUAS::FLAT_ADDRESS)
+    CanLower = (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
+                SrcAS == AMDGPUAS::PRIVATE_ADDRESS);
+  if (!CanLower)
+    return false;
+
+  // Check the Src operand, and look through Phis.
+  SmallVector<Value *, 4> WorkList;
+  DenseSet<const PHINode *> SeenPHIs;
+  WorkList.push_back(I.getOperand(0));
+  while (!WorkList.empty()) {
+    Value *Cur = getUnderlyingObject(WorkList.pop_back_val());
+
+    // Pointer cannot be null if it's a block address, GV or alloca.
+    // NOTE: We don't support extern_weak, but if we did, we'd need to check for
+    // it as the symbol could be null in such cases.
+    if (isa<BlockAddress>(Cur) || isa<GlobalValue>(Cur) || isa<AllocaInst>(Cur))
+      continue;
+
+    // Check nonnull arguments.
+    if (const auto *Arg = dyn_cast<Argument>(Cur); Arg && Arg->hasNonNullAttr())
+      continue;
+
+    // TODO: Calls that return nonnull?
+
+    // Look through PHIs - add all incoming values to the queue.
+    if (const auto *Phi = dyn_cast<PHINode>(Cur)) {
+      auto [It, Inserted] = SeenPHIs.insert(Phi);
+      if (!Inserted)
+        return false; // infinite recursion
+
+      for (auto &Inc : Phi->incoming_values())
+        WorkList.push_back(Inc.get());
+      continue;
+    }
+
+    // For all other things, use KnownBits.
+    // We either use 0 or all bits set to indicate null, so check whether the
+    // value can be zero or all ones.
+    auto SrcPtrKB =
+        computeKnownBits(Cur, *DL).trunc(DL->getPointerSizeInBits(SrcAS));
+    const auto NullVal = TM->getNullPointerValue(SrcAS);
+    assert((NullVal == 0 || NullVal == -1) &&
+           "don't know how to check for this null value!");
+    if (NullVal ? !SrcPtrKB.getMaxValue().isAllOnes() : SrcPtrKB.isNonZero())
+      continue;
+
+    // Value is unknown so we can't lower.
+    return false;
+  }
+
+  IRBuilder<> B(&I);
+  auto *Intrin = B.CreateIntrinsic(
+      I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
+  I.replaceAllUsesWith(Intrin);
+  I.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   case Intrinsic::bitreverse:
@@ -2196,6 +2276,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
+  Impl.TM = &TM;
   Impl.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -2214,6 +2295,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   AMDGPUCodeGenPrepareImpl Impl;
   Impl.Mod = F.getParent();
   Impl.DL = &Impl.Mod->getDataLayout();
+  Impl.TM = static_cast<const AMDGPUTargetMachine *>(&TM);
   Impl.TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
   Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
   Impl.AC = &FAM.getResult<AssumptionAnalysis>(F);
