@@ -152,6 +152,10 @@ Changes to Sanitizers
 Other Changes
 -------------
 
+* The optimizer will no longer try to transform `memcmp(x, y, Len) == 0` to
+  `bcmp(x, y, Len) == 0` unless the command line option
+  `allow-memcmp-to-bcmp-transform` is enabled (off by default).
+
 External Open Source Projects Using LLVM 19
 ===========================================
 

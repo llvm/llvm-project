@@ -85,6 +85,13 @@ static cl::opt<unsigned, false, HotColdHintParser> HotNewHintValue(
     "hot-new-hint-value", cl::Hidden, cl::init(254),
     cl::desc("Value to pass to hot/cold operator new for hot allocation"));
 
+// Allow transforming `memcmp(x, y, Len) == 0` to `bcmp(x, y, Len) == 0`.
+// Note: `bcmp` was removed from the POSIX.1-2008 standard.
+static cl::opt<bool> AllowMemcmpToBcmpTransform(
+    "allow-memcmp-to-bcmp-transform", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Allow transforming memcmp calls to bcmp calls if deemed beneficial"));
+
 //===----------------------------------------------------------------------===//
 // Helper Functions
 //===----------------------------------------------------------------------===//
@@ -1596,7 +1603,7 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilderBase &B) {
   // memcmp(x, y, Len) == 0 -> bcmp(x, y, Len) == 0
   // bcmp can be more efficient than memcmp because it only has to know that
   // there is a difference, not how different one is to the other.
-  if (isLibFuncEmittable(M, TLI, LibFunc_bcmp) &&
+  if (AllowMemcmpToBcmpTransform && isLibFuncEmittable(M, TLI, LibFunc_bcmp) &&
       isOnlyUsedInZeroEqualityComparison(CI)) {
     Value *LHS = CI->getArgOperand(0);
     Value *RHS = CI->getArgOperand(1);

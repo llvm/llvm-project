@@ -15,8 +15,8 @@ declare i32 @__sprintf_chk(ptr, i32, i32, ptr, ...)
 @b = common global [60 x i8] zeroinitializer, align 1
 @h = constant [2 x i8] c"h\00"
 
-; CHECK:     declare i32 @bcmp(ptr inreg nocapture, ptr inreg nocapture, i32 inreg)
-; CHECK-NOT: declare i32 @bcmp(ptr nocapture, ptr nocapture, i32)
+; CHECK:     declare i32 @memcmp(ptr inreg nocapture noundef, ptr inreg nocapture noundef, i32 inreg noundef)
+; CHECK-NOT: declare i32 @memcmp(ptr nocapture noundef, ptr nocapture noundef, i32)
 
 define i32 @baz(ptr inreg noundef %s2, i32 inreg noundef %n){
   %call = call ptr @foo()
