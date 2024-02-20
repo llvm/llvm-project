@@ -114,14 +114,14 @@ std::unique_ptr<clang::ASTConsumer>
 GenICFGAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
                                  llvm::StringRef InFile) {
 
-    static const int total = Global.cb->getAllFiles().size();
-    static int fileCnt = 0;
-    fileCnt++;
+    static const int total = Global.cb->getAllCompileCommands().size();
+    static int cnt = 0;
+    cnt++;
 
     SourceManager &sm = Compiler.getSourceManager();
     const FileEntry *fileEntry = sm.getFileEntryForID(sm.getMainFileID());
     std::string filePath(fileEntry->tryGetRealPathName());
-    llvm::errs() << "[" << fileCnt << "/" << total << "] " << filePath << "\n";
+    llvm::errs() << "[" << cnt << "/" << total << "] " << filePath << "\n";
 
     return std::make_unique<GenICFGConsumer>(&Compiler.getASTContext(),
                                              filePath);
