@@ -16,9 +16,12 @@
 
 // UNSUPPORTED: c++03
 
-#include <tuple>
-#include <string>
 #include <cassert>
+#include <concepts>
+#include <ranges>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -81,6 +84,24 @@ int main(int, char**)
     }
 #endif
 
+#if TEST_STD_VER >= 20
+    // `get()` allows using `tuple` with ranges
+    {
+      std::tuple<int, std::string> arr[]{{27, "hkt"}, {28, "zmt"}};
 
-  return 0;
+      std::same_as<std::vector<int>> decltype(auto) numbers{
+          arr | std::views::elements<0> | std::ranges::to<std::vector<int>>()};
+      assert(numbers.size() == 2);
+      assert(numbers[0] == 27);
+      assert(numbers[1] == 28);
+
+      std::same_as<std::vector<std::string>> decltype(auto) strings{
+          arr | std::views::elements<1> | std::ranges::to<std::vector<std::string>>()};
+      assert(strings.size() == 2);
+      assert(strings[0] == "hkt");
+      assert(strings[1] == "zmt");
+    }
+#endif
+
+    return 0;
 }

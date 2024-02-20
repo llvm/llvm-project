@@ -12,6 +12,9 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
+#include <ranges>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -57,6 +60,25 @@ TEST_CONSTEXPR_CXX14 bool tests()
         assert(std::get<1>(tempArray(1, 2, 3)) == 2);
         assert(std::get<2>(tempArray(1, 2, 3)) == 3);
     }
+
+#if TEST_STD_VER >= 20
+    // `get()` allows using `array` with ranges
+    {
+      std::array<int, 2> arr[]{{27, 28}, {82, 94}};
+
+      std::same_as<std::vector<int>> decltype(auto) nums0{
+          arr | std::views::elements<0> | std::ranges::to<std::vector<int>>()};
+      assert(nums0.size() == 2);
+      assert(nums0[0] == 27);
+      assert(nums0[1] == 82);
+
+      std::same_as<std::vector<int>> decltype(auto) nums1{
+          arr | std::views::elements<1> | std::ranges::to<std::vector<int>>()};
+      assert(nums1.size() == 2);
+      assert(nums1[0] == 28);
+      assert(nums1[1] == 94);
+    }
+#endif
 
     return true;
 }

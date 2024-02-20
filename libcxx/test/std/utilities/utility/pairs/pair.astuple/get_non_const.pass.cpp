@@ -14,8 +14,12 @@
 //     typename tuple_element<I, std::pair<T1, T2> >::type&
 //     get(pair<T1, T2>&);
 
-#include <utility>
 #include <cassert>
+#include <concepts>
+#include <ranges>
+#include <string>
+#include <vector>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -49,6 +53,24 @@ int main(int, char**)
     }
 #endif
 
+#if TEST_STD_VER >= 20
+    // `get()` allows using `pair` with ranges
+    {
+      std::pair<int, std::string> arr[]{{27, "hkt"}, {28, "zmt"}};
+
+      std::same_as<std::vector<int>> decltype(auto) numbers{
+          arr | std::views::elements<0> | std::ranges::to<std::vector<int>>()};
+      assert(numbers.size() == 2);
+      assert(numbers[0] == 27);
+      assert(numbers[1] == 28);
+
+      std::same_as<std::vector<std::string>> decltype(auto) strings{
+          arr | std::views::elements<1> | std::ranges::to<std::vector<std::string>>()};
+      assert(strings.size() == 2);
+      assert(strings[0] == "hkt");
+      assert(strings[1] == "zmt");
+    }
+#endif
 
   return 0;
 }
