@@ -359,6 +359,8 @@ public:
   Register getCarryOutReg() const { return getReg(1); }
   MachineOperand &getLHS() { return getOperand(2); }
   MachineOperand &getRHS() { return getOperand(3); }
+  Register getLHSReg() { return getOperand(2).getReg(); }
+  Register getRHSReg() { return getOperand(3).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -441,6 +443,21 @@ public:
     case TargetOpcode::G_SADDE:
     case TargetOpcode::G_USUBE:
     case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add operations that also consume a carry-in.
+/// G_UADDE, G_SADDE
+class GAddCarryInOut : public GAddSubCarryInOut {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
       return true;
     default:
       return false;

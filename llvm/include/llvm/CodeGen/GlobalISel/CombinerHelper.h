@@ -810,11 +810,14 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ands,
+  /// Combine ands.
   bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ors,
+  /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine addes.
+  bool matchAddCarryInOut(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -919,6 +922,7 @@ private:
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,
                              bool AllowUndefs);
+  bool isConstantOrConstantVectorI(Register Src);
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
 
@@ -930,6 +934,8 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  bool isZExtOrTruncLegal(LLT ToTy, LLT FromTy) const;
 };
 } // namespace llvm
 

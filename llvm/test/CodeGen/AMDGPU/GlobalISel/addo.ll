@@ -39,9 +39,12 @@ define i64 @v_uaddo_i64(i64 %a, i64 %b) {
 ; GFX7-LABEL: v_uaddo_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX7-NEXT:    v_add_i32_e64 v0, s[4:5], v0, v2
+; GFX7-NEXT:    v_add_i32_e32 v1, vcc, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
+; GFX7-NEXT:    v_add_i32_e64 v1, s[4:5], v1, v2
+; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -49,9 +52,12 @@ define i64 @v_uaddo_i64(i64 %a, i64 %b) {
 ; GFX8-LABEL: v_uaddo_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8-NEXT:    v_add_u32_e64 v0, s[4:5], v0, v2
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v1, v3
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
+; GFX8-NEXT:    v_add_u32_e64 v1, s[4:5], v1, v2
+; GFX8-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -59,9 +65,12 @@ define i64 @v_uaddo_i64(i64 %a, i64 %b) {
 ; GFX9-LABEL: v_uaddo_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX9-NEXT:    v_add_co_u32_e64 v0, s[4:5], v0, v2
+; GFX9-NEXT:    v_add_co_u32_e32 v1, vcc, v1, v3
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
+; GFX9-NEXT:    v_add_co_u32_e64 v1, s[4:5], v1, v2
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -477,8 +486,13 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX7-LABEL: s_uaddo_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_add_u32 s0, s0, s2
-; GFX7-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX7-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX7-NEXT:    s_add_u32 s1, s1, s3
+; GFX7-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX7-NEXT:    s_add_u32 s1, s1, s2
+; GFX7-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX7-NEXT:    s_or_b32 s2, s3, s2
+; GFX7-NEXT:    s_and_b32 s2, s2, 1
 ; GFX7-NEXT:    s_add_u32 s0, s0, s2
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -486,8 +500,13 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX8-LABEL: s_uaddo_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_add_u32 s0, s0, s2
-; GFX8-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX8-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX8-NEXT:    s_add_u32 s1, s1, s3
+; GFX8-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX8-NEXT:    s_add_u32 s1, s1, s2
+; GFX8-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX8-NEXT:    s_or_b32 s2, s3, s2
+; GFX8-NEXT:    s_and_b32 s2, s2, 1
 ; GFX8-NEXT:    s_add_u32 s0, s0, s2
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -495,8 +514,13 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX9-LABEL: s_uaddo_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-NEXT:    s_add_u32 s1, s1, s3
+; GFX9-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX9-NEXT:    s_add_u32 s1, s1, s2
+; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-NEXT:    s_or_b32 s2, s3, s2
+; GFX9-NEXT:    s_and_b32 s2, s2, 1
 ; GFX9-NEXT:    s_add_u32 s0, s0, s2
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    ; return to shader part epilog
