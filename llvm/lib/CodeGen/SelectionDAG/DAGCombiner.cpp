@@ -11660,6 +11660,24 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     }
   }
 
+  // select m, sub(X, C), X --> sub (X, and(C, m))
+  if (N1.getOpcode() == ISD::SUB && N1.getOperand(0) == N2 && N1->hasOneUse() &&
+      DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) &&
+      N0.getScalarValueSizeInBits() == N1.getScalarValueSizeInBits()) {
+    return DAG.getNode(ISD::SUB, DL, N1.getValueType(), N2,
+                       DAG.getNode(ISD::AND, DL, N0.getValueType(), N1.getOperand(1),
+                                   N0));
+  }
+
+  // select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
+  if (N1.getOpcode() == ISD::ADD && N1.getOperand(0) == N2 && N1->hasOneUse() &&
+      DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) && 
+      N0.getScalarValueSizeInBits() == N1.getScalarValueSizeInBits()) {
+    return DAG.getNode(ISD::ADD, DL, N1.getValueType(), N2,
+                       DAG.getNode(ISD::AND, DL, N0.getValueType(), N1.getOperand(1),
+                                   N0));
+  }
+
   // Fold selects based on a setcc into other things, such as min/max/abs.
   if (N0.getOpcode() == ISD::SETCC) {
     SDValue Cond0 = N0.getOperand(0), Cond1 = N0.getOperand(1);

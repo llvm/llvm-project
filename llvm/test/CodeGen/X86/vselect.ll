@@ -22,7 +22,7 @@ define <2 x i64> @masked_select_const(<2 x i64> %a, <2 x i64> %x, <2 x i64> %y) 
 ; SSE41-LABEL: masked_select_const:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [4294967272,4294967272,4294967272,4294967272]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm4 = [4294967272,4294967272,4294967272,4294967272]
 ; SSE41-NEXT:    paddd %xmm0, %xmm4
 ; SSE41-NEXT:    pcmpgtd %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
