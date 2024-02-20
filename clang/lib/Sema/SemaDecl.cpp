@@ -20317,8 +20317,13 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                            ? Context.UnsignedLongTy : Context.LongTy;
     } else {
       BestWidth = Context.getTargetInfo().getLongLongWidth();
-      assert(NumPositiveBits <= BestWidth &&
-             "How could an initializer get larger than ULL?");
+      if (NumPositiveBits > BestWidth) {
+        // This can happen with bit-precise integer types, but those are not
+        // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
+        // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
+        // a 128-bit integer, we should consider doing the same.
+        Diag(Enum->getLocation(), diag::ext_enum_too_large);
+      }
       BestType = Context.UnsignedLongLongTy;
       BestPromotionType
         = (NumPositiveBits == BestWidth || !getLangOpts().CPlusPlus)

@@ -201,6 +201,14 @@ Improvements to Clang's diagnostics
 - Added diagnostics for C11 keywords being incompatible with language standards
   before C11, under a new warning group: ``-Wpre-c11-compat``.
 
+- Now diagnoses an enumeration constant whose value is larger than can be
+  represented by ``unsigned long long``, which can happen with a large constant
+  using the ``wb`` or ``uwb`` suffix. The maximal underlying type is currently
+  ``unsigned long long``, but this behavior may change in the future when Clang
+  implements
+  `WG14 N3029 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_.
+  Fixes `#69352 <https://github.com/llvm/llvm-project/issues/69352>`_.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
