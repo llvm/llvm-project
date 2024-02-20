@@ -612,6 +612,19 @@ def int_amdgcn_cvt_sr_bf8_f16 : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f16">;
 
+class AMDGPUCvtScaleIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
+  [DstTy], [Src0Ty, llvm_float_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_"#name>;
+
+def int_amdgcn_cvt_scale_pk_f16_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v16f16_ty,  llvm_v3i32_ty, "cvt_scale_pk_f16_bf6">;
+def int_amdgcn_cvt_scale_pk_bf16_bf6 : AMDGPUCvtScaleIntrinsic<llvm_v16bf16_ty, llvm_v3i32_ty, "cvt_scale_pk_bf16_bf6">;
+def int_amdgcn_cvt_scale_pk_f16_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v16f16_ty,  llvm_v3i32_ty, "cvt_scale_pk_f16_fp6">;
+def int_amdgcn_cvt_scale_pk_bf16_fp6 : AMDGPUCvtScaleIntrinsic<llvm_v16bf16_ty, llvm_v3i32_ty, "cvt_scale_pk_bf16_fp6">;
+def int_amdgcn_cvt_scale_pk_f16_fp8  : AMDGPUCvtScaleIntrinsic<llvm_v4f16_ty,   llvm_i32_ty,   "cvt_scale_pk_f16_fp8">;
+def int_amdgcn_cvt_scale_pk_bf16_fp8 : AMDGPUCvtScaleIntrinsic<llvm_v4bf16_ty,  llvm_i32_ty,   "cvt_scale_pk_bf16_fp8">;
+def int_amdgcn_cvt_scale_pk_f16_bf8  : AMDGPUCvtScaleIntrinsic<llvm_v4f16_ty,   llvm_i32_ty,   "cvt_scale_pk_f16_bf8">;
+def int_amdgcn_cvt_scale_pk_bf16_bf8 : AMDGPUCvtScaleIntrinsic<llvm_v4bf16_ty,  llvm_i32_ty,   "cvt_scale_pk_bf16_bf8">;
+
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
@@ -2965,11 +2978,11 @@ def int_amdgcn_fdot2_f16_f16 :
 def int_amdgcn_fdot2_bf16_bf16 :
   ClangBuiltin<"__builtin_amdgcn_fdot2_bf16_bf16">,
   DefaultAttrsIntrinsic<
-    [llvm_i16_ty],   // %r
+    [llvm_bfloat_ty],   // %r
     [
-      llvm_v2i16_ty, // %a
-      llvm_v2i16_ty, // %b
-      llvm_i16_ty    // %c
+      llvm_v2bf16_ty, // %a
+      llvm_v2bf16_ty, // %b
+      llvm_bfloat_ty    // %c
     ],
     [IntrNoMem, IntrSpeculatable]
   >;
@@ -2981,8 +2994,8 @@ def int_amdgcn_fdot2_f32_bf16 :
   DefaultAttrsIntrinsic<
     [llvm_float_ty], // %r
     [
-      llvm_v2i16_ty, // %a
-      llvm_v2i16_ty, // %b
+      llvm_v2bf16_ty, // %a
+      llvm_v2bf16_ty, // %b
       llvm_float_ty, // %c
       llvm_i1_ty     // %clamp
     ],

@@ -9,6 +9,7 @@
 include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
 include "AMDGPUFeatures.td"
+include "AMDGPUPredicateControl.td"
 
 def p0 : PtrValueType<i64, 0>;
 def p1 : PtrValueType<i64, 1>;
@@ -2116,10 +2117,10 @@ def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
 // True16 instructions as they are defined in the ISA. Fake True16
 // instructions have the same encoding as real ones but syntactically
 // only allow 32-bit registers in operands and use low halves thereof.
-def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
+def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
-def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
-                                   "!Subtarget->useRealTrue16Insts()">;
+def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
+                                              "!Subtarget->useRealTrue16Insts()">;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;

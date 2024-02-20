@@ -596,6 +596,8 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
                     LostDebugLocObserver &LocObserver, MachineInstr *MI) {
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   const char *Name = TLI.getLibcallName(Libcall);
+  if (!Name)
+    return LegalizerHelper::UnableToLegalize;
   const CallingConv::ID CC = TLI.getLibcallCallingConv(Libcall);
   return createLibcall(MIRBuilder, Name, Result, Args, CC, LocObserver, MI);
 }
@@ -2986,27 +2988,45 @@ static void getUnmergePieces(SmallVectorImpl<Register> &Pieces,
     Pieces.push_back(Unmerge.getReg(I));
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerFConstant(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-
+static void emitLoadFromConstantPool(Register DstReg, const Constant *ConstVal,
+                                     MachineIRBuilder &MIRBuilder) {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   MachineFunction &MF = MIRBuilder.getMF();
   const DataLayout &DL = MIRBuilder.getDataLayout();
-
   unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
   LLT AddrPtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
-  Align Alignment = Align(DL.getABITypeAlign(
-      getFloatTypeForLLT(MF.getFunction().getContext(), MRI.getType(Dst))));
+  LLT DstLLT = MRI.getType(DstReg);
+
+  Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
 
   auto Addr = MIRBuilder.buildConstantPool(
-      AddrPtrTy, MF.getConstantPool()->getConstantPoolIndex(
-                     MI.getOperand(1).getFPImm(), Alignment));
+      AddrPtrTy,
+      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
 
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
-      MRI.getType(Dst), Alignment);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                              MachineMemOperand::MOLoad, DstLLT, Alignment);
 
-  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, Dst, Addr, *MMO);
+  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, DstReg, Addr, *MMO);
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerConstant(MachineInstr &MI) {
+  const MachineOperand &ConstOperand = MI.getOperand(1);
+  const Constant *ConstantVal = ConstOperand.getCImm();
+
+  emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
+  MI.eraseFromParent();
+
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFConstant(MachineInstr &MI) {
+  const MachineOperand &ConstOperand = MI.getOperand(1);
+  const Constant *ConstantVal = ConstOperand.getFPImm();
+
+  emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
   MI.eraseFromParent();
 
   return Legalized;
@@ -5190,6 +5210,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FCOPYSIGN:
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_USUBSAT:
   case TargetOpcode::G_SADDSAT:

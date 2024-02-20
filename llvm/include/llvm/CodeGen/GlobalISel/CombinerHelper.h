@@ -927,6 +927,9 @@ private:
   /// into a single comparison using range-based reasoning.
   bool tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
                                       BuildFnTy &MatchInfo);
+
+  // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
+  bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

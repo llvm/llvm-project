@@ -357,18 +357,9 @@ static void addReplicateRegions(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::createAndOptimizeReplicateRegions(VPlan &Plan) {
-  // Convert masked VPReplicateRecipes to if-then region blocks.
-  addReplicateRegions(Plan);
-
-  bool ShouldSimplify = true;
-  while (ShouldSimplify) {
-    ShouldSimplify = sinkScalarOperands(Plan);
-    ShouldSimplify |= mergeReplicateRegionsIntoSuccessors(Plan);
-    ShouldSimplify |= VPlanTransforms::mergeBlocksIntoPredecessors(Plan);
-  }
-}
-bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
+/// Remove redundant VPBasicBlocks by merging them into their predecessor if
+/// the predecessor has a single successor.
+static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -395,7 +386,25 @@ bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   return !WorkList.empty();
 }
 
-void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
+void VPlanTransforms::createAndOptimizeReplicateRegions(VPlan &Plan) {
+  // Convert masked VPReplicateRecipes to if-then region blocks.
+  addReplicateRegions(Plan);
+
+  bool ShouldSimplify = true;
+  while (ShouldSimplify) {
+    ShouldSimplify = sinkScalarOperands(Plan);
+    ShouldSimplify |= mergeReplicateRegionsIntoSuccessors(Plan);
+    ShouldSimplify |= mergeBlocksIntoPredecessors(Plan);
+  }
+}
+
+/// Remove redundant casts of inductions.
+///
+/// Such redundant casts are casts of induction variables that can be ignored,
+/// because we already proved that the casted phi is equal to the uncasted phi
+/// in the vectorized loop. There is no need to vectorize the cast - the same
+/// value can be used for both the phi and casts in the vector loop.
+static void removeRedundantInductionCasts(VPlan &Plan) {
   for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (!IV || IV->getTruncInst())
@@ -426,7 +435,9 @@ void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
+/// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
+/// recipe, if it exists.
+static void removeRedundantCanonicalIVs(VPlan &Plan) {
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPWidenCanonicalIVRecipe *WidenNewIV = nullptr;
   for (VPUser *U : CanonicalIV->users()) {
@@ -462,7 +473,7 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
+static void removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
 
@@ -531,7 +542,11 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
   return Steps;
 }
 
-void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
+/// If any user of a VPWidenIntOrFpInductionRecipe needs scalar values,
+/// provide them by building scalar steps off of the canonical scalar IV and
+/// update the original IV's users. This is an optional optimization to reduce
+/// the needs of vector extracts.
+static void optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
@@ -560,7 +575,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   }
 }
 
-void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
+/// Remove redundant EpxandSCEVRecipes in \p Plan's entry block by replacing
+/// them with already existing recipes expanding the same SCEV expression.
+static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   DenseMap<const SCEV *, VPValue *> SCEV2VPV;
 
   for (VPRecipeBase &R :

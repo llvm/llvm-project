@@ -171,10 +171,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `month_weekday_last <https://reviews.llvm.org/D152699>`_
 | `year_month_weekday <https://reviews.llvm.org/D152699>`_
 | `year_month_weekday_last <https://reviews.llvm.org/D152699>`_",None,Hristo Hristov,|Complete|
-`[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_,"`chrono::time_zone`",A ``<chrono>`` implementation,Mark de Wever,|In Progress|
+`[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_,"`chrono::time_zone`",A ``<chrono>`` implementation,Mark de Wever,|Complete|
 `[time.zone.zonedtime.nonmembers] <https://wg21.link/time.zone.zonedtime.nonmembers>`_,"`chrono::zoned_time`",A ``<chrono>`` implementation,Mark de Wever,|In Progress|
 `[time.zone.leap.nonmembers] <https://wg21.link/time.zone.leap.nonmembers>`_,"`chrono::time_leap_seconds`",A ``<chrono>`` implementation,Mark de Wever,|In Progress|
-`[time.zone.link.nonmembers] <https://wg21.link/time.zone.link.nonmembers>`_,"`chrono::time_zone_link`",A ``<chrono>`` implementation,Mark de Wever,|In Progress|
+`[time.zone.link.nonmembers] <https://wg21.link/time.zone.link.nonmembers>`_,"`chrono::time_zone_link`",A ``<chrono>`` implementation,Mark de Wever,|Complete|
 - `5.13 Clause 28: Localization library <https://wg21.link/p1614r2#clause-28-localization-library>`_,,,,
 "| `[locale] <https://wg21.link/locale>`_
 | `[locale.operators] <https://wg21.link/locale.operators>`_",| remove ops `locale <https://reviews.llvm.org/D152654>`_,None,Hristo Hristov,|Complete|
