@@ -17,7 +17,8 @@ sys.path.append(sys.argv[1])
 from libcxx.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
 {lit_header_restrictions.get(header, '')}
 
@@ -175,4 +176,5 @@ static_assert(__builtin_strcmp(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAM
 
 // __shifted is a reserved keyword on the LLVM Widberg compiler
 #define __shifted SYSTEM_RESERVED_NAME
-""")
+"""
+    )
