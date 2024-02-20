@@ -51,6 +51,14 @@ DPValue::DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
     : DbgRecord(ValueKind, DI), DebugValueUser({Location, nullptr, nullptr}),
       Type(Type), Variable(DV), Expression(Expr) {}
 
+DPValue::DPValue(Metadata *Value, DILocalVariable *Variable,
+                 DIExpression *Expression, DIAssignID *AssignID,
+                 Metadata *Address, DIExpression *AddressExpression,
+                 const DILocation *DI)
+    : DbgRecord(ValueKind, DI), DebugValueUser({Value, Address, AssignID}),
+      Variable(Variable), Expression(Expression),
+      AddressExpression(AddressExpression), Type(LocationType::Assign) {}
+
 void DbgRecord::deleteRecord() {
   switch (RecordKind) {
   case ValueKind:
