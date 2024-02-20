@@ -288,7 +288,7 @@ uses the package and provides other details.
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `CMake <http://cmake.org/>`__                               >=3.20.0     Makefile/workspace generator
-`python <http://www.python.org/>`_                          >=3.8        Automated test suite\ :sup:`1`
+`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`1`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`2`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`3`
 =========================================================== ============ ==========================================
@@ -296,8 +296,7 @@ Package                                                     Version      Notes
 .. note::
 
    #. Only needed if you want to run the automated test suite in the
-      ``llvm/test`` directory, or if you plan to utilize any Python libraries,
-      utilities, or bindings.
+      ``llvm/test`` directory.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
