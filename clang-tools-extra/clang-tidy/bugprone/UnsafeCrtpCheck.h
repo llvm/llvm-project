@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// Finds CRTP used in an error-prone way.
+/// Detects error-prone CRTP usage.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-crtp.html
@@ -23,6 +23,7 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
 };
 
 } // namespace clang::tidy::bugprone

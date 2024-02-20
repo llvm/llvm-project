@@ -104,6 +104,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-unsafe-crtp
+  <clang-tidy/checks/bugprone/unsafe-crtp>` check.
+
+  Detects error-prone CRTP usage.
+
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 
@@ -115,11 +120,6 @@ New checks
 
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
-
-- New :doc:`bugprone-unsafe-crtp
-  <clang-tidy/checks/bugprone/unsafe-crtp>` check.
-
-  Detects error-prone CRTP usage.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

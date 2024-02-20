@@ -85,7 +85,7 @@ std::vector<FixItHint> hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
   Hints.emplace_back(FixItHint::CreateInsertion(
       Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
 
-  SourceLocation CtorEndLoc =
+  const SourceLocation CtorEndLoc =
       Ctor->isExplicitlyDefaulted()
           ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
           : Ctor->getEndLoc();
@@ -114,7 +114,7 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
   if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
-    bool IsStruct = CRTPDeclaration->isStruct();
+    const bool IsStruct = CRTPDeclaration->isStruct();
 
     diag(CRTPDeclaration->getLocation(),
          "the implicit default constructor of the CRTP is publicly accessible")
@@ -150,8 +150,8 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
     if (Ctor->getAccess() == AS_private)
       continue;
 
-    bool IsPublic = Ctor->getAccess() == AS_public;
-    std::string Access = IsPublic ? "public" : "protected";
+    const bool IsPublic = Ctor->getAccess() == AS_public;
+    const std::string Access = IsPublic ? "public" : "protected";
 
     diag(Ctor->getLocation(),
          "%0 contructor allows the CRTP to be %select{inherited "
@@ -164,4 +164,8 @@ void UnsafeCrtpCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
+bool UnsafeCrtpCheck::isLanguageVersionSupported(
+    const LangOptions &LangOpts) const {
+  return LangOpts.CPlusPlus;
+}
 } // namespace clang::tidy::bugprone
