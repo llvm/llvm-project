@@ -120,6 +120,8 @@ Symbols:
 # RUN:   FileCheck %s --check-prefix=ENTRY-FREQ-PROB
 # RUN: llvm-objdump %t3 -d --symbolize-operands --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr | \
 # RUN:   FileCheck %s --check-prefix=ENTRY-FREQ-PROB-PRETTY
+# RUN: llvm-objdump %t3 -d --pretty-pgo-analysis-map --no-show-raw-insn --no-leading-addr 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-SYMBOLIZE-OPERANDS
 
 --- !ELF
 FileHeader:
@@ -197,3 +199,5 @@ Symbols:
 # ENTRY-FREQ-PROB-PRETTY: <BB1> (Frequency: 0.133, Successors: BB2:[0x10000000 / 0x80000000 = 12.50%], BB3:[0x70000000 / 0x80000000 = 87.50%]):
 # ENTRY-FREQ-PROB-PRETTY: <BB2> (Frequency: 0.018, Successors: BB3:[0x80000000 / 0x80000000 = 100.00%]):
 # ENTRY-FREQ-PROB-PRETTY: <BB5> (Frequency: 1.0):
+
+# MISSING-SYMBOLIZE-OPERANDS: warning: --symbolize-operands must be enabled for --pretty-pgo-analysis-map to have an effect

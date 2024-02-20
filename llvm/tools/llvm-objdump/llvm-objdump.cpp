@@ -3487,6 +3487,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
   SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
   PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
+  if (PrettyPGOAnalysisMap && !SymbolizeOperands) {
+    reportCmdLineWarning("--symbolize-operands must be enabled for "
+                         "--pretty-pgo-analysis-map to have an effect");
+  }
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);
