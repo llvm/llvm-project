@@ -182,20 +182,6 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshShardingAttr sharding) {
   return type;
 }
 
-// static void getAsmMultiResultNames(Operation* op, StringRef namePrefix,
-// function_ref<void(Value, StringRef)> setNameFn) {
-//   if (op->getNumResults() == 1) {
-//     setNameFn(op->getResult(0), namePrefix);
-//     return;
-//   }
-//   SmallString<64> str;
-//   for (auto [i, result]: llvm::enumerate(op->getResults())) {
-//     (Twine(namePrefix) + "_" + Twine(i) + "_").toStringRef(str);
-//     setNameFn(result, str);
-//     str.clear();
-//   }
-// }
-
 //===----------------------------------------------------------------------===//
 // mesh.mesh op
 //===----------------------------------------------------------------------===//
