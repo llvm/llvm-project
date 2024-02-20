@@ -108,7 +108,7 @@ void UseDesignatedInitializersCheck::check(
       DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
-      Diag << Type->getDeclName();
+      Diag << Type;
       Diag << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
         const std::string &Designator =
