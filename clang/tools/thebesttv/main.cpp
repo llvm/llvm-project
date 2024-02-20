@@ -460,11 +460,6 @@ int main(int argc, const char **argv) {
         o.close();
     }
 
-    // std::string source = "IOPriorityPanel_new(IOPriority)";
-    // std::string target = "Panel_setSelected(Panel *, int)";
-    // findPathBetween(locateVariable(source, 23, 11),
-    //                 locateVariable(target, 207, 10));
-
     while (true) {
         std::string methodName;
         llvm::errs() << "> ";

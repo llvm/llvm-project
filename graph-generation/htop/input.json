@@ -1,0 +1,23 @@
+{
+    "root": "/home/thebesttv/vul/packages/htop",
+    "compile_commands": "/home/thebesttv/vul/packages/htop/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/packages/htop/src/htop/linux/IOPriorityPanel.c",
+                    "line": 23,
+                    "column": 11
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/packages/htop/src/htop/Panel.c",
+                    "line": 207,
+                    "column": 10
+                }
+            ]
+        }
+    ]
+}
