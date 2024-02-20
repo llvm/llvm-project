@@ -182,6 +182,41 @@
 ## Unaffected symbol:
 # SPECIAL-DAG: DEFAULT     1 foo
 
+# RUN: yaml2obj --docnum=3 %s -o %t10.o
+
+## Check that symbols with SHN_UNDEF index are ignored when setting visibility.
+# RUN: llvm-objcopy %t10.o --set-symbol-visibility=foo=hidden
+# RUN: llvm-readelf -s %t10.o | FileCheck %s --check-prefix=UNDEF
+# UNDEF: DEFAULT   UND foo
+
+## Check that passing an invalid visibility type generates an error message.
+# RUN: echo 'foo' > %t.symbols
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols=invalid-type 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TYPE
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility=foo=invalid-type 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TYPE
+# TYPE: error: 'invalid-type' is not a valid symbol visibility
+
+## Check that omitting the '=' character generates an error.
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbols-visibility
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility=foo default 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbol-visibility
+# FORMAT: error: bad format for [[OPTION]]
+
+## Check that using an invalid symbol pattern generates an error.
+# RUN: echo '*.' > %t.symbols.regex
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols.regex=hidden --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility=*.=default --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
+
+## Check passing an invalid filename generates an error.
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=no_file=hidden 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO_FILE -DMSG=%errc_ENOENT
+# NO_FILE: error: 'no_file': [[MSG]]
+
 ---
 !ELF
 FileHeader:
@@ -260,5 +295,17 @@ Symbols:
     Binding:  STB_LOCAL
   - Name:    foo
     Section: .text
+    Binding:  STB_LOCAL
+...
+
+---
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name:     foo
     Binding:  STB_LOCAL
 ...
