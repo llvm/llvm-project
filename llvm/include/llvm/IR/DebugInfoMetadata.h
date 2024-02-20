@@ -1106,36 +1106,31 @@ public:
   std::optional<unsigned> getPtrAuthKey() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (unsigned)PtrAuthData->Payload.Data.Key;
-    else
-      return std::nullopt;
+    return std::nullopt;
   }
   /// \returns The PointerAuth address discrimination bit.
   std::optional<bool> isPtrAuthAddressDiscriminated() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (bool)PtrAuthData->Payload.Data.IsAddressDiscriminated;
-    else
-      return std::nullopt;
+    return std::nullopt;
   }
   /// \returns The PointerAuth extra discriminator.
   std::optional<unsigned> getPtrAuthExtraDiscriminator() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (unsigned)PtrAuthData->Payload.Data.ExtraDiscriminator;
-    else
-      return std::nullopt;
+    return std::nullopt;
   }
   /// \returns The PointerAuth IsaPointer bit.
   std::optional<bool> isPtrAuthIsaPointer() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (bool)PtrAuthData->Payload.Data.IsaPointer;
-    else
-      return std::nullopt;
+    return std::nullopt;
   }
   /// \returns The PointerAuth authenticates null values bit.
   std::optional<bool> getPtrAuthAuthenticatesNullValues() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (bool)PtrAuthData->Payload.Data.AuthenticatesNullValues;
-    else
-      return std::nullopt;
+    return std::nullopt;
   }
 
   /// Get extra data associated with this derived type.
