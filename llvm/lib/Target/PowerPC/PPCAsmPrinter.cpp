@@ -501,25 +501,16 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &S,
   return ModuleModel;
 }
 
-static void checkPerGlobalCodeModel(const GlobalValue *GV, MCSymbol *Sym) {
-  // ELF per global code model not supported yet.
-  if (!isa<MCSymbolXCOFF>(Sym))
-    return;
-
+static std::optional<CodeModel::Model>
+hasPerGlobalCodeModel(const GlobalValue *GV) {
   // Symbols that aren't global variables cannot have the attribute.
   if (!isa<GlobalVariable>(GV))
-    return;
+    return std::nullopt;
 
-  const GlobalVariable *GVar = cast<GlobalVariable>(GV);
-  std::optional<CodeModel::Model> MaybeCM = GVar->getCodeModel();
+  return cast<GlobalVariable>(GV)->getCodeModel();
+}
 
-  // No overriding atribute.
-  if (!MaybeCM)
-    return;
-
-  CodeModel::Model CM = *MaybeCM;
-
-  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(Sym);
+static void setOptionalCodeModel(MCSymbolXCOFF *XSym, CodeModel::Model CM) {
   switch (CM) {
   case CodeModel::Large:
     XSym->setPerSymbolCodeModel(MCSymbolXCOFF::CM_Large);
@@ -528,7 +519,7 @@ static void checkPerGlobalCodeModel(const GlobalValue *GV, MCSymbol *Sym) {
     XSym->setPerSymbolCodeModel(MCSymbolXCOFF::CM_Small);
     return;
   default:
-    report_fatal_error("Invlaid code model for AIX");
+    report_fatal_error("Invalid code model for AIX");
   }
 }
 
@@ -784,7 +775,6 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
     MCSymbol *Sym = AP.getSymbol(GV);
-    checkPerGlobalCodeModel(GV, Sym);
     return Sym;
   }
   case MachineOperand::MO_ConstantPoolIndex:
@@ -3053,6 +3043,11 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     }
 
     setCsectAlignment(&G);
+    std::optional<CodeModel::Model> OptionalCodeModel =
+        hasPerGlobalCodeModel(&G);
+    if (OptionalCodeModel)
+      setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&G)),
+                           *OptionalCodeModel);
   }
 
   for (const auto &F : M)
