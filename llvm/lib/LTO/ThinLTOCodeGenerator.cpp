@@ -467,36 +467,24 @@ public:
   }
 
   void write(const MemoryBuffer &OutputBuffer, std::function<void()> Cb) final {
-    if (auto Err = llvm::writeToOutput(
-            EntryPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
-              OS << OutputBuffer.getBuffer();
-              return llvm::Error::success();
-            }))
-      report_fatal_error(llvm::formatv("ThinLTO: Can't write file {0}: {1}",
-                                       EntryPath,
-                                       toString(std::move(Err)).c_str()));
-    return Cb();
+    // FIXME: If we knew OutputPath, we could just create hardlink.
+    auto Err = llvm::writeToOutput(
+        EntryPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
+          OS << OutputBuffer.getBuffer();
+          return llvm::Error::success();
+        });
+    if (Err)
+      llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    Cb();
   }
 
   Error writeObject(const MemoryBuffer &OutputBuffer,
                     StringRef OutputPath) final {
-    // Clear output file if exists for hard-linking.
-    sys::fs::remove(OutputPath);
-    // Hard-link the entry (or copy if hard-link fails).
-    auto Err = sys::fs::create_hard_link(EntryPath, OutputPath);
-    if (!Err)
-      return Error::success();
-    // Hard linking failed, try to copy.
-    Err = sys::fs::copy_file(EntryPath, OutputPath);
-    if (!Err)
-      return Error::success();
-    // Copy failed (could be because the CacheEntry was removed from the cache
-    // in the meantime by another process), fall back and try to write down
-    // the buffer to the output.
-    errs() << "remark: can't link or copy from cached entry '" << EntryPath
-           << "' to '" << OutputPath << "'\n";
-    // Fallback to default.
-    return ModuleCacheEntry::writeObject(OutputBuffer, OutputPath);
+    return llvm::writeToOutput(
+        OutputPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
+          OS << OutputBuffer.getBuffer();
+          return llvm::Error::success();
+        });
   }
 
   std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
