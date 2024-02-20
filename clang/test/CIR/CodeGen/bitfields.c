@@ -34,9 +34,29 @@ typedef struct {
   unsigned b;
 } T; 
 
+typedef struct {
+    char a;
+    char b;
+    char c;
+  
+    // startOffset 24 bits, new storage from here
+    int d: 2;  
+    int e: 2;
+    int f: 4;
+    int g: 25;
+    int h: 3;
+    int i: 4;  
+    int j: 3;
+    int k: 8;
+
+    int l: 14; // need to be a part of the new storage
+               // because (tail - startOffset) is 65 after 'l' field   
+} U;
+
 // CHECK: !ty_22D22 = !cir.struct<struct "D" {!u16i, !s32i}>
 // CHECK: !ty_22S22 = !cir.struct<struct "S" {!u32i, !u32i, !u16i, !u32i}>
 // CHECK: !ty_22T22 = !cir.struct<struct "T" {!u8i, !u32i} #cir.record.decl.ast>
+// CHECK: !ty_22U22 = !cir.struct<struct "U" {!s8i, !s8i, !s8i, !u64i, !u16i}>
 // CHECK: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!u32i} #cir.record.decl.ast>
 // CHECK: !ty_anon_struct = !cir.struct<struct  {!u8i, !u8i, !s32i}>
 // CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!ty_22anon2E122, !u32i, !cir.ptr<!u32i>}>
@@ -105,6 +125,11 @@ unsigned load_non_bitfield(S *s) {
 // CHECK: cir.func {{.*@load_one_bitfield}}
 int load_one_bitfield(T* t) {
   return t->a;
+}
+
+// CHECK: cir.func {{.*@createU}}
+void createU() {
+  U u;
 }
 
 // for this struct type we create an anon structure with different storage types in initialization
