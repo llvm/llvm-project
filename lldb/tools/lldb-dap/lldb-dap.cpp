@@ -1779,8 +1779,10 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // Set the launch info so that run commands can access the configured
     // launch details.
     g_dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands))
+    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands)) {
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
+      return error;
+    }
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_dap.target = g_dap.debugger.GetSelectedTarget();
