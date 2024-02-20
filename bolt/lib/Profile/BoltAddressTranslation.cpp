@@ -424,5 +424,20 @@ bool BoltAddressTranslation::enabledFor(
   }
   return false;
 }
+
+void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    // We don't need a translation table if the body of the function hasn't
+    // changed
+    if (BF.isIgnored() || (!BC.HasRelocations && !BF.isSimple()))
+      continue;
+    // Prepare function and block hashes
+    FuncHashes[BF.getAddress()].first = BF.computeHash();
+    BF.computeBlockHashes();
+    for (const BinaryBasicBlock &BB : BF)
+      FuncHashes[BF.getAddress()].second.emplace(BB.getInputOffset(),
+                                                 BB.getHash());
+  }
+}
 } // namespace bolt
 } // namespace llvm

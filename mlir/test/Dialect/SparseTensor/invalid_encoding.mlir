@@ -234,6 +234,22 @@ func.func private @too_many_lvl_decl(%arg0: tensor<?x?xf64, #TooManyLvlDecl>) {
 
 // -----
 
+// expected-error@+1{{expected all singleton lvlTypes stored in the same memory layout (SoA vs AoS).}}
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(soa, nonunique), d2 : singleton)
+}>
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
+
+// -----
+
+// expected-error@+1{{SoA is only applicable to singleton lvlTypes.}}
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique, soa), d1 : singleton(soa))
+}>
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
+
+// -----
+
 // expected-error@+2 {{use of undeclared identifier 'l1'}}
 #TooFewLvlDecl = #sparse_tensor.encoding<{
   map = {l0} (d0, d1) -> (l0 = d0 : dense, l1 = d1 : compressed)

@@ -335,9 +335,9 @@ namespace InitializerTemporaries {
   };
 
   constexpr int f() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}}
-    /// FIXME: Wrong source location below.
-    return 12; // expected-note {{in call to '&S{}->~S()'}}
+    S{}; // ref-note {{in call to 'S{}.~S()'}} \
+         // expected-note {{in call to '&S{}->~S()'}}
+    return 12;
   }
   static_assert(f() == 12); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to 'f()'}}
@@ -604,9 +604,9 @@ namespace Destructors {
     }
   };
   constexpr int testS() {
-    S{}; // ref-note {{in call to 'S{}.~S()'}}
-    return 1; // expected-note {{in call to '&S{}->~S()'}}
-              // FIXME: ^ Wrong line
+    S{}; // ref-note {{in call to 'S{}.~S()'}} \
+         // expected-note {{in call to '&S{}->~S()'}}
+    return 1;
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
                                // both-note {{in call to 'testS()'}}
@@ -1232,10 +1232,9 @@ namespace InheritedConstructor {
 namespace InvalidCtorInitializer {
   struct X {
     int Y;
-    constexpr X() // expected-note {{declared here}}
+    constexpr X()
         : Y(fo_o_()) {} // both-error {{use of undeclared identifier 'fo_o_'}}
   };
   // no crash on evaluating the constexpr ctor.
-  constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}} \
-                           // expected-note {{undefined constructor 'X'}}
+  constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}}
 }

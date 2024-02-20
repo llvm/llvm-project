@@ -437,7 +437,7 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
 }
 
 extern "C" int64_t mlirAsyncRuntimGetNumWorkerThreads() {
-  return getDefaultAsyncRuntime()->getThreadPool().getThreadCount();
+  return getDefaultAsyncRuntime()->getThreadPool().getMaxConcurrency();
 }
 
 //===----------------------------------------------------------------------===//
