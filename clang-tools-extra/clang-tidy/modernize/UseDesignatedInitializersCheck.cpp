@@ -46,9 +46,8 @@ AST_MATCHER(CXXRecordDecl, isPOD) { return Node.isPOD(); }
 
 AST_MATCHER(InitListExpr, isFullyDesignated) {
   if (const InitListExpr *SyntacticForm =
-          Node.isSyntacticForm() ? &Node : Node.getSyntacticForm()) {
+          Node.isSyntacticForm() ? &Node : Node.getSyntacticForm())
     return getNumberOfDesignated(SyntacticForm) == SyntacticForm->getNumInits();
-  }
   return true;
 }
 
@@ -86,13 +85,11 @@ void UseDesignatedInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitList = Result.Nodes.getNodeAs<InitListExpr>("init");
   const auto *Type = Result.Nodes.getNodeAs<CXXRecordDecl>("type");
-  if (!Type || !InitList) {
+  if (!Type || !InitList)
     return;
-  }
   const auto *SyntacticInitList = InitList->getSyntacticForm();
-  if (!SyntacticInitList) {
+  if (!SyntacticInitList)
     return;
-  }
   std::optional<llvm::DenseMap<clang::SourceLocation, std::string>>
       Designators{};
   const auto LazyDesignators = [SyntacticInitList, &Designators] {
@@ -102,13 +99,11 @@ void UseDesignatedInitializersCheck::check(
   };
   const unsigned NumberOfDesignated = getNumberOfDesignated(SyntacticInitList);
   if (0 == NumberOfDesignated) {
-    if (IgnoreMacros && InitList->getBeginLoc().isMacroID()) {
+    if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
       return;
-    }
     if (SyntacticInitList->getNumInits() - NumberOfDesignated >
-        LazyDesignators()->size()) {
+        LazyDesignators()->size())
       return;
-    }
     {
       DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
@@ -118,10 +113,9 @@ void UseDesignatedInitializersCheck::check(
       for (const Stmt *InitExpr : *SyntacticInitList) {
         const std::string Designator =
             LazyDesignators()->at(InitExpr->getBeginLoc());
-        if (!Designator.empty()) {
+        if (!Designator.empty())
           Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
                                              Designator + "=");
-        }
       }
     }
     diag(Type->getBeginLoc(), "this is the type to initialize",
@@ -129,12 +123,10 @@ void UseDesignatedInitializersCheck::check(
     return;
   }
   for (const auto *InitExpr : *SyntacticInitList) {
-    if (isa<DesignatedInitExpr>(InitExpr)) {
+    if (isa<DesignatedInitExpr>(InitExpr))
       continue;
-    }
-    if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID()) {
+    if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID())
       continue;
-    }
     const std::string Designator =
         LazyDesignators()->at(InitExpr->getBeginLoc());
     DiagnosticBuilder Diag =
