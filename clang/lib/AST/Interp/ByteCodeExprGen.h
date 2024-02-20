@@ -116,6 +116,7 @@ public:
   bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
   bool VisitRequiresExpr(const RequiresExpr *E);
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -289,7 +290,8 @@ private:
 
   bool emitComplexReal(const Expr *SubExpr);
 
-  bool emitRecordDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R);
+  bool emitDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);
 
@@ -401,7 +403,8 @@ public:
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
-        this->Ctx->emitRecordDestruction(Local.Desc);
+        this->Ctx->emitDestruction(Local.Desc);
+        this->Ctx->emitPopPtr(SourceInfo{});
         removeIfStoredOpaqueValue(Local);
       }
     }

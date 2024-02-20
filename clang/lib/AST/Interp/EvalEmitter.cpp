@@ -22,7 +22,7 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
   // Create a dummy frame for the interpreter which does not have locals.
   S.Current =
-      new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr());
+      new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr(), 0);
 }
 
 EvalEmitter::~EvalEmitter() {
@@ -33,7 +33,9 @@ EvalEmitter::~EvalEmitter() {
   }
 }
 
-EvaluationResult EvalEmitter::interpretExpr(const Expr *E) {
+EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
+                                            bool ConvertResultToRValue) {
+  this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E) && EvalResult.empty())
@@ -42,7 +44,9 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E) {
   return std::move(this->EvalResult);
 }
 
-EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD) {
+EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
+                                            bool CheckFullyInitialized) {
+  this->CheckFullyInitialized = CheckFullyInitialized;
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())
@@ -119,12 +123,35 @@ template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
 template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
-  EvalResult.setPointer(S.Stk.pop<Pointer>());
+
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  // Implicitly convert lvalue to rvalue, if requested.
+  if (ConvertResultToRValue) {
+    if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
+      EvalResult.setValue(*V);
+    } else {
+      return false;
+    }
+  } else {
+    if (CheckFullyInitialized) {
+      if (!EvalResult.checkFullyInitialized(S, Ptr))
+        return false;
+
+      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
+      if (!RValueResult)
+        return false;
+      EvalResult.setValue(*RValueResult);
+    } else {
+      EvalResult.setValue(Ptr.toAPValue());
+    }
+  }
+
   return true;
 }
 template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
+  // Function pointers cannot be converted to rvalues.
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }

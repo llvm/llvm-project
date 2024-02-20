@@ -82,6 +82,9 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return; // Already handled
   else if (Bitwidth <= 32) {
     MIB.addImm(Imm.getZExtValue());
+    // Asm Printer needs this info to print floating-type correctly
+    if (Bitwidth == 16)
+      MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
@@ -345,6 +348,20 @@ bool isSpecialOpaqueType(const Type *Ty) {
   if (const TargetExtType *EType =
           dyn_cast<TargetExtType>(getTypedPtrEltType(Ty)))
     return hasBuiltinTypePrefix(EType->getName());
+
+  return false;
+}
+
+bool isEntryPoint(const Function &F) {
+  // OpenCL handling: any function with the SPIR_KERNEL
+  // calling convention will be a potential entry point.
+  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+    return true;
+
+  // HLSL handling: special attribute are emitted from the
+  // front-end.
+  if (F.getFnAttribute("hlsl.shader").isValid())
+    return true;
 
   return false;
 }
