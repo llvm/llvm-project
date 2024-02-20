@@ -77,7 +77,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   # It also produces to module files: omp_lib.mod and omp_lib_kinds.mod.
   message("MK: ${CMAKE_BINARY_DIR}")
   set(base ${FLANG_INTRINSIC_MODULES_DIR}/omp_lib)
-  add_custom_command(OUTPUT ${base}.mod
+  add_custom_command(OUTPUT ${base}.mod ${base}_kinds.mod
     COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
     COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
       ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90
