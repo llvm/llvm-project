@@ -685,22 +685,22 @@ Also it is suggested to refactor your headers to include thirdparty headers cond
 
 .. code-block:: c++
 
-  + #ifndef IN_MODULE_INTERFACE
+  #ifndef IN_MODULE_INTERFACE
   #include "third_party/A/headers.h"
-  + #endif
+  #endif
 
   #include "header_x.h"
 
   ...
 
-This may be helpful to get better diagnostic messages if you forgot to update your module 
+This may be helpful to get better diagnostic messages if you forgot to update your module
 interface unit file during maintaining.
 
 The reasoning for the practice is that the declarations in the language linkage are considered
 to be attached to the global module. So the ABI of your library in the modular version
 wouldn't change.
 
-While this style looks not as convenient as the export-using style, it is easier to convert 
+While this style looks not as convenient as the export-using style, it is easier to convert
 to other styles.
 
 ABI breaking style
@@ -783,14 +783,14 @@ In that case, you need to convert your source files (.cpp files) to module imple
 
 .. code-block:: c++
 
-  + #ifndef IN_MODULE_INTERFACE
+  #ifndef IN_MODULE_INTERFACE
   // List all the includes here.
   #include "third_party/A/headers.h"
   ...
   #include "header.h"
-  + #endif
+  #endif
 
-  + module your_library;
+  module your_library;
 
   // Following off should be unchanged.
   ...
@@ -864,14 +864,14 @@ headers to:
 .. code-block:: c++
 
   #pragma once
-  + #ifndef YOUR_LIBRARY_IMPORTED
+  #ifndef YOUR_LIBRARY_IMPORTED
   ...
-  + #endif
+  #endif
 
 Importing modules
 ~~~~~~~~~~~~~~~~~
 
-When there are dependent libraries providing modules, we suggest you to import that in 
+When there are dependent libraries providing modules, we suggest you to import that in
 your module.
 
 Most of the existing libraries would fall into this catagory once the std module gets available.
