@@ -288,6 +288,9 @@ enum NodeType : unsigned {
   // Vector bitwise insertion
   BIT,
 
+  // Exception Handling helpers.
+  EH_RETURN,
+
   // Compare-and-branch
   CBZ,
   CBNZ,
@@ -1088,6 +1091,7 @@ private:
   template <class NodeTy>
   SDValue getAddrTiny(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
   SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDarwinGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;

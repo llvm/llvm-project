@@ -205,3 +205,24 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
   }
   return *NeedsAsyncDwarfUnwindInfo;
 }
+
+bool AArch64FunctionInfo::isEhDataRegFI(int FI) const {
+  return CallsEhReturn && (FI == EhDataRegFI[0] || FI == EhDataRegFI[1] ||
+                           FI == EhDataRegFI[2] || FI == EhDataRegFI[3]);
+}
+
+void AArch64FunctionInfo::createEhDataRegsFI(MachineFunction &MF) {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  for (int &I : EhDataRegFI) {
+    const TargetRegisterClass &RC = AArch64::GPR64RegClass;
+
+    I = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
+                                            TRI.getSpillAlign(RC), false);
+  }
+}
+
+unsigned AArch64FunctionInfo::GetEhDataReg(unsigned I) const {
+  static const unsigned EhDataReg[] = {AArch64::X0, AArch64::X1, AArch64::X2,
+                                       AArch64::X3};
+  return EhDataReg[I];
+}
