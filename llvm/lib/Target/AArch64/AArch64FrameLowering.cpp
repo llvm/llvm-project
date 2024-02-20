@@ -3130,7 +3130,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     std::reverse(ZPRBegin, ZPREnd.base());
   }
 
-
   for (const RegPairInfo &RPI : RegPairs) {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
