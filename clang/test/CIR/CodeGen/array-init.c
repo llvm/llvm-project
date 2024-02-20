@@ -53,3 +53,35 @@ void bar(int a, int b, int c) {
 // CHECK-NEXT: [[TH_EL:%.*]] = cir.ptr_stride(%7 : !cir.ptr<!s32i>, [[ONE]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: [[LOAD_C:%.*]] = cir.load [[C]] : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT: cir.store [[LOAD_C]], [[TH_EL]] : !s32i, cir.ptr <!s32i>
+
+void zero_init(int x) {
+  int arr[3] = {x};
+}
+
+// CHECK:  cir.func @zero_init
+// CHECK:    [[VAR_ALLOC:%.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK:    %1 = cir.alloca !cir.array<!s32i x 3>, cir.ptr <!cir.array<!s32i x 3>>, ["arr", init] {alignment = 4 : i64}
+// CHECK:    [[TEMP:%.*]] = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["arrayinit.temp", init] {alignment = 8 : i64}
+// CHECK:    cir.store %arg0, [[VAR_ALLOC]] : !s32i, cir.ptr <!s32i>
+// CHECK:    [[BEGIN:%.*]] = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
+// CHECK:    [[VAR:%.*]] = cir.load [[VAR_ALLOC]] : cir.ptr <!s32i>, !s32i
+// CHECK:    cir.store [[VAR]], [[BEGIN]] : !s32i, cir.ptr <!s32i>
+// CHECK:    [[ONE:%.*]] = cir.const(#cir.int<1> : !s64i) : !s64i
+// CHECK:    [[ZERO_INIT_START:%.*]] = cir.ptr_stride([[BEGIN]] : !cir.ptr<!s32i>, [[ONE]] : !s64i), !cir.ptr<!s32i>
+// CHECK:    cir.store [[ZERO_INIT_START]], [[TEMP]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+// CHECK:    [[SIZE:%.*]] = cir.const(#cir.int<3> : !s64i) : !s64i
+// CHECK:    [[END:%.*]] = cir.ptr_stride([[BEGIN]] : !cir.ptr<!s32i>, [[SIZE]] : !s64i), !cir.ptr<!s32i>
+// CHECK:    cir.do {
+// CHECK:      [[CUR:%.*]] = cir.load [[TEMP]] : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK:      [[FILLER:%.*]] = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:      cir.store [[FILLER]], [[CUR]] : !s32i, cir.ptr <!s32i>
+// CHECK:      [[ONE:%.*]] = cir.const(#cir.int<1> : !s64i) : !s64i
+// CHECK:      [[NEXT:%.*]] = cir.ptr_stride([[CUR]] : !cir.ptr<!s32i>, [[ONE]] : !s64i), !cir.ptr<!s32i>
+// CHECK:      cir.store [[NEXT]], [[TEMP]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+// CHECK:      cir.yield
+// CHECK:    } while {
+// CHECK:      [[CUR:%.*]] = cir.load [[TEMP]] : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK:      [[CMP:%.*]] = cir.cmp(ne, [[CUR]], [[END]]) : !cir.ptr<!s32i>, !cir.bool
+// CHECK:      cir.condition([[CMP]])
+// CHECK:    }
+// CHECK:    cir.return
