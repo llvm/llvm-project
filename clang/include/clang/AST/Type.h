@@ -3010,6 +3010,9 @@ public:
   bool referencesFieldDecls() const;
 
   static bool classof(const Type *T) {
+    // Currently, only `class CountAttributedType` inherits
+    // `BoundsAttributedType` but the subclass will grow as we add more bounds
+    // annotations.
     switch (T->getTypeClass()) {
     case CountAttributed:
       return true;
