@@ -433,6 +433,7 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
 
   QualType elementType =
       CGF.getContext().getAsArrayType(ArrayQTy)->getElementType();
+  QualType elementPtrType = CGF.getContext().getPointerType(elementType);
 
   auto cirElementType = CGF.convertType(elementType);
   auto cirElementPtrType = mlir::cir::PointerType::get(
@@ -498,7 +499,73 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
   if (NumInitElements != NumArrayElements &&
       !(Dest.isZeroed() && hasTrivialFiller &&
         CGF.getTypes().isZeroInitializable(elementType))) {
-    llvm_unreachable("zero-initialization of arrays NIY");
+
+    // Use an actual loop.  This is basically
+    //   do { *array++ = filler; } while (array != end);
+
+    auto &builder = CGF.getBuilder();
+
+    // Advance to the start of the rest of the array.
+    if (NumInitElements) {
+      auto one =
+          builder.getConstInt(loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), 1);
+      element = builder.create<mlir::cir::PtrStrideOp>(loc, cirElementPtrType,
+                                                       element, one);
+
+      assert(!endOfInit.isValid() && "destructed types NIY");
+    }
+
+    // Allocate the temporary variable
+    // to store the pointer to first unitialized element
+    auto tmpAddr = CGF.CreateTempAlloca(
+        cirElementPtrType, CGF.getPointerAlign(), loc, "arrayinit.temp");
+    LValue tmpLV = CGF.makeAddrLValue(tmpAddr, elementPtrType);
+    CGF.buildStoreThroughLValue(RValue::get(element), tmpLV);
+
+    // Compute the end of array
+    auto numArrayElementsConst = builder.getConstInt(
+        loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), NumArrayElements);
+    mlir::Value end = builder.create<mlir::cir::PtrStrideOp>(
+        loc, cirElementPtrType, begin, numArrayElementsConst);
+
+    builder.createDoWhile(
+        loc,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto currentElement = builder.createLoad(loc, tmpAddr);
+          mlir::Type boolTy = CGF.getCIRType(CGF.getContext().BoolTy);
+          auto cmp = builder.create<mlir::cir::CmpOp>(
+              loc, boolTy, mlir::cir::CmpOpKind::ne, currentElement, end);
+          builder.createCondition(cmp);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto currentElement = builder.createLoad(loc, tmpAddr);
+
+          if (UnimplementedFeature::cleanups())
+            llvm_unreachable("NYI");
+
+          // Emit the actual filler expression.
+          LValue elementLV = CGF.makeAddrLValue(
+              Address(currentElement, cirElementType, elementAlign),
+              elementType);
+          if (ArrayFiller)
+            buildInitializationToLValue(ArrayFiller, elementLV);
+          else
+            buildNullInitializationToLValue(loc, elementLV);
+
+          // Tell the EH cleanup that we finished with the last element.
+          assert(!endOfInit.isValid() && "destructed types NIY");
+
+          // Advance pointer and store them to temporary variable
+          auto one = builder.getConstInt(
+              loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), 1);
+          auto nextElement = builder.create<mlir::cir::PtrStrideOp>(
+              loc, cirElementPtrType, currentElement, one);
+          CGF.buildStoreThroughLValue(RValue::get(nextElement), tmpLV);
+
+          builder.createYield(loc);
+        });
   }
 
   // Leave the partial-array cleanup if we entered one.
