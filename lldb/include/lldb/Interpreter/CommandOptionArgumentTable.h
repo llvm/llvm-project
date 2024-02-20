@@ -260,7 +260,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypePythonFunction, "python-function", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a Python function." },
     { lldb::eArgTypePythonScript, "python-script", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Source code written in Python." },
     { lldb::eArgTypeQueueName, "queue-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of the thread queue." },
-    { lldb::eArgTypeRegisterName, "register-name", lldb::CompletionType::eNoCompletion, {}, { RegisterNameHelpTextCallback, true }, nullptr },
+    { lldb::eArgTypeRegisterName, "register-name", lldb::CompletionType::eRegisterCompletion, {}, { RegisterNameHelpTextCallback, true }, nullptr },
     { lldb::eArgTypeRegularExpression, "regular-expression", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A POSIX-compliant extended regular expression." },
     { lldb::eArgTypeRunArgs, "run-args", lldb::CompletionType::eDiskFileCompletion, {}, { nullptr, false }, "Arguments to be passed to the target program when it starts executing." },
     { lldb::eArgTypeRunMode, "run-mode", lldb::CompletionType::eNoCompletion, g_running_mode, { nullptr, false }, "Help text goes here." },
