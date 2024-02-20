@@ -399,6 +399,9 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=signed-integer-overflow`` now instruments signed arithmetic even
+  when ``-fwrapv`` is enabled. Previously, only division checks were enabled.
+
 Python Binding Changes
 ----------------------
 
