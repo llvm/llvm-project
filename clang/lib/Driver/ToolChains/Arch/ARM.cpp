@@ -895,20 +895,18 @@ fp16_fml_fallthrough:
     // defaults this bit to 0 and handles it as a system-wide (not
     // per-process) setting. It is therefore safe to assume that ARMv7+
     // Linux targets support unaligned accesses. The same goes for NaCl
-    // and Windows.
-    //
-    // The above behavior is consistent with GCC.
+    // and Windows. However, ARM's forks of GCC and Clang both allow
+    // unaligned accesses by default for all targets. We follow this
+    // behavior and enable unaligned accesses by default for ARMv7+ targets.
+    // Users can disable behavior via compiler options (-mno-unaliged-access).
+    // See https://github.com/llvm/llvm-project/issues/59560 for more info.
     int VersionNum = getARMSubArchVersionNumber(Triple);
     if (Triple.isOSDarwin() || Triple.isOSNetBSD()) {
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
-    } else if (Triple.isOSLinux() || Triple.isOSNaCl() ||
-               Triple.isOSWindows()) {
-      if (VersionNum < 7)
+    } else if (VersionNum < 7)
         Features.push_back("+strict-align");
-    } else
-      Features.push_back("+strict-align");
   }
 
   // llvm does not support reserving registers in general. There is support
