@@ -119,7 +119,7 @@ New checks
 - New :doc:`bugprone-unsafe-crtp
   <clang-tidy/checks/bugprone/unsafe-crtp>` check.
 
-  FIXME: add release notes.
+  Detects error-prone CRTP.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
