@@ -2334,8 +2334,11 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
   Operation *op = Operation::create(opState);
   readState.curBlock->push_back(op);
 
-  // If the operation had results, update the value references.
-  if (op->getNumResults() && failed(defineValues(reader, op->getResults())))
+  // If the operation had results, update the value references. We don't need to
+  // do this if the current value scope is empty. That is, the op was not
+  // encoded within a parent region.
+  if (readState.numValues && op->getNumResults() &&
+      failed(defineValues(reader, op->getResults())))
     return failure();
 
   /// Store a map for every value that received a custom use-list order from the
