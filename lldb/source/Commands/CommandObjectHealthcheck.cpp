@@ -60,8 +60,7 @@ bool CommandObjectHealthcheck::DoExecute(Args &args,
   // When in an interactive graphical session and not, for example,
   // running LLDB running over ssh, open the log file straight away in
   // the user's configured editor or the default Console.app otherwise.
-  if ((strcmp("lldb", getprogname()) == 0 ||
-       strcmp("lldb-rpc-server", getprogname()) == 0) &&
+  if (llvm::StringRef(getprogname()).starts_with("lldb") &&
       Host::IsInteractiveGraphicSession()) {
     if (llvm::Error err =
             Host::OpenFileInExternalEditor("", FileSpec(temp_path), 0))
