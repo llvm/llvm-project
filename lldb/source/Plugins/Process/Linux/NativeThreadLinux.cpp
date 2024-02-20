@@ -120,23 +120,15 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
   case eStateCrashed:
   case eStateExited:
   case eStateSuspended:
-  case eStateUnloaded: {
+  case eStateUnloaded:
     if (log)
       LogThreadStopInfo(*log, m_stop_info, "m_stop_info in thread:");
     stop_info = m_stop_info;
-    // Include child process PID/TID for forks.
-    // Client expects "<fork_pid> <fork_tid>" format for parsing.
-    if (stop_info.reason == eStopReasonFork ||
-        stop_info.reason == eStopReasonVFork) {
-      m_stop_description = std::to_string(stop_info.details.fork.child_pid);
-      m_stop_description += " ";
-      m_stop_description += std::to_string(stop_info.details.fork.child_tid);
-    }
     description = m_stop_description;
     if (log)
       LogThreadStopInfo(*log, stop_info, "returned stop_info:");
+
     return true;
-  }
 
   case eStateInvalid:
   case eStateConnected:
@@ -464,6 +456,9 @@ void NativeThreadLinux::SetStoppedByFork(bool is_vfork, lldb::pid_t child_pid) {
   m_stop_info.signo = SIGTRAP;
   m_stop_info.details.fork.child_pid = child_pid;
   m_stop_info.details.fork.child_tid = child_pid;
+  m_stop_description = std::to_string(child_pid);
+  m_stop_description += " ";
+  m_stop_description += std::to_string(child_pid);
 }
 
 void NativeThreadLinux::SetStoppedByVForkDone() {
