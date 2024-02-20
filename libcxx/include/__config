@@ -316,6 +316,19 @@
 //   user input.
 //
 // - `_LIBCPP_ASSERT_UNCATEGORIZED` -- for assertions that haven't been properly classified yet.
+//
+// In addition to these categories, `_LIBCPP_REDUNDANT_ASSERTION` should be used to wrap assertions that duplicate other
+// assertions (for example, a range view might check that its `optional` data member holds a value before dereferencing
+// it, but this is already checked by `optional` itself). Redundant assertions incur an additional performance overhead
+// and don't provide any extra security benefit, but catching an error earlier allows halting the program closer to the
+// root cause and giving the user an error message that contains more context. Due to these tradeoffs, redundant
+// assertions are disabled in the fast mode but are enabled in the extensive mode and above. Thus, going back to the
+// example above, the view should wrap its check for the empty optional member variable in
+// `_LIBCPP_REDUNDANT_ASSERTION`. Then:
+// - in the fast mode, the program will only perform one check and will trap inside the optional (with an error
+//   amounting to "Attempting to dereference an empty optional");
+// - in the extensive mode, the program will normally perform two checks (in the non-error case), and if the optional is
+//   empty, it will trap inside the view (with an error like "`foo_view` doesn't have a valid predicate").
 
 // clang-format off
 #  define _LIBCPP_HARDENING_MODE_NONE      (1 << 1)
@@ -367,6 +380,9 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
+// TODO(hardening): if `_LIBCPP_ASSUME` becomes functional again (it's currently a no-op), this would essentially
+// discard the assumption.
+#    define _LIBCPP_REDUNDANT_ASSERTION(expression)                      ((void)0)
 
 // Extensive hardening mode checks.
 
@@ -382,6 +398,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_REDUNDANT_ASSERTION(expression)                      expression
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
@@ -404,6 +421,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_REDUNDANT_ASSERTION(expression)                       expression
 
 // Disable all checks if hardening is not enabled.
 
@@ -422,6 +440,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_REDUNDANT_ASSERTION(expression)                       ((void)0)
 
 #  endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 // clang-format on

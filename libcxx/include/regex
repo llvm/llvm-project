@@ -4731,7 +4731,8 @@ _OutputIter match_results<_BidirectionalIterator, _Allocator>::format(
     const char_type* __fmt_last,
     regex_constants::match_flag_type __flags) const {
   // Note: this duplicates a check in `vector::operator[]` but provides a better error message.
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(ready(), "match_results::format() called when not ready");
+  _LIBCPP_REDUNDANT_ASSERTION(
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(ready(), "match_results::format() called when not ready"));
   if (__flags & regex_constants::format_sed) {
     for (; __fmt_first != __fmt_last; ++__fmt_first) {
       if (*__fmt_first == '&')
