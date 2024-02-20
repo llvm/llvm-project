@@ -68,6 +68,15 @@ public:
   Expected<std::optional<ValueTy>> getValueSync(ArrayRef<uint8_t> Key) {
     return getValueSync(toStringRef(Key).str());
   }
+
+  using GetValueCb = std::function<void(Expected<std::optional<ValueTy>>)>;
+  void getValueAsync(std::string Key, GetValueCb Callback) {
+    return getValueAsyncImpl(std::move(Key), std::move(Callback));
+  }
+  void getValueAsync(ArrayRef<uint8_t> Key, GetValueCb Callback) {
+    return getValueAsync(toStringRef(Key).str(), std::move(Callback));
+  }
+
   Error putValueSync(std::string Key, const ValueTy &Value) {
     return putValueSyncImpl(std::move(Key), Value);
   }
@@ -78,6 +87,7 @@ public:
 protected:
   virtual Expected<std::optional<ValueTy>>
   getValueSyncImpl(std::string Key) = 0;
+  virtual void getValueAsyncImpl(std::string Key, GetValueCb Callback) = 0;
   virtual Error putValueSyncImpl(std::string Key, const ValueTy &Value) = 0;
 
 public:
@@ -184,11 +194,20 @@ public:
     std::optional<std::string> BlobData;
     std::vector<std::string> Refs;
   };
+
   Expected<LoadResponse>
   loadSync(std::string CASID,
            std::optional<std::string> OutFilePath = std::nullopt) {
     return loadSyncImpl(std::move(CASID), std::move(OutFilePath));
   }
+
+  using LoadCb = std::function<void(Expected<LoadResponse>)>;
+  void loadAsync(std::string CASID, std::optional<std::string> OutFilePath,
+                 LoadCb Callback) {
+    return loadAsyncImpl(std::move(CASID), std::move(OutFilePath),
+                         std::move(Callback));
+  }
+
   Expected<std::string> saveDataSync(std::string BlobData) {
     return saveDataSyncImpl(std::move(BlobData));
   }
@@ -212,6 +231,10 @@ public:
 protected:
   virtual Expected<LoadResponse>
   loadSyncImpl(std::string CASID, std::optional<std::string> OutFilePath) = 0;
+  virtual void loadAsyncImpl(std::string CASID,
+                             std::optional<std::string> OutFilePath,
+                             LoadCb Callback) = 0;
+
   virtual Expected<std::string> saveDataSyncImpl(std::string BlobData) = 0;
   virtual Expected<std::string> saveFileSyncImpl(std::string FilePath) = 0;
   virtual Expected<GetResponse>

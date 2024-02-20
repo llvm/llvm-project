@@ -504,6 +504,22 @@ class KeyValueDBClientImpl : public KeyValueDBClient {
     return createGetValueResponse(Resp);
   }
 
+  void getValueAsyncImpl(std::string Key, GetValueCb Callback) override {
+    auto Request = std::make_shared<GetValueRequest>();
+    auto Context = std::make_shared<grpc::ClientContext>();
+    auto Resp = std::make_shared<GetValueResponse>();
+    Request->set_key(Key);
+    Stub->async()->GetValue(&*Context, &*Request, &*Resp,
+                            [=](grpc::Status Status) {
+                              (void)Request;
+                              (void)Context;
+                              if (!Status.ok())
+                                return Callback(errorFromGRPCStatus(Status));
+
+                              return Callback(createGetValueResponse(*Resp));
+                            });
+  }
+
   Error putValueSyncImpl(std::string Key,
                          const KeyValueDBClient::ValueTy &Value) override {
     PutValueRequest Request;
@@ -548,6 +564,23 @@ class CASDBClientImpl : public CASDBClient {
     if (!Status.ok())
       return errorFromGRPCStatus(Status);
     return createLoadResponse(Response, OutFilePath);
+  }
+
+  void loadAsyncImpl(std::string CASID, std::optional<std::string> OutFilePath,
+                     LoadCb Callback) override {
+    auto Request = std::make_shared<CASLoadRequest>();
+    auto Context = std::make_shared<grpc::ClientContext>();
+    auto Response = std::make_shared<CASLoadResponse>();
+    Request->mutable_cas_id()->set_id(std::move(CASID));
+    Request->set_write_to_disk(OutFilePath.has_value());
+    Stub->async()->Load(
+        &*Context, &*Request, &*Response, [=](grpc::Status Status) {
+          (void)Request;
+          (void)Context;
+          if (!Status.ok())
+            return Callback(errorFromGRPCStatus(Status));
+          return Callback(createLoadResponse(*Response, OutFilePath));
+        });
   }
 
   Expected<std::string> saveDataSyncImpl(std::string BlobData) override {

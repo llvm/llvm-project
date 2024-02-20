@@ -53,8 +53,16 @@ public:
   // Access the path to this entry in the cache.
   virtual std::string getEntryPath() = 0;
 
-  virtual ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() = 0;
-  virtual void write(const MemoryBuffer &OutputBuffer) = 0;
+  /// Attempt to asynchronously load the cached buffer and invoke the callback.
+  /// Cache miss is represented as std::error_code().
+  virtual void tryLoadingBuffer(
+      std::function<void(ErrorOr<std::unique_ptr<MemoryBuffer>>)> Cb) = 0;
+
+  /// Attempt to asynchronously write the computed buffer and invoke the
+  /// callback.
+  virtual void write(const MemoryBuffer &OutputBuffer,
+                     std::function<void()> Cb) = 0;
+
   virtual Error writeObject(const MemoryBuffer &OutputBuffer,
                             StringRef OutputPath);
   virtual std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() {
