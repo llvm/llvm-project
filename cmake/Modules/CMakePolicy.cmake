@@ -10,3 +10,9 @@ endif()
 if(POLICY CMP0116)
   cmake_policy(SET CMP0116 OLD)
 endif()
+
++# Enable debug info compatible with SCCache
++# https://github.com/mozilla/sccache?tab=readme-ov-file#usage
++if(POLICY CMP0141)
++  cmake_policy(SET CMP0141 NEW)
++endif()
