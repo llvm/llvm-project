@@ -55,7 +55,7 @@ Visual Studio 2019 so separate installation is not required. If you do install
 CMake separately, Visual Studio 2022 will require CMake Version 3.21 or later.
 
 If you would like to run the LLVM tests you will need `Python
-<http://www.python.org/>`_. Version 3.6 and newer are known to work. You can
+<http://www.python.org/>`_. Version 3.8 and newer are known to work. You can
 install Python with Visual Studio 2019, from the Microsoft store or from
 the `Python web site <http://www.python.org/>`_. We recommend the latter since it
 allows you to adjust installation options.
