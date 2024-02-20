@@ -31,7 +31,7 @@ struct TestConstantFold : public PassWrapper<TestConstantFold, OperationPass<>>,
                                OpBuilder::InsertPoint previous) override {
     existingConstants.push_back(op);
   }
-  void notifyOperationRemoved(Operation *op) override {
+  void notifyOperationErased(Operation *op) override {
     auto *it = llvm::find(existingConstants, op);
     if (it != existingConstants.end())
       existingConstants.erase(it);
