@@ -176,6 +176,11 @@ public:
     *this << attrOrType;
   }
 
+  template <>
+  void printStrippedAttrOrType(std::string attrOrType) {
+    return printString(attrOrType);
+  }
+
   /// Print the given attribute without its type. The corresponding parser must
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
