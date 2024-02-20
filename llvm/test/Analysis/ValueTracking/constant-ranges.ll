@@ -133,9 +133,7 @@ define i1 @and_ugt_fail(i8 %xx) {
 
 define i1 @urem_okay(i8 %x) {
 ; CHECK-LABEL: @urem_okay(
-; CHECK-NEXT:    [[VAL:%.*]] = urem i8 34, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL]], 35
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %val = urem i8 34, %x
   %r = icmp ule i8 %val, 35
@@ -155,9 +153,7 @@ define i1 @urem_fail(i8 %x) {
 
 define i1 @srem_posC_okay0(i8 %x) {
 ; CHECK-LABEL: @srem_posC_okay0(
-; CHECK-NEXT:    [[VAL:%.*]] = srem i8 34, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[VAL]], 34
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %val = srem i8 34, %x
   %r = icmp sle i8 %val, 34
@@ -166,9 +162,7 @@ define i1 @srem_posC_okay0(i8 %x) {
 
 define i1 @srem_posC_okay1(i8 %x) {
 ; CHECK-LABEL: @srem_posC_okay1(
-; CHECK-NEXT:    [[VAL:%.*]] = srem i8 34, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[VAL]], -3
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %val = srem i8 34, %x
   %r = icmp sge i8 %val, -3
@@ -177,9 +171,7 @@ define i1 @srem_posC_okay1(i8 %x) {
 
 define i1 @srem_negC_okay0(i8 %x) {
 ; CHECK-LABEL: @srem_negC_okay0(
-; CHECK-NEXT:    [[VAL:%.*]] = srem i8 -34, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[VAL]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %val = srem i8 -34, %x
   %r = icmp sle i8 %val, 0
@@ -188,9 +180,7 @@ define i1 @srem_negC_okay0(i8 %x) {
 
 define i1 @srem_negC_okay1(i8 %x) {
 ; CHECK-LABEL: @srem_negC_okay1(
-; CHECK-NEXT:    [[VAL:%.*]] = srem i8 -34, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[VAL]], -34
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %val = srem i8 -34, %x
   %r = icmp sge i8 %val, -34
