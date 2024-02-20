@@ -887,15 +887,15 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_ranges",
             "values": {
-                # "c++20": 201811, The One Ranges Proposal
-                # "c++20": 201907, Input Range Adaptors
-                # "c++20": 201911, ranges compare algorithm are over-constrained
-                # "c++20": 202106, Views should not be required to be default constructible
-                "c++20": 202110, # What is a view?
-                # "c++23": 202202, Pipe support for user-defined range adaptors (Not implemented)
-                # "c++23": 202207, Relaxing range adaptors to allow for move only types
-                # "c++23": 202211, Poison Pills are Too Toxic (C++20 DR)
-                # "c++23": 202302, Relaxing Ranges Just A Smidge (Not implemented)
+                # "c++20": 201811 The One Ranges Proposal
+                # "c++20": 201907 Input Range Adaptors
+                # "c++20": 201911 ranges compare algorithm are over-constrained
+                # "c++20": 202106 Views should not be required to be default constructible
+                "c++20": 202110,  # What is a view?
+                # "c++23": 202202 Pipe support for user-defined range adaptors (Not implemented)
+                # "c++23": 202207 Relaxing range adaptors to allow for move only types
+                # "c++23": 202211 Poison Pills are Too Toxic (C++20 DR)
+                # "c++23": 202302 Relaxing Ranges Just A Smidge (Not implemented)
             },
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
