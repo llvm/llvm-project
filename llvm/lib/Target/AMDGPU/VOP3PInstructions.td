@@ -1486,7 +1486,7 @@ multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
       : VOP3P_DPP16<op, !cast<VOP_DPP_Pseudo>(backing_ps_name #"_dpp"),
                     Gen.Subtarget> {
     let AsmString = asmName #ps.Pfl.AsmVOP3DPP16;
-    let DecoderNamespace = "DPP"#Gen.DecoderNamespace;
+    let DecoderNamespace = Gen.DecoderNamespace;
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1496,7 +1496,7 @@ multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
   def _dpp8#Gen.Suffix : VOP3P_DPP8_Base<op, ps> {
     let AsmString = asmName #ps.Pfl.AsmVOP3DPP8;
-    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+    let DecoderNamespace = Gen.DecoderNamespace;
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1613,7 +1613,7 @@ multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string
 multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
-  let SubtargetPredicate = isGFX940Plus,
+  let AssemblerPredicate = isGFX940Plus,
       DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
   def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
