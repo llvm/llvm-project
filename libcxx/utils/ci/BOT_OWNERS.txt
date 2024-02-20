@@ -20,3 +20,9 @@ N: Android libc++
 E: rprichard@google.com
 H: rprichard
 D: Emulator-based x86[-64] libc++ CI testing
+
+N: OpenHarmony libc++
+W: https://www.openharmony.cn/docs/en/overview
+E: kosov.pavel@huawei.com
+H: kpdev42
+D: AArch64 libc++ CI testing
