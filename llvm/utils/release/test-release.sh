@@ -537,6 +537,11 @@ function build_llvmCore() {
         InstallTarget="$InstallTarget install-builtins"
       fi
     fi
+    if [ "$Phase" -eq "3" ]; then
+      # Build everything at once, with the proper parallelism and verbosity,
+      # in Phase 3.
+      BuildTarget=
+    fi
 
     cd $ObjDir
     echo "# Compiling llvm $Release-$RC $Flavor"
