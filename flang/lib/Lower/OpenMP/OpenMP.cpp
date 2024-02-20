@@ -785,6 +785,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
+  cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
 
   if constexpr (std::is_same_v<OpTy, mlir::omp::UpdateDataOp>) {
@@ -796,7 +797,6 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   } else {
     cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
   }
-  cp.processDepend(dependTypeOperands, dependOperands);
 
   return firOpBuilder.create<OpTy>(
       currentLocation, ifClauseOperand, deviceOperand,
@@ -982,10 +982,11 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
+  cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
                 &mapSymLocs, &mapSymbols);
-  cp.processDepend(dependTypeOperands, dependOperands);
+
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Firstprivate,
                  Fortran::parser::OmpClause::IsDevicePtr,
