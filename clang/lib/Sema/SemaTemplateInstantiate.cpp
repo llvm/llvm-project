@@ -283,7 +283,8 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
 }
 
-Response HandleRecordDecl(const CXXRecordDecl *Rec,
+Response HandleRecordDecl(Sema &SemaRef,
+                          const CXXRecordDecl *Rec,
                           MultiLevelTemplateArgumentList &Result,
                           ASTContext &Context,
                           bool ForConstraintInstantiation) {
@@ -314,9 +315,42 @@ Response HandleRecordDecl(const CXXRecordDecl *Rec,
 
   // This is to make sure we pick up the VarTemplateSpecializationDecl that this
   // lambda is defined inside of.
-  if (Rec->isLambda())
+  if (Rec->isLambda()) {
     if (const Decl *LCD = Rec->getLambdaContextDecl())
       return Response::ChangeDecl(LCD);
+    if (ForConstraintInstantiation && !SemaRef.CodeSynthesisContexts.empty()) {
+      for (auto &CSC : llvm::reverse(SemaRef.CodeSynthesisContexts)) {
+        if (CSC.Kind == Sema::CodeSynthesisContext::SynthesisKind::TypeAliasTemplateInstantiation) {
+          auto *TATD = cast<TypeAliasTemplateDecl>(CSC.Entity), *CurrentTATD = TATD;
+          FunctionDecl *LambdaCallOperator = Rec->getLambdaCallOperator();
+          while (true) {
+            auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(
+                LambdaCallOperator->getDescribedTemplate());
+            if (FTD && FTD->getInstantiatedFromMemberTemplate()) {
+              LambdaCallOperator =
+                  FTD->getInstantiatedFromMemberTemplate()->getTemplatedDecl();
+            } else if (auto *Prev = cast<CXXMethodDecl>(LambdaCallOperator)
+                                        ->getInstantiatedFromMemberFunction())
+              LambdaCallOperator = Prev;
+            else
+              break;
+          }
+          while (TATD->getInstantiatedFromMemberTemplate())
+            TATD = TATD->getInstantiatedFromMemberTemplate();
+          // Constraint template parameters have a deeper depth.
+          if (cast<CXXRecordDecl>(LambdaCallOperator->getDeclContext())
+                      ->getTemplateDepth() == TATD->getTemplateDepth() &&
+              getLambdaAwareParentOfDeclContext(LambdaCallOperator) ==
+                  TATD->getDeclContext()) {
+            Result.addOuterTemplateArguments(CurrentTATD,
+                                             CSC.template_arguments(),
+                                             /*Final=*/false);
+            return Response::ChangeDecl(CurrentTATD->getDeclContext());
+          }
+        }
+      }
+    }
+  }
 
   return Response::UseNextDecl(Rec);
 }
@@ -413,7 +447,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       R = HandleFunction(Function, Result, Pattern, RelativeToPrimary,
                          ForConstraintInstantiation);
     } else if (const auto *Rec = dyn_cast<CXXRecordDecl>(CurDecl)) {
-      R = HandleRecordDecl(Rec, Result, Context, ForConstraintInstantiation);
+      R = HandleRecordDecl(*this, Rec, Result, Context, ForConstraintInstantiation);
     } else if (const auto *CSD =
                    dyn_cast<ImplicitConceptSpecializationDecl>(CurDecl)) {
       R = HandleImplicitConceptSpecializationDecl(CSD, Result);
@@ -470,6 +504,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case BuildingBuiltinDumpStructCall:
   case LambdaExpressionSubstitution:
   case BuildingDeductionGuides:
+  case TypeAliasTemplateInstantiation:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -614,6 +649,15 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           CodeSynthesisContext::PriorTemplateArgumentSubstitution,
           PointOfInstantiation, InstantiationRange, Param, Template,
           TemplateArgs) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    TypeAliasTemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
+    SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation,
+          PointOfInstantiation, InstantiationRange, /*Entity=*/Template,
+          nullptr, TemplateArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, TemplateDecl *Template,
@@ -1132,6 +1176,8 @@ void Sema::PrintInstantiationStack() {
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_building_deduction_guide_here);
       break;
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      break;
     }
   }
 }
@@ -1209,6 +1255,7 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       break;
 
     case CodeSynthesisContext::Memoization:
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       break;
     }
 
@@ -1532,6 +1579,17 @@ namespace {
     TransformSubstTemplateTypeParmPackType(TypeLocBuilder &TLB,
                                            SubstTemplateTypeParmPackTypeLoc TL,
                                            bool SuppressObjCLifetime);
+
+    CXXRecordDecl::LambdaDependencyKind
+    ComputeLambdaDependency(LambdaScopeInfo *LSI) {
+      auto &CCS = SemaRef.CodeSynthesisContexts.back();
+      if (CCS.Kind == Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation) {
+        unsigned TypeAliasDeclDepth = CCS.Entity->getTemplateDepth();
+        if (TypeAliasDeclDepth >= TemplateArgs.getNumSubstitutedLevels())
+          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
+      }
+      return inherited::ComputeLambdaDependency(LSI);
+    }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);

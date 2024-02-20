@@ -1083,6 +1083,11 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
     return nullptr;
 
   TypeAliasDecl *Pattern = D->getTemplatedDecl();
+  Sema::InstantiatingTemplate InstTemplate(
+      SemaRef, Pattern->getTypeSourceInfo()->getTypeLoc().getBeginLoc(), D,
+      D->getTemplateDepth() >= TemplateArgs.getNumSubstitutedLevels()
+          ? ArrayRef<TemplateArgument>()
+          : TemplateArgs.getInnermost());
 
   TypeAliasTemplateDecl *PrevAliasTemplate = nullptr;
   if (getPreviousDeclForInstantiation<TypedefNameDecl>(Pattern)) {

@@ -344,6 +344,8 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Clang now supports direct lambda calls inside of a type alias template declarations.
+  This addresses (#GH70601), (#GH76674), (#GH79555), (#GH81145) and so on.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -767,6 +767,10 @@ public:
   /// the body.
   StmtResult SkipLambdaBody(LambdaExpr *E, Stmt *Body);
 
+  CXXRecordDecl::LambdaDependencyKind ComputeLambdaDependency(LambdaScopeInfo *LSI) {
+    return static_cast<CXXRecordDecl::LambdaDependencyKind>(LSI->Lambda->getLambdaDependencyKind());
+  }
+
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr);
@@ -13935,6 +13939,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   getSema().ActOnFinishFunctionBody(NewCallOperator, Body.get(),
                                     /*IsInstantiation*/ true);
   SavedContext.pop();
+
+  DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
+  Class->setLambdaDependencyKind(DependencyKind);
+  Class->setTypeForDecl(nullptr);
+  getSema().Context.getTypeDeclType(Class);
 
   return getSema().BuildLambdaExpr(E->getBeginLoc(), Body.get()->getEndLoc(),
                                    &LSICopy);

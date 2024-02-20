@@ -4343,9 +4343,12 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Inst.isInvalid())
       return QualType();
 
-    CanonType = SubstType(Pattern->getUnderlyingType(),
-                          TemplateArgLists, AliasTemplate->getLocation(),
-                          AliasTemplate->getDeclName());
+    InstantiatingTemplate InstTemplate(
+        *this, Pattern->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+        AliasTemplate, TemplateArgLists.getInnermost());
+    CanonType =
+        SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
+                  AliasTemplate->getLocation(), AliasTemplate->getDeclName());
     if (CanonType.isNull()) {
       // If this was enable_if and we failed to find the nested type
       // within enable_if in a SFINAE context, dig out the specific
