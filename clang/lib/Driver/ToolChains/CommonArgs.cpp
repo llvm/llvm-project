@@ -1288,7 +1288,7 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     StringRef f128LibName = TC.getDriver().getFlangF128MathLibrary();
     f128LibName.consume_front_insensitive("lib");
     if (!f128LibName.empty()) {
-      CmdArgs.push_back("-lFortranFloat128");
+      CmdArgs.push_back("-lFortranFloat128Math");
       addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
       CmdArgs.push_back(Args.MakeArgString("-l" + f128LibName));
       addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
