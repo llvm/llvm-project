@@ -10,7 +10,7 @@
 # is required for users to be able to include any public header and then override
 # the function using a strong definition.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])

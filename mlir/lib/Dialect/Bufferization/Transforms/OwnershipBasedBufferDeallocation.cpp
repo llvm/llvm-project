@@ -166,10 +166,8 @@ namespace {
 /// program have a corresponding de-allocation.
 class BufferDeallocation {
 public:
-  BufferDeallocation(Operation *op, bool privateFuncDynamicOwnership)
-      : state(op) {
-    options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
-  }
+  BufferDeallocation(Operation *op, DeallocationOptions options)
+      : state(op), options(options) {}
 
   /// Performs the actual placement/creation of all dealloc operations.
   LogicalResult deallocate(FunctionOpInterface op);
@@ -586,13 +584,9 @@ BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
   if (!returnOperandTypes.empty())
     resultTypes = returnOperandTypes[0];
 
-  // TODO: it would be nice if the FunctionOpInterface had a method to not only
-  // get the function type but also set it.
-  op->setAttr(
-      "function_type",
-      TypeAttr::get(FunctionType::get(
-          op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
-          resultTypes)));
+  op.setFunctionTypeAttr(TypeAttr::get(FunctionType::get(
+      op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
+      resultTypes)));
 
   return success();
 }
@@ -1027,17 +1021,20 @@ struct OwnershipBasedBufferDeallocationPass
     : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
           OwnershipBasedBufferDeallocationPass> {
   OwnershipBasedBufferDeallocationPass() = default;
-  OwnershipBasedBufferDeallocationPass(bool privateFuncDynamicOwnership)
+  OwnershipBasedBufferDeallocationPass(DeallocationOptions options)
       : OwnershipBasedBufferDeallocationPass() {
-    this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
+    this->privateFuncDynamicOwnership.setValue(
+        options.privateFuncDynamicOwnership);
   }
   void runOnOperation() override {
+    DeallocationOptions options;
+    options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
+
     auto status = getOperation()->walk([&](func::FuncOp func) {
       if (func.isExternal())
         return WalkResult::skip();
 
-      if (failed(deallocateBuffersOwnershipBased(func,
-                                                 privateFuncDynamicOwnership)))
+      if (failed(deallocateBuffersOwnershipBased(func, options)))
         return WalkResult::interrupt();
 
       return WalkResult::advance();
@@ -1053,10 +1050,11 @@ struct OwnershipBasedBufferDeallocationPass
 // Implement bufferization API
 //===----------------------------------------------------------------------===//
 
-LogicalResult bufferization::deallocateBuffersOwnershipBased(
-    FunctionOpInterface op, bool privateFuncDynamicOwnership) {
+LogicalResult
+bufferization::deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                               DeallocationOptions options) {
   // Gather all required allocation nodes and prepare the deallocation phase.
-  BufferDeallocation deallocation(op, privateFuncDynamicOwnership);
+  BufferDeallocation deallocation(op, options);
 
   // Place all required temporary clone and dealloc nodes.
   return deallocation.deallocate(op);
@@ -1068,7 +1066,6 @@ LogicalResult bufferization::deallocateBuffersOwnershipBased(
 
 std::unique_ptr<Pass>
 mlir::bufferization::createOwnershipBasedBufferDeallocationPass(
-    bool privateFuncDynamicOwnership) {
-  return std::make_unique<OwnershipBasedBufferDeallocationPass>(
-      privateFuncDynamicOwnership);
+    DeallocationOptions options) {
+  return std::make_unique<OwnershipBasedBufferDeallocationPass>(options);
 }

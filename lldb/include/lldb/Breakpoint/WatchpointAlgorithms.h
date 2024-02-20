@@ -11,7 +11,7 @@
 
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/lldb-public.h"
+#include "lldb/lldb-private.h"
 
 #include <vector>
 
@@ -58,7 +58,7 @@ public:
   ///     watchpoint cannot be set.
   static std::vector<lldb::WatchpointResourceSP> AtomizeWatchpointRequest(
       lldb::addr_t addr, size_t size, bool read, bool write,
-      lldb::WatchpointHardwareFeature supported_features, ArchSpec &arch);
+      WatchpointHardwareFeature supported_features, ArchSpec &arch);
 
 protected:
   struct Region {

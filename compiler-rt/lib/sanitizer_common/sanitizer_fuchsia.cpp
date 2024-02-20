@@ -413,7 +413,7 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   return reinterpret_cast<void *>(addr);
 }
 
-void UnmapOrDie(void *addr, uptr size) {
+void UnmapOrDie(void *addr, uptr size, bool) {
   UnmapOrDieVmar(addr, size, gSanitizerHeapVmar);
 }
 

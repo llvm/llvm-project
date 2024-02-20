@@ -481,7 +481,7 @@ subroutine acc_parallel_loop
   END DO
 
 ! CHECK:      acc.parallel {
-! CHECK:        acc.loop gang()
+! CHECK:        acc.loop gang
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.yield
@@ -530,7 +530,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 ! CHECK:      acc.parallel {
-! CHECK:        acc.loop vector()
+! CHECK:        acc.loop vector
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
 ! CHECK:        acc.yield
@@ -569,7 +569,7 @@ subroutine acc_parallel_loop
   END DO
 
 ! CHECK:      acc.parallel {
-! CHECK:        acc.loop worker() {{.*}} {
+! CHECK:        acc.loop worker {{.*}} {
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}{{$}}

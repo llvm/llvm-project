@@ -147,6 +147,8 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
+  MachineModuleInfo MMI(&LLVMTM);
+
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM);
   SI.registerCallbacks(PIC);
@@ -164,7 +166,7 @@ int llvm::compileModuleWithNewPM(
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-  MAM.registerPass([&] { return MachineModuleAnalysis(&LLVMTM); });
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   MachineFunctionAnalysisManager MFAM(FAM, MAM);
 
@@ -185,12 +187,9 @@ int llvm::compileModuleWithNewPM(
     MFPM.addPass(PrintMIRPass(*OS));
     MFPM.addPass(FreeMachineFunctionPass());
 
-    auto &MMI = MFAM.getResult<MachineModuleAnalysis>(*M);
+    auto &MMI = MFAM.getResult<MachineModuleAnalysis>(*M).getMMI();
     if (MIR->parseMachineFunctions(*M, MMI))
       return 1;
-
-    RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, &MPM, &MAM, MFPM,
-              MFAM);
   } else {
     ExitOnErr(LLVMTM.buildCodeGenPipeline(MPM, MFPM, MFAM, *OS,
                                           DwoOut ? &DwoOut->os() : nullptr,
@@ -198,35 +197,34 @@ int llvm::compileModuleWithNewPM(
 
     auto StartStopInfo = TargetPassConfig::getStartStopInfo(PIC);
     assert(StartStopInfo && "Expect StartStopInfo!");
-    // Add IR or MIR printing pass according the pass type.
 
     if (auto StopPassName = StartStopInfo->StopPass; !StopPassName.empty()) {
       MFPM.addPass(PrintMIRPass(*OS));
       MFPM.addPass(FreeMachineFunctionPass());
     }
-
-    if (PrintPipelinePasses) {
-      std::string IRPipeline;
-      raw_string_ostream IRSOS(IRPipeline);
-      MPM.printPipeline(IRSOS, [&PIC](StringRef ClassName) {
-        auto PassName = PIC.getPassNameForClassName(ClassName);
-        return PassName.empty() ? ClassName : PassName;
-      });
-      outs() << "IR pipeline: " << IRPipeline << '\n';
-
-      std::string MIRPipeline;
-      raw_string_ostream MIRSOS(MIRPipeline);
-      MFPM.printPipeline(MIRSOS, [&PIC](StringRef ClassName) {
-        auto PassName = PIC.getPassNameForClassName(ClassName);
-        return PassName.empty() ? ClassName : PassName;
-      });
-      outs() << "MIR pipeline: " << MIRPipeline << '\n';
-      return 0;
-    }
-
-    RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, &MPM, &MAM, MFPM,
-              MFAM);
   }
+
+  if (PrintPipelinePasses) {
+    std::string IRPipeline;
+    raw_string_ostream IRSOS(IRPipeline);
+    MPM.printPipeline(IRSOS, [&PIC](StringRef ClassName) {
+      auto PassName = PIC.getPassNameForClassName(ClassName);
+      return PassName.empty() ? ClassName : PassName;
+    });
+    outs() << "IR pipeline: " << IRPipeline << '\n';
+
+    std::string MIRPipeline;
+    raw_string_ostream MIRSOS(MIRPipeline);
+    MFPM.printPipeline(MIRSOS, [&PIC](StringRef ClassName) {
+      auto PassName = PIC.getPassNameForClassName(ClassName);
+      return PassName.empty() ? ClassName : PassName;
+    });
+    outs() << "MIR pipeline: " << MIRPipeline << '\n';
+    return 0;
+  }
+
+  RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, &MPM, &MAM, MFPM,
+            MFAM);
 
   // Declare success.
   Out->keep();

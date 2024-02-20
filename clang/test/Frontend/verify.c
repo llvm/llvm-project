@@ -187,3 +187,32 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 #endif
 
 #endif
+
+#ifdef TEST10
+// RUN: not %clang_cc1 -DTEST10 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK10 %s
+
+// CHECK10: error: no expected directives found: consider use of 'foo-no-diagnostics'
+#endif
+
+#ifdef TEST11
+// RUN: not %clang_cc1 -DTEST11 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK11 %s
+
+// foo-no-diagnostics
+// foo-note {{}}
+
+//      CHECK11: error: 'foo-error' diagnostics seen but not expected:
+// CHECK11-NEXT:   Line 201: expected directive cannot follow 'foo-no-diagnostics' directive
+// CHECK11-NEXT: 1 error generated.
+#endif
+
+#ifdef TEST12
+// RUN: not %clang_cc1 -DTEST12 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK12 %s
+
+#warning X
+// foo-warning@-1 {{X}}
+// foo-no-diagnostics
+
+//      CHECK12: error: 'foo-error' diagnostics seen but not expected:
+// CHECK12-NEXT:   Line 213: 'foo-no-diagnostics' directive cannot follow other expected directives
+// CHECK12-NEXT: 1 error generated.
+#endif

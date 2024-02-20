@@ -221,7 +221,7 @@ define <16 x i8> @ext_i16_16i8(i16 %a0) {
 ; AVX512F-LABEL: ext_i16_16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -229,7 +229,7 @@ define <16 x i8> @ext_i16_16i8(i16 %a0) {
 ; AVX512VLBW-LABEL: ext_i16_16i8:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    kmovd %edi, %k1
-; AVX512VLBW-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512VLBW-NEXT:    retq
   %1 = bitcast i16 %a0 to <16 x i1>
   %2 = zext <16 x i1> %1 to <16 x i8>
@@ -497,7 +497,7 @@ define <32 x i8> @ext_i32_32i8(i32 %a0) {
 ; AVX512VLBW-LABEL: ext_i32_32i8:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    kmovd %edi, %k1
-; AVX512VLBW-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    vmovdqu8 {{.*#+}} ymm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512VLBW-NEXT:    retq
   %1 = bitcast i32 %a0 to <32 x i1>
   %2 = zext <32 x i1> %1 to <32 x i8>
@@ -885,7 +885,7 @@ define <64 x i8> @ext_i64_64i8(i64 %a0) {
 ; AVX512VLBW-LABEL: ext_i64_64i8:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    kmovq %rdi, %k1
-; AVX512VLBW-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    vmovdqu8 {{.*#+}} zmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512VLBW-NEXT:    retq
   %1 = bitcast i64 %a0 to <64 x i1>
   %2 = zext <64 x i1> %1 to <64 x i8>

@@ -2839,6 +2839,27 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
 }
 
 //===----------------------------------------------------------------------===//
+// OpenACC Constructs/Directives.
+//===----------------------------------------------------------------------===//
+void ASTStmtWriter::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  Record.writeEnum(S->Kind);
+  Record.AddSourceRange(S->Range);
+  // TODO OpenACC: Serialize Clauses.
+}
+
+void ASTStmtWriter::VisitOpenACCAssociatedStmtConstruct(
+    OpenACCAssociatedStmtConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  Record.AddStmt(S->getAssociatedStmt());
+}
+
+void ASTStmtWriter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_COMPUTE_CONSTRUCT;
+}
+
+//===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
 

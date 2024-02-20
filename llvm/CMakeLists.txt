@@ -35,7 +35,7 @@ endif()
 
 if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
   # "Symbol version prefix for libLLVM.so"
-  set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}")
+  set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
 if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142) AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
@@ -653,9 +653,6 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
-option(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS
-  "Add extra Booleans to ilist_iterators to communicate facts for debug-info" OFF)
-
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
 
@@ -1259,8 +1256,10 @@ if( LLVM_INCLUDE_TESTS )
   get_property(LLVM_ALL_LIT_DEPENDS GLOBAL PROPERTY LLVM_ALL_LIT_DEPENDS)
   get_property(LLVM_ALL_ADDITIONAL_TEST_DEPENDS
       GLOBAL PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
-  add_custom_target(test-depends
-      DEPENDS ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
+  add_custom_target(test-depends)
+  if(LLVM_ALL_LIT_DEPENDS OR LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
+    add_dependencies(test-depends ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
+  endif()
   set_target_properties(test-depends PROPERTIES FOLDER "Tests")
   add_dependencies(check-all test-depends)
 endif()

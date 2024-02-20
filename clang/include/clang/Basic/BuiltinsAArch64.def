@@ -139,6 +139,7 @@ TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LA
 TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedAdd,           "NiNiD*Ni",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "LLiLLiD*",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")

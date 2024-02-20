@@ -2044,7 +2044,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
     auto InsertionPt = Parent->getFirstInsertionPt();
     assert(InsertionPt != Parent->end() && "Ill-formed basic block");
 
-    InsertionPt->DbgMarker->insertDPValue(NewDbgII, true);
+    Parent->insertDPValueBefore(NewDbgII, InsertionPt);
   }
 }
 

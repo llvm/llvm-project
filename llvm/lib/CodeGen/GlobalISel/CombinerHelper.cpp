@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -28,10 +29,12 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
@@ -220,21 +223,11 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) {
   replaceRegWith(MRI, DstReg, SrcReg);
 }
 
-bool CombinerHelper::tryCombineConcatVectors(MachineInstr &MI) {
-  bool IsUndef = false;
-  SmallVector<Register, 4> Ops;
-  if (matchCombineConcatVectors(MI, IsUndef, Ops)) {
-    applyCombineConcatVectors(MI, IsUndef, Ops);
-    return true;
-  }
-  return false;
-}
-
-bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                               SmallVectorImpl<Register> &Ops) {
+bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS &&
          "Invalid instruction");
-  IsUndef = true;
+  bool IsUndef = true;
   MachineInstr *Undef = nullptr;
 
   // Walk over all the operands of concat vectors and check if they are
@@ -244,6 +237,8 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
     Register Reg = MO.getReg();
     MachineInstr *Def = MRI.getVRegDef(Reg);
     assert(Def && "Operand not defined");
+    if (!MRI.hasOneNonDBGUse(Reg))
+      return false;
     switch (Def->getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
       IsUndef = false;
@@ -273,10 +268,21 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
       return false;
     }
   }
+
+  // Check if the combine is illegal
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, MRI.getType(Ops[0])}})) {
+    return false;
+  }
+
+  if (IsUndef)
+    Ops.clear();
+
   return true;
 }
-void CombinerHelper::applyCombineConcatVectors(
-    MachineInstr &MI, bool IsUndef, const ArrayRef<Register> Ops) {
+void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
   // We determined that the concat_vectors can be flatten.
   // Generate the flattened build_vector.
   Register DstReg = MI.getOperand(0).getReg();
@@ -287,9 +293,9 @@ void CombinerHelper::applyCombineConcatVectors(
   // checking that at all Ops are undef.  Alternatively, we could have
   // generate a build_vector of undefs and rely on another combine to
   // clean that up.  For now, given we already gather this information
-  // in tryCombineConcatVectors, just save compile time and issue the
+  // in matchCombineConcatVectors, just save compile time and issue the
   // right thing.
-  if (IsUndef)
+  if (Ops.empty())
     Builder.buildUndef(NewDstReg);
   else
     Builder.buildBuildVector(NewDstReg, Ops);
@@ -2072,6 +2078,9 @@ bool CombinerHelper::matchCombineUnmergeUndef(
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
+  if (MRI.getType(MI.getOperand(0).getReg()).isVector() ||
+      MRI.getType(MI.getOperand(MI.getNumDefs()).getReg()).isVector())
+    return false;
   // Check that all the lanes are dead except the first one.
   for (unsigned Idx = 1, EndIdx = MI.getNumDefs(); Idx != EndIdx; ++Idx) {
     if (!MRI.use_nodbg_empty(MI.getOperand(Idx).getReg()))
@@ -2083,21 +2092,8 @@ bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
 void CombinerHelper::applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   Builder.setInstrAndDebugLoc(MI);
   Register SrcReg = MI.getOperand(MI.getNumDefs()).getReg();
-  // Truncating a vector is going to truncate every single lane,
-  // whereas we want the full lowbits.
-  // Do the operation on a scalar instead.
-  LLT SrcTy = MRI.getType(SrcReg);
-  if (SrcTy.isVector())
-    SrcReg =
-        Builder.buildCast(LLT::scalar(SrcTy.getSizeInBits()), SrcReg).getReg(0);
-
   Register Dst0Reg = MI.getOperand(0).getReg();
-  LLT Dst0Ty = MRI.getType(Dst0Reg);
-  if (Dst0Ty.isVector()) {
-    auto MIB = Builder.buildTrunc(LLT::scalar(Dst0Ty.getSizeInBits()), SrcReg);
-    Builder.buildCast(Dst0Reg, MIB);
-  } else
-    Builder.buildTrunc(Dst0Reg, SrcReg);
+  Builder.buildTrunc(Dst0Reg, SrcReg);
   MI.eraseFromParent();
 }
 
@@ -6647,6 +6643,265 @@ bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
     return true;
 
   if (tryFoldSelectToIntMinMax(Select, MatchInfo))
+    return true;
+
+  return false;
+}
+
+/// Fold (icmp Pred1 V1, C1) && (icmp Pred2 V2, C2)
+/// or   (icmp Pred1 V1, C1) || (icmp Pred2 V2, C2)
+/// into a single comparison using range-based reasoning.
+/// see InstCombinerImpl::foldAndOrOfICmpsUsingRanges.
+bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
+                                                    BuildFnTy &MatchInfo) {
+  assert(Logic->getOpcode() != TargetOpcode::G_XOR && "unexpected xor");
+  bool IsAnd = Logic->getOpcode() == TargetOpcode::G_AND;
+  Register DstReg = Logic->getReg(0);
+  Register LHS = Logic->getLHSReg();
+  Register RHS = Logic->getRHSReg();
+  unsigned Flags = Logic->getFlags();
+
+  // We need an G_ICMP on the LHS register.
+  GICmp *Cmp1 = getOpcodeDef<GICmp>(LHS, MRI);
+  if (!Cmp1)
+    return false;
+
+  // We need an G_ICMP on the RHS register.
+  GICmp *Cmp2 = getOpcodeDef<GICmp>(RHS, MRI);
+  if (!Cmp2)
+    return false;
+
+  // We want to fold the icmps.
+  if (!MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp2->getReg(0)))
+    return false;
+
+  APInt C1;
+  APInt C2;
+  std::optional<ValueAndVReg> MaybeC1 =
+      getIConstantVRegValWithLookThrough(Cmp1->getRHSReg(), MRI);
+  if (!MaybeC1)
+    return false;
+  C1 = MaybeC1->Value;
+
+  std::optional<ValueAndVReg> MaybeC2 =
+      getIConstantVRegValWithLookThrough(Cmp2->getRHSReg(), MRI);
+  if (!MaybeC2)
+    return false;
+  C2 = MaybeC2->Value;
+
+  Register R1 = Cmp1->getLHSReg();
+  Register R2 = Cmp2->getLHSReg();
+  CmpInst::Predicate Pred1 = Cmp1->getCond();
+  CmpInst::Predicate Pred2 = Cmp2->getCond();
+  LLT CmpTy = MRI.getType(Cmp1->getReg(0));
+  LLT CmpOperandTy = MRI.getType(R1);
+
+  // We build ands, adds, and constants of type CmpOperandTy.
+  // They must be legal to build.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, CmpOperandTy}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, CmpOperandTy}) ||
+      !isConstantLegalOrBeforeLegalizer(CmpOperandTy))
+    return false;
+
+  // Look through add of a constant offset on R1, R2, or both operands. This
+  // allows us to interpret the R + C' < C'' range idiom into a proper range.
+  std::optional<APInt> Offset1;
+  std::optional<APInt> Offset2;
+  if (R1 != R2) {
+    if (GAdd *Add = getOpcodeDef<GAdd>(R1, MRI)) {
+      std::optional<ValueAndVReg> MaybeOffset1 =
+          getIConstantVRegValWithLookThrough(Add->getRHSReg(), MRI);
+      if (MaybeOffset1) {
+        R1 = Add->getLHSReg();
+        Offset1 = MaybeOffset1->Value;
+      }
+    }
+    if (GAdd *Add = getOpcodeDef<GAdd>(R2, MRI)) {
+      std::optional<ValueAndVReg> MaybeOffset2 =
+          getIConstantVRegValWithLookThrough(Add->getRHSReg(), MRI);
+      if (MaybeOffset2) {
+        R2 = Add->getLHSReg();
+        Offset2 = MaybeOffset2->Value;
+      }
+    }
+  }
+
+  if (R1 != R2)
+    return false;
+
+  // We calculate the icmp ranges including maybe offsets.
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, C1);
+  if (Offset1)
+    CR1 = CR1.subtract(*Offset1);
+
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, C2);
+  if (Offset2)
+    CR2 = CR2.subtract(*Offset2);
+
+  bool CreateMask = false;
+  APInt LowerDiff;
+  std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
+  if (!CR) {
+    // We need non-wrapping ranges.
+    if (CR1.isWrappedSet() || CR2.isWrappedSet())
+      return false;
+
+    // Check whether we have equal-size ranges that only differ by one bit.
+    // In that case we can apply a mask to map one range onto the other.
+    LowerDiff = CR1.getLower() ^ CR2.getLower();
+    APInt UpperDiff = (CR1.getUpper() - 1) ^ (CR2.getUpper() - 1);
+    APInt CR1Size = CR1.getUpper() - CR1.getLower();
+    if (!LowerDiff.isPowerOf2() || LowerDiff != UpperDiff ||
+        CR1Size != CR2.getUpper() - CR2.getLower())
+      return false;
+
+    CR = CR1.getLower().ult(CR2.getLower()) ? CR1 : CR2;
+    CreateMask = true;
+  }
+
+  if (IsAnd)
+    CR = CR->inverse();
+
+  CmpInst::Predicate NewPred;
+  APInt NewC, Offset;
+  CR->getEquivalentICmp(NewPred, NewC, Offset);
+
+  // We take the result type of one of the original icmps, CmpTy, for
+  // the to be build icmp. The operand type, CmpOperandTy, is used for
+  // the other instructions and constants to be build. The types of
+  // the parameters and output are the same for add and and.  CmpTy
+  // and the type of DstReg might differ. That is why we zext or trunc
+  // the icmp into the destination register.
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (CreateMask && Offset != 0) {
+      auto TildeLowerDiff = B.buildConstant(CmpOperandTy, ~LowerDiff);
+      auto And = B.buildAnd(CmpOperandTy, R1, TildeLowerDiff); // the mask.
+      auto OffsetC = B.buildConstant(CmpOperandTy, Offset);
+      auto Add = B.buildAdd(CmpOperandTy, And, OffsetC, Flags);
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, Add, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else if (CreateMask && Offset == 0) {
+      auto TildeLowerDiff = B.buildConstant(CmpOperandTy, ~LowerDiff);
+      auto And = B.buildAnd(CmpOperandTy, R1, TildeLowerDiff); // the mask.
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, And, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else if (!CreateMask && Offset != 0) {
+      auto OffsetC = B.buildConstant(CmpOperandTy, Offset);
+      auto Add = B.buildAdd(CmpOperandTy, R1, OffsetC, Flags);
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, Add, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else if (!CreateMask && Offset == 0) {
+      auto NewCon = B.buildConstant(CmpOperandTy, NewC);
+      auto ICmp = B.buildICmp(NewPred, CmpTy, R1, NewCon);
+      B.buildZExtOrTrunc(DstReg, ICmp);
+    } else {
+      llvm_unreachable("unexpected configuration of CreateMask and Offset");
+    }
+  };
+  return true;
+}
+
+bool CombinerHelper::tryFoldLogicOfFCmps(GLogicalBinOp *Logic,
+                                         BuildFnTy &MatchInfo) {
+  assert(Logic->getOpcode() != TargetOpcode::G_XOR && "unexpecte xor");
+  Register DestReg = Logic->getReg(0);
+  Register LHS = Logic->getLHSReg();
+  Register RHS = Logic->getRHSReg();
+  bool IsAnd = Logic->getOpcode() == TargetOpcode::G_AND;
+
+  // We need a compare on the LHS register.
+  GFCmp *Cmp1 = getOpcodeDef<GFCmp>(LHS, MRI);
+  if (!Cmp1)
+    return false;
+
+  // We need a compare on the RHS register.
+  GFCmp *Cmp2 = getOpcodeDef<GFCmp>(RHS, MRI);
+  if (!Cmp2)
+    return false;
+
+  LLT CmpTy = MRI.getType(Cmp1->getReg(0));
+  LLT CmpOperandTy = MRI.getType(Cmp1->getLHSReg());
+
+  // We build one fcmp, want to fold the fcmps, replace the logic op,
+  // and the fcmps must have the same shape.
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_FCMP, {CmpTy, CmpOperandTy}}) ||
+      !MRI.hasOneNonDBGUse(Logic->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp2->getReg(0)) ||
+      MRI.getType(Cmp1->getLHSReg()) != MRI.getType(Cmp2->getLHSReg()))
+    return false;
+
+  CmpInst::Predicate PredL = Cmp1->getCond();
+  CmpInst::Predicate PredR = Cmp2->getCond();
+  Register LHS0 = Cmp1->getLHSReg();
+  Register LHS1 = Cmp1->getRHSReg();
+  Register RHS0 = Cmp2->getLHSReg();
+  Register RHS1 = Cmp2->getRHSReg();
+
+  if (LHS0 == RHS1 && LHS1 == RHS0) {
+    // Swap RHS operands to match LHS.
+    PredR = CmpInst::getSwappedPredicate(PredR);
+    std::swap(RHS0, RHS1);
+  }
+
+  if (LHS0 == RHS0 && LHS1 == RHS1) {
+    // We determine the new predicate.
+    unsigned CmpCodeL = getFCmpCode(PredL);
+    unsigned CmpCodeR = getFCmpCode(PredR);
+    unsigned NewPred = IsAnd ? CmpCodeL & CmpCodeR : CmpCodeL | CmpCodeR;
+    unsigned Flags = Cmp1->getFlags() | Cmp2->getFlags();
+    MatchInfo = [=](MachineIRBuilder &B) {
+      // The fcmp predicates fill the lower part of the enum.
+      FCmpInst::Predicate Pred = static_cast<FCmpInst::Predicate>(NewPred);
+      if (Pred == FCmpInst::FCMP_FALSE &&
+          isConstantLegalOrBeforeLegalizer(CmpTy)) {
+        auto False = B.buildConstant(CmpTy, 0);
+        B.buildZExtOrTrunc(DestReg, False);
+      } else if (Pred == FCmpInst::FCMP_TRUE &&
+                 isConstantLegalOrBeforeLegalizer(CmpTy)) {
+        auto True =
+            B.buildConstant(CmpTy, getICmpTrueVal(getTargetLowering(),
+                                                  CmpTy.isVector() /*isVector*/,
+                                                  true /*isFP*/));
+        B.buildZExtOrTrunc(DestReg, True);
+      } else { // We take the predicate without predicate optimizations.
+        auto Cmp = B.buildFCmp(Pred, CmpTy, LHS0, LHS1, Flags);
+        B.buildZExtOrTrunc(DestReg, Cmp);
+      }
+    };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  GAnd *And = cast<GAnd>(&MI);
+
+  if (tryFoldAndOrOrICmpsUsingRanges(And, MatchInfo))
+    return true;
+
+  if (tryFoldLogicOfFCmps(And, MatchInfo))
+    return true;
+
+  return false;
+}
+
+bool CombinerHelper::matchOr(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  GOr *Or = cast<GOr>(&MI);
+
+  if (tryFoldAndOrOrICmpsUsingRanges(Or, MatchInfo))
+    return true;
+
+  if (tryFoldLogicOfFCmps(Or, MatchInfo))
     return true;
 
   return false;

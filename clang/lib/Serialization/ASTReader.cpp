@@ -987,9 +987,12 @@ ASTIdentifierLookupTraitBase::ReadKey(const unsigned char* d, unsigned n) {
 /// Whether the given identifier is "interesting".
 static bool isInterestingIdentifier(ASTReader &Reader, IdentifierInfo &II,
                                     bool IsModule) {
+  bool IsInteresting =
+      II.getNotableIdentifierID() != tok::NotableIdentifierKind::not_notable ||
+      II.getBuiltinID() != Builtin::ID::NotBuiltin ||
+      II.getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
   return II.hadMacroDefinition() || II.isPoisoned() ||
-         (!IsModule && II.getObjCOrBuiltinID()) ||
-         II.hasRevertedTokenIDToIdentifier() ||
+         (!IsModule && IsInteresting) || II.hasRevertedTokenIDToIdentifier() ||
          (!(IsModule && Reader.getPreprocessor().getLangOpts().CPlusPlus) &&
           II.getFETokenInfo());
 }

@@ -150,7 +150,17 @@ namespace format {
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TableGenBangOperator)                                                   \
   TYPE(TableGenCondOperator)                                                   \
+  TYPE(TableGenCondOperatorColon)                                              \
+  TYPE(TableGenCondOperatorComma)                                              \
+  TYPE(TableGenDAGArgCloser)                                                   \
+  TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenListCloser)                                                     \
+  TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \
+  TYPE(TableGenTrailingPasteOperator)                                          \
+  TYPE(TableGenValueSuffix)                                                    \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \

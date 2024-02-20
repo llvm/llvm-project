@@ -87,9 +87,9 @@ enum : uint64_t {
   FLAT = 1 << 24,
   DS = 1 << 25,
 
-  // Pseudo instruction formats.
-  VGPRSpill = 1 << 26,
-  SGPRSpill = 1 << 27,
+  // Combined SGPR/VGPR Spill bit
+  // Logic to separate them out is done in isSGPRSpill and isVGPRSpill
+  Spill = 1 << 26,
 
   // LDSDIR instruction format.
   LDSDIR = 1 << 28,
@@ -105,10 +105,16 @@ enum : uint64_t {
   WQM = UINT64_C(1) << 35,
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
-  SOPK_ZEXT = UINT64_C(1) << 38,
+
+  // Reserved, must be 0.
+  Reserved0 = UINT64_C(1) << 38,
+
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
-  VOPAsmPrefer32Bit = UINT64_C(1) << 41,
+
+  // Reserved, must be 0.
+  Reserved1 = UINT64_C(1) << 41,
+
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
   renamedInGFX9 = UINT64_C(1) << 44,
@@ -196,9 +202,12 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_INT16,
   OPERAND_REG_IMM_FP32,
   OPERAND_REG_IMM_FP64,
+  OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
+  OPERAND_REG_IMM_BF16_DEFERRED,
   OPERAND_REG_IMM_FP16_DEFERRED,
   OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
   OPERAND_REG_IMM_V2INT32,
@@ -208,10 +217,12 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_INT32,
   OPERAND_REG_INLINE_C_INT64,
+  OPERAND_REG_INLINE_C_BF16,
   OPERAND_REG_INLINE_C_FP16,
   OPERAND_REG_INLINE_C_FP32,
   OPERAND_REG_INLINE_C_FP64,
   OPERAND_REG_INLINE_C_V2INT16,
+  OPERAND_REG_INLINE_C_V2BF16,
   OPERAND_REG_INLINE_C_V2FP16,
   OPERAND_REG_INLINE_C_V2INT32,
   OPERAND_REG_INLINE_C_V2FP32,
@@ -226,10 +237,12 @@ enum OperandType : unsigned {
   /// Operands with an AccVGPR register or inline constant
   OPERAND_REG_INLINE_AC_INT16,
   OPERAND_REG_INLINE_AC_INT32,
+  OPERAND_REG_INLINE_AC_BF16,
   OPERAND_REG_INLINE_AC_FP16,
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
   OPERAND_REG_INLINE_AC_V2INT16,
+  OPERAND_REG_INLINE_AC_V2BF16,
   OPERAND_REG_INLINE_AC_V2FP16,
   OPERAND_REG_INLINE_AC_V2INT32,
   OPERAND_REG_INLINE_AC_V2FP32,
@@ -255,6 +268,15 @@ enum OperandType : unsigned {
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
   OPERAND_KIMM_LAST = OPERAND_KIMM16
 
+};
+
+// Should be in sync with the OperandSemantics defined in SIRegisterInfo.td
+enum OperandSemantics : unsigned {
+  INT = 0,
+  FP16 = 1,
+  BF16 = 2,
+  FP32 = 3,
+  FP64 = 4,
 };
 }
 

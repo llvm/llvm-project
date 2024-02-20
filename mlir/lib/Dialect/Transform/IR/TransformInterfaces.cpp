@@ -1265,17 +1265,16 @@ DiagnosedSilenceableFailure transform::TrackingListener::findReplacementOp(
   return diag;
 }
 
-LogicalResult transform::TrackingListener::notifyMatchFailure(
+void transform::TrackingListener::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
     DBGS() << "Match Failure : " << diag.str() << "\n";
   });
-  return failure();
 }
 
-void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
+void transform::TrackingListener::notifyOperationErased(Operation *op) {
   // TODO: Walk can be removed when D144193 has landed.
   op->walk([&](Operation *op) {
     // Remove mappings for result values.
