@@ -261,10 +261,7 @@ struct VPTransformState {
     DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
   } Data;
 
-  /// Get the generated Value for a given VPValue and a given Part. Note that
-  /// as some Defs are still created by ILV and managed in its ValueMap, this
-  /// method will delegate the call to ILV in such cases in order to provide
-  /// callers a consistent API.
+  /// Get the generated Value for the given VPValue \p Def and the given \p Part.
   /// \see set.
   Value *get(VPValue *Def, unsigned Part);
 
