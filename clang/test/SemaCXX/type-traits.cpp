@@ -1711,13 +1711,13 @@ void is_layout_compatible(int n)
 {
   static_assert(__is_layout_compatible(void, void), "");
   static_assert(!__is_layout_compatible(void, int), "");
-  static_assert(!__is_layout_compatible(void, const void), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(void, volatile void), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(const int, volatile int), ""); // FIXME: this is CWG1719
+  static_assert(__is_layout_compatible(void, const void), "");
+  static_assert(__is_layout_compatible(void, volatile void), "");
+  static_assert(__is_layout_compatible(const int, volatile int), "");
   static_assert(__is_layout_compatible(int, int), "");
-  static_assert(!__is_layout_compatible(int, const int), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(int, volatile int), ""); // FIXME: this is CWG1719
-  static_assert(!__is_layout_compatible(const int, volatile int), ""); // FIXME: this is CWG1719
+  static_assert(__is_layout_compatible(int, const int), "");
+  static_assert(__is_layout_compatible(int, volatile int), "");
+  static_assert(__is_layout_compatible(const int, volatile int), "");
   static_assert(!__is_layout_compatible(int, unsigned int), "");
   static_assert(!__is_layout_compatible(char, unsigned char), "");
   static_assert(!__is_layout_compatible(char, signed char), "");
@@ -1758,7 +1758,7 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(CppStructNonStandardByVirtBase, CppStructNonStandardByVirtBase2), "");
   static_assert(!__is_layout_compatible(CppStructNonStandardBySameBase, CppStructNonStandardBySameBase2), "");
   static_assert(!__is_layout_compatible(CppStructNonStandardBy2ndVirtBase, CppStructNonStandardBy2ndVirtBase2), "");
-  static_assert(!__is_layout_compatible(CStruct, CStructWithQualifiers), ""); // FIXME: this is CWG1719
+  static_assert(__is_layout_compatible(CStruct, CStructWithQualifiers), "");
   static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
