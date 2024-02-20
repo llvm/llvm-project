@@ -392,10 +392,10 @@ define i1 @test_fcmpult(float %a, float %b) #0 {
 ; CHECK-NEXT:    efscmpeq 0, 3, 3
 ; CHECK-NEXT:    efscmpeq 1, 4, 4
 ; CHECK-NEXT:    crnand 20, 5, 1
-; CHECK-NEXT:    efscmplt 0, 3, 4
+; CHECK-NEXT:    efscmplt 6, 3, 4
 ; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crnor 20, 1, 20
-; CHECK-NEXT:    bc 12, 20, .LBB18_2
+; CHECK-NEXT:    crnor 28, 25, 20
+; CHECK-NEXT:    bc 12, 28, .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    ori 3, 5, 0
 ; CHECK-NEXT:    blr
@@ -1410,9 +1410,9 @@ define i1 @test_dcmpge(double %a, double %b) #0 {
 ; SPE-NEXT:    efdcmpeq 0, 4, 4
 ; SPE-NEXT:    efdcmpeq 1, 3, 3
 ; SPE-NEXT:    efdcmplt 5, 3, 4
-; SPE-NEXT:    crand 20, 5, 1
-; SPE-NEXT:    crorc 20, 21, 20
-; SPE-NEXT:    bc 12, 20, .LBB47_2
+; SPE-NEXT:    crand 24, 5, 1
+; SPE-NEXT:    crorc 28, 21, 24
+; SPE-NEXT:    bc 12, 28, .LBB47_2
 ; SPE-NEXT:  # %bb.1: # %entry
 ; SPE-NEXT:    ori 3, 7, 0
 ; SPE-NEXT:    blr

@@ -25,9 +25,9 @@ define i1 @cmp(ptr %a, ptr %b) {
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    li 4, -1
 ; CHECK-NEXT:    crandc 20, 0, 2
-; CHECK-NEXT:    crand 21, 2, 4
-; CHECK-NEXT:    cror 20, 21, 20
-; CHECK-NEXT:    isel 3, 4, 3, 20
+; CHECK-NEXT:    crand 24, 2, 4
+; CHECK-NEXT:    cror 28, 24, 20
+; CHECK-NEXT:    isel 3, 4, 3, 28
 ; CHECK-NEXT:    srwi 3, 3, 31
 ; CHECK-NEXT:    blr
 entry:

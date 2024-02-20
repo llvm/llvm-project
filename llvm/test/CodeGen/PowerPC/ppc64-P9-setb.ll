@@ -1378,11 +1378,11 @@ define void @setbn4(i128 %0, ptr %sel.out) {
 ; CHECK-NEXT:    rldic r6, r6, 48, 15
 ; CHECK-NEXT:    cmpld r4, r6
 ; CHECK-NEXT:    crandc 4*cr5+lt, gt, eq
-; CHECK-NEXT:    crandc 4*cr5+gt, eq, 4*cr1+eq
-; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; CHECK-NEXT:    crandc 4*cr6+lt, eq, 4*cr1+eq
+; CHECK-NEXT:    crnor 4*cr7+lt, 4*cr6+lt, 4*cr5+lt
 ; CHECK-NEXT:    rldicl. r4, r4, 16, 48
 ; CHECK-NEXT:    li r4, -1
-; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; CHECK-NEXT:    isel r3, 0, r3, 4*cr7+lt
 ; CHECK-NEXT:    iseleq r3, r4, r3
 ; CHECK-NEXT:    stw r3, 0(r5)
 ; CHECK-NEXT:    blr
@@ -1395,11 +1395,11 @@ define void @setbn4(i128 %0, ptr %sel.out) {
 ; CHECK-PWR8-NEXT:    rldic r6, r6, 48, 15
 ; CHECK-PWR8-NEXT:    cmpld r4, r6
 ; CHECK-PWR8-NEXT:    crandc 4*cr5+lt, gt, eq
-; CHECK-PWR8-NEXT:    crandc 4*cr5+gt, eq, 4*cr1+eq
+; CHECK-PWR8-NEXT:    crandc 4*cr6+lt, eq, 4*cr1+eq
 ; CHECK-PWR8-NEXT:    rldicl. r4, r4, 16, 48
 ; CHECK-PWR8-NEXT:    li r4, -1
-; CHECK-PWR8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; CHECK-PWR8-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; CHECK-PWR8-NEXT:    crnor 4*cr7+lt, 4*cr6+lt, 4*cr5+lt
+; CHECK-PWR8-NEXT:    isel r3, 0, r3, 4*cr7+lt
 ; CHECK-PWR8-NEXT:    iseleq r3, r4, r3
 ; CHECK-PWR8-NEXT:    stw r3, 0(r5)
 ; CHECK-PWR8-NEXT:    blr

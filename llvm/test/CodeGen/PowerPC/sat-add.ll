@@ -775,34 +775,34 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    cmpd 2, 7, 3
 ; CHECK-NEXT:    mfvsrd 3, 33
 ; CHECK-NEXT:    crandc 21, 8, 30
-; CHECK-NEXT:    crand 22, 30, 24
-; CHECK-NEXT:    cmpld 6, 3, 4
-; CHECK-NEXT:    cmpd 7, 3, 4
+; CHECK-NEXT:    crand 24, 30, 24
+; CHECK-NEXT:    cmpld 7, 3, 4
+; CHECK-NEXT:    cmpd 2, 3, 4
 ; CHECK-NEXT:    mfvsrd 4, 42
 ; CHECK-NEXT:    sradi 3, 3, 63
-; CHECK-NEXT:    mtocrf 32, 12
-; CHECK-NEXT:    crnor 21, 22, 21
-; CHECK-NEXT:    crandc 23, 28, 26
-; CHECK-NEXT:    crand 24, 26, 0
+; CHECK-NEXT:    crnor 21, 24, 21
+; CHECK-NEXT:    mtfprd 5, 3
+; CHECK-NEXT:    crandc 22, 8, 30
+; CHECK-NEXT:    crand 25, 30, 0
 ; CHECK-NEXT:    cmpld 4, 5
 ; CHECK-NEXT:    cmpd 7, 4, 5
 ; CHECK-NEXT:    mfvsrd 5, 43
-; CHECK-NEXT:    crnor 22, 24, 23
-; CHECK-NEXT:    mtfprd 5, 3
+; CHECK-NEXT:    crnor 24, 25, 22
 ; CHECK-NEXT:    sradi 4, 4, 63
+; CHECK-NEXT:    mtocrf 32, 12
 ; CHECK-NEXT:    mtfprd 6, 4
-; CHECK-NEXT:    crandc 25, 28, 2
-; CHECK-NEXT:    crand 20, 2, 20
+; CHECK-NEXT:    crandc 23, 28, 2
+; CHECK-NEXT:    crand 26, 2, 20
 ; CHECK-NEXT:    cmpld 5, 6
 ; CHECK-NEXT:    cmpd 7, 5, 6
 ; CHECK-NEXT:    mfvsrd 6, 38
 ; CHECK-NEXT:    sradi 5, 5, 63
-; CHECK-NEXT:    crnor 20, 20, 25
 ; CHECK-NEXT:    mtfprd 7, 5
 ; CHECK-NEXT:    sradi 6, 6, 63
-; CHECK-NEXT:    crandc 26, 28, 2
+; CHECK-NEXT:    crandc 20, 28, 2
+; CHECK-NEXT:    crnor 28, 26, 23
 ; CHECK-NEXT:    crand 27, 2, 4
-; CHECK-NEXT:    crnor 23, 27, 26
+; CHECK-NEXT:    crnor 4, 27, 20
 ; CHECK-NEXT:    mtfprd 0, 6
 ; CHECK-NEXT:    mfvsrd 6, 39
 ; CHECK-NEXT:    sradi 6, 6, 63
@@ -817,9 +817,9 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    mtfprd 4, 6
 ; CHECK-NEXT:    li 6, -1
 ; CHECK-NEXT:    isel 3, 0, 6, 21
-; CHECK-NEXT:    isel 4, 0, 6, 22
-; CHECK-NEXT:    isel 5, 0, 6, 20
-; CHECK-NEXT:    isel 6, 0, 6, 23
+; CHECK-NEXT:    isel 4, 0, 6, 24
+; CHECK-NEXT:    isel 5, 0, 6, 28
+; CHECK-NEXT:    isel 6, 0, 6, 4
 ; CHECK-NEXT:    mtfprd 8, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI48_0@toc@ha
 ; CHECK-NEXT:    mtfprd 10, 4

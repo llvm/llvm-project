@@ -38,10 +38,10 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK-LABEL: two_chain_same_offset_succ_i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmplwi r6, 0
-; CHECK-NEXT:    cmpwi cr1, r6, 0
-; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr1+lt, eq
+; CHECK-NEXT:    cmpwi cr5, r6, 0
 ; CHECK-NEXT:    cmpwi cr1, r7, 0
-; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_6
+; CHECK-NEXT:    crandc 4*cr6+lt, 4*cr5+lt, eq
+; CHECK-NEXT:    bc 12, 4*cr6+lt, L..BB0_6
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_6

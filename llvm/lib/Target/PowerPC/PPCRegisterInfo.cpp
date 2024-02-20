@@ -76,6 +76,11 @@ MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
                            "spill on ppc"),
                   cl::Hidden, cl::init(100));
 
+static cl::opt<unsigned> CRWAWWindowSize(
+    "ppc-cr-waw-window",
+    cl::desc("Maximum search distance for definition of CR fields on ppc"),
+    cl::Hidden, cl::init(3));
+
 // Copies/moves of physical accumulators are expensive operations
 // that should be avoided whenever possible. MMA instructions are
 // meant to be used in performance-sensitive computational kernels.
@@ -565,6 +570,8 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
                                             const VirtRegMap *VRM,
                                             const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   // Call the base implementation first to set any hints based on the usual
   // heuristics and decide what the return value should be. We want to return
@@ -582,15 +589,22 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   if (MF.getSubtarget<PPCSubtarget>().isISAFuture())
     return BaseImplRetVal;
 
-  // We are interested in instructions that copy values to ACC/UACC.
-  // The copy into UACC will be simply a COPY to a subreg so we
-  // want to allocate the corresponding physical subreg for the source.
-  // The copy into ACC will be a BUILD_UACC so we want to allocate
-  // the same number UACC for the source.
+  MachineInstr *LastDefMI = nullptr;
+  bool DefInOneMI = true;
   const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
+    if (Use.modifiesRegister(VirtReg, TRI)) {
+      if (LastDefMI)
+        DefInOneMI = false;
+      LastDefMI = &Use;
+    }
     const MachineOperand *ResultOp = nullptr;
     Register ResultReg;
+    // We are interested in instructions that copy values to ACC/UACC.
+    // The copy into UACC will be simply a COPY to a subreg so we
+    // want to allocate the corresponding physical subreg for the source.
+    // The copy into ACC will be a BUILD_UACC so we want to allocate
+    // the same number UACC for the source.
     switch (Use.getOpcode()) {
     case TargetOpcode::COPY: {
       ResultOp = &Use.getOperand(0);
@@ -628,6 +642,62 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     }
   }
+
+  // In single MBB, allocate different CRs for neighboring definitions can
+  // improve performance.
+  if (DefInOneMI && LastDefMI &&
+      (RegClass->hasSuperClassEq(&PPC::CRRCRegClass) ||
+       RegClass->hasSuperClassEq(&PPC::CRBITRCRegClass))) {
+    std::set<MCRegister> NeighboringAllocatedCRs;
+    auto FindAllocatedCRs = [&](MachineInstr &MI) {
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||
+            !MO.isDef())
+          continue;
+        const TargetRegisterClass *RC = MRI->getRegClass(MO.getReg());
+        if (!RC->hasSuperClassEq(&PPC::CRRCRegClass) &&
+            !RC->hasSuperClassEq(&PPC::CRBITRCRegClass))
+          continue;
+        if (VRM->hasPhys(MO.getReg()))
+          llvm::copy_if(
+              TRI->superregs_inclusive(VRM->getPhys(MO.getReg())),
+              std::inserter(NeighboringAllocatedCRs,
+                            NeighboringAllocatedCRs.begin()),
+              [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
+      }
+    };
+    {
+      // Search backward.
+      unsigned ScanDistance = 0;
+      auto I = ++LastDefMI->getReverseIterator();
+      for (; I != LastDefMI->getParent()->rend() &&
+             ScanDistance < CRWAWWindowSize;
+           ++I, ++ScanDistance)
+        FindAllocatedCRs(*I);
+    }
+    {
+      // Search forward.
+      unsigned ScanDistance = 0;
+      auto I = ++LastDefMI->getIterator();
+      for (;
+           I != LastDefMI->getParent()->end() && ScanDistance < CRWAWWindowSize;
+           ++I, ++ScanDistance)
+        FindAllocatedCRs(*I);
+    }
+    llvm::copy_if(llvm::make_range(Order.begin(), Order.end()),
+                  std::back_inserter(Hints), [&](MCPhysReg Reg) {
+                    // Be conservative not to use callee saved CRs.
+                    if (TRI->regsOverlap(Reg, PPC::CR2) ||
+                        TRI->regsOverlap(Reg, PPC::CR3) ||
+                        TRI->regsOverlap(Reg, PPC::CR4))
+                      return false;
+                    return llvm::all_of(
+                        TRI->superregs_inclusive(Reg), [&](MCPhysReg SR) {
+                          return !NeighboringAllocatedCRs.count(SR);
+                        });
+                  });
+  }
+
   return BaseImplRetVal;
 }
 

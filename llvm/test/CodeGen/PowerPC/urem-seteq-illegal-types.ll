@@ -245,12 +245,12 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC-NEXT:    cmplwi 1, 10, 13
 ; PPC-NEXT:    rlwinm 3, 3, 31, 31, 31
 ; PPC-NEXT:    crand 20, 6, 0
-; PPC-NEXT:    crandc 21, 4, 6
+; PPC-NEXT:    crandc 24, 4, 6
 ; PPC-NEXT:    rlwimi. 3, 6, 1, 30, 30
-; PPC-NEXT:    cror 20, 20, 21
-; PPC-NEXT:    crnand 20, 2, 20
+; PPC-NEXT:    cror 20, 20, 24
+; PPC-NEXT:    crnand 28, 2, 20
 ; PPC-NEXT:    li 3, 1
-; PPC-NEXT:    bc 12, 20, .LBB5_1
+; PPC-NEXT:    bc 12, 28, .LBB5_1
 ; PPC-NEXT:    blr
 ; PPC-NEXT:  .LBB5_1:
 ; PPC-NEXT:    li 3, 0

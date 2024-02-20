@@ -1629,10 +1629,10 @@ define ppc_fp128 @testppc_fp128eq(ppc_fp128 %c1, ppc_fp128 %c2, ppc_fp128 %c3, p
 ; CHECK-NEXT:    fcmpu 0, 6, 8
 ; CHECK-NEXT:    fcmpu 1, 5, 7
 ; CHECK-NEXT:    crand 20, 6, 2
-; CHECK-NEXT:    fcmpu 0, 2, 4
-; CHECK-NEXT:    fcmpu 1, 1, 3
-; CHECK-NEXT:    crand 21, 6, 2
-; CHECK-NEXT:    crxor 20, 21, 20
+; CHECK-NEXT:    fcmpu 6, 2, 4
+; CHECK-NEXT:    fcmpu 0, 1, 3
+; CHECK-NEXT:    crand 28, 2, 26
+; CHECK-NEXT:    crxor 20, 28, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB50_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    fmr 11, 9
@@ -1650,10 +1650,10 @@ define ppc_fp128 @testppc_fp128eq(ppc_fp128 %c1, ppc_fp128 %c2, ppc_fp128 %c3, p
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 6, 8
 ; CHECK-NO-ISEL-NEXT:    fcmpu 1, 5, 7
 ; CHECK-NO-ISEL-NEXT:    crand 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 4
-; CHECK-NO-ISEL-NEXT:    fcmpu 1, 1, 3
-; CHECK-NO-ISEL-NEXT:    crand 21, 6, 2
-; CHECK-NO-ISEL-NEXT:    crxor 20, 21, 20
+; CHECK-NO-ISEL-NEXT:    fcmpu 6, 2, 4
+; CHECK-NO-ISEL-NEXT:    fcmpu 0, 1, 3
+; CHECK-NO-ISEL-NEXT:    crand 28, 2, 26
+; CHECK-NO-ISEL-NEXT:    crxor 20, 28, 20
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB50_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
 ; CHECK-NO-ISEL-NEXT:    fmr 11, 9

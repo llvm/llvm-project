@@ -267,11 +267,11 @@ define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
 ; NOP8VEC-NEXT:    cmpld 4, 8
 ; NOP8VEC-NEXT:    cmpd 1, 4, 8
 ; NOP8VEC-NEXT:    crandc 20, 4, 2
-; NOP8VEC-NEXT:    cmpld 1, 3, 7
-; NOP8VEC-NEXT:    crand 21, 2, 4
-; NOP8VEC-NEXT:    cror 20, 21, 20
-; NOP8VEC-NEXT:    isel 3, 3, 7, 20
-; NOP8VEC-NEXT:    isel 4, 4, 8, 20
+; NOP8VEC-NEXT:    cmpld 6, 3, 7
+; NOP8VEC-NEXT:    crand 28, 2, 24
+; NOP8VEC-NEXT:    cror 4, 28, 20
+; NOP8VEC-NEXT:    isel 3, 3, 7, 4
+; NOP8VEC-NEXT:    isel 4, 4, 8, 4
 ; NOP8VEC-NEXT:    std 3, -32(1)
 ; NOP8VEC-NEXT:    addi 3, 1, -32
 ; NOP8VEC-NEXT:    std 4, -24(1)

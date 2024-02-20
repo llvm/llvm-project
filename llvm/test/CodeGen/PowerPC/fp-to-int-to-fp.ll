@@ -112,9 +112,9 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    ori 4, 6, 0
 ; PPC64-NEXT:    b .LBB2_6
 ; PPC64-NEXT:  .LBB2_6: # %entry
-; PPC64-NEXT:    cmpdi 3, 0
+; PPC64-NEXT:    cmpdi 1, 3, 0
 ; PPC64-NEXT:    std 4, -24(1)
-; PPC64-NEXT:    bc 12, 0, .LBB2_8
+; PPC64-NEXT:    bc 12, 4, .LBB2_8
 ; PPC64-NEXT:  # %bb.7: # %entry
 ; PPC64-NEXT:    lfd 0, -32(1)
 ; PPC64-NEXT:    fcfid 0, 0
