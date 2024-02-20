@@ -122,6 +122,8 @@ class DAPTestCaseBase(TestBase):
         for cmd in commands:
             found = False
             for line in lines:
+                if len(cmd) > 0 and (cmd[0] == "!" or cmd[0] == "?"):
+                    cmd = cmd[1:]
                 if line.startswith(prefix) and cmd in line:
                     found = True
                     break
