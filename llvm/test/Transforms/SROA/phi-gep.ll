@@ -3,6 +3,7 @@
 ; RUN: opt -S -passes='sroa<modify-cfg>' < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 
 %pair = type { i32, i32 }
+%t1   = type { i64, i32, i32, i64, i32, i32 }
 
 define i32 @test_sroa_phi_gep(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_phi_gep(
@@ -245,7 +246,7 @@ define i32 @test_sroa_invoke_phi_gep(i1 %cond) personality ptr @__gxx_personalit
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[CALL:%.*]], label [[END:%.*]]
 ; CHECK:       call:
 ; CHECK-NEXT:    [[B:%.*]] = invoke ptr @foo()
-; CHECK-NEXT:    to label [[END]] unwind label [[INVOKE_CATCH:%.*]]
+; CHECK-NEXT:            to label [[END]] unwind label [[INVOKE_CATCH:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[B]], [[CALL]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[PHI]], i32 0, i32 1
@@ -253,7 +254,7 @@ define i32 @test_sroa_invoke_phi_gep(i1 %cond) personality ptr @__gxx_personalit
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ; CHECK:       invoke_catch:
 ; CHECK-NEXT:    [[RES:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -468,10 +469,10 @@ define i32 @test_sroa_phi_gep_multiple_values_from_same_block(i32 %arg) {
 ; CHECK-LABEL: @test_sroa_phi_gep_multiple_values_from_same_block(
 ; CHECK-NEXT:  bb.1:
 ; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[BB_3:%.*]] [
-; CHECK-NEXT:    i32 1, label [[BB_2:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB_2]]
-; CHECK-NEXT:    i32 3, label [[BB_4:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB_4]]
+; CHECK-NEXT:      i32 1, label [[BB_2:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB_2]]
+; CHECK-NEXT:      i32 3, label [[BB_4:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB_4]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    br label [[BB_4]]
@@ -502,6 +503,47 @@ bb.4:                                                ; preds = %bb.1, %bb.1, %bb
   %gep = getelementptr inbounds %pair, ptr %phi, i32 0, i32 1
   %load = load i32, ptr %gep, align 4
   ret i32 %load
+}
+
+
+define void @test_gep_phi_const(i32 %arg) {
+; CHECK-LABEL: @test_gep_phi_const(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[BB9:%.*]] [
+; CHECK-NEXT:      i32 0, label [[BB11:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB10:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb9:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 8, [[BB10]] ], [ 16, [[BB:%.*]] ]
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi ptr [ undef, [[BB10]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    br label [[BB11]]
+; CHECK:       bb10:
+; CHECK-NEXT:    br label [[BB9]]
+; CHECK:       bb11:
+; CHECK-NEXT:    [[PHI12:%.*]] = phi ptr [ [[PHI_SROA_PHI_SROA_SPECULATED]], [[BB9]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    store i8 0, ptr [[PHI12]], align 1
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca %t1, align 8
+  switch i32 %arg, label %bb9 [
+  i32 0, label %bb11
+  i32 1, label %bb10
+  ]
+
+bb9:                                              ; preds = %bb10, %bb
+  %phi = phi i64 [ 8, %bb10 ], [ 16, %bb ]
+  %getelementptr = getelementptr i8, ptr %alloca, i64 %phi
+  %load = load ptr, ptr %getelementptr, align 8
+  br label %bb11
+
+bb10:                                             ; preds = %bb
+  br label %bb9
+
+bb11:                                             ; preds = %bb9, %bb
+  %phi12 = phi ptr [ %load, %bb9 ], [ undef, %bb ]
+  store i8 0, ptr %phi12, align 1
+  ret void
 }
 
 declare ptr @foo()
