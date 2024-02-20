@@ -612,7 +612,16 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // memory (without proving that the loop doesn't write).
       if (L->hasLoopInvariantOperands(Inst) && !Inst->mayReadFromMemory() &&
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
-          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
+          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst) &&
+          // It is not safe to hoist the value of these instructions in
+          // coroutines, as the addresses of otherwise eligible variables (e.g.
+          // thread-local variables and errno) may change if the coroutine is
+          // resumed in a different thread.Therefore, we disable this
+          // optimization for correctness. However, this may block other correct
+          // optimizations.
+          // FIXME: This should be reverted once we have a better model for
+          // memory access in coroutines.
+          !Inst->getFunction()->isPresplitCoroutine()) {
 
         if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
             !NextDbgInsts.empty()) {
