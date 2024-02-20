@@ -823,7 +823,10 @@ backend:X86:
   - llvm/utils/TableGen/X86*
 
 backend:PowerPC:
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/PowerPC*
+  - llvm/include/llvm/BinaryFormat/XCOFF.h
   - llvm/include/llvm/IR/IntrinsicsPowerPC.td
+  - llvm/lib/CodeGen/AsmPrinter/AIXException.cpp
   - llvm/lib/Target/PowerPC/**
   - llvm/test/Analysis/**/PowerPC/**
   - llvm/test/CodeGen/PowerPC/**
