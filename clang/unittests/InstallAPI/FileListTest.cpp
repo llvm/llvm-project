@@ -10,6 +10,7 @@
 #include "clang/InstallAPI/HeaderFile.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -21,10 +22,7 @@ static inline void testValidFileList(std::string Input, HeaderSeq &Expected) {
   auto InputBuf = MemoryBuffer::getMemBuffer(Input);
   HeaderSeq Headers;
   llvm::Error Err = FileListReader::loadHeaders(std::move(InputBuf), Headers);
-  EXPECT_FALSE(!!Err);
-  if (Err)
-    FAIL()
-        << "Unexpected error reading and testing FileListReader::loadHeaders";
+  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
 
   EXPECT_EQ(Expected.size(), Headers.size());
   EXPECT_EQ(Headers, Expected);
@@ -122,9 +120,10 @@ TEST(FileList, MissingVersion) {
   auto InputBuf = MemoryBuffer::getMemBuffer(Input);
   HeaderSeq Headers;
   llvm::Error Err = FileListReader::loadHeaders(std::move(InputBuf), Headers);
-  EXPECT_TRUE(!!Err);
-  EXPECT_STREQ("invalid input format: required field 'version' not specified\n",
-               toString(std::move(Err)).c_str());
+  EXPECT_THAT_ERROR(
+      std::move(Err),
+      FailedWithMessage(
+          "invalid input format: required field 'version' not specified\n"));
 }
 
 TEST(FileList, InvalidTypes) {
@@ -140,8 +139,8 @@ TEST(FileList, InvalidTypes) {
   auto InputBuf = MemoryBuffer::getMemBuffer(Input);
   HeaderSeq Headers;
   llvm::Error Err = FileListReader::loadHeaders(std::move(InputBuf), Headers);
-  EXPECT_TRUE(!!Err);
-  EXPECT_STREQ("invalid input format: unsupported header type\n",
-               toString(std::move(Err)).c_str());
+  EXPECT_THAT_ERROR(
+      std::move(Err),
+      FailedWithMessage("invalid input format: unsupported header type\n"));
 }
 } // namespace FileListTests
