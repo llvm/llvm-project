@@ -906,7 +906,7 @@ fp16_fml_fallthrough:
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
     } else if (VersionNum < 7)
-        Features.push_back("+strict-align");
+      Features.push_back("+strict-align");
   }
 
   // llvm does not support reserving registers in general. There is support
