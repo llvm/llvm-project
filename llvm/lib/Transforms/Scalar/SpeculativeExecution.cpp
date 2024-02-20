@@ -292,10 +292,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   unsigned NotHoistedInstCount = 0;
   for (const auto &I : FromBlock) {
     // Make note of any DPValues that need hoisting.
-    for (DPValue &DPV : I.getDbgValueRange())
+    for (DbgRecord &DR : I.getDbgValueRange()) {
+      DPValue &DPV = cast<DPValue>(DR);
       if (HasNoUnhoistedInstr(DPV.location_ops()))
         DPValuesToHoist[DPV.getInstruction()].push_back(&DPV);
-
+    }
     const InstructionCost Cost = ComputeSpeculationCost(&I, *TTI);
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
