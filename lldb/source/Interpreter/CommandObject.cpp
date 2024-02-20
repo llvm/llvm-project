@@ -305,43 +305,6 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   }
 }
 
-void CommandObject::HandleArgumentCompletion(
-    CompletionRequest &request, OptionElementVector &opt_element_vector) {
-  size_t num_arg_entries = GetNumArgumentEntries();
-  if (num_arg_entries != 1)
-    return;
-
-  CommandArgumentEntry *entry_ptr = GetArgumentEntryAtIndex(0);
-  if (!entry_ptr) {
-    assert(entry_ptr && "We said there was one entry, but there wasn't.");
-    return; // Not worth crashing if asserts are off...
-  }
-  
-  CommandArgumentEntry &entry = *entry_ptr;
-  // For now, we only handle the simple case of one homogenous argument type.
-  if (entry.size() != 1)
-    return;
-
-  // Look up the completion type, and if it has one, invoke it:
-  const CommandObject::ArgumentTableEntry *arg_entry =
-      FindArgumentDataByType(entry[0].arg_type);
-  const ArgumentRepetitionType repeat = entry[0].arg_repetition;
-
-  if (arg_entry == nullptr || arg_entry->completion_type == lldb::eNoCompletion)
-    return;
-
-  // FIXME: This should be handled higher in the Command Parser.
-  // Check the case where this command only takes one argument, and don't do
-  // the completion if we aren't on the first entry:
-  if (repeat == eArgRepeatPlain && request.GetCursorIndex() != 0)
-    return;
-
-  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-      GetCommandInterpreter(), arg_entry->completion_type, request, nullptr);
-
-}
-
-
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,

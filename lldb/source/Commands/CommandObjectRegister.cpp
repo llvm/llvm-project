@@ -80,7 +80,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope())
       return;
-    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -438,7 +440,8 @@ different for the same register when connected to different debug servers.)");
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
       return;
-    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
   }
 
 protected:

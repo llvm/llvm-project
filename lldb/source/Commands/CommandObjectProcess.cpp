@@ -143,6 +143,14 @@ public:
 
   ~CommandObjectProcessLaunch() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_all_options; }
 
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
@@ -1007,7 +1015,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (!m_exe_ctx.HasProcessScope())
       return;
-    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1281,6 +1291,13 @@ public:
   ~CommandObjectProcessSaveCore() override = default;
 
   Options *GetOptions() override { return &m_options; }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
 
   class CommandOptions : public Options {
   public:

@@ -418,7 +418,7 @@ public:
       : CommandObjectParsed(interpreter, "platform mkdir",
                             "Make a new directory on the remote end.", nullptr,
                             0) {
-    CommandArgumentData thread_arg{eArgTypeRemotePath, eArgRepeatPlain};
+    CommandArgumentData thread_arg{eArgTypePath, eArgRepeatPlain};
     m_arguments.push_back({thread_arg});
   }
 
@@ -467,11 +467,20 @@ public:
   CommandObjectPlatformFOpen(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform file open",
                             "Open a file on the remote end.", nullptr, 0) {
-    CommandArgumentData path_arg{eArgTypeRemotePath, eArgRepeatPlain};
+    CommandArgumentData path_arg{eArgTypePath, eArgRepeatPlain};
     m_arguments.push_back({path_arg});
   }
 
   ~CommandObjectPlatformFOpen() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() == 0)
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
+  }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
@@ -786,7 +795,7 @@ public:
     CommandArgumentData file_arg_remote, file_arg_host;
 
     // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
+    file_arg_remote.arg_type = eArgTypeFilename;
     file_arg_remote.arg_repetition = eArgRepeatPlain;
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -867,7 +876,7 @@ public:
     CommandArgumentData file_arg_remote;
 
     // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
+    file_arg_remote.arg_type = eArgTypeFilename;
     file_arg_remote.arg_repetition = eArgRepeatPlain;
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -878,6 +887,17 @@ public:
   }
 
   ~CommandObjectPlatformGetSize() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() != 0)
+      return;
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
+  }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     // If the number of arguments is incorrect, issue an error message.
@@ -926,7 +946,7 @@ public:
     CommandArgumentData file_arg_remote;
 
     // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
+    file_arg_remote.arg_type = eArgTypeFilename;
     file_arg_remote.arg_repetition = eArgRepeatPlain;
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -937,6 +957,17 @@ public:
   }
 
   ~CommandObjectPlatformGetPermissions() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() != 0)
+      return;
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
+  }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     // If the number of arguments is incorrect, issue an error message.
@@ -984,7 +1015,7 @@ public:
     CommandArgumentData file_arg_remote;
 
     // Define the first (and only) variant of this arg.
-    file_arg_remote.arg_type = eArgTypeRemoteFilename;
+    file_arg_remote.arg_type = eArgTypeFilename;
     file_arg_remote.arg_repetition = eArgRepeatPlain;
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -995,6 +1026,17 @@ public:
   }
 
   ~CommandObjectPlatformFileExists() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex() != 0)
+      return;
+
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
+  }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     // If the number of arguments is incorrect, issue an error message.
@@ -1038,7 +1080,7 @@ public:
 
     Omitting the destination places the file in the platform working directory.)");
     CommandArgumentData source_arg{eArgTypePath, eArgRepeatPlain};
-    CommandArgumentData path_arg{eArgTypeRemotePath, eArgRepeatOptional};
+    CommandArgumentData path_arg{eArgTypePath, eArgRepeatOptional};
     m_arguments.push_back({source_arg});
     m_arguments.push_back({path_arg});
   }
@@ -1095,16 +1137,6 @@ public:
     m_all_options.Finalize();
     CommandArgumentData run_arg_arg{eArgTypeRunArgs, eArgRepeatStar};
     m_arguments.push_back({run_arg_arg});
-  }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    // I didn't make a type for RemoteRunArgs, but since we're going to run
-    // this on the remote system we should use the remote completer.
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
-        nullptr);
   }
 
   ~CommandObjectPlatformProcessLaunch() override = default;
@@ -1520,6 +1552,13 @@ public:
 
   ~CommandObjectPlatformProcessInfo() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eProcessIDCompletion, request, nullptr);
+  }
+
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = GetDebugger().GetSelectedTarget().get();
@@ -1811,7 +1850,7 @@ public:
             "Install a target (bundle or executable file) to the remote end.",
             "platform target-install <local-thing> <remote-sandbox>", 0) {
     CommandArgumentData local_arg{eArgTypePath, eArgRepeatPlain};
-    CommandArgumentData remote_arg{eArgTypeRemotePath, eArgRepeatPlain};
+    CommandArgumentData remote_arg{eArgTypePath, eArgRepeatPlain};
     m_arguments.push_back({local_arg});
     m_arguments.push_back({remote_arg});
   }
