@@ -85,6 +85,8 @@ public:
       bool Freestanding, const TargetMachineBuilder &TMBuilder);
 };
 
+struct CancellationToken;
+
 /// This class define an interface similar to the LTOCodeGenerator, but adapted
 /// for ThinLTO processing.
 /// The ThinLTOCodeGenerator is not intended to be reuse for multiple
@@ -183,6 +185,8 @@ public:
 
   /// Create a cache entry for the module
   std::unique_ptr<ModuleCacheEntry> createModuleCacheEntry(
+      std::shared_ptr<CancellationToken> GetCancelTok,
+      std::shared_ptr<CancellationToken> PutCancelTok,
       const ModuleSummaryIndex &Index, StringRef ModuleID, StringRef OutputPath,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
