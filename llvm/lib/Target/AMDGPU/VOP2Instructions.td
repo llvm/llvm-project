@@ -1839,15 +1839,11 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
     if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa")>,
-      VOP2_SDWA9Ae<op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl> {
-      let DecoderNamespace = "SDWA10";
-    }
+      VOP2_SDWA9Ae<op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
   }
   multiclass VOP2_Real_dpp_gfx10<bits<6> op> {
     if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExt32BitDPP then
-    def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX10> {
-      let DecoderNamespace = "SDWA10";
-    }
+    def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX10>;
   }
   multiclass VOP2_Real_dpp8_gfx10<bits<6> op> {
     if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExt32BitDPP then
@@ -1876,35 +1872,33 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
         let AsmString = asmName # ps.AsmOperands;
       }
   }
-  let DecoderNamespace = "SDWA10" in {
-    multiclass VOP2_Real_sdwa_gfx10_with_name<bits<6> op, string opName,
-                                              string asmName> {
-      if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtSDWA9 then
-      def _sdwa_gfx10 :
-        VOP_SDWA10_Real<!cast<VOP2_SDWA_Pseudo>(opName#"_sdwa")>,
-        VOP2_SDWA9Ae<op{5-0}, !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa").Pfl> {
-          VOP2_SDWA_Pseudo ps = !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa");
-          let AsmString = asmName # ps.AsmOperands;
-        }
-    }
-    multiclass VOP2_Real_dpp_gfx10_with_name<bits<6> op, string opName,
-                                             string asmName> {
-      if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExt32BitDPP then
-      def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp"), SIEncodingFamily.GFX10> {
-        VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
-        let AsmString = asmName # ps.Pfl.AsmDPP16;
+  multiclass VOP2_Real_sdwa_gfx10_with_name<bits<6> op, string opName,
+                                            string asmName> {
+    if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtSDWA9 then
+    def _sdwa_gfx10 :
+      VOP_SDWA10_Real<!cast<VOP2_SDWA_Pseudo>(opName#"_sdwa")>,
+      VOP2_SDWA9Ae<op{5-0}, !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa").Pfl> {
+        VOP2_SDWA_Pseudo ps = !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa");
+        let AsmString = asmName # ps.AsmOperands;
       }
+  }
+  multiclass VOP2_Real_dpp_gfx10_with_name<bits<6> op, string opName,
+                                           string asmName> {
+    if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExt32BitDPP then
+    def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp"), SIEncodingFamily.GFX10> {
+      VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
+      let AsmString = asmName # ps.Pfl.AsmDPP16;
     }
-    multiclass VOP2_Real_dpp8_gfx10_with_name<bits<6> op, string opName,
-                                              string asmName> {
-      if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExt32BitDPP then
-      def _dpp8_gfx10 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
-        VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
-        let AsmString = asmName # ps.Pfl.AsmDPP8;
-        let DecoderNamespace = "DPP8";
-      }
+  }
+  multiclass VOP2_Real_dpp8_gfx10_with_name<bits<6> op, string opName,
+                                            string asmName> {
+    if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExt32BitDPP then
+    def _dpp8_gfx10 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
+      VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
+      let AsmString = asmName # ps.Pfl.AsmDPP8;
+      let DecoderNamespace = "DPP8";
     }
-  } // End DecoderNamespace = "SDWA10"
+  }
 
   //===------------------------------ VOP2be ------------------------------===//
   multiclass VOP2be_Real_e32_gfx10<bits<6> op, string opName, string asmName> {
@@ -1931,7 +1925,6 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
       VOP2_SDWA9Ae<op{5-0}, !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa").Pfl> {
         VOP2_SDWA_Pseudo Ps = !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa");
         let AsmString = asmName # !subst(", vcc", "", Ps.AsmOperands);
-        let DecoderNamespace = "SDWA10";
       }
     if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtSDWA9 then
     def _sdwa_w32_gfx10 :
@@ -1940,9 +1933,8 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
         VOP2_SDWA_Pseudo Ps = !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa");
         let AsmString = asmName # !subst("vcc", "vcc_lo", Ps.AsmOperands);
         let isAsmParserOnly = 1;
-        let DecoderNamespace = "SDWA10";
         let WaveSizePredicate = isWave32;
-      }
+     }
     if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtSDWA9 then
     def _sdwa_w64_gfx10 :
       Base_VOP_SDWA10_Real<!cast<VOP2_SDWA_Pseudo>(opName#"_sdwa")>,
@@ -1950,7 +1942,6 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
         VOP2_SDWA_Pseudo Ps = !cast<VOP2_SDWA_Pseudo>(opName#"_sdwa");
         let AsmString = asmName # Ps.AsmOperands;
         let isAsmParserOnly = 1;
-        let DecoderNamespace = "SDWA10";
         let WaveSizePredicate = isWave64;
       }
   }
@@ -1960,7 +1951,6 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
       VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp"), SIEncodingFamily.GFX10, asmName> {
         string AsmDPP = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP16;
         let AsmString = asmName # !subst(", vcc", "", AsmDPP);
-        let DecoderNamespace = "SDWA10";
       }
     if !cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExt32BitDPP then
     def _dpp_w32_gfx10 :
@@ -2404,7 +2394,7 @@ multiclass VOP2be_Real_e32e64_gfx9 <bits<6> op, string OpName, string AsmName> {
       VOP2_DPPe<op, !cast<VOP2_DPP_Pseudo>(OpName#"_dpp")> {
         VOP2_DPP_Pseudo ps = !cast<VOP2_DPP_Pseudo>(OpName#"_dpp");
         let AsmString = AsmName # ps.AsmOperands;
-        let DecoderNamespace = "SDWA9";
+        let DecoderNamespace = "GFX9";
       }
 }
 
@@ -2428,7 +2418,7 @@ multiclass VOP2_Real_e32e64_gfx9 <bits<6> op> {
     def _dpp_gfx9 :
       VOP_DPP_Real<!cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX9>,
       VOP2_DPPe<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")> {
-        let DecoderNamespace = "SDWA9";
+        let DecoderNamespace = "GFX9";
       }
 }
 
@@ -2588,7 +2578,7 @@ let AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A" in {
       def _dpp_gfx90a :
         VOP_DPP_Real<!cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX90A>,
         VOP2_DPPe<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")> {
-          let DecoderNamespace = "SDWA9";
+          let DecoderNamespace = "GFX9";
         }
   }
 } // End AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A"
