@@ -1595,8 +1595,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           O << "\t.param .u" << PTySizeInBits << " ";
 
           int addrSpace = PTy->getAddressSpace();
-          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
-              NVPTX::CUDA) {
+          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() == NVPTX::CUDA) {
             assert(addrSpace == 0 && "Invalid address space");
             O << ".ptr .global ";
           } else {
