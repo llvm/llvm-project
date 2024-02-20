@@ -3218,10 +3218,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
   case Builtin::BI__builtin_popcountg: {
-    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_popcountg) {
-      assert(E->getNumArgs() == 1 && "__builtin_popcountg takes 1 argument");
-    }
-
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
