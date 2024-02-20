@@ -23,116 +23,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableHCFGVerifier("vplan-verify-hcfg", cl::init(false),
-                                        cl::Hidden,
-                                        cl::desc("Verify VPlan H-CFG."));
-
-#ifndef NDEBUG
-/// Utility function that checks whether \p VPBlockVec has duplicate
-/// VPBlockBases.
-static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
-  SmallDenseSet<const VPBlockBase *, 8> VPBlockSet;
-  for (const auto *Block : VPBlockVec) {
-    if (VPBlockSet.count(Block))
-      return true;
-    VPBlockSet.insert(Block);
-  }
-  return false;
-}
-#endif
-
-/// Helper function that verifies the CFG invariants of the VPBlockBases within
-/// \p Region. Checks in this function are generic for VPBlockBases. They are
-/// not specific for VPBasicBlocks or VPRegionBlocks.
-static void verifyBlocksInRegion(const VPRegionBlock *Region) {
-  for (const VPBlockBase *VPB : vp_depth_first_shallow(Region->getEntry())) {
-    // Check block's parent.
-    assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
-
-    auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-    // Check block's condition bit.
-    if (VPB->getNumSuccessors() > 1 || (VPBB && VPBB->isExiting()))
-      assert(VPBB && VPBB->getTerminator() &&
-             "Block has multiple successors but doesn't "
-             "have a proper branch recipe!");
-    else
-      assert((!VPBB || !VPBB->getTerminator()) && "Unexpected branch recipe!");
-
-    // Check block's successors.
-    const auto &Successors = VPB->getSuccessors();
-    // There must be only one instance of a successor in block's successor list.
-    // TODO: This won't work for switch statements.
-    assert(!hasDuplicates(Successors) &&
-           "Multiple instances of the same successor.");
-
-    for (const VPBlockBase *Succ : Successors) {
-      // There must be a bi-directional link between block and successor.
-      const auto &SuccPreds = Succ->getPredecessors();
-      assert(llvm::is_contained(SuccPreds, VPB) && "Missing predecessor link.");
-      (void)SuccPreds;
-    }
-
-    // Check block's predecessors.
-    const auto &Predecessors = VPB->getPredecessors();
-    // There must be only one instance of a predecessor in block's predecessor
-    // list.
-    // TODO: This won't work for switch statements.
-    assert(!hasDuplicates(Predecessors) &&
-           "Multiple instances of the same predecessor.");
-
-    for (const VPBlockBase *Pred : Predecessors) {
-      // Block and predecessor must be inside the same region.
-      assert(Pred->getParent() == VPB->getParent() &&
-             "Predecessor is not in the same region.");
-
-      // There must be a bi-directional link between block and predecessor.
-      const auto &PredSuccs = Pred->getSuccessors();
-      assert(llvm::is_contained(PredSuccs, VPB) && "Missing successor link.");
-      (void)PredSuccs;
-    }
-  }
-}
-
-/// Verify the CFG invariants of VPRegionBlock \p Region and its nested
-/// VPBlockBases. Do not recurse inside nested VPRegionBlocks.
-static void verifyRegion(const VPRegionBlock *Region) {
-  const VPBlockBase *Entry = Region->getEntry();
-  const VPBlockBase *Exiting = Region->getExiting();
-
-  // Entry and Exiting shouldn't have any predecessor/successor, respectively.
-  assert(!Entry->getNumPredecessors() && "Region entry has predecessors.");
-  assert(!Exiting->getNumSuccessors() &&
-         "Region exiting block has successors.");
-  (void)Entry;
-  (void)Exiting;
-
-  verifyBlocksInRegion(Region);
-}
-
-/// Verify the CFG invariants of VPRegionBlock \p Region and its nested
-/// VPBlockBases. Recurse inside nested VPRegionBlocks.
-static void verifyRegionRec(const VPRegionBlock *Region) {
-  verifyRegion(Region);
-
-  // Recurse inside nested regions.
-  for (const VPBlockBase *VPB : make_range(
-           df_iterator<const VPBlockBase *>::begin(Region->getEntry()),
-           df_iterator<const VPBlockBase *>::end(Region->getExiting()))) {
-    if (const auto *SubRegion = dyn_cast<VPRegionBlock>(VPB))
-      verifyRegionRec(SubRegion);
-  }
-}
-
-void VPlanVerifier::verifyHierarchicalCFG(
-    const VPRegionBlock *TopRegion) const {
-  if (!EnableHCFGVerifier)
-    return;
-
-  LLVM_DEBUG(dbgs() << "Verifying VPlan H-CFG.\n");
-  assert(!TopRegion->getParent() && "VPlan Top Region should have no parent.");
-  verifyRegionRec(TopRegion);
-}
-
 // Verify that phi-like recipes are at the beginning of \p VPBB, with no
 // other recipes in between. Also check that only header blocks contain
 // VPHeaderPHIRecipes.
@@ -147,7 +37,7 @@ static bool verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe>(*RecipeI)) {
+    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI)) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -191,7 +81,7 @@ static bool verifyPhiRecipes(const VPBasicBlock *VPBB) {
 }
 
 static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
-                               VPDominatorTree &VPDT) {
+                               const VPDominatorTree &VPDT) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
@@ -207,7 +97,8 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
-        if (!UI || isa<VPHeaderPHIRecipe>(UI) || isa<VPPredInstPHIRecipe>(UI))
+        if (!UI ||
+            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -230,18 +121,153 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
   return true;
 }
 
-bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
+/// Utility function that checks whether \p VPBlockVec has duplicate
+/// VPBlockBases.
+static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
+  SmallDenseSet<const VPBlockBase *, 8> VPBlockSet;
+  for (const auto *Block : VPBlockVec) {
+    if (VPBlockSet.count(Block))
+      return true;
+    VPBlockSet.insert(Block);
+  }
+  return false;
+}
+
+static bool verifyBlock(const VPBlockBase *VPB, const VPDominatorTree &VPDT) {
+  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+  if (VPBB && !verifyVPBasicBlock(VPBB, VPDT))
+    return false;
+
+  // Check block's condition bit.
+  if (VPB->getNumSuccessors() > 1 ||
+      (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+       !VPBB->getParent()->isReplicator())) {
+    if (!VPBB || !VPBB->getTerminator()) {
+      errs() << "Block has multiple successors but doesn't "
+                "have a proper branch recipe!\n";
+      return false;
+    }
+  } else {
+    if (VPBB && VPBB->getTerminator()) {
+      errs() << "Unexpected branch recipe!\n";
+      return false;
+    }
+  }
+
+  // Check block's successors.
+  const auto &Successors = VPB->getSuccessors();
+  // There must be only one instance of a successor in block's successor list.
+  // TODO: This won't work for switch statements.
+  if (hasDuplicates(Successors)) {
+    errs() << "Multiple instances of the same successor.\n";
+    return false;
+  }
+
+  for (const VPBlockBase *Succ : Successors) {
+    // There must be a bi-directional link between block and successor.
+    const auto &SuccPreds = Succ->getPredecessors();
+    if (!is_contained(SuccPreds, VPB)) {
+      errs() << "Missing predecessor link.\n";
+      return false;
+    }
+  }
+
+  // Check block's predecessors.
+  const auto &Predecessors = VPB->getPredecessors();
+  // There must be only one instance of a predecessor in block's predecessor
+  // list.
+  // TODO: This won't work for switch statements.
+  if (hasDuplicates(Predecessors)) {
+    errs() << "Multiple instances of the same predecessor.\n";
+    return false;
+  }
+
+  for (const VPBlockBase *Pred : Predecessors) {
+    // Block and predecessor must be inside the same region.
+    if (Pred->getParent() != VPB->getParent()) {
+      errs() << "Predecessor is not in the same region.\n";
+      return false;
+    }
+
+    // There must be a bi-directional link between block and predecessor.
+    const auto &PredSuccs = Pred->getSuccessors();
+    if (!is_contained(PredSuccs, VPB)) {
+      errs() << "Missing successor link.\n";
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Helper function that verifies the CFG invariants of the VPBlockBases within
+/// \p Region. Checks in this function are generic for VPBlockBases. They are
+/// not specific for VPBasicBlocks or VPRegionBlocks.
+static bool verifyBlocksInRegion(const VPRegionBlock *Region,
+                                 const VPDominatorTree &VPDT) {
+  for (const VPBlockBase *VPB : vp_depth_first_shallow(Region->getEntry())) {
+    // Check block's parent.
+    if (VPB->getParent() != Region) {
+      errs() << "VPBlockBase has wrong parent\n";
+      return false;
+    }
+
+    if (!verifyBlock(VPB, VPDT))
+      return false;
+  }
+  return true;
+}
+
+/// Verify the CFG invariants of VPRegionBlock \p Region and its nested
+/// VPBlockBases. Do not recurse inside nested VPRegionBlocks.
+static bool verifyRegion(const VPRegionBlock *Region,
+                         const VPDominatorTree &VPDT) {
+  const VPBlockBase *Entry = Region->getEntry();
+  const VPBlockBase *Exiting = Region->getExiting();
+
+  // Entry and Exiting shouldn't have any predecessor/successor, respectively.
+  if (Entry->getNumPredecessors() != 0) {
+    errs() << "region entry block has predecessors\n";
+    return false;
+  }
+  if (Exiting->getNumSuccessors() != 0) {
+    errs() << "region exiting block has successors\n";
+    return false;
+  }
+
+  return verifyBlocksInRegion(Region, VPDT);
+}
+
+/// Verify the CFG invariants of VPRegionBlock \p Region and its nested
+/// VPBlockBases. Recurse inside nested VPRegionBlocks.
+static bool verifyRegionRec(const VPRegionBlock *Region,
+                            const VPDominatorTree &VPDT) {
+  // Recurse inside nested regions and check all blocks inside the region.
+  return verifyRegion(Region, VPDT) &&
+         all_of(vp_depth_first_shallow(Region->getEntry()),
+                [&VPDT](const VPBlockBase *VPB) {
+                  const auto *SubRegion = dyn_cast<VPRegionBlock>(VPB);
+                  return !SubRegion || verifyRegionRec(SubRegion, VPDT);
+                });
+}
+
+bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
 
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
-  for (const VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<const VPBasicBlock>(Iter)) {
-    if (!verifyVPBasicBlock(VPBB, VPDT))
-      return false;
-  }
+  if (any_of(
+          vp_depth_first_shallow(Plan.getEntry()),
+          [&VPDT](const VPBlockBase *VPB) { return !verifyBlock(VPB, VPDT); }))
+    return false;
 
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  if (!verifyRegionRec(TopRegion, VPDT))
+    return false;
+
+  if (TopRegion->getParent()) {
+    errs() << "VPlan Top Region should have no parent.\n";
+    return false;
+  }
+
   const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
   if (!Entry) {
     errs() << "VPlan entry block is not a VPBasicBlock\n";
@@ -272,19 +298,6 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
     errs() << "VPlan vector loop exit must end with BranchOnCount or "
               "BranchOnCond VPInstruction\n";
     return false;
-  }
-
-  for (const VPRegionBlock *Region :
-       VPBlockUtils::blocksOnly<const VPRegionBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    if (Region->getEntry()->getNumPredecessors() != 0) {
-      errs() << "region entry block has predecessors\n";
-      return false;
-    }
-    if (Region->getExiting()->getNumSuccessors() != 0) {
-      errs() << "region exiting block has successors\n";
-      return false;
-    }
   }
 
   for (const auto &KV : Plan.getLiveOuts())

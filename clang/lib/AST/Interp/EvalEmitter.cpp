@@ -152,7 +152,6 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
   // Function pointers cannot be converted to rvalues.
-  assert(!ConvertResultToRValue);
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
