@@ -95,6 +95,17 @@ typedef void (*llcas_cas_load_object_cb)(void *ctx, llcas_lookup_result_t,
                                          llcas_loaded_object_t, char *error);
 
 /**
+ * Callback for \c llcas_cas_store_object_async.
+ *
+ * \param ctx pointer passed through from the \c llcas_cas_store_object_async
+ * call.
+ * \param error message if an error occurred. If set, the memory it points to
+ * needs to be released via \c llcas_string_dispose.
+ */
+typedef void (*llcas_cas_store_object_cb)(void *ctx, bool, llcas_objectid_t,
+                                          char *error);
+
+/**
  * Callback for \c llcas_actioncache_get_for_digest_async.
  *
  * \param ctx pointer passed through from the

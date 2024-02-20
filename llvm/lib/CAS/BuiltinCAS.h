@@ -30,6 +30,8 @@ public:
 
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                             ArrayRef<char> Data) final;
+  void storeAsync(ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+                  unique_function<void(Expected<ObjectRef>)> Callback) final;
   virtual Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
                                         ArrayRef<ObjectRef> Refs,
                                         ArrayRef<char> Data) = 0;

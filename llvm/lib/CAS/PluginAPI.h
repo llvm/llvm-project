@@ -67,6 +67,11 @@ struct llcas_functions_t {
                            const llcas_objectid_t *refs, size_t refs_count,
                            llcas_objectid_t *, char **error);
 
+  void (*cas_store_object_async)(llcas_cas_t, llcas_data_t,
+                                 const llcas_objectid_t *refs,
+                                 size_t refs_count, void *ctx_cb,
+                                 llcas_cas_store_object_cb);
+
   llcas_data_t (*loaded_object_get_data)(llcas_cas_t, llcas_loaded_object_t);
 
   llcas_object_refs_t (*loaded_object_get_refs)(llcas_cas_t,

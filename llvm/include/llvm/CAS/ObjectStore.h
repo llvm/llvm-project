@@ -143,6 +143,11 @@ public:
   /// Store object into ObjectStore.
   virtual Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                                     ArrayRef<char> Data) = 0;
+  /// Async version of \c store using a callback.
+  virtual void
+  storeAsync(ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+             unique_function<void(Expected<ObjectRef>)> Callback) = 0;
+
   /// Get an ID for \p Ref.
   virtual CASID getID(ObjectRef Ref) const = 0;
 
@@ -221,6 +226,9 @@ protected:
 public:
   /// Helper functions to store object and returns a ObjectProxy.
   Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
+  /// Async version of \c createProxy using a callback.
+  void createProxyAsync(ArrayRef<ObjectRef> Refs, StringRef Data,
+                        unique_function<void(Expected<ObjectProxy>)> Callback);
 
   /// Store object from StringRef.
   Expected<ObjectRef> storeFromString(ArrayRef<ObjectRef> Refs,

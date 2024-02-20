@@ -249,6 +249,16 @@ LLCAS_PUBLIC bool llcas_cas_store_object(llcas_cas_t, llcas_data_t,
                                          const llcas_objectid_t *refs,
                                          size_t refs_count,
                                          llcas_objectid_t *p_id, char **error);
+/**
+ * Like \c llcas_cas_store_object but storing happens via a callback function.
+ * Whether the call is asynchronous or not depends on the implementation.
+ *
+ * \param ctx_cb pointer to pass to the callback function.
+ */
+LLCAS_PUBLIC void llcas_cas_store_object_async(llcas_cas_t, llcas_data_t,
+                                               const llcas_objectid_t *refs,
+                                               size_t refs_count, void *ctx_cb,
+                                               llcas_cas_store_object_cb);
 
 /**
  * \returns the data buffer of the provided \c llcas_loaded_object_t. The buffer

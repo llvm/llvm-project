@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
@@ -69,6 +70,13 @@ Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
                                       ArrayRef<char> Data) {
   return storeImpl(BuiltinObjectHasher<HasherT>::hashObject(*this, Refs, Data),
                    Refs, Data);
+}
+
+void BuiltinCAS::storeAsync(
+    ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+    unique_function<void(Expected<ObjectRef>)> Callback) {
+  // Just do it synchronously.
+  return Callback(store(Refs, Data));
 }
 
 Error BuiltinCAS::validate(const CASID &ID) {

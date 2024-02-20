@@ -113,7 +113,9 @@ public:
   // ObjectStore interfaces.
   Expected<CASID> parseID(StringRef ID) final;
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
-                               ArrayRef<char> Data) final;
+                            ArrayRef<char> Data) final;
+  void storeAsync(ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+                  unique_function<void(Expected<ObjectRef>)> Callback) override;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
@@ -290,6 +292,27 @@ Expected<ObjectRef> GRPCRelayCAS::store(ArrayRef<ObjectRef> Refs,
     InternalRefs.push_back(&asInMemoryIndexValue(Ref));
 
   return toReference(storeObjectImpl(I, InternalRefs, Data));
+}
+
+void GRPCRelayCAS::storeAsync(
+    ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+    unique_function<void(Expected<ObjectRef>)> Callback) {
+  SmallVector<std::string> RefIDs;
+  for (auto Ref : Refs)
+    RefIDs.emplace_back(getDataIDFromRef(Ref));
+
+  CASDB->putDataAsync(toStringRef(Data).str(), RefIDs, [&](auto Response) {
+    if (!Response)
+      return Callback(Response.takeError());
+
+    auto &I = indexHash(arrayRefFromStringRef(*Response));
+    // Create the node.
+    SmallVector<const InMemoryIndexValueT *> InternalRefs;
+    for (ObjectRef Ref : Refs)
+      InternalRefs.push_back(&asInMemoryIndexValue(Ref));
+
+    return Callback(toReference(storeObjectImpl(I, InternalRefs, Data)));
+  });
 }
 
 CASID GRPCRelayCAS::getID(ObjectRef Ref) const {

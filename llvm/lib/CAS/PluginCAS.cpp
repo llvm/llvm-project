@@ -128,6 +128,8 @@ public:
   Expected<CASID> parseID(StringRef ID) final;
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                             ArrayRef<char> Data) final;
+  void storeAsync(ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+                  unique_function<void(Expected<ObjectRef>)> Callback) final;
   CASID getID(ObjectRef Ref) const final;
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
@@ -206,6 +208,40 @@ Expected<ObjectRef> PluginObjectStore::store(ArrayRef<ObjectRef> Refs,
     return Ctx->errorAndDispose(c_err);
 
   return ObjectRef::getFromInternalRef(*this, c_stored_id.opaque);
+}
+
+void PluginObjectStore::storeAsync(
+    ArrayRef<ObjectRef> Refs, ArrayRef<char> Data,
+    unique_function<void(Expected<ObjectRef>)> Callback) {
+  SmallVector<llcas_objectid_t, 64> c_ids;
+  c_ids.reserve(Refs.size());
+  for (ObjectRef Ref : Refs) {
+    c_ids.push_back(llcas_objectid_t{Ref.getInternalRef(*this)});
+  }
+
+  struct ObjectStoreCtx {
+    std::shared_ptr<PluginObjectStore> DB;
+    unique_function<void(Expected<ObjectRef>)> Callback;
+  };
+  auto ObjectStoreCB = [](void *c_ctx, bool c_has_error,
+                          llcas_objectid_t c_stored_id, char *c_err) {
+    auto getRefAndDispose = [&](ObjectStoreCtx *Ctx) -> Expected<ObjectRef> {
+      auto _ = make_scope_exit([Ctx]() { delete Ctx; });
+      if (c_has_error)
+        return Ctx->DB->Ctx->errorAndDispose(c_err);
+      return ObjectRef::getFromInternalRef(*Ctx->DB, c_stored_id.opaque);
+    };
+
+    ObjectStoreCtx *Ctx = static_cast<ObjectStoreCtx *>(c_ctx);
+    auto Callback = std::move(Ctx->Callback);
+    Callback(getRefAndDispose(Ctx));
+  };
+
+  ObjectStoreCtx *CallCtx =
+      new ObjectStoreCtx{shared_from_this(), std::move(Callback)};
+  Ctx->Functions.cas_store_object_async(
+      Ctx->c_cas, llcas_data_t{Data.data(), Data.size()}, c_ids.data(),
+      c_ids.size(), CallCtx, ObjectStoreCB);
 }
 
 static StringRef toStringRef(llcas_digest_t c_digest) {
