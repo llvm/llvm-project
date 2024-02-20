@@ -118,18 +118,18 @@ cl::opt<std::string> ProfiledBinary(
     "profiled-binary", cl::init(""),
     cl::desc("Path to binary from which the profile was collected."),
     cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
-cl::opt<std::string> DebugInfoFilename(
-    "debug-info", cl::init(""),
+cl::list<std::string> DebugInfoFilenames(
+    "debug-info",
     cl::desc(
         "For show, read and extract profile metadata from debug info and show "
         "the functions it found. For merge, use the provided debug info to "
         "correlate the raw profile."),
     cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
-cl::opt<std::string>
-    BinaryFilename("binary-file", cl::init(""),
-                   cl::desc("For merge, use the provided unstripped bianry to "
-                            "correlate the raw profile."),
-                   cl::sub(MergeSubcommand));
+cl::list<std::string>
+    BinaryFilenames("binary-file",
+                    cl::desc("For merge, use the provided unstripped bianry to "
+                             "correlate the raw profile."),
+                    cl::sub(MergeSubcommand));
 cl::opt<std::string> FuncNameFilter(
     "function",
     cl::desc("Only functions matching the filter are shown in the output. For "
@@ -613,7 +613,7 @@ static void overlapInput(const std::string &BaseFilename,
 
 /// Load an input into a writer context.
 static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
-                      const InstrProfCorrelator *Correlator,
+                      const InstrProfCorrelators *Correlators,
                       const StringRef ProfiledBinary, WriterContext *WC) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
@@ -681,7 +681,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
   };
   auto ReaderOrErr =
-      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
+      InstrProfReader::create(Input.Filename, *FS, Correlators, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -855,28 +855,27 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       OutputFormat != PF_Text)
     exitWithError("unknown format is specified");
 
-  // TODO: Maybe we should support correlation with mixture of different
-  // correlation modes(w/wo debug-info/object correlation).
-  if (!DebugInfoFilename.empty() && !BinaryFilename.empty())
-    exitWithError("Expected only one of -debug-info, -binary-file");
-  std::string CorrelateFilename;
-  ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
-  if (!DebugInfoFilename.empty()) {
-    CorrelateFilename = DebugInfoFilename;
-    CorrelateKind = ProfCorrelatorKind::DEBUG_INFO;
-  } else if (!BinaryFilename.empty()) {
-    CorrelateFilename = BinaryFilename;
-    CorrelateKind = ProfCorrelatorKind::BINARY;
-  }
+  std::unique_ptr<InstrProfCorrelators> Correlators;
+  SmallVector<std::pair<StringRef, InstrProfCorrelator::ProfCorrelatorKind>>
+      CorrelateInputs;
 
-  std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (CorrelateKind != InstrProfCorrelator::NONE) {
-    if (auto Err = InstrProfCorrelator::get(CorrelateFilename, CorrelateKind)
-                       .moveInto(Correlator))
-      exitWithError(std::move(Err), CorrelateFilename);
-    if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
-      exitWithError(std::move(Err), CorrelateFilename);
+  for (StringRef Filenames : DebugInfoFilenames) {
+    SmallVector<StringRef, 1> FilenameVec;
+    Filenames.split(FilenameVec, ',');
+    for (StringRef Filename : FilenameVec)
+      CorrelateInputs.push_back({Filename, InstrProfCorrelator::DEBUG_INFO});
   }
+  for (StringRef Filenames : BinaryFilenames) {
+    SmallVector<StringRef, 1> FilenameVec;
+    Filenames.split(FilenameVec, ',');
+    for (StringRef Filename : FilenameVec)
+      CorrelateInputs.push_back({Filename, InstrProfCorrelator::BINARY});
+  }
+  if (!CorrelateInputs.empty())
+    if (auto Err = InstrProfCorrelators::get(CorrelateInputs,
+                                             MaxDbgCorrelationWarnings)
+                       .moveInto(Correlators))
+      exitWithError(std::move(Err));
 
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
@@ -895,7 +894,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
+      loadInput(Input, Remapper, Correlators.get(), ProfiledBinary,
                 Contexts[0].get());
   } else {
     ThreadPool Pool(hardware_concurrency(NumThreads));
@@ -903,7 +902,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
+      Pool.async(loadInput, Input, Remapper, Correlators.get(), ProfiledBinary,
                  Contexts[Ctx].get());
       Ctx = (Ctx + 1) % NumThreads;
     }
@@ -3141,17 +3140,18 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto Err =
-          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
-              .moveInto(Correlator))
+  InstrProfCorrelator::WarningCounter WarnCounter(MaxDbgCorrelationWarnings);
+  if (auto Err = InstrProfCorrelator::get(
+                     Filename, InstrProfCorrelator::DEBUG_INFO, &WarnCounter)
+                     .moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
-    if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))
+    if (auto Err = Correlator->dumpYaml(OS))
       exitWithError(std::move(Err), Filename);
     return 0;
   }
 
-  if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
+  if (auto Err = Correlator->correlateProfileData())
     exitWithError(std::move(Err), Filename);
 
   InstrProfSymtab Symtab;
@@ -3172,10 +3172,10 @@ static int showDebugInfoCorrelation(const std::string &Filename,
 }
 
 static int show_main(int argc, const char *argv[]) {
-  if (Filename.empty() && DebugInfoFilename.empty())
+  if (Filename.empty() && DebugInfoFilenames.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
-        DebugInfoFilename.ArgStr + "' is provided");
+        DebugInfoFilenames.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
     errs() << sys::path::filename(argv[0]) << " " << argv[1]
@@ -3193,8 +3193,12 @@ static int show_main(int argc, const char *argv[]) {
   if (ShowAllFunctions && !FuncNameFilter.empty())
     WithColor::warning() << "-function argument ignored: showing all functions\n";
 
-  if (!DebugInfoFilename.empty())
-    return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);
+  if (!DebugInfoFilenames.empty()) {
+    if (DebugInfoFilenames.size() > 1)
+      exitWithError("'--" + DebugInfoFilenames.ArgStr +
+                    "' only accept one argument in show subcommand");
+    return showDebugInfoCorrelation(DebugInfoFilenames[0], SFormat, OS);
+  }
 
   if (ShowProfileKind == instr)
     return showInstrProfile(SFormat, OS);

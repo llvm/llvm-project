@@ -14,6 +14,7 @@
 
 #include "llvm/Object/BuildID.h"
 
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -42,6 +43,21 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
   return {};
 }
 
+BuildIDRef getBuildID(const COFFObjectFile *Obj) {
+  for (const debug_directory &D : Obj->debug_directories()) {
+    if (D.AddressOfRawData == 0 || D.Type != COFF::IMAGE_DEBUG_TYPE_CODEVIEW)
+      continue;
+    const codeview::DebugInfo *DebugInfo;
+    StringRef PDBFileName;
+    if (Error E = Obj->getDebugPDBInfo(&D, DebugInfo, PDBFileName))
+      consumeError(std::move(E));
+    if (DebugInfo->Signature.CVSignature == OMF::Signature::PDB70)
+      return ArrayRef(DebugInfo->PDB70.Signature,
+                      sizeof(DebugInfo->PDB70.Signature));
+  }
+  return {};
+}
+
 } // namespace
 
 BuildID llvm::object::parseBuildID(StringRef Str) {
@@ -62,6 +78,8 @@ BuildIDRef llvm::object::getBuildID(const ObjectFile *Obj) {
     return ::getBuildID(O->getELFFile());
   if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Obj))
     return ::getBuildID(O->getELFFile());
+  if (auto *O = dyn_cast<COFFObjectFile>(Obj))
+    return ::getBuildID(O);
   return std::nullopt;
 }
 

@@ -155,19 +155,19 @@ printBinaryIdsInternal(raw_ostream &OS,
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
-                        const InstrProfCorrelator *Correlator,
+                        const InstrProfCorrelators *Correlators,
                         std::function<void(Error)> Warn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return InstrProfReader::create(std::move(BufferOrError.get()), Correlator,
+  return InstrProfReader::create(std::move(BufferOrError.get()), Correlators,
                                  Warn);
 }
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
-                        const InstrProfCorrelator *Correlator,
+                        const InstrProfCorrelators *Correlators,
                         std::function<void(Error)> Warn) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
@@ -177,9 +177,11 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   if (IndexedInstrProfReader::hasFormat(*Buffer))
     Result.reset(new IndexedInstrProfReader(std::move(Buffer)));
   else if (RawInstrProfReader64::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader64(std::move(Buffer), Correlator, Warn));
+    Result.reset(
+        new RawInstrProfReader64(std::move(Buffer), Correlators, Warn));
   else if (RawInstrProfReader32::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader32(std::move(Buffer), Correlator, Warn));
+    Result.reset(
+        new RawInstrProfReader32(std::move(Buffer), Correlators, Warn));
   else if (TextInstrProfReader::hasFormat(*Buffer))
     Result.reset(new TextInstrProfReader(std::move(Buffer)));
   else
@@ -559,6 +561,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
   // Binary id start just after the header if exists.
+  object::BuildIDRef BinaryId;
   const uint8_t *BinaryIdStart =
       reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
@@ -570,6 +573,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
             readBinaryIdsInternal(*DataBuffer, BinaryIdSize, BinaryIdStart,
                                   BinaryIds, getDataEndianness()))
       return Err;
+    BinaryId = BinaryIds.back();
   }
 
   CountersDelta = swap(Header.CountersDelta);
@@ -600,22 +604,28 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
     return error(instrprof_error::bad_header);
 
-  if (Correlator) {
+  if (DataSize == 0 && NamesSize == 0 && Correlators && !Correlators->empty()) {
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
-    if (!(DataSize == 0 && NamesSize == 0 && CountersDelta == 0 &&
-          NamesDelta == 0))
+    if (!(CountersDelta == 0 && NamesDelta == 0))
       return error(instrprof_error::unexpected_correlation_info);
-    Data = Correlator->getDataPointer();
+    auto CorrelatorOrErr = Correlators->getCorrelator(BinaryId);
+    if (!CorrelatorOrErr)
+      return CorrelatorOrErr.takeError();
+    auto *Correlator = CorrelatorOrErr.get();
+    Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
+        Correlator->getDataPointer());
     DataEnd = Data + Correlator->getDataSize();
     NamesStart = Correlator->getNamesPointer();
     NamesEnd = NamesStart + Correlator->getNamesSize();
+    IsCorrelatorUsed = true;
   } else {
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);
     DataEnd = Data + NumData;
     NamesStart = Start + NamesOffset;
     NamesEnd = NamesStart + NamesSize;
+    IsCorrelatorUsed = false;
   }
 
   CountersStart = Start + CountersOffset;
