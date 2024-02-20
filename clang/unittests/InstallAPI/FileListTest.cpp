@@ -28,7 +28,7 @@ static inline void testValidFileList(std::string Input, HeaderSeq &Expected) {
   EXPECT_EQ(Headers, Expected);
 }
 
-TEST(FileListReader, Version3) {
+TEST(FileList, Version3) {
   static const char Input[] = R"({
     "version" : "3",
     "headers" : [
@@ -82,7 +82,7 @@ TEST(FileList, Version1) {
   testValidFileList(Input, Expected);
 }
 
-TEST(FileListReader, Version2) {
+TEST(FileList, Version2) {
   static const auto Input = R"({
     "version" : "2",
     "headers" : [

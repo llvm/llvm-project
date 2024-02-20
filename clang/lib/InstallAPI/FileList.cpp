@@ -171,17 +171,14 @@ Error Implementation::parse(StringRef Input) {
 llvm::Error
 FileListReader::loadHeaders(std::unique_ptr<MemoryBuffer> InputBuffer,
                             HeaderSeq &Destination) {
-  llvm::Error Err = Error::success();
   Implementation Impl;
-  ErrorAsOutParameter ErrorAsOutParam(&Err);
   Impl.InputBuffer = std::move(InputBuffer);
 
-  Err = Impl.parse(Impl.InputBuffer->getBuffer());
-  if (Err)
+  if (llvm::Error Err = Impl.parse(Impl.InputBuffer->getBuffer()))
     return Err;
 
   Destination.reserve(Destination.size() + Impl.HeaderList.size());
   llvm::move(Impl.HeaderList, std::back_inserter(Destination));
 
-  return Err;
+  return Error::success();
 }
