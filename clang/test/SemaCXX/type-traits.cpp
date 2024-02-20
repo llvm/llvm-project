@@ -1609,7 +1609,12 @@ struct CStructNoUniqueAddress2 {
   [[no_unique_address]] int two;
 };
 
-struct CStructAlignment {
+struct alignas(64) CStructAlignment {
+  int one;
+  int two;
+};
+
+struct CStructAlignedMembers {
   int one;
   alignas(16) int two;
 };
@@ -1766,6 +1771,7 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(CStruct, CStructNoUniqueAddress) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStructNoUniqueAddress, CStructNoUniqueAddress2) == bool(__has_cpp_attribute(no_unique_address)), ""); // FIXME: this is CWG2759
   static_assert(__is_layout_compatible(CStruct, CStructAlignment), "");
+  static_assert(__is_layout_compatible(CStruct, CStructAlignedMembers), ""); // FIXME: alignment of members impact common initial sequence
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds), "");
   static_assert(__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds2), "");
   static_assert(!__is_layout_compatible(CStructWithBitfelds, CStructWithBitfelds3), "");
