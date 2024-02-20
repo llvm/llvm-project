@@ -5065,6 +5065,17 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // Create the node.
   SDValue Result;
+
+  if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    SDValue ConvControlToken = getValue(Token);
+    assert(Ops.back().getValueType() != MVT::Glue &&
+           "Did not expected another glue node here.");
+    ConvControlToken =
+        DAG.getNode(ISD::CONVERGENCECTRL_GLUE, {}, MVT::Glue, ConvControlToken);
+    Ops.push_back(ConvControlToken);
+  }
+
   // In some cases, custom collection of operands from CallInst I may be needed.
   TLI.CollectTargetIntrinsicOperands(I, Ops, DAG);
   if (IsTgtIntrinsic) {
@@ -6063,6 +6074,27 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(
   LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
                        "couldn't find a physical register\n");
   return true;
+}
+
+/// Lower the call to the specified intrinsic function.
+void SelectionDAGBuilder::visitConvergenceControl(const CallInst &I,
+                                                  unsigned Intrinsic) {
+  SDLoc sdl = getCurSDLoc();
+  switch (Intrinsic) {
+  case Intrinsic::experimental_convergence_anchor:
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_ANCHOR, sdl, MVT::Untyped));
+    break;
+  case Intrinsic::experimental_convergence_entry:
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_ENTRY, sdl, MVT::Untyped));
+    break;
+  case Intrinsic::experimental_convergence_loop: {
+    auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl);
+    auto *Token = Bundle->Inputs[0].get();
+    setValue(&I, DAG.getNode(ISD::CONVERGENCECTRL_LOOP, sdl, MVT::Untyped,
+                             getValue(Token)));
+    break;
+  }
+  }
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -7724,6 +7756,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_deinterleave2:
     visitVectorDeinterleave(I);
     return;
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    visitConvergenceControl(I, Intrinsic);
   }
 }
 
@@ -8398,6 +8434,14 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     }
   }
 
+  SDValue ConvControlToken;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    ConvControlToken = getValue(Token);
+  } else {
+    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
+  }
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -8406,7 +8450,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setConvergent(CB.isConvergent())
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
-      .setCFIType(CFIType);
+      .setCFIType(CFIType)
+      .setConvergenceControlToken(ConvControlToken);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
@@ -8958,7 +9003,8 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
+              LLVMContext::OB_convergencectrl}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
