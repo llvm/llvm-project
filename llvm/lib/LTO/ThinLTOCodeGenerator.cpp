@@ -1564,70 +1564,79 @@ void ThinLTOCodeGenerator::run() {
   TimeTraceScopeExit.release();
   LoggingStream CacheLogOS(llvm::errs());
 
+  struct ModuleInfo {
+    std::unique_ptr<ModuleCacheEntry> Entry;
+    std::unique_ptr<MemoryBuffer> ComputedBuffer;
+    std::unique_ptr<MemoryBuffer> CachedBuffer;
+  };
+  std::vector<ModuleInfo> Infos(ModuleCount);
+
+  // Query the cache.
+  for (auto IndexCount : ModulesOrdering) {
+    auto &Mod = Modules[IndexCount];
+    int count = IndexCount;
+    auto ModuleIdentifier = Mod->getName();
+    ScopedDurationTimer ScopedTime([&](double Seconds) {
+      if (CacheLogging) {
+        CacheLogOS.applyLocked([&](raw_ostream &OS) {
+          OS << "LTO processing '" << ModuleIdentifier << "' in "
+             << llvm::format("%.6fs", Seconds) << "\n";
+        });
+      }
+    });
+
+    auto &ExportList = ExportLists[ModuleIdentifier];
+
+    auto &DefinedGVSummaries = ModuleToDefinedGVSummaries[ModuleIdentifier];
+
+    // Compute the output name.
+    std::string OutputPath = computeThinLTOOutputPath(
+        count, SavedObjectsDirectoryPath, TMBuilder);
+
+    // The module may be cached, this helps handling it.
+    auto &CacheEntry = Infos[count].Entry = createModuleCacheEntry(
+        *Index, ModuleIdentifier, OutputPath, ImportLists[ModuleIdentifier],
+        ExportList, ResolvedODR[ModuleIdentifier], DefinedGVSummaries,
+        OptLevel, Freestanding, TMBuilder,
+        [&CacheLogOS](llvm::function_ref<void(raw_ostream & OS)> Log) {
+          if (CacheLogging)
+            CacheLogOS.applyLocked(Log);
+        });
+    auto CacheEntryPath = CacheEntry->getEntryPath();
+
+    if (CacheLogging)
+      CacheLogOS.applyLocked([&](raw_ostream &OS) {
+        OS << "Look up cache entry for " << ModuleIdentifier << "\n";
+      });
+    auto ErrOrBuffer = CacheEntry->tryLoadingBuffer();
+    LLVM_DEBUG(dbgs() << "Cache " << (ErrOrBuffer ? "hit" : "miss")
+                      << " '" << CacheEntryPath << "' for buffer "
+                      << count << " " << ModuleIdentifier << "\n");
+    if (CacheLogging)
+      CacheLogOS.applyLocked([&](raw_ostream &OS) {
+        OS << "Cache " << (ErrOrBuffer ? "hit" : "miss") << " '"
+           << CacheEntryPath << "' for buffer " << count << " "
+           << ModuleIdentifier << "\n";
+      });
+
+    if (ErrOrBuffer) {
+      // Cache Hit!
+      Infos[count].CachedBuffer = std::move(ErrOrBuffer.get());
+    }
+  }
+
   // Parallel optimizer + codegen
   {
-    DefaultThreadPool Pool(heavyweight_hardware_concurrency(ThreadCount));
-    for (auto IndexCount : ModulesOrdering) {
-      auto &Mod = Modules[IndexCount];
-      Pool.async([&](int count) {
-        auto ModuleIdentifier = Mod->getName();
-        ScopedDurationTimer ScopedTime([&](double Seconds) {
-          if (CacheLogging) {
-            CacheLogOS.applyLocked([&](raw_ostream &OS) {
-              OS << "LTO processing '" << ModuleIdentifier << "' in "
-                 << llvm::format("%.6fs", Seconds) << "\n";
-            });
-          }
-        });
-
+    ThreadPool Pool(heavyweight_hardware_concurrency(ThreadCount));
+    for (auto count : ModulesOrdering) {
+      Pool.async([&, count] {
+        auto &Mod = Modules[count];
+        StringRef ModuleIdentifier = Mod->getName();
         auto &ExportList = ExportLists[ModuleIdentifier];
 
-        auto &DefinedGVSummaries = ModuleToDefinedGVSummaries[ModuleIdentifier];
-
-        // Compute the output name.
-        std::string OutputPath = computeThinLTOOutputPath(
-            count, SavedObjectsDirectoryPath, TMBuilder);
-
-        // The module may be cached, this helps handling it.
-        auto CacheEntry = createModuleCacheEntry(
-            *Index, ModuleIdentifier, OutputPath, ImportLists[ModuleIdentifier],
-            ExportList, ResolvedODR[ModuleIdentifier], DefinedGVSummaries,
-            OptLevel, Freestanding, TMBuilder,
-            [&CacheLogOS](llvm::function_ref<void(raw_ostream & OS)> Log) {
-              if (CacheLogging)
-                CacheLogOS.applyLocked(Log);
-            });
-        auto CacheEntryPath = CacheEntry->getEntryPath();
-
-        {
-          if (CacheLogging)
-            CacheLogOS.applyLocked([&](raw_ostream &OS) {
-              OS << "Look up cache entry for " << ModuleIdentifier << "\n";
-            });
-
-          auto ErrOrBuffer = CacheEntry->tryLoadingBuffer();
-          LLVM_DEBUG(dbgs() << "Cache " << (ErrOrBuffer ? "hit" : "miss")
-                            << " '" << CacheEntryPath << "' for buffer "
-                            << count << " " << ModuleIdentifier << "\n");
-          if (CacheLogging)
-            CacheLogOS.applyLocked([&](raw_ostream &OS) {
-              OS << "Cache " << (ErrOrBuffer ? "hit" : "miss") << " '"
-                 << CacheEntryPath << "' for buffer " << count << " "
-                 << ModuleIdentifier << "\n";
-            });
-
-          if (ErrOrBuffer) {
-            // Cache Hit!
-            if (UseBufferAPI)
-              ProducedBinaries[count] = std::move(ErrOrBuffer.get());
-            else
-              ProducedBinaryFiles[count] = writeGeneratedObject(
-                  OutputPath, CacheEntry.get(), *ErrOrBuffer.get());
-
-            if (!DeterministicCheck)
-              return;
-          }
-        }
+        if (!DeterministicCheck)
+          if (Infos[count].CachedBuffer)
+            return;
 
         LLVMContext Context;
         Context.setDiscardValueNames(LTODiscardValueNames);
@@ -1657,35 +1666,62 @@ void ThinLTOCodeGenerator::run() {
             DisableCodeGen, SaveTempsDir, Freestanding, OptLevel, count,
             DebugPassManager);
 
-        if (CacheLogging)
-          CacheLogOS.applyLocked([&](raw_ostream &OS) {
-            OS << "Update cached result for " << ModuleIdentifier << "\n";
-          });
+        Infos[count].ComputedBuffer = std::move(OutputBuffer);
+      });
+    }
+  }
 
-        // Commit to the cache.
-        CacheEntry->write(*OutputBuffer);
+  // Commit to cache if necessary.
+  for (int count : ModulesOrdering) {
+    if (Infos[count].ComputedBuffer) {
+      auto &CacheEntry = Infos[count].Entry;
+      auto &OutputBuffer = Infos[count].ComputedBuffer;
+      StringRef ModuleIdentifier = Modules[count]->getName();
 
-        if (DeterministicCheck)
-          (void)CacheEntry->areLoadedAndWrittenResultsIdentical();
+      if (CacheLogging)
+        CacheLogOS.applyLocked([&](raw_ostream &OS) {
+          OS << "Update cached result for " << ModuleIdentifier << "\n";
+        });
 
-        if (UseBufferAPI) {
-          // We need to generated a memory buffer for the linker.
-          auto ReloadedBuffer = CacheEntry->getMappedBuffer();
-          // When cache is enabled, reload from the cache if possible.
-          // Releasing the buffer from the heap and reloading it from the
-          // cache file with mmap helps us to lower memory pressure.
-          // The freed memory can be used for the next input file.
-          // The final binary link will read from the VFS cache (hopefully!)
-          // or from disk (if the memory pressure was too high).
-          if (ReloadedBuffer)
-            OutputBuffer = std::move(*ReloadedBuffer);
+      // Commit to the cache.
+      CacheEntry->write(*OutputBuffer);
+    }
+  }
 
-          ProducedBinaries[count] = std::move(OutputBuffer);
-          return;
-        }
-        ProducedBinaryFiles[count] =
-            writeGeneratedObject(OutputPath, CacheEntry.get(), *OutputBuffer);
-      }, IndexCount);
+  // Write out the object file.
+  for (int count : ModulesOrdering) {
+    auto &CacheEntry = Infos[count].Entry;
+
+    if (DeterministicCheck)
+      (void)CacheEntry->areLoadedAndWrittenResultsIdentical();
+
+    auto OutputBuffer = [&] {
+      if (Infos[count].CachedBuffer)
+        return std::move(Infos[count].CachedBuffer);
+
+      if (UseBufferAPI) {
+        // We need to generated a memory buffer for the linker.
+        auto ReloadedBuffer = CacheEntry->getMappedBuffer();
+        // When cache is enabled, reload from the cache if possible.
+        // Releasing the buffer from the heap and reloading it from the
+        // cache file with mmap helps us to lower memory pressure.
+        // The freed memory can be used for the next input file.
+        // The final binary link will read from the VFS cache (hopefully!)
+        // or from disk (if the memory pressure was too high).
+        if (ReloadedBuffer)
+          return std::move(*ReloadedBuffer);
+      }
+      return std::move(Infos[count].ComputedBuffer);
+    }();
+
+    if (UseBufferAPI) {
+      ProducedBinaries[count] = std::move(OutputBuffer);
+    } else {
+      std::string OutputPath = computeThinLTOOutputPath(
+          count, SavedObjectsDirectoryPath, TMBuilder);
+
+      ProducedBinaryFiles[count] =
+          writeGeneratedObject(OutputPath, CacheEntry.get(), *OutputBuffer);
     }
   }
 
