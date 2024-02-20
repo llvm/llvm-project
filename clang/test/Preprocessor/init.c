@@ -93,8 +93,8 @@
 // C99-NOT: __GXX_WEAK__
 // C99-NOT: __cplusplus
 //
-// RUN: %clang_cc1 -std=c17 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C17-FMT %s
-// RUN: %clang_cc1 -std=c23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C23-FMT %s
+// RUN: %clang_cc1 -std=c17 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C17-FMT %s
+// RUN: %clang_cc1 -std=c23 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C23-FMT %s
 //
 // C17-FMT-NOT: __SIZE_FMTB__
 // C17-FMT-NOT: __SIZE_FMTb__
