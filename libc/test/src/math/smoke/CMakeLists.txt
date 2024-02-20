@@ -878,7 +878,6 @@ add_fp_unittest(
   HDRS
     LdExpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ldexp
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
@@ -894,7 +893,6 @@ add_fp_unittest(
   HDRS
     LdExpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ldexpf
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
@@ -910,8 +908,22 @@ add_fp_unittest(
   HDRS
     LdExpTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.ldexpl
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  ldexpf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpf128_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf128
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float

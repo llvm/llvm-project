@@ -338,7 +338,7 @@ static void processSTIPredicate(STIPredicateFunction &Fn,
   APInt DefaultProcMask(ProcModelMap.size(), 0);
   APInt DefaultPredMask(NumUniquePredicates, 0);
   for (std::pair<APInt, APInt> &MaskPair : OpcodeMasks)
-    MaskPair = std::make_pair(DefaultProcMask, DefaultPredMask);
+    MaskPair = std::pair(DefaultProcMask, DefaultPredMask);
 
   // Construct a OpcodeInfo object for every unique opcode declared by an
   // InstructionEquivalenceClass definition.
@@ -564,7 +564,7 @@ void CodeGenSchedModels::collectProcModels() {
 /// ProcessorItineraries.
 void CodeGenSchedModels::addProcModel(Record *ProcDef) {
   Record *ModelKey = getModelOrItinDef(ProcDef);
-  if (!ProcModelMap.insert(std::make_pair(ModelKey, ProcModels.size())).second)
+  if (!ProcModelMap.insert(std::pair(ModelKey, ProcModels.size())).second)
     return;
 
   std::string Name = std::string(ModelKey->getName());
@@ -1788,7 +1788,7 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
     for (const PredTransition &Trans : LastTransitions)
       SubstitutedAny |= Transitions.substituteVariants(Trans);
     LLVM_DEBUG(Transitions.dump());
-    LastTransitions.swap(Transitions.TransVec);
+    LastTransitions = std::move(Transitions.TransVec);
   } while (SubstitutedAny);
 
   // WARNING: We are about to mutate the SchedClasses vector. Do not refer to

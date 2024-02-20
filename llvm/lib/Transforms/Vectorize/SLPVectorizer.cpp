@@ -4558,6 +4558,8 @@ void BoUpSLP::reorderTopToBottom() {
         ++OrdersUses.insert(std::make_pair(Order, 0)).first->second;
       }
     }
+    if (OrdersUses.empty())
+      continue;
     // Choose the most used order.
     ArrayRef<unsigned> BestOrder = OrdersUses.front().first;
     unsigned Cnt = OrdersUses.front().second;
@@ -10646,19 +10648,13 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
           // ... (use %2)
           // %shuffle = shuffle <2 x> %2, poison, <2 x> {2, 0}
           // br %block
-          SmallVector<int> UniqueIdxs(VF, PoisonMaskElem);
-          SmallSet<int, 4> UsedIdxs;
-          int Pos = 0;
-          for (int Idx : VE->ReuseShuffleIndices) {
-            if (Idx != static_cast<int>(VF) && Idx != PoisonMaskElem &&
-                UsedIdxs.insert(Idx).second)
-              UniqueIdxs[Idx] = Pos;
-            ++Pos;
+          SmallVector<int> Mask(VF, PoisonMaskElem);
+          for (auto [I, V] : enumerate(VL)) {
+            if (isa<PoisonValue>(V))
+              continue;
+            Mask[I] = VE->findLaneForValue(V);
           }
-          assert(VF >= UsedIdxs.size() && "Expected vectorization factor "
-                                          "less than original vector size.");
-          UniqueIdxs.append(VF - UsedIdxs.size(), PoisonMaskElem);
-          V = FinalShuffle(V, UniqueIdxs);
+          V = FinalShuffle(V, Mask);
         } else {
           assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
                  "Expected vectorization factor less "
@@ -16073,19 +16069,29 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {
         if (isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
           continue;
-        if (isa<Instruction>(Opcodes1[I]))
+        if (isa<Instruction>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Instruction>(Opcodes2[I]))
+        }
+        if (isa<Instruction>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I]))
+        }
+        if (isa<Constant>(Opcodes1[I]) && !isa<UndefValue>(Opcodes1[I])) {
+          assert(isa<UndefValue>(Opcodes2[I]) && "Expected 2nd undef value");
           return true;
-        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (isa<Constant>(Opcodes2[I]) && !isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (isa<UndefValue>(Opcodes1[I]) && !isa<UndefValue>(Opcodes2[I]))
+        }
+        if (!isa<UndefValue>(Opcodes2[I])) {
+          assert(isa<UndefValue>(Opcodes1[I]) && "Expected 1st undef value");
           return false;
-        if (!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]))
-          return true;
-        continue;
+        }
+        assert(!isa<UndefValue>(Opcodes1[I]) && isa<UndefValue>(Opcodes2[I]) &&
+               "Expected 1st non-undef and 2nd undef value");
+        return true;
       }
       if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
         if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {

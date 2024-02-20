@@ -104,6 +104,14 @@ add_gen_header(
     .llvm-libc-types.float128
 )
 
+add_gen_header(
+  stdfix
+  DEF_FILE stdfix.h.def
+  GEN_HDR stdfix.h
+  DEPENDS
+    .llvm-libc-macros.stdfix_macros
+)
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
@@ -232,6 +240,15 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.stdbit_macros
+)
+
+add_gen_header(
+  stdckdint
+  DEF_FILE stdckdint.h.def
+  GEN_HDR stdckdint.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdckdint_macros
 )
 
 add_gen_header(

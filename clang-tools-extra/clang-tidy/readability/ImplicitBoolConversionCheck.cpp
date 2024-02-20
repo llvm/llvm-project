@@ -151,16 +151,29 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
   return {};
 }
 
+bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
+  SourceRange PrefixRange(Loc.getLocWithOffset(-1), Loc);
+  StringRef SpaceBeforeStmtStr = Lexer::getSourceText(
+      CharSourceRange::getCharRange(PrefixRange), Context.getSourceManager(),
+      Context.getLangOpts(), nullptr);
+  if (SpaceBeforeStmtStr.empty())
+    return true;
+
+  const StringRef AllowedCharacters(" \t\n\v\f\r(){}[]<>;,+=-|&~!^*/");
+  return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
+}
+
 void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
                                 const ImplicitCastExpr *Cast,
                                 ASTContext &Context, StringRef OtherType) {
   const Expr *SubExpr = Cast->getSubExpr();
-  bool NeedParens = !isa<ParenExpr>(SubExpr);
+  const bool NeedParens = !isa<ParenExpr>(SubExpr->IgnoreImplicit());
+  const bool NeedSpace = needsSpacePrefix(Cast->getBeginLoc(), Context);
 
   Diag << FixItHint::CreateInsertion(
-      Cast->getBeginLoc(),
-      (Twine("static_cast<") + OtherType + ">" + (NeedParens ? "(" : ""))
-          .str());
+      Cast->getBeginLoc(), (Twine() + (NeedSpace ? " " : "") + "static_cast<" +
+                            OtherType + ">" + (NeedParens ? "(" : ""))
+                               .str());
 
   if (NeedParens) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(

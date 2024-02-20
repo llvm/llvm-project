@@ -127,6 +127,7 @@ chrono string
 chrono string_view
 chrono tuple
 chrono type_traits
+chrono vector
 chrono version
 cinttypes cstdint
 cmath limits
@@ -159,6 +160,7 @@ compare limits
 compare type_traits
 compare version
 complex cmath
+complex cstddef
 complex iosfwd
 complex sstream
 complex stdexcept

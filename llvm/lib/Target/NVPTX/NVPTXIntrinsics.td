@@ -6382,6 +6382,7 @@ def INT_PTX_SREG_GLOBALTIMER :
 }
 
 def: Pat <(i64 (readcyclecounter)), (INT_PTX_SREG_CLOCK64)>;
+def: Pat <(i64 (readsteadycounter)), (INT_PTX_SREG_GLOBALTIMER)>;
 
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;

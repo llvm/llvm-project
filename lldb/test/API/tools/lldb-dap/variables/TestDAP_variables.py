@@ -120,7 +120,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         functions = ["main"]
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
 
         locals = self.dap_server.get_local_variables()
@@ -607,9 +607,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         for scope in scopes:
             if scope["name"] == "Locals":
-                self.assertEquals(scope.get("presentationHint"), "locals")
+                self.assertEqual(scope.get("presentationHint"), "locals")
             if scope["name"] == "Registers":
-                self.assertEquals(scope.get("presentationHint"), "registers")
+                self.assertEqual(scope.get("presentationHint"), "registers")
 
     @skipIfWindows
     @skipIfRemote

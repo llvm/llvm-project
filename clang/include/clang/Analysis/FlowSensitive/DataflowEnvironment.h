@@ -681,6 +681,14 @@ private:
                                           llvm::DenseSet<QualType> &Visited,
                                           int Depth, int &CreatedValuesCount);
 
+  /// Initializes the fields (including synthetic fields) of `Loc` with values,
+  /// unless values of the field type are not supported or we hit one of the
+  /// limits at which we stop producing values (controlled by `Visited`,
+  /// `Depth`, and `CreatedValuesCount`).
+  void initializeFieldsWithValues(RecordStorageLocation &Loc,
+                                  llvm::DenseSet<QualType> &Visited, int Depth,
+                                  int &CreatedValuesCount);
+
   /// Shared implementation of `createObject()` overloads.
   /// `D` and `InitExpr` may be null.
   StorageLocation &createObjectInternal(const ValueDecl *D, QualType Ty,

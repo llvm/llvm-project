@@ -400,18 +400,18 @@ public:
   // division.
   enum ComplexRangeKind {
     /// Implementation of complex division and multiplication using a call to
-   ///  runtime library functions(generally the case, but the BE might
-   /// sometimes replace the library call if it knows enough about the
-   /// potential range of the inputs). Overflow and non -finite values are
-   /// handled by the library implementation.
+    ///  runtime library functions(generally the case, but the BE might
+    /// sometimes replace the library call if it knows enough about the
+    /// potential range of the inputs). Overflow and non -finite values are
+    /// handled by the library implementation.
     CX_Full,
 
     /// Implementation of complex division using the Smith algorithm at
     /// source precision. Smith's algorithm for complex division.
-    /// See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
-    /// This value offers improved handling for overflow in intermediate calculations,
-    /// but overflow may occur. NaN and infinite and  values are not handled in some
-    // cases.
+    /// See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
+    /// (1962). This value offers improved handling for overflow in intermediate
+    /// calculations, but overflow may occur. NaN and infinite and  values are
+    /// not handled in some cases.
     CX_Improved,
 
     /// Implementation of complex division using algebraic formulas at

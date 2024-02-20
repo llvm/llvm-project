@@ -111,6 +111,7 @@ module {
           %r = arith.mulf %t, %s : f64
           linalg.yield %r : f64
     } -> tensor<8x8xf64>
+    bufferization.dealloc_tensor %2 : tensor<8x8xf64>
     return %3 : tensor<8x8xf64>
   }
 

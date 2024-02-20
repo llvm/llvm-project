@@ -7162,13 +7162,11 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
 
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
-  if (const RecordType *UT = Expr->getType()->getAsUnionType()) {
-    if (UT->getDecl()->hasAttr<TransparentUnionAttr>())
-      if (const CompoundLiteralExpr *CLE =
-          dyn_cast<CompoundLiteralExpr>(Expr))
-        if (const InitListExpr *ILE =
-            dyn_cast<InitListExpr>(CLE->getInitializer()))
-          Expr = ILE->getInit(0);
+  if (const RecordType *UT = Expr->getType()->getAsUnionType();
+      UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+    if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
+      if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
+        Expr = ILE->getInit(0);
   }
 
   bool Result;
@@ -15678,11 +15676,18 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       if (S.SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_vector_scalar);
+    } else if (S.getLangOpts().HLSL &&
+               Target->castAs<VectorType>()->getNumElements() <
+                   Source->castAs<VectorType>()->getNumElements()) {
+      // Diagnose vector truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(S, E, T, CC, diag::warn_hlsl_impcast_vector_truncation);
     }
 
     // If the vector cast is cast between two vectors of the same size, it is
-    // a bitcast, not a conversion.
-    if (S.Context.getTypeSize(Source) == S.Context.getTypeSize(Target))
+    // a bitcast, not a conversion, except under HLSL where it is a conversion.
+    if (!S.getLangOpts().HLSL &&
+        S.Context.getTypeSize(Source) == S.Context.getTypeSize(Target))
       return;
 
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
@@ -19148,6 +19153,10 @@ static bool isLayoutCompatible(ASTContext &C, QualType T1, QualType T2) {
   }
 
   return false;
+}
+
+bool Sema::IsLayoutCompatible(QualType T1, QualType T2) const {
+  return isLayoutCompatible(getASTContext(), T1, T2);
 }
 
 //===--- CHECK: pointer_with_type_tag attribute: datatypes should match ----//

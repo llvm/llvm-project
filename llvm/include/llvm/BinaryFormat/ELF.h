@@ -794,6 +794,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC   = 0x052,
   EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC   = 0x053,
   EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC     = 0x054,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X55 = 0x055,
   // clang-format on
 
   // First/last AMDGCN-based processors.
@@ -1475,6 +1476,7 @@ enum {
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
   PT_OPENBSD_WXNEEDED = 0x65a3dbe7,  // Program does W^X violations.
   PT_OPENBSD_NOBTCFI = 0x65a3dbe8,   // Do not enforce branch target CFI.
+  PT_OPENBSD_SYSCALLS = 0x65a3dbe9,  // System call sites.
   PT_OPENBSD_BOOTDATA = 0x65a41be6,  // Section for boot arguments.
 
   // ARM program header types.

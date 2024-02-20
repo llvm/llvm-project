@@ -16,7 +16,6 @@ class LetDummies {
   bit isMoveImm;
   bit isReMaterializable;
   bit isAsCheapAsAMove;
-  bit VOPAsmPrefer32Bit;
   bit FPDPRounding;
   Predicate SubtargetPredicate;
   string Constraints;
@@ -162,7 +161,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let AsmMatchConverter =
     !if(isVOP3P,
         "cvtVOP3P",
-        !if(!or(P.HasModifiers, P.HasOMod, P.HasIntClamp),
+        !if(!or(P.HasModifiers, P.HasOMod, P.HasClamp),
             "cvtVOP3",
             ""));
 }
@@ -617,7 +616,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let AssemblerPredicate = HasSDWA;
   let AsmVariantName = !if(P.HasExtSDWA, AMDGPUAsmVariants.SDWA,
                                          AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA";
+  let DecoderNamespace = "GFX8";
 
   VOPProfile Pfl = P;
 }
@@ -673,7 +672,7 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let AssemblerPredicate = HasSDWA9;
   let AsmVariantName = !if(ps.Pfl.HasExtSDWA9, AMDGPUAsmVariants.SDWA9,
                                                AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA9";
+  let DecoderNamespace = "GFX9";
 
   // Copy relevant pseudo op flags
   let AsmMatchConverter    = ps.AsmMatchConverter;
@@ -694,7 +693,7 @@ class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
 class Base_VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> : Base_VOP_SDWA9_Real<ps> {
   let SubtargetPredicate = HasSDWA10;
   let AssemblerPredicate = HasSDWA10;
-  let DecoderNamespace = "SDWA10";
+  let DecoderNamespace = "GFX10";
 }
 
 class VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> :
@@ -1485,8 +1484,8 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
   let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
       DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
-      OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts],
-                            [TruePredicate]) in {
+      True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
+                            NoTrue16Predicate) in {
     defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
   }
 }
@@ -1668,6 +1667,19 @@ class VOPC64Table <string Format> : GenericTable {
 
 def VOPC64DPPTable : VOPC64Table<"DPP">;
 def VOPC64DPP8Table : VOPC64Table<"DPP8">;
+
+class AsmOnlyInfoTable <string Format, string Class>: GenericTable {
+  let FilterClass = Class;
+  let FilterClassField = "isAsmParserOnly";
+  let CppTypeName = Format # "DPPAsmOnlyInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "is" # Format # "AsmOnlyOpcodeHelper";
+}
+
+def VOPCAsmOnlyInfoTable : AsmOnlyInfoTable <"VOPC", "VOPC_DPPe_Common">;
+def VOP3CAsmOnlyInfoTable : AsmOnlyInfoTable <"VOP3C", "VOP3_DPPe_Common_Base">;
 
 def VOPTrue16Table : GenericTable {
   let FilterClass = "VOP_Pseudo";
