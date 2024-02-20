@@ -48,6 +48,10 @@
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
+#SoACOO = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
+}>
+
 #CooPNo = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton(nonordered))
 }>
@@ -66,6 +70,28 @@
 func.func @sparse_nop(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
   return %arg0 : tensor<?xf64, #SparseVector>
 }
+
+// CHECK-LABEL: func @sparse_nop_aos_coo(
+//  CHECK-SAME: %[[POS:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[AoS_CRD:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[VAL:.*]]: memref<?xf64>,
+//  CHECK-SAME: %[[A3:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[POS]], %[[AoS_CRD]], %[[VAL]], %[[A3]]
+func.func @sparse_nop_aos_coo(%arg0: tensor<?x?xf64, #Coo>) -> tensor<?x?xf64, #Coo> {
+  return %arg0 : tensor<?x?xf64, #Coo>
+}
+
+// CHECK-LABEL: func @sparse_nop_soa_coo(
+//  CHECK-SAME: %[[POS:.*0]]: memref<?xindex>,
+//  CHECK-SAME: %[[SoA_CRD_0:.*1]]: memref<?xindex>,
+//  CHECK-SAME: %[[SoA_CRD_1:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[VAL:.*]]: memref<?xf64>,
+//  CHECK-SAME: %[[A3:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: return %[[POS]], %[[SoA_CRD_0]], %[[SoA_CRD_1]], %[[VAL]], %[[A3]]
+func.func @sparse_nop_soa_coo(%arg0: tensor<?x?xf64, #SoACOO>) -> tensor<?x?xf64, #SoACOO> {
+  return %arg0 : tensor<?x?xf64, #SoACOO>
+}
+
 
 // CHECK-LABEL: func @sparse_nop_multi_ret(
 //  CHECK-SAME: %[[A0:.*0]]: memref<?xi32>,

@@ -303,9 +303,9 @@ public:
   }
 
   /// Check if the `LevelType` is in the `LevelFormat`.
-  template <LevelFormat fmt>
+  template <LevelFormat... fmt>
   constexpr bool isa() const {
-    return getLvlFmt() == fmt;
+    return (... || (getLvlFmt() == fmt)) || false;
   }
 
   /// Check if the `LevelType` has the properties
