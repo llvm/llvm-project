@@ -4484,7 +4484,8 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     // For all instruction/variable pairs needing extra filtering, find the
     // latest assignment.
     for (const Instruction *Inst : DupSet) {
-      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+      for (DPValue &DPV :
+           llvm::reverse(DPValue::filter(Inst->getDbgValueRange()))) {
         DebugVariable DbgUserVariable =
             DebugVariable(DPV.getVariable(), DPV.getExpression(),
                           DPV.getDebugLoc()->getInlinedAt());

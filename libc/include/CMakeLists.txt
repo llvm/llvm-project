@@ -243,6 +243,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  stdckdint
+  DEF_FILE stdckdint.h.def
+  GEN_HDR stdckdint.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdckdint_macros
+)
+
+add_gen_header(
   stdio
   DEF_FILE stdio.h.def
   GEN_HDR stdio.h
