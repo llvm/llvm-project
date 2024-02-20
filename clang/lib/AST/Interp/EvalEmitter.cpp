@@ -47,6 +47,9 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
+  this->ConvertResultToRValue =
+      VD->getAnyInitializer() &&
+      (VD->getAnyInitializer()->getType()->isAnyComplexType());
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())
