@@ -157,14 +157,14 @@ public:
 #else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 move_iterator() : __current_() {}
 
-  template <class _Up,
-            class = __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<const _Up&, _Iter>::value > >
+  template <class _Up, __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<const _Up&, _Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 move_iterator(const move_iterator<_Up>& __u)
       : __current_(__u.base()) {}
 
   template <class _Up,
-            class = __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<const _Up&, _Iter>::value &&
-                                   is_assignable<_Iter&, const _Up&>::value > >
+            __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<const _Up&, _Iter>::value &&
+                               is_assignable<_Iter&, const _Up&>::value,
+                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 move_iterator& operator=(const move_iterator<_Up>& __u) {
     __current_ = __u.base();
     return *this;

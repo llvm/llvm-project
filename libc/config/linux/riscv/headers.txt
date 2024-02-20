@@ -15,6 +15,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.signal
     libc.include.spawn
     libc.include.setjmp
+    libc.include.stdckdint
     libc.include.stdbit
     libc.include.stdio
     libc.include.stdlib

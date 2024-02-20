@@ -554,7 +554,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         DbgIntrinsics.insert(makeHash(DII));
         // Until RemoveDIs supports dbg.declares in DPValue format, we'll need
         // to collect DPValues attached to any other debug intrinsics.
-        for (const DPValue &DPV : DII->getDbgValueRange())
+        for (const DPValue &DPV : DPValue::filter(DII->getDbgValueRange()))
           DbgIntrinsics.insert(makeHash(&DPV));
       } else {
         break;
@@ -564,7 +564,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Build DPValue hashes for DPValues attached to the terminator, which isn't
     // considered in the loop above.
     for (const DPValue &DPV :
-         OrigPreheader->getTerminator()->getDbgValueRange())
+         DPValue::filter(OrigPreheader->getTerminator()->getDbgValueRange()))
       DbgIntrinsics.insert(makeHash(&DPV));
 
     // Remember the local noalias scope declarations in the header. After the
@@ -621,7 +621,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           RemapDPValueRange(M, DbgValueRange, ValueMap,
                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           // Erase anything we've seen before.
-          for (DPValue &DPV : make_early_inc_range(DbgValueRange))
+          for (DPValue &DPV :
+               make_early_inc_range(DPValue::filter(DbgValueRange)))
             if (DbgIntrinsics.count(makeHash(&DPV)))
               DPV.eraseFromParent();
         }
@@ -647,7 +648,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
                           RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         NextDbgInsts = DPMarker::getEmptyDPValueRange();
         // Erase anything we've seen before.
-        for (DPValue &DPV : make_early_inc_range(Range))
+        for (DPValue &DPV : make_early_inc_range(DPValue::filter(Range)))
           if (DbgIntrinsics.count(makeHash(&DPV)))
             DPV.eraseFromParent();
       }
