@@ -1985,6 +1985,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialMetatype(
       reflection_ctx->ReadTypeFromMetadata(
           ptr, tss->GetTypeSystemSwiftTypeRef().GetDescriptorFinder());
 
+  if (!type_ref)
+    return false;
+
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer node = type_ref->getDemangling(dem);
