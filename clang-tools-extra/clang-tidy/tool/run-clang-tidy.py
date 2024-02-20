@@ -473,7 +473,10 @@ def main():
         try:
             source_ignore_re = re.compile(args.source_ignore)
         except:
-            print("Error: unable to compile regex from arg -source-ignore.", file=sys.stderr)
+            print(
+                "Error: unable to compile regex from arg -source-ignore.",
+                file=sys.stderr,
+            )
             sys.exit(1)
         files = {f for f in files if not source_ignore_re.match(f)}
 
