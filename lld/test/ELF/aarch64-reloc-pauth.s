@@ -19,6 +19,21 @@
 # UNPACKED-NEXT:       0x30470 R_AARCH64_AUTH_ABS64 bar2 0x0
 # UNPACKED-NEXT:     }
 
+# RUN: ld.lld %t.o %t.so -o %t.nopie
+# RUN: llvm-readobj -r %t.nopie | FileCheck --check-prefix=NOPIE %s
+
+# NOPIE:      Section ({{.+}}) .rela.dyn {
+# NOPIE:        0x230430 R_AARCH64_AUTH_RELATIVE - 0x200001
+# NOPIE-NEXT:   0x230438 R_AARCH64_AUTH_RELATIVE - 0x200002
+# NOPIE-NEXT:   0x230440 R_AARCH64_AUTH_RELATIVE - 0x200003
+# NOPIE-NEXT:   0x230448 R_AARCH64_AUTH_RELATIVE - 0x12545678
+# NOPIE-NEXT:   0x230450 R_AARCH64_AUTH_RELATIVE - 0x123476789A
+# NOPIE-NEXT:   0x230469 R_AARCH64_AUTH_RELATIVE - 0x200004
+# NOPIE-NEXT:   0x230472 R_AARCH64_AUTH_RELATIVE - 0x200005
+# NOPIE-NEXT:   0x230458 R_AARCH64_AUTH_ABS64 zed2 0x0
+# NOPIE-NEXT:   0x230460 R_AARCH64_AUTH_ABS64 bar2 0x0
+# NOPIE-NEXT: }
+
 # RUN: ld.lld -pie -z pack-relative-relocs %t.o %t.so -o %t2
 # RUN: llvm-readelf -S -d -r -x .test %t2 | FileCheck --check-prefixes=RELR,HEX %s
 

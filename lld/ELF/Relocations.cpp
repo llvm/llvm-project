@@ -995,7 +995,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (e == R_GOT || e == R_PLT)
     return target->usesOnlyLowPageBits(type) || !config->isPic;
 
-  if (sym.isPreemptible)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
+  if (sym.isPreemptible || e == R_AARCH64_AUTH)
     return false;
   if (!config->isPic)
     return true;
