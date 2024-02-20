@@ -251,8 +251,9 @@ protected:
             // The call to .__tls_get_mod.
             BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
           } else if (!IsTLSTPRelMI) {
-            // The variable offset and region handle are copied in r4 and r3.
-            // The copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
+            // The variable offset and region handle (for TLSGD) are copied in
+            // r4 and r3. The copies are followed by
+            // GETtlsADDR32AIX/GETtlsADDR64AIX.
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
                 .addReg(MI.getOperand(1).getReg());
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
