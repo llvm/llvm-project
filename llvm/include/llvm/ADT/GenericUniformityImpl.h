@@ -46,7 +46,6 @@
 
 #include "llvm/ADT/GenericUniformityInfo.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -57,6 +56,10 @@
 #define DEBUG_TYPE "uniformity"
 
 namespace llvm {
+
+template <typename Range> auto unique(Range &&R) {
+  return std::unique(adl_begin(R), adl_end(R));
+}
 
 /// Construct a specially modified post-order traversal of cycles.
 ///
