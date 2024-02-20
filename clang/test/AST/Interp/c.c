@@ -171,3 +171,9 @@ const _Bool CTB3 = (_Complex double){0.0, 1.0}; // pedantic-ref-warning {{extens
 _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
 
+
+int t1 = sizeof(int);
+void test4(void) {
+  t1 = sizeof(int);
+}
+

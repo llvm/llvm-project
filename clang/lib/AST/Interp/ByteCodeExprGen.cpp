@@ -505,8 +505,18 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     if (DiscardResult)
       return LHS->refersToBitField() ? this->emitStoreBitFieldPop(*T, BO)
                                      : this->emitStorePop(*T, BO);
-    return LHS->refersToBitField() ? this->emitStoreBitField(*T, BO)
-                                   : this->emitStore(*T, BO);
+    if (LHS->refersToBitField()) {
+      if (!this->emitStoreBitField(*T, BO))
+        return false;
+    } else {
+      if (!this->emitStore(*T, BO))
+        return false;
+    }
+    // Assignments aren't necessarily lvalues in C.
+    // Load from them in that case.
+    if (!BO->isLValue())
+      return this->emitLoadPop(*T, BO);
+    return true;
   case BO_And:
     return Discard(this->emitBitAnd(*T, BO));
   case BO_Or:
