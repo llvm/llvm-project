@@ -430,7 +430,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                     getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
                     dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
                     DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
+  let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   let InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
@@ -447,7 +447,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                      getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
-                     dpp8:$dpp8, DppFI:$fi);
+                     dpp8:$dpp8, Dpp8FI:$fi);
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
@@ -500,7 +500,7 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                      getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2, // stub argument
-                     dpp8:$dpp8, DppFI:$fi);
+                     dpp8:$dpp8, Dpp8FI:$fi);
   let Src2Mod = FP32InputMods; // dummy unused modifiers
   let Src2RC64 = VGPRSrc_32;   // stub argument
 }
@@ -552,11 +552,11 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/
                     Src1DPP:$src1,
                     dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
                     DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
+  let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
                     Src0DPP:$src0,
                     Src1DPP:$src1,
-                    dpp8:$dpp8, DppFI:$fi);
+                    dpp8:$dpp8, Dpp8FI:$fi);
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let OutsVOP3DPP = Outs64;
@@ -594,11 +594,11 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1>
                     Src1DPP:$src1,
                     dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
                     DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
+  let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
                      Src0DPP:$src0,
                      Src1DPP:$src1,
-                     dpp8:$dpp8, DppFI:$fi);
+                     dpp8:$dpp8, Dpp8FI:$fi);
 
   let HasExt = 1;
   let HasExtDPP = 1;
@@ -645,11 +645,11 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
                     FPVRegInputMods:$src1_modifiers, Src1DPP:$src1,
                     dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
                     DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
+  let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
                      FPVRegInputMods:$src0_modifiers, Src0DPP:$src0,
                      FPVRegInputMods:$src1_modifiers, Src1DPP:$src1,
-                     dpp8:$dpp8, DppFI:$fi);
+                     dpp8:$dpp8, Dpp8FI:$fi);
 
   let Src0ModVOP3DPP = FPVRegInputMods;
   let Src1ModVOP3DPP = FPVRegInputMods;

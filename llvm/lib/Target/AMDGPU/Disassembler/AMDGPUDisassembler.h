@@ -261,6 +261,7 @@ public:
 
   MCOperand decodeBoolReg(unsigned Val) const;
   MCOperand decodeSplitBarrier(unsigned Val) const;
+  MCOperand decodeDpp8FI(unsigned Val) const;
 
   int getTTmpIdx(unsigned Val) const;
 
