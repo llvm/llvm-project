@@ -99,8 +99,8 @@ behavior between Clang and DXC. Some examples include:
 
 .. note::
 
-  In Clang a conscious decision was made to exclude the ``dot(vector<double,N>,
-  vector<double,N>)`` overload and allow overload resolution to resolve the
+  In Clang, a conscious decision was made to exclude the ``dot(vector<double,N>, vector<double,N>)`` 
+  overload and allow overload resolution to resolve the
   ``vector<float,N>`` overload. This approach provides ``-Wconversion``
   diagnostic notifying the user of the conversion rather than silently altering
   precision relative to the other overloads (as FXC does) or generating code
