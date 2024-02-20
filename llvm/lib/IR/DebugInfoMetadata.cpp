@@ -34,6 +34,10 @@ cl::opt<bool> EnableFSDiscriminator(
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 
+uint32_t DIType::getAlignInBits() const {
+  return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
+}
+
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
@@ -748,6 +752,13 @@ DIDerivedType *DIDerivedType::getImpl(
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
                         DWARFAddressSpace, PtrAuthData, Flags),
                        Ops);
+}
+
+std::optional<DIDerivedType::PtrAuthData>
+DIDerivedType::getPtrAuthData() const {
+  return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
+             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             : std::nullopt;
 }
 
 DICompositeType *DICompositeType::getImpl(

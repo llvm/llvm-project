@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
@@ -746,9 +745,7 @@ public:
 
   unsigned getLine() const { return Line; }
   uint64_t getSizeInBits() const { return SizeInBits; }
-  uint32_t getAlignInBits() const {
-    return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
-  }
+  uint32_t getAlignInBits() const;
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
   uint64_t getOffsetInBits() const { return OffsetInBits; }
   DIFlags getFlags() const { return Flags; }
@@ -1096,11 +1093,7 @@ public:
     return DWARFAddressSpace;
   }
 
-  std::optional<PtrAuthData> getPtrAuthData() const {
-    return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
-               ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
-               : std::nullopt;
-  }
+  std::optional<PtrAuthData> getPtrAuthData() const;
 
   /// \returns The PointerAuth key.
   std::optional<unsigned> getPtrAuthKey() const {
