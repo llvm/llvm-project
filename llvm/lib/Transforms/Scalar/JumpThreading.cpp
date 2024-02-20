@@ -401,7 +401,7 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
     Changed |= replaceNonLocalUsesWith(Cond, ToVal);
   for (Instruction &I : reverse(*KnownAtEndOfBB)) {
     // Replace any debug-info record users of Cond with ToVal.
-    for (DPValue &DPV : I.getDbgValueRange())
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
       DPV.replaceVariableLocationOp(Cond, ToVal, true);
 
     // Reached the Cond whose uses we are trying to replace, so there are no
@@ -2082,7 +2082,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
 
   auto CloneAndRemapDbgInfo = [&](Instruction *NewInst, Instruction *From) {
     auto DPVRange = NewInst->cloneDebugInfoFrom(From);
-    for (DPValue &DPV : DPVRange)
+    for (DPValue &DPV : DPValue::filter(DPVRange))
       RetargetDPValueIfPossible(&DPV);
   };
 
@@ -2117,7 +2117,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     DPMarker *Marker = RangeBB->getMarker(BE);
     DPMarker *EndMarker = NewBB->createMarker(NewBB->end());
     auto DPVRange = EndMarker->cloneDebugInfoFrom(Marker, std::nullopt);
-    for (DPValue &DPV : DPVRange)
+    for (DPValue &DPV : DPValue::filter(DPVRange))
       RetargetDPValueIfPossible(&DPV);
   }
 
