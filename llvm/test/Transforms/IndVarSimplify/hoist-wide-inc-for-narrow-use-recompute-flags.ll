@@ -4,7 +4,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; Test for https://github.com/llvm/llvm-project/issues/82243.
-; FIXME: Currently no-wrap flags on hoisted wide IV are not dropped properly.
+; Check that NUW flag on hoisted wide IV is dropped properly.
 define void @test_pr82243(ptr %f) {
 ; CHECK-LABEL: define void @test_pr82243(
 ; CHECK-SAME: ptr [[F:%.*]]) {
@@ -14,7 +14,7 @@ define void @test_pr82243(ptr %f) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[GEP_IV_EXT:%.*]] = getelementptr i32, ptr [[F]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 1, ptr [[GEP_IV_EXT]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 123, [[TMP0]]
 ; CHECK-NEXT:    [[GEP_SHL:%.*]] = getelementptr i32, ptr [[F]], i32 [[SHL]]
