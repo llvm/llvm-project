@@ -14,6 +14,8 @@ will be performed unauthenticated.
 
 import argparse
 import github
+import sys
+import time
 
 
 def main(token, filter_gha_runners):
@@ -44,6 +46,8 @@ def main(token, filter_gha_runners):
 
     print(f"\nFound {in_progress_jobs} running jobs.")
 
+    return in_progress_jobs
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -53,6 +57,20 @@ if __name__ == "__main__":
         "--token",
         type=str,
         help="The Github token to use to authorize with the API",
+        default=None,
+        nargs="?",
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        help="The output file to write time-series data to",
+        default=None,
+        nargs="?",
+    )
+    parser.add_argument(
+        "--data-collection-interval",
+        type=int,
+        help="The number of seconds between data collection intervals",
         default=None,
         nargs="?",
     )
@@ -68,6 +86,31 @@ if __name__ == "__main__":
         help="Consider all running jobs",
     )
     parser.set_defaults(filter_gha_runners=False)
-
     args = parser.parse_args()
-    main(args.token, args.filter_gha_runners)
+
+    # Perform some basic argument validation
+
+    # If an output file is specified, the user must also specify the data
+    # collection interval.
+    if bool(args.output_file) and not bool(args.data_collection_interval):
+        print("A data collection interval must be specified when --output_file is used")
+        sys.exit(1)
+
+    if args.data_collection_interval:
+        while True:
+            current_time = time.localtime()
+            current_time_string = time.strftime("%Y/%m/%d %H:%M:%S", current_time)
+
+            print(f"Collecting data at {current_time_string}")
+
+            current_job_count = main(args.token, args.filter_gha_runners)
+
+            if args.output_file:
+                with open(args.output_file, "a") as output_file_handle:
+                    output_file_handle.write(
+                        f"{current_time_string},{current_job_count}\n"
+                    )
+
+            time.sleep(args.data_collection_interval)
+    else:
+        main(args.token, args.filter_gha_runners)
