@@ -165,6 +165,10 @@ public:
     return dyn_cast_if_present<ValueDecl>(asDecl());
   }
 
+  const VarDecl *asVarDecl() const {
+    return dyn_cast_if_present<VarDecl>(asDecl());
+  }
+
   const FieldDecl *asFieldDecl() const {
     return dyn_cast_if_present<FieldDecl>(asDecl());
   }
