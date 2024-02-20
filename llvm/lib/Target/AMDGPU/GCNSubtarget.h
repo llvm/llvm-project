@@ -168,6 +168,10 @@ protected:
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
+  /// The maximum number of instructions that may be placed within an S_CLAUSE,
+  /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
+  /// indicates a lack of S_CLAUSE support.
+  unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
   bool DynamicVGPR = false;
 
@@ -1148,7 +1152,7 @@ public:
 
   bool hasNSAClauseBug() const { return HasNSAClauseBug; }
 
-  bool hasHardClauses() const { return getGeneration() >= GFX10; }
+  bool hasHardClauses() const { return MaxHardClauseLength > 0; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
@@ -1218,6 +1222,11 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns The maximum number of instructions that can be enclosed in an
+  /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
+  /// instruction.
+  unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

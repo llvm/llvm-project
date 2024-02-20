@@ -2497,3 +2497,27 @@ func.func @vector_interleave_1d_scalable(%a: vector<[4]xi32>, %b: vector<[4]xi32
   %0 = vector.interleave %a, %b : vector<[4]xi32>
   return %0 : vector<[8]xi32>
 }
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_2d
+//  CHECK-SAME:     %[[LHS:.*]]: vector<2x3xi8>, %[[RHS:.*]]: vector<2x3xi8>)
+func.func @vector_interleave_2d(%a: vector<2x3xi8>, %b: vector<2x3xi8>) -> vector<2x6xi8>
+{
+  // CHECK: llvm.shufflevector
+  // CHECK-NOT: vector.interleave {{.*}} : vector<2x3xi8>
+  %0 = vector.interleave %a, %b : vector<2x3xi8>
+  return %0 : vector<2x6xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_2d_scalable
+//  CHECK-SAME:     %[[LHS:.*]]: vector<2x[8]xi16>, %[[RHS:.*]]: vector<2x[8]xi16>)
+func.func @vector_interleave_2d_scalable(%a: vector<2x[8]xi16>, %b: vector<2x[8]xi16>) -> vector<2x[16]xi16>
+{
+  // CHECK: llvm.intr.experimental.vector.interleave2
+  // CHECK-NOT: vector.interleave {{.*}} : vector<2x[8]xi16>
+  %0 = vector.interleave %a, %b : vector<2x[8]xi16>
+  return %0 : vector<2x[16]xi16>
+}

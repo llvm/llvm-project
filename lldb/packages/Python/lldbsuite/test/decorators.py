@@ -1,6 +1,6 @@
 # System modules
-from distutils.version import LooseVersion
 from functools import wraps
+from pkg_resources import packaging
 import ctypes
 import locale
 import os
@@ -65,10 +65,10 @@ def _check_expected_version(comparison, expected, actual):
         ">=": fn_geq,
         "<=": fn_leq,
     }
-    expected_str = ".".join([str(x) for x in expected])
-    actual_str = ".".join([str(x) for x in actual])
 
-    return op_lookup[comparison](LooseVersion(actual_str), LooseVersion(expected_str))
+    return op_lookup[comparison](
+        packaging.version.parse(actual), packaging.version.parse(expected)
+    )
 
 
 def _match_decorator_property(expected, actual):
@@ -122,33 +122,6 @@ def expectedFailureIf(condition, bugnumber=None):
             return unittest.expectedFailure(func)
         return func
 
-    if callable(bugnumber):
-        return expectedFailure_impl(bugnumber)
-    else:
-        return expectedFailure_impl
-
-
-def expectedFailureIfFn(expected_fn, bugnumber=None):
-    def expectedFailure_impl(func):
-        if isinstance(func, type) and issubclass(func, unittest.TestCase):
-            raise Exception("Decorator can only be used to decorate a test method")
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            xfail_reason = expected_fn(*args, **kwargs)
-            if xfail_reason is not None:
-                xfail_func = unittest.expectedFailure(func)
-                xfail_func(*args, **kwargs)
-            else:
-                func(*args, **kwargs)
-
-        return wrapper
-
-    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
-    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
-    # the first way, the first argument will be the actual function because decorators are
-    # weird like that.  So this is basically a check that says "which syntax was the original
-    # function decorated with?"
     if callable(bugnumber):
         return expectedFailure_impl(bugnumber)
     else:
@@ -265,7 +238,9 @@ def _decorateTest(
             )
         )
         skip_for_py_version = (py_version is None) or _check_expected_version(
-            py_version[0], py_version[1], sys.version_info
+            py_version[0],
+            py_version[1],
+            "{}.{}".format(sys.version_info.major, sys.version_info.minor),
         )
         skip_for_macos_version = (macos_version is None) or (
             (platform.mac_ver()[0] != "")
@@ -417,8 +392,8 @@ def skipIf(
     )
 
 
-def _skip_for_android(reason, api_levels, archs):
-    def impl(obj):
+def _skip_fn_for_android(reason, api_levels, archs):
+    def impl():
         result = lldbplatformutil.match_android_device(
             lldbplatformutil.getArchitecture(),
             valid_archs=archs,
@@ -549,8 +524,8 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
         arch - A sequence of architecture names specifying the architectures
             for which a test is expected to fail. None means all architectures.
     """
-    return expectedFailureIfFn(
-        _skip_for_android("xfailing on android", api_levels, archs), bugnumber
+    return expectedFailureIf(
+        _skip_fn_for_android("xfailing on android", api_levels, archs)(), bugnumber
     )
 
 
@@ -612,7 +587,7 @@ def expectedFlakeyNetBSD(bugnumber=None, compilers=None):
 
 def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
     return expectedFlakey(
-        _skip_for_android("flakey on android", api_levels, archs), bugnumber
+        _skip_fn_for_android("flakey on android", api_levels, archs), bugnumber
     )
 
 
@@ -773,18 +748,14 @@ def skipUnlessTargetAndroid(func):
     )(func)
 
 
-def skipIfHostIncompatibleWithRemote(func):
-    """Decorate the item to skip tests if binaries built on this host are incompatible."""
+def skipIfHostIncompatibleWithTarget(func):
+    """Decorate the item to skip tests when the host and target are incompatible."""
 
     def is_host_incompatible_with_remote():
         host_arch = lldbplatformutil.getLLDBArchitecture()
         host_platform = lldbplatformutil.getHostPlatform()
         target_arch = lldbplatformutil.getArchitecture()
-        target_platform = (
-            "darwin"
-            if lldbplatformutil.platformIsDarwin()
-            else lldbplatformutil.getPlatform()
-        )
+        target_platform = lldbplatformutil.getPlatform()
         if (
             not (target_arch == "x86_64" and host_arch == "i386")
             and host_arch != target_arch
@@ -846,7 +817,7 @@ def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
             for which a test is skipped. None means all architectures.
     """
     return skipTestIfFn(
-        _skip_for_android("skipping for android", api_levels, archs), bugnumber
+        _skip_fn_for_android("skipping for android", api_levels, archs), bugnumber
     )
 
 

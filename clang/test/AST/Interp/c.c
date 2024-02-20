@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 -Wcast-qual %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -125,3 +125,55 @@ struct XY { int before; struct XX xx, *xp; float* after; } xy[] = {
   0,              // all-warning {{initializer overrides prior initialization of this subobject}}
   &xy[2].xx.a, &xy[2].xx, &global_float
 };
+
+void t14(void) {
+  int array[256] = { 0 }; // expected-note {{array 'array' declared here}} \
+                          // pedantic-expected-note {{array 'array' declared here}} \
+                          // ref-note {{array 'array' declared here}} \
+                          // pedantic-ref-note {{array 'array' declared here}}
+  const char b = -1;
+  int val = array[b]; // expected-warning {{array index -1 is before the beginning of the array}} \
+                      // pedantic-expected-warning {{array index -1 is before the beginning of the array}} \
+                      // ref-warning {{array index -1 is before the beginning of the array}} \
+                      // pedantic-ref-warning {{array index -1 is before the beginning of the array}}
+
+}
+
+void bar_0(void) {
+  struct C {
+    const int a;
+    int b;
+  };
+
+  const struct C S = {0, 0};
+
+  *(int *)(&S.a) = 0; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+  *(int *)(&S.b) = 0; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+}
+
+/// Complex-to-bool casts.
+const int A =  ((_Complex double)1.0 ? 21 : 1);
+_Static_assert(A == 21, ""); // pedantic-ref-warning {{GNU extension}} \
+                             // pedantic-expected-warning {{GNU extension}}
+
+const int CTI1 = ((_Complex double){0.0, 1.0}); // pedantic-ref-warning {{extension}} \
+                                                // pedantic-expected-warning {{extension}}
+_Static_assert(CTI1 == 0, ""); // pedantic-ref-warning {{GNU extension}} \
+                               // pedantic-expected-warning {{GNU extension}}
+
+const _Bool CTB2 = (_Bool)(_Complex double){0.0, 1.0}; // pedantic-ref-warning {{extension}} \
+                                                       // pedantic-expected-warning {{extension}}
+_Static_assert(CTB2, ""); // pedantic-ref-warning {{GNU extension}} \
+                          // pedantic-expected-warning {{GNU extension}}
+
+const _Bool CTB3 = (_Complex double){0.0, 1.0}; // pedantic-ref-warning {{extension}} \
+                                                // pedantic-expected-warning {{extension}}
+_Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
+                          // pedantic-expected-warning {{GNU extension}}
+
+
+int t1 = sizeof(int);
+void test4(void) {
+  t1 = sizeof(int);
+}
+

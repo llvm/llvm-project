@@ -877,8 +877,7 @@ template <> struct MappingTraits<FormatStyle> {
     if (!IO.outputting()) {
       IO.mapOptional("AlignEscapedNewlinesLeft", Style.AlignEscapedNewlines);
       IO.mapOptional("AllowAllConstructorInitializersOnNextLine", OnNextLine);
-      IO.mapOptional("AlwaysBreakAfterReturnType",
-                     Style.AlwaysBreakAfterReturnType);
+      IO.mapOptional("AlwaysBreakAfterReturnType", Style.BreakAfterReturnType);
       IO.mapOptional("AlwaysBreakTemplateDeclarations",
                      Style.BreakTemplateDeclarations);
       IO.mapOptional("BreakBeforeInheritanceComma",
@@ -957,7 +956,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
-    IO.mapOptional("BreakAfterReturnType", Style.AlwaysBreakAfterReturnType);
+    IO.mapOptional("BreakAfterReturnType", Style.BreakAfterReturnType);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
@@ -1127,17 +1126,16 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
-    // AlwaysBreakAfterReturnType was not, initialize the latter from the
-    // former for backwards compatibility.
+    // BreakAfterReturnType was not, initialize the latter from the former for
+    // backwards compatibility.
     if (Style.AlwaysBreakAfterDefinitionReturnType != FormatStyle::DRTBS_None &&
-        Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None) {
+        Style.BreakAfterReturnType == FormatStyle::RTBS_None) {
       if (Style.AlwaysBreakAfterDefinitionReturnType ==
           FormatStyle::DRTBS_All) {
-        Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+        Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
       } else if (Style.AlwaysBreakAfterDefinitionReturnType ==
                  FormatStyle::DRTBS_TopLevel) {
-        Style.AlwaysBreakAfterReturnType =
-            FormatStyle::RTBS_TopLevelDefinitions;
+        Style.BreakAfterReturnType = FormatStyle::RTBS_TopLevelDefinitions;
       }
     }
 
@@ -1408,29 +1406,28 @@ static void expandPresetsSpacesInParens(FormatStyle &Expanded) {
 
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
-  LLVMStyle.InheritsParentConfig = false;
-  LLVMStyle.Language = Language;
   LLVMStyle.AccessModifierOffset = -2;
-  LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
-  LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignConsecutiveAssignments = {};
-  LLVMStyle.AlignConsecutiveAssignments.Enabled = false;
-  LLVMStyle.AlignConsecutiveAssignments.AcrossEmptyLines = false;
   LLVMStyle.AlignConsecutiveAssignments.AcrossComments = false;
+  LLVMStyle.AlignConsecutiveAssignments.AcrossEmptyLines = false;
   LLVMStyle.AlignConsecutiveAssignments.AlignCompound = false;
   LLVMStyle.AlignConsecutiveAssignments.AlignFunctionPointers = false;
+  LLVMStyle.AlignConsecutiveAssignments.Enabled = false;
   LLVMStyle.AlignConsecutiveAssignments.PadOperators = true;
   LLVMStyle.AlignConsecutiveBitFields = {};
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
   LLVMStyle.AlignConsecutiveShortCaseStatements = {};
+  LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+  LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignTrailingComments = {};
   LLVMStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
   LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
+  LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
   LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
@@ -1439,14 +1436,12 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
-  LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
-  LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.AttributeMacros.push_back("__capability");
-  LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackParameters = true;
+  LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
                              /*AfterClass=*/false,
@@ -1469,16 +1464,17 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
-  LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
   LLVMStyle.BreakStringLiterals = true;
+  LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
   LLVMStyle.CompactNamespaces = false;
@@ -1495,22 +1491,23 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
   LLVMStyle.ForEachMacros.push_back("BOOST_FOREACH");
   LLVMStyle.IfMacros.push_back("KJ_IF_MAYBE");
+  LLVMStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
   LLVMStyle.IncludeStyle.IncludeCategories = {
       {"^\"(llvm|llvm-c|clang|clang-c)/", 2, 0, false},
       {"^(<|\"(gtest|gmock|isl|json)/)", 3, 0, false},
       {".*", 1, 0, false}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
-  LLVMStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
   LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
   LLVMStyle.IndentAccessModifiers = false;
-  LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentCaseBlocks = false;
+  LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   LLVMStyle.IndentGotoLabels = true;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequiresClause = true;
   LLVMStyle.IndentWidth = 2;
   LLVMStyle.IndentWrappedFunctionNames = false;
+  LLVMStyle.InheritsParentConfig = false;
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
@@ -1523,6 +1520,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.KeepEmptyLinesAtEOF = false;
   LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
+  LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
@@ -1552,7 +1550,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceAfterLogicalNot = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
+  LLVMStyle.SpaceBeforeAssignmentOperators = true;
   LLVMStyle.SpaceBeforeCaseColon = false;
+  LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeCtorInitializerColon = true;
   LLVMStyle.SpaceBeforeInheritanceColon = true;
   LLVMStyle.SpaceBeforeJsonColon = false;
@@ -1562,8 +1562,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeParensOptions.AfterForeachMacros = true;
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
-  LLVMStyle.SpaceBeforeAssignmentOperators = true;
-  LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
   LLVMStyle.SpaceInEmptyBlock = false;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
@@ -1586,16 +1584,16 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.WhitespaceSensitiveMacros.push_back("STRINGIZE");
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;
+  LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
   LLVMStyle.PenaltyBreakComment = 300;
   LLVMStyle.PenaltyBreakFirstLessLess = 120;
-  LLVMStyle.PenaltyBreakString = 1000;
-  LLVMStyle.PenaltyExcessCharacter = 1000000;
-  LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
-  LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
   LLVMStyle.PenaltyBreakOpenParenthesis = 0;
   LLVMStyle.PenaltyBreakScopeResolution = 500;
+  LLVMStyle.PenaltyBreakString = 1000;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
+  LLVMStyle.PenaltyExcessCharacter = 1000000;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
+  LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
 
   // Defaults that differ when not C++.
   switch (Language) {
@@ -1634,12 +1632,12 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AlwaysBreakBeforeMultilineStrings = true;
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.DerivePointerAlignment = true;
+  GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
                                                 {"^<.*\\.h>", 1, 0, false},
                                                 {"^<.*", 2, 0, false},
                                                 {".*", 3, 0, false}};
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
-  GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
@@ -1694,8 +1692,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.SpacesBeforeTrailingComments = 2;
   GoogleStyle.Standard = FormatStyle::LS_Auto;
 
-  GoogleStyle.PenaltyReturnTypeOnItsOwnLine = 200;
   GoogleStyle.PenaltyBreakBeforeFirstCallParameter = 1;
+  GoogleStyle.PenaltyReturnTypeOnItsOwnLine = 200;
 
   if (Language == FormatStyle::LK_Java) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
@@ -1723,22 +1721,22 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     // TODO: enable once decided, in particular re disabling bin packing.
     // https://google.github.io/styleguide/jsguide.html#features-arrays-trailing-comma
     // GoogleStyle.InsertTrailingCommas = FormatStyle::TCS_Wrapped;
+    GoogleStyle.JavaScriptQuotes = FormatStyle::JSQS_Single;
+    GoogleStyle.JavaScriptWrapImports = false;
     GoogleStyle.MaxEmptyLinesToKeep = 3;
     GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
     GoogleStyle.SpacesInContainerLiterals = false;
-    GoogleStyle.JavaScriptQuotes = FormatStyle::JSQS_Single;
-    GoogleStyle.JavaScriptWrapImports = false;
   } else if (Language == FormatStyle::LK_Proto) {
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
-    GoogleStyle.SpacesInContainerLiterals = false;
-    GoogleStyle.Cpp11BracedListStyle = false;
     // This affects protocol buffer options specifications and text protos.
     // Text protos are currently mostly formatted inside C++ raw string literals
     // and often the current breaking behavior of string literals is not
     // beneficial there. Investigate turning this on once proper string reflow
     // has been implemented.
     GoogleStyle.BreakStringLiterals = false;
+    GoogleStyle.Cpp11BracedListStyle = false;
+    GoogleStyle.SpacesInContainerLiterals = false;
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
@@ -1822,15 +1820,15 @@ FormatStyle getMozillaStyle() {
   FormatStyle MozillaStyle = getLLVMStyle();
   MozillaStyle.AllowAllParametersOfDeclarationOnNextLine = false;
   MozillaStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
-  MozillaStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
-  MozillaStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  MozillaStyle.BinPackParameters = false;
   MozillaStyle.BinPackArguments = false;
+  MozillaStyle.BinPackParameters = false;
+  MozillaStyle.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
   MozillaStyle.BreakInheritanceList = FormatStyle::BILS_BeforeComma;
+  MozillaStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   MozillaStyle.ConstructorInitializerIndentWidth = 2;
   MozillaStyle.ContinuationIndentWidth = 2;
   MozillaStyle.Cpp11BracedListStyle = false;
@@ -1855,8 +1853,8 @@ FormatStyle getWebKitStyle() {
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   Style.BreakBeforeBraces = FormatStyle::BS_WebKit;
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
-  Style.Cpp11BracedListStyle = false;
   Style.ColumnLimit = 0;
+  Style.Cpp11BracedListStyle = false;
   Style.FixNamespaceComments = false;
   Style.IndentWidth = 4;
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
@@ -1871,12 +1869,12 @@ FormatStyle getWebKitStyle() {
 FormatStyle getGNUStyle() {
   FormatStyle Style = getLLVMStyle();
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_All;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_AllDefinitions;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   Style.BreakBeforeBraces = FormatStyle::BS_GNU;
   Style.BreakBeforeTernaryOperators = true;
-  Style.Cpp11BracedListStyle = false;
   Style.ColumnLimit = 79;
+  Style.Cpp11BracedListStyle = false;
   Style.FixNamespaceComments = false;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   Style.Standard = FormatStyle::LS_Cpp03;
@@ -1908,7 +1906,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   Style.AllowShortLoopsOnASingleLine = false;
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
   return Style;
 }
 
@@ -2950,9 +2948,9 @@ private:
                      << getTokenTypeName(FormatTok->getType()) << "\n");
           return true;
         }
-        if (guessIsObjC(SourceManager, Line->Children, Keywords))
-          return true;
       }
+      if (guessIsObjC(SourceManager, Line->Children, Keywords))
+        return true;
     }
     return false;
   }

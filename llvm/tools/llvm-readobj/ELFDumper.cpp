@@ -1478,6 +1478,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_RANDOMIZE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_WXNEEDED);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_NOBTCFI);
+    LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_SYSCALLS);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_BOOTDATA);
   default:
     return "";
@@ -1622,8 +1623,8 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10.1-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10.3-generic"),          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
 // clang-format on
 
@@ -3553,6 +3554,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   if (e.e_ident[ELF::EI_OSABI] >= ELF::ELFOSABI_FIRST_ARCH &&
       e.e_ident[ELF::EI_OSABI] <= ELF::ELFOSABI_LAST_ARCH) {
     switch (e.e_machine) {
+    case ELF::EM_ARM:
+      OSABI = ArrayRef(ARMElfOSABI);
+      break;
     case ELF::EM_AMDGPU:
       OSABI = ArrayRef(AMDGPUElfOSABI);
       break;

@@ -12,6 +12,14 @@
 # RUN: llvm-objdump --section .data --full-contents %t | FileCheck --check-prefix=LE-DATA %s
 # RUN: llvm-objdump --section .got --full-contents %t | FileCheck --check-prefix=LE-GOT %s
 
+## With -pie we still have the R_390_RELATIVE for the data element, but all GOT
+## entries should be fully resolved without any remaining R_390_TLS_TPOFF.
+# RUN: ld.lld -pie %t.o -o %t.pie
+# RUN: llvm-readelf -r %t.pie | FileCheck --check-prefix=PIE-REL %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.pie | FileCheck --check-prefix=PIE %s
+# RUN: llvm-objdump --section .data --full-contents %t.pie | FileCheck --check-prefix=PIE-DATA %s
+# RUN: llvm-objdump --section .got --full-contents %t.pie | FileCheck --check-prefix=PIE-GOT %s
+
 # IE-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 4 entries:
 # IE-REL: 0000000000003478 000000000000000c R_390_RELATIVE 2460
 # IE-REL: 0000000000002460 0000000100000038 R_390_TLS_TPOFF 0000000000000008 a + 0
@@ -57,6 +65,32 @@
 # LE-GOT: 1002238 00000000 00000000 00000000 00000000
 # LE-GOT: 1002248 00000000 00000000 ffffffff fffffff8
 # LE-GOT: 1002258 ffffffff fffffffc 00000000 00000000
+
+# PIE-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
+# PIE-REL: 00000000000033d0 000000000000000c R_390_RELATIVE 23b8
+
+## TP offset for a is at 0x23b8
+# PIE:      lgrl    %r1, 0x23b8
+# PIE-NEXT: lgf     %r1, 0(%r1,%r7)
+
+## TP offset for b is at 0x23c0
+# PIE-NEXT: lgrl    %r1, 0x23c0
+# PIE-NEXT: lgf     %r1, 0(%r1,%r7)
+
+## TP offset for c is at 0x23c8
+# PIE-NEXT: lgrl    %r1, 0x23c8
+# PIE-NEXT: lgf     %r1, 0(%r1,%r7)
+
+## Data element: TP offset for a is at 0x23b8 (relocated via R_390_RELATIVE above)
+# PIE-DATA: 33d0 00000000 00000000
+
+## TP offsets in GOT:
+# a: -8
+# b: -4
+# c: 0
+# PIE-GOT: 23a0 00000000 000022d0 00000000 00000000
+# PIE-GOT: 23b0 00000000 00000000 ffffffff fffffff8
+# PIE-GOT: 23c0 ffffffff fffffffc 00000000 00000000
 
 ear     %r7,%a0
 sllg    %r7,%r1,32

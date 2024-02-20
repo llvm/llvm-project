@@ -279,6 +279,16 @@ module {
     bufferization.dealloc_tensor %3 : tensor<10xf32, #SV>
     bufferization.dealloc_tensor %5 : tensor<10xf64, #SV>
     bufferization.dealloc_tensor %7 : tensor<10xf64, #SV>
+    bufferization.dealloc_tensor %c0 : tensor<10xf32>
+    bufferization.dealloc_tensor %c1 : tensor<10xf32>
+    bufferization.dealloc_tensor %c2 : tensor<10xi32>
+    bufferization.dealloc_tensor %c3 : tensor<10xi32>
+    bufferization.dealloc_tensor %c4 : tensor<10xf64>
+    bufferization.dealloc_tensor %c5 : tensor<10xf32>
+    bufferization.dealloc_tensor %c6 : tensor<10xi64>
+    bufferization.dealloc_tensor %c7 : tensor<10xi64>
+    bufferization.dealloc_tensor %c8 : tensor<10xi8>
+    bufferization.dealloc_tensor %c9 : tensor<10xi32>
 
     return
   }
