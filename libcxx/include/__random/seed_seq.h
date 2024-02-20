@@ -35,7 +35,7 @@ public:
   // constructors
   _LIBCPP_HIDE_FROM_ABI seed_seq() _NOEXCEPT {}
 #ifndef _LIBCPP_CXX03_LANG
-  template <class _Tp, __enable_if_t<is_integral<_Tp>::value>* = nullptr>
+  template <class _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI seed_seq(initializer_list<_Tp> __il) {
     __init(__il.begin(), __il.end());
   }

@@ -96,14 +96,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit reverse_iterator(_Iter __x) : __t_(__x), current(__x) {}
 
-  template <class _Up,
-            class = __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value > >
+  template <class _Up, __enable_if_t<!is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator(const reverse_iterator<_Up>& __u)
       : __t_(__u.base()), current(__u.base()) {}
 
   template <class _Up,
-            class = __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value &&
-                                   is_assignable<_Iter&, _Up const&>::value > >
+            __enable_if_t<!is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value &&
+                              is_assignable<_Iter&, _Up const&>::value,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
     __t_ = current = __u.base();
     return *this;
@@ -113,14 +113,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit reverse_iterator(_Iter __x) : current(__x) {}
 
-  template <class _Up,
-            class = __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value > >
+  template <class _Up, __enable_if_t<!is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator(const reverse_iterator<_Up>& __u)
       : current(__u.base()) {}
 
   template <class _Up,
-            class = __enable_if_t< !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value &&
-                                   is_assignable<_Iter&, _Up const&>::value > >
+            __enable_if_t<!is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value &&
+                              is_assignable<_Iter&, _Up const&>::value,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
     current = __u.base();
     return *this;
