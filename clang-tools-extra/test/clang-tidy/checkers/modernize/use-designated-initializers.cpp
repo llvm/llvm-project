@@ -2,13 +2,13 @@
 // RUN:     -- \
 // RUN:     -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++17 %s modernize-use-designated-initializers %t \
-// RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.IgnoreSingleElementAggregates, value: false}]}" \
+// RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.IgnoreSingleElementAggregates: false}}" \
 // RUN:     -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=POD -std=c++17 %s modernize-use-designated-initializers %t \
-// RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.RestrictToPODTypes, value: true}]}" \
+// RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.RestrictToPODTypes: true}}" \
 // RUN:     -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=,MACROS -std=c++17 %s modernize-use-designated-initializers %t \
-// RUN:     -- -config="{CheckOptions: [{key: modernize-use-designated-initializers.IgnoreMacros, value: false}]}" \
+// RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.IgnoreMacros: false}}" \
 // RUN:     -- -fno-delayed-template-parsing
 
 struct S1 {};
