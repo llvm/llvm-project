@@ -9,14 +9,16 @@ popd() {
 }
 
 GIT_DIR=$(git rev-parse --git-dir)
+ROOT_DIR=$(git rev-parse --show-toplevel)
+
 pushd ${GIT_DIR}/hooks
 
 rm --force post-merge
 rm --force pre-commit
 rm --force llvm-main-revision
 
-ln --symbolic ../../amd/git-hooks/post-merge post-merge
-ln --symbolic ../../amd/git-hooks/pre-commit pre-commit
-ln --symbolic ../../amd/git-hooks/llvm-main-revision llvm-main-revision
+ln --relative --symbolic ${ROOT_DIR}/amd/git-hooks/post-merge post-merge
+ln --relative --symbolic ${ROOT_DIR}/amd/git-hooks/pre-commit pre-commit
+ln --relative --symbolic ${ROOT_DIR}/amd/git-hooks/llvm-main-revision llvm-main-revision
 
 popd
