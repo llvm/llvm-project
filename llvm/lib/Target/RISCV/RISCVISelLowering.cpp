@@ -625,7 +625,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::Constant, MVT::i64, Custom);
 
-  // TODO: On M-mode only targets, the cycle[h] CSR may not be present.
+  // TODO: On M-mode only targets, the cycle[h]/time[h] CSR may not be present.
   // Unfortunately this can't be determined just from the ISA naming string.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
                      Subtarget.is64Bit() ? Legal : Custom);
@@ -11739,7 +11739,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding, DL, XLenVT);
       HiCounter = DAG.getConstant(
           RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding, DL, XLenVT);
-    } else if (N->getOpcode() == ISD::READSTEADYCOUNTER) {
+    } else {
       LoCounter = DAG.getConstant(
           RISCVSysReg::lookupSysRegByName("TIME")->Encoding, DL, XLenVT);
       HiCounter = DAG.getConstant(
@@ -16929,9 +16929,9 @@ static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
   // For example:
   // ```
   // read:
-  //   csrrs x3, counter # load high word of counter
-  //   csrrs x2, counterh # load low word of counter
-  //   csrrs x4, counter # load high word of counter
+  //   csrrs x3, counterh # load high word of counter
+  //   csrrs x2, counter # load low word of counter
+  //   csrrs x4, counterh # load high word of counter
   //   bne x3, x4, read # check if high word reads match, otherwise try again
   // ```
 
