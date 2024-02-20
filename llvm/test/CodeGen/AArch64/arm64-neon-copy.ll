@@ -1394,7 +1394,7 @@ define <8 x i8> @testDUP.v1i8(<1 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: testDUP.v1i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    dup v0.8b, w8
 ; CHECK-GI-NEXT:    ret
   %b = extractelement <1 x i8> %a, i32 0
@@ -1410,17 +1410,11 @@ define <8 x i8> @testDUP.v1i8(<1 x i8> %a) {
 }
 
 define <8 x i16> @testDUP.v1i16(<1 x i16> %a) {
-; CHECK-SD-LABEL: testDUP.v1i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: testDUP.v1i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    dup v0.8h, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: testDUP.v1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
   %b = extractelement <1 x i16> %a, i32 0
   %c = insertelement <8 x i16> undef, i16 %b, i32 0
   %d = insertelement <8 x i16> %c, i16 %b, i32 1
@@ -1434,17 +1428,11 @@ define <8 x i16> @testDUP.v1i16(<1 x i16> %a) {
 }
 
 define <4 x i32> @testDUP.v1i32(<1 x i32> %a) {
-; CHECK-SD-LABEL: testDUP.v1i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: testDUP.v1i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    dup v0.4s, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: testDUP.v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
   %b = extractelement <1 x i32> %a, i32 0
   %c = insertelement <4 x i32> undef, i32 %b, i32 0
   %d = insertelement <4 x i32> %c, i32 %b, i32 1
@@ -2448,33 +2436,21 @@ define <16 x i8> @concat_vector_v16i8_const() {
 }
 
 define <4 x i16> @concat_vector_v4i16(<1 x i16> %a) {
-; CHECK-SD-LABEL: concat_vector_v4i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_vector_v4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    dup v0.4h, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_vector_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.4h, v0.h[0]
+; CHECK-NEXT:    ret
  %r = shufflevector <1 x i16> %a, <1 x i16> undef, <4 x i32> zeroinitializer
  ret <4 x i16> %r
 }
 
 define <4 x i32> @concat_vector_v4i32(<1 x i32> %a) {
-; CHECK-SD-LABEL: concat_vector_v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_vector_v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    dup v0.4s, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_vector_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
  %r = shufflevector <1 x i32> %a, <1 x i32> undef, <4 x i32> zeroinitializer
  ret <4 x i32> %r
 }
@@ -2488,7 +2464,7 @@ define <8 x i8> @concat_vector_v8i8(<1 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: concat_vector_v8i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    dup v0.8b, w8
 ; CHECK-GI-NEXT:    ret
  %r = shufflevector <1 x i8> %a, <1 x i8> undef, <8 x i32> zeroinitializer
@@ -2496,17 +2472,11 @@ define <8 x i8> @concat_vector_v8i8(<1 x i8> %a) {
 }
 
 define <8 x i16> @concat_vector_v8i16(<1 x i16> %a) {
-; CHECK-SD-LABEL: concat_vector_v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_vector_v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    dup v0.8h, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_vector_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
  %r = shufflevector <1 x i16> %a, <1 x i16> undef, <8 x i32> zeroinitializer
  ret <8 x i16> %r
 }
@@ -2520,7 +2490,7 @@ define <16 x i8> @concat_vector_v16i8(<1 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: concat_vector_v16i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    dup v0.16b, w8
 ; CHECK-GI-NEXT:    ret
  %r = shufflevector <1 x i8> %a, <1 x i8> undef, <16 x i32> zeroinitializer
