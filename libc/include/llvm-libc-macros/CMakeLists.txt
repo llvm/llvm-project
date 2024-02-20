@@ -233,3 +233,9 @@ add_macro_header(
   HDR
     stdfix-macros.h
 )
+
+add_macro_header(
+  stdckdint_macros
+  HDR
+    stdckdint-macros.h
+)
