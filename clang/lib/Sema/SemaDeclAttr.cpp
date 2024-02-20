@@ -8474,7 +8474,12 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
-  while (RD && (RD->isAnonymousStructOrUnion() || RD->getName().empty())) {
+  // An unnamed struct is anonymous struct only if it's not instantiated.
+  // However, the struct may not be fully processed yet to determine
+  // whether it's anonymous or not. In that case, this function treats it as
+  // an anonymous struct and tries to find a named parent.
+  while (RD && (RD->isAnonymousStructOrUnion() ||
+                (!RD->isCompleteDefinition() && RD->getName().empty()))) {
     const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
     if (!Parent)
       break;
@@ -8485,7 +8490,7 @@ static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
 
 static bool
 CheckCountExpr(Sema &S, FieldDecl *FD, Expr *E,
-               llvm::SmallVector<TypeCoupledDeclRefInfo, 1> &Decls) {
+               llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
   if (FD->getParent()->isUnion()) {
     S.Diag(FD->getBeginLoc(), diag::err_counted_by_attr_in_union)
         << FD->getSourceRange();
@@ -8541,8 +8546,8 @@ CheckCountExpr(Sema &S, FieldDecl *FD, Expr *E,
       return true;
     }
     // Whether CountRD is an anonymous struct is not determined at this
-    // point. Thus, an additional check is done later in
-    // `Parser::ParseStructDeclaration`.
+    // point. Thus, an additional diagnostic in case it's not anonymous struct
+    // is done later in `Parser::ParseStructDeclaration`.
     auto *RD = GetEnclosingNamedOrTopAnonRecord(FD);
     auto *CountRD = GetEnclosingNamedOrTopAnonRecord(CountFD);
 
@@ -8573,8 +8578,8 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (CheckCountExpr(S, FD, CountExpr, Decls))
     return;
 
-  QualType CAT =
-      S.BuildCountAttributedArrayType(FD->getType(), CountExpr, Decls);
+  QualType CAT = S.BuildCountAttributedArrayType(
+      FD->getType(), CountExpr, llvm::ArrayRef(Decls.begin(), Decls.end()));
   FD->setType(CAT);
 }
 

@@ -9747,14 +9747,13 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
 
 QualType Sema::BuildCountAttributedArrayType(
     QualType WrappedTy, Expr *CountExpr,
-    const llvm::SmallVector<TypeCoupledDeclRefInfo, 1> &Decls) {
+    llvm::ArrayRef<TypeCoupledDeclRefInfo> Decls) {
   assert(WrappedTy->isIncompleteArrayType());
 
   /// When the resulting expression is invalid, we still create the AST using
   /// the original count expression for the sake of AST dump.
   return Context.getCountAttributedType(
-      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false,
-      llvm::ArrayRef(Decls.begin(), Decls.end()));
+      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false, Decls);
 }
 
 /// getDecltypeForExpr - Given an expr, will return the decltype for
