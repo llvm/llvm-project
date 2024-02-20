@@ -311,8 +311,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 
     if (DetachProcess) {
       // Detach from controlling terminal
-      if (setsid() == -1) {
-        MakeErrMsg(ErrMsg, "Couldn't detach process, setsid() failed");
+      if (::setsid() == -1) {
+        MakeErrMsg(ErrMsg, "Could not detach process, ::setsid failed");
         return false;
       }
     }
