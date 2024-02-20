@@ -85,24 +85,14 @@ entry:
 }
 
 define <2 x double> @fpext_v2f16_v2f64(<2 x half> %a) {
-; CHECK-SD-LABEL: fpext_v2f16_v2f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov h1, v0.h[1]
-; CHECK-SD-NEXT:    fcvt d0, h0
-; CHECK-SD-NEXT:    fcvt d1, h1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v2f16_v2f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fcvt d0, h0
-; CHECK-GI-NEXT:    fcvt d1, h1
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v2f16_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov h1, v0.h[1]
+; CHECK-NEXT:    fcvt d0, h0
+; CHECK-NEXT:    fcvt d1, h1
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <2 x half> %a to <2 x double>
   ret <2 x double> %c
@@ -165,8 +155,7 @@ define <2 x float> @fpext_v2f16_v2f32(<2 x half> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v2f16_v2f32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
