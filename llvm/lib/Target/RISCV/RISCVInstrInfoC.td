@@ -368,7 +368,7 @@ def C_SW : CStore_rri<0b110, "c.sw", GPRC, uimm7_lsb00>,
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]  in
 def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
-             Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
+             Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
   bits<7> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6} = imm{2};
@@ -578,7 +578,7 @@ def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00>,
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
-               Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
+               Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
   let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
