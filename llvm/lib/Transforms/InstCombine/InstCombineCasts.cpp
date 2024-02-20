@@ -1938,7 +1938,11 @@ Instruction *InstCombinerImpl::visitUIToFP(CastInst &CI) {
 }
 
 Instruction *InstCombinerImpl::visitSIToFP(CastInst &CI) {
-  return commonCastTransforms(CI);
+  if (Instruction *R = commonCastTransforms(CI))
+    return R;
+  if (isKnownNonNegative(CI.getOperand(0), SQ))
+    return new UIToFPInst(CI.getOperand(0), CI.getType());
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
