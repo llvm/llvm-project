@@ -18,7 +18,7 @@ import sys
 import time
 
 
-def main(token):
+def main(token, filter_gha_runners):
     workflows = (
         github.Github(args.token)
         .get_repo("llvm/llvm-project")
@@ -30,6 +30,17 @@ def main(token):
     for workflow in workflows:
         for job in workflow.jobs():
             if job.status == "in_progress":
+                # TODO(boomanaiden154): Remove the try/except block once we are able
+                # to pull in a PyGithub release that has the runner_group_name property
+                # for workflow jobs.
+                try:
+                    if filter_gha_runners and job.runner_group_name != "GitHub Actions":
+                        continue
+                except:
+                    print(
+                        "Failed to filter runners. Your PyGithub version is "
+                        "most likely too old."
+                    )
                 print(f"{workflow.name}/{job.name}")
                 in_progress_jobs += 1
 
@@ -63,6 +74,18 @@ if __name__ == "__main__":
         default=None,
         nargs="?",
     )
+    parser.add_argument(
+        "--filter-gha-runners",
+        help="Only consider jobs running on hosted Github actions runners",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-filter-gha-runners",
+        dest="filter_gha_runners",
+        action="store_false",
+        help="Consider all running jobs",
+    )
+    parser.set_defaults(filter_gha_runners=False)
     args = parser.parse_args()
 
     # Perform some basic argument validation
@@ -80,7 +103,7 @@ if __name__ == "__main__":
 
             print(f"Collecting data at {current_time_string}")
 
-            current_job_count = main(args.token)
+            current_job_count = main(args.token, args.filter_gha_runners)
 
             if args.output_file:
                 with open(args.output_file, "a") as output_file_handle:
@@ -90,4 +113,4 @@ if __name__ == "__main__":
 
             time.sleep(args.data_collection_interval)
     else:
-        main(args.token)
+        main(args.token, args.filter_gha_runners)

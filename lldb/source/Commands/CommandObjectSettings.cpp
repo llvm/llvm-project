@@ -262,14 +262,6 @@ public:
 
   ~CommandObjectSettingsShow() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
-        nullptr);
-  }
-
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishResult);

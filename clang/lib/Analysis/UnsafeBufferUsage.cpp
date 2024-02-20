@@ -2200,8 +2200,7 @@ FixVarInitializerWithSpan(const Expr *Init, ASTContext &Ctx,
       // Although the initializer is not allocating a buffer, the pointer
       // variable could still be used in buffer access operations.
       ExtentText = One;
-  } else if (const auto *CArrTy = Ctx.getAsConstantArrayType(
-                 Init->IgnoreImpCasts()->getType())) {
+  } else if (Ctx.getAsConstantArrayType(Init->IgnoreImpCasts()->getType())) {
     // std::span has a single parameter constructor for initialization with
     // constant size array. The size is auto-deduced as the constructor is a
     // function template. The correct fixit is empty - no changes should happen.
