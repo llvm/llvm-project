@@ -286,8 +286,8 @@ struct StreamOperationEvaluator {
     return State->assume(*Cond, true);
   }
 
-  ProgramStatePair makeRetValAndAssumeDual(ProgramStateRef State,
-                                           CheckerContext &C) {
+  ConstraintManager::ProgramStatePair
+  makeRetValAndAssumeDual(ProgramStateRef State, CheckerContext &C) {
     DefinedSVal RetVal = makeRetVal(C, CE);
     State = State->BindExpr(CE, C.getLocationContext(), RetVal);
     return C.getConstraintManager().assumeDual(State, RetVal);
@@ -1199,8 +1199,9 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
-  StateNotFailed = E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
-                                   SVB.makeZeroVal(Call.getResultType()));
+  StateNotFailed =
+      E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal,
+                      *E.SVB.makeZeroVal(Call.getResultType()).getAs<NonLoc>());
   if (!StateNotFailed)
     return;
 
@@ -1236,7 +1237,7 @@ void StreamChecker::evalClearerr(const FnDescription *Desc,
   // FilePositionIndeterminate is not cleared.
   State = E.setStreamState(
       State,
-      StreamState::getOpened(Desc, ErrorNone, SS->FilePositionIndeterminate));
+      StreamState::getOpened(Desc, ErrorNone, E.SS->FilePositionIndeterminate));
   C.addTransition(State);
 }
 
@@ -1253,10 +1254,10 @@ void StreamChecker::evalFeofFerror(const FnDescription *Desc,
     // Function returns true.
     // From now on it is the only one error state.
     ProgramStateRef TrueState = bindAndAssumeTrue(State, C, E.CE);
-    E.setStreamState(TrueState,
-                     StreamState::getOpened(Desc, ErrorKind,
-                                            E.SS->FilePositionIndeterminate &&
-                                                !ErrorKind.isFEof()));
+    C.addTransition(E.setStreamState(
+        TrueState, StreamState::getOpened(Desc, ErrorKind,
+                                          E.SS->FilePositionIndeterminate &&
+                                              !ErrorKind.isFEof())));
   }
   if (StreamErrorState NewES = E.SS->ErrorState & (~ErrorKind)) {
     // Execution path(s) with ErrorKind not set.
