@@ -304,6 +304,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- ARMv6+ targets now default to allowing unaligned access, except Armv6-M, and
+  Armv8-M without the Main Extension.
 
 Android Support
 ^^^^^^^^^^^^^^^

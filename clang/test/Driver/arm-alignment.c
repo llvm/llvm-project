@@ -22,12 +22,10 @@
 // RUN: %clang -target armv7-windows -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
-/// Ensure that by default before ARMv7 we default to +strict-align
-// RUN: %clang -target armv6 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
+// RUN: %clang --target=armv6 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
-/// After ARMv7 by default we allow unaligned accesses for all targets
-// RUN: %clang -target armv7 -### %s 2> %t
+// RUN: %clang --target=armv7 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
 // RUN: %clang --target=aarch64 -munaligned-access -### %s 2> %t
@@ -65,10 +63,10 @@
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
 // RUN: %clang -target armv6-unknown-linux -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
+// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
 // RUN: %clang -target armv6-unknown-nacl-gnueabihf -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
+// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
 // RUN: %clang -target armv6m-apple-darwin -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
