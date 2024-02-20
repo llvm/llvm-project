@@ -34,6 +34,34 @@ static constexpr bool IgnoreMacrosDefault = true;
 
 namespace {
 
+struct Designators {
+
+  Designators(const InitListExpr *InitList) : InitList(InitList) {
+    assert(InitList->isSyntacticForm());
+  };
+
+  unsigned size() { return get().size(); }
+
+  std::optional<llvm::StringRef> operator[](const SourceLocation &Location) {
+    const auto Result = get().find(Location);
+    if (Result == get().end())
+      return {};
+    return Result->getSecond();
+  }
+
+private:
+  using LocationToNameMap = llvm::DenseMap<clang::SourceLocation, std::string>;
+
+  std::optional<LocationToNameMap> CachedDesignators;
+  const InitListExpr *InitList;
+
+  LocationToNameMap &get() {
+    return CachedDesignators ? *CachedDesignators
+                             : CachedDesignators.emplace(
+                                   utils::getUnwrittenDesignators(InitList));
+  }
+};
+
 unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
   return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
     return isa<DesignatedInitExpr>(InitExpr);
@@ -90,16 +118,10 @@ void UseDesignatedInitializersCheck::check(
   const auto *SyntacticInitList = InitList->getSyntacticForm();
   if (!SyntacticInitList)
     return;
-  std::optional<llvm::DenseMap<clang::SourceLocation, std::string>>
-      Designators{};
-  const auto LazyDesignators = [SyntacticInitList, &Designators]() -> auto & {
-    return Designators ? *Designators
-                       : Designators.emplace(
-                             utils::getUnwrittenDesignators(SyntacticInitList));
-  };
+  Designators Designators{SyntacticInitList};
   const unsigned NumberOfDesignated = getNumberOfDesignated(SyntacticInitList);
   if (SyntacticInitList->getNumInits() - NumberOfDesignated >
-      LazyDesignators().size())
+      Designators.size())
     return;
   if (0 == NumberOfDesignated) {
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
@@ -111,11 +133,9 @@ void UseDesignatedInitializersCheck::check(
       Diag << Type;
       Diag << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
-        const std::string &Designator =
-            LazyDesignators().at(InitExpr->getBeginLoc());
-        if (!Designator.empty())
+        if (const auto Designator = Designators[InitExpr->getBeginLoc()])
           Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                             Designator + "=");
+                                             (*Designator + "=").str());
       }
     }
     diag(Type->getBeginLoc(), "aggregate type is defined here",
@@ -127,16 +147,15 @@ void UseDesignatedInitializersCheck::check(
       continue;
     if (IgnoreMacros && InitExpr->getBeginLoc().isMacroID())
       continue;
-    const std::string &Designator =
-        LazyDesignators().at(InitExpr->getBeginLoc());
     DiagnosticBuilder Diag =
         diag(InitExpr->getBeginLoc(),
              "use designated init expression to initialize field '%0'");
     Diag << InitExpr->getSourceRange();
-    if (!Designator.empty() && Designator.front() == '.') {
-      Diag << StringRef(Designator).substr(1); // Strip leading dot
+    const auto Designator = Designators[InitExpr->getBeginLoc()];
+    if (Designator && Designator->front() == '.') {
+      Diag << Designator->substr(1); // Strip leading dot
       Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
-                                         Designator + "=");
+                                         (*Designator + "=").str());
     }
   }
 }
