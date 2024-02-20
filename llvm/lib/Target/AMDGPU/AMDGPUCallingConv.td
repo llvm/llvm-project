@@ -187,15 +187,16 @@ def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
 // Calling convention for leaf functions
 def CC_AMDGPU_Func : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
+  CCIfType<[i1], CCIfInReg<CCPromoteToType<i32>>>,
   CCIfType<[i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
-
-  CCIfType<[i1] , CCCustom<"CC_AMDGPU_Custom_I1">>,
-
-  CCIfType<[i1], CCPromoteToType<i32>>,
 
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
   >>>,
+
+  CCIfType<[i1], CCCustom<"CC_AMDGPU_Custom_I1">>,
+
+  CCIfType<[i1], CCPromoteToType<i32>>,
 
   CCIfType<[i32, f32, i16, f16, v2i16, v2f16, i1, bf16, v2bf16], CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
