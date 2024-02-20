@@ -261,10 +261,7 @@ struct VPTransformState {
     DenseMap<VPValue *, ScalarsPerPartValuesTy> PerPartScalars;
   } Data;
 
-  /// Get the generated Value for a given VPValue and a given Part. Note that
-  /// as some Defs are still created by ILV and managed in its ValueMap, this
-  /// method will delegate the call to ILV in such cases in order to provide
-  /// callers a consistent API.
+  /// Get the generated Value for the given VPValue \p Def and the given \p Part.
   /// \see set.
   Value *get(VPValue *Def, unsigned Part);
 
@@ -1177,9 +1174,6 @@ private:
   bool isFPMathOp() const;
 #endif
 
-protected:
-  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
-
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
@@ -2085,8 +2079,11 @@ public:
   ~VPReplicateRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
-                                 isPredicated() ? getMask() : nullptr);
+    auto *Copy =
+        new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
+                              isPredicated() ? getMask() : nullptr);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReplicateSC)

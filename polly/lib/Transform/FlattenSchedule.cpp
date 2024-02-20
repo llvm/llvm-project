@@ -104,7 +104,7 @@ public:
   static char ID;
 
   FlattenSchedulePrinterLegacyPass()
-      : FlattenSchedulePrinterLegacyPass(outs()){};
+      : FlattenSchedulePrinterLegacyPass(outs()) {}
   explicit FlattenSchedulePrinterLegacyPass(llvm::raw_ostream &OS)
       : ScopPass(ID), OS(OS) {}
 

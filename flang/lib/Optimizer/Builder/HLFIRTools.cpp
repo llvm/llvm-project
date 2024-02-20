@@ -198,7 +198,8 @@ mlir::Value hlfir::Entity::getFirBase() const {
 fir::FortranVariableOpInterface
 hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
-                  fir::FortranVariableFlagsAttr flags) {
+                  fir::FortranVariableFlagsAttr flags,
+                  fir::CUDADataAttributeAttr cudaAttr) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::conformsWithPassByRef(base.getType()) &&
@@ -228,7 +229,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
       },
       [](const auto &) {});
   auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, base, name, shapeOrShift, lenParams, flags);
+      loc, base, name, shapeOrShift, lenParams, flags, cudaAttr);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 

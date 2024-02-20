@@ -94,7 +94,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -110,12 +110,13 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     LibcxxStdAtomicSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp) {}
 
-bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
   ValueObjectSP atomic_value = GetLibCxxAtomicValue(m_backend);
   if (atomic_value)
     m_real_child = GetLibCxxAtomicValue(m_backend).get();
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::

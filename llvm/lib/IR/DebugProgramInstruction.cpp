@@ -286,6 +286,7 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   // Create the intrinsic from this DPValue's information, optionally insert
   // into the target location.
   DbgVariableIntrinsic *DVI;
+  assert(getRawLocation() && "DPValue's RawLocation should be non-null.");
   if (isDbgAssign()) {
     Value *AssignArgs[] = {
         MetadataAsValue::get(Context, getRawLocation()),

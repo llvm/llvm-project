@@ -1150,7 +1150,7 @@ class ForwardOpTreePrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 
-  ForwardOpTreePrinterLegacyPass() : ForwardOpTreePrinterLegacyPass(outs()){};
+  ForwardOpTreePrinterLegacyPass() : ForwardOpTreePrinterLegacyPass(outs()) {}
   explicit ForwardOpTreePrinterLegacyPass(llvm::raw_ostream &OS)
       : ScopPass(ID), OS(OS) {}
 

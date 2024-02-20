@@ -403,13 +403,16 @@ static unsigned getFixedObjectSize(const MachineFunction &MF,
   if (!IsWin64 || IsFunclet) {
     return AFI->getTailCallReservedStack();
   } else {
-    if (AFI->getTailCallReservedStack() != 0)
+    if (AFI->getTailCallReservedStack() != 0 &&
+        !MF.getFunction().getAttributes().hasAttrSomewhere(
+            Attribute::SwiftAsync))
       report_fatal_error("cannot generate ABI-changing tail call for Win64");
     // Var args are stored here in the primary function.
     const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
     // To support EH funclets we allocate an UnwindHelp object
     const unsigned UnwindHelpObject = (MF.hasEHFunclets() ? 8 : 0);
-    return alignTo(VarArgsArea + UnwindHelpObject, 16);
+    return AFI->getTailCallReservedStack() +
+           alignTo(VarArgsArea + UnwindHelpObject, 16);
   }
 }
 
@@ -1060,7 +1063,7 @@ bool AArch64FrameLowering::canUseAsPrologue(
 
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.
-  if (!RegInfo->hasStackRealignment(*MF) && TLI->hasInlineStackProbe(*MF))
+  if (!RegInfo->hasStackRealignment(*MF) && !TLI->hasInlineStackProbe(*MF))
     return true;
   // Otherwise, we can use any block as long as it has a scratch register
   // available.
@@ -3186,11 +3189,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     return MIB->getIterator();
   };
 
-  // SVE objects are always restored in reverse order.
-  for (const RegPairInfo &RPI : reverse(RegPairs))
-    if (RPI.isScalable())
-      EmitMI(RPI);
-
   if (homogeneousPrologEpilog(MF, &MBB)) {
     auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
                    .setMIFlag(MachineInstr::FrameDestroy);
@@ -3201,11 +3199,19 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     return true;
   }
 
+  // For performance reasons restore SVE register in increasing order
+  auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
+  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+  auto PPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsPPR);
+  std::reverse(PPRBegin, PPREnd.base());
+  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
+  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+  auto ZPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsZPR);
+  std::reverse(ZPRBegin, ZPREnd.base());
+
   if (ReverseCSRRestoreSeq) {
     MachineBasicBlock::iterator First = MBB.end();
     for (const RegPairInfo &RPI : reverse(RegPairs)) {
-      if (RPI.isScalable())
-        continue;
       MachineBasicBlock::iterator It = EmitMI(RPI);
       if (First == MBB.end())
         First = It;
@@ -3214,8 +3220,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MBB.splice(MBBI, &MBB, First);
   } else {
     for (const RegPairInfo &RPI : RegPairs) {
-      if (RPI.isScalable())
-        continue;
       (void)EmitMI(RPI);
     }
   }

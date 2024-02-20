@@ -150,6 +150,23 @@ class TypeAndTypeListTestCase(TestBase):
         invalid_type = task_type.FindDirectNestedType(None)
         self.assertFalse(invalid_type)
 
+        # Check that FindDirectNestedType works with types from AST
+        pointer = frame0.FindVariable("pointer")
+        pointer_type = pointer.GetType()
+        self.assertTrue(pointer_type)
+        self.DebugSBType(pointer_type)
+        pointer_info_type = pointer_type.template_args[1]
+        self.assertTrue(pointer_info_type)
+        self.DebugSBType(pointer_info_type)
+
+        pointer_masks1_type = pointer_info_type.FindDirectNestedType("Masks1")
+        self.assertTrue(pointer_masks1_type)
+        self.DebugSBType(pointer_masks1_type)
+
+        pointer_masks2_type = pointer_info_type.FindDirectNestedType("Masks2")
+        self.assertTrue(pointer_masks2_type)
+        self.DebugSBType(pointer_masks2_type)
+
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
         self.DebugSBValue(id)
@@ -192,7 +209,7 @@ class TypeAndTypeListTestCase(TestBase):
             int_scoped_enum_type = scoped_enum_type.GetEnumerationIntegerType()
             self.assertTrue(int_scoped_enum_type)
             self.DebugSBType(int_scoped_enum_type)
-            self.assertEquals(int_scoped_enum_type.GetName(), "int")
+            self.assertEqual(int_scoped_enum_type.GetName(), "int")
 
             enum_uchar = target.FindFirstType("EnumUChar")
             self.assertTrue(enum_uchar)
@@ -200,4 +217,4 @@ class TypeAndTypeListTestCase(TestBase):
             int_enum_uchar = enum_uchar.GetEnumerationIntegerType()
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
-            self.assertEquals(int_enum_uchar.GetName(), "unsigned char")
+            self.assertEqual(int_enum_uchar.GetName(), "unsigned char")

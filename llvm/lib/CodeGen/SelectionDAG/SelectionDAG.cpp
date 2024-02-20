@@ -1734,6 +1734,12 @@ SDValue SelectionDAG::getShiftAmountConstant(uint64_t Val, EVT VT,
   return getConstant(Val, DL, ShiftVT);
 }
 
+SDValue SelectionDAG::getShiftAmountConstant(const APInt &Val, EVT VT,
+                                             const SDLoc &DL, bool LegalTypes) {
+  assert(Val.ult(VT.getScalarSizeInBits()) && "Out of range shift");
+  return getShiftAmountConstant(Val.getZExtValue(), VT, DL, LegalTypes);
+}
+
 SDValue SelectionDAG::getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
                                            bool isTarget) {
   return getConstant(Val, DL, TLI->getVectorIdxTy(getDataLayout()), isTarget);
@@ -3108,6 +3114,33 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     for (auto [I, SrcOp] : enumerate(Op->ops())) {
       Known.insertBits(computeKnownBits(SrcOp, Depth + 1), ScalarSize * I);
     }
+    break;
+  }
+  case ISD::STEP_VECTOR: {
+    const APInt &Step = Op.getConstantOperandAPInt(0);
+
+    if (Step.isPowerOf2())
+      Known.Zero.setLowBits(Step.logBase2());
+
+    const Function &F = getMachineFunction().getFunction();
+
+    if (!isUIntN(BitWidth, Op.getValueType().getVectorMinNumElements()))
+      break;
+    const APInt MinNumElts =
+        APInt(BitWidth, Op.getValueType().getVectorMinNumElements());
+
+    bool Overflow;
+    const APInt MaxNumElts = getVScaleRange(&F, BitWidth)
+                                 .getUnsignedMax()
+                                 .umul_ov(MinNumElts, Overflow);
+    if (Overflow)
+      break;
+
+    const APInt MaxValue = (MaxNumElts - 1).umul_ov(Step, Overflow);
+    if (Overflow)
+      break;
+
+    Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
   case ISD::BUILD_VECTOR:
@@ -5682,8 +5715,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                                   N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
     assert(N1.getValueType().bitsLT(VT) && "Invalid sext node, dst < src!");
-    if (OpOpcode == ISD::SIGN_EXTEND || OpOpcode == ISD::ZERO_EXTEND)
-      return getNode(OpOpcode, DL, VT, N1.getOperand(0));
+    if (OpOpcode == ISD::SIGN_EXTEND || OpOpcode == ISD::ZERO_EXTEND) {
+      SDNodeFlags Flags;
+      if (OpOpcode == ISD::ZERO_EXTEND)
+        Flags.setNonNeg(N1->getFlags().hasNonNeg());
+      return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+    }
     if (OpOpcode == ISD::UNDEF)
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
@@ -5699,8 +5736,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                                   N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
     assert(N1.getValueType().bitsLT(VT) && "Invalid zext node, dst < src!");
-    if (OpOpcode == ISD::ZERO_EXTEND) // (zext (zext x)) -> (zext x)
-      return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0));
+    if (OpOpcode == ISD::ZERO_EXTEND) { // (zext (zext x)) -> (zext x)
+      SDNodeFlags Flags;
+      Flags.setNonNeg(N1->getFlags().hasNonNeg());
+      return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
+    }
     if (OpOpcode == ISD::UNDEF)
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
@@ -5736,9 +5776,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N1.getValueType().bitsLT(VT) && "Invalid anyext node, dst < src!");
 
     if (OpOpcode == ISD::ZERO_EXTEND || OpOpcode == ISD::SIGN_EXTEND ||
-        OpOpcode == ISD::ANY_EXTEND)
+        OpOpcode == ISD::ANY_EXTEND) {
+      SDNodeFlags Flags;
+      if (OpOpcode == ISD::ZERO_EXTEND)
+        Flags.setNonNeg(N1->getFlags().hasNonNeg());
       // (ext (zext x)) -> (zext x)  and  (ext (sext x)) -> (sext x)
-      return getNode(OpOpcode, DL, VT, N1.getOperand(0));
+      return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+    }
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
 

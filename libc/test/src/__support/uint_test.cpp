@@ -588,7 +588,7 @@ TEST(LlvmLibcUIntClassTest, ConstexprInitTests) {
     d <<= e;                                                                   \
     LL_UInt320 q1 = y / d;                                                     \
     LL_UInt320 r1 = y % d;                                                     \
-    LL_UInt320 r2 = *y.div_uint32_times_pow_2(x, e);                           \
+    LL_UInt320 r2 = *y.div_uint_half_times_pow_2(x, e);                        \
     EXPECT_EQ(q1, y);                                                          \
     EXPECT_EQ(r1, r2);                                                         \
   } while (0)
@@ -676,6 +676,52 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
   ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + b));
 }
 
+TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
+  using LL_UInt256_128 = cpp::BigInt<256, false, __uint128_t>;
+  using LL_UInt128_128 = cpp::BigInt<128, false, __uint128_t>;
+
+  LL_UInt256_128 a(1);
+
+  ASSERT_EQ(static_cast<int>(a), 1);
+  a = (a << 128) + 2;
+  ASSERT_EQ(static_cast<int>(a), 2);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(2));
+  a = (a << 32) + 3;
+  ASSERT_EQ(static_cast<int>(a), 3);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(0x2'0000'0003));
+  ASSERT_EQ(static_cast<int>(a >> 32), 2);
+  ASSERT_EQ(static_cast<int>(a >> (128 + 32)), 1);
+
+  LL_UInt128_128 b(__uint128_t(1) << 127);
+  LL_UInt128_128 c(b);
+  a = b.ful_mul(c);
+
+  ASSERT_EQ(static_cast<int>(a >> 254), 1);
+
+  LL_UInt256_128 d = LL_UInt256_128(123) << 4;
+  ASSERT_EQ(static_cast<int>(d), 123 << 4);
+  LL_UInt256_128 e = a / d;
+  LL_UInt256_128 f = a % d;
+  LL_UInt256_128 r = *a.div_uint_half_times_pow_2(123, 4);
+  EXPECT_TRUE(e == a);
+  EXPECT_TRUE(f == r);
+}
+
 #endif // __SIZEOF_INT128__
+
+TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
+  using LL_UInt96 = cpp::BigInt<96, false, uint32_t>;
+
+  LL_UInt96 a(1);
+
+  ASSERT_EQ(static_cast<int>(a), 1);
+  a = (a << 32) + 2;
+  ASSERT_EQ(static_cast<int>(a), 2);
+  ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(0x1'0000'0002));
+  a = (a << 32) + 3;
+  ASSERT_EQ(static_cast<int>(a), 3);
+  ASSERT_EQ(static_cast<int>(a >> 32), 2);
+  ASSERT_EQ(static_cast<int>(a >> 64), 1);
+}
 
 } // namespace LIBC_NAMESPACE

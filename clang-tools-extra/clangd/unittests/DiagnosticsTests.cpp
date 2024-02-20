@@ -898,6 +898,48 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
                 withFix(equalToFix(ExpectedDFix))))));
 }
 
+TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
+  Annotations Main(R"cpp(
+    class Interface {
+    public:
+      virtual void Reset1() = 0;
+      virtual void Reset2() = 0;
+    };
+    class A : public Interface {
+      // This will be marked by clangd to use override instead of virtual
+      $virtual1[[virtual    ]]void $Reset1[[Reset1]]()$override1[[]];
+      $virtual2[[virtual      ]]/**/void $Reset2[[Reset2]]()$override2[[]];
+    };
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyProvider =
+      addTidyChecks("cppcoreguidelines-explicit-virtual-functions,");
+  clangd::Fix const ExpectedFix1{
+      "prefer using 'override' or (rarely) 'final' "
+      "instead of 'virtual'",
+      {TextEdit{Main.range("override1"), " override"},
+       TextEdit{Main.range("virtual1"), ""}},
+      {}};
+  clangd::Fix const ExpectedFix2{
+      "prefer using 'override' or (rarely) 'final' "
+      "instead of 'virtual'",
+      {TextEdit{Main.range("override2"), " override"},
+       TextEdit{Main.range("virtual2"), ""}},
+      {}};
+  // Note that in the Fix we expect the "virtual" keyword and the following
+  // whitespace to be deleted
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  AllOf(Diag(Main.range("Reset1"),
+                             "prefer using 'override' or (rarely) 'final' "
+                             "instead of 'virtual'"),
+                        withFix(equalToFix(ExpectedFix1))),
+                  AllOf(Diag(Main.range("Reset2"),
+                             "prefer using 'override' or (rarely) 'final' "
+                             "instead of 'virtual'"),
+                        withFix(equalToFix(ExpectedFix2))))));
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:

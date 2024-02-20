@@ -172,20 +172,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA tag describing our copy.
-  AAMDNodes AACopyMD = MI->getAAMetadata();
-
-  if (MDNode *M = AACopyMD.TBAAStruct) {
-    AACopyMD.TBAAStruct = nullptr;
-    if (M->getNumOperands() == 3 && M->getOperand(0) &&
-        mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
-        mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
-        M->getOperand(1) &&
-        mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
-        mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
-        Size &&
-        M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
-      AACopyMD.TBAA = cast<MDNode>(M->getOperand(2));
-  }
+  AAMDNodes AACopyMD = MI->getAAMetadata().adjustForAccess(Size);
 
   Value *Src = MI->getArgOperand(1);
   Value *Dest = MI->getArgOperand(0);
@@ -915,7 +902,8 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   const FPClassTest OrderedMask = Mask & ~fcNan;
   const FPClassTest OrderedInvertedMask = ~OrderedMask & ~fcNan;
 
-  const bool IsStrict = II.isStrictFP();
+  const bool IsStrict =
+      II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP);
 
   Value *FNegSrc;
   if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
@@ -1580,6 +1568,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceOperand(*II, 0, X);
     if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
+
+    Value *Y;
+    // abs(a * abs(b)) -> abs(a * b)
+    if (match(IIOperand,
+              m_OneUse(m_c_Mul(m_Value(X),
+                               m_Intrinsic<Intrinsic::abs>(m_Value(Y)))))) {
+      bool NSW =
+          cast<Instruction>(IIOperand)->hasNoSignedWrap() && IntMinIsPoison;
+      auto *XY = NSW ? Builder.CreateNSWMul(X, Y) : Builder.CreateMul(X, Y);
+      return replaceOperand(*II, 0, XY);
+    }
 
     if (std::optional<bool> Known =
             getKnownSignOrZero(IIOperand, II, DL, &AC, &DT)) {
