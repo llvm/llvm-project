@@ -1484,8 +1484,8 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
   let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
       DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
-      OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts],
-                            [TruePredicate]) in {
+      True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
+                            NoTrue16Predicate) in {
     defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
   }
 }
