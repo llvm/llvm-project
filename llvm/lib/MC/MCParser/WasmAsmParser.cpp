@@ -115,6 +115,9 @@ public:
       case 'S':
         flags |= wasm::WASM_SEG_FLAG_STRINGS;
         break;
+      case 'R':
+        flags |= wasm::WASM_SEG_FLAG_RETAIN;
+        break;
       default:
         return -1U;
       }
