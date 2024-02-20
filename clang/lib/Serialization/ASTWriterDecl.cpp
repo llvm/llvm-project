@@ -488,13 +488,15 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   BitsPacker EnumDeclBits;
   EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
   EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  EnumDeclBits.addBit(ShouldSkipCheckingODR);
   EnumDeclBits.addBit(D->isScoped());
   EnumDeclBits.addBit(D->isScopedUsingClassTag());
   EnumDeclBits.addBit(D->isFixed());
   Record.push_back(EnumDeclBits);
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D))
+  if (!ShouldSkipCheckingODR)
     Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
@@ -678,6 +680,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FIXME: stable encoding
   FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
   FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  FunctionDeclBits.addBit(ShouldSkipCheckingODR);
   FunctionDeclBits.addBit(D->isInlineSpecified());
   FunctionDeclBits.addBit(D->isInlined());
   FunctionDeclBits.addBit(D->hasSkippedBody());
@@ -704,7 +708,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     Record.AddSourceLocation(D->getDefaultLoc());
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D))
+  if (!ShouldSkipCheckingODR)
     Record.push_back(D->getODRHash());
 
   if (D->isDefaulted()) {
@@ -2137,12 +2141,13 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      27)); // Packed Function Bits: StorageClass, Inline, InlineSpecified,
+      28)); // Packed Function Bits: StorageClass, Inline, InlineSpecified,
             // VirtualAsWritten, Pure, HasInheritedProto, HasWrittenProto,
             // Deleted, Trivial, TrivialForCall, Defaulted, ExplicitlyDefaulted,
             // IsIneligibleOrNotSelected, ImplicitReturnZero, Constexpr,
             // UsesSEHTry, SkippedBody, MultiVersion, LateParsed,
-            // FriendConstraintRefersToEnclosingTemplate, Linkage
+            // FriendConstraintRefersToEnclosingTemplate, Linkage,
+            // ShouldSkipCheckingODR
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));    // LocEnd
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // ODRHash
   // This Array slurps the rest of the record. Fortunately we want to encode
@@ -2269,7 +2274,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // AddTypeRef
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IntegerType
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getPromotionType
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 19)); // Enum Decl Bits
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 20)); // Enum Decl Bits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));// ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // InstantiatedMembEnum
   // DC
