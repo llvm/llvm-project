@@ -2,13 +2,13 @@
 // RUN: -o - | FileCheck %s --check-prefix=FULL
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -complex-range=limited -o - | FileCheck --check-prefix=LMTD %s
+// RUN: -complex-range=basic -o - | FileCheck --check-prefix=BASIC %s
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -complex-range=smith -o - | FileCheck --check-prefix=SMITH %s
+// RUN: -complex-range=improved -o - | FileCheck --check-prefix=IMPRVD %s
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -complex-range=extend -o - | FileCheck --check-prefix=EXTND %s
+// RUN: -complex-range=promoted -o - | FileCheck --check-prefix=PRMTD %s
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -complex-range=full -o - | FileCheck --check-prefix=FULL %s
@@ -24,26 +24,26 @@ _Complex float pragma_on_mul(_Complex float a, _Complex float b) {
   // FULL-NEXT: fsub float
   // FULL-NEXT: fadd float
 
-  // LMTD: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fsub float
-  // LMTD-NEXT: fadd float
+  // BASIC: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fsub float
+  // BASIC-NEXT: fadd float
 
-  // SMITH: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fsub float
-  // SMITH-NEXT: fadd float
+  // IMPRVD: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fsub float
+  // IMPRVD-NEXT: fadd float
 
-  // EXTND: fmul float
-  // EXTND-NEXT: fmul float
-  // EXTND-NEXT: fmul float
-  // EXTND-NEXT: fmul float
-  // EXTND-NEXT: fsub float
-  // EXTND-NEXT: fadd float
+  // PRMTD: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fsub float
+  // PRMTD-NEXT: fadd float
 
   return a * b;
 }
@@ -54,11 +54,11 @@ _Complex float pragma_off_mul(_Complex float a, _Complex float b) {
 
   // FULL: call {{.*}} @__mulsc3
 
-  // LMTD: call {{.*}} @__mulsc3
+  // BASIC: call {{.*}} @__mulsc3
 
-  // SMITH: call {{.*}} @__mulsc3
+  // IMPRVD: call {{.*}} @__mulsc3
 
-  // EXTND: call {{.*}} @__mulsc3
+  // PRMTD: call {{.*}} @__mulsc3
 
   return a * b;
 }
@@ -79,45 +79,45 @@ _Complex float pragma_on_div(_Complex float a, _Complex float b) {
   // FULL-NEXT: fdiv float
   // FULL: fdiv float
 
-  // LMTD: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fadd float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fadd float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fsub float
-  // LMTD-NEXT: fdiv float
-  // LMTD-NEXT: fdiv float
+  // BASIC: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fadd float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fadd float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fsub float
+  // BASIC-NEXT: fdiv float
+  // BASIC-NEXT: fdiv float
 
-  // SMITH: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fadd float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fadd float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fsub float
-  // SMITH-NEXT: fdiv float
-  // SMITH-NEXT: fdiv float
+  // IMPRVD: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fadd float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fadd float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fsub float
+  // IMPRVD-NEXT: fdiv float
+  // IMPRVD-NEXT: fdiv float
 
-  // EXTND:   fpext float {{.*}} to double
-  // EXTND:   fpext float {{.*}} to double
-  // EXTND:   fmul double
-  // EXTND:   fmul double
-  // EXTND:   fadd double
-  // EXTND:   fmul double
-  // EXTND:   fmul double
-  // EXTND:   fadd double
-  // EXTND:   fmul double
-  // EXTND:   fmul double
-  // EXTND:   fsub double
-  // EXTND:   fdiv double
-  // EXTND:   fdiv double
-  // EXTND:   fptrunc double
-  // EXTND:   fptrunc double
+  // PRMTD:   fpext float {{.*}} to double
+  // PRMTD:   fpext float {{.*}} to double
+  // PRMTD:   fmul double
+  // PRMTD:   fmul double
+  // PRMTD:   fadd double
+  // PRMTD:   fmul double
+  // PRMTD:   fmul double
+  // PRMTD:   fadd double
+  // PRMTD:   fmul double
+  // PRMTD:   fmul double
+  // PRMTD:   fsub double
+  // PRMTD:   fdiv double
+  // PRMTD:   fdiv double
+  // PRMTD:   fptrunc double
+  // PRMTD:   fptrunc double
 
   return a / b;
 }
@@ -128,11 +128,11 @@ _Complex float pragma_off_div(_Complex float a, _Complex float b) {
 
   // FULL: call {{.*}} @__divsc3
 
-  // LMTD: call {{.*}} @__divsc3
+  // BASIC: call {{.*}} @__divsc3
 
-  // SMITH: call {{.*}} @__divsc3
+  // IMPRVD: call {{.*}} @__divsc3
 
-  // EXTND: call {{.*}} @__divdc3
+  // PRMTD: call {{.*}} @__divdc3
 
   return a / b;
 }
@@ -148,26 +148,26 @@ _Complex float pragma_default_mul(_Complex float a, _Complex float b) {
   // FULL-NEXT: fsub float
   // FULL-NEXT: fadd float
 
-  // LMTD: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fsub float
-  // LMTD-NEXT: fadd float
+  // BASIC: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fsub float
+  // BASIC-NEXT: fadd float
 
-  // SMITH: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fsub float
-  // SMITH-NEXT: fadd float
+  // IMPRVD: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fsub float
+  // IMPRVD-NEXT: fadd float
 
-  // EXTND: fmul float
-  // EXTND-NEXT: fmul float
-  // EXTND-NEXT: fmul float
-  // EXTND-NEXT: fmul float
-  // EXTND-NEXT: fsub float
-  // EXTND-NEXT: fadd float
+  // PRMTD: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fsub float
+  // PRMTD-NEXT: fadd float
 
   return a * b;
 }
@@ -177,66 +177,66 @@ _Complex float pragma_default_div(_Complex float a, _Complex float b) {
 
   // FULL: call {{.*}} @__divsc3
 
-  // LMTD: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fadd float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fadd float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fmul float
-  // LMTD-NEXT: fsub float
-  // LMTD-NEXT: fdiv float
-  // LMTD-NEXT: fdiv float
+  // BASIC: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fadd float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fadd float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fmul float
+  // BASIC-NEXT: fsub float
+  // BASIC-NEXT: fdiv float
+  // BASIC-NEXT: fdiv float
 
-  // SMITH: call{{.*}}float @llvm.fabs.f32(float {{.*}})
-  // SMITH-NEXT: call{{.*}}float @llvm.fabs.f32(float {{.*}})
-  // SMITH-NEXT: fcmp{{.*}}ugt float {{.*}}, {{.*}}
-  // SMITH-NEXT:   br i1 {{.*}}, label
-  // SMITH:  abs_rhsr_greater_or_equal_abs_rhsi:
-  // SMITH-NEXT: fdiv float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fadd float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fadd float
-  // SMITH-NEXT: fdiv float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fsub float
-  // SMITH-NEXT: fdiv float
-  // SMITH-NEXT: br label
-  // SMITH: abs_rhsr_less_than_abs_rhsi:
-  // SMITH-NEXT: fdiv float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fadd float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fadd float
-  // SMITH-NEXT: fdiv float
-  // SMITH-NEXT: fmul float
-  // SMITH-NEXT: fsub float
-  // SMITH-NEXT: fdiv float
+  // IMPRVD: call{{.*}}float @llvm.fabs.f32(float {{.*}})
+  // IMPRVD-NEXT: call{{.*}}float @llvm.fabs.f32(float {{.*}})
+  // IMPRVD-NEXT: fcmp{{.*}}ugt float {{.*}}, {{.*}}
+  // IMPRVD-NEXT:   br i1 {{.*}}, label
+  // IMPRVD:  abs_rhsr_greater_or_equal_abs_rhsi:
+  // IMPRVD-NEXT: fdiv float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fadd float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fadd float
+  // IMPRVD-NEXT: fdiv float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fsub float
+  // IMPRVD-NEXT: fdiv float
+  // IMPRVD-NEXT: br label
+  // IMPRVD: abs_rhsr_less_than_abs_rhsi:
+  // IMPRVD-NEXT: fdiv float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fadd float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fadd float
+  // IMPRVD-NEXT: fdiv float
+  // IMPRVD-NEXT: fmul float
+  // IMPRVD-NEXT: fsub float
+  // IMPRVD-NEXT: fdiv float
 
-  // EXTND: load float, ptr {{.*}}
-  // EXTND: fpext float {{.*}} to double
-  // EXTND-NEXT: fpext float {{.*}} to double
-  // EXTND-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 0
-  // EXTND-NEXT: load float, ptr {{.*}}
-  // EXTND-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 1
-  // EXTND-NEXT: load float, ptr {{.*}}
-  // EXTND-NEXT: fpext float {{.*}} to double
-  // EXTND-NEXT: fpext float {{.*}} to double
-  // EXTND-NEXT: fmul double
-  // EXTND-NEXT: fmul double
-  // EXTND-NEXT: fadd double
-  // EXTND-NEXT: fmul double
-  // EXTND-NEXT: fmul double
-  // EXTND-NEXT: fadd double
-  // EXTND-NEXT: fmul double
-  // EXTND-NEXT: fmul double
-  // EXTND-NEXT: fsub double
-  // EXTND-NEXT: fdiv double
-  // EXTND-NEXT: fdiv double
-  // EXTND-NEXT: fptrunc double {{.*}} to float
-  // EXTND-NEXT: fptrunc double {{.*}} to float
+  // PRMTD: load float, ptr {{.*}}
+  // PRMTD: fpext float {{.*}} to double
+  // PRMTD-NEXT: fpext float {{.*}} to double
+  // PRMTD-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 0
+  // PRMTD-NEXT: load float, ptr {{.*}}
+  // PRMTD-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 1
+  // PRMTD-NEXT: load float, ptr {{.*}}
+  // PRMTD-NEXT: fpext float {{.*}} to double
+  // PRMTD-NEXT: fpext float {{.*}} to double
+  // PRMTD-NEXT: fmul double
+  // PRMTD-NEXT: fmul double
+  // PRMTD-NEXT: fadd double
+  // PRMTD-NEXT: fmul double
+  // PRMTD-NEXT: fmul double
+  // PRMTD-NEXT: fadd double
+  // PRMTD-NEXT: fmul double
+  // PRMTD-NEXT: fmul double
+  // PRMTD-NEXT: fsub double
+  // PRMTD-NEXT: fdiv double
+  // PRMTD-NEXT: fdiv double
+  // PRMTD-NEXT: fptrunc double {{.*}} to float
+  // PRMTD-NEXT: fptrunc double {{.*}} to float
 
   return a / b;
 }

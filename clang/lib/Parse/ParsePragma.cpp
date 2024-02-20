@@ -909,7 +909,7 @@ void Parser::HandlePragmaCXLimitedRange() {
   LangOptions::ComplexRangeKind Range;
   switch (OOS) {
   case tok::OOS_ON:
-    Range = LangOptions::CX_Limited;
+    Range = LangOptions::CX_Basic;
     break;
   case tok::OOS_OFF:
     Range = LangOptions::CX_Full;

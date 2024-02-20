@@ -1014,13 +1014,13 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
 
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"full,smith,extend,limited">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Smith", "CX_Extend", "CX_Limited"]>;
+  Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>;
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
   Visibility<[CC1Option]>,
-  Values<"full,smith,extend,limited">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Smith", "CX_Extend", "CX_Limited"]>,
+  Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
   MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
 
 // OpenCL-only Options

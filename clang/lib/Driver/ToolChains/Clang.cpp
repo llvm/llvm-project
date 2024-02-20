@@ -2692,14 +2692,14 @@ static std::string ComplexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   case LangOptions::ComplexRangeKind::CX_Full:
     return "full";
     break;
-  case LangOptions::ComplexRangeKind::CX_Limited:
-    return "limited";
+  case LangOptions::ComplexRangeKind::CX_Basic:
+    return "basic";
     break;
-  case LangOptions::ComplexRangeKind::CX_Smith:
-    return "smith";
+  case LangOptions::ComplexRangeKind::CX_Improved:
+    return "improved";
     break;
-  case LangOptions::ComplexRangeKind::CX_Extend:
-    return "extend";
+  case LangOptions::ComplexRangeKind::CX_Promoted:
+    return "promoted";
     break;
   default:
     return "";
@@ -2791,12 +2791,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       StringRef Val = A->getValue();
       if (Val.equals("full"))
         RangeVal = LangOptions::ComplexRangeKind::CX_Full;
-      else if (Val.equals("smith"))
-        RangeVal = LangOptions::ComplexRangeKind::CX_Smith;
-      else if (Val.equals("extend"))
-        RangeVal = LangOptions::ComplexRangeKind::CX_Extend;
-      else if (Val.equals("limited"))
-        RangeVal = LangOptions::ComplexRangeKind::CX_Limited;
+      else if (Val.equals("improved"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Improved;
+      else if (Val.equals("promoted"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Promoted;
+      else if (Val.equals("basic"))
+        RangeVal = LangOptions::ComplexRangeKind::CX_Basic;
       else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << LangOptions::ComplexRangeKind::CX_None;
@@ -3073,7 +3073,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SeenUnsafeMathModeOption = true;
       // ffast-math enables fortran rules for complex multiplication and
       // division.
-      Range = LangOptions::ComplexRangeKind::CX_Limited;
+      Range = LangOptions::ComplexRangeKind::CX_Basic;
       break;
     }
     case options::OPT_fno_fast_math:

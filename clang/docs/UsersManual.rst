@@ -1851,21 +1851,29 @@ floating point semantic models: precise (the default), strict, and fast.
 
    This option specifies the implementation for complex multiplication and division.
 
-   Valid values are: ``limited``, ``smith``, ``full`` and ``extend``.
+   Valid values are: ``basic``, ``improved``, ``full`` and ``promoted``.
 
-   * ``limited`` Implementation of complex division and multiplication using
-     algebraic formulas at source precision. Overflow and non-finites values
-     are not handled.
-   * ``smith`` Implementation of complex division using the Smith algorithm at
+   * ``basic`` Implementation of complex division and multiplication using
+     algebraic formulas at source precision. No special handling to avoid
+     overflow. NaN and infinite and  values are not handled.
+   * ``improved`` Implementation of complex division using the Smith algorithm at
      source precision. Smith's algorithm for complex division.
      See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
-     Overflow is handled.
+     This value offers improved handling for overflow in intermediate calculations,
+     but overflow may occur. NaN and infinite and  values are not handled in some
+     cases.
    * ``full``  Implementation of complex division and multiplication using a
      call to runtime library functions (generally the case, but the BE might
      sometimes replace the library call if it knows enough about the potential
-     range of the inputs). Overflow and non-finite values are handled.
-   * ``extend`` Implementation of complex division using algebraic formulas at
-     higher precision. Overflow is handled.
+     range of the inputs). Overflow and non-finite values are handled by the
+     library implementation.
+   * ``promoted`` Implementation of complex division using algebraic formulas at
+     higher precision. Overflow is handled. Non-finite values are handled in some
+     cases. If the target hardware does not have native support for a higher precision
+     data type, an implementation for the complex operation will be used to provide
+     improved guards against intermediate overflow, but overflow and underflow may
+     still occur in some cases. NaN and infinite and  values are not handled.
+     This is the default value.
 
 .. _floating-point-environment:
 

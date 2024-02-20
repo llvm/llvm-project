@@ -283,23 +283,48 @@ public:
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
 
+  QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
+                                                   bool IsDivOpCode) {
+    const TargetInfo &TI = CGF.getContext().getTargetInfo();
+    if (const auto *BT = dyn_cast<BuiltinType>(ElementType)) {
+      switch (BT->getKind()) {
+      case BuiltinType::Kind::Float16:
+      case BuiltinType::Kind::BFloat16: {
+        return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
+      }
+      case BuiltinType::Kind::Float:
+        return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
+      case BuiltinType::Kind::Double:
+        if (TI.hasLongDoubleType()) {
+          return CGF.getContext().getComplexType(CGF.getContext().LongDoubleTy);
+        } else {
+          return QualType();
+        }
+      case BuiltinType::Kind::LongDouble:
+        if (TI.getTriple().isOSLinux()) {
+          if (TI.hasFloat128Type() && !TI.hasLongDoubleType())
+            return CGF.getContext().getComplexType(CGF.getContext().Float128Ty);
+          else
+            return CGF.getContext().getComplexType(
+                CGF.getContext().LongDoubleTy);
+        }
+        if (TI.getTriple().isOSWindows())
+          return CGF.getContext().getComplexType(CGF.getContext().LongDoubleTy);
+      default:
+        return QualType();
+      }
+    }
+    return QualType();
+  }
+
   QualType getPromotionType(QualType Ty, bool IsDivOpCode = false) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
-      if (CGF.getLangOpts().getComplexRange() ==
-              LangOptions::ComplexRangeKind::CX_Extend &&
-          IsDivOpCode) {
-        if (ElementType->isFloatingType()) {
-          if (const auto *BT = dyn_cast<BuiltinType>(ElementType))
-            switch (BT->getKind()) {
-            case BuiltinType::Kind::Float:
-              return CGF.getContext().getComplexType(CGF.getContext().DoubleTy);
-            default:
-              return CGF.getContext().getComplexType(
-                  CGF.getContext().LongDoubleTy);
-            }
-        }
-      }
+      if (IsDivOpCode && ElementType->isFloatingType() &&
+          CGF.getLangOpts().getComplexRange() ==
+              LangOptions::ComplexRangeKind::CX_Promoted)
+        return HigherPrecisionTypeForComplexArithmetic(ElementType,
+                                                       IsDivOpCode);
       if (ElementType.UseExcessPrecision(CGF.getContext()))
         return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
@@ -804,9 +829,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       ResR = Builder.CreateFSub(AC, BD, "mul_r");
       ResI = Builder.CreateFAdd(AD, BC, "mul_i");
 
-      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Smith ||
-          Op.FPFeatures.getComplexRange() == LangOptions::CX_Extend)
+      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
         return ComplexPairTy(ResR, ResI);
 
       // Emit the test for the real part becoming NaN and create a branch to
@@ -997,10 +1022,10 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
-    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Smith)
+    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved)
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
-    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
-             Op.FPFeatures.getComplexRange() == LangOptions::CX_Extend)
+    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
+             Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
     else if (!CGF.getLangOpts().FastMath ||
              // '-ffast-math' is used in the command line but followed by an
