@@ -7598,9 +7598,6 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
 
         if (PAM.FeatEnable.hasPGOAnalysisBBData()) {
           ListScope L(W, "PGO BB entries");
-          BlockFrequency EntryFreq{};
-          if (PrettyPGOAnalysis && !PAM.BBEntries.empty())
-            EntryFreq = PAM.BBEntries.front().BlockFreq;
           for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
             DictScope L(W);
 
@@ -7608,7 +7605,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
               if (PrettyPGOAnalysis) {
                 std::string BlockFreqStr;
                 raw_string_ostream SS(BlockFreqStr);
-                printRelativeBlockFreq(SS, EntryFreq, PBBE.BlockFreq);
+                printRelativeBlockFreq(SS, PAM.BBEntries.front().BlockFreq,
+                                       PBBE.BlockFreq);
                 W.printString("Frequency", BlockFreqStr);
               } else {
                 W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());

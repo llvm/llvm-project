@@ -62,8 +62,8 @@
 # CHECK-NEXT:           Successors [
 # CHECK-NEXT:             {
 # CHECK-NEXT:               ID: 2
-# RAW-NEXT:                 Probability: 0xF0000000
-# PRETTY-NEXT:              Probability: 0xf0000000 / 0x80000000 = 187.50%
+# RAW-NEXT:                 Probability: 0x80000000
+# PRETTY-NEXT:              Probability: 0x80000000 / 0x80000000 = 100.00%
 # CHECK-NEXT:             }
 # CHECK-NEXT:           ]
 # CHECK-NEXT:         }
@@ -200,7 +200,7 @@ Sections:
           - BBFreq:        100
             Successors:
               - ID:        2
-                BrProb:    0xF0000000
+                BrProb:    0x80000000
           - BBFreq:        100
             Successors:    []
       - FuncEntryCount: 8888
