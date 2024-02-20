@@ -21,7 +21,7 @@ namespace sparse_tensor {
 /// A simple structure that encodes a range of levels in the sparse tensors that
 /// forms a COO segment.
 struct COOSegment {
-  std::pair<Level /*low*/, Level /*high*/> lvlRange;
+  std::pair<Level, Level> lvlRange; // [low, high)
   bool isSoA;
 
   bool isSegmentStart(Level l) const { return l == lvlRange.first; }

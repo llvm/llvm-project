@@ -77,10 +77,9 @@ void StorageLayout::foreachField(
   SmallVector<COOSegment> cooSegs = SparseTensorType(enc).getCOOSegments();
   FieldIndex fieldIdx = kDataFieldStartingIdx;
 
-  Level l = 0;
   ArrayRef cooSegsRef = cooSegs;
   // Per-level storage.
-  while (l < lvlRank) {
+  for (Level l = 0; l < lvlRank; /*l += 1 or l += AoSCooLen*/) {
     const auto lt = lvlTypes[l];
     if (isWithPosLT(lt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, lt)))
