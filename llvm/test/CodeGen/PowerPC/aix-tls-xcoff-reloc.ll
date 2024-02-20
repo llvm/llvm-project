@@ -33,7 +33,7 @@ entry:
 ; RELOC-NEXT: Relocations [
 ; RELOC-NEXT:   Section (index: 1) .text {
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x12
+; RELOC-NEXT:     Virtual Address: 0xE
 ; RELOC-NEXT:     Symbol: _$TLSML ([[#NFA+25]])
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -589,6 +589,7 @@ entry:
 ; DIS-NEXT:                                      mr 6, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 0(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: [[#NFA+25]]) _$TLSML[TC]
+; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0x0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: [[#NFA+1]]) .__tls_get_mod[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 4(2)
