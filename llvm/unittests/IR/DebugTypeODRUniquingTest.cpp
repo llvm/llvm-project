@@ -30,7 +30,7 @@ TEST(DebugTypeODRUniquingTest, getODRType) {
   // Without a type map, this should return null.
   EXPECT_FALSE(DICompositeType::getODRType(
       Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr, 0, nullptr,
-      nullptr, 0, 0, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, nullptr,
+      nullptr, 0, 0, 0, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, nullptr,
       nullptr, nullptr, nullptr, nullptr, nullptr));
 
   // Enable the mapping.  There still shouldn't be a type.
@@ -40,7 +40,7 @@ TEST(DebugTypeODRUniquingTest, getODRType) {
   // Create some ODR-uniqued type.
   auto &CT = *DICompositeType::getODRType(
       Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr, 0, nullptr,
-      nullptr, 0, 0, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, nullptr,
+      nullptr, 0, 0, 0, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, nullptr,
       nullptr, nullptr, nullptr, nullptr, nullptr);
   EXPECT_EQ(UUID.getString(), CT.getIdentifier());
 
@@ -49,13 +49,13 @@ TEST(DebugTypeODRUniquingTest, getODRType) {
   EXPECT_EQ(&CT,
             DICompositeType::getODRType(
                 Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr, 0,
-                nullptr, nullptr, 0, 0, 0, DINode::FlagZero, nullptr, 0,
+                nullptr, nullptr, 0, 0, 0, 0, DINode::FlagZero, nullptr, 0,
                 nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                 nullptr));
   EXPECT_EQ(&CT, DICompositeType::getODRType(
                      Context, UUID, dwarf::DW_TAG_class_type,
                      MDString::get(Context, "name"), nullptr, 0, nullptr,
-                     nullptr, 0, 0, 0, DINode::FlagZero, nullptr, 0, nullptr,
+                     nullptr, 0, 0, 0, 0, DINode::FlagZero, nullptr, 0, nullptr,
                      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                      nullptr));
 
@@ -76,7 +76,7 @@ TEST(DebugTypeODRUniquingTest, buildODRType) {
   MDString &UUID = *MDString::get(Context, "Type");
   auto &CT = *DICompositeType::buildODRType(
       Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr, 0, nullptr,
-      nullptr, 0, 0, 0, DINode::FlagFwdDecl, nullptr, 0, nullptr, nullptr,
+      nullptr, 0, 0, 0, 0, DINode::FlagFwdDecl, nullptr, 0, nullptr, nullptr,
       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   EXPECT_EQ(&CT, DICompositeType::getODRTypeIfExists(Context, UUID));
   EXPECT_EQ(dwarf::DW_TAG_class_type, CT.getTag());
@@ -84,19 +84,19 @@ TEST(DebugTypeODRUniquingTest, buildODRType) {
   // Update with another forward decl.  This should be a no-op.
   EXPECT_EQ(&CT, DICompositeType::buildODRType(
                      Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr,
-                     0, nullptr, nullptr, 0, 0, 0, DINode::FlagFwdDecl, nullptr,
+                     0, nullptr, nullptr, 0, 0, 0, 0, DINode::FlagFwdDecl, nullptr,
                      0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                      nullptr, nullptr));
 
   EXPECT_FALSE(DICompositeType::buildODRType(
       Context, UUID, dwarf::DW_TAG_structure_type, nullptr, nullptr, 0, nullptr,
-      nullptr, 0, 0, 0, DINode::FlagFwdDecl, nullptr, 0, nullptr, nullptr,
+      nullptr, 0, 0, 0, 0, DINode::FlagFwdDecl, nullptr, 0, nullptr, nullptr,
       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
 
   // Update with a definition.  This time we should see a change.
   EXPECT_EQ(&CT, DICompositeType::buildODRType(
                      Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr,
-                     0, nullptr, nullptr, 0, 0, 0, DINode::FlagZero, nullptr, 0,
+                     0, nullptr, nullptr, 0, 0, 0, 0, DINode::FlagZero, nullptr, 0,
                      nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                      nullptr, nullptr));
   EXPECT_FALSE(CT.isForwardDecl());
@@ -104,13 +104,13 @@ TEST(DebugTypeODRUniquingTest, buildODRType) {
   // Further updates should be ignored.
   EXPECT_EQ(&CT, DICompositeType::buildODRType(
                      Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr,
-                     0, nullptr, nullptr, 0, 0, 0, DINode::FlagFwdDecl, nullptr,
+                     0, nullptr, nullptr, 0, 0, 0, 0, DINode::FlagFwdDecl, nullptr,
                      0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                      nullptr, nullptr));
   EXPECT_FALSE(CT.isForwardDecl());
   EXPECT_EQ(&CT, DICompositeType::buildODRType(
                      Context, UUID, dwarf::DW_TAG_class_type, nullptr, nullptr,
-                     111u, nullptr, nullptr, 0, 0, 0, DINode::FlagZero, nullptr,
+                     111u, nullptr, nullptr, 0, 0, 0, 0, DINode::FlagZero, nullptr,
                      0, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                      nullptr, nullptr));
   EXPECT_NE(111u, CT.getLine());
@@ -123,7 +123,7 @@ TEST(DebugTypeODRUniquingTest, buildODRTypeFields) {
   // Build an ODR type that's a forward decl with no other fields set.
   MDString &UUID = *MDString::get(Context, "UUID");
   auto &CT = *DICompositeType::buildODRType(
-      Context, UUID, 0, nullptr, nullptr, 0, nullptr, nullptr, 0, 0, 0,
+      Context, UUID, 0, nullptr, nullptr, 0, nullptr, nullptr, 0, 0, 0, 0,
       DINode::FlagFwdDecl, nullptr, 0, nullptr, nullptr, nullptr, nullptr,
       nullptr, nullptr, nullptr, nullptr);
 
@@ -141,6 +141,7 @@ TEST(DebugTypeODRUniquingTest, buildODRTypeFields) {
   DO_FOR_FIELD(SizeInBits)                                                     \
   DO_FOR_FIELD(AlignInBits)                                                    \
   DO_FOR_FIELD(OffsetInBits)                                                   \
+  DO_FOR_FIELD(NumExtraInhabitants)                                            \
   DO_FOR_FIELD(RuntimeLang)
 
 // Create all the fields.
@@ -153,12 +154,12 @@ TEST(DebugTypeODRUniquingTest, buildODRTypeFields) {
 #undef DO_FOR_FIELD
 
   // Replace all the fields with new values that are distinct from each other.
-  EXPECT_EQ(&CT,
-            DICompositeType::buildODRType(
-                Context, UUID, 0, Name, File, Line, Scope, BaseType, SizeInBits,
-                AlignInBits, OffsetInBits, DINode::FlagArtificial, Elements,
-                RuntimeLang, VTableHolder, TemplateParams, nullptr, nullptr,
-                nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(&CT, DICompositeType::buildODRType(
+                     Context, UUID, 0, Name, File, Line, Scope, BaseType,
+                     SizeInBits, AlignInBits, OffsetInBits, NumExtraInhabitants,
+                     DINode::FlagArtificial, Elements, RuntimeLang,
+                     VTableHolder, TemplateParams, nullptr, nullptr, nullptr,
+                     nullptr, nullptr, nullptr));
 
   // Confirm that all the right fields got updated.
 #define DO_FOR_FIELD(X) EXPECT_EQ(X, CT.getRaw##X());
