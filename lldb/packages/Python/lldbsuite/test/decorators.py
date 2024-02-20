@@ -1,6 +1,6 @@
 # System modules
+from distutils.version import LooseVersion
 from functools import wraps
-from pkg_resources import packaging
 import ctypes
 import locale
 import os
@@ -65,10 +65,10 @@ def _check_expected_version(comparison, expected, actual):
         ">=": fn_geq,
         "<=": fn_leq,
     }
+    expected_str = ".".join([str(x) for x in expected])
+    actual_str = ".".join([str(x) for x in actual])
 
-    return op_lookup[comparison](
-        packaging.version.parse(actual), packaging.version.parse(expected)
-    )
+    return op_lookup[comparison](LooseVersion(actual_str), LooseVersion(expected_str))
 
 
 def _match_decorator_property(expected, actual):
@@ -238,9 +238,7 @@ def _decorateTest(
             )
         )
         skip_for_py_version = (py_version is None) or _check_expected_version(
-            py_version[0],
-            py_version[1],
-            "{}.{}".format(sys.version_info.major, sys.version_info.minor),
+            py_version[0], py_version[1], sys.version_info
         )
         skip_for_macos_version = (macos_version is None) or (
             (platform.mac_ver()[0] != "")

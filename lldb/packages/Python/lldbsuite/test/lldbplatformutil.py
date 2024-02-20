@@ -7,8 +7,8 @@ import re
 import subprocess
 import sys
 import os
+from distutils.version import LooseVersion
 from urllib.parse import urlparse
-from pkg_resources import packaging
 
 # LLDB modules
 import lldb
@@ -297,30 +297,27 @@ def expectedCompilerVersion(compiler_version):
     if compiler_version is None:
         return True
     operator = str(compiler_version[0])
-    version_str = str(compiler_version[1])
+    version = compiler_version[1]
 
-    if not version_str:
+    if version is None:
         return True
 
-    test_compiler_version_str = getCompilerVersion()
-    if test_compiler_version_str == "unknown":
+    test_compiler_version = getCompilerVersion()
+    if test_compiler_version == "unknown":
         # Assume the compiler version is at or near the top of trunk.
         return operator in [">", ">=", "!", "!=", "not"]
 
-    version = packaging.version.parse(version_str)
-    test_compiler_version = packaging.version.parse(test_compiler_version_str)
-
     if operator == ">":
-        return test_compiler_version < version
+        return LooseVersion(test_compiler_version) > LooseVersion(version)
     if operator == ">=" or operator == "=>":
-        return test_compiler_version >= version
+        return LooseVersion(test_compiler_version) >= LooseVersion(version)
     if operator == "<":
-        return test_compiler_version < version
+        return LooseVersion(test_compiler_version) < LooseVersion(version)
     if operator == "<=" or operator == "=<":
-        return test_compiler_version <= version
+        return LooseVersion(test_compiler_version) <= LooseVersion(version)
     if operator == "!=" or operator == "!" or operator == "not":
-        return version_str not in test_compiler_version_str
-    return version_str in test_compiler_version_str
+        return str(version) not in str(test_compiler_version)
+    return str(version) in str(test_compiler_version)
 
 
 def expectedCompiler(compilers):
