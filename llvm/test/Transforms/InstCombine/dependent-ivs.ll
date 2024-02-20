@@ -71,7 +71,7 @@ define void @int_iv_commuted_add(i64 %base, i64 %end) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = add i64 [[BASE2]], [[IV]]
+; CHECK-NEXT:    [[IV2:%.*]] = add i64 [[IV]], [[BASE2]]
 ; CHECK-NEXT:    call void @use.i64(i64 [[IV2]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]

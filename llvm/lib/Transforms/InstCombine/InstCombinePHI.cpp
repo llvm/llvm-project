@@ -1425,7 +1425,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   }
 
   assert(BO->isCommutative() && "Must be commutative");
-  Value *Res = Builder.CreateBinOp(BO->getOpcode(), Start, Iv2);
+  Value *Res = Builder.CreateBinOp(BO->getOpcode(), Iv2, Start);
   cast<Instruction>(Res)->copyIRFlags(BO);
   return Res;
 }
