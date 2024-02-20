@@ -614,9 +614,10 @@ enum AcceleratorTable {
 };
 
 // Uniquify the string hashes and calculate the bucket count for the
-// DWARF v5 Accelerator Table.
-inline uint32_t computeDebugNamesUniqueHashes(MutableArrayRef<uint32_t> hashes,
-                                              uint32_t &uniqueHashCount) {
+// DWARF v5 Accelerator Table. NOTE: This function effectively consumes the
+// 'hashes' input parameter.
+inline uint32_t getDebugNamesBucketCount(MutableArrayRef<uint32_t> hashes,
+                                         uint32_t &uniqueHashCount) {
   uint32_t BucketCount = 0;
 
   sort(hashes);
