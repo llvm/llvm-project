@@ -67,7 +67,7 @@ behavior between Clang and DXC. Some examples include:
 
   cbuffer CB {
     uint U;
-    uint I;
+    int I;
     float X, Y, Z;
     double3 A, B;
   }
@@ -96,7 +96,7 @@ behavior between Clang and DXC. Some examples include:
 
   }
 
-`Compiler Explorer <https://godbolt.org/z/1qz6sn713>`_
+`Compiler Explorer <https://godbolt.org/z/a9q74E95T>`_
 
 .. note::
 
