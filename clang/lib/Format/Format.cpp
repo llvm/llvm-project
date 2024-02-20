@@ -2948,9 +2948,9 @@ private:
                      << getTokenTypeName(FormatTok->getType()) << "\n");
           return true;
         }
-        if (guessIsObjC(SourceManager, Line->Children, Keywords))
-          return true;
       }
+      if (guessIsObjC(SourceManager, Line->Children, Keywords))
+        return true;
     }
     return false;
   }
