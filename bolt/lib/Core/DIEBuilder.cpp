@@ -208,7 +208,7 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CU4TURanges =
       isDWO() ? DwarfContext->dwo_types_section_units()
-            : DwarfContext->types_section_units();
+              : DwarfContext->types_section_units();
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
@@ -219,7 +219,7 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
 
   DWARFContext::unit_iterator_range CURanges =
       isDWO() ? DwarfContext->dwo_info_section_units()
-            : DwarfContext->info_section_units();
+              : DwarfContext->info_section_units();
 
   // This handles DWARF4 CUs and DWARF5 CU/TUs.
   // Creating a vector so that for reference handling only DWARF5 CU/TUs are
@@ -246,7 +246,7 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CURanges =
       isDWO() ? DwarfContext->dwo_info_section_units()
-            : DwarfContext->info_section_units();
+              : DwarfContext->info_section_units();
 
   // This handles DWARF4 CUs and DWARF5 CU/TUs.
   // Creating a vector so that for reference handling only DWARF5 CU/TUs are
