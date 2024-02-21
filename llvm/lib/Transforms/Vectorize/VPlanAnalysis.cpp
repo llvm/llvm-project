@@ -205,6 +205,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (V->isLiveIn()) {
     if (auto *IRValue = V->getLiveInIRValue())
       return IRValue->getType();
+    // All VPValues without any underlying IR value (like the vector trip count
+    // or the backedge-taken count) have the same type as the canonical IV.
     return CanonicalIVTy;
   }
 

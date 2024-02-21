@@ -2927,9 +2927,6 @@ public:
     return BackedgeTakenCount;
   }
 
-  /// Return the backedge taken count of the original loop, if set.
-  VPValue *getBackedgeTakenCount() { return BackedgeTakenCount; }
-
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }
 

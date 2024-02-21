@@ -15,7 +15,6 @@ namespace llvm {
 
 class LLVMContext;
 class VPValue;
-class VPlan;
 class VPBlendRecipe;
 class VPInstruction;
 class VPWidenRecipe;
@@ -36,6 +35,9 @@ class Type;
 /// of the previously inferred types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
+  /// Type of the canonical induction variable. Used for all VPValues without
+  /// any underlying IR value (like the vector trip count or the backedge-taken
+  /// count).
   Type *CanonicalIVTy;
   LLVMContext &Ctx;
 
