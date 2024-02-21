@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "test_iterators.h"
+
 #include "../types.h"
 
 template <class Iterator, bool HasNoexceptIterMove>

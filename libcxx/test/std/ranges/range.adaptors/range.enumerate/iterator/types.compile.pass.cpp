@@ -20,9 +20,10 @@
 // std::enumerate_view::<iterator>::iterator_concept;
 
 #include <ranges>
-
 #include <type_traits>
+
 #include "test_iterators.h"
+
 #include "../types.h"
 
 template <typename T>

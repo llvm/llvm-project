@@ -19,6 +19,8 @@
 #include <ranges>
 
 #include "test_iterators.h"
+
+#include "test_concepts.h"
 #include "types.h"
 
 struct NonSizedRangeView : std::ranges::view_base {
@@ -30,8 +32,8 @@ struct NonSizedRangeView : std::ranges::view_base {
 static_assert(!std::ranges::sized_range<NonSizedRangeView>);
 static_assert(!std::ranges::sized_range<const NonSizedRangeView>);
 
-static_assert(!HasSize<std::ranges::enumerate_view<NonSizedRangeView>>);
-static_assert(!HasSize<const std::ranges::enumerate_view<NonSizedRangeView>>);
+static_assert(!HasMemberSize<std::ranges::enumerate_view<NonSizedRangeView>>);
+static_assert(!HasMemberSize<const std::ranges::enumerate_view<NonSizedRangeView>>);
 
 constexpr bool test() {
   int buffer[] = {1, 2, 3};

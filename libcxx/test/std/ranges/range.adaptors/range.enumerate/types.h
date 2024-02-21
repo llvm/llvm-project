@@ -132,9 +132,4 @@ public:
   }
 };
 
-// Concepts
-
-template <class T>
-concept HasSize = requires(T t) { t.size(); };
-
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_H

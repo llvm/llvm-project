@@ -20,6 +20,7 @@
 #include <ranges>
 
 #include "test_iterators.h"
+
 #include "../types.h"
 
 constexpr void compareOperatorTest(const auto& iter1, const auto& iter2) {

@@ -29,8 +29,10 @@
 #include <ranges>
 
 #include "test_iterators.h"
-#include "../types.h"
+
+#include "../test_concepts.h"
 // #include "../types_iterators.h"
+#include "../types.h"
 
 template <bool Const>
 struct Iter {
@@ -146,7 +148,7 @@ constexpr void testConstraints() {
   {
     using Base = BufferView<Iter, Sent>;
 
-    static_assert(!HasSize<Base>);
+    static_assert(!HasMemberSize<Base>);
     static_assert(!std::ranges::sized_range<Base>);
 
     static_assert(!HasMinus<EnumerateIter<Base>, EnumerateSentinel<Base>>);
@@ -166,7 +168,7 @@ constexpr void testConstraints() {
   {
     using Base = SizedBufferView<Iter, Sent>;
 
-    static_assert(HasSize<Base>);
+    static_assert(HasMemberSize<Base>);
     static_assert(std::ranges::sized_range<Base>);
 
     static_assert(HasMinus<EnumerateIter<Base>, EnumerateSentinel<Base>>);
@@ -186,7 +188,7 @@ constexpr void testConstraints() {
   {
     using Base = BufferView<Iter, CrossSizedSent>;
 
-    static_assert(!HasSize<Base>);
+    static_assert(!HasMemberSize<Base>);
     static_assert(!std::ranges::sized_range<Base>);
 
     static_assert(HasMinus<EnumerateIter<Base>, EnumerateSentinel<Base>>);
@@ -210,7 +212,7 @@ constexpr bool test() {
   {
     using Base = SizedBufferView<Iter, SizedSent>;
 
-    static_assert(HasSize<Base>);
+    static_assert(HasMemberSize<Base>);
     static_assert(std::ranges::sized_range<Base>);
 
     Base base{buffer};
@@ -231,7 +233,7 @@ constexpr bool test() {
   {
     using Base = BufferView<Iter, CrossSizedSent>;
 
-    static_assert(!HasSize<Base>);
+    static_assert(!HasMemberSize<Base>);
     static_assert(!std::ranges::sized_range<Base>);
 
     Base base{buffer};

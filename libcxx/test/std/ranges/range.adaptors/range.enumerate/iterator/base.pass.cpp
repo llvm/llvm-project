@@ -17,11 +17,10 @@
 // constexpr const iterator_t<Base>& base() const & noexcept;
 // constexpr iterator_t<Base> base() &&;
 
-#include <ranges>
-
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <ranges>
 #include <utility>
 #include <tuple>
 

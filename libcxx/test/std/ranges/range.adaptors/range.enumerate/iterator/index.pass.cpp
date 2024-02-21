@@ -25,6 +25,7 @@
 
 #include "test_iterators.h"
 #include "test_macros.h"
+
 #include "../types.h"
 
 template <class Iterator, class ValueType = int, class Sentinel = sentinel_wrapper<Iterator>>
