@@ -16567,7 +16567,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
                                            CharUnits::fromQuantity(4));
     assert(FieldValue->getType()->isIntegerTy(32) &&
-           "Only supports 32-bit integer in the GenAIXPPCBuiltinCpuExpr.");
+           "Only 32-bit integers are supported in GenAIXPPCBuiltinCpuExpr().");
     return Builder.CreateICmp(ICmpInst::ICMP_EQ, FieldValue,
                               ConstantInt::get(Int32Ty, OpValue));
   };

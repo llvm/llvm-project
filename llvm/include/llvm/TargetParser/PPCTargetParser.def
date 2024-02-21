@@ -148,7 +148,7 @@ PPC_LNX_CPU("power10",47)
 #endif
 
 // The value of SUPPORT_METHOD can be AIX_BUILTIN_PPC_TRUE,
-// AIX_BUILTIN_PPC_FALSE, Or USE_SYS_CONF.
+// AIX_BUILTIN_PPC_FALSE, or USE_SYS_CONF.
 // When the value of SUPPORT_METHOD is USE_SYS_CONF, the return value
 // depends on the result of comparing the data member of
 // _system_configuration specified by INDEX with a certain value.
@@ -176,8 +176,8 @@ PPC_AIX_CPU("power9",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,COMP_EQ,AIX_PPC9_VALUE)
 PPC_AIX_CPU("power10",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,COMP_EQ,AIX_PPC10_VALUE)
 #undef PPC_AIX_CPU
 
-// PPC_SYSTEMCONFIG_TYPE defines the IR data struture of the kernel variable
-// `_system_configuration` found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
+// PPC_SYSTEMCONFIG_TYPE defines the IR data structure of kernel variable
+// `_system_configuration`, that is found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
 #ifndef PPC_SYSTEMCONFIG_TYPE
 #define PPC_SYSTEMCONFIG_TYPE \
 Int32Ty, Int32Ty, Int32Ty
