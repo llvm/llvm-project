@@ -1199,6 +1199,18 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI,
   if (!VecEltTy.isByteSized())
     return false;
 
+  // Check for load fold barriers between the extraction and the load.
+  if (MI.getParent() != LoadMI->getParent())
+    return false;
+  const unsigned MaxIter = 20;
+  unsigned Iter = 0;
+  for (auto II = LoadMI->getIterator(), IE = MI.getIterator(); II != IE; ++II) {
+    if (II->isLoadFoldBarrier())
+      return false;
+    if (Iter++ == MaxIter)
+      return false;
+  }
+
   // Check if the new load that we are going to create is legal
   // if we are in the post-legalization phase.
   MachineMemOperand MMO = LoadMI->getMMO();
