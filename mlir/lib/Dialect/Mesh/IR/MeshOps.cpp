@@ -24,7 +24,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,7 +33,6 @@
 #include <iterator>
 #include <numeric>
 #include <optional>
-#include <string>
 #include <utility>
 
 #define DEBUG_TYPE "mesh-ops"
@@ -244,6 +242,11 @@ void MeshShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
         MeshAxesAttr::get(odsBuilder.getContext(), axes));
 }
 
+void MeshShapeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResults()[0], "mesh_shape");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.shard attr
 //===----------------------------------------------------------------------===//
@@ -308,6 +311,15 @@ bool MeshShardingAttr::operator==(MeshShardingAttr rhs) const {
 }
 
 //===----------------------------------------------------------------------===//
+// mesh.shard op
+//===----------------------------------------------------------------------===//
+
+void ShardOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "sharding_annotated");
+}
+
+//===----------------------------------------------------------------------===//
 // mesh.process_multi_index op
 //===----------------------------------------------------------------------===//
 
@@ -345,6 +357,11 @@ void ProcessMultiIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
         MeshAxesAttr::get(odsBuilder.getContext(), axes));
 }
 
+void ProcessMultiIndexOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResults()[0], "proc_linear_idx");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.process_linear_index op
 //===----------------------------------------------------------------------===//
@@ -361,6 +378,11 @@ ProcessLinearIndexOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void ProcessLinearIndexOp::build(OpBuilder &odsBuilder,
                                  OperationState &odsState, MeshOp mesh) {
   build(odsBuilder, odsState, mesh.getSymName());
+}
+
+void ProcessLinearIndexOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "proc_linear_idx");
 }
 
 //===----------------------------------------------------------------------===//
@@ -606,6 +628,11 @@ void AllGatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<EmptyMeshAxesCanonicalizationPattern<AllGatherOp>>(context);
 }
 
+void AllGatherOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "all_gather");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.all_reduce op
 //===----------------------------------------------------------------------===//
@@ -618,6 +645,11 @@ AllReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void AllReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<AllReduceOp>>(context);
+}
+
+void AllReduceOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "all_reduce");
 }
 
 //===----------------------------------------------------------------------===//
@@ -654,6 +686,11 @@ void AllSliceOp::build(OpBuilder &odsBuilder, OperationState &odsState,
         APInt(sizeof(sliceAxis) * CHAR_BIT, sliceAxis));
 }
 
+void AllSliceOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "all_slice");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.all_to_all op
 //===----------------------------------------------------------------------===//
@@ -672,6 +709,11 @@ LogicalResult AllToAllOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void AllToAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                              MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<AllToAllOp>>(context);
+}
+
+void AllToAllOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "all_to_all");
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,6 +738,11 @@ BroadcastOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<BroadcastOp>>(context);
+}
+
+void BroadcastOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "broadcast");
 }
 
 //===----------------------------------------------------------------------===//
@@ -724,6 +771,11 @@ void GatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<EmptyMeshAxesCanonicalizationPattern<GatherOp>>(context);
 }
 
+void GatherOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "gather");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.recv op
 //===----------------------------------------------------------------------===//
@@ -745,6 +797,10 @@ LogicalResult RecvOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void RecvOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                          MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<RecvOp>>(context);
+}
+
+void RecvOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "recv");
 }
 
 //===----------------------------------------------------------------------===//
@@ -770,6 +826,11 @@ void ReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<EmptyMeshAxesCanonicalizationPattern<ReduceOp>>(context);
 }
 
+void ReduceOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "reduce");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.reduce_scatter op
 //===----------------------------------------------------------------------===//
@@ -789,6 +850,11 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<ReduceScatterOp>>(context);
+}
+
+void ReduceScatterOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "reduce_scatter");
 }
 
 //===----------------------------------------------------------------------===//
@@ -817,6 +883,11 @@ void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<EmptyMeshAxesCanonicalizationPattern<ScatterOp>>(context);
 }
 
+void ScatterOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "scatter");
+}
+
 //===----------------------------------------------------------------------===//
 // mesh.send op
 //===----------------------------------------------------------------------===//
@@ -837,6 +908,10 @@ LogicalResult SendOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void SendOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                          MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<SendOp>>(context);
+}
+
+void SendOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "send");
 }
 
 //===----------------------------------------------------------------------===//
@@ -863,6 +938,11 @@ void ShiftOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                           MLIRContext *context) {
   // TODO: remove op when offset is 0 or if it is a rotate with and
   // offset % shift_axis_mesh_dim_size == 0.
+}
+
+void ShiftOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "shift");
 }
 
 //===----------------------------------------------------------------------===//
