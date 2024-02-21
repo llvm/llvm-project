@@ -44,6 +44,12 @@ struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
     return nullptr;
   }
 
+  std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
+  getMultiPayloadEnumDescriptor(const swift::reflection::TypeRef *TR) override {
+    if (m_descriptor_finder)
+      return m_descriptor_finder->getMultiPayloadEnumDescriptor(TR);
+    return nullptr;
+  }
   void SetExternalDescriptorFinder(
       swift::reflection::DescriptorFinder *desciptor_finder) {
     m_descriptor_finder = desciptor_finder;

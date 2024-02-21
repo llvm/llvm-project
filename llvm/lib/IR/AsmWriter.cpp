@@ -2131,6 +2131,8 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("offset", N->getOffsetInBits());
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
+  if (!N->getSpareBitsMask().isZero())
+    Printer.printAPInt("spare_bits_mask", N->getSpareBitsMask(), true, false);
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("elements", N->getRawElements());
   Printer.printDwarfEnum("runtimeLang", N->getRuntimeLang(),
@@ -2148,6 +2150,8 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   else
     Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto *SpecificationOf = N->getRawSpecificationOf())
+    Printer.printMetadata("specification_of", SpecificationOf);
   Out << ")";
 }
 

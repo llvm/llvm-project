@@ -3445,6 +3445,9 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
 #ifndef NDEBUG
         // This block is a custom VALIDATE_AND_RETURN implementation to support
         // checking the return value, plus the by-ref `child_indexes`.
+        if (!ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftValidateTypeSystem())
+          return index_size;
         if (!GetSwiftASTContextFromExecutionContext(exe_ctx))
           return index_size;
         auto swift_scratch_ctx_lock = SwiftScratchContextLock(exe_ctx);

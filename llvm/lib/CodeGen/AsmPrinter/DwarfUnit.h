@@ -218,11 +218,16 @@ public:
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
 
   /// Add constant value entry in variable DIE.
-  void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
-  void addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty);
-  void addConstantValue(DIE &Die, const APInt &Val, bool Unsigned);
-  void addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty);
-  void addConstantValue(DIE &Die, bool Unsigned, uint64_t Val);
+  void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty,
+                        dwarf::Attribute = dwarf::DW_AT_const_value);
+  void addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty,
+                        dwarf::Attribute = dwarf::DW_AT_const_value);
+  void addConstantValue(DIE &Die, const APInt &Val, bool Unsigned,
+                        dwarf::Attribute = dwarf::DW_AT_const_value);
+  void addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty,
+                        dwarf::Attribute = dwarf::DW_AT_const_value);
+  void addConstantValue(DIE &Die, bool Unsigned, uint64_t Val,
+                        dwarf::Attribute = dwarf::DW_AT_const_value);
 
   /// Add constant value entry in variable DIE.
   void addConstantFPValue(DIE &Die, const ConstantFP *CFP);
