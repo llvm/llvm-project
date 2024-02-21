@@ -54,6 +54,11 @@ struct atomic_u64 {
   alignas(8) volatile Type ValDoNotUse;
 };
 
+struct atomic_voidptr {
+  typedef void *Type;
+  volatile Type ValDoNotUse;
+};
+
 struct atomic_uptr {
   typedef uptr Type;
   volatile Type ValDoNotUse;

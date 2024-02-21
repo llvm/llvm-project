@@ -688,14 +688,16 @@ public:
     Quarantine.disable();
     Primary.disable();
     Secondary.disable();
-    if (Depot)
-      Depot->disable();
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB)
+      RB->Depot->disable();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
-    if (Depot)
-      Depot->enable();
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB)
+      RB->Depot->enable();
     Secondary.enable();
     Primary.enable();
     Quarantine.enable();
@@ -920,12 +922,14 @@ public:
 
   const char *getStackDepotAddress() {
     initThreadMaybe();
-    return reinterpret_cast<char *>(Depot);
+    AllocationRingBuffer *RB = getRingBuffer();
+    return RB ? reinterpret_cast<char *>(RB->Depot) : nullptr;
   }
 
   uptr getStackDepotSize() {
     initThreadMaybe();
-    return StackDepotSize;
+    AllocationRingBuffer *RB = getRingBuffer();
+    return RB ? RB->StackDepotSize : 0;
   }
 
   const char *getRegionInfoArrayAddress() const {
@@ -938,12 +942,15 @@ public:
 
   const char *getRingBufferAddress() {
     initThreadMaybe();
-    return RawRingBuffer;
+    return reinterpret_cast<char *>(getRingBuffer());
   }
 
   uptr getRingBufferSize() {
     initThreadMaybe();
-    return RingBufferElements ? ringBufferSizeInBytes(RingBufferElements) : 0;
+    AllocationRingBuffer *RB = getRingBuffer();
+    return RB && RB->RingBufferElements
+               ? ringBufferSizeInBytes(RB->RingBufferElements)
+               : 0;
   }
 
   static const uptr MaxTraceSize = 64;
@@ -1048,10 +1055,6 @@ private:
   uptr GuardedAllocSlotSize = 0;
 #endif // GWP_ASAN_HOOKS
 
-  StackDepot *Depot = nullptr;
-  uptr StackDepotSize = 0;
-  MemMapT RawStackDepotMap;
-
   struct AllocationRingBuffer {
     struct Entry {
       atomic_uptr Ptr;
@@ -1061,16 +1064,29 @@ private:
       atomic_u32 DeallocationTrace;
       atomic_u32 DeallocationTid;
     };
-
+    StackDepot *Depot = nullptr;
+    uptr StackDepotSize = 0;
+    MemMapT RawRingBufferMap;
+    MemMapT RawStackDepotMap;
+    u32 RingBufferElements;
     atomic_uptr Pos;
     // An array of Size (at least one) elements of type Entry is immediately
     // following to this struct.
   };
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
-  char *RawRingBuffer = {};
-  u32 RingBufferElements = 0;
-  MemMapT RawRingBufferMap;
+  atomic_voidptr RingBuffer = {};
+
+  AllocationRingBuffer *getRingBuffer() {
+    return reinterpret_cast<AllocationRingBuffer *>(
+        atomic_load(&RingBuffer, memory_order_acquire));
+  }
+
+  AllocationRingBuffer *getRingBufferIfEnabled(const Options &Options) {
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+      return nullptr;
+    return getRingBuffer();
+  }
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {
@@ -1259,27 +1275,22 @@ private:
     storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
   }
 
-  StackDepot *getDepotIfEnabled(const Options &Options) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
-      return nullptr;
-    return Depot;
-  }
-
   void storePrimaryAllocationStackMaybe(const Options &Options, void *Ptr) {
-    auto *Depot = getDepotIfEnabled(Options);
-    if (!Depot)
+    auto *RingBuffer = getRingBufferIfEnabled(Options);
+    if (!RingBuffer)
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
-    Ptr32[MemTagAllocationTraceIndex] = collectStackTrace(Depot);
+    Ptr32[MemTagAllocationTraceIndex] = collectStackTrace(RingBuffer->Depot);
     Ptr32[MemTagAllocationTidIndex] = getThreadID();
   }
 
-  void storeRingBufferEntry(void *Ptr, u32 AllocationTrace, u32 AllocationTid,
+  void storeRingBufferEntry(AllocationRingBuffer *RB, void *Ptr,
+                            u32 AllocationTrace, u32 AllocationTid,
                             uptr AllocationSize, u32 DeallocationTrace,
                             u32 DeallocationTid) {
-    uptr Pos = atomic_fetch_add(&getRingBuffer()->Pos, 1, memory_order_relaxed);
+    uptr Pos = atomic_fetch_add(&RB->Pos, 1, memory_order_relaxed);
     typename AllocationRingBuffer::Entry *Entry =
-        getRingBufferEntry(RawRingBuffer, Pos % RingBufferElements);
+        getRingBufferEntry(RB, Pos % RB->RingBufferElements);
 
     // First invalidate our entry so that we don't attempt to interpret a
     // partially written state in getSecondaryErrorInfo(). The fences below
@@ -1300,32 +1311,32 @@ private:
 
   void storeSecondaryAllocationStackMaybe(const Options &Options, void *Ptr,
                                           uptr Size) {
-    auto *Depot = getDepotIfEnabled(Options);
-    if (!Depot)
+    auto *RingBuffer = getRingBufferIfEnabled(Options);
+    if (!RingBuffer->Depot)
       return;
-    u32 Trace = collectStackTrace(Depot);
+    u32 Trace = collectStackTrace(RingBuffer->Depot);
     u32 Tid = getThreadID();
 
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
     Ptr32[MemTagAllocationTraceIndex] = Trace;
     Ptr32[MemTagAllocationTidIndex] = Tid;
 
-    storeRingBufferEntry(untagPointer(Ptr), Trace, Tid, Size, 0, 0);
+    storeRingBufferEntry(RingBuffer, untagPointer(Ptr), Trace, Tid, Size, 0, 0);
   }
 
   void storeDeallocationStackMaybe(const Options &Options, void *Ptr,
                                    u8 PrevTag, uptr Size) {
-    auto *Depot = getDepotIfEnabled(Options);
-    if (!Depot)
+    auto *RingBuffer = getRingBufferIfEnabled(Options);
+    if (!RingBuffer->Depot)
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
     u32 AllocationTrace = Ptr32[MemTagAllocationTraceIndex];
     u32 AllocationTid = Ptr32[MemTagAllocationTidIndex];
 
-    u32 DeallocationTrace = collectStackTrace(Depot);
+    u32 DeallocationTrace = collectStackTrace(RingBuffer->Depot);
     u32 DeallocationTid = getThreadID();
 
-    storeRingBufferEntry(addFixedTag(untagPointer(Ptr), PrevTag),
+    storeRingBufferEntry(RingBuffer, addFixedTag(untagPointer(Ptr), PrevTag),
                          AllocationTrace, AllocationTid, Size,
                          DeallocationTrace, DeallocationTid);
   }
@@ -1434,7 +1445,7 @@ private:
     for (uptr I = Pos - 1; I != Pos - 1 - RingBufferElements &&
                            NextErrorReport != NumErrorReports;
          --I) {
-      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBufferElements);
+      auto *Entry = getRingBufferEntry(RingBuffer, I % RingBufferElements);
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
       if (!EntryPtr)
         continue;
@@ -1502,12 +1513,14 @@ private:
   }
 
   static typename AllocationRingBuffer::Entry *
-  getRingBufferEntry(char *RawRingBuffer, uptr N) {
+  getRingBufferEntry(AllocationRingBuffer *RB, uptr N) {
+    char *RawRingBuffer = reinterpret_cast<char *>(RB);
     return &reinterpret_cast<typename AllocationRingBuffer::Entry *>(
         &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
   }
   static const typename AllocationRingBuffer::Entry *
-  getRingBufferEntry(const char *RawRingBuffer, uptr N) {
+  getRingBufferEntry(const AllocationRingBuffer *RB, uptr N) {
+    const char *RawRingBuffer = reinterpret_cast<const char *>(RB);
     return &reinterpret_cast<const typename AllocationRingBuffer::Entry *>(
         &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
   }
@@ -1544,15 +1557,14 @@ private:
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
     DCHECK(isPowerOfTwo(RingSize));
 
-    StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
-                     sizeof(atomic_u32) * TabSize;
+    auto StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
+                          sizeof(atomic_u32) * TabSize;
     MemMapT DepotMap;
     DepotMap.map(
         /*Addr=*/0U, roundUp(StackDepotSize, getPageSizeCached()),
         "scudo:stack_depot");
-    Depot = reinterpret_cast<StackDepot *>(DepotMap.getBase());
+    auto *Depot = reinterpret_cast<StackDepot *>(DepotMap.getBase());
     Depot->init(RingSize, TabSize);
-    RawStackDepotMap = DepotMap;
 
     MemMapT MemMap;
     MemMap.map(
@@ -1560,9 +1572,14 @@ private:
         roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
                 getPageSizeCached()),
         "scudo:ring_buffer");
-    RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
-    RawRingBufferMap = MemMap;
-    RingBufferElements = AllocationRingBufferSize;
+    auto *RB = reinterpret_cast<AllocationRingBuffer *>(MemMap.getBase());
+    RB->RawRingBufferMap = MemMap;
+    RB->RingBufferElements = AllocationRingBufferSize;
+    RB->Depot = Depot;
+    RB->StackDepotSize = StackDepotSize;
+    RB->RawStackDepotMap = DepotMap;
+
+    atomic_store(&RingBuffer, RB, memory_order_release);
     static_assert(sizeof(AllocationRingBuffer) %
                           alignof(typename AllocationRingBuffer::Entry) ==
                       0,
@@ -1570,16 +1587,16 @@ private:
   }
 
   void unmapRingBuffer() {
-    auto *RingBuffer = getRingBuffer();
-    if (RingBuffer != nullptr) {
-      RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
-                             RawRingBufferMap.getCapacity());
+    AllocationRingBuffer *RB = getRingBuffer();
+    if (RB != nullptr) {
+      // N.B. because RawStackDepotMap is part of RawRingBufferMap, the order
+      // is very important.
+      RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
+                                 RB->RawStackDepotMap.getCapacity());
+      RB->RawRingBufferMap.unmap(RB->RawRingBufferMap.getBase(),
+                                 RB->RawRingBufferMap.getCapacity());
     }
-    RawRingBuffer = nullptr;
-    if (Depot) {
-      RawStackDepotMap.unmap(RawStackDepotMap.getBase(),
-                             RawStackDepotMap.getCapacity());
-    }
+    atomic_store(&RingBuffer, nullptr, memory_order_release);
   }
 
   static constexpr size_t ringBufferSizeInBytes(u32 RingBufferElements) {
@@ -1593,10 +1610,6 @@ private:
     }
     return (Bytes - sizeof(AllocationRingBuffer)) /
            sizeof(typename AllocationRingBuffer::Entry);
-  }
-
-  inline AllocationRingBuffer *getRingBuffer() {
-    return reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
   }
 };
 
