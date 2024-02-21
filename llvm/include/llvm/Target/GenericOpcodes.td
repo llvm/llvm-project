@@ -1101,6 +1101,12 @@ def G_READCYCLECOUNTER : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_READSTEADYCOUNTER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------

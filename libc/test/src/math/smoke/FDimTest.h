@@ -10,7 +10,6 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 template <typename T>
 class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
@@ -26,7 +25,7 @@ public:
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();
   const T nan = FPBits::quiet_nan().get_val();
 
-  void test_na_n_arg(FuncPtr func) {
+  void test_nan_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
     EXPECT_FP_EQ(nan, func(neg_inf, nan));
     EXPECT_FP_EQ(nan, func(nan, zero));
@@ -66,11 +65,14 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
-      if (isnan(x) || isinf(x))
+      FPBits xbits(v), ybits(w);
+      if (xbits.is_inf_or_nan())
         continue;
-      if (isnan(y) || isinf(y))
+      if (ybits.is_inf_or_nan())
         continue;
+
+      T x = xbits.get_val();
+      T y = ybits.get_val();
 
       if (x > y) {
         EXPECT_FP_EQ(x - y, func(x, y));
@@ -80,3 +82,12 @@ public:
     }
   }
 };
+
+#define LIST_FDIM_TESTS(T, func)                                               \
+  using LlvmLibcFDimTest = FDimTestTemplate<T>;                                \
+  TEST_F(LlvmLibcFDimTest, NaNArg) { test_nan_arg(&func); }                    \
+  TEST_F(LlvmLibcFDimTest, InfArg) { test_inf_arg(&func); }                    \
+  TEST_F(LlvmLibcFDimTest, NegInfArg) { test_neg_inf_arg(&func); }             \
+  TEST_F(LlvmLibcFDimTest, BothZero) { test_both_zero(&func); }                \
+  TEST_F(LlvmLibcFDimTest, InFloatRange) { test_in_range(&func); }             \
+  static_assert(true, "Require semicolon.")

@@ -355,7 +355,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
     auto __begin = __ctx.begin();
     auto __end   = __ctx.end();
-    if (__begin == __end)
+    if (__begin == __end || *__begin == _CharT('}'))
       return __begin;
 
     if (__parse_fill_align(__begin, __end, __fields.__use_range_fill_) && __begin == __end)
@@ -577,9 +577,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill, bool __use_range_fill) {
     // The forbidden fill characters all code points formed from a single code unit, thus the
     // check can be omitted when more code units are used.
-    if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT('}') || __fill == _CharT(':')))
+    if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT(':')))
       std::__throw_format_error("The fill option contains an invalid value");
-    else if (__fill == _CharT('{') || __fill == _CharT('}'))
+    else if (__fill == _CharT('{'))
       std::__throw_format_error("The fill option contains an invalid value");
   }
 

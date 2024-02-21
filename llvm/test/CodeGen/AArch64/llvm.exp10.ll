@@ -100,8 +100,7 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset b8, -16
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov h8, v0.h[1]
 ; GISEL-NEXT:    fcvt s0, h0
 ; GISEL-NEXT:    bl exp10f
@@ -323,8 +322,7 @@ define <1 x float> @exp10_v1f32(<1 x float> %x) {
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-NEXT:    .cfi_offset w30, -16
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; GISEL-NEXT:    bl exp10f
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 def $d0
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload

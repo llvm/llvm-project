@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -triple aarch64-arm-none-eabi %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -triple aarch64 %s -o - | FileCheck %s
 
 struct S0 {
   unsigned int x : 16;

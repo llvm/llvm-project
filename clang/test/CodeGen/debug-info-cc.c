@@ -22,6 +22,7 @@
 //    CC_SwiftAsync,   // __attribute__((swiftasynccall))
 //    CC_PreserveMost, // __attribute__((preserve_most))
 //    CC_PreserveAll,  // __attribute__((preserve_all))
+//    CC_PreserveNone,  // __attribute__((preserve_none))
 //  };
 
 #ifdef __x86_64__
@@ -48,6 +49,12 @@ __attribute__((preserve_most)) int add_preserve_most(int a, int b) {
 // LINUX: !DISubprogram({{.*}}"add_preserve_all", {{.*}}type: ![[FTY:[0-9]+]]
 // LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_PreserveAll,
 __attribute__((preserve_all)) int add_preserve_all(int a, int b) {
+  return a+b;
+}
+
+// LINUX: !DISubprogram({{.*}}"add_preserve_none", {{.*}}type: ![[FTY:[0-9]+]]
+// LINUX: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_PreserveNone,
+__attribute__((preserve_none)) int add_preserve_none(int a, int b) {
   return a+b;
 }
 

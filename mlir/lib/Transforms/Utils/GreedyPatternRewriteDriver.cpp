@@ -130,8 +130,8 @@ protected:
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
   void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
 
-  void notifyBlockRemoved(Block *block) override {
-    RewriterBase::ForwardingListener::notifyBlockRemoved(block);
+  void notifyBlockErased(Block *block) override {
+    RewriterBase::ForwardingListener::notifyBlockErased(block);
 
     // The block structure (number of blocks, types of block arguments, etc.)
     // is part of the fingerprint of the parent op.
@@ -152,8 +152,8 @@ protected:
     invalidateFingerPrint(op);
   }
 
-  void notifyOperationRemoved(Operation *op) override {
-    RewriterBase::ForwardingListener::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    RewriterBase::ForwardingListener::notifyOperationErased(op);
     op->walk([this](Operation *op) { invalidateFingerPrint(op); });
   }
 
@@ -345,7 +345,7 @@ protected:
   /// Notify the driver that the specified operation was removed. Update the
   /// worklist as needed: The operation and its children are removed from the
   /// worklist.
-  void notifyOperationRemoved(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
 
   /// Notify the driver that the specified operation was replaced. Update the
   /// worklist as needed: New users are added enqueued.
@@ -384,10 +384,10 @@ private:
                            Region::iterator previousIt) override;
 
   /// Notify the driver that the given block is about to be removed.
-  void notifyBlockRemoved(Block *block) override;
+  void notifyBlockErased(Block *block) override;
 
   /// For debugging only: Notify the driver of a pattern match failure.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -647,9 +647,9 @@ void GreedyPatternRewriteDriver::notifyBlockInserted(
     config.listener->notifyBlockInserted(block, previous, previousIt);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockErased(Block *block) {
   if (config.listener)
-    config.listener->notifyBlockRemoved(block);
+    config.listener->notifyBlockErased(block);
 }
 
 void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op,
@@ -689,7 +689,7 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(ValueRange operands) {
   }
 }
 
-void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
+void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
   LLVM_DEBUG({
     logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
                        << ")\n";
@@ -707,7 +707,7 @@ void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
 #endif // NDEBUG
 
   if (config.listener)
-    config.listener->notifyOperationRemoved(op);
+    config.listener->notifyOperationErased(op);
 
   addOperandsToWorklist(op->getOperands());
   worklist.remove(op);
@@ -726,7 +726,7 @@ void GreedyPatternRewriteDriver::notifyOperationReplaced(
     config.listener->notifyOperationReplaced(op, replacement);
 }
 
-LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
+void GreedyPatternRewriteDriver::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
@@ -734,8 +734,7 @@ LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
     logger.startLine() << "** Failure : " << diag.str() << "\n";
   });
   if (config.listener)
-    return config.listener->notifyMatchFailure(loc, reasonCallback);
-  return failure();
+    config.listener->notifyMatchFailure(loc, reasonCallback);
 }
 
 //===----------------------------------------------------------------------===//
@@ -902,8 +901,8 @@ public:
   LogicalResult simplify(ArrayRef<Operation *> ops, bool *changed = nullptr) &&;
 
 private:
-  void notifyOperationRemoved(Operation *op) override {
-    GreedyPatternRewriteDriver::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    GreedyPatternRewriteDriver::notifyOperationErased(op);
     if (survivingOps)
       survivingOps->erase(op);
   }

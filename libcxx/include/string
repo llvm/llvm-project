@@ -938,7 +938,11 @@ public:
       // Turning off ASan instrumentation for variable initialization with _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
       // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
       // __str's memory needs to be unpoisoned only in the case where it's a short string.
-      : __r_([](basic_string &__s) -> decltype(__s.__r_)&& { if(!__s.__is_long()) __s.__annotate_delete(); return std::move(__s.__r_); }(__str)) {
+      : __r_([](basic_string& __s) -> decltype(__s.__r_)&& {
+          if (!__s.__is_long())
+            __s.__annotate_delete();
+          return std::move(__s.__r_);
+        }(__str)) {
     __str.__r_.first() = __rep();
     __str.__annotate_new(0);
     if (!__is_long())
@@ -1918,7 +1922,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void) __current_size;
+    (void)__current_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
@@ -1933,7 +1937,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void) __n;
+    (void)__n;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
@@ -1941,7 +1945,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void) __old_size;
+    (void)__old_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
@@ -1952,9 +1956,7 @@ private:
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __align_it(size_type __s) _NOEXCEPT {
     return (__s + (__a - 1)) & ~(__a - 1);
   }
-  enum {
-    __alignment = 8
-  };
+  enum { __alignment = 8 };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
       return static_cast<size_type>(__min_cap) - 1;

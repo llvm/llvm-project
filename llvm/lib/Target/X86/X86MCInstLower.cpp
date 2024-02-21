@@ -1388,18 +1388,6 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   return MBBI;
 }
 
-static unsigned getRegisterWidth(const MCOperandInfo &Info) {
-  if (Info.RegClass == X86::VR128RegClassID ||
-      Info.RegClass == X86::VR128XRegClassID)
-    return 128;
-  if (Info.RegClass == X86::VR256RegClassID ||
-      Info.RegClass == X86::VR256XRegClassID)
-    return 256;
-  if (Info.RegClass == X86::VR512RegClassID)
-    return 512;
-  llvm_unreachable("Unknown register class!");
-}
-
 static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
   if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     // Skip mask operand.
@@ -1412,51 +1400,32 @@ static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
   return SrcIdx;
 }
 
-static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
-                                     unsigned SrcOp2Idx, ArrayRef<int> Mask) {
-  std::string Comment;
-
-  // Compute the name for a register. This is really goofy because we have
-  // multiple instruction printers that could (in theory) use different
-  // names. Fortunately most people use the ATT style (outside of Windows)
-  // and they actually agree on register naming here. Ultimately, this is
-  // a comment, and so its OK if it isn't perfect.
-  auto GetRegisterName = [](MCRegister Reg) -> StringRef {
-    return X86ATTInstPrinter::getRegisterName(Reg);
-  };
-
+static void printDstRegisterName(raw_ostream &CS, const MachineInstr *MI,
+                                 unsigned SrcOpIdx) {
   const MachineOperand &DstOp = MI->getOperand(0);
-  const MachineOperand &SrcOp1 = MI->getOperand(SrcOp1Idx);
-  const MachineOperand &SrcOp2 = MI->getOperand(SrcOp2Idx);
+  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg());
 
-  StringRef DstName = DstOp.isReg() ? GetRegisterName(DstOp.getReg()) : "mem";
-  StringRef Src1Name =
-      SrcOp1.isReg() ? GetRegisterName(SrcOp1.getReg()) : "mem";
-  StringRef Src2Name =
-      SrcOp2.isReg() ? GetRegisterName(SrcOp2.getReg()) : "mem";
+  // Handle AVX512 MASK/MASXZ write mask comments.
+  // MASK: zmmX {%kY}
+  // MASKZ: zmmX {%kY} {z}
+  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
+    const MachineOperand &WriteMaskOp = MI->getOperand(SrcOpIdx - 1);
+    StringRef Mask = X86ATTInstPrinter::getRegisterName(WriteMaskOp.getReg());
+    CS << " {%" << Mask << "}";
+    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
+      CS << " {z}";
+    }
+  }
+}
 
+static void printShuffleMask(raw_ostream &CS, StringRef Src1Name,
+                             StringRef Src2Name, ArrayRef<int> Mask) {
   // One source operand, fix the mask to print all elements in one span.
   SmallVector<int, 8> ShuffleMask(Mask);
   if (Src1Name == Src2Name)
     for (int i = 0, e = ShuffleMask.size(); i != e; ++i)
       if (ShuffleMask[i] >= e)
         ShuffleMask[i] -= e;
-
-  raw_string_ostream CS(Comment);
-  CS << DstName;
-
-  // Handle AVX512 MASK/MASXZ write mask comments.
-  // MASK: zmmX {%kY}
-  // MASKZ: zmmX {%kY} {z}
-  if (X86II::isKMasked(MI->getDesc().TSFlags)) {
-    const MachineOperand &WriteMaskOp = MI->getOperand(SrcOp1Idx - 1);
-    CS << " {%" << GetRegisterName(WriteMaskOp.getReg()) << "}";
-    if (!X86II::isKMergeMasked(MI->getDesc().TSFlags)) {
-      CS << " {z}";
-    }
-  }
-
-  CS << " = ";
 
   for (int i = 0, e = ShuffleMask.size(); i != e; ++i) {
     if (i != 0)
@@ -1487,6 +1456,25 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
     CS << ']';
     --i; // For loop increments element #.
   }
+}
+
+static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
+                                     unsigned SrcOp2Idx, ArrayRef<int> Mask) {
+  std::string Comment;
+
+  const MachineOperand &SrcOp1 = MI->getOperand(SrcOp1Idx);
+  const MachineOperand &SrcOp2 = MI->getOperand(SrcOp2Idx);
+  StringRef Src1Name = SrcOp1.isReg()
+                           ? X86ATTInstPrinter::getRegisterName(SrcOp1.getReg())
+                           : "mem";
+  StringRef Src2Name = SrcOp2.isReg()
+                           ? X86ATTInstPrinter::getRegisterName(SrcOp2.getReg())
+                           : "mem";
+
+  raw_string_ostream CS(Comment);
+  printDstRegisterName(CS, MI, SrcOp1Idx);
+  CS << " = ";
+  printShuffleMask(CS, Src1Name, Src2Name, Mask);
   CS.flush();
 
   return Comment;
@@ -1561,12 +1549,14 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
 static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
                                int SclWidth, int VecWidth,
                                const char *ShuffleComment) {
+  unsigned SrcIdx = getSrcIdx(MI, 1);
+
   std::string Comment;
   raw_string_ostream CS(Comment);
-  const MachineOperand &DstOp = MI->getOperand(0);
-  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+  printDstRegisterName(CS, MI, SrcIdx);
+  CS << " = ";
 
-  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
+  if (auto *C = X86::getConstantFromPool(*MI, SrcIdx)) {
     CS << "[";
     printConstant(C, SclWidth, CS);
     for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
@@ -1585,12 +1575,12 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
                            int Repeats, int BitWidth) {
-  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
+  unsigned SrcIdx = getSrcIdx(MI, 1);
+  if (auto *C = X86::getConstantFromPool(*MI, SrcIdx)) {
     std::string Comment;
     raw_string_ostream CS(Comment);
-    const MachineOperand &DstOp = MI->getOperand(0);
-    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-    CS << "[";
+    printDstRegisterName(CS, MI, SrcIdx);
+    CS << " = [";
     for (int l = 0; l != Repeats; ++l) {
       if (l != 0)
         CS << ",";
@@ -1603,16 +1593,15 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 static bool printExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
                         int SrcEltBits, int DstEltBits, bool IsSext) {
-  auto *C = X86::getConstantFromPool(*MI, 1);
+  unsigned SrcIdx = getSrcIdx(MI, 1);
+  auto *C = X86::getConstantFromPool(*MI, SrcIdx);
   if (C && C->getType()->getScalarSizeInBits() == unsigned(SrcEltBits)) {
     if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
       int NumElts = CDS->getNumElements();
       std::string Comment;
       raw_string_ostream CS(Comment);
-
-      const MachineOperand &DstOp = MI->getOperand(0);
-      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-      CS << "[";
+      printDstRegisterName(CS, MI, SrcIdx);
+      CS << " = [";
       for (int i = 0; i != NumElts; ++i) {
         if (i != 0)
           CS << ",";
@@ -1643,22 +1632,16 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
   // We didn't find a constant load, fallback to a shuffle mask decode.
   std::string Comment;
   raw_string_ostream CS(Comment);
+  printDstRegisterName(CS, MI, getSrcIdx(MI, 1));
+  CS << " = ";
 
-  const MachineOperand &DstOp = MI->getOperand(0);
-  CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-
-  unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+  SmallVector<int> Mask;
+  unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
   assert((Width % DstEltBits) == 0 && (DstEltBits % SrcEltBits) == 0 &&
          "Illegal extension ratio");
-  unsigned NumElts = Width / DstEltBits;
-  unsigned Scale = DstEltBits / SrcEltBits;
-  for (unsigned I = 0; I != NumElts; ++I) {
-    if (I != 0)
-      CS << ",";
-    CS << "mem[" << I << "]";
-    for (unsigned S = 1; S != Scale; ++S)
-      CS << ",zero";
-  }
+  DecodeZeroExtendMask(SrcEltBits, DstEltBits, Width / DstEltBits, false, Mask);
+  printShuffleMask(CS, "mem", "", Mask);
+
   OutStreamer.AddComment(CS.str());
 }
 
@@ -1758,7 +1741,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPSHUFBZrmkz: {
     unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
       if (!Mask.empty())
@@ -1780,7 +1763,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPSZrmkz: {
     unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, 32, Width, Mask);
       if (!Mask.empty())
@@ -1801,7 +1784,7 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPERMILPDZrmkz: {
     unsigned SrcIdx = getSrcIdx(MI, 1);
     if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, 64, Width, Mask);
       if (!Mask.empty())
@@ -1829,7 +1812,7 @@ static void addConstantComments(const MachineInstr *MI,
     }
 
     if (auto *C = X86::getConstantFromPool(*MI, 3)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
       if (!Mask.empty())
@@ -1840,7 +1823,7 @@ static void addConstantComments(const MachineInstr *MI,
 
   case X86::VPPERMrrm: {
     if (auto *C = X86::getConstantFromPool(*MI, 3)) {
-      unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
+      unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
       if (!Mask.empty())
@@ -1863,9 +1846,14 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   }
 
+#define MASK_AVX512_CASE(Instr)                                                \
+  case Instr:                                                                  \
+  case Instr##k:                                                               \
+  case Instr##kz:
+
   case X86::MOVSDrm:
   case X86::VMOVSDrm:
-  case X86::VMOVSDZrm:
+  MASK_AVX512_CASE(X86::VMOVSDZrm)
   case X86::MOVSDrm_alt:
   case X86::VMOVSDrm_alt:
   case X86::VMOVSDZrm_alt:
@@ -1875,9 +1863,15 @@ static void addConstantComments(const MachineInstr *MI,
     printZeroUpperMove(MI, OutStreamer, 64, 128, "mem[0],zero");
     break;
 
+  MASK_AVX512_CASE(X86::VMOVSHZrm)
+  case X86::VMOVSHZrm_alt:
+    printZeroUpperMove(MI, OutStreamer, 16, 128,
+                       "mem[0],zero,zero,zero,zero,zero,zero,zero");
+    break;
+
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
-  case X86::VMOVSSZrm:
+  MASK_AVX512_CASE(X86::VMOVSSZrm)
   case X86::MOVSSrm_alt:
   case X86::VMOVSSrm_alt:
   case X86::VMOVSSZrm_alt:
@@ -1895,29 +1889,35 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::Prefix##MOVDQA##Suffix##rm:                                        \
   case X86::Prefix##MOVDQU##Suffix##rm:
 
-#define MOV_AVX512_CASE(Suffix)                                                \
-  case X86::VMOVDQA64##Suffix##rm:                                             \
-  case X86::VMOVDQA32##Suffix##rm:                                             \
-  case X86::VMOVDQU64##Suffix##rm:                                             \
-  case X86::VMOVDQU32##Suffix##rm:                                             \
-  case X86::VMOVDQU16##Suffix##rm:                                             \
-  case X86::VMOVDQU8##Suffix##rm:                                              \
-  case X86::VMOVAPS##Suffix##rm:                                               \
-  case X86::VMOVAPD##Suffix##rm:                                               \
-  case X86::VMOVUPS##Suffix##rm:                                               \
-  case X86::VMOVUPD##Suffix##rm:
+#define MOV_AVX512_CASE(Suffix, Postfix)                                       \
+  case X86::VMOVDQA64##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQA32##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU64##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU32##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU16##Suffix##rm##Postfix:                                    \
+  case X86::VMOVDQU8##Suffix##rm##Postfix:                                     \
+  case X86::VMOVAPS##Suffix##rm##Postfix:                                      \
+  case X86::VMOVAPD##Suffix##rm##Postfix:                                      \
+  case X86::VMOVUPS##Suffix##rm##Postfix:                                      \
+  case X86::VMOVUPD##Suffix##rm##Postfix:
 
 #define CASE_128_MOV_RM()                                                      \
   MOV_CASE(, )   /* SSE */                                                     \
   MOV_CASE(V, )  /* AVX-128 */                                                 \
-  MOV_AVX512_CASE(Z128)
+  MOV_AVX512_CASE(Z128, )                                                      \
+  MOV_AVX512_CASE(Z128, k)                                                     \
+  MOV_AVX512_CASE(Z128, kz)
 
 #define CASE_256_MOV_RM()                                                      \
   MOV_CASE(V, Y) /* AVX-256 */                                                 \
-  MOV_AVX512_CASE(Z256)
+  MOV_AVX512_CASE(Z256, )                                                      \
+  MOV_AVX512_CASE(Z256, k)                                                     \
+  MOV_AVX512_CASE(Z256, kz)                                                    \
 
 #define CASE_512_MOV_RM()                                                      \
-  MOV_AVX512_CASE(Z)
+  MOV_AVX512_CASE(Z, )                                                         \
+  MOV_AVX512_CASE(Z, k)                                                        \
+  MOV_AVX512_CASE(Z, kz)                                                       \
 
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
@@ -1932,22 +1932,22 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  case X86::VBROADCASTF32X4Z256rm:
-  case X86::VBROADCASTF64X2Z128rm:
-  case X86::VBROADCASTI32X4Z256rm:
-  case X86::VBROADCASTI64X2Z128rm:
+  MASK_AVX512_CASE(X86::VBROADCASTF32X4Z256rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X2Z128rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X4Z256rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X2Z128rm)
     printBroadcast(MI, OutStreamer, 2, 128);
     break;
-  case X86::VBROADCASTF32X4rm:
-  case X86::VBROADCASTF64X2rm:
-  case X86::VBROADCASTI32X4rm:
-  case X86::VBROADCASTI64X2rm:
+  MASK_AVX512_CASE(X86::VBROADCASTF32X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X2rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X2rm)
     printBroadcast(MI, OutStreamer, 4, 128);
     break;
-  case X86::VBROADCASTF32X8rm:
-  case X86::VBROADCASTF64X4rm:
-  case X86::VBROADCASTI32X8rm:
-  case X86::VBROADCASTI64X4rm:
+  MASK_AVX512_CASE(X86::VBROADCASTF32X8rm)
+  MASK_AVX512_CASE(X86::VBROADCASTF64X4rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI32X8rm)
+  MASK_AVX512_CASE(X86::VBROADCASTI64X4rm)
     printBroadcast(MI, OutStreamer, 2, 256);
     break;
 
@@ -1955,70 +1955,76 @@ static void addConstantComments(const MachineInstr *MI,
   // print the constant loaded.
   case X86::MOVDDUPrm:
   case X86::VMOVDDUPrm:
-  case X86::VMOVDDUPZ128rm:
+  MASK_AVX512_CASE(X86::VMOVDDUPZ128rm)
   case X86::VPBROADCASTQrm:
-  case X86::VPBROADCASTQZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTQZ128rm)
     printBroadcast(MI, OutStreamer, 2, 64);
     break;
   case X86::VBROADCASTSDYrm:
-  case X86::VBROADCASTSDZ256rm:
+  MASK_AVX512_CASE(X86::VBROADCASTSDZ256rm)
   case X86::VPBROADCASTQYrm:
-  case X86::VPBROADCASTQZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTQZ256rm)
     printBroadcast(MI, OutStreamer, 4, 64);
     break;
-  case X86::VBROADCASTSDZrm:
-  case X86::VPBROADCASTQZrm:
+  MASK_AVX512_CASE(X86::VBROADCASTSDZrm)
+  MASK_AVX512_CASE(X86::VPBROADCASTQZrm)
     printBroadcast(MI, OutStreamer, 8, 64);
     break;
   case X86::VBROADCASTSSrm:
-  case X86::VBROADCASTSSZ128rm:
+  MASK_AVX512_CASE(X86::VBROADCASTSSZ128rm)
   case X86::VPBROADCASTDrm:
-  case X86::VPBROADCASTDZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTDZ128rm)
     printBroadcast(MI, OutStreamer, 4, 32);
     break;
   case X86::VBROADCASTSSYrm:
-  case X86::VBROADCASTSSZ256rm:
+    MASK_AVX512_CASE(X86::VBROADCASTSSZ256rm)
   case X86::VPBROADCASTDYrm:
-  case X86::VPBROADCASTDZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTDZ256rm)
     printBroadcast(MI, OutStreamer, 8, 32);
     break;
-  case X86::VBROADCASTSSZrm:
-  case X86::VPBROADCASTDZrm:
+  MASK_AVX512_CASE(X86::VBROADCASTSSZrm)
+  MASK_AVX512_CASE(X86::VPBROADCASTDZrm)
     printBroadcast(MI, OutStreamer, 16, 32);
     break;
   case X86::VPBROADCASTWrm:
-  case X86::VPBROADCASTWZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTWZ128rm)
     printBroadcast(MI, OutStreamer, 8, 16);
     break;
   case X86::VPBROADCASTWYrm:
-  case X86::VPBROADCASTWZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTWZ256rm)
     printBroadcast(MI, OutStreamer, 16, 16);
     break;
-  case X86::VPBROADCASTWZrm:
+  MASK_AVX512_CASE(X86::VPBROADCASTWZrm)
     printBroadcast(MI, OutStreamer, 32, 16);
     break;
   case X86::VPBROADCASTBrm:
-  case X86::VPBROADCASTBZ128rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTBZ128rm)
     printBroadcast(MI, OutStreamer, 16, 8);
     break;
   case X86::VPBROADCASTBYrm:
-  case X86::VPBROADCASTBZ256rm:
+  MASK_AVX512_CASE(X86::VPBROADCASTBZ256rm)
     printBroadcast(MI, OutStreamer, 32, 8);
     break;
-  case X86::VPBROADCASTBZrm:
+  MASK_AVX512_CASE(X86::VPBROADCASTBZrm)
     printBroadcast(MI, OutStreamer, 64, 8);
     break;
 
-#define MOVX_CASE(Prefix, Ext, Type, Suffix)                                   \
-  case X86::Prefix##PMOV##Ext##Type##Suffix##rm:
+#define MOVX_CASE(Prefix, Ext, Type, Suffix, Postfix)                          \
+  case X86::Prefix##PMOV##Ext##Type##Suffix##rm##Postfix:
 
 #define CASE_MOVX_RM(Ext, Type)                                                \
-  MOVX_CASE(, Ext, Type, )                                                     \
-  MOVX_CASE(V, Ext, Type, )                                                    \
-  MOVX_CASE(V, Ext, Type, Y)                                                   \
-  MOVX_CASE(V, Ext, Type, Z128)                                                \
-  MOVX_CASE(V, Ext, Type, Z256)                                                \
-  MOVX_CASE(V, Ext, Type, Z)
+  MOVX_CASE(, Ext, Type, , )                                                   \
+  MOVX_CASE(V, Ext, Type, , )                                                  \
+  MOVX_CASE(V, Ext, Type, Y, )                                                 \
+  MOVX_CASE(V, Ext, Type, Z128, )                                              \
+  MOVX_CASE(V, Ext, Type, Z128, k )                                            \
+  MOVX_CASE(V, Ext, Type, Z128, kz )                                           \
+  MOVX_CASE(V, Ext, Type, Z256, )                                              \
+  MOVX_CASE(V, Ext, Type, Z256, k )                                            \
+  MOVX_CASE(V, Ext, Type, Z256, kz )                                           \
+  MOVX_CASE(V, Ext, Type, Z, )                                                 \
+  MOVX_CASE(V, Ext, Type, Z, k )                                               \
+  MOVX_CASE(V, Ext, Type, Z, kz )
 
     CASE_MOVX_RM(SX, BD)
     printSignExtend(MI, OutStreamer, 8, 32);

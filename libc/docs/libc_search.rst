@@ -41,10 +41,10 @@ Function Name                Available
 hcreate                      |check|
 hdestroy                     |check|
 hsearch                      |check|
-insque                       
+insque                       |check|
 lfind                        
 lsearch                      
-remque
+remque                       |check|
 tdelete
 tfind
 tsearch

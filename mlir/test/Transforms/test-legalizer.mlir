@@ -320,3 +320,29 @@ module {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @test_move_op_before_rollback()
+func.func @test_move_op_before_rollback() {
+  // CHECK: "test.one_region_op"()
+  // CHECK: "test.hoist_me"()
+  "test.one_region_op"() ({
+    // expected-remark @below{{'test.hoist_me' is not legalizable}}
+    %0 = "test.hoist_me"() : () -> (i32)
+    "test.valid"(%0) : (i32) -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @test_properties_rollback()
+func.func @test_properties_rollback() {
+  // CHECK: test.with_properties <{a = 32 : i64,
+  // expected-remark @below{{op 'test.with_properties' is not legalizable}}
+  test.with_properties
+      <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo"}>
+      {modify_inplace}
+  "test.return"() : () -> ()
+}

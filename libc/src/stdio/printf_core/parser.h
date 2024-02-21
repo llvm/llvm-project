@@ -159,6 +159,8 @@ public:
       case ('x'):
       case ('X'):
       case ('u'):
+      case ('b'):
+      case ('B'):
         switch (lm) {
         case (LengthModifier::hh):
         case (LengthModifier::h):
@@ -484,6 +486,8 @@ private:
         case ('x'):
         case ('X'):
         case ('u'):
+        case ('b'):
+        case ('B'):
           switch (lm) {
           case (LengthModifier::hh):
           case (LengthModifier::h):

@@ -39,7 +39,7 @@
 "`P2868R3 <https://wg21.link/P2868R3>`__","LWG","Remove Deprecated ``std::allocator`` Typedef From C++26","Kona November 2023","|Complete|","18.0",""
 "`P2870R3 <https://wg21.link/P2870R3>`__","LWG","Remove ``basic_string::reserve()`` From C++26","Kona November 2023","|Complete|","18.0",""
 "`P2871R3 <https://wg21.link/P2871R3>`__","LWG","Remove Deprecated Unicode Conversion Facets from C++26","Kona November 2023","|Complete|","18.0",""
-"`P2819R2 <https://wg21.link/P2819R2>`__","LWG","Add tuple protocol to complex","Kona November 2023","","",""
+"`P2819R2 <https://wg21.link/P2819R2>`__","LWG","Add tuple protocol to complex","Kona November 2023","|Complete|","19.0",""
 "`P2937R0 <https://wg21.link/P2937R0>`__","LWG","Freestanding: Remove ``strtok``","Kona November 2023","","",""
 "`P2833R2 <https://wg21.link/P2833R2>`__","LWG","Freestanding Library: inout expected span","Kona November 2023","","",""
 "`P2836R1 <https://wg21.link/P2836R1>`__","LWG","``std::basic_const_iterator`` should follow its underlying type's convertibility","Kona November 2023","","","|DR|"

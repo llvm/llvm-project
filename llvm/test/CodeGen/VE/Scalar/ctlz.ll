@@ -34,7 +34,6 @@ define signext i32 @func32s(i32 signext %p) {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, -32(, %s0)
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i32 @llvm.ctlz.i32(i32 %p, i1 true)
   ret i32 %r
@@ -202,7 +201,6 @@ define signext i32 @func32sx(i32 signext %p) {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, -32(, %s0)
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i32 @llvm.ctlz.i32(i32 %p, i1 false)
   ret i32 %r

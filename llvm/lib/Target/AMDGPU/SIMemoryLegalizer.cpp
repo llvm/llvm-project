@@ -2030,8 +2030,11 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_GL0_INV));
+      // The order of invalidates matter here. We must invalidate "outer in"
+      // so L1 -> L0 to avoid L0 pulling in stale data from L1 when it is
+      // invalidated.
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_GL1_INV));
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_GL0_INV));
       Changed = true;
       break;
     case SIAtomicScope::WORKGROUP:

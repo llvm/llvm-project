@@ -32,6 +32,12 @@ FailureOr<RankedTensorType>
 computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
 
+SmallVector<int64_t> getPackInverseDestPerm(tensor::PackOp packOp);
+SmallVector<int64_t> getUnPackInverseSrcPerm(tensor::UnPackOp unpackOp);
+
+SmallVector<int64_t> getUnPackInverseSrcPerm(tensor::UnPackOp,
+                                             PackingMetadata &metadata);
+
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
 /// source tensor or inserts the source tensor into a destination tensor with
 /// the same shape.

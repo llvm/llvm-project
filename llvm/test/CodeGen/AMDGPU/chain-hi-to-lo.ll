@@ -432,22 +432,22 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
+; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:2
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:6
+; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:2
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
 ; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:8
+; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:6
-; GFX900-NEXT:    buffer_load_ushort v3, off, s[0:3], 0 offset:4
+; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
+; GFX900-NEXT:    buffer_load_ushort v3, off, s[0:3], 0
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
-; GFX900-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
+; GFX900-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:4
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
 ; GFX900-NEXT:    v_perm_b32 v0, v0, v3, s4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
@@ -464,19 +464,19 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1]
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v0, s4 offset:4
+; FLATSCR-NEXT:    scratch_store_short off, v0, s4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1] offset:2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v0, s4 offset:6
+; FLATSCR-NEXT:    scratch_store_short off, v0, s4 offset:2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1] offset:4
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v0, s0 offset:8
+; FLATSCR-NEXT:    scratch_store_short off, v0, s0 offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:4
-; FLATSCR-NEXT:    scratch_load_dword v1, off, s0 offset:6
+; FLATSCR-NEXT:    scratch_load_dword v0, off, s0
+; FLATSCR-NEXT:    scratch_load_dword v1, off, s0 offset:2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; FLATSCR-NEXT:    s_endpgm
@@ -490,24 +490,24 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX10_DEFAULT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5]
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
+; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5] offset:2
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:6
+; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:2
 ; GFX10_DEFAULT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:8
+; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
 ; GFX10_DEFAULT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_DEFAULT-NEXT:    s_clause 0x1
-; GFX10_DEFAULT-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:6
-; GFX10_DEFAULT-NEXT:    buffer_load_ushort v3, off, s[0:3], 0 offset:4
+; GFX10_DEFAULT-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
+; GFX10_DEFAULT-NEXT:    buffer_load_ushort v3, off, s[0:3], 0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_DEFAULT-NEXT:    v_perm_b32 v0, v0, v3, 0x5040100
-; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
+; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:4
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_DEFAULT-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX10_DEFAULT-NEXT:    s_endpgm
@@ -524,21 +524,21 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; FLATSCR_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1]
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4 offset:4
+; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1] offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4 offset:6
+; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4 offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1] offset:4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s0 offset:8
+; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s0 offset:4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLATSCR_GFX10-NEXT:    s_clause 0x1
-; FLATSCR_GFX10-NEXT:    scratch_load_dword v0, off, s0 offset:4
-; FLATSCR_GFX10-NEXT:    scratch_load_dword v1, off, s0 offset:6
+; FLATSCR_GFX10-NEXT:    scratch_load_dword v0, off, s0
+; FLATSCR_GFX10-NEXT:    scratch_load_dword v1, off, s0 offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR_GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; FLATSCR_GFX10-NEXT:    s_endpgm
@@ -550,19 +550,19 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
+; GFX11-NEXT:    scratch_store_b16 off, v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1] offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:6 dlc
+; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:2 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1] offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:8 dlc
+; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_load_b32 v0, off, off offset:4
-; GFX11-NEXT:    scratch_load_b32 v1, off, off offset:6
+; GFX11-NEXT:    scratch_load_b32 v0, off, off
+; GFX11-NEXT:    scratch_load_b32 v1, off, off offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX11-NEXT:    s_nop 0
