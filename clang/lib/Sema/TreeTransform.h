@@ -6561,7 +6561,11 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       return QualType();
     if (!ShouldExpand) {
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
-      QualType Pack = getDerived().TransformType(T);
+      // FIXME: should we keep TypeLoc for individual expansions in
+      // PackIndexingTypeLoc?
+      TypeSourceInfo *TI =
+          SemaRef.getASTContext().getTrivialTypeSourceInfo(T, TL.getBeginLoc());
+      QualType Pack = getDerived().TransformType(TLB, TI->getTypeLoc());
       if (Pack.isNull())
         return QualType();
       if (NotYetExpanded) {
