@@ -642,11 +642,10 @@ Block *ArgConverter::applySignatureConversion(
 
       // Legalize the argument output type.
       Type outputType = origOutputType;
-      if (converter){
+      if (converter) {
         if (Type legalOutputType = converter->convertType(outputType))
           outputType = legalOutputType;
       }
-        
 
       newArg = buildUnresolvedArgumentMaterialization(
           rewriter, origArg.getLoc(), replArgs, origOutputType, outputType,
