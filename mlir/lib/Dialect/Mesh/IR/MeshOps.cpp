@@ -24,19 +24,15 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
 #include <numeric>
 #include <optional>
-#include <string>
 #include <utility>
 
 #define DEBUG_TYPE "mesh-ops"
