@@ -744,8 +744,8 @@ public:
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
-  /// and not nested regions. Updates to regions will still require
-  /// notification through other more specific hooks above.
+  /// and not nested regions. Updates to regions will still require notification
+  /// through other more specific hooks above.
   void startOpModification(Operation *op) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
