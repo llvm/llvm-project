@@ -13451,7 +13451,7 @@ struct NodeExtensionHelper {
                     ? MVT::getFloatingPointVT(NarrowSize)
                     : MVT::getIntegerVT(NarrowSize);
 
-    assert(NarrowSize >= (SupportsExt == ExtKind::FPExt ? 16 : 8) &&
+    assert((int)NarrowSize >= (SupportsExt == ExtKind::FPExt ? 16 : 8) &&
            "Trying to extend something we can't represent");
     MVT NarrowVT = MVT::getVectorVT(EltVT, VT.getVectorElementCount());
     return NarrowVT;
