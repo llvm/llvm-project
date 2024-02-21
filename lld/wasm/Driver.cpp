@@ -132,12 +132,12 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTFORVISIBILITY, METAVAR,    \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTFORVISIBILITIES, METAVAR,  \
                VALUES)                                                         \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
-   HELPTEXTFORVISIBILITY,                                                      \
+   HELPTEXTFORVISIBILITIES,                                                    \
    METAVAR,                                                                    \
    OPT_##ID,                                                                   \
    opt::Option::KIND##Class,                                                   \

@@ -106,7 +106,7 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   // Used by MultiArg option kind.
   int NumArgs = 0;
   string HelpText = ?;
-  HelpTextForVisibility HelpTextForVisibility = ?;
+  list<HelpTextForVisibility> HelpTextForVisibilities = [];
   string MetaVarName = ?;
   string Values = ?;
   code ValuesCode = ?;
@@ -161,8 +161,8 @@ class Visibility<list<OptionVisibility> visibility> {
 }
 class Group<OptionGroup group> { OptionGroup Group = group; }
 class HelpText<string text> { string HelpText = text; }
-class HelpForVisibility<HelpTextForVisibility text> {
-  HelpTextForVisibility HelpTextForVisibility = text;
+class HelpTextForVisibilities<list<HelpTextForVisibility> texts> {
+  list<HelpTextForVisibility> HelpTextForVisibilities = texts;
 }
 
 class MetaVarName<string name> { string MetaVarName = name; }

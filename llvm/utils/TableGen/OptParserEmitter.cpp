@@ -313,7 +313,8 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << ", nullptr";
 
     // Not using Visibility specific text for group help.
-    OS << ", std::make_pair(0, nullptr)";
+    OS << ", (std::array<std::pair<unsigned, const char*>, 2>{{"
+       << "std::make_pair(0, nullptr), std::make_pair(0, nullptr)}})";
 
     // The option meta-variable name (unused).
     OS << ", nullptr";
@@ -413,18 +414,39 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     } else
       OS << ", nullptr";
 
-    // Help text specific to a certain visibility.
-    if (isa<UnsetInit>(R.getValueInit("HelpTextForVisibility")))
-      OS << ", std::make_pair(0, nullptr)";
-    else {
-      const Record *VisibilityHelp = R.getValueAsDef("HelpTextForVisibility");
-      const RecordVal *Visibility = VisibilityHelp->getValue("Visibility");
+    const unsigned MaxVisibilityHelp = 2;
+    OS << ", (std::array<std::pair<unsigned, const char*>, "
+       << MaxVisibilityHelp << ">{{";
+    unsigned NumVisibilityHelpEmitted = 0;
+
+    std::vector<Record *> VisibilitiesHelp =
+        R.getValueAsListOfDefs("HelpTextForVisibilities");
+    assert(VisibilitiesHelp.size() <= MaxVisibilityHelp &&
+           "Too many help text variants to store in "
+           "OptTable::HelpTextForVisibilities");
+
+    for (std::vector<Record *>::const_iterator VisibilityHelp =
+             VisibilitiesHelp.begin();
+         VisibilityHelp != VisibilitiesHelp.end();
+         ++VisibilityHelp, ++NumVisibilityHelpEmitted) {
+      const RecordVal *Visibility = (*VisibilityHelp)->getValue("Visibility");
       Init *VisibilityInit = Visibility->getValue();
       std::string VisibilityStr = VisibilityInit->getAsString();
-      StringRef Text = VisibilityHelp->getValueAsString("Text");
-      OS << ", std::make_pair(options::" << VisibilityStr << ", \"" << Text
+      StringRef Text = (*VisibilityHelp)->getValueAsString("Text");
+      OS << "std::make_pair(options::" << VisibilityStr << ", \"" << Text
          << "\")";
+
+      if (std::next(VisibilityHelp) != VisibilitiesHelp.end())
+        OS << ", ";
     }
+    // Init any unused elements.
+    for (; NumVisibilityHelpEmitted < MaxVisibilityHelp;
+         ++NumVisibilityHelpEmitted) {
+      OS << "std::make_pair(0, nullptr)";
+      if ((NumVisibilityHelpEmitted + 1) != MaxVisibilityHelp)
+        OS << ", ";
+    }
+    OS << "}})";
 
     // The option meta-variable name.
     OS << ", ";

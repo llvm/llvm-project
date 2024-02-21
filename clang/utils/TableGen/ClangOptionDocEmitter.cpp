@@ -362,8 +362,9 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   std::string Description;
 
   // Prefer a program specific help string.
-  if (!isa<UnsetInit>(R->getValueInit("HelpTextForVisibility"))) {
-    const Record *VisibilityHelp = R->getValueAsDef("HelpTextForVisibility");
+  std::vector<Record *> VisibilitiesHelp =
+      R->getValueAsListOfDefs("HelpTextForVisibilities");
+  for (Record *VisibilityHelp : VisibilitiesHelp) {
     std::string VisibilityStr =
         VisibilityHelp->getValue("Visibility")->getValue()->getAsString();
 
@@ -373,6 +374,9 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
         break;
       }
     }
+
+    if (!Description.empty())
+      break;
   }
 
   // If there's not a program specific string, use the default one.

@@ -223,7 +223,7 @@
 ! HELP-FC1-NEXT:                         Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-FC1-NEXT: -fopenmp-version=<value>
-! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
+! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 11 for Flang
 ! HELP-FC1-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-FC1-NEXT: -fppc-native-vector-element-order
