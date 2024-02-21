@@ -61,7 +61,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
                 blocked, rows are continuous in the correspoding dimention, otherwise, rows may be not continous.
     * mapping (xegpu::SubGroupMapAttr): [optional] Used to guide compiler to distribute the workload into different threads. It is default to none.
 
-    For convinience, its attribute field can also take either "ScatteredAttr" or "SubGroupMapAttr" directly if and only
+    For convenience, its attribute field can also take either "ScatteredAttr" or "SubGroupMapAttr" directly if and only
     if others are taking default values.
 
     Syntax:
