@@ -187,9 +187,9 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
 
   // sanity checks for zero-copy depend on specific devices: request it here
   // TODO: check if there are no devices and bail if so.
-  if (ExclusiveDevicesAccessor->size() > 0 &&
-          (PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-      (PM.getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
+  if ((ExclusiveDevicesAccessor->size() > 0) &&
+      ((PM.getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+       (PM.getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {
     // APUs are assumed to be a homogeneous set of GPUs: ask
     // the first device in the system to run a sanity check.
     auto &Device = *(*ExclusiveDevicesAccessor)[0];
