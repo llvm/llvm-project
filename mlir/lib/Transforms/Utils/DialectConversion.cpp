@@ -965,14 +965,14 @@ public:
   ModifyOperationRewrite(ConversionPatternRewriterImpl &rewriterImpl,
                          Operation *op)
       : OperationRewrite(Kind::ModifyOperation, rewriterImpl, op),
-        loc(op->getLoc()), attrs(op->getAttrDictionary()),
+        name(op->getName()), loc(op->getLoc()), attrs(op->getAttrDictionary()),
         operands(op->operand_begin(), op->operand_end()),
         successors(op->successor_begin(), op->successor_end()) {
     if (OpaqueProperties prop = op->getPropertiesStorage()) {
       // Make a copy of the properties.
       propertiesStorage = operator new(op->getPropertiesStorageSize());
       OpaqueProperties propCopy(propertiesStorage);
-      op->getName().initOpProperties(propCopy, /*init=*/prop);
+      name.initOpProperties(propCopy, /*init=*/prop);
     }
   }
 
@@ -988,7 +988,9 @@ public:
   void commit() override {
     if (propertiesStorage) {
       OpaqueProperties propCopy(propertiesStorage);
-      op->getName().destroyOpProperties(propCopy);
+      // Note: The operation may have been erased in the mean time, so
+      // OperationName must be stored in this object.
+      name.destroyOpProperties(propCopy);
       operator delete(propertiesStorage);
       propertiesStorage = nullptr;
     }
@@ -1003,13 +1005,14 @@ public:
     if (propertiesStorage) {
       OpaqueProperties propCopy(propertiesStorage);
       op->copyProperties(propCopy);
-      op->getName().destroyOpProperties(propCopy);
+      name.destroyOpProperties(propCopy);
       operator delete(propertiesStorage);
       propertiesStorage = nullptr;
     }
   }
 
 private:
+  OperationName name;
   LocationAttr loc;
   DictionaryAttr attrs;
   SmallVector<Value, 8> operands;
