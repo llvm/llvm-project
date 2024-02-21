@@ -22,14 +22,7 @@ namespace installapi {
 
 bool Options::processDriverOptions(InputArgList &Args) {
   // Handle inputs.
-  llvm::vfs::Status Stat;
-  for (const auto &Path : Args.getAllArgValues(OPT_INPUT)) {
-    if (FM->getNoncachedStatValue(Path, Stat) || !Stat.exists()) {
-      Diags->Report(clang::diag::err_drv_no_such_file) << Path;
-      return false;
-    }
-    DriverOpts.FileLists.push_back(std::move(Path));
-  }
+  llvm::append_range(DriverOpts.FileLists, Args.getAllArgValues(OPT_INPUT));
 
   // Handle output.
   SmallString<PATH_MAX> OutputPath;
@@ -61,8 +54,9 @@ bool Options::processDriverOptions(InputArgList &Args) {
 
   // Capture target triples first.
   if (ArgTarget) {
-    for (auto *Arg : Args.filtered(OPT_target)) {
-      llvm::Triple TargetTriple(Arg->getValue());
+    for (const Arg *A : Args.filtered(OPT_target)) {
+      A->claim();
+      llvm::Triple TargetTriple(A->getValue());
       Target TAPITarget = Target(TargetTriple);
       if ((TAPITarget.Arch == AK_unknown) ||
           (TAPITarget.Platform == PLATFORM_UNKNOWN)) {
