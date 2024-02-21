@@ -345,6 +345,10 @@ public:
     return isVRegWithInputMods(AMDGPU::VReg_64RegClassID);
   }
 
+  bool isPackedFP16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
+  }
+
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
            isRegClass(AMDGPU::VReg_64RegClassID) ||

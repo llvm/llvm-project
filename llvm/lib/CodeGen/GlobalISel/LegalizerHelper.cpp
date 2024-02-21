@@ -3971,14 +3971,18 @@ LegalizerHelper::createStackTemporary(TypeSize Bytes, Align Alignment,
   return MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx);
 }
 
-static Register clampDynamicVectorIndex(MachineIRBuilder &B, Register IdxReg,
-                                        LLT VecTy) {
-  int64_t IdxVal;
-  if (mi_match(IdxReg, *B.getMRI(), m_ICst(IdxVal)))
-    return IdxReg;
-
+static Register clampVectorIndex(MachineIRBuilder &B, Register IdxReg,
+                                 LLT VecTy) {
   LLT IdxTy = B.getMRI()->getType(IdxReg);
   unsigned NElts = VecTy.getNumElements();
+
+  int64_t IdxVal;
+  if (mi_match(IdxReg, *B.getMRI(), m_ICst(IdxVal))) {
+    if (IdxVal < VecTy.getNumElements())
+      return IdxReg;
+    // If a constant index would be out of bounds, clamp it as well.
+  }
+
   if (isPowerOf2_32(NElts)) {
     APInt Imm = APInt::getLowBitsSet(IdxTy.getSizeInBits(), Log2_32(NElts));
     return B.buildAnd(IdxTy, IdxReg, B.buildConstant(IdxTy, Imm)).getReg(0);
@@ -3997,7 +4001,7 @@ Register LegalizerHelper::getVectorElementPointer(Register VecPtr, LLT VecTy,
   assert(EltSize * 8 == EltTy.getSizeInBits() &&
          "Converting bits to bytes lost precision");
 
-  Index = clampDynamicVectorIndex(MIRBuilder, Index, VecTy);
+  Index = clampVectorIndex(MIRBuilder, Index, VecTy);
 
   LLT IdxTy = MRI.getType(Index);
   auto Mul = MIRBuilder.buildMul(IdxTy, Index,
