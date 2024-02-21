@@ -761,7 +761,8 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value ifClauseOperand, deviceOperand;
   mlir::UnitAttr nowaitAttr;
-  llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<mlir::Value> mapOperands, dependOperands;
+  llvm::SmallVector<mlir::Attribute> dependTypeOperands;
 
   Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
   llvm::omp::Directive directive;
@@ -784,6 +785,7 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
+  cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
 
   if constexpr (std::is_same_v<OpTy, mlir::omp::UpdateDataOp>) {
@@ -796,12 +798,13 @@ genEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
     cp.processMap(currentLocation, directive, stmtCtx, mapOperands);
   }
 
-  cp.processTODO<Fortran::parser::OmpClause::Depend>(currentLocation,
-                                                     directive);
-
-  return firOpBuilder.create<OpTy>(currentLocation, ifClauseOperand,
-                                   deviceOperand, nullptr, mlir::ValueRange(),
-                                   nowaitAttr, mapOperands);
+  return firOpBuilder.create<OpTy>(
+      currentLocation, ifClauseOperand, deviceOperand,
+      dependTypeOperands.empty()
+          ? nullptr
+          : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                 dependTypeOperands),
+      dependOperands, nowaitAttr, mapOperands);
 }
 
 // This functions creates a block for the body of the targetOp's region. It adds
@@ -968,7 +971,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value ifClauseOperand, deviceOperand, threadLimitOperand;
   mlir::UnitAttr nowaitAttr;
-  llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<mlir::Attribute> dependTypeOperands;
+  llvm::SmallVector<mlir::Value> mapOperands, dependOperands;
   llvm::SmallVector<mlir::Type> mapSymTypes;
   llvm::SmallVector<mlir::Location> mapSymLocs;
   llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
@@ -978,11 +982,12 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
+  cp.processDepend(dependTypeOperands, dependOperands);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, stmtCtx, mapOperands, &mapSymTypes,
                 &mapSymLocs, &mapSymbols);
+
   cp.processTODO<Fortran::parser::OmpClause::Private,
-                 Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,
                  Fortran::parser::OmpClause::IsDevicePtr,
                  Fortran::parser::OmpClause::HasDeviceAddr,
@@ -992,7 +997,6 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                  Fortran::parser::OmpClause::UsesAllocators,
                  Fortran::parser::OmpClause::Defaultmap>(
       currentLocation, llvm::omp::Directive::OMPD_target);
-
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
   // symbols used inside the region that have not been explicitly mapped using
@@ -1066,7 +1070,11 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
   auto targetOp = converter.getFirOpBuilder().create<mlir::omp::TargetOp>(
       currentLocation, ifClauseOperand, deviceOperand, threadLimitOperand,
-      nullptr, mlir::ValueRange(), nowaitAttr, mapOperands);
+      dependTypeOperands.empty()
+          ? nullptr
+          : mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
+                                 dependTypeOperands),
+      dependOperands, nowaitAttr, mapOperands);
 
   genBodyOfTargetOp(converter, semaCtx, eval, genNested, targetOp, mapSymTypes,
                     mapSymLocs, mapSymbols, currentLocation);
