@@ -59,3 +59,18 @@ define <vscale x 4 x i32> @ret_scalable_vector_splat_i32() {
 ; CHECK: ret <vscale x 4 x i32> splat (i32 78)
   ret <vscale x 4 x i32> splat (i32 78)
 }
+
+define <4 x i32> @canonical_constant_vector() {
+; CHECK: ret <4 x i32> splat (i32 7)
+  ret <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+}
+
+define <4 x i32> @canonical_fixed_lnegth_vector_zero() {
+; CHECK: ret <4 x i32> zeroinitializer
+  ret <4 x i32> zeroinitializer
+}
+
+define <vscale x 4 x i32> @canonical_scalable_lnegth_vector_zero() {
+; CHECK: ret <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x i32> zeroinitializer
+}

@@ -1412,11 +1412,13 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
+  bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
+  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
 
-  if (isZero || isUndef) {
+  if (isZero || isUndef || isSplatFP || isSplatInt) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
-        isZero = isUndef = isPoison = false;
+        isZero = isUndef = isPoison = isSplatFP = isSplatInt = false;
         break;
       }
   }
@@ -1427,6 +1429,12 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
     return PoisonValue::get(T);
   if (isUndef)
     return UndefValue::get(T);
+  if (isSplatFP)
+    return ConstantFP::get(C->getContext(), T->getElementCount(),
+                           cast<ConstantFP>(C)->getValue());
+  if (isSplatInt)
+    return ConstantInt::get(C->getContext(), T->getElementCount(),
+                            cast<ConstantInt>(C)->getValue());
 
   // Check to see if all of the elements are ConstantFP or ConstantInt and if
   // the element type is compatible with ConstantDataVector.  If so, use it.
