@@ -1413,7 +1413,7 @@ define bfloat @lds_atomic_fadd_ret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; VI-NEXT:    v_add_f32_e32 v3, 4.0, v3
 ; VI-NEXT:    v_bfe_u32 v6, v3, 16, 1
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, v6, v3
-; VI-NEXT:    v_and_b32_e32 v7, 0x80000000, v3
+; VI-NEXT:    v_and_b32_e32 v7, 0xff800000, v3
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6
 ; VI-NEXT:    v_or_b32_e32 v7, 0x400000, v7
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
@@ -1451,7 +1451,7 @@ define bfloat @lds_atomic_fadd_ret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; GFX9-NEXT:    v_lshrrev_b32_sdwa v3, v0, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX9-NEXT:    v_add_f32_e32 v3, 4.0, v3
 ; GFX9-NEXT:    v_bfe_u32 v5, v3, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v6, 0x80000000, v3
+; GFX9-NEXT:    v_and_b32_e32 v6, 0xff800000, v3
 ; GFX9-NEXT:    v_add3_u32 v5, v5, v3, s6
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v6
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v3, v3
@@ -1560,7 +1560,7 @@ define void @lds_atomic_fadd_noret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; VI-NEXT:    v_add_f32_e32 v4, 4.0, v4
 ; VI-NEXT:    v_bfe_u32 v6, v4, 16, 1
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, v6, v4
-; VI-NEXT:    v_and_b32_e32 v7, 0x80000000, v4
+; VI-NEXT:    v_and_b32_e32 v7, 0xff800000, v4
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6
 ; VI-NEXT:    v_or_b32_e32 v7, 0x400000, v7
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
@@ -1597,7 +1597,7 @@ define void @lds_atomic_fadd_noret_bf16(ptr addrspace(3) %ptr) nounwind {
 ; GFX9-NEXT:    v_lshrrev_b32_sdwa v4, v0, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX9-NEXT:    v_add_f32_e32 v4, 4.0, v4
 ; GFX9-NEXT:    v_bfe_u32 v5, v4, 16, 1
-; GFX9-NEXT:    v_and_b32_e32 v6, 0x80000000, v4
+; GFX9-NEXT:    v_and_b32_e32 v6, 0xff800000, v4
 ; GFX9-NEXT:    v_add3_u32 v5, v5, v4, s6
 ; GFX9-NEXT:    v_or_b32_e32 v6, 0x400000, v6
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
