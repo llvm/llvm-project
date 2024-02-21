@@ -1108,6 +1108,7 @@ let SubtargetPredicate = isGFX12_10Plus in {
     defm V_CVT_SCALE_PK_F32_BF6  : VOP3Inst<"v_cvt_scale_pk_f32_bf6",  VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V16F32_V3I32_F32>,  int_amdgcn_cvt_scale_pk_f32_bf6>;
     defm V_CVT_SCALE_PK_F32_FP8  : VOP3Inst<"v_cvt_scale_pk_f32_fp8",  VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V4F32_I32_F32>,     int_amdgcn_cvt_scale_pk_f32_fp8>;
     defm V_CVT_SCALE_PK_F32_BF8  : VOP3Inst<"v_cvt_scale_pk_f32_bf8",  VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V4F32_I32_F32>,     int_amdgcn_cvt_scale_pk_f32_bf8>;
+    defm V_CVT_SCALE_PK_F32_FP4  : VOP3Inst<"v_cvt_scale_pk_f32_fp4",  VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V8F32_I32_F32>,     int_amdgcn_cvt_scale_pk_f32_fp4>;
   }
 
   def : GCNPat<(v2f16 (fpround v2f32:$src)),
@@ -1449,6 +1450,7 @@ defm V_ASHR_PK_I8_I32        : VOP3Only_Realtriple_gfx1210<0x290>;
 defm V_ASHR_PK_U8_I32        : VOP3Only_Realtriple_gfx1210<0x291>;
 defm V_CVT_SCALE_PK_F16_FP4  : VOP3Only_Realtriple_gfx1210<0x29f>;
 defm V_CVT_SCALE_PK_BF16_FP4 : VOP3Only_Realtriple_gfx1210<0x2a0>;
+defm V_CVT_SCALE_PK_F32_FP4  : VOP3Only_Realtriple_gfx1210<0x2a1>;
 defm V_CVT_SCALE_PK_F16_FP6  : VOP3Only_Realtriple_gfx1210<0x2a2>;
 defm V_CVT_SCALE_PK_BF16_FP6 : VOP3Only_Realtriple_gfx1210<0x2a3>;
 defm V_CVT_SCALE_PK_F32_FP6  : VOP3Only_Realtriple_gfx1210<0x2a4>;

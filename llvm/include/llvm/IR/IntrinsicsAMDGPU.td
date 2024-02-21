@@ -630,6 +630,7 @@ def int_amdgcn_cvt_scale_pk_f32_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v16f32_ty,  
 def int_amdgcn_cvt_scale_pk_f32_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v16f32_ty,  llvm_v3i32_ty, "cvt_scale_pk_f32_bf6">;
 def int_amdgcn_cvt_scale_pk_f32_fp8  : AMDGPUCvtScaleIntrinsic<llvm_v4f32_ty,   llvm_i32_ty,   "cvt_scale_pk_f32_fp8">;
 def int_amdgcn_cvt_scale_pk_f32_bf8  : AMDGPUCvtScaleIntrinsic<llvm_v4f32_ty,   llvm_i32_ty,   "cvt_scale_pk_f32_bf8">;
+def int_amdgcn_cvt_scale_pk_f32_fp4  : AMDGPUCvtScaleIntrinsic<llvm_v8f32_ty,   llvm_i32_ty,   "cvt_scale_pk_f32_fp4">;
 
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
