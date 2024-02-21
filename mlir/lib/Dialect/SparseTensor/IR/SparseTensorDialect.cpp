@@ -182,7 +182,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   unsigned stride = 1;
   if (kind == SparseTensorFieldKind::CrdMemRef) {
     assert(lvl.has_value());
-    const Level cooStart = SparseTensorType(enc).getCOOStart();
+    const Level cooStart = SparseTensorType(enc).getAoSCOOStart();
     const Level lvlRank = enc.getLvlRank();
     if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
       lvl = cooStart;
@@ -811,10 +811,10 @@ bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
   return !isUnique || isUniqueLvl(lvlRank - 1);
 }
 
-Level mlir::sparse_tensor::SparseTensorType::getCOOStart() const {
+Level mlir::sparse_tensor::SparseTensorType::getAoSCOOStart() const {
   SmallVector<COOSegment> coo = getCOOSegments();
-  if (!coo.empty()) {
-    assert(coo.size() == 1);
+  assert(coo.size() == 1 || coo.empty());
+  if (!coo.empty() && coo.front().isAoS()) {
     return coo.front().lvlRange.first;
   }
   return lvlRank;
@@ -1051,7 +1051,7 @@ static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
   SmallVector<LevelType> lts;
   for (auto lt : enc.getLvlTypes())
-    lts.push_back(lt.stripProperties());
+    lts.push_back(lt.stripStorageIrrelevantProperties());
 
   return SparseTensorEncodingAttr::get(
       enc.getContext(), lts,
@@ -1137,7 +1137,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have an encoding attribute");
 
   // Verifies the trailing COO.
-  Level cooStartLvl = stt.getCOOStart();
+  Level cooStartLvl = stt.getAoSCOOStart();
   if (cooStartLvl < stt.getLvlRank()) {
     // We only supports trailing COO for now, must be the last input.
     auto cooTp = llvm::cast<ShapedType>(lvlTps.back());
@@ -1452,7 +1452,7 @@ LogicalResult ToCoordinatesOp::verify() {
 
 LogicalResult ToCoordinatesBufferOp::verify() {
   auto stt = getSparseTensorType(getTensor());
-  if (stt.getCOOStart() >= stt.getLvlRank())
+  if (stt.getAoSCOOStart() >= stt.getLvlRank())
     return emitError("expected sparse tensor with a COO region");
   return success();
 }

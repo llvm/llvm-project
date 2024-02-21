@@ -568,7 +568,7 @@ Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
   const auto srcTp = getSparseTensorType(tensor);
   const Type crdTp = srcTp.getCrdType();
   const Type memTp =
-      get1DMemRefType(crdTp, /*withLayout=*/lvl >= srcTp.getCOOStart());
+      get1DMemRefType(crdTp, /*withLayout=*/lvl >= srcTp.getAoSCOOStart());
   return builder.create<ToCoordinatesOp>(loc, memTp, tensor,
                                          builder.getIndexAttr(lvl));
 }

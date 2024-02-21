@@ -24,6 +24,7 @@ struct COOSegment {
   std::pair<Level, Level> lvlRange; // [low, high)
   bool isSoA;
 
+  bool isAoS() const { return !isSoA; }
   bool isSegmentStart(Level l) const { return l == lvlRange.first; }
   bool inSegment(Level l) const {
     return l >= lvlRange.first && l < lvlRange.second;
@@ -337,7 +338,9 @@ public:
   /// Returns the starting level of this sparse tensor type for a
   /// trailing COO region that spans **at least** two levels. If
   /// no such COO region is found, then returns the level-rank.
-  Level getCOOStart() const;
+  ///
+  /// DEPRECATED: use getCOOSegment instead;
+  Level getAoSCOOStart() const;
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;
