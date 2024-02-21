@@ -29,6 +29,8 @@ std::optional<bool> getExplicitRelaxAll();
 
 bool getIncrementalLinkerCompatible();
 
+bool getFDPIC();
+
 int getDwarfVersion();
 
 bool getDwarf64();
