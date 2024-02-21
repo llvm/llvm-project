@@ -210,7 +210,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
 class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
   VOP3_Real <ps, Gen.Subtarget, asm_name> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
-  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
+  let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
   let DecoderNamespace = Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -616,7 +616,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let AssemblerPredicate = HasSDWA;
   let AsmVariantName = !if(P.HasExtSDWA, AMDGPUAsmVariants.SDWA,
                                          AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA";
+  let DecoderNamespace = "GFX8";
 
   VOPProfile Pfl = P;
 }
@@ -672,7 +672,7 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let AssemblerPredicate = HasSDWA9;
   let AsmVariantName = !if(ps.Pfl.HasExtSDWA9, AMDGPUAsmVariants.SDWA9,
                                                AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA9";
+  let DecoderNamespace = "GFX9";
 
   // Copy relevant pseudo op flags
   let AsmMatchConverter    = ps.AsmMatchConverter;
@@ -693,7 +693,7 @@ class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
 class Base_VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> : Base_VOP_SDWA9_Real<ps> {
   let SubtargetPredicate = HasSDWA10;
   let AssemblerPredicate = HasSDWA10;
-  let DecoderNamespace = "SDWA10";
+  let DecoderNamespace = "GFX10";
 }
 
 class VOP_SDWA10_Real<VOP_SDWA_Pseudo ps> :
@@ -1349,7 +1349,7 @@ class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
                      string opName = ps.OpName> :
   VOP3_DPP16 <op, ps, Gen.Subtarget, opName> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
-  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
+  let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
   let DecoderNamespace = "DPP"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }

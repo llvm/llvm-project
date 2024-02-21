@@ -1250,7 +1250,8 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
 
   // Is there is any debug-info attached to this instruction, in the form of
   // DPValue non-instruction debug-info records.
-  for (DPValue &DPV : I.getDbgValueRange()) {
+  for (DbgRecord &DPR : I.getDbgValueRange()) {
+    DPValue &DPV = cast<DPValue>(DPR);
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
@@ -4331,7 +4332,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Type *Ty = I.getType();
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets, 0);
+  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -4499,7 +4500,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets, 0);
+                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
