@@ -1243,7 +1243,7 @@ def : InstAlias<"chkfeat\tx16", (CHKFEAT), 0>;
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 1>, Requires<[HasCHK]>;
 
 class GCSSt<string mnemonic, bits<3> op>
-    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, $Rn", "", []>, Sched<[]> {
+    : I<(outs), (ins GPR64:$Rt, GPR64sp:$Rn), mnemonic, "\t$Rt, [$Rn]", "", []>, Sched<[]> {
   bits<5> Rt;
   bits<5> Rn;
   let Inst{31-15} = 0b11011001000111110;
