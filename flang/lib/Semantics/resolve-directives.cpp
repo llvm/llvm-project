@@ -1982,6 +1982,12 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
+    // Exclude construct-names
+    if (auto *details{symbol->detailsIf<semantics::MiscDetails>()}) {
+      if (details->kind() == semantics::MiscDetails::Kind::ConstructName) {
+        return;
+      }
+    }
     if (!symbol->owner().IsDerivedType() && !IsProcedure(*symbol) &&
         !IsObjectWithDSA(*symbol) && !IsNamedConstant(*symbol)) {
       // TODO: create a separate function to go through the rules for

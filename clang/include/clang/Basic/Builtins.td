@@ -4067,14 +4067,14 @@ class MPATemplate : Template<
 
 def Addc : Builtin, MPATemplate {
   let Spellings = ["__builtin_addc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }
 
 def Subc : Builtin, MPATemplate {
   let Spellings = ["__builtin_subc"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   // FIXME: Why are these argumentes marked const?
   let Prototype = "T(T const, T const, T const, T*)";
 }

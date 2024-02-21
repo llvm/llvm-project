@@ -65,6 +65,15 @@ COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
                                      const __llvm_profile_data *End) {
   intptr_t BeginI = (intptr_t)Begin, EndI = (intptr_t)End;
+  // `sizeof(__llvm_profile_data) - 1` is required in the numerator when
+  // [Begin, End] represents an inclusive range.
+  // For ELF, [Begin, End) represents the address of linker-inserted
+  // symbols  `__start__<elf-section>` and `__stop_<elf-section>`.
+  // Thereby, `End` is one byte past the inclusive range, and
+  // `sizeof(__llvm_profile_data) - 1` is not necessary in the numerator to get
+  // the correct number of profile data.
+  // FIXME: Consider removing `sizeof(__llvm_profile_data) - 1` if this is true
+  // across platforms.
   return ((EndI + sizeof(__llvm_profile_data) - 1) - BeginI) /
          sizeof(__llvm_profile_data);
 }
@@ -75,17 +84,24 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
   return __llvm_profile_get_num_data(Begin, End) * sizeof(__llvm_profile_data);
 }
 
+// Counts the number of `VTableProfData` elements within the range of [Begin,
+// End). Caller should guarantee that End points to one byte past the inclusive
+// range.
+// FIXME: Add a compiler-rt test to make sure the number of vtables in the
+// raw profile is the same as the number of vtable elements in the instrumented
+// binary.
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
                                        const VTableProfData *End) {
+  // Convert pointers to intptr_t to use integer arithmetic.
   intptr_t EndI = (intptr_t)End, BeginI = (intptr_t)Begin;
-  return (EndI + sizeof(VTableProfData) - 1 - BeginI) / sizeof(VTableProfData);
+  return (EndI - BeginI) / sizeof(VTableProfData);
 }
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
                                                 const VTableProfData *End) {
-  return __llvm_profile_get_num_vtable(Begin, End) * sizeof(VTableProfData);
+  return (intptr_t)(End) - (intptr_t)(Begin);
 }
 
 COMPILER_RT_VISIBILITY size_t __llvm_profile_counter_entry_size(void) {
@@ -241,7 +257,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
   // Set virtual table arguments to NULL since they are not supported yet.
   return lprofWriteDataImpl(
       &BufferWriter, DataBegin, DataEnd, CountersBegin, CountersEnd,
-      BitmapBegin, BitmapEnd, 0 /* VPDataReader */, NamesBegin, NamesEnd,
-      NULL /* VTableBegin */, NULL /* VTableEnd */, NULL /* VNamesBegin */,
-      NULL /* VNamesEnd */, 0 /* SkipNameDataWrite */);
+      BitmapBegin, BitmapEnd, /*VPDataReader=*/0, NamesBegin, NamesEnd,
+      /*VTableBegin=*/NULL, /*VTableEnd=*/NULL, /*VNamesBegin=*/NULL,
+      /*VNamesEnd=*/NULL, /*SkipNameDataWrite=*/0);
 }

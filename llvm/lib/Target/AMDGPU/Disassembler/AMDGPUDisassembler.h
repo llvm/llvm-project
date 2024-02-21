@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 #define LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 
+#include "SIDefines.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -231,25 +232,29 @@ public:
   unsigned getTtmpClassId(const OpWidthTy Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm);
+  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm,
+                                 AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
 
-  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                        bool MandatoryLiteral = false, unsigned ImmWidth = 0,
-                        bool IsFP = false) const;
+  MCOperand decodeSrcOp(
+      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
+      unsigned ImmWidth = 0,
+      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
-  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
-                               bool MandatoryLiteral = false,
-                               unsigned ImmWidth = 0, bool IsFP = false) const;
+  MCOperand decodeNonVGPRSrcOp(
+      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
+      unsigned ImmWidth = 0,
+      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
 
   MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
-                          unsigned ImmWidth = 0) const;
+                          unsigned ImmWidth,
+                          AMDGPU::OperandSemantics Sema) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;

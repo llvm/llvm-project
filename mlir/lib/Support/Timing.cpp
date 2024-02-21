@@ -26,8 +26,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
-#include <optional>
 #include <chrono>
+#include <optional>
 
 using namespace mlir;
 using namespace detail;
