@@ -2960,6 +2960,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
         S.mergeHLSLNumThreadsAttr(D, *NT, NT->getX(), NT->getY(), NT->getZ());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.mergeHLSLShaderAttr(D, *SA, SA->getType());
+  else if (isa<SuppressAttr>(Attr))
+    // Do nothing. Each redeclaration should be suppressed separately.
+    NewAttr = nullptr;
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
@@ -6207,6 +6210,8 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
                                         SourceLocation Loc,
                                         TemplateIdAnnotation *TemplateId,
                                         bool IsMemberSpecialization) {
+  assert(SS.isValid() && "diagnoseQualifiedDeclaration called for declaration "
+                         "without nested-name-specifier");
   DeclContext *Cur = CurContext;
   while (isa<LinkageSpecDecl>(Cur) || isa<CapturedDecl>(Cur))
     Cur = Cur->getParent();
@@ -6295,22 +6300,36 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         << FixItHint::CreateRemoval(TemplateId->TemplateKWLoc);
 
   NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
-  while (SpecLoc.getPrefix()) {
+  do {
     if (SpecLoc.getNestedNameSpecifier()->getKind() ==
         NestedNameSpecifier::TypeSpecWithTemplate)
       Diag(Loc, diag::ext_template_after_declarative_nns)
           << FixItHint::CreateRemoval(
                  SpecLoc.getTypeLoc().getTemplateKeywordLoc());
 
-    SpecLoc = SpecLoc.getPrefix();
-  }
-  // C++11 [dcl.meaning]p1:
-  //   [...] "The nested-name-specifier of the qualified declarator-id shall
-  //   not begin with a decltype-specifer"
-  if (isa_and_nonnull<DecltypeType>(
-          SpecLoc.getNestedNameSpecifier()->getAsType()))
-    Diag(Loc, diag::err_decltype_in_declarator)
-      << SpecLoc.getTypeLoc().getSourceRange();
+    if (const Type *T = SpecLoc.getNestedNameSpecifier()->getAsType()) {
+      if (const auto *TST = T->getAsAdjusted<TemplateSpecializationType>()) {
+        // C++23 [expr.prim.id.qual]p3:
+        //   [...] If a nested-name-specifier N is declarative and has a
+        //   simple-template-id with a template argument list A that involves a
+        //   template parameter, let T be the template nominated by N without A.
+        //   T shall be a class template.
+        if (TST->isDependentType() && TST->isTypeAlias())
+          Diag(Loc, diag::ext_alias_template_in_declarative_nns)
+              << SpecLoc.getLocalSourceRange();
+      } else if (T->isDecltypeType()) {
+        // C++23 [expr.prim.id.qual]p2:
+        //   [...] A declarative nested-name-specifier shall not have a
+        //   decltype-specifier.
+        //
+        // FIXME: This wording appears to be defective as it does not forbid
+        // declarative nested-name-specifiers with pack-index-specifiers.
+        // See https://github.com/cplusplus/CWG/issues/499.
+        Diag(Loc, diag::err_decltype_in_declarator)
+            << SpecLoc.getTypeLoc().getSourceRange();
+      }
+    }
+  } while ((SpecLoc = SpecLoc.getPrefix()));
 
   return false;
 }
@@ -6839,21 +6858,21 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   if (IdentifierInfo *II = NewTD->getIdentifier())
     if (!NewTD->isInvalidDecl() &&
         NewTD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-      switch (II->getInterestingIdentifierID()) {
-      case tok::InterestingIdentifierKind::FILE:
+      switch (II->getNotableIdentifierID()) {
+      case tok::NotableIdentifierKind::FILE:
         Context.setFILEDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::jmp_buf:
+      case tok::NotableIdentifierKind::jmp_buf:
         Context.setjmp_bufDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::sigjmp_buf:
+      case tok::NotableIdentifierKind::sigjmp_buf:
         Context.setsigjmp_bufDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::ucontext_t:
+      case tok::NotableIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
         break;
-      case tok::InterestingIdentifierKind::float_t:
-      case tok::InterestingIdentifierKind::double_t:
+      case tok::NotableIdentifierKind::float_t:
+      case tok::NotableIdentifierKind::double_t:
         NewTD->addAttr(AvailableOnlyInDefaultEvalMethodAttr::Create(Context));
         break;
       default:
@@ -8357,28 +8376,40 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
 
   unsigned WarningDiag = diag::warn_decl_shadow;
   SourceLocation CaptureLoc;
-  if (isa<VarDecl>(D) && isa<VarDecl>(ShadowedDecl) && NewDC &&
-      isa<CXXMethodDecl>(NewDC)) {
+  if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (RD->getLambdaCaptureDefault() == LCD_None) {
-          // Try to avoid warnings for lambdas with an explicit capture list.
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
-          // Warn only when the lambda captures the shadowed decl explicitly.
-          CaptureLoc = getCaptureLocation(LSI, cast<VarDecl>(ShadowedDecl));
-          if (CaptureLoc.isInvalid())
-            WarningDiag = diag::warn_decl_shadow_uncaptured_local;
-        } else {
-          // Remember that this was shadowed so we can avoid the warning if the
-          // shadowed decl isn't captured and the warning settings allow it.
+          if (RD->getLambdaCaptureDefault() == LCD_None) {
+            // Try to avoid warnings for lambdas with an explicit capture
+            // list. Warn only when the lambda captures the shadowed decl
+            // explicitly.
+            CaptureLoc = getCaptureLocation(LSI, VD);
+            if (CaptureLoc.isInvalid())
+              WarningDiag = diag::warn_decl_shadow_uncaptured_local;
+          } else {
+            // Remember that this was shadowed so we can avoid the warning if
+            // the shadowed decl isn't captured and the warning settings allow
+            // it.
+            cast<LambdaScopeInfo>(getCurFunction())
+                ->ShadowingDecls.push_back({D, VD});
+            return;
+          }
+        }
+        if (isa<FieldDecl>(ShadowedDecl)) {
+          // If lambda can capture this, then emit default shadowing warning,
+          // Otherwise it is not really a shadowing case since field is not
+          // available in lambda's body.
+          // At this point we don't know that lambda can capture this, so
+          // remember that this was shadowed and delay until we know.
           cast<LambdaScopeInfo>(getCurFunction())
-              ->ShadowingDecls.push_back(
-                  {cast<VarDecl>(D), cast<VarDecl>(ShadowedDecl)});
+              ->ShadowingDecls.push_back({D, ShadowedDecl});
           return;
         }
       }
-
-      if (cast<VarDecl>(ShadowedDecl)->hasLocalStorage()) {
+      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
+          VD && VD->hasLocalStorage()) {
         // A variable can't shadow a local variable in an enclosing scope, if
         // they are separated by a non-capturing declaration context.
         for (DeclContext *ParentDC = NewDC;
@@ -8429,19 +8460,28 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
 /// when these variables are captured by the lambda.
 void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
   for (const auto &Shadow : LSI->ShadowingDecls) {
-    const VarDecl *ShadowedDecl = Shadow.ShadowedDecl;
+    const NamedDecl *ShadowedDecl = Shadow.ShadowedDecl;
     // Try to avoid the warning when the shadowed decl isn't captured.
-    SourceLocation CaptureLoc = getCaptureLocation(LSI, ShadowedDecl);
     const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    Diag(Shadow.VD->getLocation(), CaptureLoc.isInvalid()
-                                       ? diag::warn_decl_shadow_uncaptured_local
-                                       : diag::warn_decl_shadow)
-        << Shadow.VD->getDeclName()
-        << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
-    if (!CaptureLoc.isInvalid())
-      Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
-          << Shadow.VD->getDeclName() << /*explicitly*/ 0;
-    Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+      SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
+      Diag(Shadow.VD->getLocation(),
+           CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
+                                  : diag::warn_decl_shadow)
+          << Shadow.VD->getDeclName()
+          << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
+      if (CaptureLoc.isValid())
+        Diag(CaptureLoc, diag::note_var_explicitly_captured_here)
+            << Shadow.VD->getDeclName() << /*explicitly*/ 0;
+      Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    } else if (isa<FieldDecl>(ShadowedDecl)) {
+      Diag(Shadow.VD->getLocation(),
+           LSI->isCXXThisCaptured() ? diag::warn_decl_shadow
+                                    : diag::warn_decl_shadow_uncaptured_local)
+          << Shadow.VD->getDeclName()
+          << computeShadowedDeclKind(ShadowedDecl, OldDC) << OldDC;
+      Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
+    }
   }
 }
 
@@ -9759,7 +9799,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   SmallVector<TemplateParameterList *, 4> TemplateParamLists;
   llvm::append_range(TemplateParamLists, TemplateParamListsRef);
   if (TemplateParameterList *Invented = D.getInventedTemplateParameterList()) {
-    if (!TemplateParamLists.empty() &&
+    if (!TemplateParamLists.empty() && !TemplateParamLists.back()->empty() &&
         Invented->getDepth() == TemplateParamLists.back()->getDepth())
       TemplateParamLists.back() = Invented;
     else
@@ -13049,7 +13089,8 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   TemplateDeductionInfo Info(DeduceInit->getExprLoc());
   TemplateDeductionResult Result =
       DeduceAutoType(TSI->getTypeLoc(), DeduceInit, DeducedType, Info);
-  if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed) {
+  if (Result != TemplateDeductionResult::Success &&
+      Result != TemplateDeductionResult::AlreadyDiagnosed) {
     if (!IsInitCapture)
       DiagnoseAutoDeductionFailure(VDecl, DeduceInit);
     else if (isa<InitListExpr>(Init))
@@ -17242,6 +17283,26 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       return true;
   }
 
+  if (TUK == TUK_Friend && Kind == TagTypeKind::Enum) {
+    // C++23 [dcl.type.elab]p4:
+    //   If an elaborated-type-specifier appears with the friend specifier as
+    //   an entire member-declaration, the member-declaration shall have one
+    //   of the following forms:
+    //     friend class-key nested-name-specifier(opt) identifier ;
+    //     friend class-key simple-template-id ;
+    //     friend class-key nested-name-specifier template(opt)
+    //       simple-template-id ;
+    //
+    // Since enum is not a class-key, so declarations like "friend enum E;"
+    // are ill-formed. Although CWG2363 reaffirms that such declarations are
+    // invalid, most implementations accept so we issue a pedantic warning.
+    Diag(KWLoc, diag::ext_enum_friend) << FixItHint::CreateRemoval(
+        ScopedEnum ? SourceRange(KWLoc, ScopedEnumKWLoc) : KWLoc);
+    assert(ScopedEnum || !ScopedEnumUsesClassTag);
+    Diag(KWLoc, diag::note_enum_friend)
+        << (ScopedEnum + ScopedEnumUsesClassTag);
+  }
+
   // Figure out the underlying type if this a enum declaration. We need to do
   // this early, because it's needed to detect if this is an incompatible
   // redeclaration.
@@ -20272,8 +20333,13 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
                            ? Context.UnsignedLongTy : Context.LongTy;
     } else {
       BestWidth = Context.getTargetInfo().getLongLongWidth();
-      assert(NumPositiveBits <= BestWidth &&
-             "How could an initializer get larger than ULL?");
+      if (NumPositiveBits > BestWidth) {
+        // This can happen with bit-precise integer types, but those are not
+        // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
+        // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
+        // a 128-bit integer, we should consider doing the same.
+        Diag(Enum->getLocation(), diag::ext_enum_too_large);
+      }
       BestType = Context.UnsignedLongLongTy;
       BestPromotionType
         = (NumPositiveBits == BestWidth || !getLangOpts().CPlusPlus)

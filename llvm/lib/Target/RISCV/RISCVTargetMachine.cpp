@@ -366,6 +366,7 @@ public:
 
   void addIRPasses() override;
   bool addPreISel() override;
+  void addCodeGenPrepare() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -450,6 +451,12 @@ bool RISCVPassConfig::addPreISel() {
   }
 
   return false;
+}
+
+void RISCVPassConfig::addCodeGenPrepare() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createTypePromotionLegacyPass());
+  TargetPassConfig::addCodeGenPrepare();
 }
 
 bool RISCVPassConfig::addInstSelector() {

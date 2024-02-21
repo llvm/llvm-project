@@ -201,6 +201,7 @@ module {
     bufferization.dealloc_tensor %C1 : tensor<8x8xf32>
     bufferization.dealloc_tensor %C2 : tensor<8x8xf32>
     bufferization.dealloc_tensor %C3 : tensor<8x8xf32>
+    bufferization.dealloc_tensor %C4 : tensor<8x8xf32>
     bufferization.dealloc_tensor %CSR_A : tensor<8x8xf32, #CSR>
     bufferization.dealloc_tensor %COO_A : tensor<8x8xf32, #SortedCOO>
     bufferization.dealloc_tensor %COO_B : tensor<8x8xf32, #SortedCOO>

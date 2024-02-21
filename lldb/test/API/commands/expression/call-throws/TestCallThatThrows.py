@@ -46,7 +46,7 @@ class ExprCommandWithThrowTestCase(TestBase):
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
         self.assertTrue(value.IsValid())
-        self.assertEquals(value.GetError().Success(), False)
+        self.assertEqual(value.GetError().Success(), False)
 
         self.check_after_call()
 
@@ -86,7 +86,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         value = frame.EvaluateExpression("[my_class iCatchMyself]", options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsUnsigned(), 57)
+        self.assertEqual(value.GetValueAsUnsigned(), 57)
         self.check_after_call()
         options.SetTrapExceptions(True)
 

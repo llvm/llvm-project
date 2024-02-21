@@ -243,19 +243,23 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
                         /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
-                        PGOOptions::NoCSAction, true);
+                        PGOOptions::NoCSAction,
+                        PGOOptions::ColdFuncOpt::Default, true);
   else if (Conf.RunCSIRInstr) {
     PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
                         /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRInstr, Conf.AddFSDiscriminator);
+                        PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
+                        Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
     PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
                         /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRUse, Conf.AddFSDiscriminator);
+                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default,
+                        Conf.AddFSDiscriminator);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
     PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction, true);
+                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+                        PGOOptions::ColdFuncOpt::Default, true);
   }
   TM->setPGOOption(PGOOpt);
 

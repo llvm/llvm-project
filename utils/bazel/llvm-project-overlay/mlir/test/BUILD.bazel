@@ -804,8 +804,6 @@ cc_library(
     ],
 )
 
-
-
 cc_library(
     name = "TestMemRef",
     srcs = glob(["lib/Dialect/MemRef/*.cpp"]),

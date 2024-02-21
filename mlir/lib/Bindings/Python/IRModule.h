@@ -201,6 +201,9 @@ public:
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
 
+  /// Get a list of Python objects which are still in the live context map.
+  std::vector<PyOperation *> getLiveOperationObjects();
+
   /// Gets the count of live operations associated with this context.
   /// Used for testing.
   size_t getLiveOperationCount();

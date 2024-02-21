@@ -813,14 +813,30 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    // Only lower this if the icmp is the only user of the GEP or if we expect
-    // the result to fold to a constant!
-    if ((GEPsInBounds || CmpInst::isEquality(Cond)) &&
-        (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
-        (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse())) {
+    if (GEPsInBounds || CmpInst::isEquality(Cond)) {
+      auto EmitGEPOffsetAndRewrite = [&](GEPOperator *GEP) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        auto *Inst = dyn_cast<Instruction>(GEP);
+        if (Inst)
+          Builder.SetInsertPoint(Inst);
+
+        Value *Offset = EmitGEPOffset(GEP);
+        // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
+        // the offset arithmetic.
+        if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
+            !GEP->getSourceElementType()->isIntegerTy(8)) {
+          replaceInstUsesWith(*Inst,
+                              Builder.CreateGEP(Builder.getInt8Ty(),
+                                                GEP->getPointerOperand(),
+                                                Offset, "", GEPsInBounds));
+          eraseInstFromFunction(*Inst);
+        }
+        return Offset;
+      };
+
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Value *L = EmitGEPOffset(GEPLHS);
-      Value *R = EmitGEPOffset(GEPRHS);
+      Value *L = EmitGEPOffsetAndRewrite(GEPLHS);
+      Value *R = EmitGEPOffsetAndRewrite(GEPRHS);
       return new ICmpInst(ICmpInst::getSignedPredicate(Cond), L, R);
     }
   }
@@ -3229,16 +3245,16 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
       if (Cmp.isEquality() && match(Op1, m_Zero()))
         return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
 
-    // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
-    // the FP extend/truncate because that cast does not change the sign-bit.
-    // This is true for all standard IEEE-754 types and the X86 80-bit type.
-    // The sign-bit is always the most significant bit in those types.
     const APInt *C;
     bool TrueIfSigned;
-    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
-        isSignBitCheck(Pred, *C, TrueIfSigned)) {
-      if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
-          match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
+    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse()) {
+      // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
+      // the FP extend/truncate because that cast does not change the sign-bit.
+      // This is true for all standard IEEE-754 types and the X86 80-bit type.
+      // The sign-bit is always the most significant bit in those types.
+      if (isSignBitCheck(Pred, *C, TrueIfSigned) &&
+          (match(BCSrcOp, m_FPExt(m_Value(X))) ||
+           match(BCSrcOp, m_FPTrunc(m_Value(X))))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0
         // (bitcast (fpext/fptrunc X)) to iX) > -1 --> (bitcast X to iY) > -1
         Type *XType = X->getType();
@@ -3255,6 +3271,20 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
           else
             return new ICmpInst(ICmpInst::ICMP_SGT, NewBitcast,
                                 ConstantInt::getAllOnesValue(NewType));
+        }
+      }
+
+      // icmp eq/ne (bitcast X to int), special fp -> llvm.is.fpclass(X, class)
+      Type *FPType = SrcType->getScalarType();
+      if (!Cmp.getParent()->getParent()->hasFnAttribute(
+              Attribute::NoImplicitFloat) &&
+          Cmp.isEquality() && FPType->isIEEELikeFPTy()) {
+        FPClassTest Mask = APFloat(FPType->getFltSemantics(), *C).classify();
+        if (Mask & (fcInf | fcZero)) {
+          if (Pred == ICmpInst::ICMP_NE)
+            Mask = ~Mask;
+          return replaceInstUsesWith(Cmp,
+                                     Builder.createIsFPClass(BCSrcOp, Mask));
         }
       }
     }
@@ -5991,7 +6021,7 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth) {
   // If this is a normal comparison, it demands all bits. If it is a sign bit
   // comparison, it only demands the sign bit.
   bool UnusedBit;
-  if (InstCombiner::isSignBitCheck(I.getPredicate(), *RHS, UnusedBit))
+  if (isSignBitCheck(I.getPredicate(), *RHS, UnusedBit))
     return APInt::getSignMask(BitWidth);
 
   switch (I.getPredicate()) {
@@ -7264,14 +7294,14 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
   if (MantissaWidth == -1) return nullptr;  // Unknown.
 
-  IntegerType *IntTy = cast<IntegerType>(LHSI->getOperand(0)->getType());
-
+  Type *IntTy = LHSI->getOperand(0)->getType();
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
   bool LHSUnsigned = isa<UIToFPInst>(LHSI);
 
   if (I.isEquality()) {
     FCmpInst::Predicate P = I.getPredicate();
     bool IsExact = false;
-    APSInt RHSCvt(IntTy->getBitWidth(), LHSUnsigned);
+    APSInt RHSCvt(IntWidth, LHSUnsigned);
     RHS.convertToInteger(RHSCvt, APFloat::rmNearestTiesToEven, &IsExact);
 
     // If the floating point constant isn't an integer value, we know if we will
@@ -7296,23 +7326,22 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   // Check to see that the input is converted from an integer type that is small
   // enough that preserves all bits.  TODO: check here for "known" sign bits.
   // This would allow us to handle (fptosi (x >>s 62) to float) if x is i64 f.e.
-  unsigned InputSize = IntTy->getScalarSizeInBits();
 
-  // Following test does NOT adjust InputSize downwards for signed inputs,
+  // Following test does NOT adjust IntWidth downwards for signed inputs,
   // because the most negative value still requires all the mantissa bits
   // to distinguish it from one less than that value.
-  if ((int)InputSize > MantissaWidth) {
+  if ((int)IntWidth > MantissaWidth) {
     // Conversion would lose accuracy. Check if loss can impact comparison.
     int Exp = ilogb(RHS);
     if (Exp == APFloat::IEK_Inf) {
       int MaxExponent = ilogb(APFloat::getLargest(RHS.getSemantics()));
-      if (MaxExponent < (int)InputSize - !LHSUnsigned)
+      if (MaxExponent < (int)IntWidth - !LHSUnsigned)
         // Conversion could create infinity.
         return nullptr;
     } else {
       // Note that if RHS is zero or NaN, then Exp is negative
       // and first condition is trivially false.
-      if (MantissaWidth <= Exp && Exp <= (int)InputSize - !LHSUnsigned)
+      if (MantissaWidth <= Exp && Exp <= (int)IntWidth - !LHSUnsigned)
         // Conversion could affect comparison.
         return nullptr;
     }
@@ -7360,8 +7389,6 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
 
   // See if the FP constant is too large for the integer.  For example,
   // comparing an i8 to 300.0.
-  unsigned IntWidth = IntTy->getScalarSizeInBits();
-
   if (!LHSUnsigned) {
     // If the RHS value is > SignedMax, fold the comparison.  This handles +INF
     // and large values.

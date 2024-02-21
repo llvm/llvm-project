@@ -100,7 +100,7 @@ inline _LIBCPP_HIDE_FROM_ABI int vasprintf(char** strp, const char* fmt, va_list
   }
 
   va_list ap_copy;
-  // va_copy may not be provided by the C library in C++ 03 mode.
+  // va_copy may not be provided by the C library in C++03 mode.
 #if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
   __builtin_va_copy(ap_copy, ap);
 #else

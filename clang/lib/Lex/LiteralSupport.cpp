@@ -1358,11 +1358,17 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
 
   // Handle simple binary numbers 0b01010
   if ((c1 == 'b' || c1 == 'B') && (s[1] == '0' || s[1] == '1')) {
-    // 0b101010 is a C++1y / GCC extension.
-    Diags.Report(TokLoc, LangOpts.CPlusPlus14
-                             ? diag::warn_cxx11_compat_binary_literal
-                         : LangOpts.CPlusPlus ? diag::ext_binary_literal_cxx14
-                                              : diag::ext_binary_literal);
+    // 0b101010 is a C++14 and C23 extension.
+    unsigned DiagId;
+    if (LangOpts.CPlusPlus14)
+      DiagId = diag::warn_cxx11_compat_binary_literal;
+    else if (LangOpts.C23)
+      DiagId = diag::warn_c23_compat_binary_literal;
+    else if (LangOpts.CPlusPlus)
+      DiagId = diag::ext_binary_literal_cxx14;
+    else
+      DiagId = diag::ext_binary_literal;
+    Diags.Report(TokLoc, DiagId);
     ++s;
     assert(s < ThisTokEnd && "didn't maximally munch?");
     radix = 2;

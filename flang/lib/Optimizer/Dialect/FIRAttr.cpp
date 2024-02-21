@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/AttributeSupport.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallString.h"
@@ -297,5 +298,6 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 void FIROpsDialect::registerAttributes() {
   addAttributes<ClosedIntervalAttr, ExactTypeAttr, FortranVariableFlagsAttr,
                 LowerBoundAttr, PointIntervalAttr, RealAttr, SubclassAttr,
-                UpperBoundAttr>();
+                UpperBoundAttr, CUDADataAttributeAttr, CUDAProcAttributeAttr,
+                CUDALaunchBoundsAttr, CUDAClusterDimsAttr>();
 }

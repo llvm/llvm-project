@@ -50,7 +50,7 @@ typedef struct ident ident_t;
 // recent versions), but we are bounded by the pointer-sized chunks that
 // the Intel compiler allocates.
 
-#if KMP_OS_LINUX && defined(KMP_GOMP_COMPAT)
+#if (KMP_OS_LINUX || KMP_OS_AIX) && defined(KMP_GOMP_COMPAT)
 #define OMP_LOCK_T_SIZE sizeof(int)
 #define OMP_NEST_LOCK_T_SIZE sizeof(void *)
 #else
@@ -120,8 +120,15 @@ extern void __kmp_validate_locks(void);
 
 struct kmp_base_tas_lock {
   // KMP_LOCK_FREE(tas) => unlocked; locked: (gtid+1) of owning thread
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ && __LP64__
+  // Flip the ordering of the high and low 32-bit member to be consistent
+  // with the memory layout of the address in 64-bit big-endian.
+  kmp_int32 depth_locked; // depth locked, for nested locks only
+  std::atomic<kmp_int32> poll;
+#else
   std::atomic<kmp_int32> poll;
   kmp_int32 depth_locked; // depth locked, for nested locks only
+#endif
 };
 
 typedef struct kmp_base_tas_lock kmp_base_tas_lock_t;
@@ -1138,11 +1145,13 @@ extern int (**__kmp_indirect_test)(kmp_user_lock_p, kmp_int32);
 
 // Extracts direct lock tag from a user lock pointer
 #define KMP_EXTRACT_D_TAG(l)                                                   \
-  (*((kmp_dyna_lock_t *)(l)) & ((1 << KMP_LOCK_SHIFT) - 1) &                   \
-   -(*((kmp_dyna_lock_t *)(l)) & 1))
+  ((kmp_dyna_lock_t)((kmp_base_tas_lock_t *)(l))->poll &                       \
+   ((1 << KMP_LOCK_SHIFT) - 1) &                                               \
+   -((kmp_dyna_lock_t)((kmp_tas_lock_t *)(l))->lk.poll & 1))
 
 // Extracts indirect lock index from a user lock pointer
-#define KMP_EXTRACT_I_INDEX(l) (*(kmp_lock_index_t *)(l) >> 1)
+#define KMP_EXTRACT_I_INDEX(l)                                                 \
+  ((kmp_lock_index_t)((kmp_base_tas_lock_t *)(l))->poll >> 1)
 
 // Returns function pointer to the direct lock function with l (kmp_dyna_lock_t
 // *) and op (operation type).

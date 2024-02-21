@@ -651,6 +651,9 @@ enum CommandArgumentType {
   eArgTypeTargetID,
   eArgTypeStopHookID,
   eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1303,6 +1306,21 @@ enum CompletionType {
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
   eTerminatorCompletion = (1ul << 27)
+};
+
+/// Specifies if children need to be re-computed
+/// after a call to \ref SyntheticChildrenFrontEnd::Update.
+enum class ChildCacheState {
+  eRefetch = 0, ///< Children need to be recomputed dynamically.
+
+  eReuse = 1, ///< Children did not change and don't need to be recomputed;
+              ///< re-use what we computed the last time we called Update.
+};
+
+enum SymbolDownload {
+  eSymbolDownloadOff = 0,
+  eSymbolDownloadBackground = 1,
+  eSymbolDownloadForeground = 2,
 };
 
 } // namespace lldb
