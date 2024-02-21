@@ -294,7 +294,7 @@ mcdc::TVIdxBuilder::TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
     }
   }
 
-  std::sort(Decisions.begin(), Decisions.end());
+  llvm::sort(Decisions);
 
   // Assign TestVector Indices in Decision Nodes
   int64_t CurIdx = 0;

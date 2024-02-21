@@ -1088,9 +1088,9 @@ TEST(CoverageMappingTest, TVIdxBuilder) {
   int Offset = 1000;
   auto TheBuilder = mcdc::TVIdxBuilder(
       SmallVector<mcdc::ConditionIDs>(ArrayRef(Branches)), Offset);
-  ASSERT_TRUE(TheBuilder.NumTestVectors < TheBuilder.HardMaxTVs);
-  ASSERT_EQ(TheBuilder.Indices.size(), 6u);
-  ASSERT_EQ(TheBuilder.NumTestVectors, 15);
+  EXPECT_TRUE(TheBuilder.NumTestVectors < TheBuilder.HardMaxTVs);
+  EXPECT_EQ(TheBuilder.Indices.size(), 6u);
+  EXPECT_EQ(TheBuilder.NumTestVectors, 15);
 
   std::map<int, int> Decisions;
   for (unsigned I = 0; I < TheBuilder.Indices.size(); ++I) {
@@ -1106,15 +1106,15 @@ TEST(CoverageMappingTest, TVIdxBuilder) {
         {2, {2, 1012}},
         {4, {1004, 1008}},
     }};
-    ASSERT_EQ(TheBuilder.Indices[I], IndicesRefs[I].Indices);
+    EXPECT_EQ(TheBuilder.Indices[I], IndicesRefs[I].Indices);
 
 #ifndef NDEBUG
     const auto &Node = TheBuilder.SavedNodes[I];
-    ASSERT_EQ(Node.Width, IndicesRefs[I].Width);
+    EXPECT_EQ(Node.Width, IndicesRefs[I].Width);
     for (int C = 0; C < 2; ++C) {
       auto Index = TheBuilder.Indices[I][C];
       if (Node.NextIDs[C] < 0)
-        ASSERT_TRUE(Decisions.insert({Index, Node.Width}).second);
+        EXPECT_TRUE(Decisions.insert({Index, Node.Width}).second);
     }
 #endif
   }
@@ -1122,11 +1122,11 @@ TEST(CoverageMappingTest, TVIdxBuilder) {
 #ifndef NDEBUG
   int NextIdx = Offset;
   for (const auto [Index, Width] : Decisions) {
-    ASSERT_EQ(Index, NextIdx);
+    EXPECT_EQ(Index, NextIdx);
     NextIdx += Width;
   }
   // The sum of Width(s) is NumTVs.
-  ASSERT_EQ(NextIdx, Offset + TheBuilder.NumTestVectors);
+  EXPECT_EQ(NextIdx, Offset + TheBuilder.NumTestVectors);
 #endif
 }
 
