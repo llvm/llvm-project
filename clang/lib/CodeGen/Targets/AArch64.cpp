@@ -838,7 +838,7 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
     const FunctionDecl *Callee, const CallArgList &Args) const {
-  if (!Caller || !Callee->hasAttr<AlwaysInlineAttr>())
+  if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
   bool CallerIsStreaming = isStreaming(Caller);
