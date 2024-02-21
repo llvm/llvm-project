@@ -912,10 +912,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a,
   ; DAGISEL-GFX11-WF32-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_ADD3_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD3_U32_e64 killed [[V_BFE_U32_e64_]], [[V_ADD_F32_e64_]], killed [[S_MOV_B32_]], implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 4194304
-  ; DAGISEL-GFX11-WF32-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -8388608
-  ; DAGISEL-GFX11-WF32-NEXT:   [[V_AND_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_2]], killed [[S_MOV_B32_1]], implicit $exec
+  ; DAGISEL-GFX11-WF32-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_1]], implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[V_CMP_U_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F32_e64 0, [[V_ADD_F32_e64_]], 0, [[V_ADD_F32_e64_]], 0, implicit $mode, implicit $exec
-  ; DAGISEL-GFX11-WF32-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_AND_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
+  ; DAGISEL-GFX11-WF32-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
   ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-NEXT:   FLAT_STORE_SHORT_D16_HI killed [[COPY2]], killed [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
@@ -934,10 +933,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a,
   ; DAGISEL-GFX11-WF64-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_ADD3_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD3_U32_e64 killed [[V_BFE_U32_e64_]], [[V_ADD_F32_e64_]], killed [[S_MOV_B32_]], implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 4194304
-  ; DAGISEL-GFX11-WF64-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -8388608
-  ; DAGISEL-GFX11-WF64-NEXT:   [[V_AND_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_2]], killed [[S_MOV_B32_1]], implicit $exec
+  ; DAGISEL-GFX11-WF64-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_1]], implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[V_CMP_U_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_U_F32_e64 0, [[V_ADD_F32_e64_]], 0, [[V_ADD_F32_e64_]], 0, implicit $mode, implicit $exec
-  ; DAGISEL-GFX11-WF64-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_AND_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
+  ; DAGISEL-GFX11-WF64-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
   ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-NEXT:   FLAT_STORE_SHORT_D16_HI killed [[COPY2]], killed [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
@@ -956,10 +954,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a,
   ; DAGISEL-GFX10-WF32-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_ADD3_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD3_U32_e64 killed [[V_BFE_U32_e64_]], [[V_ADD_F32_e64_]], killed [[S_MOV_B32_]], implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 4194304
-  ; DAGISEL-GFX10-WF32-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -8388608
-  ; DAGISEL-GFX10-WF32-NEXT:   [[V_AND_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_2]], killed [[S_MOV_B32_1]], implicit $exec
+  ; DAGISEL-GFX10-WF32-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_1]], implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[V_CMP_U_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F32_e64 0, [[V_ADD_F32_e64_]], 0, [[V_ADD_F32_e64_]], 0, implicit $mode, implicit $exec
-  ; DAGISEL-GFX10-WF32-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_AND_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
+  ; DAGISEL-GFX10-WF32-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
   ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF32-NEXT:   FLAT_STORE_SHORT_D16_HI killed [[COPY2]], killed [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)
@@ -978,10 +975,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a,
   ; DAGISEL-GFX10-WF64-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_ADD3_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD3_U32_e64 killed [[V_BFE_U32_e64_]], [[V_ADD_F32_e64_]], killed [[S_MOV_B32_]], implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 4194304
-  ; DAGISEL-GFX10-WF64-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 -8388608
-  ; DAGISEL-GFX10-WF64-NEXT:   [[V_AND_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_2]], killed [[S_MOV_B32_1]], implicit $exec
+  ; DAGISEL-GFX10-WF64-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_ADD_F32_e64_]], killed [[S_MOV_B32_1]], implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[V_CMP_U_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_U_F32_e64 0, [[V_ADD_F32_e64_]], 0, [[V_ADD_F32_e64_]], 0, implicit $mode, implicit $exec
-  ; DAGISEL-GFX10-WF64-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_AND_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
+  ; DAGISEL-GFX10-WF64-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD3_U32_e64_]], 0, killed [[V_OR_B32_e64_]], killed [[V_CMP_U_F32_e64_]], implicit $exec
   ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF64-NEXT:   FLAT_STORE_SHORT_D16_HI killed [[COPY2]], killed [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into `ptr poison`)

@@ -10948,12 +10948,10 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     Op = expandRoundInexactToOdd(F32, Op, dl, DAG);
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
 
-    // Extract the sign bit and exponent.
-    SDValue SignBitAndExponentField = DAG.getNode(
-        ISD::AND, dl, I32, Op, DAG.getConstant(0xff800000, dl, I32));
-    // Set the quiet bit.
-    SDValue NaN = DAG.getNode(ISD::OR, dl, I32, SignBitAndExponentField,
-                              DAG.getConstant(0x400000, dl, I32));
+    // Conversions should set NaN's quiet bit. This also prevents NaNs from
+    // turning into infinities.
+    SDValue NaN =
+        DAG.getNode(ISD::OR, dl, I32, Op, DAG.getConstant(0x400000, dl, I32));
 
     // Factor in the contribution of the low 16 bits.
     SDValue One = DAG.getConstant(1, dl, I32);
