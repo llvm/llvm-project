@@ -1403,12 +1403,11 @@ bool ByteCodeExprGen<Emitter>::VisitPointerCompoundAssignOperator(
 
   if (!LT || !RT)
     return false;
-  assert(*LT == PT_Ptr);
 
   if (!visit(LHS))
     return false;
 
-  if (!this->emitLoadPtr(LHS))
+  if (!this->emitLoad(*LT, LHS))
     return false;
 
   if (!visit(RHS))
@@ -2828,7 +2827,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr) {
+    if (T == PT_Ptr || T == PT_FnPtr) {
       if (!this->emitIncPtr(E))
         return false;
 
@@ -2846,7 +2845,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr) {
+    if (T == PT_Ptr || T == PT_FnPtr) {
       if (!this->emitDecPtr(E))
         return false;
 
@@ -2864,7 +2863,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr) {
+    if (T == PT_Ptr || T == PT_FnPtr) {
       if (!this->emitLoadPtr(E))
         return false;
       if (!this->emitConstUint8(1, E))
@@ -2903,7 +2902,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr) {
+    if (T == PT_Ptr || T == PT_FnPtr) {
       if (!this->emitLoadPtr(E))
         return false;
       if (!this->emitConstUint8(1, E))
