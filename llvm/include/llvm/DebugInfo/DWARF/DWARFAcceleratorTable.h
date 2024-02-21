@@ -802,8 +802,7 @@ public:
 /// Calculates the starting offsets for various sections within the
 /// .debug_names section.
 void findDebugNamesOffsets(DWARFDebugNames::DWARFDebugNamesOffsets &Offsets,
-                           uint64_t HdrSize,
-                           const dwarf::DwarfFormat Format,
+                           uint64_t HdrSize, const dwarf::DwarfFormat Format,
                            const DWARFDebugNames::Header &Hdr);
 
 /// If `Name` is the name of a templated function that includes template
