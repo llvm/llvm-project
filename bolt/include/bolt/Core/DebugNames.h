@@ -20,7 +20,7 @@
 
 namespace llvm {
 namespace bolt {
-class BOLTDWARF5AccelTableData : DWARF5AccelTableData {
+class BOLTDWARF5AccelTableData : public DWARF5AccelTableData {
 public:
   BOLTDWARF5AccelTableData(const uint64_t DieOffset,
                            const std::optional<uint64_t> DefiningParentOffset,
@@ -45,6 +45,10 @@ class DWARF5AcceleratorTable {
 public:
   DWARF5AcceleratorTable(const bool CreateDebugNames, BinaryContext &BC,
                          DebugStrWriter &MainBinaryStrWriter);
+  ~DWARF5AcceleratorTable() {
+    for (DebugNamesAbbrev *Abbrev : AbbreviationsVector)
+      Abbrev->~DebugNamesAbbrev();
+  }
   /// Add DWARF5 Accelerator table entry.
   /// Input is DWARFUnit being processed, DIE that belongs to it, and potential
   /// SkeletonCU if the Unit comes from a DWO section.
@@ -62,26 +66,6 @@ public:
   }
 
 private:
-  union AbbrevDescriptor {
-    struct {
-      uint32_t CompUnit : 1;
-      uint32_t TypeUnit : 1;
-      uint32_t DieOffset : 1;
-      uint32_t Parent : 2;
-      uint32_t TypeHash : 1;
-      uint32_t Tag : 26;
-    } Bits;
-    uint32_t Value = 0;
-  };
-  struct TagIndex {
-    uint32_t DieTag;
-    uint32_t Index;
-  };
-  struct cmpByTagIndex {
-    bool operator()(const TagIndex &LHS, const TagIndex &RHS) const {
-      return LHS.Index < RHS.Index;
-    }
-  };
   bool NeedToCreate = false;
   BumpPtrAllocator Allocator;
   DebugStrWriter &MainBinaryStrWriter;
@@ -109,9 +93,13 @@ private:
   using StringEntries =
       MapVector<std::string, HashData, llvm::StringMap<unsigned>>;
   StringEntries Entries;
-  std::map<TagIndex, SmallVector<DWARF5AccelTableData::AttributeEncoding, 2>,
-           cmpByTagIndex>
-      Abbreviations;
+  /// FoldingSet that uniques the abbreviations.
+  FoldingSet<DebugNamesAbbrev> AbbreviationsSet;
+  /// Vector containing DebugNames abbreviations for iteration in order.
+  SmallVector<DebugNamesAbbrev *, 5> AbbreviationsVector;
+  /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
+  /// storage container.
+  BumpPtrAllocator Alloc;
   uint32_t BucketCount = 0;
   uint32_t UniqueHashCount = 0;
   uint32_t AbbrevTableSize = 0;
@@ -140,13 +128,6 @@ private:
   void addUnit(DWARFUnit &Unit, const std::optional<uint64_t> &DWOID);
   /// Returns number of buckets in .debug_name table.
   ArrayRef<HashList> getBuckets() const { return Buckets; }
-  /// Constructs and returns a unique AbbrevTag that captures what a DIE
-  /// accesses.
-  TagIndex getAbbrevIndex(
-      const unsigned DieTag,
-      const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet,
-      const std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
-          &SecondEntryRe);
   /// Get encoding for a given attribute.
   std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
   getIndexForEntry(const BOLTDWARF5AccelTableData &Value) const;

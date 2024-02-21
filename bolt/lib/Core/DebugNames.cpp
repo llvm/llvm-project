@@ -322,43 +322,6 @@ void DWARF5AcceleratorTable::finalize() {
   TUIndexEncodingSize = *dwarf::getFixedFormByteSize(TUIndexForm, FormParams);
 }
 
-DWARF5AcceleratorTable::TagIndex DWARF5AcceleratorTable::getAbbrevIndex(
-    const unsigned DieTag,
-    const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet,
-    const std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
-        &SecondEntryRet) {
-  AbbrevDescriptor AbbrvDesc;
-  auto setFields =
-      [&](const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &Entry)
-      -> void {
-    if (!Entry)
-      return;
-    switch (Entry->Encoding.Index) {
-    case dwarf::DW_IDX_compile_unit:
-      AbbrvDesc.Bits.CompUnit = true;
-      break;
-    case dwarf::DW_IDX_type_unit:
-      AbbrvDesc.Bits.TypeUnit = true;
-      break;
-    case dwarf::DW_IDX_parent:
-      AbbrvDesc.Bits.Parent = 0;
-      break;
-    case dwarf::DW_IDX_type_hash:
-      AbbrvDesc.Bits.TypeHash = true;
-      break;
-    default:
-      return;
-    }
-  };
-  setFields(EntryRet);
-  setFields(SecondEntryRet);
-  AbbrvDesc.Bits.DieOffset = true;
-  AbbrvDesc.Bits.Tag = DieTag;
-  auto Iter = AbbrevTagToIndexMap.insert(
-      {AbbrvDesc.Value, static_cast<uint32_t>(AbbrevTagToIndexMap.size() + 1)});
-  return {DieTag, Iter.first->second};
-}
-
 std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
 DWARF5AcceleratorTable::getIndexForEntry(
     const BOLTDWARF5AccelTableData &Value) const {
@@ -388,17 +351,26 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
         // the CU.
         const std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
             SecondEntryRet = getSecondIndexForEntry(*Value);
-        const unsigned Tag = Value->getDieTag();
-        const TagIndex AbbrvTag = getAbbrevIndex(Tag, EntryRet, SecondEntryRet);
-        if (Abbreviations.count(AbbrvTag) == 0) {
-          SmallVector<DWARF5AccelTableData::AttributeEncoding, 2> UA;
-          if (EntryRet)
-            UA.push_back(EntryRet->Encoding);
-          if (SecondEntryRet)
-            UA.push_back(SecondEntryRet->Encoding);
-          UA.push_back({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
-          Abbreviations.try_emplace(AbbrvTag, UA);
+        DebugNamesAbbrev Abbrev(Value->getDieTag());
+        if (EntryRet)
+          Abbrev.addAttribute(EntryRet->Encoding);
+        if (SecondEntryRet)
+          Abbrev.addAttribute(SecondEntryRet->Encoding);
+        Abbrev.addAttribute({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
+        FoldingSetNodeID ID;
+        Abbrev.Profile(ID);
+        void *InsertPos;
+        if (DebugNamesAbbrev *Existing =
+                AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
+          Value->setAbbrevNumber(Existing->getNumber());
+          continue;
         }
+        DebugNamesAbbrev *NewAbbrev =
+            new (Alloc) DebugNamesAbbrev(std::move(Abbrev));
+        AbbreviationsVector.push_back(NewAbbrev);
+        NewAbbrev->setNumber(AbbreviationsVector.size());
+        AbbreviationsSet.InsertNode(NewAbbrev, InsertPos);
+        Value->setAbbrevNumber(NewAbbrev->getNumber());
       }
     }
   }
@@ -410,12 +382,11 @@ void DWARF5AcceleratorTable::writeEntry(const BOLTDWARF5AccelTableData &Entry) {
   // For forgeign type (FTU) units that need to refer to the FTU and to the CU.
   const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> SecondEntryRet =
       getSecondIndexForEntry(Entry);
-  const TagIndex TagIndexVal =
-      getAbbrevIndex(Entry.getDieTag(), EntryRet, SecondEntryRet);
-  auto AbbrevIt = Abbreviations.find(TagIndexVal);
-  assert(AbbrevIt != Abbreviations.end() &&
-         "Abbrev tag was not found in the abbreviation map!");
-  encodeULEB128(TagIndexVal.Index, *Entriestream);
+  const unsigned AbbrevIndex = Entry.getAbbrevNumber() - 1;
+  assert(AbbrevIndex < AbbreviationsVector.size() &&
+         "Entry abbrev index is outside of abbreviations vector range.");
+  const DebugNamesAbbrev *Abbrev = AbbreviationsVector[AbbrevIndex];
+  encodeULEB128(Entry.getAbbrevNumber(), *Entriestream);
   auto writeIndex = [&](uint32_t Index, uint32_t IndexSize) -> void {
     switch (IndexSize) {
     default:
@@ -436,8 +407,8 @@ void DWARF5AcceleratorTable::writeEntry(const BOLTDWARF5AccelTableData &Entry) {
     };
   };
 
-  for (const DWARF5AccelTableData::AttributeEncoding &AttrEnc :
-       AbbrevIt->second) {
+  for (const DebugNamesAbbrev::AttributeEncoding &AttrEnc :
+       Abbrev->getAttributes()) {
     switch (AttrEnc.Index) {
     default: {
       llvm_unreachable("Unexpected index attribute!");
@@ -602,10 +573,10 @@ void DWARF5AcceleratorTable::emitOffsets() const {
 }
 void DWARF5AcceleratorTable::emitAbbrevs() {
   const uint32_t AbbrevTableStart = StrBuffer->size();
-  for (const auto &Abbrev : Abbreviations) {
-    encodeULEB128(Abbrev.first.Index, *StrStream);
-    encodeULEB128(Abbrev.first.DieTag, *StrStream);
-    for (const auto &AttrEnc : Abbrev.second) {
+  for (const auto *Abbrev : AbbreviationsVector) {
+    encodeULEB128(Abbrev->getNumber(), *StrStream);
+    encodeULEB128(Abbrev->getDieTag(), *StrStream);
+    for (const auto &AttrEnc : Abbrev->getAttributes()) {
       encodeULEB128(AttrEnc.Index, *StrStream);
       encodeULEB128(AttrEnc.Form, *StrStream);
     }
