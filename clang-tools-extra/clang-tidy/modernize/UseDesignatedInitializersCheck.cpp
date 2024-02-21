@@ -131,8 +131,7 @@ void UseDesignatedInitializersCheck::check(
       DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
-      Diag << Type;
-      Diag << InitList->getSourceRange();
+      Diag << Type << InitList->getSourceRange();
       for (const Stmt *InitExpr : *SyntacticInitList) {
         if (const auto Designator = Designators[InitExpr->getBeginLoc()])
           Diag << FixItHint::CreateInsertion(InitExpr->getBeginLoc(),
