@@ -175,7 +175,7 @@ static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 }
 
 static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
-                              bool IsLast, bool IsBuffered, uint VecSize) {
+                              bool IsLast, bool IsBuffered, uint32_t VecSize) {
   auto Zero = Builder.getInt64(0);
 
   if (auto VectorTy = dyn_cast<FixedVectorType>(Arg->getType())) {
@@ -207,7 +207,7 @@ static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                          bool SpecIsCString, bool IsLast, bool IsBuffered,
-                         uint VecSize, bool IsOpenCL) {
+                         uint32_t VecSize, bool IsOpenCL) {
   if (SpecIsCString && isa<PointerType>(Arg->getType())) {
     if (IsOpenCL)
       Arg = Builder.CreateAddrSpaceCast(Arg, Builder.getPtrTy());
@@ -236,11 +236,11 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 // valid are 2, 4, 6, 8 and 16. Remaining cases are considered
 // to be invalid and function returns zero.
 
-static uint getSizeFromVectorSpec(StringRef Spec) {
+static uint32_t getSizeFromVectorSpec(StringRef Spec) {
   size_t size = Spec.size() - 1; // Spec length excluding '%' character
   size_t curPos = Spec.size();
   size_t pos = curPos;
-  uint VecLen = 0;
+  uint32_t VecLen = 0;
 
   if (size >= 3) {
     size = 0;
@@ -346,7 +346,7 @@ static Value *callBufferedPrintfStart(
   Value *LenWithNull = nullptr;
   Value *LenWithNullAligned = nullptr;
   Value *TempAdd = nullptr;
-  uint VecIdx = 0;
+  uint32_t VecIdx = 0;
 
   // First 4 bytes to be reserved for control dword
   size_t BufSize = 4;
@@ -682,7 +682,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   // FIXME: This invokes hostcall once for each argument. We can pack up to
   // seven scalar printf arguments in a single hostcall. See the signature of
   // callAppendArgs().
-  uint VecIdx = 0;
+  uint32_t VecIdx = 0;
   for (unsigned int i = 1; i != NumOps; ++i) {
     bool IsLast = i == NumOps - 1;
     bool IsCString = SpecIsCString.test(i);
