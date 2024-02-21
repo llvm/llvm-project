@@ -33,7 +33,9 @@ using namespace llvm::omp::target::ompt;
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
-  PM->addRequirements(Flags);
+  MESSAGE("The %s function has been removed. Old OpenMP requirements will not "
+          "be handled",
+          __PRETTY_FUNCTION__);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

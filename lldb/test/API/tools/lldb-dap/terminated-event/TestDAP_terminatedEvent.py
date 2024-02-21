@@ -45,16 +45,16 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
         statistics = self.dap_server.wait_for_terminated()["statistics"]
-        self.assertTrue(statistics["totalDebugInfoByteSize"] > 0)
-        self.assertTrue(statistics["totalDebugInfoEnabled"] > 0)
-        self.assertTrue(statistics["totalModuleCountHasDebugInfo"] > 0)
+        self.assertGreater(statistics["totalDebugInfoByteSize"], 0)
+        self.assertGreater(statistics["totalDebugInfoEnabled"], 0)
+        self.assertGreater(statistics["totalModuleCountHasDebugInfo"], 0)
 
         self.assertIsNotNone(statistics["memory"])
         self.assertNotIn("modules", statistics.keys())
 
         # lldb-dap debugs one target at a time
         target = json.loads(statistics["targets"])[0]
-        self.assertTrue(target["totalBreakpointResolveTime"] > 0)
+        self.assertGreater(target["totalBreakpointResolveTime"], 0)
 
         breakpoints = target["breakpoints"]
         self.assertIn(
