@@ -474,9 +474,7 @@ public:
 
   /// Return true if this exact scope (and not one of it's parents) is a switch
   /// scope.
-  bool isDirectlySwitchScope() const {
-    return getFlags() & Scope::SwitchScope;
-  }
+  bool isDirectlySwitchScope() const { return getFlags() & Scope::SwitchScope; }
 
   /// Determines whether this scope is the OpenMP directive scope
   bool isOpenMPDirectiveScope() const {
