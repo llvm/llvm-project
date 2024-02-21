@@ -321,6 +321,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeRecognizerID, "frame-recognizer-id", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The ID for a stack frame recognizer." },
     { lldb::eArgTypeConnectURL, "process-connect-url", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A URL-style specification for a remote connection." },
     { lldb::eArgTypeTargetID, "target-id", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The index ID for an lldb Target." },
+    { lldb::eArgTypeStopHookID, "stop-hook-id", lldb::CompletionType::eStopHookIDCompletion, {}, { nullptr, false }, "The ID you receive when you create a stop-hook." },
     // BEGIN SWIFT
     { lldb::eArgTypeBindGenTypeParamValue, "bind-generic-types", lldb::CompletionType::eNoCompletion, g_bind_gen_type_params, { nullptr, false }, "Controls whether any generic types in the current context should be bound to their dynamic type before evaluating. Defaults to auto." },
     // END SWIFT
