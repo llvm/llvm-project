@@ -95,6 +95,10 @@ public:
   processAllocate(llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
                   llvm::SmallVectorImpl<mlir::Value> &allocateOperands) const;
   bool processCopyin() const;
+  bool processCopyPrivate(
+      mlir::Location currentLocation,
+      llvm::SmallVectorImpl<mlir::Value> &copyPrivateVars,
+      llvm::SmallVectorImpl<mlir::Attribute> &copyPrivateFuncs) const;
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool

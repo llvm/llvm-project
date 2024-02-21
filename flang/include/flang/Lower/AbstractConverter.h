@@ -121,6 +121,9 @@ public:
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
+  virtual void copyVar(mlir::Location loc, mlir::Value dst,
+                       mlir::Value src) = 0;
+
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.
   virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
