@@ -100,6 +100,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-transform-interpreter-test
   mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
