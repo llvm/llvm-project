@@ -613,6 +613,25 @@ enum AcceleratorTable {
   DW_hash_function_djb = 0u
 };
 
+// Uniquify the string hashes and calculate the bucket count for the
+// DWARF v5 Accelerator Table. NOTE: This function effectively consumes the
+// 'hashes' input parameter.
+inline uint32_t getDebugNamesBucketCount(MutableArrayRef<uint32_t> hashes,
+                                         uint32_t &uniqueHashCount) {
+  uint32_t BucketCount = 0;
+
+  sort(hashes);
+  uniqueHashCount = llvm::unique(hashes) - hashes.begin();
+  if (uniqueHashCount > 1024)
+    BucketCount = uniqueHashCount / 4;
+  else if (uniqueHashCount > 16)
+    BucketCount = uniqueHashCount / 2;
+  else
+    BucketCount = std::max<uint32_t>(uniqueHashCount, 1);
+
+  return BucketCount;
+}
+
 // Constants for the GNU pubnames/pubtypes extensions supporting gdb index.
 enum GDBIndexEntryKind {
   GIEK_NONE,
