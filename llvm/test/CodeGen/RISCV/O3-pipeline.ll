@@ -34,15 +34,6 @@
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Loop Data Prefetch
-; CHECK-NEXT:       Post-Dominator Tree Construction
-; CHECK-NEXT:       Branch Probability Analysis
-; CHECK-NEXT:       Block Frequency Analysis
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
-; CHECK-NEXT:       Optimization Remark Emitter
-; CHECK-NEXT:       Optimize selects
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       RISC-V gather/scatter lowering
 ; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       RISC-V CodeGenPrepare
@@ -77,6 +68,15 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Post-Dominator Tree Construction
+; CHECK-NEXT:       Branch Probability Analysis
+; CHECK-NEXT:       Block Frequency Analysis
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
+; CHECK-NEXT:       Optimize selects
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
