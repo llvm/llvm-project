@@ -49,9 +49,9 @@ entry:
 define void @func_reset_fpmode() #0 {
 ; DAG-LABEL: func_reset_fpmode:
 ; DAG:       // %bb.0: // %entry
-; DAG-NEXT:    mov w9, #57592 // =0xe0f8
+; DAG-NEXT:    mov x9, #-48904 // =0xffffffffffff40f8
 ; DAG-NEXT:    mrs x8, FPCR
-; DAG-NEXT:    movk w9, #65039, lsl #16
+; DAG-NEXT:    movk x9, #63488, lsl #16
 ; DAG-NEXT:    and x8, x8, x9
 ; DAG-NEXT:    msr FPCR, x8
 ; DAG-NEXT:    ret
