@@ -618,8 +618,8 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output register
 // in the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0, unknown:$callee),
-  [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
+  (outs), (ins SSrc_b64:$src0, unknown:$callee, unknown:$token),
+  [(AMDGPUcall i64:$src0, tglobaladdr:$callee, untyped:$token)]> {
   let Size = 4;
   let isCall = 1;
   let SchedRW = [WriteBranch];
@@ -629,8 +629,8 @@ def SI_CALL_ISEL : SPseudoInstSI <
 }
 
 def : GCNPat<
-  (AMDGPUcall i64:$src0, (i64 0)),
-  (SI_CALL_ISEL $src0, (i64 0))
+  (AMDGPUcall i64:$src0, (i64 0), untyped:$token),
+  (SI_CALL_ISEL $src0, (i64 0), untyped:$token)
 >;
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
