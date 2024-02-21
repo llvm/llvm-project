@@ -1854,9 +1854,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
                                               FnArgs, Builder);
     Builder.CreateRetVoid();
     InlineFunctionInfo FnInfo;
-    auto InlineRes = InlineFunction(*TailCall, FnInfo);
-    assert(InlineRes.isSuccess() && "Expected inlining to succeed");
-    (void)InlineRes;
+    (void)InlineFunction(*TailCall, FnInfo);
 
     // Replace the lvm.coro.async.resume intrisic call.
     replaceAsyncResumeFunction(Suspend, Continuation);
