@@ -4000,7 +4000,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  1 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
-    { ISD::CTPOP,      MVT::i8,      {  7,  6, 13, 13 } },
+    { ISD::CTPOP,      MVT::i8,      {  7,  6,  6,  6 } },
     { ISD::ROTL,       MVT::i32,     {  2,  3,  1,  3 } },
     { ISD::ROTL,       MVT::i16,     {  2,  3,  1,  3 } },
     { ISD::ROTL,       MVT::i8,      {  2,  3,  1,  3 } },
