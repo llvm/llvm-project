@@ -868,20 +868,9 @@ def : DivFmasPat<f32, V_DIV_FMAS_F32_e64, VCC_LO>;
 def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 }
 
-class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile<P, Features> {
+class VOP3_DOT_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
   let HasClamp = 0;
   let HasOMod = 0;
-  // Override modifiers for bf16(i16) (same as float modifiers).
-  let HasSrc0Mods = 1;
-  let HasSrc1Mods = 1;
-  let HasSrc2Mods = 1;
-  let Src0ModVOP3DPP = FPVRegInputMods;
-  let Src1ModVOP3DPP = FPVRegInputMods;
-  let Src2ModVOP3DPP = FP16InputMods;
-  let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                                     HasClamp, HasOMod, FP16InputMods,
-                                     FP16InputMods, FP16InputMods>.ret;
-  let AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs, HasClamp, HasOMod, 1, 1, 1>.ret;
 }
 
 let SubtargetPredicate = isGFX11Plus in {
