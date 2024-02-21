@@ -26,9 +26,8 @@ using namespace sparse_tensor;
 static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
                       SmallVectorImpl<Type> *extraTypes = nullptr) {
   for (auto type : types) {
-    auto enc = getSparseTensorEncoding(type);
     // All "dense" data passes through unmodified.
-    if (!enc) {
+    if (!getSparseTensorEncoding(type)) {
       convTypes.push_back(type);
       continue;
     }
