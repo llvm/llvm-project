@@ -17,9 +17,6 @@ using LIBC_NAMESPACE::fixed_point::FXRep;
 
 using LIBC_NAMESPACE::operator""_u8;
 using LIBC_NAMESPACE::operator""_u16;
-using LIBC_NAMESPACE::operator""_u32;
-using LIBC_NAMESPACE::operator""_u64;
-using LIBC_NAMESPACE::operator""_u128;
 
 TEST(LlvmLibcFxBitsTest, FXBits_UnsignedShortFract) {
   auto bits_var = FXBits<unsigned short fract>(0x00_u8);
