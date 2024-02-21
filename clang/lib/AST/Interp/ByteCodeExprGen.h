@@ -236,29 +236,6 @@ private:
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
-  enum class DerefKind {
-    /// Value is read and pushed to stack.
-    Read,
-    /// Direct method generates a value which is written. Returns pointer.
-    Write,
-    /// Direct method receives the value, pushes mutated value. Returns pointer.
-    ReadWrite,
-  };
-
-  /// Method to directly load a value. If the value can be fetched directly,
-  /// the direct handler is called. Otherwise, a pointer is left on the stack
-  /// and the indirect handler is expected to operate on that.
-  bool dereference(const Expr *LV, DerefKind AK,
-                   llvm::function_ref<bool(PrimType)> Direct,
-                   llvm::function_ref<bool(PrimType)> Indirect);
-  bool dereferenceParam(const Expr *LV, PrimType T, const ParmVarDecl *PD,
-                        DerefKind AK,
-                        llvm::function_ref<bool(PrimType)> Direct,
-                        llvm::function_ref<bool(PrimType)> Indirect);
-  bool dereferenceVar(const Expr *LV, PrimType T, const VarDecl *PD,
-                      DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
-                      llvm::function_ref<bool(PrimType)> Indirect);
-
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);

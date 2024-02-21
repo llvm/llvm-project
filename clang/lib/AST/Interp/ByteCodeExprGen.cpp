@@ -81,16 +81,15 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (DiscardResult)
       return this->discard(SubExpr);
 
-    return dereference(
-        SubExpr, DerefKind::Read,
-        [](PrimType) {
-          // Value loaded - nothing to do here.
-          return true;
-        },
-        [this, CE](PrimType T) {
-          // Pointer on stack - dereference it.
-          return this->emitLoadPop(T, CE);
-        });
+    if (SubExpr->getType()->isAnyComplexType())
+      return this->delegate(SubExpr);
+
+    if (!this->visit(SubExpr))
+      return false;
+
+    if (std::optional<PrimType> SubExprT = classify(SubExpr->getType()))
+      return this->emitLoadPop(*SubExprT, CE);
+    return false;
   }
 
   case CK_UncheckedDerivedToBase:
@@ -2327,134 +2326,6 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::dereference(
-    const Expr *LV, DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
-    llvm::function_ref<bool(PrimType)> Indirect) {
-  if (std::optional<PrimType> T = classify(LV->getType())) {
-    if (!LV->refersToBitField()) {
-      // Only primitive, non bit-field types can be dereferenced directly.
-      if (const auto *DE = dyn_cast<DeclRefExpr>(LV)) {
-        if (!DE->getDecl()->getType()->isReferenceType()) {
-          if (const auto *PD = dyn_cast<ParmVarDecl>(DE->getDecl()))
-            return dereferenceParam(LV, *T, PD, AK, Direct, Indirect);
-          if (const auto *VD = dyn_cast<VarDecl>(DE->getDecl()))
-            return dereferenceVar(LV, *T, VD, AK, Direct, Indirect);
-        }
-      }
-    }
-
-    if (!visit(LV))
-      return false;
-    return Indirect(*T);
-  }
-
-  if (LV->getType()->isAnyComplexType())
-    return this->delegate(LV);
-
-  return false;
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::dereferenceParam(
-    const Expr *LV, PrimType T, const ParmVarDecl *PD, DerefKind AK,
-    llvm::function_ref<bool(PrimType)> Direct,
-    llvm::function_ref<bool(PrimType)> Indirect) {
-  if (auto It = this->Params.find(PD); It != this->Params.end()) {
-    unsigned Idx = It->second.Offset;
-    switch (AK) {
-    case DerefKind::Read:
-      return DiscardResult ? true : this->emitGetParam(T, Idx, LV);
-
-    case DerefKind::Write:
-      if (!Direct(T))
-        return false;
-      if (!this->emitSetParam(T, Idx, LV))
-        return false;
-      return DiscardResult ? true : this->emitGetPtrParam(Idx, LV);
-
-    case DerefKind::ReadWrite:
-      if (!this->emitGetParam(T, Idx, LV))
-        return false;
-      if (!Direct(T))
-        return false;
-      if (!this->emitSetParam(T, Idx, LV))
-        return false;
-      return DiscardResult ? true : this->emitGetPtrParam(Idx, LV);
-    }
-    return true;
-  }
-
-  // If the param is a pointer, we can dereference a dummy value.
-  if (!DiscardResult && T == PT_Ptr && AK == DerefKind::Read) {
-    if (auto Idx = P.getOrCreateDummy(PD))
-      return this->emitGetPtrGlobal(*Idx, PD);
-    return false;
-  }
-
-  // Value cannot be produced - try to emit pointer and do stuff with it.
-  return visit(LV) && Indirect(T);
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::dereferenceVar(
-    const Expr *LV, PrimType T, const VarDecl *VD, DerefKind AK,
-    llvm::function_ref<bool(PrimType)> Direct,
-    llvm::function_ref<bool(PrimType)> Indirect) {
-  auto It = Locals.find(VD);
-  if (It != Locals.end()) {
-    const auto &L = It->second;
-    switch (AK) {
-    case DerefKind::Read:
-      if (!this->emitGetLocal(T, L.Offset, LV))
-        return false;
-      return DiscardResult ? this->emitPop(T, LV) : true;
-
-    case DerefKind::Write:
-      if (!Direct(T))
-        return false;
-      if (!this->emitSetLocal(T, L.Offset, LV))
-        return false;
-      return DiscardResult ? true : this->emitGetPtrLocal(L.Offset, LV);
-
-    case DerefKind::ReadWrite:
-      if (!this->emitGetLocal(T, L.Offset, LV))
-        return false;
-      if (!Direct(T))
-        return false;
-      if (!this->emitSetLocal(T, L.Offset, LV))
-        return false;
-      return DiscardResult ? true : this->emitGetPtrLocal(L.Offset, LV);
-    }
-  } else if (auto Idx = P.getGlobal(VD)) {
-    switch (AK) {
-    case DerefKind::Read:
-      if (!this->emitGetGlobal(T, *Idx, LV))
-        return false;
-      return DiscardResult ? this->emitPop(T, LV) : true;
-
-    case DerefKind::Write:
-      if (!Direct(T))
-        return false;
-      if (!this->emitSetGlobal(T, *Idx, LV))
-        return false;
-      return DiscardResult ? true : this->emitGetPtrGlobal(*Idx, LV);
-
-    case DerefKind::ReadWrite:
-      if (!this->emitGetGlobal(T, *Idx, LV))
-        return false;
-      if (!Direct(T))
-        return false;
-      if (!this->emitSetGlobal(T, *Idx, LV))
-        return false;
-      return DiscardResult ? true : this->emitGetPtrGlobal(*Idx, LV);
-    }
-  }
-
-  // Value cannot be produced - try to emit pointer.
-  return visit(LV) && Indirect(T);
-}
-
-template <class Emitter>
 template <typename T>
 bool ByteCodeExprGen<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
   switch (Ty) {
@@ -3092,15 +2963,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref:  // *x
-    return dereference(
-        SubExpr, DerefKind::Read,
-        [](PrimType) {
-          llvm_unreachable("Dereferencing requires a pointer");
-          return false;
-        },
-        [this, E](PrimType T) {
-          return DiscardResult ? this->emitPop(T, E) : true;
-        });
+    if (DiscardResult)
+      return this->discard(SubExpr);
+    return this->visit(SubExpr);
   case UO_Not:    // ~x
     if (!this->visit(SubExpr))
       return false;
