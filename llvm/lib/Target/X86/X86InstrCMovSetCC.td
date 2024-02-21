@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 // CMOV instructions.
 multiclass Cmov<X86TypeInfo t, string args, bit ndd = 0, string suffix = ""> {
 let isCommutable = 1, SchedRW = [WriteCMOV] in
@@ -42,7 +43,7 @@ let Predicates = [HasCMOV, HasCF, In64BitMode] in {
 let Predicates = [HasCMOV, HasCF, HasNDD, In64BitMode] in
   def rr_ND : ITy<0x40, MRMSrcRegCC, t, (outs t.RegClass:$dst),
                   (ins t.RegClass:$src1, t.RegClass:$src2, ccode:$cond),
-                  "cfcmov${cond}", binop_ndd_args, []>, UseEFLAGS, NDD<1>, NF;  
+                  "cfcmov${cond}", binop_ndd_args, []>, UseEFLAGS, NDD<1>, NF;
 }
 let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in {
 let Predicates = [HasCMOV, HasCF, In64BitMode] in {
