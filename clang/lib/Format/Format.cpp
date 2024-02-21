@@ -2261,27 +2261,36 @@ public:
           FormatTokenLexer &Tokens) override {
     AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
     tooling::Replacements Result;
-    removeSemi(AnnotatedLines, Result);
+    removeSemi(Annotator, AnnotatedLines, Result);
     return {Result, 0};
   }
 
 private:
-  void removeSemi(SmallVectorImpl<AnnotatedLine *> &Lines,
+  void removeSemi(TokenAnnotator &Annotator,
+                  SmallVectorImpl<AnnotatedLine *> &Lines,
                   tooling::Replacements &Result) {
+    auto PrecededByFunctionRBrace = [](const FormatToken &Tok) {
+      const auto *Prev = Tok.Previous;
+      if (!Prev || Prev->isNot(tok::r_brace))
+        return false;
+      const auto *LBrace = Prev->MatchingParen;
+      return LBrace && LBrace->is(TT_FunctionLBrace);
+    };
     const auto &SourceMgr = Env.getSourceManager();
     const auto End = Lines.end();
     for (auto I = Lines.begin(); I != End; ++I) {
       const auto Line = *I;
-      removeSemi(Line->Children, Result);
+      removeSemi(Annotator, Line->Children, Result);
       if (!Line->Affected)
         continue;
+      Annotator.calculateFormattingInformation(*Line);
       const auto NextLine = I + 1 == End ? nullptr : I[1];
       for (auto Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional)
+        if (Token->isNot(tok::semi) ||
+            (!Token->Optional && !PrecededByFunctionRBrace(*Token))) {
           continue;
-        if (Token->isNot(tok::semi))
-          continue;
+        }
         auto Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
@@ -3677,7 +3686,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       FormatStyle S = Expanded;
       S.RemoveSemicolon = true;
       Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
-        return SemiRemover(Env, S).process(/*SkipAnnotation=*/true);
+        return SemiRemover(Env, S).process();
       });
     }
 

@@ -26720,13 +26720,20 @@ TEST_F(FormatTest, RemoveSemicolon) {
 
   verifyIncompleteFormat("class C final [[deprecated(l]] {});", Style);
 
-  // These tests are here to show a problem that may not be easily
-  // solved, our implementation to remove semicolons is only as good
-  // as our FunctionLBrace detection and this fails for empty braces
-  // because we can't distringuish this from a bracelist.
-  // We will enable when that is resolved.
-#if 0
   verifyFormat("void main() {}", "void main() {};", Style);
+
+  verifyFormat("struct Foo {\n"
+               "  Foo() {}\n"
+               "  ~Foo() {}\n"
+               "};",
+               "struct Foo {\n"
+               "  Foo() {};\n"
+               "  ~Foo() {};\n"
+               "};",
+               Style);
+
+// We can't (and probably shouldn't) support the following.
+#if 0
   verifyFormat("void foo() {} //\n"
                "int bar;",
                "void foo() {}; //\n"
