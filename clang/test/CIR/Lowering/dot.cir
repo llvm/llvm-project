@@ -3,17 +3,17 @@
 
 !s32i = !cir.int<s, 32>
 module {
-  cir.func @dot(%arg0: !cir.ptr<f64>, %arg1: !cir.ptr<f64>, %arg2: !s32i) -> f64 {
-    %0 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["a", init] {alignment = 8 : i64}
-    %1 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["b", init] {alignment = 8 : i64}
+  cir.func @dot(%arg0: !cir.ptr<!cir.double>, %arg1: !cir.ptr<!cir.double>, %arg2: !s32i) -> !cir.double {
+    %0 = cir.alloca !cir.ptr<!cir.double>, cir.ptr <!cir.ptr<!cir.double>>, ["a", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!cir.double>, cir.ptr <!cir.ptr<!cir.double>>, ["b", init] {alignment = 8 : i64}
     %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["size", init] {alignment = 4 : i64}
-    %3 = cir.alloca f64, cir.ptr <f64>, ["__retval"] {alignment = 8 : i64}
-    %4 = cir.alloca f64, cir.ptr <f64>, ["q", init] {alignment = 8 : i64}
-    cir.store %arg0, %0 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
-    cir.store %arg1, %1 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
+    %3 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["__retval"] {alignment = 8 : i64}
+    %4 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["q", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<!cir.double>, cir.ptr <!cir.ptr<!cir.double>>
+    cir.store %arg1, %1 : !cir.ptr<!cir.double>, cir.ptr <!cir.ptr<!cir.double>>
     cir.store %arg2, %2 : !s32i, cir.ptr <!s32i>
-    %5 = cir.const(0.000000e+00 : f64) : f64
-    cir.store %5, %4 : f64, cir.ptr <f64>
+    %5 = cir.const(#cir.fp<0.000000e+00> : !cir.double) : !cir.double
+    cir.store %5, %4 : !cir.double, cir.ptr <!cir.double>
     cir.scope {
       %8 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
       %9 = cir.const(#cir.int<0> : !s32i) : !s32i
@@ -25,18 +25,18 @@ module {
         %13 = cir.cast(int_to_bool, %12 : !s32i), !cir.bool
         cir.condition(%13)
       } body {
-        %10 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
+        %10 = cir.load %0 : cir.ptr <!cir.ptr<!cir.double>>, !cir.ptr<!cir.double>
         %11 = cir.load %8 : cir.ptr <!s32i>, !s32i
-        %12 = cir.ptr_stride(%10 : !cir.ptr<f64>, %11 : !s32i), !cir.ptr<f64>
-        %13 = cir.load %12 : cir.ptr <f64>, f64
-        %14 = cir.load %1 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
+        %12 = cir.ptr_stride(%10 : !cir.ptr<!cir.double>, %11 : !s32i), !cir.ptr<!cir.double>
+        %13 = cir.load %12 : cir.ptr <!cir.double>, !cir.double
+        %14 = cir.load %1 : cir.ptr <!cir.ptr<!cir.double>>, !cir.ptr<!cir.double>
         %15 = cir.load %8 : cir.ptr <!s32i>, !s32i
-        %16 = cir.ptr_stride(%14 : !cir.ptr<f64>, %15 : !s32i), !cir.ptr<f64>
-        %17 = cir.load %16 : cir.ptr <f64>, f64
-        %18 = cir.binop(mul, %13, %17) : f64
-        %19 = cir.load %4 : cir.ptr <f64>, f64
-        %20 = cir.binop(add, %19, %18) : f64
-        cir.store %20, %4 : f64, cir.ptr <f64>
+        %16 = cir.ptr_stride(%14 : !cir.ptr<!cir.double>, %15 : !s32i), !cir.ptr<!cir.double>
+        %17 = cir.load %16 : cir.ptr <!cir.double>, !cir.double
+        %18 = cir.binop(mul, %13, %17) : !cir.double
+        %19 = cir.load %4 : cir.ptr <!cir.double>, !cir.double
+        %20 = cir.binop(add, %19, %18) : !cir.double
+        cir.store %20, %4 : !cir.double, cir.ptr <!cir.double>
         cir.yield
       } step {
         %10 = cir.load %8 : cir.ptr <!s32i>, !s32i
@@ -45,10 +45,10 @@ module {
         cir.yield
       }
     }
-    %6 = cir.load %4 : cir.ptr <f64>, f64
-    cir.store %6, %3 : f64, cir.ptr <f64>
-    %7 = cir.load %3 : cir.ptr <f64>, f64
-    cir.return %7 : f64
+    %6 = cir.load %4 : cir.ptr <!cir.double>, !cir.double
+    cir.store %6, %3 : !cir.double, cir.ptr <!cir.double>
+    %7 = cir.load %3 : cir.ptr <!cir.double>, !cir.double
+    cir.return %7 : !cir.double
   }
 }
 

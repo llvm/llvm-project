@@ -11,7 +11,7 @@ module {
     // CHECK: llvm.mlir.constant(dense<[115, 116, 114, 105, 110, 103, 0]> : tensor<7xi8>) : !llvm.array<7 x i8>
     %1 = cir.const(#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>) : !cir.array<!s32i x 2>
     // CHECK: llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i32>
-    %3 = cir.const(#cir.const_array<[1.000000e+00 : f32, 2.000000e+00 : f32]> : !cir.array<f32 x 2>) : !cir.array<f32 x 2>
+    %3 = cir.const(#cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>) : !cir.array<!cir.float x 2>
     // CHECK: llvm.mlir.constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
     %4 = cir.const(#cir.zero : !cir.array<!s32i x 3>) : !cir.array<!s32i x 3>
     // CHECK: cir.llvmir.zeroinit : !llvm.array<3 x i32>
@@ -21,8 +21,8 @@ module {
   cir.func @testConvertConstArrayToDenseConst() {
     %0 = cir.const(#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1>, #cir.zero : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>) : !cir.array<!cir.array<!s32i x 1> x 2>
     %1 = cir.const(#cir.const_array<[#cir.const_array<[#cir.int<1> : !s64i]> : !cir.array<!s64i x 1>, #cir.zero : !cir.array<!s64i x 1>]> : !cir.array<!cir.array<!s64i x 1> x 2>) : !cir.array<!cir.array<!s64i x 1> x 2>
-    %2 = cir.const(#cir.const_array<[#cir.const_array<[1.000000e+00 : f32]> : !cir.array<f32 x 1>, #cir.zero : !cir.array<f32 x 1>]> : !cir.array<!cir.array<f32 x 1> x 2>) : !cir.array<!cir.array<f32 x 1> x 2>
-    %3 = cir.const(#cir.const_array<[#cir.const_array<[1.000000e+00]> : !cir.array<f64 x 1>, #cir.zero : !cir.array<f64 x 1>]> : !cir.array<!cir.array<f64 x 1> x 2>) : !cir.array<!cir.array<f64 x 1> x 2>
+    %2 = cir.const(#cir.const_array<[#cir.const_array<[#cir.fp<1.000000e+00> : !cir.float]> : !cir.array<!cir.float x 1>, #cir.zero : !cir.array<!cir.float x 1>]> : !cir.array<!cir.array<!cir.float x 1> x 2>) : !cir.array<!cir.array<!cir.float x 1> x 2>
+    %3 = cir.const(#cir.const_array<[#cir.const_array<[#cir.fp<1.000000e+00> : !cir.double]> : !cir.array<!cir.double x 1>, #cir.zero : !cir.array<!cir.double x 1>]> : !cir.array<!cir.array<!cir.double x 1> x 2>) : !cir.array<!cir.array<!cir.double x 1> x 2>
     %4 = cir.const(#cir.const_array<[#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.array<!s32i x 3>]> : !cir.array<!cir.array<!s32i x 3> x 1>, #cir.zero : !cir.array<!cir.array<!s32i x 3> x 1>]> : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>) : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>
 
     cir.return

@@ -20,8 +20,8 @@
 module {
   cir.global external @a = #cir.int<3> : !s32i
   cir.global external @c = #cir.int<2> : !u64i
-  cir.global external @y = 3.400000e+00 : f32
-  cir.global external @w = 4.300000e+00 : f64
+  cir.global external @y = #cir.fp<3.400000e+00> : !cir.float
+  cir.global external @w = #cir.fp<4.300000e+00> : !cir.double
   cir.global external @x = #cir.int<51> : !s8i
   cir.global external @rgb = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<233> : !u8i, #cir.int<33> : !u8i]> : !cir.array<!u8i x 3>
   cir.global external @alpha = #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 4>
@@ -130,8 +130,8 @@ module {
     cir.store %14, %4 : !cir.ptr<!s64i>, cir.ptr <!cir.ptr<!s64i>>
     cir.return
   }
-  cir.global external @flt = #cir.const_array<[1.000000e+00 : f32, 2.000000e+00 : f32]> : !cir.array<f32 x 2>
-  cir.global external @zeroInitFlt = #cir.const_array<[0.000000e+00 : f32, 0.000000e+00 : f32]> : !cir.array<f32 x 2>
+  cir.global external @flt = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>
+  cir.global external @zeroInitFlt = #cir.const_array<[#cir.fp<0.000000e+00> : !cir.float, #cir.fp<0.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>
   // MLIR: llvm.mlir.global external @flt(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
   // MLIR: llvm.mlir.global external @zeroInitFlt(dense<0.000000e+00> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
   cir.global "private" internal @staticVar = #cir.int<0> : !s32i

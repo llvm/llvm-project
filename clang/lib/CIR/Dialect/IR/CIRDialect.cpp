@@ -305,7 +305,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (attrType.isa<mlir::cir::IntAttr, FloatAttr>()) {
+  if (attrType.isa<mlir::cir::IntAttr, mlir::cir::FPAttr>()) {
     auto at = attrType.cast<TypedAttr>();
     if (at.getType() != opType) {
       return op->emitOpError("result type (")
@@ -428,13 +428,13 @@ LogicalResult CastOp::verify() {
     return success();
   }
   case cir::CastKind::floating: {
-    if (!srcType.dyn_cast<mlir::FloatType>() ||
-        !resType.dyn_cast<mlir::FloatType>())
+    if (!srcType.isa<mlir::cir::CIRFPTypeInterface>() ||
+        !resType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requries floating for source and result";
     return success();
   }
   case cir::CastKind::float_to_int: {
-    if (!srcType.dyn_cast<mlir::FloatType>())
+    if (!srcType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requires floating for source";
     if (!resType.dyn_cast<mlir::cir::IntType>())
       return emitOpError() << "requires !IntegerType for result";
@@ -455,7 +455,7 @@ LogicalResult CastOp::verify() {
     return success();
   }
   case cir::CastKind::float_to_bool: {
-    if (!srcType.isa<mlir::FloatType>())
+    if (!srcType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requires float for source";
     if (!resType.isa<mlir::cir::BoolType>())
       return emitOpError() << "requires !cir.bool for result";
@@ -471,14 +471,14 @@ LogicalResult CastOp::verify() {
   case cir::CastKind::int_to_float: {
     if (!srcType.isa<mlir::cir::IntType>())
       return emitOpError() << "requires !cir.int for source";
-    if (!resType.isa<mlir::FloatType>())
+    if (!resType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requires !cir.float for result";
     return success();
   }
   case cir::CastKind::bool_to_float: {
     if (!srcType.isa<mlir::cir::BoolType>())
       return emitOpError() << "requires !cir.bool for source";
-    if (!resType.isa<mlir::FloatType>())
+    if (!resType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requires !cir.float for result";
     return success();
   }

@@ -6,8 +6,8 @@ module {
   cir.func @foo() {
     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a"] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b"] {alignment = 4 : i64}
-    %2 = cir.alloca f32, cir.ptr <f32>, ["c"] {alignment = 4 : i64}
-    %3 = cir.alloca f32, cir.ptr <f32>, ["d"] {alignment = 4 : i64}
+    %2 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["c"] {alignment = 4 : i64}
+    %3 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["d"] {alignment = 4 : i64}
     %4 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["e"] {alignment = 1 : i64}
     %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
     %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
@@ -27,24 +27,24 @@ module {
     %20 = cir.load %0 : cir.ptr <!s32i>, !s32i
     %21 = cir.load %1 : cir.ptr <!s32i>, !s32i
     %22 = cir.cmp(le, %20, %21) : !s32i, !cir.bool
-    %23 = cir.load %2 : cir.ptr <f32>, f32
-    %24 = cir.load %3 : cir.ptr <f32>, f32
-    %25 = cir.cmp(gt, %23, %24) : f32, !cir.bool
-    %26 = cir.load %2 : cir.ptr <f32>, f32
-    %27 = cir.load %3 : cir.ptr <f32>, f32
-    %28 = cir.cmp(eq, %26, %27) : f32, !cir.bool
-    %29 = cir.load %2 : cir.ptr <f32>, f32
-    %30 = cir.load %3 : cir.ptr <f32>, f32
-    %31 = cir.cmp(lt, %29, %30) : f32, !cir.bool
-    %32 = cir.load %2 : cir.ptr <f32>, f32
-    %33 = cir.load %3 : cir.ptr <f32>, f32
-    %34 = cir.cmp(ge, %32, %33) : f32, !cir.bool
-    %35 = cir.load %2 : cir.ptr <f32>, f32
-    %36 = cir.load %3 : cir.ptr <f32>, f32
-    %37 = cir.cmp(ne, %35, %36) : f32, !cir.bool
-    %38 = cir.load %2 : cir.ptr <f32>, f32
-    %39 = cir.load %3 : cir.ptr <f32>, f32
-    %40 = cir.cmp(le, %38, %39) : f32, !cir.bool
+    %23 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %24 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %25 = cir.cmp(gt, %23, %24) : !cir.float, !cir.bool
+    %26 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %27 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %28 = cir.cmp(eq, %26, %27) : !cir.float, !cir.bool
+    %29 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %30 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %31 = cir.cmp(lt, %29, %30) : !cir.float, !cir.bool
+    %32 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %33 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %34 = cir.cmp(ge, %32, %33) : !cir.float, !cir.bool
+    %35 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %36 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %37 = cir.cmp(ne, %35, %36) : !cir.float, !cir.bool
+    %38 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
+    %39 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %40 = cir.cmp(le, %38, %39) : !cir.float, !cir.bool
     cir.return
   }
 }

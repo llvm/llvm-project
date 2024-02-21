@@ -37,7 +37,8 @@ struct CIRGenTypeCache {
   // mlir::Type HalfTy, BFloatTy;
   // TODO(cir): perhaps we should abstract long double variations into a custom
   // cir.long_double type. Said type would also hold the semantics for lowering.
-  mlir::FloatType FloatTy, DoubleTy, LongDouble80BitsTy;
+  mlir::cir::SingleType FloatTy;
+  mlir::cir::DoubleType DoubleTy;
 
   /// int
   mlir::Type UIntTy;

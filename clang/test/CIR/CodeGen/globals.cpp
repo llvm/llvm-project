@@ -43,8 +43,8 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT:   cir.store [[TMP2]], [[TMP0]] : !s32i, cir.ptr <!s32i>
 
 // CHECK: cir.global external @e = #false
-// CHECK-NEXT: cir.global external @y = 3.400000e+00 : f32
-// CHECK-NEXT: cir.global external @w = 4.300000e+00 : f64
+// CHECK-NEXT: cir.global external @y = #cir.fp<3.400000e+00> : !cir.float
+// CHECK-NEXT: cir.global external @w = #cir.fp<4.300000e+00> : !cir.double
 // CHECK-NEXT: cir.global external @x = #cir.int<51> : !s8i
 // CHECK-NEXT: cir.global external @rgb = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<233> : !u8i, #cir.int<33> : !u8i]> : !cir.array<!u8i x 3>
 // CHECK-NEXT: cir.global external @alpha = #cir.const_array<"abc\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>

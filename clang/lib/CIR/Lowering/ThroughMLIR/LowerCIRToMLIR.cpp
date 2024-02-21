@@ -639,6 +639,12 @@ static mlir::TypeConverter prepareTypeConverter() {
   converter.addConversion([&](mlir::cir::BoolType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 8);
   });
+  converter.addConversion([&](mlir::cir::SingleType type) -> mlir::Type {
+    return mlir::FloatType::getF32(type.getContext());
+  });
+  converter.addConversion([&](mlir::cir::DoubleType type) -> mlir::Type {
+    return mlir::FloatType::getF64(type.getContext());
+  });
   converter.addConversion([&](mlir::cir::ArrayType type) -> mlir::Type {
     auto elementType = converter.convertType(type.getEltType());
     return mlir::MemRefType::get(type.getSize(), elementType);

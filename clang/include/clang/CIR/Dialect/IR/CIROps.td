@@ -2615,8 +2615,8 @@ def IterEndOp : CIR_Op<"iterator_end"> {
 
 class UnaryFPToFPBuiltinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins AnyFloat:$src);
-  let results = (outs AnyFloat:$result);
+  let arguments = (ins CIR_AnyFloat:$src);
+  let results = (outs CIR_AnyFloat:$result);
   let summary = "libc builtin equivalent ignoring "
                 "floating point exceptions and errno";
   let assemblyFormat = "$src `:` type($src) attr-dict";

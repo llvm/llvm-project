@@ -21,22 +21,22 @@ module {
 // LLVM: = xor i32 -1, %[[#]]
 
 
-    cir.func @floatingPoint(%arg0: f32, %arg1: f64) {
+    cir.func @floatingPoint(%arg0: !cir.float, %arg1: !cir.double) {
     // MLIR: llvm.func @floatingPoint
-        %0 = cir.alloca f32, cir.ptr <f32>, ["f", init] {alignment = 4 : i64}
-        %1 = cir.alloca f64, cir.ptr <f64>, ["d", init] {alignment = 8 : i64}
-        cir.store %arg0, %0 : f32, cir.ptr <f32>
-        cir.store %arg1, %1 : f64, cir.ptr <f64>
-        %2 = cir.load %0 : cir.ptr <f32>, f32
-        %3 = cir.cast(float_to_bool, %2 : f32), !cir.bool
+        %0 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["f", init] {alignment = 4 : i64}
+        %1 = cir.alloca !cir.double, cir.ptr <!cir.double>, ["d", init] {alignment = 8 : i64}
+        cir.store %arg0, %0 : !cir.float, cir.ptr <!cir.float>
+        cir.store %arg1, %1 : !cir.double, cir.ptr <!cir.double>
+        %2 = cir.load %0 : cir.ptr <!cir.float>, !cir.float
+        %3 = cir.cast(float_to_bool, %2 : !cir.float), !cir.bool
         // MLIR: %[[#F_ZERO:]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
         // MLIR: %[[#F_BOOL:]] = llvm.fcmp "une" %{{.+}}, %[[#F_ZERO]] : f32
         // MLIR: %[[#F_ZEXT:]] = llvm.zext %[[#F_BOOL]] : i1 to i8
         %4 = cir.unary(not, %3) : !cir.bool, !cir.bool
         // MLIR: %[[#F_ONE:]] = llvm.mlir.constant(1 : i8) : i8
         // MLIR: = llvm.xor %[[#F_ZEXT]], %[[#F_ONE]]  : i8
-        %5 = cir.load %1 : cir.ptr <f64>, f64
-        %6 = cir.cast(float_to_bool, %5 : f64), !cir.bool
+        %5 = cir.load %1 : cir.ptr <!cir.double>, !cir.double
+        %6 = cir.cast(float_to_bool, %5 : !cir.double), !cir.bool
         // MLIR: %[[#D_ZERO:]] = llvm.mlir.constant(0.000000e+00 : f64) : f64
         // MLIR: %[[#D_BOOL:]] = llvm.fcmp "une" %{{.+}}, %[[#D_ZERO]] : f64
         // MLIR: %[[#D_ZEXT:]] = llvm.zext %[[#D_BOOL]] : i1 to i8
@@ -46,12 +46,12 @@ module {
         cir.return
     }
 
-    cir.func @CStyleValueNegation(%arg0: !s32i, %arg1: f32) {
+    cir.func @CStyleValueNegation(%arg0: !s32i, %arg1: !cir.float) {
     // MLIR: llvm.func @CStyleValueNegation
         %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
-        %3 = cir.alloca f32, cir.ptr <f32>, ["f", init] {alignment = 4 : i64}
+        %3 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["f", init] {alignment = 4 : i64}
         cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
-        cir.store %arg1, %3 : f32, cir.ptr <f32>
+        cir.store %arg1, %3 : !cir.float, cir.ptr <!cir.float>
 
         %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
         %6 = cir.cast(int_to_bool, %5 : !s32i), !cir.bool
@@ -65,8 +65,8 @@ module {
         // MLIR: %[[#IXOR:]] = llvm.xor %[[#IEXT]], %[[#IONE]]  : i8
         // MLIR: = llvm.zext %[[#IXOR]] : i8 to i32
 
-        %17 = cir.load %3 : cir.ptr <f32>, f32
-        %18 = cir.cast(float_to_bool, %17 : f32), !cir.bool
+        %17 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+        %18 = cir.cast(float_to_bool, %17 : !cir.float), !cir.bool
         %19 = cir.unary(not, %18) : !cir.bool, !cir.bool
         %20 = cir.cast(bool_to_int, %19 : !cir.bool), !s32i
         // MLIR: %[[#FLOAT:]] = llvm.load %{{.+}} : !llvm.ptr

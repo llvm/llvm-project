@@ -9,5 +9,5 @@ void conditionalResultIimplicitCast(int a, int b, float f) {
   float y = f && f;
   // CHECK: %[[#BOOL:]] = cir.ternary
   // CHECK: %[[#INT:]] = cir.cast(bool_to_int, %[[#BOOL]] : !cir.bool), !s32i
-  // CHECK: %{{.+}} = cir.cast(int_to_float, %[[#INT]] : !s32i), f32
+  // CHECK: %{{.+}} = cir.cast(int_to_float, %[[#INT]] : !s32i), !cir.float
 }

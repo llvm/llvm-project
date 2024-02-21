@@ -1,0 +1,20 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck %s --input-file=%t.mlir
+
+module {
+  cir.func @test() {
+    // %0 = cir.const(1.0 : f16) : f16
+    // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f16) : f16
+    %1 = cir.const(#cir.fp<1.0> : !cir.float) : !cir.float
+    // CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %2 = cir.const(#cir.fp<1.0> : !cir.double) : !cir.double
+    // CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f64) : f64
+    // %3 = cir.const(1.0 : f128) : f128
+    // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f128) : f128
+    // %4 = cir.const(1.0 : f80) : f80
+    // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f80) : f80
+    // %5 = cir.const(1.0 : bf16) : bf16
+    // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : bf16) : bf16
+    cir.return
+  }
+}
