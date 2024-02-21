@@ -1,0 +1,129 @@
+//===-- Options.cpp -------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "Options.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
+#include "llvm/Support/Program.h"
+#include "llvm/TargetParser/Host.h"
+
+using namespace clang::driver;
+using namespace clang::driver::options;
+using namespace llvm::opt;
+using namespace llvm::MachO;
+
+namespace clang {
+namespace installapi {
+
+bool Options::processDriverOptions(InputArgList &Args) {
+  // Handle inputs.
+  llvm::vfs::Status Stat;
+  for (const auto &Path : Args.getAllArgValues(OPT_INPUT)) {
+    if (FM->getNoncachedStatValue(Path, Stat) || !Stat.exists()) {
+      Diags->Report(clang::diag::err_drv_no_such_file) << Path;
+      return false;
+    }
+    DriverOpts.FileLists.push_back(std::move(Path));
+  }
+
+  // Handle output.
+  SmallString<PATH_MAX> OutputPath;
+  if (auto *Arg = Args.getLastArg(OPT_o)) {
+    OutputPath = Arg->getValue();
+    if (OutputPath != "-")
+      FM->makeAbsolutePath(OutputPath);
+    DriverOpts.OutputPath = std::string(OutputPath);
+  }
+
+  // Do basic error checking first for mixing -target and -arch options.
+  auto *ArgArch = Args.getLastArgNoClaim(OPT_arch);
+  auto *ArgTarget = Args.getLastArgNoClaim(OPT_target);
+  auto *ArgTargetVariant =
+      Args.getLastArgNoClaim(OPT_darwin_target_variant_triple);
+  if (ArgArch && (ArgTarget || ArgTargetVariant)) {
+    Diags->Report(clang::diag::err_drv_argument_not_allowed_with)
+        << ArgArch->getAsString(Args)
+        << (ArgTarget ? ArgTarget : ArgTargetVariant)->getAsString(Args);
+    return false;
+  }
+
+  auto *ArgMinTargetOS = Args.getLastArgNoClaim(OPT_mtargetos_EQ);
+  if ((ArgTarget || ArgTargetVariant) && ArgMinTargetOS) {
+    Diags->Report(clang::diag::err_drv_cannot_mix_options)
+        << ArgTarget->getAsString(Args) << ArgMinTargetOS->getAsString(Args);
+    return false;
+  }
+
+  // Capture target triples first.
+  if (ArgTarget) {
+    for (auto *Arg : Args.filtered(OPT_target)) {
+      llvm::Triple TargetTriple(Arg->getValue());
+      Target TAPITarget = Target(TargetTriple);
+      if ((TAPITarget.Arch == AK_unknown) ||
+          (TAPITarget.Platform == PLATFORM_UNKNOWN)) {
+        Diags->Report(clang::diag::err_drv_unsupported_opt_for_target)
+            << "installapi" << TargetTriple.str();
+        return false;
+      }
+      DriverOpts.Targets[TAPITarget] = TargetTriple;
+    }
+  }
+
+  return true;
+}
+
+bool Options::processLinkerOptions(InputArgList &Args) {
+  // TODO: add error handling.
+
+  // Required arguments.
+  if (const Arg *A = Args.getLastArg(options::OPT_install__name))
+    LinkerOpts.InstallName = A->getValue();
+
+  // Defaulted or optional arguments.
+  if (auto *Arg = Args.getLastArg(OPT_current__version))
+    LinkerOpts.CurrentVersion.parse64(Arg->getValue());
+
+  LinkerOpts.IsDylib = Args.hasArg(OPT_dynamiclib);
+
+  LinkerOpts.AppExtensionSafe =
+      Args.hasFlag(OPT_fapplication_extension, OPT_fno_application_extension,
+                   /*Default=*/LinkerOpts.AppExtensionSafe);
+
+  if (::getenv("LD_NO_ENCRYPT") != nullptr)
+    LinkerOpts.AppExtensionSafe = true;
+
+  if (::getenv("LD_APPLICATION_EXTENSION_SAFE") != nullptr)
+    LinkerOpts.AppExtensionSafe = true;
+  return true;
+}
+
+Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
+                 InputArgList &ArgList)
+    : Diags(&Diag), FM(FM) {
+  if (!processDriverOptions(ArgList))
+    return;
+
+  if (!processLinkerOptions(ArgList))
+    return;
+}
+
+InstallAPIContext Options::createContext() {
+  InstallAPIContext Ctx;
+  // InstallAPI requires two level namespacing.
+  Ctx.BA.TwoLevelNamespace = true;
+
+  Ctx.BA.InstallName = LinkerOpts.InstallName;
+  Ctx.BA.CurrentVersion = LinkerOpts.CurrentVersion;
+  Ctx.BA.AppExtensionSafe = LinkerOpts.AppExtensionSafe;
+  Ctx.FT = DriverOpts.OutFT;
+  Ctx.OutputLoc = DriverOpts.OutputPath;
+  return Ctx;
+}
+
+} // namespace installapi
+} // namespace clang
