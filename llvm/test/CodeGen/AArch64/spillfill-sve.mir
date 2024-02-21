@@ -213,10 +213,9 @@ body:             |
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
-    ; EXPAND: STR_PXI killed renamable $p8, $sp, 7
+    ; EXPAND: STR_PXI killed renamable $pn8, $sp, 7
     ;
-    ; EXPAND: renamable $p0 = LDR_PXI $sp, 7
-    ; EXPAND: $p8 = ORR_PPzPP $p0, $p0, killed $p0, implicit-def $pn8
+    ; EXPAND: renamable $pn8 = LDR_PXI $sp, 7
     ; EXPAND: $p0 = PEXT_PCI_B killed renamable $pn8, 0
 
 
