@@ -1099,6 +1099,11 @@ Bug Fixes to C++ Support
 - Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
   Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
 
+- Fix crash when using an immediate-escalated function at global scope.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+- Correctly immediate-escalate lambda conversion functions.
+  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
