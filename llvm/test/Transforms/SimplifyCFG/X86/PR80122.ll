@@ -5,49 +5,45 @@
 ; RUN: opt < %s -S -passes=simplifycfg -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX,AVX512
 
 define zeroext i1 @cmp128(<2 x i64> %x, <2 x i64> %y) {
-; SSE-LABEL: define zeroext i1 @cmp128(
-; SSE-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; SSE-NEXT:  entry:
-; SSE-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[X]], zeroinitializer
-; SSE-NEXT:    [[TMP0:%.*]] = bitcast <2 x i1> [[CMP]] to i2
-; SSE-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP0]], 0
-; SSE-NEXT:    br i1 [[DOTNOT]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
-; SSE:       land.rhs:
-; SSE-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i64> [[Y]], zeroinitializer
-; SSE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[CMP2]] to i2
-; SSE-NEXT:    [[DOTNOT9:%.*]] = icmp eq i2 [[TMP1]], 0
-; SSE-NEXT:    br label [[LAND_END]]
-; SSE:       land.end:
-; SSE-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[DOTNOT9]], [[LAND_RHS]] ]
-; SSE-NEXT:    ret i1 [[TMP2]]
+; SSE2-LABEL: define zeroext i1 @cmp128(
+; SSE2-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
+; SSE2-NEXT:  entry:
+; SSE2-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[X]], zeroinitializer
+; SSE2-NEXT:    [[TMP0:%.*]] = bitcast <2 x i1> [[CMP]] to i2
+; SSE2-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP0]], 0
+; SSE2-NEXT:    br i1 [[DOTNOT]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+; SSE2:       land.rhs:
+; SSE2-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i64> [[Y]], zeroinitializer
+; SSE2-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[CMP2]] to i2
+; SSE2-NEXT:    [[DOTNOT9:%.*]] = icmp eq i2 [[TMP1]], 0
+; SSE2-NEXT:    br label [[LAND_END]]
+; SSE2:       land.end:
+; SSE2-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[DOTNOT9]], [[LAND_RHS]] ]
+; SSE2-NEXT:    ret i1 [[TMP2]]
 ;
-; AVX2-LABEL: define zeroext i1 @cmp128(
-; AVX2-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; AVX2-NEXT:  entry:
-; AVX2-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[X]], zeroinitializer
-; AVX2-NEXT:    [[TMP0:%.*]] = bitcast <2 x i1> [[CMP]] to i2
-; AVX2-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP0]], 0
-; AVX2-NEXT:    br i1 [[DOTNOT]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
-; AVX2:       land.rhs:
-; AVX2-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i64> [[Y]], zeroinitializer
-; AVX2-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[CMP2]] to i2
-; AVX2-NEXT:    [[DOTNOT9:%.*]] = icmp eq i2 [[TMP1]], 0
-; AVX2-NEXT:    br label [[LAND_END]]
-; AVX2:       land.end:
-; AVX2-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[DOTNOT9]], [[LAND_RHS]] ]
-; AVX2-NEXT:    ret i1 [[TMP2]]
+; SSE4-LABEL: define zeroext i1 @cmp128(
+; SSE4-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
+; SSE4-NEXT:  entry:
+; SSE4-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[X]], zeroinitializer
+; SSE4-NEXT:    [[TMP0:%.*]] = bitcast <2 x i1> [[CMP]] to i2
+; SSE4-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP0]], 0
+; SSE4-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i64> [[Y]], zeroinitializer
+; SSE4-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[CMP2]] to i2
+; SSE4-NEXT:    [[DOTNOT9:%.*]] = icmp eq i2 [[TMP1]], 0
+; SSE4-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i1 [[DOTNOT9]], i1 false
+; SSE4-NEXT:    ret i1 [[TMP2]]
 ;
-; AVX512-LABEL: define zeroext i1 @cmp128(
-; AVX512-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[X]], zeroinitializer
-; AVX512-NEXT:    [[TMP0:%.*]] = bitcast <2 x i1> [[CMP]] to i2
-; AVX512-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP0]], 0
-; AVX512-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i64> [[Y]], zeroinitializer
-; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[CMP2]] to i2
-; AVX512-NEXT:    [[DOTNOT9:%.*]] = icmp eq i2 [[TMP1]], 0
-; AVX512-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i1 [[DOTNOT9]], i1 false
-; AVX512-NEXT:    ret i1 [[TMP2]]
+; AVX-LABEL: define zeroext i1 @cmp128(
+; AVX-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
+; AVX-NEXT:  entry:
+; AVX-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[X]], zeroinitializer
+; AVX-NEXT:    [[TMP0:%.*]] = bitcast <2 x i1> [[CMP]] to i2
+; AVX-NEXT:    [[DOTNOT:%.*]] = icmp eq i2 [[TMP0]], 0
+; AVX-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i64> [[Y]], zeroinitializer
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[CMP2]] to i2
+; AVX-NEXT:    [[DOTNOT9:%.*]] = icmp eq i2 [[TMP1]], 0
+; AVX-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i1 [[DOTNOT9]], i1 false
+; AVX-NEXT:    ret i1 [[TMP2]]
 ;
 entry:
   %cmp = icmp ne <2 x i64> %x, zeroinitializer
@@ -68,7 +64,7 @@ land.end:
 
 define zeroext i1 @cmp256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE-LABEL: define zeroext i1 @cmp256(
-; SSE-SAME: <4 x i64> [[X:%.*]], <4 x i64> [[Y:%.*]]) #[[ATTR0]] {
+; SSE-SAME: <4 x i64> [[X:%.*]], <4 x i64> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[CMP:%.*]] = icmp ne <4 x i64> [[X]], zeroinitializer
 ; SSE-NEXT:    [[TMP0:%.*]] = bitcast <4 x i1> [[CMP]] to i4
@@ -83,33 +79,17 @@ define zeroext i1 @cmp256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[DOTNOT9]], [[LAND_RHS]] ]
 ; SSE-NEXT:    ret i1 [[TMP2]]
 ;
-; AVX2-LABEL: define zeroext i1 @cmp256(
-; AVX2-SAME: <4 x i64> [[X:%.*]], <4 x i64> [[Y:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:  entry:
-; AVX2-NEXT:    [[CMP:%.*]] = icmp ne <4 x i64> [[X]], zeroinitializer
-; AVX2-NEXT:    [[TMP0:%.*]] = bitcast <4 x i1> [[CMP]] to i4
-; AVX2-NEXT:    [[DOTNOT:%.*]] = icmp eq i4 [[TMP0]], 0
-; AVX2-NEXT:    br i1 [[DOTNOT]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
-; AVX2:       land.rhs:
-; AVX2-NEXT:    [[CMP2:%.*]] = icmp ne <4 x i64> [[Y]], zeroinitializer
-; AVX2-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[CMP2]] to i4
-; AVX2-NEXT:    [[DOTNOT9:%.*]] = icmp eq i4 [[TMP1]], 0
-; AVX2-NEXT:    br label [[LAND_END]]
-; AVX2:       land.end:
-; AVX2-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[DOTNOT9]], [[LAND_RHS]] ]
-; AVX2-NEXT:    ret i1 [[TMP2]]
-;
-; AVX512-LABEL: define zeroext i1 @cmp256(
-; AVX512-SAME: <4 x i64> [[X:%.*]], <4 x i64> [[Y:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[CMP:%.*]] = icmp ne <4 x i64> [[X]], zeroinitializer
-; AVX512-NEXT:    [[TMP0:%.*]] = bitcast <4 x i1> [[CMP]] to i4
-; AVX512-NEXT:    [[DOTNOT:%.*]] = icmp eq i4 [[TMP0]], 0
-; AVX512-NEXT:    [[CMP2:%.*]] = icmp ne <4 x i64> [[Y]], zeroinitializer
-; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[CMP2]] to i4
-; AVX512-NEXT:    [[DOTNOT9:%.*]] = icmp eq i4 [[TMP1]], 0
-; AVX512-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i1 [[DOTNOT9]], i1 false
-; AVX512-NEXT:    ret i1 [[TMP2]]
+; AVX-LABEL: define zeroext i1 @cmp256(
+; AVX-SAME: <4 x i64> [[X:%.*]], <4 x i64> [[Y:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:  entry:
+; AVX-NEXT:    [[CMP:%.*]] = icmp ne <4 x i64> [[X]], zeroinitializer
+; AVX-NEXT:    [[TMP0:%.*]] = bitcast <4 x i1> [[CMP]] to i4
+; AVX-NEXT:    [[DOTNOT:%.*]] = icmp eq i4 [[TMP0]], 0
+; AVX-NEXT:    [[CMP2:%.*]] = icmp ne <4 x i64> [[Y]], zeroinitializer
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[CMP2]] to i4
+; AVX-NEXT:    [[DOTNOT9:%.*]] = icmp eq i4 [[TMP1]], 0
+; AVX-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i1 [[DOTNOT9]], i1 false
+; AVX-NEXT:    ret i1 [[TMP2]]
 ;
 entry:
   %cmp = icmp ne <4 x i64> %x, zeroinitializer
@@ -189,7 +169,3 @@ land.end:
   %2 = phi i1 [ false, %entry ], [ %.not9, %land.rhs ]
   ret i1 %2
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}
-; SSE2: {{.*}}
-; SSE4: {{.*}}
