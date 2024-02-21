@@ -90,11 +90,12 @@ current function.
 ### Address translation table
 Delta encoding means that only the difference with the previous corresponding
 entry is encoded. Input offsets implicitly start at zero.
-| Entry  | Encoding | Description |
-| ------ | ------| ----------- |
-| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
-| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
-| `BBHash` | Optional, 8b | Basic block entries only: basic block hash in input binary |
+| Entry  | Encoding | Description | Branch/BB |
+| ------ | ------| ----------- | ------ |
+| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary | Both |
+| `InputOffset` | Optional, Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit | Both |
+| `BBHash` | Optional, 8b | Basic block hash in input binary | BB |
+| `BBIdx`  | Optional, Delta, ULEB128 | Basic block index in input binary | BB |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
