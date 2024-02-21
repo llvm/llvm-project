@@ -128,7 +128,7 @@ enum NodeType : unsigned {
 
   // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
   // It takes a chain operand and another two target constant operands (the
-  // low and high parts of the counter).
+  // CSR numbers of the low and high parts of the counter).
   READ_COUNTER_WIDE,
 
   // brev8, orc.b, zip, and unzip from Zbb and Zbkb. All operands are i32 or
