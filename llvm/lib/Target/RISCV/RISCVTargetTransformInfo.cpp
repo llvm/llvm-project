@@ -437,7 +437,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       return TTI::TCC_Free;
 
     // If we're extracting a subvector of at most m1 size at a sub-register
-    // boundary - which unfortunately we need exact vlen to identity - this is
+    // boundary - which unfortunately we need exact vlen to identify - this is
     // a subregister extract at worst and thus won't require a vslidedown.
     // TODO: Extend for aligned m2, m4 subvector extracts
     // TODO: Extend for misalgined (but contained) extracts
