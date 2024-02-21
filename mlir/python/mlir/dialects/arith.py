@@ -12,7 +12,6 @@ try:
         get_default_loc_context as _get_default_loc_context,
         _cext as _ods_cext,
         get_op_result_or_op_results as _get_op_result_or_op_results,
-        SubClassValueT as _SubClassValueT,
     )
 
     from typing import Any, List, Union
@@ -81,5 +80,5 @@ class ConstantOp(ConstantOp):
 
 def constant(
     result: Type, value: Union[int, float, Attribute], *, loc=None, ip=None
-) -> _SubClassValueT:
+) -> Value:
     return _get_op_result_or_op_results(ConstantOp(result, value, loc=loc, ip=ip))
