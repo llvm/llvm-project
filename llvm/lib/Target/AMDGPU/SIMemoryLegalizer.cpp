@@ -367,8 +367,8 @@ public:
   }
 
 public:
-  // The following is for supporting precise memory mode. When the option
-  // amdgpu-precise-memory is enabled, an s_waitcnt instruction is inserted
+  // The following is for supporting precise memory mode. When the feature
+  // precise-memory is enabled, an s_waitcnt instruction is inserted
   // after each memory instruction.
 
   virtual bool

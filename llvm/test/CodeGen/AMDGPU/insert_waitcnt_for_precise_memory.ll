@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX9
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX90A
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX10
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global,+enable-flat-scratch,+amdgpu-precise-memory-op -amdgpu-use-divergent-register-indexing < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX11
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+amdgpu-precise-memory-op < %s | FileCheck %s -check-prefixes=GFX12
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX9
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX90A
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX10
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global,+enable-flat-scratch,+precise-memory -amdgpu-use-divergent-register-indexing < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX11
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX12
 
 ; from atomicrmw-expand.ll
 ; covers flat_load, flat_atomic

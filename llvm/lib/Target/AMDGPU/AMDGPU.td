@@ -169,7 +169,7 @@ def FeatureCuMode : SubtargetFeature<"cumode",
 >;
 
 def FeaturePreciseMemory
-    : SubtargetFeature<"amdgpu-precise-memory-op", "EnablePreciseMemory",
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
 
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
