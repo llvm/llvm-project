@@ -4959,10 +4959,11 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   return Decl;
 }
 
-ExprResult Sema::CheckVarTemplateId(
-    const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
-    VarTemplateDecl *Template, NamedDecl *FoundD, SourceLocation TemplateLoc,
-    const TemplateArgumentListInfo *TemplateArgs) {
+ExprResult
+Sema::CheckVarTemplateId(const CXXScopeSpec &SS,
+                         const DeclarationNameInfo &NameInfo,
+                         VarTemplateDecl *Template, SourceLocation TemplateLoc,
+                         const TemplateArgumentListInfo *TemplateArgs) {
 
   DeclResult Decl = CheckVarTemplateId(Template, TemplateLoc, NameInfo.getLoc(),
                                        *TemplateArgs);
@@ -4978,7 +4979,8 @@ ExprResult Sema::CheckVarTemplateId(
                                        NameInfo.getLoc());
 
   // Build an ordinary singleton decl ref.
-  return BuildDeclarationNameExpr(SS, NameInfo, Var, FoundD, TemplateArgs);
+  return BuildDeclarationNameExpr(SS, NameInfo, Var,
+                                  /*FoundD=*/nullptr, TemplateArgs);
 }
 
 void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
@@ -5065,9 +5067,9 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   bool KnownDependent = false;
   // In C++1y, check variable template ids.
   if (R.getAsSingle<VarTemplateDecl>()) {
-    ExprResult Res = CheckVarTemplateId(
-        SS, R.getLookupNameInfo(), R.getAsSingle<VarTemplateDecl>(),
-        R.getRepresentativeDecl(), TemplateKWLoc, TemplateArgs);
+    ExprResult Res = CheckVarTemplateId(SS, R.getLookupNameInfo(),
+                                        R.getAsSingle<VarTemplateDecl>(),
+                                        TemplateKWLoc, TemplateArgs);
     if (Res.isInvalid() || Res.isUsable())
       return Res;
     // Result is dependent. Carry on to build an UnresolvedLookupEpxr.
