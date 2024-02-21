@@ -1401,6 +1401,74 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
   return nullptr;
 }
 
+// Try to fold:
+//    1) (add (sitofp x), (sitofp y))
+//          -> (sitofp (add x, y))
+//    2) (add (sitofp x), FpC)
+//          -> (sitofp (add x, (fptosi FpC)))
+Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
+  // Check for (fadd double (sitofp x), y), see if we can merge this into an
+  // integer add followed by a promotion.
+  Value *LHS = BO.getOperand(0), *RHS = BO.getOperand(1);
+  if (SIToFPInst *LHSConv = dyn_cast<SIToFPInst>(LHS)) {
+    Value *LHSIntVal = LHSConv->getOperand(0);
+    Type *FPType = LHSConv->getType();
+
+    // TODO: This check is overly conservative. In many cases known bits
+    // analysis can tell us that the result of the addition has less significant
+    // bits than the integer type can hold.
+    auto IsValidPromotion = [](Type *FTy, Type *ITy) {
+      Type *FScalarTy = FTy->getScalarType();
+      Type *IScalarTy = ITy->getScalarType();
+
+      // Do we have enough bits in the significand to represent the result of
+      // the integer addition?
+      unsigned MaxRepresentableBits =
+          APFloat::semanticsPrecision(FScalarTy->getFltSemantics());
+      return IScalarTy->getIntegerBitWidth() <= MaxRepresentableBits;
+    };
+
+    // (fadd double (sitofp x), fpcst) --> (sitofp (add int x, intcst))
+    // ... if the constant fits in the integer value.  This is useful for things
+    // like (double)(x & 1234) + 4.0 -> (double)((X & 1234)+4) which no longer
+    // requires a constant pool load, and generally allows the add to be better
+    // instcombined.
+    if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS))
+      if (IsValidPromotion(FPType, LHSIntVal->getType())) {
+        Constant *CI = ConstantFoldCastOperand(Instruction::FPToSI, CFP,
+                                               LHSIntVal->getType(), DL);
+        if (LHSConv->hasOneUse() &&
+            ConstantFoldCastOperand(Instruction::SIToFP, CI, BO.getType(),
+                                    DL) == CFP &&
+            willNotOverflowSignedAdd(LHSIntVal, CI, BO)) {
+          // Insert the new integer add.
+          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, CI);
+          return new SIToFPInst(NewAdd, BO.getType());
+        }
+      }
+
+    // (fadd double (sitofp x), (sitofp y)) --> (sitofp (add int x, y))
+    if (SIToFPInst *RHSConv = dyn_cast<SIToFPInst>(RHS)) {
+      Value *RHSIntVal = RHSConv->getOperand(0);
+      // It's enough to check LHS types only because we require int types to
+      // be the same for this transform.
+      if (IsValidPromotion(FPType, LHSIntVal->getType())) {
+        // Only do this if x/y have the same type, if at least one of them has a
+        // single use (so we don't increase the number of int->fp conversions),
+        // and if the integer add will not overflow.
+        if (LHSIntVal->getType() == RHSIntVal->getType() &&
+            (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
+            willNotOverflowSignedAdd(LHSIntVal, RHSIntVal, BO)) {
+          // Insert the new integer add.
+          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, RHSIntVal);
+          return new SIToFPInst(NewAdd, BO.getType());
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 /// A binop with a constant operand and a sign-extended boolean operand may be
 /// converted into a select of constants by applying the binary operation to
 /// the constant with the two possible values of the extended boolean (0 or -1).
