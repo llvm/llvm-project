@@ -49,11 +49,10 @@ static Value buildMinMaxReductionSeq(Location loc,
   auto valueIt = values.begin();
   Value value = *valueIt++;
   for (; valueIt != values.end(); ++valueIt) {
-    if (predicate == arith::CmpIPredicate::sgt) {
+    if (predicate == arith::CmpIPredicate::sgt)
       value = builder.create<arith::MaxSIOp>(loc, value, *valueIt);
-    } else {
+    else
       value = builder.create<arith::MinSIOp>(loc, value, *valueIt);
-    }
   }
 
   return value;
