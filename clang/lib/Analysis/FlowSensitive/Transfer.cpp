@@ -729,9 +729,8 @@ public:
     if (Type->isUnionType()) {
       for (const FieldDecl *Field :
            Env.getDataflowAnalysisContext().getModeledFields(Type)) {
-        if (!FieldLocs.contains(Field))
-          FieldLocs.insert(
-              {Field, &Env.createStorageLocation(Field->getType())});
+        if (auto [it, inserted] = FieldLocs.insert({Field, nullptr}); inserted)
+          it->second = &Env.createStorageLocation(Field->getType());
       }
     }
 
