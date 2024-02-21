@@ -5157,11 +5157,9 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
 
 // Check if the module attribute is present and not zero.
 static bool isModuleAttributeSet(const Module *M, const StringRef &ModAttr) {
-  if (const auto *Attr =
-          mdconst::extract_or_null<ConstantInt>(M->getModuleFlag(ModAttr)))
-    if (Attr->getZExtValue())
-      return true;
-  return false;
+  const auto *Attr =
+      mdconst::extract_or_null<ConstantInt>(M->getModuleFlag(ModAttr));
+  return Attr && Attr->getZExtValue();
 }
 
 // Copy an attribute from module to the function if exists.
@@ -5171,14 +5169,11 @@ static void
 CopyModuleAttributeToFunction(Function &F, StringRef FnAttrName,
                               StringRef ModAttrName,
                               std::pair<StringRef, StringRef> Values) {
-  Module *M = F.getParent();
-  assert(M && "Missing module");
   if (F.hasFnAttribute(FnAttrName))
     return;
-  if (isModuleAttributeSet(M, ModAttrName))
-    F.addFnAttr(FnAttrName, Values.first);
-  else
-    F.addFnAttr(FnAttrName, Values.second);
+  F.addFnAttr(FnAttrName, isModuleAttributeSet(F.getParent(), ModAttrName)
+                              ? Values.first
+                              : Values.second);
 }
 
 // Copy a boolean attribute from module to the function if exists.
