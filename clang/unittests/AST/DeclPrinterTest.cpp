@@ -360,13 +360,16 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
 
 TEST(DeclPrinter, TestCXXRecordDecl12) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
-    "struct S { int x; };"
-    "namespace NS { class C {};}"
-    "S foo(S s1, NS::C c1) {using namespace NS; C c; return s1;}",
-    "foo",
-    "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
-    "NS::C c;\nreturn s1;\n}\n",
-      [](PrintingPolicy &Policy) { Policy.TerseOutput = false;
+      "struct S { int x; };"
+      "namespace NS { class C {};}"
+      "S foo(S s1, NS::C c1) {using namespace NS; C c; return s1;}",
+      "foo",
+      "struct S foo(struct S s1, class NS::C c1) {\nusing namespace NS;\nclass "
+      "NS::C c;\nreturn s1;\n}\n",
+      [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword = true;
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
       }));
 }
 
