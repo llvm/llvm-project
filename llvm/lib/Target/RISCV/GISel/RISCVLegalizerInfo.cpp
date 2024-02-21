@@ -495,33 +495,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
 }
 
-// TODO: This is almost the same as LegalizerHelper::lowerFConstant and is
-// target-independent. Should we move this to LegalizeHelper?
-bool RISCVLegalizerInfo::emitLoadFromConstantPool(
-    Register DstReg, const Constant *ConstVal,
-    MachineIRBuilder &MIRBuilder) const {
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  MachineFunction &MF = MIRBuilder.getMF();
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLVMContext &Ctx = MF.getFunction().getContext();
-  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
-  LLT AddrPtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
-  LLT DstLLT = MRI.getType(DstReg);
-
-  Align Alignment(DL.getABITypeAlign(getTypeForLLT(DstLLT, Ctx)));
-
-  auto Addr = MIRBuilder.buildConstantPool(
-      AddrPtrTy,
-      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
-
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                              MachineMemOperand::MOLoad, DstLLT, Alignment);
-
-  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, DstReg, Addr, *MMO);
-  return true;
-}
-
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -543,10 +516,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
     const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
     if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
       return true;
-    emitLoadFromConstantPool(MI.getOperand(0).getReg(),
-                             MI.getOperand(1).getCImm(), MIRBuilder);
-    MI.eraseFromParent();
-    return true;
+    return Helper.lowerConstant(MI);
   }
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:

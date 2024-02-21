@@ -543,6 +543,10 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf64-tradlittlemips`
 - `elf32-sparc`
 - `elf32-sparcel`
+- `elf32-hexagon`
+- `elf32-loongarch`
+- `elf64-loongarch`
+- `elf64-s390`
 
 The following formats are suppoprted by :program:`llvm-objcopy` for the
 :option:`--output-target` only:

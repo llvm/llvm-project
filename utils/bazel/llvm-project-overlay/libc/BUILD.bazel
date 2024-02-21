@@ -296,6 +296,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_convertible.h",
         "src/__support/CPP/type_traits/is_destructible.h",
         "src/__support/CPP/type_traits/is_enum.h",
+        "src/__support/CPP/type_traits/is_fixed_point.h",
         "src/__support/CPP/type_traits/is_floating_point.h",
         "src/__support/CPP/type_traits/is_function.h",
         "src/__support/CPP/type_traits/is_integral.h",
@@ -332,6 +333,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_float",
+        ":llvm_libc_macros_stdfix_macros",
     ],
 )
 
@@ -473,6 +475,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_integer_literals",
+    hdrs = ["src/__support/integer_literals.h"],
+    deps = [
+        ":__support_cpp_limits",
+        ":__support_uint128",
+    ],
+)
+
+libc_support_library(
     name = "__support_str_to_num_result",
     hdrs = ["src/__support/str_to_num_result.h"],
     deps = [":__support_macros_attributes"],
@@ -600,6 +611,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fixed_point",
+    hdrs = [
+        "src/__support/fixed_point/fx_rep.h",
+        "src/__support/fixed_point/fx_bits.h",
+    ],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
+        ":__support_macros_optimization",
+        ":llvm_libc_macros_stdfix_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_generic_fmod",
     hdrs = ["src/__support/FPUtil/generic/FMod.h"],
     deps = [
@@ -713,6 +739,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_normal_float",
@@ -967,6 +994,12 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_macros_float_macros",
     hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdfix_macros",
+    hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
+    deps = [":llvm_libc_macros_float_macros"],
 )
 
 libc_support_library(
@@ -1274,6 +1307,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1304,6 +1338,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1333,6 +1368,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1356,6 +1392,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
@@ -1419,11 +1456,12 @@ libc_math_function(
 libc_math_function(
     name = "log",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -1434,11 +1472,12 @@ libc_math_function(
 libc_math_function(
     name = "log2",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -1449,11 +1488,12 @@ libc_math_function(
 libc_math_function(
     name = "log10",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",
@@ -1464,11 +1504,12 @@ libc_math_function(
 libc_math_function(
     name = "log1p",
     additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":common_constants",

@@ -2,7 +2,6 @@
 Test lldb-dap setBreakpoints request
 """
 
-
 import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -118,7 +117,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         for line in lines:
             if line.startswith(prefix):
                 found = True
-                self.assertEquals(
+                self.assertEqual(
                     program_parent_dir,
                     line[len(prefix) :],
                     "lldb-dap working dir '%s' == '%s'"
@@ -145,7 +144,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             if line.startswith(prefix):
                 found = True
                 quoted_path = '"%s"' % (program_dir)
-                self.assertEquals(
+                self.assertEqual(
                     quoted_path,
                     line[len(prefix) :],
                     "lldb-dap working dir %s == %s" % (quoted_path, line[6:]),
@@ -164,7 +163,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
         # Now get the STDOUT and verify our program argument is correct
         output = self.get_stdout()
-        self.assertEquals(output, None, "expect no program output")
+        self.assertEqual(output, None, "expect no program output")
 
     @skipIfWindows
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
@@ -327,7 +326,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Set 2 breakpoints so we can verify that "stopCommands" get run as the
         # breakpoints get hit
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEquals(
+        self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
 
@@ -398,7 +397,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Verify all "preRunCommands" were found in console output
         self.verify_commands("preRunCommands", output, preRunCommands)
 
-        # Verify all "launchCommands" were founc in console output
+        # Verify all "launchCommands" were found in console output
         # After execution, program should launch
         self.verify_commands("launchCommands", output, launchCommands)
         # Verify the "stopCommands" here
@@ -419,6 +418,47 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # "exitCommands" that were run after the second breakpoint was hit
         output = self.get_console(timeout=1.0)
         self.verify_commands("exitCommands", output, exitCommands)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_failing_launch_commands(self):
+        """
+        Tests "launchCommands" failures prevents a launch.
+        """
+        self.build_and_create_debug_adaptor()
+        program = self.getBuildArtifact("a.out")
+
+        # Run an invalid launch command, in this case a bad path.
+        launchCommands = ['!target create "/bad/path%s"' % (program)]
+
+        initCommands = ["target list", "platform list"]
+        preRunCommands = ["image list a.out", "image dump sections a.out"]
+        response = self.launch(
+            program,
+            initCommands=initCommands,
+            preRunCommands=preRunCommands,
+            launchCommands=launchCommands,
+            expectFailure=True,
+        )
+
+        self.assertFalse(response["success"])
+        self.assertRegex(
+            response["message"],
+            r"Failed to run launch commands\. See the Debug Console for more details",
+        )
+
+        # Get output from the console. This should contain both the
+        # "initCommands" and the "preRunCommands".
+        output = self.get_console()
+        # Verify all "initCommands" were found in console output
+        self.verify_commands("initCommands", output, initCommands)
+        # Verify all "preRunCommands" were found in console output
+        self.verify_commands("preRunCommands", output, preRunCommands)
+
+        # Verify all "launchCommands" were founc in console output
+        # The launch should fail due to the invalid command.
+        self.verify_commands("launchCommands", output, launchCommands)
+        self.assertRegex(output, r"unable to find executable for '/bad/path/")
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well

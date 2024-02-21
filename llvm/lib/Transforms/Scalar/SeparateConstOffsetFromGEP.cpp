@@ -391,6 +391,11 @@ private:
   /// and returns true if the splitting succeeds.
   bool splitGEP(GetElementPtrInst *GEP);
 
+  /// Tries to reorder the given GEP with the GEP that produces the base if
+  /// doing so results in producing a constant offset as the outermost
+  /// index.
+  bool reorderGEP(GetElementPtrInst *GEP, TargetTransformInfo &TTI);
+
   /// Lower a GEP with multiple indices into multiple GEPs with a single index.
   /// Function splitGEP already split the original GEP into a variadic part and
   /// a constant offset (i.e., AccumulativeByteOffset). This function lowers the
@@ -964,6 +969,66 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
   Variadic->eraseFromParent();
 }
 
+bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
+                                            TargetTransformInfo &TTI) {
+  Type *GEPType = GEP->getResultElementType();
+  // TODO: support reordering for non-trivial GEP chains
+  if (GEPType->isAggregateType() || GEP->getNumIndices() != 1)
+    return false;
+
+  auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
+  if (!PtrGEP)
+    return false;
+  Type *PtrGEPType = PtrGEP->getResultElementType();
+  // TODO: support reordering for non-trivial GEP chains
+  if (PtrGEPType->isAggregateType() || PtrGEP->getNumIndices() != 1)
+    return false;
+
+  // TODO: support reordering for non-trivial GEP chains
+  if (PtrGEPType != GEPType ||
+      PtrGEP->getSourceElementType() != GEP->getSourceElementType())
+    return false;
+
+  bool NestedNeedsExtraction;
+  int64_t NestedByteOffset =
+      accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
+  if (!NestedNeedsExtraction)
+    return false;
+
+  unsigned AddrSpace = PtrGEP->getPointerAddressSpace();
+  if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
+                                 /*BaseGV=*/nullptr, NestedByteOffset,
+                                 /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
+    return false;
+
+  IRBuilder<> Builder(GEP);
+  Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
+  bool GEPInBounds = GEP->isInBounds();
+  bool PtrGEPInBounds = PtrGEP->isInBounds();
+  bool IsChainInBounds = GEPInBounds && PtrGEPInBounds;
+  if (IsChainInBounds) {
+    auto GEPIdx = GEP->indices().begin();
+    auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
+    IsChainInBounds &= KnownGEPIdx.isNonNegative();
+    if (IsChainInBounds) {
+      auto PtrGEPIdx = GEP->indices().begin();
+      auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
+      IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
+    }
+  }
+
+  // For trivial GEP chains, we can swap the indicies.
+  auto NewSrc = Builder.CreateGEP(PtrGEPType, PtrGEP->getPointerOperand(),
+                                  SmallVector<Value *, 4>(GEP->indices()));
+  cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
+  auto NewGEP = Builder.CreateGEP(GEPType, NewSrc,
+                                  SmallVector<Value *, 4>(PtrGEP->indices()));
+  cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
+  GEP->replaceAllUsesWith(NewGEP);
+  RecursivelyDeleteTriviallyDeadInstructions(GEP);
+  return true;
+}
+
 bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // Skip vector GEPs.
   if (GEP->getType()->isVectorTy())
@@ -979,10 +1044,12 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   bool NeedsExtraction;
   int64_t AccumulativeByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
 
-  if (!NeedsExtraction)
-    return Changed;
-
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
+
+  if (!NeedsExtraction) {
+    Changed |= reorderGEP(GEP, TTI);
+    return Changed;
+  }
 
   // If LowerGEP is disabled, before really splitting the GEP, check whether the
   // backend supports the addressing mode we are about to produce. If no, this

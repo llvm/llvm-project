@@ -221,6 +221,12 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
       attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins CArg<"TypeRange">:$result,
+                   CArg<"StringAttr">:$sym_name,
+                   CArg<"TypeAttr">:$type)>
+  ];
+
   let hasVerifier = 1;
 }
 
@@ -270,7 +276,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
-             OptionalAttr<ProcBindKindAttr>:$proc_bind_val);
+             OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
+             Variadic<AnyType>:$private_vars,
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers);
 
   let regions = (region AnyRegion:$region);
 
@@ -291,7 +299,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
-    ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars), $reductions) attr-dict
+    ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
+                             $reductions, $private_vars, type($private_vars),
+                             $privatizers) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -466,10 +476,16 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
     master thread), in the context of its implicit task. The other threads
     in the team, which do not execute the block, wait at an implicit barrier
     at the end of the single construct unless a nowait clause is specified.
+
+    If copyprivate variables and functions are specified, then each thread
+    variable is updated with the variable value of the thread that executed
+    the single region, using the specified copy functions.
   }];
 
   let arguments = (ins Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars,
+                       Variadic<OpenMP_PointerLikeType>:$copyprivate_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$copyprivate_funcs,
                        UnitAttr:$nowait);
 
   let regions = (region AnyRegion:$region);
@@ -481,6 +497,10 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
                 $allocators_vars, type($allocators_vars)
               ) `)`
           |`nowait` $nowait
+          |`copyprivate` `(`
+              custom<CopyPrivateVarList>(
+                $copyprivate_vars, type($copyprivate_vars), $copyprivate_funcs
+              ) `)`
     ) $region attr-dict
   }];
   let hasVerifier = 1;
@@ -525,13 +545,11 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     accumulator variables in `reduction_vars` and symbols referring to reduction
     declarations in the `reductions` attribute. Each reduction is identified
     by the accumulator it uses and accumulators must not be repeated in the same
-    reduction. The `omp.reduction` operation accepts the accumulator and a
-    partial value which is considered to be produced by the current loop
-    iteration for the given reduction. If multiple values are produced for the
-    same accumulator, i.e. there are multiple `omp.reduction`s, the last value
-    is taken. The reduction declaration specifies how to combine the values from
-    each iteration into the final value, which is available in the accumulator
-    after the loop completes.
+    reduction. A private variable corresponding to the accumulator is used in
+    place of the accumulator inside the body of the worksharing-loop. The
+    reduction declaration specifies how to combine the values from each
+    iteration into the final value, which is available in the accumulator after
+    the loop completes.
 
     The optional `schedule_val` attribute specifies the loop schedule for this
     loop, determining how the loop is distributed across the parallel threads.
@@ -597,12 +615,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
           |`nowait` $nowait
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
-          |`reduction` `(`
-              custom<ReductionVarList>(
-                $reduction_vars, type($reduction_vars), $reductions
-              ) `)`
-    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $inclusive) attr-dict
+    ) custom<WsLoop>($region, $lowerBound, $upperBound, $step,
+                                  type($step), $reduction_vars, type($reduction_vars), $reductions,
+                                  $inclusive) attr-dict
   }];
   let hasVerifier = 1;
 }

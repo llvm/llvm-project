@@ -5260,11 +5260,6 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     // Suppression attribute with GSL spelling requires at least 1 argument.
     if (!AL.checkAtLeastNumArgs(S, 1))
       return;
-  } else if (!isa<VarDecl>(D)) {
-    // Analyzer suppression applies only to variables and statements.
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
-        << AL << 0 << "variables and statements";
-    return;
   }
 
   std::vector<StringRef> DiagnosticIdentifiers;

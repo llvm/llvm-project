@@ -320,3 +320,118 @@ if.else:
   %ret = call i1 @llvm.is.fpclass.f32(float %x, i32 783)
   ret i1 %ret
 }
+
+define float @test_signbit_check(float %x, i1 %cond) {
+; CHECK-LABEL: define float @test_signbit_check(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN2:%.*]], label [[IF_END]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[X]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
+; CHECK-NEXT:    ret float [[VALUE]]
+;
+  %i32 = bitcast float %x to i32
+  %cmp = icmp slt i32 %i32, 0
+  br i1 %cmp, label %if.then1, label %if.else
+
+if.then1:
+  %fneg = fneg float %x
+  br label %if.end
+
+if.else:
+  br i1 %cond, label %if.then2, label %if.end
+
+if.then2:
+  br label %if.end
+
+if.end:
+  %value = phi float [ %fneg, %if.then1 ], [ %x, %if.then2 ], [ %x, %if.else ]
+  %ret = call float @llvm.fabs.f32(float %value)
+  ret float %ret
+}
+
+define float @test_signbit_check_fail(float %x, i1 %cond) {
+; CHECK-LABEL: define float @test_signbit_check_fail(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN2:%.*]], label [[IF_END]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    [[FNEG2:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[FNEG2]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %i32 = bitcast float %x to i32
+  %cmp = icmp slt i32 %i32, 0
+  br i1 %cmp, label %if.then1, label %if.else
+
+if.then1:
+  %fneg = fneg float %x
+  br label %if.end
+
+if.else:
+  br i1 %cond, label %if.then2, label %if.end
+
+if.then2:
+  %fneg2 = fneg float %x
+  br label %if.end
+
+if.end:
+  %value = phi float [ %fneg, %if.then1 ], [ %fneg2, %if.then2 ], [ %x, %if.else ]
+  %ret = call float @llvm.fabs.f32(float %value)
+  ret float %ret
+}
+
+define <2 x float> @test_signbit_check_wrong_type(<2 x float> %x, i1 %cond) {
+; CHECK-LABEL: define <2 x float> @test_signbit_check_wrong_type(
+; CHECK-SAME: <2 x float> [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast <2 x float> [[X]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I32]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN1:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg <2 x float> [[X]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN2:%.*]], label [[IF_END]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[VALUE:%.*]] = phi <2 x float> [ [[FNEG]], [[IF_THEN1]] ], [ [[X]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[VALUE]])
+; CHECK-NEXT:    ret <2 x float> [[RET]]
+;
+  %i32 = bitcast <2 x float> %x to i64
+  %cmp = icmp slt i64 %i32, 0
+  br i1 %cmp, label %if.then1, label %if.else
+
+if.then1:
+  %fneg = fneg <2 x float> %x
+  br label %if.end
+
+if.else:
+  br i1 %cond, label %if.then2, label %if.end
+
+if.then2:
+  br label %if.end
+
+if.end:
+  %value = phi <2 x float> [ %fneg, %if.then1 ], [ %x, %if.then2 ], [ %x, %if.else ]
+  %ret = call <2 x float> @llvm.fabs.v2f32(<2 x float> %value)
+  ret <2 x float> %ret
+}

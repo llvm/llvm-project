@@ -16,10 +16,9 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.op<"func.func">
 
-    %mmt4d = transform.structured.match ops{["linalg.mmt4d"]} in %func
+    %mmt4d = transform.structured.match ops{["linalg.mmt4d"]} in %func : (!transform.op<"func.func">) -> !transform.any_op
 
     // Step 1: Tile
-      : (!transform.op<"func.func">) -> !transform.any_op
     // Tile parallel dims
     %tiled_linalg_op_p, %loops:4 = transform.structured.tile_using_for %mmt4d[1, 1, 0, 8, 8, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
