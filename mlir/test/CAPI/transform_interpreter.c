@@ -46,6 +46,7 @@ int testApplyNamedSequence(MlirContext ctx) {
   MlirLogicalResult result =
       mlirTransformApplyNamedSequence(root, entry, root, options);
   mlirTransformOptionsDestroy(options);
+  mlirOperationDestroy(root);
   if (mlirLogicalResultIsFailure(result))
     return 2;
 
