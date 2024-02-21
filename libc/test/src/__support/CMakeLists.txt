@@ -55,6 +55,7 @@ add_libc_test(
     str_to_double_test.cpp
     str_to_long_double_test.cpp
   DEPENDS
+    libc.src.__support.integer_literals
     libc.src.__support.str_to_float
     libc.src.__support.uint128
     libc.src.errno.errno
@@ -67,8 +68,9 @@ add_libc_test(
   SRCS
     integer_to_string_test.cpp
   DEPENDS
-    libc.src.__support.integer_to_string
     libc.src.__support.CPP.string_view
+    libc.src.__support.integer_literals
+    libc.src.__support.integer_to_string
     libc.src.__support.uint
     libc.src.__support.uint128
 )

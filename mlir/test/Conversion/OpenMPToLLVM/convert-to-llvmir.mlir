@@ -485,3 +485,29 @@ llvm.func @_QPtarget_map_with_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: 
   }
   llvm.return
 }
+
+// -----
+
+// CHECK: omp.private {type = private} @x.privatizer : !llvm.struct<{{.*}}> alloc {
+omp.private {type = private} @x.privatizer : memref<?xf32> alloc {
+// CHECK: ^bb0(%arg0: !llvm.struct<{{.*}}>):
+^bb0(%arg0: memref<?xf32>):
+  // CHECK: omp.yield(%arg0 : !llvm.struct<{{.*}}>)
+  omp.yield(%arg0 : memref<?xf32>)
+}
+
+// -----
+
+// CHECK: omp.private {type = firstprivate} @y.privatizer : i64 alloc {
+omp.private {type = firstprivate} @y.privatizer : index alloc {
+// CHECK: ^bb0(%arg0: i64):
+^bb0(%arg0: index):
+  // CHECK: omp.yield(%arg0 : i64)
+  omp.yield(%arg0 : index)
+// CHECK: } copy {
+} copy {
+// CHECK: ^bb0(%arg0: i64, %arg1: i64):
+^bb0(%arg0: index, %arg1: index):
+  // CHECK: omp.yield(%arg0 : i64)
+  omp.yield(%arg0 : index)
+}

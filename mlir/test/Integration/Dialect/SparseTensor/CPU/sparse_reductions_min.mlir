@@ -137,6 +137,12 @@ module {
     bufferization.dealloc_tensor %sv0 : tensor<32xi32, #SV>
     bufferization.dealloc_tensor %sv1 : tensor<32xi32, #SV>
     bufferization.dealloc_tensor %sv2 : tensor<32xi32, #SV>
+    bufferization.dealloc_tensor %0 : tensor<i32>
+    bufferization.dealloc_tensor %1 : tensor<i32>
+    bufferization.dealloc_tensor %2 : tensor<i32>
+    bufferization.dealloc_tensor %3 : tensor<i32>
+    bufferization.dealloc_tensor %4 : tensor<i32>
+    bufferization.dealloc_tensor %5 : tensor<i32>
 
     return
   }

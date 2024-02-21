@@ -53,8 +53,8 @@ private:
   Address EmitDarwinVAArg(Address VAListAddr, QualType Ty,
                           CodeGenFunction &CGF) const;
 
-  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
-                         AArch64ABIKind Kind) const;
+  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
+                         CodeGenFunction &CGF) const;
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override {
@@ -65,7 +65,7 @@ private:
 
     return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
            : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                           : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind);
+                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
   }
 
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -482,11 +482,6 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 }
 
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
-  // For the soft-float ABI variant, no types are considered to be homogeneous
-  // aggregates.
-  if (Kind == AArch64ABIKind::AAPCSSoft)
-    return false;
-
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
   // point type or a short-vector type. This is the same as the 32-bit ABI,
   // but with the difference that any floating-point type is allowed,
@@ -518,8 +513,7 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
 }
 
 Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                                       CodeGenFunction &CGF,
-                                       AArch64ABIKind Kind) const {
+                                       CodeGenFunction &CGF) const {
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
   // Empty records are ignored for parameter passing purposes.
@@ -544,8 +538,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = Kind != AArch64ABIKind::AAPCSSoft &&
-               (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
+  bool IsFPR = BaseTy->isFloatingPointTy() || BaseTy->isVectorTy();
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:

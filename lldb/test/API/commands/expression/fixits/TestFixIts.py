@@ -46,7 +46,7 @@ class ExprCommandWithFixits(TestBase):
         value = frame.EvaluateExpression("my_pointer.first", options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsUnsigned(), 10)
+        self.assertEqual(value.GetValueAsUnsigned(), 10)
 
         # Try with one error in a top-level expression.
         # The Fix-It changes "ptr.m" to "ptr->m".
@@ -56,14 +56,14 @@ class ExprCommandWithFixits(TestBase):
         # unknown error . If a parsing error would have happened we
         # would get a different error kind, so let's check the error
         # kind here.
-        self.assertEquals(value.GetError().GetCString(), "unknown error")
+        self.assertEqual(value.GetError().GetCString(), "unknown error")
 
         # Try with two errors:
         two_error_expression = "my_pointer.second->a"
         value = frame.EvaluateExpression(two_error_expression, options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsUnsigned(), 20)
+        self.assertEqual(value.GetValueAsUnsigned(), 20)
 
         # Try a Fix-It that is stored in the 'note:' diagnostic of an error.
         # The Fix-It here is adding parantheses around the ToStr parameters.
@@ -71,7 +71,7 @@ class ExprCommandWithFixits(TestBase):
         value = frame.EvaluateExpression(fixit_in_note_expr, options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetSummary(), '"(0 {, })"')
+        self.assertEqual(value.GetSummary(), '"(0 {, })"')
 
         # Now turn off the fixits, and the expression should fail:
         options.SetAutoApplyFixIts(False)
@@ -178,7 +178,7 @@ class ExprCommandWithFixits(TestBase):
         multiple_runs_options.SetRetriesWithFixIts(2)
         value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
         # This error signals success for top level expressions.
-        self.assertEquals(value.GetError().GetCString(), "unknown error")
+        self.assertEqual(value.GetError().GetCString(), "unknown error")
 
         # Test that the code above compiles to the right thing.
         self.expect_expr("test_X(1)", result_type="int", result_value="123")

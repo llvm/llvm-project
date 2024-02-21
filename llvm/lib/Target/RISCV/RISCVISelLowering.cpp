@@ -625,9 +625,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::Constant, MVT::i64, Custom);
 
-  // TODO: On M-mode only targets, the cycle[h] CSR may not be present.
+  // TODO: On M-mode only targets, the cycle[h]/time[h] CSR may not be present.
   // Unfortunately this can't be determined just from the ISA naming string.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
+                     Subtarget.is64Bit() ? Legal : Custom);
+  setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64,
                      Subtarget.is64Bit() ? Legal : Custom);
 
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
@@ -641,7 +643,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtA()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
-    setMinCmpXchgSizeInBits(32);
+    if (Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas())
+      setMinCmpXchgSizeInBits(8);
+    else
+      setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
   } else {
@@ -1414,7 +1419,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
-                         ISD::INSERT_VECTOR_ELT});
+                         ISD::INSERT_VECTOR_ELT, ISD::ABS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -7234,6 +7239,16 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // select c, ~x, x --> xor -c, x
+  if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV)) {
+    const APInt &TrueVal = TrueV->getAsAPIntVal();
+    const APInt &FalseVal = FalseV->getAsAPIntVal();
+    if (~TrueVal == FalseVal) {
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::XOR, DL, VT, Neg, FalseV);
+    }
+  }
+
   // Try to fold (select (setcc lhs, rhs, cc), truev, falsev) into bitwise ops
   // when both truev and falsev are also setcc.
   if (CondV.getOpcode() == ISD::SETCC && TrueV.getOpcode() == ISD::SETCC &&
@@ -8089,12 +8104,11 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     // If we're compiling for an exact VLEN value, we can always perform
     // the insert in m1 as we can determine the register corresponding to
     // the index in the register group.
-    const unsigned MinVLen = Subtarget.getRealMinVLen();
-    const unsigned MaxVLen = Subtarget.getRealMaxVLen();
     const MVT M1VT = getLMUL1VT(ContainerVT);
-    if (MinVLen == MaxVLen && ContainerVT.bitsGT(M1VT)) {
+    if (auto VLEN = Subtarget.getRealVLen();
+        VLEN && ContainerVT.bitsGT(M1VT)) {
       EVT ElemVT = VecVT.getVectorElementType();
-      unsigned ElemsPerVReg = MinVLen / ElemVT.getFixedSizeInBits();
+      unsigned ElemsPerVReg = *VLEN / ElemVT.getFixedSizeInBits();
       unsigned RemIdx = OrigIdx % ElemsPerVReg;
       unsigned SubRegIdx = OrigIdx / ElemsPerVReg;
       unsigned ExtractIdx =
@@ -9817,27 +9831,32 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (SubVecVT.isFixedLengthVector())
     ContainerSubVecVT = getContainerForFixedLengthVector(SubVecVT);
 
-  unsigned SubRegIdx, RemIdx;
-  // extract_subvector scales the index by vscale is the subvector is scalable,
+  unsigned SubRegIdx;
+  ElementCount RemIdx;
+  // extract_subvector scales the index by vscale if the subvector is scalable,
   // and decomposeSubvectorInsertExtractToSubRegs takes this into account. So if
   // we have a fixed length subvector, we need to adjust the index by 1/vscale.
   if (SubVecVT.isFixedLengthVector()) {
     assert(MinVLen == MaxVLen);
     unsigned Vscale = MinVLen / RISCV::RVVBitsPerBlock;
-    std::tie(SubRegIdx, RemIdx) =
+    auto Decompose =
         RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
             VecVT, ContainerSubVecVT, OrigIdx / Vscale, TRI);
-    RemIdx = (RemIdx * Vscale) + (OrigIdx % Vscale);
+    SubRegIdx = Decompose.first;
+    RemIdx = ElementCount::getFixed((Decompose.second * Vscale) +
+                                    (OrigIdx % Vscale));
   } else {
-    std::tie(SubRegIdx, RemIdx) =
+    auto Decompose =
         RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
             VecVT, ContainerSubVecVT, OrigIdx, TRI);
+    SubRegIdx = Decompose.first;
+    RemIdx = ElementCount::getScalable(Decompose.second);
   }
 
   // If the Idx has been completely eliminated then this is a subvector extract
   // which naturally aligns to a vector register. These can easily be handled
   // using subregister manipulation.
-  if (RemIdx == 0) {
+  if (RemIdx.isZero()) {
     if (SubVecVT.isFixedLengthVector()) {
       Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, ContainerSubVecVT, Vec);
       return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
@@ -9864,13 +9883,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
-  SDValue SlidedownAmt;
-  if (SubVecVT.isFixedLengthVector())
-    SlidedownAmt = DAG.getConstant(RemIdx, DL, Subtarget.getXLenVT());
-  else
-    SlidedownAmt =
-        DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
-
+  SDValue SlidedownAmt = DAG.getElementCount(DL, XLenVT, RemIdx);
   auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
   if (SubVecVT.isFixedLengthVector())
     VL = getVLOp(SubVecVT.getVectorNumElements(), InterSubVT, DL, DAG,
@@ -11723,13 +11736,27 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Result);
     break;
   }
-  case ISD::READCYCLECOUNTER: {
-    assert(!Subtarget.is64Bit() &&
-           "READCYCLECOUNTER only has custom type legalization on riscv32");
+  case ISD::READCYCLECOUNTER:
+  case ISD::READSTEADYCOUNTER: {
+    assert(!Subtarget.is64Bit() && "READCYCLECOUNTER/READSTEADYCOUNTER only "
+                                   "has custom type legalization on riscv32");
 
+    SDValue LoCounter, HiCounter;
+    MVT XLenVT = Subtarget.getXLenVT();
+    if (N->getOpcode() == ISD::READCYCLECOUNTER) {
+      LoCounter = DAG.getTargetConstant(
+          RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(
+          RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding, DL, XLenVT);
+    } else {
+      LoCounter = DAG.getTargetConstant(
+          RISCVSysReg::lookupSysRegByName("TIME")->Encoding, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(
+          RISCVSysReg::lookupSysRegByName("TIMEH")->Encoding, DL, XLenVT);
+    }
     SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
-    SDValue RCW =
-        DAG.getNode(RISCVISD::READ_CYCLE_WIDE, DL, VTs, N->getOperand(0));
+    SDValue RCW = DAG.getNode(RISCVISD::READ_COUNTER_WIDE, DL, VTs,
+                              N->getOperand(0), LoCounter, HiCounter);
 
     Results.push_back(
         DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, RCW, RCW.getValue(1)));
@@ -13371,7 +13398,7 @@ struct NodeExtensionHelper {
     unsigned ExtOpc = *SExt ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
 
     // If we need an extension, we should be changing the type.
-    SDLoc DL(Root);
+    SDLoc DL(OrigOperand);
     auto [Mask, VL] = getMaskAndVL(Root, DAG, Subtarget);
     switch (OrigOperand.getOpcode()) {
     case ISD::ZERO_EXTEND:
@@ -15000,8 +15027,8 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     if (CC == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
         isa<ConstantSDNode>(LHS.getOperand(1)) && isNullConstant(RHS)) {
-      uint64_t MaskVal = LHS.getConstantOperandVal(1);
-      if (isPowerOf2_64(MaskVal) && !isInt<12>(MaskVal))
+      const APInt &MaskVal = LHS.getConstantOperandAPInt(1);
+      if (MaskVal.isPowerOf2() && !MaskVal.isSignedIntN(12))
         return DAG.getSelect(DL, VT,
                              DAG.getSetCC(DL, CondVT, LHS, RHS, ISD::SETNE),
                              False, True);
@@ -15607,6 +15634,19 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     assert(Op0.getOpcode() == ISD::FABS);
     return DAG.getNode(ISD::AND, DL, VT, NewFMV,
                        DAG.getConstant(~SignBit, DL, VT));
+  }
+  case ISD::ABS: {
+    EVT VT = N->getValueType(0);
+    SDValue N0 = N->getOperand(0);
+    // abs (sext) -> zext (abs)
+    // abs (zext) -> zext (handled elsewhere)
+    if (VT.isVector() && N0.hasOneUse() && N0.getOpcode() == ISD::SIGN_EXTEND) {
+      SDValue Src = N0.getOperand(0);
+      SDLoc DL(N);
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
+                         DAG.getNode(ISD::ABS, DL, Src.getValueType(), Src));
+    }
+    break;
   }
   case ISD::ADD: {
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
@@ -16888,29 +16928,30 @@ RISCVTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
   return CNodeLo->getConstVal();
 }
 
-static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
-                                                  MachineBasicBlock *BB) {
-  assert(MI.getOpcode() == RISCV::ReadCycleWide && "Unexpected instruction");
+static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
+                                                    MachineBasicBlock *BB) {
+  assert(MI.getOpcode() == RISCV::ReadCounterWide && "Unexpected instruction");
 
-  // To read the 64-bit cycle CSR on a 32-bit target, we read the two halves.
+  // To read a 64-bit counter CSR on a 32-bit target, we read the two halves.
   // Should the count have wrapped while it was being read, we need to try
   // again.
-  // ...
+  // For example:
+  // ```
   // read:
-  // rdcycleh x3 # load high word of cycle
-  // rdcycle  x2 # load low word of cycle
-  // rdcycleh x4 # load high word of cycle
-  // bne x3, x4, read # check if high word reads match, otherwise try again
-  // ...
+  //   csrrs x3, counterh # load high word of counter
+  //   csrrs x2, counter # load low word of counter
+  //   csrrs x4, counterh # load high word of counter
+  //   bne x3, x4, read # check if high word reads match, otherwise try again
+  // ```
 
   MachineFunction &MF = *BB->getParent();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
   MachineFunction::iterator It = ++BB->getIterator();
 
-  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
   MF.insert(It, LoopMBB);
 
-  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
   MF.insert(It, DoneMBB);
 
   // Transfer the remainder of BB and its successor edges to DoneMBB.
@@ -16924,17 +16965,19 @@ static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
   Register ReadAgainReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
   Register LoReg = MI.getOperand(0).getReg();
   Register HiReg = MI.getOperand(1).getReg();
+  int64_t LoCounter = MI.getOperand(2).getImm();
+  int64_t HiCounter = MI.getOperand(3).getImm();
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), HiReg)
-      .addImm(RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding)
+      .addImm(HiCounter)
       .addReg(RISCV::X0);
   BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), LoReg)
-      .addImm(RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding)
+      .addImm(LoCounter)
       .addReg(RISCV::X0);
   BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), ReadAgainReg)
-      .addImm(RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding)
+      .addImm(HiCounter)
       .addReg(RISCV::X0);
 
   BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
@@ -17513,10 +17556,10 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
-  case RISCV::ReadCycleWide:
+  case RISCV::ReadCounterWide:
     assert(!Subtarget.is64Bit() &&
-           "ReadCycleWrite is only to be used on riscv32");
-    return emitReadCycleWidePseudo(MI, BB);
+           "ReadCounterWide is only to be used on riscv32");
+    return emitReadCounterWidePseudo(MI, BB);
   case RISCV::Select_GPR_Using_CC_GPR:
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR16INX_Using_CC_GPR:
@@ -19188,7 +19231,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FCLASS)
   NODE_NAME_CASE(FMAX)
   NODE_NAME_CASE(FMIN)
-  NODE_NAME_CASE(READ_CYCLE_WIDE)
+  NODE_NAME_CASE(READ_COUNTER_WIDE)
   NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(ORC_B)
   NODE_NAME_CASE(ZIP)
@@ -19731,12 +19774,16 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     return AtomicExpansionKind::None;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16)
-    return AtomicExpansionKind::MaskedIntrinsic;
+  if (AI->getOperation() == AtomicRMWInst::Nand) {
+    if (Subtarget.hasStdExtZacas() &&
+        (Size >= 32 || Subtarget.hasStdExtZabha()))
+      return AtomicExpansionKind::CmpXChg;
+    if (Size < 32)
+      return AtomicExpansionKind::MaskedIntrinsic;
+  }
 
-  if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
-      (Size == Subtarget.getXLen() || Size == 32))
-    return AtomicExpansionKind::CmpXChg;
+  if (Size < 32 && !Subtarget.hasStdExtZabha())
+    return AtomicExpansionKind::MaskedIntrinsic;
 
   return AtomicExpansionKind::None;
 }
@@ -19859,7 +19906,8 @@ RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
     return AtomicExpansionKind::None;
 
   unsigned Size = CI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
-  if (Size == 8 || Size == 16)
+  if (!(Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas()) &&
+      (Size == 8 || Size == 16))
     return AtomicExpansionKind::MaskedIntrinsic;
   return AtomicExpansionKind::None;
 }
@@ -20709,11 +20757,11 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
-  // GISel support is in progress or complete for G_ADD, G_SUB, G_AND, G_OR, and
-  // G_XOR.
+  // GISel support is in progress or complete for these opcodes.
   unsigned Op = Inst.getOpcode();
   if (Op == Instruction::Add || Op == Instruction::Sub ||
-      Op == Instruction::And || Op == Instruction::Or || Op == Instruction::Xor)
+      Op == Instruction::And || Op == Instruction::Or ||
+      Op == Instruction::Xor || Op == Instruction::InsertElement)
     return false;
 
   if (Inst.getType()->isScalableTy())

@@ -37,10 +37,10 @@ template <size_t Bits> struct DyadicFloat {
   int exponent = 0;
   MantissaType mantissa = MantissaType(0);
 
-  constexpr DyadicFloat() = default;
+  LIBC_INLINE constexpr DyadicFloat() = default;
 
   template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-  DyadicFloat(T x) {
+  LIBC_INLINE constexpr DyadicFloat(T x) {
     static_assert(FPBits<T>::FRACTION_LEN < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.sign();
@@ -49,14 +49,14 @@ template <size_t Bits> struct DyadicFloat {
     normalize();
   }
 
-  constexpr DyadicFloat(Sign s, int e, MantissaType m)
+  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, MantissaType m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
 
   // Normalizing the mantissa, bringing the leading 1 bit to the most
   // significant bit.
-  constexpr DyadicFloat &normalize() {
+  LIBC_INLINE constexpr DyadicFloat &normalize() {
     if (!mantissa.is_zero()) {
       int shift_length = static_cast<int>(mantissa.clz());
       exponent -= shift_length;
@@ -66,14 +66,14 @@ template <size_t Bits> struct DyadicFloat {
   }
 
   // Used for aligning exponents.  Output might not be normalized.
-  DyadicFloat &shift_left(int shift_length) {
+  LIBC_INLINE constexpr DyadicFloat &shift_left(int shift_length) {
     exponent -= shift_length;
     mantissa <<= static_cast<size_t>(shift_length);
     return *this;
   }
 
   // Used for aligning exponents.  Output might not be normalized.
-  DyadicFloat &shift_right(int shift_length) {
+  LIBC_INLINE constexpr DyadicFloat &shift_right(int shift_length) {
     exponent += shift_length;
     mantissa >>= static_cast<size_t>(shift_length);
     return *this;
@@ -85,7 +85,7 @@ template <size_t Bits> struct DyadicFloat {
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
-  explicit operator T() const {
+  LIBC_INLINE explicit constexpr operator T() const {
     if (LIBC_UNLIKELY(mantissa.is_zero()))
       return FPBits<T>::zero(sign).get_val();
 
@@ -176,7 +176,7 @@ template <size_t Bits> struct DyadicFloat {
     return r;
   }
 
-  explicit operator MantissaType() const {
+  LIBC_INLINE explicit constexpr operator MantissaType() const {
     if (mantissa.is_zero())
       return 0;
 
@@ -208,8 +208,8 @@ template <size_t Bits> struct DyadicFloat {
 // don't need to normalize the inputs again in this function.  If the inputs are
 // not normalized, the results might lose precision significantly.
 template <size_t Bits>
-constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
-                                      DyadicFloat<Bits> b) {
+LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
+                                                  DyadicFloat<Bits> b) {
   if (LIBC_UNLIKELY(a.mantissa.is_zero()))
     return b;
   if (LIBC_UNLIKELY(b.mantissa.is_zero()))
@@ -263,8 +263,8 @@ constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 // don't need to normalize the inputs again in this function.  If the inputs are
 // not normalized, the results might lose precision significantly.
 template <size_t Bits>
-constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
-                                      DyadicFloat<Bits> b) {
+LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
+                                                  DyadicFloat<Bits> b) {
   DyadicFloat<Bits> result;
   result.sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
   result.exponent = a.exponent + b.exponent + int(Bits);
@@ -285,16 +285,17 @@ constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
 
 // Simple polynomial approximation.
 template <size_t Bits>
-constexpr DyadicFloat<Bits> multiply_add(const DyadicFloat<Bits> &a,
-                                         const DyadicFloat<Bits> &b,
-                                         const DyadicFloat<Bits> &c) {
+LIBC_INLINE constexpr DyadicFloat<Bits>
+multiply_add(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
+             const DyadicFloat<Bits> &c) {
   return quick_add(c, quick_mul(a, b));
 }
 
 // Simple exponentiation implementation for printf. Only handles positive
 // exponents, since division isn't implemented.
 template <size_t Bits>
-constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a, uint32_t power) {
+LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a,
+                                              uint32_t power) {
   DyadicFloat<Bits> result = 1.0;
   DyadicFloat<Bits> cur_power = a;
 
@@ -309,7 +310,8 @@ constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a, uint32_t power) {
 }
 
 template <size_t Bits>
-constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a, int32_t pow_2) {
+LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a,
+                                                  int32_t pow_2) {
   DyadicFloat<Bits> result = a;
   result.exponent += pow_2;
   return result;

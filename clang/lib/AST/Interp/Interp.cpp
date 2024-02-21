@@ -357,10 +357,18 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK) {
+  assert(Ptr.isLive());
+
   if (Ptr.isInitialized())
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
+    if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+        VD && VD->hasGlobalStorage()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    }
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }
@@ -477,6 +485,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
           return false;
 
+        // If the declaration is defined _and_ declared 'constexpr', the below
+        // diagnostic doesn't add anything useful.
+        if (DiagDecl->isDefined() && DiagDecl->isConstexpr())
+          return false;
+
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
         S.Note(DiagDecl->getLocation(), diag::note_declared_at);
@@ -525,17 +538,6 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
   S.Note(MD->getLocation(), diag::note_declared_at);
-  return false;
-}
-
-bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
-                                   const Pointer &Ptr) {
-  if (!S.inConstantContext())
-    return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
   return false;
 }
 

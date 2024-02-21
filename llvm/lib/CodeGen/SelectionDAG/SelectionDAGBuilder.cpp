@@ -1250,7 +1250,8 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
 
   // Is there is any debug-info attached to this instruction, in the form of
   // DPValue non-instruction debug-info records.
-  for (DPValue &DPV : I.getDbgValueRange()) {
+  for (DbgRecord &DPR : I.getDbgValueRange()) {
+    DPValue &DPV = cast<DPValue>(DPR);
     DILocalVariable *Variable = DPV.getVariable();
     DIExpression *Expression = DPV.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
@@ -6956,11 +6957,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::stackguard: {
     MachineFunction &MF = DAG.getMachineFunction();
     const Module &M = *MF.getFunction().getParent();
+    EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Chain = getRoot();
     if (TLI.useLoadStackGuardNode()) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
+      Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
-      EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
       const Value *Global = TLI.getSDagStackGuard(M);
       Align Align = DAG.getDataLayout().getPrefTypeAlign(Global->getType());
       Res = DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),

@@ -129,19 +129,25 @@ out_file.write('''\
 
 latest_release = 17
 
+class AvailabilityError(RuntimeError):
+  pass
+
+availability_error_occurred = False
+
 def availability(issue):
   status = status_map.get(issue, 'unknown')
 
   unresolved_status = ''
-  if status.endswith(' open'):
-    status = status[:-5]
-    unresolved_status = 'open'
-  elif status.endswith(' drafting'):
-    status = status[:-9]
-    unresolved_status = 'drafting'
-  elif status.endswith(' review'):
-    status = status[:-7]
-    unresolved_status = 'review'
+  proposed_resolution = ''
+  unresolved_status_match = re.search(r' (open|drafting|review)', status)
+  if unresolved_status_match:
+    unresolved_status = unresolved_status_match.group(1)
+    proposed_resolution_match = re.search(r' (open|drafting|review) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
+    if proposed_resolution_match is None:
+      raise AvailabilityError('Issue {}: \'{}\' status should be followed by a paper number (P1234R5) or proposed resolution in YYYY-MM-DD format'.format(dr.issue, unresolved_status))
+    proposed_resolution = proposed_resolution_match.group(2)
+    status = status[:-1-len(proposed_resolution)]
+    status = status[:-1-len(unresolved_status)]
 
   avail_suffix = ''
   if status.endswith(' c++11'):
@@ -159,21 +165,37 @@ def availability(issue):
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="unknown"'
-  elif re.match('^[0-9]+\.?[0-9]*', status):
-    avail = 'Clang %s' % status
-    if float(status) > latest_release:
-      avail_style = ' class="unreleased"'
-    else:
-      avail_style = ' class="full"'
+  elif re.match(r'^[0-9]+\.?[0-9]*', status):
+    if not proposed_resolution:
+      avail = 'Clang %s' % status
+      if float(status) > latest_release:
+        avail_style = ' class="unreleased"'
+      else:
+        avail_style = ' class="full"'
+    else: 
+      avail = 'Not Resolved*'
+      avail_style = f' title="Clang {status} implements {proposed_resolution} resolution"'
   elif status == 'yes':
-    avail = 'Yes'
-    avail_style = ' class="full"'
+    if not proposed_resolution:
+      avail = 'Yes'
+      avail_style = ' class="full"'
+    else:
+      avail = 'Not Resolved*'
+      avail_style = f' title="Clang implements {proposed_resolution} resolution"'
   elif status == 'partial':
-    avail = 'Partial'
-    avail_style = ' class="partial"'
+    if not proposed_resolution:
+      avail = 'Partial'
+      avail_style = ' class="partial"'
+    else:
+      avail = 'Not Resolved*'
+      avail_style = f' title="Clang partially implements {proposed_resolution} resolution"'
   elif status == 'no':
-    avail = 'No'
-    avail_style = ' class="none"'
+    if not proposed_resolution:
+      avail = 'No'
+      avail_style = ' class="none"'
+    else:
+      avail = 'Not Resolved*'
+      avail_style = f' title="Clang does not implement {proposed_resolution} resolution"'
   elif status == 'na':
     avail = 'N/A'
     avail_style = ' class="na"'
@@ -200,7 +222,7 @@ def availability(issue):
     avail = 'Duplicate of <a href="#%s">%s</a>' % (dup, dup)
     _, avail_style, _ = availability(dup)
   else:
-    assert False, 'unknown status %s for issue %s' % (status, dr.issue)
+    raise AvailabilityError('Unknown status %s for issue %s' % (status, dr.issue))
   return (avail + avail_suffix, avail_style, unresolved_status)
 
 count = {}
@@ -217,20 +239,36 @@ for dr in drs:
 
   elif dr.status in ('open', 'drafting', 'review'):
     row_style = ' class="open"'
-    avail, avail_style, unresolved_status = availability(dr.issue)
+    try:
+      avail, avail_style, unresolved_status = availability(dr.issue)
+    except AvailabilityError as e:
+      availability_error_occurred = True
+      print(e.args[0])
+      continue
+      
     if avail == 'Unknown':
       avail = 'Not resolved'
       avail_style = ''
     else:
-      assert unresolved_status == dr.status, \
-             "Issue %s is marked '%s', which differs from CWG index status '%s'" \
-             % (dr.issue, unresolved_status, dr.status)
+      if unresolved_status != dr.status:
+        availability_error_occurred = True
+        print("Issue %s is marked '%s', which differs from CWG index status '%s'" \
+             % (dr.issue, unresolved_status, dr.status))
+        continue
   else:
     row_style = ''
-    avail, avail_style, unresolved_status = availability(dr.issue)
-    assert not unresolved_status, \
-           "Issue %s is marked '%s', even though it is resolved in CWG index" \
-           % (dr.issue, unresolved_status)
+    try:
+      avail, avail_style, unresolved_status = availability(dr.issue)
+    except AvailabilityError as e:
+      availability_error_occurred = True
+      print(e.args[0])
+      continue
+
+    if unresolved_status:
+      availability_error_occurred = True
+      print("Issue %s is marked '%s', even though it is resolved in CWG index" \
+           % (dr.issue, unresolved_status))
+      continue
 
   if not avail.startswith('Sup') and not avail.startswith('Dup'):
     count[avail] = count.get(avail, 0) + 1
@@ -242,6 +280,9 @@ for dr in drs:
     <td>%s</td>
     <td%s align="center">%s</td>
   </tr>''' % (row_style, dr.issue, dr.issue, dr.issue, dr.status, dr.title, avail_style, avail))
+
+if availability_error_occurred:
+  exit(1)
 
 for status, num in sorted(count.items()):
   print("%s: %s" % (status, num), file=sys.stderr)
