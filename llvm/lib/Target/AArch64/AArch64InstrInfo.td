@@ -6125,6 +6125,15 @@ def : Pat<(v8i16 (concat_vectors (v4i16 (assertzext (trunc (v4i32 V128:$Vn)))),
 def : Pat<(v4i32 (concat_vectors (v2i32 (assertzext (trunc (v2i64 V128:$Vn)))),
                                  (v2i32 (assertzext (trunc (v2i64 V128:$Vm)))))),
           (UZP1v4i32 V128:$Vn, V128:$Vm)>;
+def : Pat<(v16i8 (concat_vectors (v8i8 (assertsext (trunc (v8i16 V128:$Vn)))),
+                                 (v8i8 (assertsext (trunc (v8i16 V128:$Vm)))))),
+          (UZP1v16i8 V128:$Vn, V128:$Vm)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 (assertsext (trunc (v4i32 V128:$Vn)))),
+                                 (v4i16 (assertsext (trunc (v4i32 V128:$Vm)))))),
+          (UZP1v8i16 V128:$Vn, V128:$Vm)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 (assertsext (trunc (v2i64 V128:$Vn)))),
+                                 (v2i32 (assertsext (trunc (v2i64 V128:$Vm)))))),
+          (UZP1v4i32 V128:$Vn, V128:$Vm)>;
 
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 (trunc (AArch64vlshr (v8i16 V128:$Vn), (i32 8)))),
