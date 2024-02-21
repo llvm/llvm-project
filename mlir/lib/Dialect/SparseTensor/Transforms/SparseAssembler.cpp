@@ -22,13 +22,9 @@ using namespace sparse_tensor;
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
-// TODO: reuse StorageLayout::foreachField?
-
-// TODO: we need COO AoS and SoA
-
 // Convert type range to new types range, with sparse tensors externalized.
-void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
-               SmallVectorImpl<Type> *extraTypes = nullptr) {
+static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
+                      SmallVectorImpl<Type> *extraTypes = nullptr) {
   for (auto type : types) {
     // All "dense" data passes through unmodified.
     if (!getSparseTensorEncoding(type)) {
@@ -42,29 +38,30 @@ void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
     convTypes.push_back(vtp);
     if (extraTypes)
       extraTypes->push_back(vtp);
-    // Convert the external representations of the pos/crd arrays.
-    for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      const auto lt = stt.getLvlType(lvl);
-      if (isCompressedLT(lt) || isLooseCompressedLT(lt)) {
-        auto ptp = RankedTensorType::get(shape, stt.getPosType());
-        auto ctp = RankedTensorType::get(shape, stt.getCrdType());
-        convTypes.push_back(ptp);
-        convTypes.push_back(ctp);
-        if (extraTypes) {
-          extraTypes->push_back(ptp);
-          extraTypes->push_back(ctp);
-        }
-      } else {
-        assert(isDenseLT(lt)); // TODO: handle other cases
+
+    // Convert the external representation of the position/coordinate array.
+    foreachFieldAndTypeInSparseTensor(stt, [&convTypes, extraTypes](
+                                               Type t, FieldIndex,
+                                               SparseTensorFieldKind kind,
+                                               Level, LevelType) {
+      if (kind == SparseTensorFieldKind::CrdMemRef ||
+          kind == SparseTensorFieldKind::PosMemRef) {
+        ShapedType st = t.cast<ShapedType>();
+        auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
+        convTypes.push_back(rtp);
+        if (extraTypes)
+          extraTypes->push_back(rtp);
       }
-    }
+      return true;
+    });
   }
 }
 
 // Convert input and output values to [dis]assemble ops for sparse tensors.
-void convVals(OpBuilder &builder, Location loc, TypeRange types,
-              ValueRange fromVals, ValueRange extraVals,
-              SmallVectorImpl<Value> &toVals, unsigned extra, bool isIn) {
+static void convVals(OpBuilder &builder, Location loc, TypeRange types,
+                     ValueRange fromVals, ValueRange extraVals,
+                     SmallVectorImpl<Value> &toVals, unsigned extra,
+                     bool isIn) {
   unsigned idx = 0;
   for (auto type : types) {
     // All "dense" data passes through unmodified.
@@ -85,29 +82,28 @@ void convVals(OpBuilder &builder, Location loc, TypeRange types,
     if (!isIn) {
       inputs.push_back(extraVals[extra++]);
       retTypes.push_back(RankedTensorType::get(shape, stt.getElementType()));
-      cntTypes.push_back(builder.getIndexType());
+      cntTypes.push_back(builder.getIndexType()); // nnz
     }
+
     // Collect the external representations of the pos/crd arrays.
-    for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      const auto lt = stt.getLvlType(lvl);
-      if (isCompressedLT(lt) || isLooseCompressedLT(lt)) {
+    foreachFieldAndTypeInSparseTensor(stt, [&, isIn](Type t, FieldIndex,
+                                                     SparseTensorFieldKind kind,
+                                                     Level, LevelType) {
+      if (kind == SparseTensorFieldKind::CrdMemRef ||
+          kind == SparseTensorFieldKind::PosMemRef) {
         if (isIn) {
           inputs.push_back(fromVals[idx++]);
-          inputs.push_back(fromVals[idx++]);
         } else {
-          Type pTp = stt.getPosType();
-          Type cTp = stt.getCrdType();
+          ShapedType st = t.cast<ShapedType>();
+          auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
           inputs.push_back(extraVals[extra++]);
-          inputs.push_back(extraVals[extra++]);
-          retTypes.push_back(RankedTensorType::get(shape, pTp));
-          retTypes.push_back(RankedTensorType::get(shape, cTp));
-          cntTypes.push_back(pTp);
-          cntTypes.push_back(cTp);
+          retTypes.push_back(rtp);
+          cntTypes.push_back(rtp.getElementType());
         }
-      } else {
-        assert(isDenseLT(lt)); // TODO: handle other cases
       }
-    }
+      return true;
+    });
+
     if (isIn) {
       // Assemble multiple inputs into a single sparse tensor.
       auto a = builder.create<sparse_tensor::AssembleOp>(loc, rtp, inputs);

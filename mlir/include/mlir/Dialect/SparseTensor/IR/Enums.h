@@ -283,7 +283,13 @@ public:
   }
   bool operator!=(const LevelType lhs) const { return !(*this == lhs); }
 
-  LevelType stripProperties() const { return LevelType(lvlBits & ~0xffff); }
+  LevelType stripStorageIrrelevantProperties() const {
+    // Properties other than `SoA` do not change the storage scheme of the
+    // sparse tensor.
+    constexpr uint64_t mask =
+        0xffff & ~static_cast<uint64_t>(LevelPropNonDefault::SoA);
+    return LevelType(lvlBits & ~mask);
+  }
 
   /// Get N of NOutOfM level type.
   constexpr uint64_t getN() const {
@@ -303,9 +309,9 @@ public:
   }
 
   /// Check if the `LevelType` is in the `LevelFormat`.
-  template <LevelFormat fmt>
+  template <LevelFormat... fmt>
   constexpr bool isa() const {
-    return getLvlFmt() == fmt;
+    return (... || (getLvlFmt() == fmt)) || false;
   }
 
   /// Check if the `LevelType` has the properties

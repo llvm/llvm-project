@@ -862,7 +862,7 @@ private:
   void processInstructionMetadata(const Instruction &I);
 
   /// Add all of the metadata from an instruction.
-  void processDPValueMetadata(const DPValue &DPV);
+  void processDbgRecordMetadata(const DbgRecord &DPV);
 };
 
 } // end namespace llvm
@@ -1131,18 +1131,21 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB) {
-      for (const DPValue &DPV : I.getDbgValueRange())
-        processDPValueMetadata(DPV);
+      for (const DbgRecord &DR : I.getDbgValueRange())
+        processDbgRecordMetadata(DR);
       processInstructionMetadata(I);
     }
   }
 }
 
-void SlotTracker::processDPValueMetadata(const DPValue &DPV) {
-  CreateMetadataSlot(DPV.getVariable());
-  CreateMetadataSlot(DPV.getDebugLoc());
-  if (DPV.isDbgAssign()) {
-    CreateMetadataSlot(DPV.getAssignID());
+void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
+  if (const DPValue *DPV = dyn_cast<const DPValue>(&DR)) {
+    CreateMetadataSlot(DPV->getVariable());
+    CreateMetadataSlot(DPV->getDebugLoc());
+    if (DPV->isDbgAssign())
+      CreateMetadataSlot(DPV->getAssignID());
+  } else {
+    llvm_unreachable("unsupported DbgRecord kind");
   }
 }
 
@@ -2673,6 +2676,7 @@ public:
   void printInstruction(const Instruction &I);
   void printDPMarker(const DPMarker &DPI);
   void printDPValue(const DPValue &DPI);
+  void printDbgRecord(const DbgRecord &DPI);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
   void printUseLists(const Function *F);
@@ -4561,8 +4565,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
   // There's no formal representation of a DPMarker -- print purely as a
   // debugging aid.
-  for (const DPValue &DPI2 : Marker.StoredDPValues) {
-    printDPValue(DPI2);
+  for (const DbgRecord &DPR : Marker.StoredDPValues) {
+    printDbgRecord(DPR);
     Out << "\n";
   }
 
@@ -4570,6 +4574,13 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
   printInstruction(*Marker.MarkedInstr);
   Out << " }";
   return;
+}
+
+void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
+  if (auto *DPV = dyn_cast<DPValue>(&DR))
+    printDPValue(*DPV);
+  else
+    llvm_unreachable("unsupported dbg record");
 }
 
 void AssemblyWriter::printDPValue(const DPValue &Value) {
@@ -5144,7 +5155,7 @@ void DPMarker::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'
 
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
-void DPValue::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
+void DbgRecord::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
 
 // Type::dump - allow easy printing of Types from the debugger.
 LLVM_DUMP_METHOD

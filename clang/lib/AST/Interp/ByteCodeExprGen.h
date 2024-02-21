@@ -289,6 +289,7 @@ private:
   }
 
   bool emitComplexReal(const Expr *SubExpr);
+  bool emitComplexBoolCast(const Expr *E);
 
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);

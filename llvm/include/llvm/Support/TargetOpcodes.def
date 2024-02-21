@@ -225,6 +225,11 @@ HANDLE_TARGET_OPCODE(MEMBARRIER)
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
 
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ENTRY)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ANCHOR)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_LOOP)
+HANDLE_TARGET_OPCODE(CONVERGENCECTRL_GLUE)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
