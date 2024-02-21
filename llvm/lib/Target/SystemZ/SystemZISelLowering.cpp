@@ -1923,7 +1923,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
         unsigned N = getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
         SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
       } else {
-        SlotVT = Outs[I].ArgVT;
+        SlotVT = Outs[I].VT;
       }
       SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
