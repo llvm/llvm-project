@@ -9,9 +9,11 @@ typedef unsigned short int ushort;
 typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
 typedef __bf16 __attribute__((ext_vector_type(2))) bfloat2;
 typedef __bf16 __attribute__((ext_vector_type(4))) bfloat4;
+typedef __bf16 __attribute__((ext_vector_type(8))) bfloat8;
 typedef __bf16 __attribute__((ext_vector_type(16))) bfloat16;
 typedef half __attribute__((ext_vector_type(2))) half2;
 typedef half __attribute__((ext_vector_type(4))) half4;
+typedef half __attribute__((ext_vector_type(8))) half8;
 typedef half __attribute__((ext_vector_type(16))) half16;
 
 // CHECK-LABEL: @test_setprio_inc_wg(
@@ -573,6 +575,8 @@ void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
 // CHECK-NEXT:    [[OUTH4_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[OUTY4_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUTH8_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTY8_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTH16:%.*]], ptr addrspace(5) [[OUTH16_ADDR]], align 8
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTY16:%.*]], ptr addrspace(5) [[OUTY16_ADDR]], align 8
@@ -581,6 +585,8 @@ void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTH4:%.*]], ptr addrspace(5) [[OUTH4_ADDR]], align 8
 // CHECK-NEXT:    store ptr addrspace(1) [[OUTY4:%.*]], ptr addrspace(5) [[OUTY4_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTH8:%.*]], ptr addrspace(5) [[OUTH8_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUTY8:%.*]], ptr addrspace(5) [[OUTY8_ADDR]], align 8
 // CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
 // CHECK-NEXT:    [[LOADVEC4:%.*]] = load <4 x i32>, ptr addrspace(5) [[SRC3_ADDR]], align 16
 // CHECK-NEXT:    [[EXTRACTVEC1:%.*]] = shufflevector <4 x i32> [[LOADVEC4]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -626,10 +632,21 @@ void test_cvt_sr_fp8_f16(global int* out, half a, short sr, int old)
 // CHECK-NEXT:    [[TMP26:%.*]] = call <4 x bfloat> @llvm.amdgcn.cvt.scale.pk.bf16.bf8(i32 [[TMP24]], float [[TMP25]])
 // CHECK-NEXT:    [[TMP27:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTY4_ADDR]], align 8
 // CHECK-NEXT:    store <4 x bfloat> [[TMP26]], ptr addrspace(1) [[TMP27]], align 8
+// CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP30:%.*]] = call <8 x half> @llvm.amdgcn.cvt.scale.pk.f16.fp4(i32 [[TMP28]], float [[TMP29]])
+// CHECK-NEXT:    [[TMP31:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTH8_ADDR]], align 8
+// CHECK-NEXT:    store <8 x half> [[TMP30]], ptr addrspace(1) [[TMP31]], align 16
+// CHECK-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP33:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP34:%.*]] = call <8 x bfloat> @llvm.amdgcn.cvt.scale.pk.bf16.fp4(i32 [[TMP32]], float [[TMP33]])
+// CHECK-NEXT:    [[TMP35:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUTY8_ADDR]], align 8
+// CHECK-NEXT:    store <8 x bfloat> [[TMP34]], ptr addrspace(1) [[TMP35]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_cvt_scale_pk(global half16 *outh16, global bfloat16 *outy16, uint3 src3,
                        global half4 *outh4, global bfloat4 *outy4, int src1,
+                       global half8 *outh8, global bfloat8 *outy8,
                        float scale)
 {
   *outh16 = __builtin_amdgcn_cvt_scale_pk_f16_fp6(src3, scale);
@@ -640,4 +657,6 @@ void test_cvt_scale_pk(global half16 *outh16, global bfloat16 *outy16, uint3 src
   *outy4 = __builtin_amdgcn_cvt_scale_pk_bf16_fp8(src1, scale);
   *outh4 = __builtin_amdgcn_cvt_scale_pk_f16_bf8(src1, scale);
   *outy4 = __builtin_amdgcn_cvt_scale_pk_bf16_bf8(src1, scale);
+  *outh8 = __builtin_amdgcn_cvt_scale_pk_f16_fp4(src1, scale);
+  *outy8 = __builtin_amdgcn_cvt_scale_pk_bf16_fp4(src1, scale);
 }

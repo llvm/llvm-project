@@ -1102,6 +1102,8 @@ let SubtargetPredicate = isGFX12_10Plus in {
     defm V_CVT_SCALE_PK_BF16_FP8 : VOP3Inst<"v_cvt_scale_pk_bf16_fp8", VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V4BF16_I32_F32>,    int_amdgcn_cvt_scale_pk_bf16_fp8>;
     defm V_CVT_SCALE_PK_F16_BF8  : VOP3Inst<"v_cvt_scale_pk_f16_bf8",  VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V4F16_I32_F32>,     int_amdgcn_cvt_scale_pk_f16_bf8>;
     defm V_CVT_SCALE_PK_BF16_BF8 : VOP3Inst<"v_cvt_scale_pk_bf16_bf8", VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V4BF16_I32_F32>,    int_amdgcn_cvt_scale_pk_bf16_bf8>;
+    defm V_CVT_SCALE_PK_F16_FP4  : VOP3Inst<"v_cvt_scale_pk_f16_fp4",  VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V8F16_I32_F32>,     int_amdgcn_cvt_scale_pk_f16_fp4>;
+    defm V_CVT_SCALE_PK_BF16_FP4 : VOP3Inst<"v_cvt_scale_pk_bf16_fp4", VOP3_CVT_SCALE_PK_F16_F864_Profile<VOP_V8BF16_I32_F32>,    int_amdgcn_cvt_scale_pk_bf16_fp4>;
   }
 
   def : GCNPat<(v2f16 (fpround v2f32:$src)),
@@ -1441,6 +1443,8 @@ defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b
 defm V_LSHL_ADD_U64          : VOP3Only_Realtriple_gfx1210<0x252>;
 defm V_ASHR_PK_I8_I32        : VOP3Only_Realtriple_gfx1210<0x290>;
 defm V_ASHR_PK_U8_I32        : VOP3Only_Realtriple_gfx1210<0x291>;
+defm V_CVT_SCALE_PK_F16_FP4  : VOP3Only_Realtriple_gfx1210<0x29f>;
+defm V_CVT_SCALE_PK_BF16_FP4 : VOP3Only_Realtriple_gfx1210<0x2a0>;
 defm V_CVT_SCALE_PK_F16_FP6  : VOP3Only_Realtriple_gfx1210<0x2a2>;
 defm V_CVT_SCALE_PK_BF16_FP6 : VOP3Only_Realtriple_gfx1210<0x2a3>;
 defm V_CVT_SCALE_PK_F16_BF6  : VOP3Only_Realtriple_gfx1210<0x2a5>;
