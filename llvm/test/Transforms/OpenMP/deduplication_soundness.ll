@@ -3,15 +3,10 @@
 
 declare void @use(i32 noundef)
 declare i32 @omp_get_thread_limit()
-; Function Attrs: nounwind
 declare void @__kmpc_set_thread_limit(ptr, i32, i32)
-; Function Attrs: nounwind
 declare i32 @__kmpc_global_thread_num(ptr)
-; Function Attrs: nounwind
 declare noalias ptr @__kmpc_omp_task_alloc(ptr, i32, i32, i64, i64, ptr)
-; Function Attrs: nounwind
 declare void @__kmpc_omp_task_complete_if0(ptr, i32, ptr)
-; Function Attrs: nounwind
 declare void @__kmpc_omp_task_begin_if0(ptr, i32, ptr)
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
