@@ -40,11 +40,12 @@ struct Designators {
     assert(InitList->isSyntacticForm());
   };
 
-  unsigned size() { return get().size(); }
+  unsigned size() { return getCached().size(); }
 
   std::optional<llvm::StringRef> operator[](const SourceLocation &Location) {
-    const auto Result = get().find(Location);
-    if (Result == get().end())
+    const auto Designators = getCached();
+    const auto Result = Designators.find(Location);
+    if (Result == Designators.end())
       return {};
     return Result->getSecond();
   }
@@ -55,7 +56,7 @@ private:
   std::optional<LocationToNameMap> CachedDesignators;
   const InitListExpr *InitList;
 
-  LocationToNameMap &get() {
+  LocationToNameMap &getCached() {
     return CachedDesignators ? *CachedDesignators
                              : CachedDesignators.emplace(
                                    utils::getUnwrittenDesignators(InitList));
