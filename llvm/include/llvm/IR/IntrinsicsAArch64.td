@@ -1378,6 +1378,16 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                             [llvm_anyvector_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   
+  class SVE2_Pred_1VectorArgIndexed_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  class SVE2_Pred_1VectorArg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                            [IntrNoMem]>;
 
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
@@ -3623,16 +3633,8 @@ def int_aarch64_sve_extq : AdvSIMD_2VectorArgIndexed_Intrinsic;
 //
 def int_aarch64_sve_pmov_to_pred_lane : SVE2_1VectorArgIndexed_Pred_Intrinsic; 
     
-
 def int_aarch64_sve_pmov_to_pred_lane_zero : SVE2_1VectorArg_Pred_Intrinsic;
 
-def int_aarch64_sve_pmov_to_vector_lane_merging :
-    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                          [LLVMMatchType<0>,
-                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_i32_ty],
-                          [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-
-def int_aarch64_sve_pmov_to_vector_lane_zeroing :
-    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                          [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                          [IntrNoMem]>;
+def int_aarch64_sve_pmov_to_vector_lane_merging : SVE2_Pred_1VectorArgIndexed_Intrinsic;
+   
+def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;
