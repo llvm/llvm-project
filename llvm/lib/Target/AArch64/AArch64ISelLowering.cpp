@@ -21073,10 +21073,13 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op1 = N->getOperand(1);
     if (Op0.getOpcode() != ISD::BITCAST || Op1.getOpcode() != ISD::BITCAST)
       return false;
+    EVT Op0Ty = Op0.getOperand(0).getValueType();
+    if (Op0Ty != Op1.getOperand(0).getValueType())
+      return false;
 
     EVT ResVT = N->getValueType(0);
     return ResVT.widenIntegerVectorElementType(Ctx).getHalfNumVectorElementsVT(
-               Ctx) == Op0.getOperand(0).getValueType();
+               Ctx) == Op0Ty;
   };
 
   // truncating uzp1(x=uzp1, y=uzp1) -> trunc(concat (x, y))
