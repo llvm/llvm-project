@@ -22,13 +22,13 @@ InstallAPI JSON Input Format specification.
 {
   "headers" : [                              # Required: Key must exist.
     {                                        # Optional: May contain 0 or more header inputs.
-      "path" : "/usr/include/mach-o/dlfn.h", # Required: Path should point to destination 
+      "path" : "/usr/include/mach-o/dlfn.h", # Required: Path should point to destination
                                              #           location where applicable.
       "type" : "public",                     # Required: Maps to HeaderType for header.
       "language": "c++"                      # Optional: Language mode for header.
     }
   ],
-  "version" : "3"                            # Required: Version 3 supports language mode 
+  "version" : "3"                            # Required: Version 3 supports language mode
                                                          & project header input.
 }
 */
