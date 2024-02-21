@@ -49,7 +49,7 @@ using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
 /// Using 64 bit size is desirable for cases like SmallVector<char>, where a
 /// 32 bit size would limit the vector to ~4GB. SmallVectors are used for
 /// buffering bitcode output - which can exceed 4GB.
-template <class Size_T> class SmallVectorBase {
+template <class Size_T> class LLVM_ATTRIBUTE_STANDALONE_DEBUG SmallVectorBase {
 protected:
   void *BeginX;
   Size_T Size = 0, Capacity;

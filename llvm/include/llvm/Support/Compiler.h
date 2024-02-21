@@ -270,6 +270,15 @@
 #define LLVM_ATTRIBUTE_NODEBUG
 #endif
 
+/// LLVM_ATTRIBUTE_STANDALONE_DEBUG - Force the compiler to emit debug info
+/// for the given type even if it assumes it is not required.
+/// This may be needed on certain types to ensure a good debugging experience.
+#if __has_attribute(standalone_debug)
+#define LLVM_ATTRIBUTE_STANDALONE_DEBUG __attribute__((standalone_debug))
+#else
+#define LLVM_ATTRIBUTE_STANDALONE_DEBUG
+#endif
+
 #if __has_attribute(returns_nonnull)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL __attribute__((returns_nonnull))
 #elif defined(_MSC_VER)
