@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
+#include "Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
@@ -57,25 +58,25 @@ public:
   };
 
   static ReductionIdentifier
-  getReductionType(const Fortran::parser::ProcedureDesignator &pd);
+  getReductionType(const omp::clause::ProcedureDesignator &pd);
 
-  static ReductionIdentifier getReductionType(
-      Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp);
+  static ReductionIdentifier
+  getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
-  static bool supportedIntrinsicProcReduction(
-      const Fortran::parser::ProcedureDesignator &pd);
-
-  static const Fortran::semantics::SourceName
-  getRealName(const Fortran::parser::Name *name);
+  static bool
+  supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
 
   static const Fortran::semantics::SourceName
-  getRealName(const Fortran::parser::ProcedureDesignator &pd);
+  getRealName(const Fortran::semantics::Symbol *symbol);
+
+  static const Fortran::semantics::SourceName
+  getRealName(const omp::clause::ProcedureDesignator &pd);
 
   static std::string getReductionName(llvm::StringRef name, mlir::Type ty);
 
-  static std::string getReductionName(
-      Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
-      mlir::Type ty);
+  static std::string
+  getReductionName(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
+                   mlir::Type ty);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
@@ -112,7 +113,7 @@ public:
   static void
   addReductionDecl(mlir::Location currentLocation,
                    Fortran::lower::AbstractConverter &converter,
-                   const Fortran::parser::OmpReductionClause &reduction,
+                   const omp::clause::Reduction &reduction,
                    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
                    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
                    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>

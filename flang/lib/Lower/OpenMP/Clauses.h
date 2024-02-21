@@ -106,6 +106,12 @@ getBaseObject(const Object &object,
               Fortran::semantics::SemanticsContext &semaCtx);
 
 namespace clause {
+using DefinedOperator = tomp::clause::DefinedOperatorT<SymIdent, SymReference>;
+using ProcedureDesignator =
+    tomp::clause::ProcedureDesignatorT<SymIdent, SymReference>;
+using ReductionOperator =
+    tomp::clause::ReductionOperatorT<SymIdent, SymReference>;
+
 #ifdef EMPTY_CLASS
 #undef EMPTY_CLASS
 #endif
