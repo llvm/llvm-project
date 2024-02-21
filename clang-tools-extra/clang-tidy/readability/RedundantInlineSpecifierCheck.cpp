@@ -88,10 +88,14 @@ void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
         this);
 
   if (getLangOpts().CPlusPlus17) {
+    const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
     Finder->addMatcher(
-        varDecl(isInlineSpecified(),
-                anyOf(isInternalLinkage(StrictMode),
-                      allOf(isConstexpr(), hasAncestor(recordDecl()))))
+        varDecl(
+            isInlineSpecified(),
+            anyOf(allOf(isInternalLinkage(StrictMode),
+                        unless(allOf(hasInitializer(expr()), IsPartOfRecordDecl,
+                                     isStaticStorageClass()))),
+                  allOf(isConstexpr(), IsPartOfRecordDecl)))
             .bind("var_decl"),
         this);
   }

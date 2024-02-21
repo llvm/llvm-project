@@ -68,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/Triple.h"
@@ -837,10 +838,6 @@ void CodeGenModule::Release() {
       AddGlobalCtor(CudaCtorFunction);
   }
   if (OpenMPRuntime) {
-    if (llvm::Function *OpenMPRequiresDirectiveRegFun =
-            OpenMPRuntime->emitRequiresDirectiveRegFun()) {
-      AddGlobalCtor(OpenMPRequiresDirectiveRegFun, 0);
-    }
     OpenMPRuntime->createOffloadEntriesAndInfoMetadata();
     OpenMPRuntime->clear();
   }
@@ -1057,6 +1054,19 @@ void CodeGenModule::Release() {
     llvm::LLVMContext &Ctx = TheModule.getContext();
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(Ctx, ABIStr));
+
+    // Add the canonical ISA string as metadata so the backend can set the ELF
+    // attributes correctly. We use AppendUnique so LTO will keep all of the
+    // unique ISA strings that were linked together.
+    const std::vector<std::string> &Features =
+        getTarget().getTargetOpts().Features;
+    auto ParseResult =
+        llvm::RISCVISAInfo::parseFeatures(T.isRISCV64() ? 64 : 32, Features);
+    if (!errorToBool(ParseResult.takeError()))
+      getModule().addModuleFlag(
+          llvm::Module::AppendUnique, "riscv-isa",
+          llvm::MDNode::get(
+              Ctx, llvm::MDString::get(Ctx, (*ParseResult)->toString())));
   }
 
   if (CodeGenOpts.SanitizeCfiCrossDso) {
@@ -3971,8 +3981,7 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
       M && M->getTopLevelModule()->isNamedModule() &&
-      getContext().getCurrentNamedModule() != M->getTopLevelModule() &&
-      !F->hasAttr<AlwaysInlineAttr>())
+      getContext().getCurrentNamedModule() != M->getTopLevelModule())
     return false;
 
   if (F->hasAttr<NoInlineAttr>())

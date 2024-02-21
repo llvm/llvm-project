@@ -52,6 +52,65 @@ import lldb
 import sys
 from abc import abstractmethod
 
+# Some methods to translate common value types.  Should return a
+# tuple of the value and an error value (True => error) if the
+# type can't be converted.  These are called internally when the
+# command line is parsed into the 'dest' properties, you should
+# not need to call them directly.
+# FIXME: Need a way to push the conversion error string back to lldb.
+def to_bool(in_value):
+    error = True
+    value = False
+    if type(in_value) != str or len(in_value) == 0:
+        return (value, error)
+
+    low_in = in_value.lower()
+    if low_in in ["y", "yes", "t", "true", "1"]:
+        value = True
+        error = False
+        
+    if not value and low_in in ["n", "no", "f", "false", "0"]:
+        value = False
+        error = False
+
+    return (value, error)
+
+def to_int(in_value):
+    #FIXME: Not doing errors yet...
+    return (int(in_value), False)
+
+def to_unsigned(in_value):
+    # FIXME: find an unsigned converter...
+    # And handle errors.
+    return (int(in_value), False)
+
+translators = {
+    lldb.eArgTypeBoolean : to_bool,
+    lldb.eArgTypeBreakpointID : to_unsigned,
+    lldb.eArgTypeByteSize : to_unsigned,
+    lldb.eArgTypeCount : to_unsigned,
+    lldb.eArgTypeFrameIndex : to_unsigned,
+    lldb.eArgTypeIndex : to_unsigned,
+    lldb.eArgTypeLineNum : to_unsigned,
+    lldb.eArgTypeNumLines : to_unsigned,
+    lldb.eArgTypeNumberPerLine : to_unsigned,
+    lldb.eArgTypeOffset : to_int,
+    lldb.eArgTypeThreadIndex : to_unsigned,
+    lldb.eArgTypeUnsignedInteger : to_unsigned,
+    lldb.eArgTypeWatchpointID : to_unsigned,
+    lldb.eArgTypeColumnNum : to_unsigned,
+    lldb.eArgTypeRecognizerID : to_unsigned,
+    lldb.eArgTypeTargetID : to_unsigned,
+    lldb.eArgTypeStopHookID : to_unsigned
+}
+
+def translate_value(value_type, value):
+    try:
+        return translators[value_type](value)
+    except KeyError:
+        # If we don't have a translator, return the string value.
+        return (value, False)
+
 class LLDBOptionValueParser:
     """
     This class holds the option definitions for the command, and when
@@ -63,68 +122,6 @@ class LLDBOptionValueParser:
         self.options_dict = {}
         self.args_array = []
 
-    # Some methods to translate common value types.  Should return a
-    # tuple of the value and an error value (True => error) if the
-    # type can't be converted.  These are called internally when the
-    # command line is parsed into the 'dest' properties, you should
-    # not need to call them directly.
-    # FIXME: Need a way to push the conversion error string back to lldb.
-    @staticmethod
-    def to_bool(in_value):
-        error = True
-        value = False
-        if type(in_value) != str or len(in_value) == 0:
-            return (value, error)
-
-        low_in = in_value.lower()
-        if low_in in ["y", "yes", "t", "true", "1"]:
-            value = True
-            error = False
-            
-        if not value and low_in in ["n", "no", "f", "false", "0"]:
-            value = False
-            error = False
-
-        return (value, error)
-
-    @staticmethod
-    def to_int(in_value):
-        #FIXME: Not doing errors yet...
-        return (int(in_value), False)
-
-    @staticmethod
-    def to_unsigned(in_value):
-        # FIXME: find an unsigned converter...
-        # And handle errors.
-        return (int(in_value), False)
-
-    translators = {
-        lldb.eArgTypeBoolean : to_bool,
-        lldb.eArgTypeBreakpointID : to_unsigned,
-        lldb.eArgTypeByteSize : to_unsigned,
-        lldb.eArgTypeCount : to_unsigned,
-        lldb.eArgTypeFrameIndex : to_unsigned,
-        lldb.eArgTypeIndex : to_unsigned,
-        lldb.eArgTypeLineNum : to_unsigned,
-        lldb.eArgTypeNumLines : to_unsigned,
-        lldb.eArgTypeNumberPerLine : to_unsigned,
-        lldb.eArgTypeOffset : to_int,
-        lldb.eArgTypeThreadIndex : to_unsigned,
-        lldb.eArgTypeUnsignedInteger : to_unsigned,
-        lldb.eArgTypeWatchpointID : to_unsigned,
-        lldb.eArgTypeColumnNum : to_unsigned,
-        lldb.eArgTypeRecognizerID : to_unsigned,
-        lldb.eArgTypeTargetID : to_unsigned,
-        lldb.eArgTypeStopHookID : to_unsigned
-    }
-
-    @classmethod
-    def translate_value(cls, value_type, value):
-        try:
-            return cls.translators[value_type](value)
-        except KeyError:
-            # If we don't have a translator, return the string value.
-            return (value, False)
 
     # FIXME: would this be better done on the C++ side?
     # The common completers are missing some useful ones.
@@ -219,7 +216,7 @@ class LLDBOptionValueParser:
         if "enum_values" in elem:
             (value, error) = self.set_enum_value(elem["enum_values"], opt_value)
         else:
-            (value, error)  = __class__.translate_value(elem["value_type"], opt_value)
+            (value, error)  = translate_value(elem["value_type"], opt_value)
 
         if error:
             return False

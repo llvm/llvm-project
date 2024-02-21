@@ -245,7 +245,7 @@ static void emitDXILEnums(std::vector<DXILOperationDesc> &Ops,
   std::vector<std::pair<std::string, std::string>> ClassVec;
   for (auto &It : ClassMap) {
     ClassVec.emplace_back(
-        std::make_pair(It.getKey().str(), buildCategoryStr(It.second)));
+        std::pair(It.getKey().str(), buildCategoryStr(It.second)));
   }
   // Sort by Category + ClassName.
   llvm::sort(ClassVec, [](std::pair<std::string, std::string> &A,
