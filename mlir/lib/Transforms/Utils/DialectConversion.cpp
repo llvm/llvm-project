@@ -1006,10 +1006,31 @@ public:
       : OperationRewrite(Kind::ModifyOperation, rewriterImpl, op),
         loc(op->getLoc()), attrs(op->getAttrDictionary()),
         operands(op->operand_begin(), op->operand_end()),
-        successors(op->successor_begin(), op->successor_end()) {}
+        successors(op->successor_begin(), op->successor_end()) {
+    if (OpaqueProperties prop = op->getPropertiesStorage()) {
+      // Make a copy of the properties.
+      propertiesStorage = operator new(op->getPropertiesStorageSize());
+      OpaqueProperties propCopy(propertiesStorage);
+      op->getName().initOpProperties(propCopy, /*init=*/prop);
+    }
+  }
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::ModifyOperation;
+  }
+
+  ~ModifyOperationRewrite() override {
+    assert(!propertiesStorage &&
+           "rewrite was neither committed nor rolled back");
+  }
+
+  void commit() override {
+    if (propertiesStorage) {
+      OpaqueProperties propCopy(propertiesStorage);
+      op->getName().destroyOpProperties(propCopy);
+      operator delete(propertiesStorage);
+      propertiesStorage = nullptr;
+    }
   }
 
   void rollback() override {
@@ -1018,6 +1039,13 @@ public:
     op->setOperands(operands);
     for (const auto &it : llvm::enumerate(successors))
       op->setSuccessor(it.value(), it.index());
+    if (propertiesStorage) {
+      OpaqueProperties propCopy(propertiesStorage);
+      op->copyProperties(propCopy);
+      op->getName().destroyOpProperties(propCopy);
+      operator delete(propertiesStorage);
+      propertiesStorage = nullptr;
+    }
   }
 
 private:
@@ -1025,6 +1053,7 @@ private:
   DictionaryAttr attrs;
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
+  void *propertiesStorage = nullptr;
 };
 } // namespace
 
