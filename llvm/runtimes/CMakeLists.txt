@@ -449,14 +449,14 @@ if(runtimes)
       endforeach()
     endif()
   endif()
-  if(NOT LLVM_RUNTIME_TARGETS)
+  if(NOT LLVM_RUNTIME_TARGETS AND NOT LLVM_EXTRA_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
       CMAKE_ARGS ${libc_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
-    if("default" IN_LIST LLVM_RUNTIME_TARGETS)
+    if("default" IN_LIST LLVM_RUNTIME_TARGETS OR LLVM_EXTRA_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
         CMAKE_ARGS ${libc_cmake_args}
@@ -481,7 +481,7 @@ if(runtimes)
       endif()
     endif()
 
-    foreach(name ${LLVM_RUNTIME_TARGETS})
+    foreach(name ${LLVM_RUNTIME_TARGETS} ${LLVM_EXTRA_RUNTIME_TARGETS})
       if(builtins_dep)
         if (LLVM_BUILTIN_TARGETS)
           set(builtins_dep_name "${builtins_dep}-${name}")
