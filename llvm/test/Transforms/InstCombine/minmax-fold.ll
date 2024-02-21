@@ -316,8 +316,7 @@ define i32 @test73(i32 %x) {
 ; SMAX(SMAX(X, 36), 75) -> SMAX(X, 75)
 define i32 @test74(i32 %x) {
 ; CHECK-LABEL: @test74(
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 36)
-; CHECK-NEXT:    [[RETVAL:%.*]] = call i32 @llvm.umax.i32(i32 [[COND]], i32 75)
+; CHECK-NEXT:    [[RETVAL:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 75)
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
   %cmp = icmp slt i32 %x, 36
@@ -499,10 +498,9 @@ define i32 @clamp_check_for_no_infinite_loop3(i32 %i) {
 ; CHECK-LABEL: @clamp_check_for_no_infinite_loop3(
 ; CHECK-NEXT:    br i1 true, label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
 ; CHECK:       truelabel:
-; CHECK-NEXT:    [[I3:%.*]] = call i32 @llvm.smax.i32(i32 [[I:%.*]], i32 1)
-; CHECK-NEXT:    [[I6:%.*]] = call i32 @llvm.umin.i32(i32 [[I3]], i32 2)
-; CHECK-NEXT:    [[I7:%.*]] = shl nuw nsw i32 [[I6]], 2
-; CHECK-NEXT:    ret i32 [[I7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[I:%.*]], 2
+; CHECK-NEXT:    [[I6:%.*]] = select i1 [[TMP1]], i32 4, i32 8
+; CHECK-NEXT:    ret i32 [[I6]]
 ; CHECK:       falselabel:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -1391,8 +1389,8 @@ entry:
 define i32 @twoway_clamp_gt(i32 %num) {
 ; CHECK-LABEL: @twoway_clamp_gt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S1:%.*]] = call i32 @llvm.smax.i32(i32 [[NUM:%.*]], i32 13767)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[S1]], i32 13768)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[NUM:%.*]], 13768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP0]], i32 13767, i32 13768
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
