@@ -327,7 +327,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     default:
       break;
     case TTI::SK_InsertSubvector: {
-      auto *FSubTy = dyn_cast<FixedVectorType>(SubTp);
+      auto *FSubTy = cast<FixedVectorType>(SubTp);
       unsigned TpRegs = getRegUsageForType(Tp);
       unsigned SubTpRegs = getRegUsageForType(SubTp);
       unsigned NextSubTpRegs = getRegUsageForType(FixedVectorType::get(

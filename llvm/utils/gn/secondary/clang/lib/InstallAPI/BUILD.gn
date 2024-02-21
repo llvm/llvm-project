@@ -6,5 +6,9 @@ static_library("InstallAPI") {
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
   ]
-  sources = [ "Context.cpp" ]
+  sources = [
+    "Context.cpp",
+    "FileList.cpp",
+    "HeaderFile.cpp",
+  ]
 }

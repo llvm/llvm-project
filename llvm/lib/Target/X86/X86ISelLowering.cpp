@@ -36707,6 +36707,19 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.trunc(BitWidth);
     break;
   }
+  case X86ISD::PSHUFB: {
+    SDValue Src = Op.getOperand(0);
+    SDValue Idx = Op.getOperand(1);
+
+    // If the index vector is never negative (MSB is zero), then all elements
+    // come from the source vector. This is useful for cases where
+    // PSHUFB is being used as a LUT (ctpop etc.) - the target shuffle handling
+    // below will handle the more common constant shuffle mask case.
+    KnownBits KnownIdx = DAG.computeKnownBits(Idx, DemandedElts, Depth + 1);
+    if (KnownIdx.isNonNegative())
+      Known = DAG.computeKnownBits(Src, Depth + 1);
+    break;
+  }
   case X86ISD::VBROADCAST: {
     SDValue Src = Op.getOperand(0);
     if (!Src.getSimpleValueType().isVector()) {
