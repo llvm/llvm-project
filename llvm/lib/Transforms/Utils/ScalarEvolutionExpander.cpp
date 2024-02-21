@@ -51,7 +51,7 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
   NNeg = false;
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I)) {
     NUW = OBO->hasNoUnsignedWrap();
-    NSW = OBO->hasNoUnsignedWrap();
+    NSW = OBO->hasNoSignedWrap();
   }
   if (auto *PEO = dyn_cast<PossiblyExactOperator>(I))
     Exact = PEO->isExact();
@@ -64,7 +64,7 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
 void PoisonFlags::apply(Instruction *I) {
   if (isa<OverflowingBinaryOperator>(I)) {
     I->setHasNoUnsignedWrap(NUW);
-    I->setHasNoUnsignedWrap(NSW);
+    I->setHasNoSignedWrap(NSW);
   }
   if (isa<PossiblyExactOperator>(I))
     I->setIsExact(Exact);
