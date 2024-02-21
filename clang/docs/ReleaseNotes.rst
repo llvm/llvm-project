@@ -305,7 +305,7 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-- ARMv6+ targets now default to allowing unaligned access, except Armv6-M, and
+- ARMv7+ targets now default to allowing unaligned access, except Armv6-M, and
   Armv8-M without the Main Extension. Baremetal targets should check that the
   new default will work with their system configurations, since it requires
   that SCTLR.A is 0, SCTLR.U is 1, and that the memory in question is
@@ -313,7 +313,8 @@ Arm and AArch64 Support
   performance gains here outweigh breakages, since it is difficult to identify
   performance loss from disabling unaligned access, but incorrect enabling
   unaligned access will generate an obvious alignment fault on ARMv7+. This is
-  also the default setting for ARM's downstream compilers.
+  also the default setting for ARM's downstream compilers. We have not changed
+  the default behavior for ARMv6, but may revisit that decision in the future.
 
 Android Support
 ^^^^^^^^^^^^^^^

@@ -23,7 +23,7 @@
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
 
 // RUN: %clang --target=armv6 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
+// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
 // RUN: %clang --target=armv7 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
@@ -63,10 +63,10 @@
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
 // RUN: %clang -target armv6-unknown-linux -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
+// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
 // RUN: %clang -target armv6-unknown-nacl-gnueabihf -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-UNALIGNED-ARM < %t %s
+// RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s
 
 // RUN: %clang -target armv6m-apple-darwin -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-ARM < %t %s

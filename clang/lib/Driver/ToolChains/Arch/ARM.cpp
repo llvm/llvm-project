@@ -886,17 +886,29 @@ fp16_fml_fallthrough:
   } else {
     // Assume pre-ARMv6 doesn't support unaligned accesses.
     //
-    // Assume ARMv6+ supports unaligned accesses, except Armv6-M, and Armv8-M
-    // without the Main Extension. This aligns with the default behavior of
-    // ARM's downstream versions of GCC and Clang
+    // ARMv6 may or may not support unaligned accesses depending on the
+    // SCTLR.U bit, which is architecture-specific. We assume ARMv6
+    // Darwin and NetBSD targets support unaligned accesses, and others don't.
     //
-    // Users can disable behavior via -mno-unaliged-access.
+    // ARMv7 always has SCTLR.U set to 1, but it has a new SCTLR.A bit which
+    // raises an alignment fault on unaligned accesses. Assume ARMv7+ supports
+    // unaligned accesses, except ARMv6-M, and ARMv8-M without the Main
+    // Extension. This aligns with the default behavior of ARM's downstream
+    // versions of GCC and Clang.
+    //
+    // Users can change the default behavior via -m[no-]unaliged-access.
     int VersionNum = getARMSubArchVersionNumber(Triple);
-    if (VersionNum < 6 ||
-        Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m ||
-        Triple.getSubArch() ==
-            llvm::Triple::SubArchType::ARMSubArch_v8m_baseline)
+    if (Triple.isOSDarwin() || Triple.isOSNetBSD()) {
+      if (VersionNum < 6 ||
+          Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
+        Features.push_back("+strict-align");
+    } else if (VersionNum < 7 ||
+               Triple.getSubArch() ==
+                   llvm::Triple::SubArchType::ARMSubArch_v6m ||
+               Triple.getSubArch() ==
+                   llvm::Triple::SubArchType::ARMSubArch_v8m_baseline) {
       Features.push_back("+strict-align");
+    }
   }
 
   // llvm does not support reserving registers in general. There is support
