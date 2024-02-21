@@ -3978,9 +3978,8 @@ static Register clampVectorIndex(MachineIRBuilder &B, Register IdxReg,
 
   int64_t IdxVal;
   if (mi_match(IdxReg, *B.getMRI(), m_ICst(IdxVal))) {
-    if (IdxVal < VecTy.getNumElements()) {
+    if (IdxVal < VecTy.getNumElements())
       return IdxReg;
-    }
     // If a constant index would be out of bounds, clamp it as well.
   }
 
