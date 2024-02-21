@@ -896,7 +896,7 @@ public:
     llvm::APInt i = iOrig.trunc(64);
     SmallString<40> s;
     i.toString(s, 16, true, true);
-    return std::string(s.str());
+    return std::string(s);
   }
 
   std::string genSema() const {
@@ -1846,7 +1846,7 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
         // declared 'static inline' without a body, which is fine
         // provided clang recognizes them as builtins, and has the
         // effect that this type signature is used in place of the one
-        // that Builtins.def didn't provide. That's how we can get
+        // that Builtins.td didn't provide. That's how we can get
         // structure types that weren't defined until this header was
         // included to be part of the type signature of a builtin that
         // was known to clang already.

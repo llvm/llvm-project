@@ -1244,6 +1244,17 @@ lldb::SBProcessInfo SBProcess::GetProcessInfo() {
   return sb_proc_info;
 }
 
+lldb::SBFileSpec SBProcess::GetCoreFile() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ProcessSP process_sp(GetSP());
+  FileSpec core_file;
+  if (process_sp) {
+    core_file = process_sp->GetCoreFile();
+  }
+  return SBFileSpec(core_file);
+}
+
 lldb::addr_t SBProcess::AllocateMemory(size_t size, uint32_t permissions,
                                        lldb::SBError &sb_error) {
   LLDB_INSTRUMENT_VA(this, size, permissions, sb_error);

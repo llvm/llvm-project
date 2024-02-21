@@ -8,7 +8,10 @@
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -348,6 +351,137 @@ LogicalResult ForOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Check that the callee attribute was specified.
+  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  if (!fnAttr)
+    return emitOpError("requires a 'callee' symbol reference attribute");
+  FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
+  if (!fn)
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
+
+  // Verify that the operand and result types match the callee.
+  auto fnType = fn.getFunctionType();
+  if (fnType.getNumInputs() != getNumOperands())
+    return emitOpError("incorrect number of operands for callee");
+
+  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
+    if (getOperand(i).getType() != fnType.getInput(i))
+      return emitOpError("operand type mismatch: expected operand type ")
+             << fnType.getInput(i) << ", but provided "
+             << getOperand(i).getType() << " for operand number " << i;
+
+  if (fnType.getNumResults() != getNumResults())
+    return emitOpError("incorrect number of results for callee");
+
+  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
+    if (getResult(i).getType() != fnType.getResult(i)) {
+      auto diag = emitOpError("result type mismatch at index ") << i;
+      diag.attachNote() << "      op result types: " << getResultTypes();
+      diag.attachNote() << "function result types: " << fnType.getResults();
+      return diag;
+    }
+
+  return success();
+}
+
+FunctionType CallOp::getCalleeType() {
+  return FunctionType::get(getContext(), getOperandTypes(), getResultTypes());
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareFuncOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DeclareFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Check that the sym_name attribute was specified.
+  auto fnAttr = getSymNameAttr();
+  if (!fnAttr)
+    return emitOpError("requires a 'sym_name' symbol reference attribute");
+  FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
+  if (!fn)
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
+                   FunctionType type, ArrayRef<NamedAttribute> attrs,
+                   ArrayRef<DictionaryAttr> argAttrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(name));
+  state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+
+  if (argAttrs.empty())
+    return;
+  assert(type.getNumInputs() == argAttrs.size());
+  function_interface_impl::addArgAndResultAttrs(
+      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
+}
+
+ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+}
+
+void FuncOp::print(OpAsmPrinter &p) {
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
+}
+
+LogicalResult FuncOp::verify() {
+  if (getNumResults() > 1)
+    return emitOpError("requires zero or exactly one result, but has ")
+           << getNumResults();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReturnOp::verify() {
+  auto function = cast<FuncOp>((*this)->getParentOp());
+
+  // The operand number and types must match the function signature.
+  if (getNumOperands() != function.getNumResults())
+    return emitOpError("has ")
+           << getNumOperands() << " operands, but enclosing function (@"
+           << function.getName() << ") returns " << function.getNumResults();
+
+  if (function.getNumResults() == 1)
+    if (getOperand().getType() != function.getResultTypes()[0])
+      return emitError() << "type of the return operand ("
+                         << getOperand().getType()
+                         << ") doesn't match function result type ("
+                         << function.getResultTypes()[0] << ")"
+                         << " in function @" << function.getName();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // IfOp
 //===----------------------------------------------------------------------===//
 
@@ -621,27 +755,6 @@ LogicalResult emitc::YieldOp::verify() {
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCAttributes.cpp.inc"
 
-Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
-  if (parser.parseLess())
-    return Attribute();
-  std::string value;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseOptionalString(&value)) {
-    parser.emitError(loc) << "expected string";
-    return Attribute();
-  }
-  if (parser.parseGreater())
-    return Attribute();
-
-  return get(parser.getContext(), value);
-}
-
-void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
-  printer << "<\"";
-  llvm::printEscapedString(getValue(), printer.getStream());
-  printer << "\">";
-}
-
 //===----------------------------------------------------------------------===//
 // EmitC Types
 //===----------------------------------------------------------------------===//
@@ -653,27 +766,15 @@ void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
-Type emitc::OpaqueType::parse(AsmParser &parser) {
-  if (parser.parseLess())
-    return Type();
-  std::string value;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseOptionalString(&value) || value.empty()) {
-    parser.emitError(loc) << "expected non empty string in !emitc.opaque type";
-    return Type();
+LogicalResult mlir::emitc::OpaqueType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    llvm::StringRef value) {
+  if (value.empty()) {
+    return emitError() << "expected non empty string in !emitc.opaque type";
   }
   if (value.back() == '*') {
-    parser.emitError(loc) << "pointer not allowed as outer type with "
-                             "!emitc.opaque, use !emitc.ptr instead";
-    return Type();
+    return emitError() << "pointer not allowed as outer type with "
+                          "!emitc.opaque, use !emitc.ptr instead";
   }
-  if (parser.parseGreater())
-    return Type();
-  return get(parser.getContext(), value);
-}
-
-void emitc::OpaqueType::print(AsmPrinter &printer) const {
-  printer << "<\"";
-  llvm::printEscapedString(getValue(), printer.getStream());
-  printer << "\">";
+  return success();
 }

@@ -27,7 +27,7 @@ define i8 @caller_1() {
 ; CHECK-NEXT: ##{{.+}}
 ; CHECK-NEXT: pushq	%rax
 ; CHECK-NEXT: {{.+cfi.+}}
-; CHECK-NEXT: movss	{{[a-zA-Z0-9_]+}}(%rip), %xmm0    ## xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT: movss	{{[a-zA-Z0-9_]+}}(%rip), %xmm0    ## xmm0 = [5.0E+2,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT: movl	$42, %edi
 ; CHECK-NEXT: callq	___llvm_deoptimize
 ; CHECK-NEXT: {{Ltmp[0-9]+}}:

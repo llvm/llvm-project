@@ -56,6 +56,7 @@ void check_note_freopen(void) {
 
 void check_note_fdopen(int fd) {
   FILE *F = fdopen(fd, "r"); // expected-note {{Stream opened here}}
+  // stdargs-note@-1 {{'fdopen' is successful}}
   if (!F)
     // expected-note@-1 {{'F' is non-null}}
     // expected-note@-2 {{Taking false branch}}

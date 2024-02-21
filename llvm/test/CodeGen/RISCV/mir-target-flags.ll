@@ -35,7 +35,7 @@ define i32 @caller(i32 %a) nounwind {
 ; RV32-SMALL:      target-flags(riscv-tprel-hi) @t_le
 ; RV32-SMALL-NEXT: target-flags(riscv-tprel-add) @t_le
 ; RV32-SMALL-NEXT: target-flags(riscv-tprel-lo) @t_le
-; RV32-SMALL:      target-flags(riscv-plt) @callee
+; RV32-SMALL:      target-flags(riscv-call) @callee
 ;
 ; RV32-MED-LABEL: name: caller
 ; RV32-MED:      target-flags(riscv-got-hi) @g_e
@@ -44,16 +44,16 @@ define i32 @caller(i32 %a) nounwind {
 ; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1>
 ; RV32-MED:      target-flags(riscv-tls-gd-hi) @t_un
 ; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi2>
-; RV32-MED:      target-flags(riscv-plt) &__tls_get_addr
+; RV32-MED:      target-flags(riscv-call) &__tls_get_addr
 ; RV32-MED:      target-flags(riscv-tls-gd-hi) @t_ld
 ; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi3>
-; RV32-MED:      target-flags(riscv-plt) &__tls_get_addr
+; RV32-MED:      target-flags(riscv-call) &__tls_get_addr
 ; RV32-MED:      target-flags(riscv-tls-got-hi) @t_ie
 ; RV32-MED-NEXT: target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi4>
 ; RV32-MED:      target-flags(riscv-tprel-hi) @t_le
 ; RV32-MED-NEXT: target-flags(riscv-tprel-add) @t_le
 ; RV32-MED-NEXT: target-flags(riscv-tprel-lo) @t_le
-; RV32-MED:      target-flags(riscv-plt) @callee
+; RV32-MED:      target-flags(riscv-call) @callee
 ;
   %b = load i32, ptr @g_e
   %c = load i32, ptr @g_i

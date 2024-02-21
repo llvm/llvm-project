@@ -68,7 +68,7 @@ __attribute__((unused)) const char* handle_strerror_r_return(int strerror_return
   if (new_errno == EINVAL)
     return "";
 
-  _LIBCPP_ASSERT_UNCATEGORIZED(new_errno == ERANGE, "unexpected error from ::strerror_r");
+  _LIBCPP_ASSERT_INTERNAL(new_errno == ERANGE, "unexpected error from ::strerror_r");
   // FIXME maybe? 'strerror_buff_size' is likely to exceed the
   // maximum error size so ERANGE shouldn't be returned.
   std::abort();

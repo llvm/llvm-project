@@ -53,6 +53,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-enumerations.h"
@@ -255,13 +256,6 @@ public:
   ~CommandObjectTargetCreate() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1531,9 +1525,10 @@ static void DumpOsoFilesTable(Stream &strm,
   });
 }
 
-static void DumpAddress(ExecutionContextScope *exe_scope,
-                        const Address &so_addr, bool verbose, bool all_ranges,
-                        Stream &strm, llvm::StringRef pattern = "") {
+static void
+DumpAddress(ExecutionContextScope *exe_scope, const Address &so_addr,
+            bool verbose, bool all_ranges, Stream &strm,
+            std::optional<Stream::HighlightSettings> settings = std::nullopt) {
   strm.IndentMore();
   strm.Indent("    Address: ");
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleModuleWithFileAddress);
@@ -1544,13 +1539,13 @@ static void DumpAddress(ExecutionContextScope *exe_scope,
   const uint32_t save_indent = strm.GetIndentLevel();
   strm.SetIndentLevel(save_indent + 13);
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription,
-               Address::DumpStyleInvalid, UINT32_MAX, false, pattern);
+               Address::DumpStyleInvalid, UINT32_MAX, false, settings);
   strm.SetIndentLevel(save_indent);
   // Print out detailed address information when verbose is enabled
   if (verbose) {
     strm.EOL();
     so_addr.Dump(&strm, exe_scope, Address::DumpStyleDetailedSymbolContext,
-                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges, pattern);
+                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges, settings);
   }
   strm.IndentLess();
 }
@@ -1615,6 +1610,9 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     DumpFullpath(strm, &module->GetFileSpec(), 0);
     strm.PutCString(":\n");
     strm.IndentMore();
+    Stream::HighlightSettings settings(
+        name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
+        interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
     for (uint32_t i = 0; i < num_matches; ++i) {
       Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
@@ -1622,18 +1620,18 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
               symbol->GetAddressRef(), verbose, all_ranges, strm,
-              use_color && name_is_regex ? name : nullptr);
+              use_color && name_is_regex
+                  ? std::optional<Stream::HighlightSettings>{settings}
+                  : std::nullopt);
           strm.EOL();
         } else {
           strm.IndentMore();
           strm.Indent("    Name: ");
-          llvm::StringRef ansi_prefix =
-              interpreter.GetDebugger().GetRegexMatchAnsiPrefix();
-          llvm::StringRef ansi_suffix =
-              interpreter.GetDebugger().GetRegexMatchAnsiSuffix();
           strm.PutCStringColorHighlighted(
               symbol->GetDisplayName().GetStringRef(),
-              use_color ? name : nullptr, ansi_prefix, ansi_suffix);
+              use_color && name_is_regex
+                  ? std::optional<Stream::HighlightSettings>{settings}
+                  : std::nullopt);
           strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
@@ -1650,10 +1648,10 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
   return num_matches;
 }
 
-static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
-                                  Stream &strm,
-                                  const SymbolContextList &sc_list,
-                                  bool verbose, bool all_ranges) {
+static void DumpSymbolContextList(
+    ExecutionContextScope *exe_scope, Stream &strm,
+    const SymbolContextList &sc_list, bool verbose, bool all_ranges,
+    std::optional<Stream::HighlightSettings> settings = std::nullopt) {
   strm.IndentMore();
   bool first_module = true;
   for (const SymbolContext &sc : sc_list) {
@@ -1664,7 +1662,8 @@ static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
 
     sc.GetAddressRange(eSymbolContextEverything, 0, true, range);
 
-    DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm);
+    DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm,
+                settings);
     first_module = false;
   }
   strm.IndentLess();
@@ -2783,13 +2782,6 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
-
 protected:
   OptionGroupOptions m_option_group;
   OptionGroupUUID m_uuid_option_group;
@@ -3227,7 +3219,7 @@ public:
       : CommandObjectParsed(
             interpreter, "target modules list",
             "List current executable and dependent shared library images.") {
-    CommandArgumentData module_arg{eArgTypeShlibName, eArgRepeatStar};
+    CommandArgumentData module_arg{eArgTypeModule, eArgRepeatStar};
     m_arguments.push_back({module_arg});
   }
 
@@ -4337,13 +4329,6 @@ public:
 
   ~CommandObjectTargetSymbolsAdd() override = default;
 
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
-
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
@@ -5189,8 +5174,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eStopHookIDCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
 protected:
@@ -5245,8 +5229,7 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eStopHookIDCompletion, request, nullptr);
+    CommandObject::HandleArgumentCompletion(request, opt_element_vector);
   }
 
 protected:

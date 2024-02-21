@@ -50,13 +50,16 @@ struct Variable;
 } // namespace pft
 
 // Generate the OpenMP terminator for Operation at Location.
-void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
-                         mlir::Location);
+mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                                     mlir::Location);
 
 void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
                         semantics::SemanticsContext &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
-void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
+void genOpenMPDeclarativeConstruct(AbstractConverter &,
+                                   Fortran::lower::SymMap &,
+                                   semantics::SemanticsContext &,
+                                   pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 /// Symbols in OpenMP code can have flags (e.g. threadprivate directive)
 /// that require additional handling when lowering the corresponding
@@ -69,6 +72,7 @@ int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 void genOpenMPReduction(AbstractConverter &,
+                        Fortran::semantics::SemanticsContext &,
                         const Fortran::parser::OmpClauseList &clauseList);
 
 mlir::Operation *findReductionChain(mlir::Value, mlir::Value * = nullptr);
@@ -79,6 +83,7 @@ void removeStoreOp(mlir::Operation *, mlir::Value);
 
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
 bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
+                                 Fortran::semantics::SemanticsContext &,
                                  Fortran::lower::pft::Evaluation &,
                                  const parser::OpenMPDeclarativeConstruct &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);

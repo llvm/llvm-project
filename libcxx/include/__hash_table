@@ -802,7 +802,7 @@ public:
     return __emplace_unique_key_args(_NodeTypes::__get_key(__x), std::move(__x));
   }
 
-  template <class _Pp, class = __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value> >
+  template <class _Pp, __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(_Pp&& __x) {
     return __emplace_unique(std::forward<_Pp>(__x));
   }
@@ -861,7 +861,7 @@ public:
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI size_type bucket(const _Key& __k) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         bucket_count() > 0, "unordered container::bucket(key) called when bucket_count() == 0");
     return std::__constrain_hash(hash_function()(__k), bucket_count());
   }
@@ -915,7 +915,10 @@ public:
     return __bc != 0 ? (float)size() / __bc : 0.f;
   }
   _LIBCPP_HIDE_FROM_ABI void max_load_factor(float __mlf) _NOEXCEPT {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__mlf > 0, "unordered container::max_load_factor(lf) called with lf <= 0");
+    // While passing a non-positive load factor is undefined behavior, in practice the result will be benign (the
+    // call will be equivalent to `max_load_factor(load_factor())`, which is also the case for passing a valid value
+    // less than the current `load_factor`).
+    _LIBCPP_ASSERT_PEDANTIC(__mlf > 0, "unordered container::max_load_factor(lf) called with lf <= 0");
     max_load_factor() = std::max(__mlf, load_factor());
   }
 

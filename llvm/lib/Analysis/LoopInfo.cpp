@@ -637,8 +637,8 @@ Loop::LocRange Loop::getLocRange() const {
     // We use the first DebugLoc in the header as the start location of the loop
     // and if there is a second DebugLoc in the header we use it as end location
     // of the loop.
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-      if (DILocation *L = dyn_cast<DILocation>(LoopID->getOperand(i))) {
+    for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+      if (DILocation *L = dyn_cast<DILocation>(MDO)) {
         if (!Start)
           Start = DebugLoc(L);
         else
@@ -816,20 +816,19 @@ Loop *UnloopUpdater::getNearestLoop(BasicBlock *BB, Loop *BBLoop) {
     NearLoop = SubloopParents.insert({Subloop, &Unloop}).first->second;
   }
 
-  succ_iterator I = succ_begin(BB), E = succ_end(BB);
-  if (I == E) {
+  if (succ_empty(BB)) {
     assert(!Subloop && "subloop blocks must have a successor");
     NearLoop = nullptr; // unloop blocks may now exit the function.
   }
-  for (; I != E; ++I) {
-    if (*I == BB)
+  for (BasicBlock *Succ : successors(BB)) {
+    if (Succ == BB)
       continue; // self loops are uninteresting
 
-    Loop *L = LI->getLoopFor(*I);
+    Loop *L = LI->getLoopFor(Succ);
     if (L == &Unloop) {
       // This successor has not been processed. This path must lead to an
       // irreducible backedge.
-      assert((FoundIB || !DFS.hasPostorder(*I)) && "should have seen IB");
+      assert((FoundIB || !DFS.hasPostorder(Succ)) && "should have seen IB");
       FoundIB = true;
     }
     if (L != &Unloop && Unloop.contains(L)) {
@@ -1025,8 +1024,8 @@ MDNode *llvm::findOptionMDForLoopID(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
   // Iterate over the metdata node operands and look for MDString metadata.
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+    MDNode *MD = dyn_cast<MDNode>(MDO);
     if (!MD || MD->getNumOperands() < 1)
       continue;
     MDString *S = dyn_cast<MDString>(MD->getOperand(0));
@@ -1137,9 +1136,9 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
   // Remove metadata for the transformation that has been applied or that became
   // outdated.
   if (OrigLoopID) {
-    for (unsigned i = 1, ie = OrigLoopID->getNumOperands(); i < ie; ++i) {
+    for (const MDOperand &MDO : llvm::drop_begin(OrigLoopID->operands())) {
       bool IsVectorMetadata = false;
-      Metadata *Op = OrigLoopID->getOperand(i);
+      Metadata *Op = MDO;
       if (MDNode *MD = dyn_cast<MDNode>(Op)) {
         const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
         if (S)

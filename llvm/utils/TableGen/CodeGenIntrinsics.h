@@ -25,12 +25,12 @@ class Record;
 class RecordKeeper;
 
 struct CodeGenIntrinsic {
-  Record *TheDef;             // The actual record defining this intrinsic.
-  std::string Name;           // The name of the LLVM function "llvm.bswap.i32"
-  std::string EnumName;       // The name of the enum "bswap_i32"
+  Record *TheDef;       // The actual record defining this intrinsic.
+  std::string Name;     // The name of the LLVM function "llvm.bswap.i32"
+  std::string EnumName; // The name of the enum "bswap_i32"
   std::string ClangBuiltinName; // Name of the corresponding GCC builtin, or "".
-  std::string MSBuiltinName;  // Name of the corresponding MS builtin, or "".
-  std::string TargetPrefix;   // Target prefix, e.g. "ppc" for t-s intrinsics.
+  std::string MSBuiltinName;    // Name of the corresponding MS builtin, or "".
+  std::string TargetPrefix;     // Target prefix, e.g. "ppc" for t-s intrinsics.
 
   /// This structure holds the return values and parameter values of an
   /// intrinsic. If the number of return values is > 1, then the intrinsic
@@ -136,9 +136,7 @@ struct CodeGenIntrinsic {
 
   void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0);
 
-  bool hasProperty(enum SDNP Prop) const {
-    return Properties & (1 << Prop);
-  }
+  bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
   /// Goes through all IntrProperties that have IsDefault
   /// value set and sets the property.
@@ -182,6 +180,6 @@ public:
     return Intrinsics[Pos];
   }
 };
-}
+} // namespace llvm
 
 #endif

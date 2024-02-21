@@ -15,7 +15,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @foo(i64 %arg) {
+define void @foo(i64 %arg) !dbg !37 {
 start:
   %val = trunc i64 %arg to i32
   %cmp = icmp eq i32 %val, 0
@@ -39,7 +39,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !22 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "&str", file: !6, size: 64, align: 32, elements: !{}, identifier: "111094d970b097647de579f9c509ef08")
 !33 = !{i32 2, !"Debug Info Version", i32 3}
 !35 = distinct !DILexicalBlock(scope: !37, file: !6, line: 357, column: 8)
-!37 = distinct !DISubprogram(name: "foobar", linkageName: "_fooba", scope: !38, file: !6, line: 353, type: !39, isLocal: true, isDefinition: true, scopeLine: 353, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !2, retainedNodes: !42)
+!37 = distinct !DISubprogram(name: "foo", scope: !6, file: !6, line: 353, type: !39, isLocal: true, isDefinition: true, scopeLine: 353, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !2, retainedNodes: !42)
 !38 = !DINamespace(name: "ptr", scope: null)
 !39 = !DISubroutineType(types: !2)
 !42 = !{!46}

@@ -22,9 +22,11 @@ add_llvm_target(SPIRVCodeGen
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
+  SPIRVStripConvergentIntrinsics.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
+  SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
   SPIRVPreLegalizer.cpp
   SPIRVPrepareFunctions.cpp
@@ -43,6 +45,7 @@ add_llvm_target(SPIRVCodeGen
   Core
   Demangle
   GlobalISel
+  SPIRVAnalysis
   MC
   SPIRVDesc
   SPIRVInfo
@@ -58,3 +61,4 @@ add_llvm_target(SPIRVCodeGen
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(Analysis)

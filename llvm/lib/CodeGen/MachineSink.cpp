@@ -1949,13 +1949,8 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
   for (unsigned DefReg : DefedRegsInCopy)
     for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
       SuccBB->removeLiveIn(S);
-  for (auto U : UsedOpsInCopy) {
-    Register SrcReg = MI->getOperand(U).getReg();
-    LaneBitmask Mask;
-    for (MCRegUnitMaskIterator S(SrcReg, TRI); S.isValid(); ++S)
-      Mask |= (*S).second;
-    SuccBB->addLiveIn(SrcReg, Mask);
-  }
+  for (auto U : UsedOpsInCopy)
+    SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();
 }
 

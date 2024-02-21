@@ -1269,7 +1269,7 @@ define <4 x float> @test_v4f32_mul_y_sub_x_negone_undefs(<4 x float> %x, <4 x fl
 define float @test_f32_interp(float %x, float %y, float %t) {
 ; FMA-INFS-LABEL: test_f32_interp:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; FMA-INFS-NEXT:    vmovss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; FMA-INFS-NEXT:    vsubss %xmm2, %xmm3, %xmm3
 ; FMA-INFS-NEXT:    vmulss %xmm3, %xmm1, %xmm1
 ; FMA-INFS-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
@@ -1277,7 +1277,7 @@ define float @test_f32_interp(float %x, float %y, float %t) {
 ;
 ; FMA4-INFS-LABEL: test_f32_interp:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; FMA4-INFS-NEXT:    vmovss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; FMA4-INFS-NEXT:    vsubss %xmm2, %xmm3, %xmm3
 ; FMA4-INFS-NEXT:    vmulss %xmm3, %xmm1, %xmm1
 ; FMA4-INFS-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1
@@ -1285,7 +1285,7 @@ define float @test_f32_interp(float %x, float %y, float %t) {
 ;
 ; AVX512-INFS-LABEL: test_f32_interp:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX512-INFS-NEXT:    vmovss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-INFS-NEXT:    vsubss %xmm2, %xmm3, %xmm3
 ; AVX512-INFS-NEXT:    vmulss %xmm3, %xmm1, %xmm1
 ; AVX512-INFS-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
@@ -1416,7 +1416,7 @@ define <8 x float> @test_v8f32_interp(<8 x float> %x, <8 x float> %y, <8 x float
 define double @test_f64_interp(double %x, double %y, double %t) {
 ; FMA-INFS-LABEL: test_f64_interp:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; FMA-INFS-NEXT:    vmovsd {{.*#+}} xmm3 = [1.0E+0,0.0E+0]
 ; FMA-INFS-NEXT:    vsubsd %xmm2, %xmm3, %xmm3
 ; FMA-INFS-NEXT:    vmulsd %xmm3, %xmm1, %xmm1
 ; FMA-INFS-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
@@ -1424,7 +1424,7 @@ define double @test_f64_interp(double %x, double %y, double %t) {
 ;
 ; FMA4-INFS-LABEL: test_f64_interp:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; FMA4-INFS-NEXT:    vmovsd {{.*#+}} xmm3 = [1.0E+0,0.0E+0]
 ; FMA4-INFS-NEXT:    vsubsd %xmm2, %xmm3, %xmm3
 ; FMA4-INFS-NEXT:    vmulsd %xmm3, %xmm1, %xmm1
 ; FMA4-INFS-NEXT:    vfmaddsd {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm1
@@ -1432,7 +1432,7 @@ define double @test_f64_interp(double %x, double %y, double %t) {
 ;
 ; AVX512-INFS-LABEL: test_f64_interp:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; AVX512-INFS-NEXT:    vmovsd {{.*#+}} xmm3 = [1.0E+0,0.0E+0]
 ; AVX512-INFS-NEXT:    vsubsd %xmm2, %xmm3, %xmm3
 ; AVX512-INFS-NEXT:    vmulsd %xmm3, %xmm1, %xmm1
 ; AVX512-INFS-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1

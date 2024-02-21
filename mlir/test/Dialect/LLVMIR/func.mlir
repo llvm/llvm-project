@@ -257,6 +257,36 @@ module {
   llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">} {
     llvm.return
   }
+
+  llvm.func @unsafe_fp_math_roundtrip() attributes {unsafe_fp_math = true} {
+    // CHECK: @unsafe_fp_math_roundtrip
+    // CHECK-SAME: attributes {unsafe_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_infs_fp_math_roundtrip() attributes {no_infs_fp_math = true} {
+    // CHECK: @no_infs_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_infs_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_nans_fp_math_roundtrip() attributes {no_nans_fp_math = true} {
+    // CHECK: @no_nans_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_nans_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @approx_func_fp_math_roundtrip() attributes {approx_func_fp_math = true} {
+    // CHECK: @approx_func_fp_math_roundtrip
+    // CHECK-SAME: attributes {approx_func_fp_math = true}
+    llvm.return
+  }
+
+  llvm.func @no_signed_zeros_fp_math_roundtrip() attributes {no_signed_zeros_fp_math = true} {
+    // CHECK: @no_signed_zeros_fp_math_roundtrip
+    // CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+    llvm.return
+  }
 }
 
 // -----

@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=sroa -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; class a {
@@ -74,7 +75,7 @@ entry:
   %4 = load float, ptr @c, align 4, !dbg !63
   %arrayidx.i = getelementptr inbounds %class.d, ptr %ref.tmp, i64 0, i32 0, i32 0, i64 3, !dbg !69
   store float %4, ptr %arrayidx.i, align 4, !dbg !70
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %2, ptr nonnull align 4 dereferenceable(16) %3, i64 16, i1 false), !dbg !71, !DIAssignID !72
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) %2, ptr nonnull align 4 dereferenceable(16) %3, i64 16, i1 false), !dbg !71, !DIAssignID !72
   call void @llvm.dbg.assign(metadata i1 undef, metadata !31, metadata !DIExpression(), metadata !72, metadata ptr %2, metadata !DIExpression()), !dbg !33
   ret void, !dbg !74
 }
@@ -82,7 +83,7 @@ entry:
 declare !dbg !75 dso_local { <2 x float>, <2 x float> } @_Z1fv() local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 ; Function Attrs: nounwind uwtable
 define linkonce_odr dso_local void @_ZN1d1eEv(ptr %this) local_unnamed_addr #3 comdat align 2 !dbg !48 {

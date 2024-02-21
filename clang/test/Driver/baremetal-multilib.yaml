@@ -17,7 +17,7 @@
 # CHECK-SAME: "-x" "c++" "{{.*}}baremetal-multilib.yaml"
 # CHECK-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 # CHECK-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib"
-# CHECK-SAME: "-lc" "-lm" "-lclang_rt.builtins"
+# CHECK-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a"
 # CHECK-SAME: "-o" "{{.*}}.tmp.out"
 
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \

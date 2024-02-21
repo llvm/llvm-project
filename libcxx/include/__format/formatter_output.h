@@ -35,6 +35,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -66,8 +69,8 @@ struct _LIBCPP_EXPORTED_FROM_ABI __padding_size_result {
 
 _LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
 __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__width > __size, "don't call this function when no padding is required");
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_INTERNAL(__width > __size, "don't call this function when no padding is required");
+  _LIBCPP_ASSERT_INTERNAL(
       __align != __format_spec::__alignment::__zero_padding, "the caller should have handled the zero-padding");
 
   size_t __fill = __width - __size;
@@ -296,7 +299,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
     basic_string_view<_CharT> __str,
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(!__specs.__has_precision(), "use __write_string");
+  _LIBCPP_ASSERT_INTERNAL(!__specs.__has_precision(), "use __write_string");
 
   // No padding -> copy the string
   if (!__specs.__has_width())
@@ -324,5 +327,7 @@ _LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __pre
 #endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMATTER_OUTPUT_H

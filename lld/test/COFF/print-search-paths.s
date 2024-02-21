@@ -1,10 +1,11 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link -safeseh:no /dll /noentry /winsysroot:%t.dir/sysroot /vctoolsversion:1.1.1.1 /winsdkversion:10.0.1 %t.obj -print-search-paths | FileCheck -DSYSROOT=%t.dir %s
+# RUN: lld-link -safeseh:no /dll /noentry /winsysroot:%t.dir/sysroot /vctoolsversion:1.1.1.1 /winsdkversion:10.0.1 /libpath:custom-dir %t.obj -print-search-paths | FileCheck -DSYSROOT=%t.dir %s
 # RUN: llvm-mc -triple i686-windows-msvc %s -filetype=obj -o %t_32.obj
 # RUN: lld-link -safeseh:no /dll /noentry /winsysroot:%t.dir/sysroot /vctoolsversion:1.1.1.1 /winsdkversion:10.0.1 %t_32.obj -print-search-paths | FileCheck -DSYSROOT=%t.dir -check-prefix=X86 %s
 # CHECK: Library search paths:
 # CHECK-NEXT:   (cwd)
+# CHECK-NEXT:   custom-dir
 # CHECK-NEXT:   [[CPATH:.*]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib{{[/\\]}}windows
 # CHECK-NEXT:   [[CPATH]]lib{{[/\\]}}clang{{[/\\]}}{{[0-9]+}}{{[/\\]}}lib
 # CHECK-NEXT:   [[CPATH]]lib

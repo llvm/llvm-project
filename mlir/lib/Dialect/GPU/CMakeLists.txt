@@ -37,6 +37,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRDLTIDialect
+  MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRIR

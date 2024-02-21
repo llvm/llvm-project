@@ -213,6 +213,13 @@ mlir::invertPermutationVector(ArrayRef<int64_t> permutation) {
   return inversion;
 }
 
+bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
+  for (auto i : llvm::seq<int64_t>(0, permutation.size()))
+    if (permutation[i] != i)
+      return false;
+  return true;
+}
+
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
   assert(llvm::all_of(interchange, [](int64_t s) { return s >= 0; }) &&
          "permutation must be non-negative");
@@ -264,9 +271,8 @@ static MLIRContext *getContext(OpFoldResult val) {
   assert(val && "Invalid value");
   if (auto attr = dyn_cast<Attribute>(val)) {
     return attr.getContext();
-  } else {
-    return cast<Value>(val).getContext();
   }
+  return cast<Value>(val).getContext();
 }
 
 std::pair<AffineExpr, SmallVector<OpFoldResult>>

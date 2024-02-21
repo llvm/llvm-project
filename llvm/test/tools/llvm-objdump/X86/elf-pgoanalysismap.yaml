@@ -1,0 +1,183 @@
+## Test that in the presence of SHT_LLVM_BB_ADDR_MAP sections which also
+## contain PGO data, --symbolize-operands is able to label the basic blocks
+## correctly.
+
+## Check the case where we only have entry counts.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-objdump %t1 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --check-prefix=ENTRYCOUNT
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x0
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '50'
+  - Name:   .llvm_bb_addr_map.foo
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.foo
+    Entries:
+      - Version: 2
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+    Value:   0x0
+
+# ENTRYCOUNT: <foo>:
+# ENTRYCOUNT: <BB3> (Entry count: 1000):
+
+## Check the case where we have entry points and block frequency information
+
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-objdump %t2 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --check-prefix=ENTRYCOUNT-BLOCKFREQ
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x0
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '503b0505200000907d02ebf5c3'
+  - Name:   .llvm_bb_addr_map.foo
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.foo
+    Entries:
+      - Version: 2
+        Feature: 0x3
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x0
+              - ID:            2
+                AddressOffset: 0x1
+                Size:          0x4
+                Metadata:      0x0
+              - ID:            5
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+        PGOBBEntries:
+          - BBFreq: 1000
+          - BBFreq: 133
+          - BBFreq: 18
+          - BBFreq: 1000
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+    Value:   0x0
+
+# ENTRYCOUNT-BLOCKFREQ: <foo>:
+# ENTRYCOUNT-BLOCKFREQ: <BB3> (Entry count: 1000, Frequency: 1000):
+# ENTRYCOUNT-BLOCKFREQ: <BB1> (Frequency: 133):
+# ENTRYCOUNT-BLOCKFREQ: <BB2> (Frequency: 18):
+# ENTRYCOUNT-BLOCKFREQ: <BB5> (Frequency: 1000):
+
+## Check the case where we have entry points, block frequency, and branch
+## proabability information.
+
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-objdump %t3 -d --symbolize-operands --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --check-prefix=ENTRY-FREQ-PROB
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x0
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '503b0505200000907d02ebf5c3'
+  - Name:   .llvm_bb_addr_map.foo
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.foo
+    Entries:
+      - Version: 2
+        Feature: 0x7
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            3
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x1
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x6
+                Metadata:      0x0
+              - ID:            2
+                AddressOffset: 0x1
+                Size:          0x4
+                Metadata:      0x0
+              - ID:            5
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+        PGOBBEntries:
+          - BBFreq: 1000
+            Successors:
+            - ID:          1
+              BrProb:      0x22222222
+            - ID:          2
+              BrProb:      0x33333333
+            - ID:          3
+              BrProb:      0xaaaaaaaa
+          - BBFreq: 133
+            Successors:
+            - ID:          2
+              BrProb:      0x11111111
+            - ID:          3
+              BrProb:      0xeeeeeeee
+          - BBFreq: 18
+            Successors:
+            - ID:          3
+              BrProb:      0xffffffff
+          - BBFreq: 1000
+            Successors:    []
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+    Value:   0x0
+
+# ENTRY-FREQ-PROB: <foo>:
+# ENTRY-FREQ-PROB: <BB3> (Entry count: 1000, Frequency: 1000, Successors: BB1:22222222, BB2:33333333, BB3:aaaaaaaa):
+# ENTRY-FREQ-PROB: <BB1> (Frequency: 133, Successors: BB2:11111111, BB3:eeeeeeee):
+# ENTRY-FREQ-PROB: <BB2> (Frequency: 18, Successors: BB3:ffffffff):
+# ENTRY-FREQ-PROB: <BB5> (Frequency: 1000):

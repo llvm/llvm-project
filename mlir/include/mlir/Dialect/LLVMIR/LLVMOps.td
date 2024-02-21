@@ -330,6 +330,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
+              UnitAttr:$invariant,
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope);
@@ -364,11 +365,16 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
+    (`invariant` $invariant^)?
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
     $res = inst;
+    if ($invariant) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), std::nullopt);
+      inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
+    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
@@ -381,13 +387,14 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     $res = $_builder.create<LLVM::LoadOp>($_location, $_resultType, $addr,
         alignment, loadInst->isVolatile(),
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
   }];
   let builders = [
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
-      CArg<"bool", "false">:$isNonTemporal,
+      CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
@@ -1413,12 +1420,22 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
     OptionalAttr<UnitAttr>:$arm_streaming_compatible,
     OptionalAttr<UnitAttr>:$arm_new_za,
+    OptionalAttr<UnitAttr>:$arm_in_za,
+    OptionalAttr<UnitAttr>:$arm_out_za,
+    OptionalAttr<UnitAttr>:$arm_inout_za,
+    OptionalAttr<UnitAttr>:$arm_preserves_za,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
-    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
+    OptionalAttr<StrAttr>:$target_cpu,
+    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
+    OptionalAttr<BoolAttr>:$unsafe_fp_math,
+    OptionalAttr<BoolAttr>:$no_infs_fp_math,
+    OptionalAttr<BoolAttr>:$no_nans_fp_math,
+    OptionalAttr<BoolAttr>:$approx_func_fp_math,
+    OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math
   );
 
   let regions = (region AnyRegion:$body);

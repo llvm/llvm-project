@@ -195,7 +195,7 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
 
 /// \return the filename and the function name parsed from the output of
 /// \c getIRPGOFuncName()
-std::pair<StringRef, StringRef> getParsedIRPGOFuncName(StringRef IRPGOFuncName);
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName);
 
 /// Return the name of the global variable used to store a function
 /// name in PGO instrumentation. \c FuncName is the IRPGO function name
@@ -449,6 +449,17 @@ private:
     return "** External Symbol **";
   }
 
+  // Returns the canonial name of the given PGOName. In a canonical name, all
+  // suffixes that begins with "." except ".__uniq." are stripped.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  static StringRef getCanonicalName(StringRef PGOName);
+
+  // Add the function into the symbol table, by creating the following
+  // map entries:
+  // name-set = {PGOFuncName} + {getCanonicalName(PGOFuncName)} if the canonical
+  // name is different from pgo name
+  // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
@@ -1035,7 +1046,8 @@ const HashT HashType = HashT::MD5;
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 
 // This structure defines the file header of the LLVM profile
-// data file in indexed-format.
+// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
+// as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic;
   uint64_t Version;

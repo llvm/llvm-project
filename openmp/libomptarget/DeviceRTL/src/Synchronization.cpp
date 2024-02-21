@@ -345,10 +345,7 @@ void namedBarrier() {
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.
   constexpr int BarrierNo = 7;
-  asm volatile("barrier.sync %0, %1;"
-               :
-               : "r"(BarrierNo), "r"(NumThreads)
-               : "memory");
+  __nvvm_barrier_sync_cnt(BarrierNo, NumThreads);
 }
 
 void fenceTeam(atomic::OrderingTy) { __nvvm_membar_cta(); }
@@ -361,7 +358,7 @@ void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
 
 void syncThreads(atomic::OrderingTy Ordering) {
   constexpr int BarrierNo = 8;
-  asm volatile("barrier.sync %0;" : : "r"(BarrierNo) : "memory");
+  __nvvm_barrier_sync(BarrierNo);
 }
 
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }

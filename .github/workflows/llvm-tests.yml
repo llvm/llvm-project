@@ -27,31 +27,13 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  check_all:
+  check-all:
     if: github.repository_owner == 'llvm'
-    name: Test llvm,clang,libclc
+    name: Build and Test
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-all
-      projects: clang;libclc
-
-  # These need to be separate from the check_all job, becuase there is not enough disk
-  # space to build all these projects on Windows.
-  build_lldb:
-    if: github.repository_owner == 'llvm'
-    name: Build lldb
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: ''
-      projects: clang;lldb
-
-  check_lld:
-    if: github.repository_owner == 'llvm'
-    name: Test lld
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-lld
-      projects: lld
+      projects: clang;lld;libclc;lldb
 
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
@@ -143,7 +125,7 @@ jobs:
           else
             touch llvm.symbols
           fi
-          abi-dumper "$EXTRA_ARGS" -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
+          abi-dumper $EXTRA_ARGS -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
       - name: Upload ABI file
@@ -193,7 +175,7 @@ jobs:
           # FIXME: Reading of gzip'd abi files on the GitHub runners stop
           # working some time in March of 2021, likely due to a change in the
           # runner's environment.
-          abi-compliance-checker "$EXTRA_ARGS" -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
+          abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
         uses: actions/upload-artifact@v3

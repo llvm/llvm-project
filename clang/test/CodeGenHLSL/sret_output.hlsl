@@ -10,7 +10,7 @@ struct S {
 
 
 // Make sure sret parameter is generated.
-// CHECK:define internal void @"?ps_main@@YA?AUS@@XZ"(ptr noalias sret(%struct.S) align 4 %agg.result)
+// CHECK:define internal void @"?ps_main@@YA?AUS@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.S) align 4 %agg.result)
 // FIXME: change it to real value instead of poison value once semantic is add to a.
 // Make sure the function with sret is called.
 // CHECK:call void @"?ps_main@@YA?AUS@@XZ"(ptr poison)

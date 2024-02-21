@@ -116,7 +116,10 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %sparse_filter : tensor<3x3xi32, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<6x6xi32>
     bufferization.dealloc_tensor %1 : tensor<6x6xi32, #DCSR>
+    bufferization.dealloc_tensor %sparse_ret : tensor<6x6xi32>
+
     return
   }
 }

@@ -23,7 +23,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! DO SIMD
   ! ----------------------------------------------------------------------------
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.wsloop
   !$omp do simd
   do i = 1, 10
   end do
@@ -33,7 +33,7 @@ program main
   ! PARALLEL DO SIMD
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.parallel
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.wsloop
   !$omp parallel do simd
   do i = 1, 10
   end do
@@ -54,7 +54,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.target
   ! CHECK: omp.parallel
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.wsloop
   !$omp target parallel do simd
   do i = 1, 10
   end do

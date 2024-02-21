@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
 
@@ -611,11 +612,19 @@ void Operation::setSuccessor(Block *block, unsigned index) {
 /// the results of the given op.
 static void checkFoldResultTypes(Operation *op,
                                  SmallVectorImpl<OpFoldResult> &results) {
-  if (!results.empty())
-    for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults()))
-      if (auto value = ofr.dyn_cast<Value>())
-        assert(value.getType() == opResult.getType() &&
-               "folder produced value of incorrect type");
+  if (results.empty())
+    return;
+
+  for (auto [ofr, opResult] : llvm::zip_equal(results, op->getResults())) {
+    if (auto value = dyn_cast<Value>(ofr)) {
+      if (value.getType() != opResult.getType()) {
+        op->emitOpError() << "folder produced a value of incorrect type: "
+                          << opResult.getType()
+                          << ", expected: " << value.getType();
+        assert(false && "incorrect fold result type");
+      }
+    }
+  }
 }
 #endif // NDEBUG
 
@@ -1110,8 +1119,8 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
   // delegate function that returns true if type is a shaped type with known
   // rank
   auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+    if (auto shapedType = dyn_cast<ShapedType>(type))
+      return shapedType.hasRank();
 
     return false;
   };

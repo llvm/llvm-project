@@ -32,7 +32,7 @@ namespace dr1213 { // dr1213: 7
 }
 
 #if __cplusplus >= 201103L
-namespace dr1223 { // dr1223: 17 drafting
+namespace dr1223 { // dr1223: 17 drafting 2023-05-12
 struct M;
 template <typename T>
 struct V;
@@ -154,7 +154,7 @@ namespace dr1295 { // dr1295: 4
   Y<x.bitfield> y; // #dr1295-y
   // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#dr1295-Y {{template parameter is declared here}}
-  // since-cxx17-error@#dr1295-y {{non-type template argument refers to subobject 'x.bitfield'}}
+  // since-cxx17-error@#dr1295-y {{reference cannot bind to bit-field in converted constant expression}}
 
 #if __cplusplus >= 201103L
   const unsigned other = 0;

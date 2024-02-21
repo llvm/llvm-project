@@ -153,6 +153,10 @@ if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
 
+if (MLIR_RUN_ARM_SVE_TESTS OR MLIR_RUN_ARM_SME_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS mlir_arm_runner_utils)
+endif()
+
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
 
 if(LLVM_BUILD_EXAMPLES)
@@ -166,6 +170,8 @@ if(LLVM_BUILD_EXAMPLES)
   list(APPEND MLIR_TEST_DEPENDS
     transform-opt-ch2
     transform-opt-ch3
+    transform-opt-ch4
+    mlir-minimal-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

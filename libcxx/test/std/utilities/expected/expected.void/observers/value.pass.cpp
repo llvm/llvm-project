@@ -65,17 +65,6 @@ void testException() {
     }
   }
 
-  // MoveOnly
-  {
-    std::expected<void, MoveOnly> e(std::unexpect, 5);
-    try {
-      std::move(e).value();
-      assert(false);
-    } catch (const std::bad_expected_access<MoveOnly>& ex) {
-      assert(ex.error() == 5);
-    }
-  }
-
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
