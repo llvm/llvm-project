@@ -1058,6 +1058,9 @@ public:
 
   /// Get the context held by this operation state.
   MLIRContext *getContext() const { return location->getContext(); }
+
+  /// Get the operation name held by this operation state.
+  OperationName getOperationName() const { return name; }
 };
 
 //===----------------------------------------------------------------------===//
