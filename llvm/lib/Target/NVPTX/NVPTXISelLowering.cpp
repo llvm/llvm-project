@@ -780,8 +780,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
   }
   if (STI.getSmVersion() < 90 || STI.getPTXVersion() < 78) {
-    setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
-    setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
+    for (MVT VT : {MVT::bf16, MVT::f32, MVT::f64}) {
+      setOperationAction(ISD::FP_EXTEND, VT, Custom);
+      setOperationAction(ISD::FP_ROUND, VT, Custom);
+    }
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
   }
 
