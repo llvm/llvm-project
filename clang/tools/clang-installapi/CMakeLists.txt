@@ -14,6 +14,7 @@ add_clang_tool(clang-installapi
 clang_target_link_libraries(clang-installapi
   PRIVATE
   clangInstallAPI
+  clangBasic
   clangDriver
   clangFrontend
   clangTooling
