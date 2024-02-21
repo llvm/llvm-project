@@ -609,7 +609,6 @@ class FlattenContiguousRowMajorTransferReadPattern
       //      memref<1x86xi32>, vector<2xi32>
       // one would get the following offset:
       //    %offset = %arg0 * 43
-      int64_t outputRank = transferReadOp.getIndices().size();
       OpFoldResult collapsedOffset =
           rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
 
