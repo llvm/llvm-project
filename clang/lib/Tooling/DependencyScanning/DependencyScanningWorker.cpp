@@ -179,78 +179,6 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.IgnoreWarnings = true;
 }
 
-// Clang implements -D and -U by splatting text into a predefines buffer. This
-// allows constructs such as `-DFඞ=3 "-D F\u{0D9E} 4 3 2”` to be accepted and
-// define the same macro, or adding C++ style comments before the macro name.
-//
-// This function checks that the first non-space characters in the macro
-// obviously form an identifier that can be uniqued on without lexing. Failing
-// to do this could lead to changing the final definition of a macro.
-//
-// We could set up a preprocessor and actually lex the name, but that's very
-// heavyweight for a situation that will almost never happen in practice.
-static std::optional<StringRef> getSimpleMacroName(StringRef Macro) {
-  StringRef Name = Macro.split("=").first.ltrim(" \t");
-  std::size_t I = 0;
-
-  auto FinishName = [&]() -> std::optional<StringRef> {
-    StringRef SimpleName = Name.slice(0, I);
-    if (SimpleName.empty())
-      return std::nullopt;
-    return SimpleName;
-  };
-
-  for (; I != Name.size(); ++I) {
-    switch (Name[I]) {
-    case '(': // Start of macro parameter list
-    case ' ': // End of macro name
-    case '\t':
-      return FinishName();
-    case '_':
-      continue;
-    default:
-      if (llvm::isAlnum(Name[I]))
-        continue;
-      return std::nullopt;
-    }
-  }
-  return FinishName();
-}
-
-static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
-  using MacroOpt = std::pair<StringRef, std::size_t>;
-  std::vector<MacroOpt> SimpleNames;
-  SimpleNames.reserve(PPOpts.Macros.size());
-  std::size_t Index = 0;
-  for (const auto &M : PPOpts.Macros) {
-    auto SName = getSimpleMacroName(M.first);
-    // Skip optimizing if we can't guarantee we can preserve relative order.
-    if (!SName)
-      return;
-    SimpleNames.emplace_back(*SName, Index);
-    ++Index;
-  }
-
-  llvm::stable_sort(SimpleNames, [](const MacroOpt &A, const MacroOpt &B) {
-    return A.first < B.first;
-  });
-  // Keep the last instance of each macro name by going in reverse
-  auto NewEnd = std::unique(
-      SimpleNames.rbegin(), SimpleNames.rend(),
-      [](const MacroOpt &A, const MacroOpt &B) { return A.first == B.first; });
-  SimpleNames.erase(SimpleNames.begin(), NewEnd.base());
-
-  // Apply permutation.
-  decltype(PPOpts.Macros) NewMacros;
-  NewMacros.reserve(SimpleNames.size());
-  for (std::size_t I = 0, E = SimpleNames.size(); I != E; ++I) {
-    std::size_t OriginalIndex = SimpleNames[I].second;
-    // We still emit undefines here as they may be undefining a predefined macro
-    NewMacros.push_back(std::move(PPOpts.Macros[OriginalIndex]));
-  }
-  std::swap(PPOpts.Macros, NewMacros);
-}
-
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -275,8 +203,6 @@ public:
     CompilerInvocation OriginalInvocation(*Invocation);
     // Restore the value of DisableFree, which may be modified by Tooling.
     OriginalInvocation.getFrontendOpts().DisableFree = DisableFree;
-    if (any(OptimizeArgs & ScanningOptimizations::Macros))
-      canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
       // Scanning runs once for the first -cc1 invocation in a chain of driver
