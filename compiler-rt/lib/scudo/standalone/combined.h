@@ -936,7 +936,7 @@ public:
 
   const char *getRingBufferAddress() {
     initThreadMaybe();
-    return RawRingBuffer;
+    return reinterpret_cast<char *>(RingBuffer);
   }
 
   uptr getRingBufferSize() {
@@ -1066,7 +1066,7 @@ private:
   };
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
-  char *RawRingBuffer = {};
+  AllocationRingBuffer *RingBuffer = {};
   u32 RingBufferElements = 0;
   MemMapT RawRingBufferMap;
 
@@ -1275,9 +1275,9 @@ private:
   void storeRingBufferEntry(void *Ptr, u32 AllocationTrace, u32 AllocationTid,
                             uptr AllocationSize, u32 DeallocationTrace,
                             u32 DeallocationTid) {
-    uptr Pos = atomic_fetch_add(&getRingBuffer()->Pos, 1, memory_order_relaxed);
+    uptr Pos = atomic_fetch_add(&RingBuffer->Pos, 1, memory_order_relaxed);
     typename AllocationRingBuffer::Entry *Entry =
-        getRingBufferEntry(RawRingBuffer, Pos % RingBufferElements);
+        getRingBufferEntry(RingBuffer, Pos % RingBufferElements);
 
     // First invalidate our entry so that we don't attempt to interpret a
     // partially written state in getSecondaryErrorInfo(). The fences below
@@ -1500,12 +1500,14 @@ private:
   }
 
   static typename AllocationRingBuffer::Entry *
-  getRingBufferEntry(char *RawRingBuffer, uptr N) {
+  getRingBufferEntry(AllocationRingBuffer *RingBuffer, uptr N) {
+    char *RawRingBuffer = reinterpret_cast<char *>(RingBuffer);
     return &reinterpret_cast<typename AllocationRingBuffer::Entry *>(
         &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
   }
   static const typename AllocationRingBuffer::Entry *
-  getRingBufferEntry(const char *RawRingBuffer, uptr N) {
+  getRingBufferEntry(const AllocationRingBuffer *RingBuffer, uptr N) {
+    const char *RawRingBuffer = reinterpret_cast<const char *>(RingBuffer);
     return &reinterpret_cast<const typename AllocationRingBuffer::Entry *>(
         &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
   }
@@ -1558,7 +1560,7 @@ private:
         roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
                 getPageSizeCached()),
         "scudo:ring_buffer");
-    RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
+    RingBuffer = reinterpret_cast<AllocationRingBuffer *>(MemMap.getBase());
     RawRingBufferMap = MemMap;
     RingBufferElements = AllocationRingBufferSize;
     static_assert(sizeof(AllocationRingBuffer) %
@@ -1568,12 +1570,11 @@ private:
   }
 
   void unmapRingBuffer() {
-    auto *RingBuffer = getRingBuffer();
     if (RingBuffer != nullptr) {
       RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
                              RawRingBufferMap.getCapacity());
     }
-    RawRingBuffer = nullptr;
+    RingBuffer = nullptr;
     if (Depot) {
       RawStackDepotMap.unmap(RawStackDepotMap.getBase(),
                              RawStackDepotMap.getCapacity());
@@ -1591,10 +1592,6 @@ private:
     }
     return (Bytes - sizeof(AllocationRingBuffer)) /
            sizeof(typename AllocationRingBuffer::Entry);
-  }
-
-  inline AllocationRingBuffer *getRingBuffer() {
-    return reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
   }
 };
 
