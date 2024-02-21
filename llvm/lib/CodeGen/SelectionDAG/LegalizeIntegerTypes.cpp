@@ -960,6 +960,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   unsigned Opcode = matcher.getRootBaseOpcode();
   bool IsShift = Opcode == ISD::USHLSAT || Opcode == ISD::SSHLSAT;
 
+  // FIXME: We need vp-aware PromotedInteger functions.
   SDValue Op1Promoted, Op2Promoted;
   if (IsShift) {
     Op1Promoted = GetPromotedInteger(Op1);
