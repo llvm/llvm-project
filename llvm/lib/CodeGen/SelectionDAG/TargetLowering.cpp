@@ -10895,15 +10895,17 @@ SDValue TargetLowering::expandRoundInexactToOdd(EVT ResultVT, SDValue Op,
   EVT ResultIntVTCCVT = getSetCCResultType(
       DAG.getDataLayout(), *DAG.getContext(), And.getValueType());
   SDValue Zero = DAG.getConstant(0, dl, ResultIntVT);
+  // The result is already odd so we don't need to do anything.
   SDValue AlreadyOdd = DAG.getSetCC(dl, ResultIntVTCCVT, And, Zero, ISD::SETNE);
 
   EVT WideSetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                        AbsWide.getValueType());
+  // We keep results which are exact, odd or NaN.
   SDValue KeepNarrow =
       DAG.getSetCC(dl, WideSetCCVT, AbsWide, AbsNarrowAsWide, ISD::SETUEQ);
   KeepNarrow = DAG.getNode(ISD::OR, dl, WideSetCCVT, KeepNarrow, AlreadyOdd);
-  // We morally performed a round-down if `abs_narrow` is smaller than
-  // `abs_wide`.
+  // We morally performed a round-down if AbsNarrow is smaller than
+  // AbsWide.
   SDValue NarrowIsRd =
       DAG.getSetCC(dl, WideSetCCVT, AbsWide, AbsNarrowAsWide, ISD::SETOGT);
   // If the narrow value is odd or exact, pick it.
@@ -10911,12 +10913,13 @@ SDValue TargetLowering::expandRoundInexactToOdd(EVT ResultVT, SDValue Op,
   // or rounded-down value. If narrow is the rounded-down value, we want
   // the rounded-up value as it will be odd.
   SDValue Adjust = DAG.getSelect(dl, ResultIntVT, NarrowIsRd, One, NegativeOne);
-  Adjust = DAG.getSelect(dl, ResultIntVT, KeepNarrow, Zero, Adjust);
+  SDValue Adjusted = DAG.getNode(ISD::ADD, dl, ResultIntVT, NarrowBits, Adjust);
+  Op = DAG.getSelect(dl, ResultIntVT, KeepNarrow, NarrowBits, Adjusted);
   int ShiftAmount = BitSize - ResultVT.getScalarSizeInBits();
   SDValue ShiftCnst = DAG.getShiftAmountConstant(ShiftAmount, WideIntVT, dl);
   SignBit = DAG.getNode(ISD::SRL, dl, WideIntVT, SignBit, ShiftCnst);
   SignBit = DAG.getNode(ISD::TRUNCATE, dl, ResultIntVT, SignBit);
-  Op = DAG.getNode(ISD::OR, dl, ResultIntVT, Adjust, SignBit);
+  Op = DAG.getNode(ISD::OR, dl, ResultIntVT, Op, SignBit);
   return DAG.getNode(ISD::BITCAST, dl, ResultVT, Op);
 }
 
