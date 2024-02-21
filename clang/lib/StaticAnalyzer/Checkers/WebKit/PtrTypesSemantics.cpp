@@ -103,14 +103,14 @@ std::optional<bool> isRefCountable(const CXXRecordDecl* R)
   return hasRef && hasDeref;
 }
 
-bool isRefType(const std::string &name) {
-  return name == "Ref" || name == "RefAllowingPartiallyDestroyed" ||
-         name == "RefPtr" || name == "RefPtrAllowingPartiallyDestroyed";
+bool isRefType(const std::string &Name) {
+  return Name == "Ref" || Name == "RefAllowingPartiallyDestroyed" ||
+         Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
 }
 
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
-  const auto &FunctionName = safeGetName(F);
+  const std::string &FunctionName = safeGetName(F);
 
   return isRefType(FunctionName) || FunctionName == "makeRef" ||
          FunctionName == "makeRefPtr" || FunctionName == "UniqueRef" ||
