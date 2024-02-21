@@ -3217,10 +3217,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::FP_ROUND: {
-    EVT VT = Node->getValueType(0);
-    if (VT.getScalarType() == MVT::bf16) {
-      Results.push_back(
-          DAG.getNode(ISD::FP_TO_BF16, SDLoc(Node), VT, Node->getOperand(0)));
+    if ((Tmp1 = TLI.expandFP_ROUND(Node, DAG))) {
+      Results.push_back(Tmp1);
       break;
     }
 
@@ -3293,6 +3291,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (Op.getValueType() != MVT::f32)
       Op = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    // Certain SNaNs will turn into infinities if we do a simple shift right.
+    if (!DAG.isKnownNeverSNaN(Op)) {
+      Op = DAG.getNode(ISD::FCANONICALIZE, dl, MVT::f32, Op, Node->getFlags());
+    }
     Op = DAG.getNode(
         ISD::SRL, dl, MVT::i32, DAG.getNode(ISD::BITCAST, dl, MVT::i32, Op),
         DAG.getConstant(16, dl,
