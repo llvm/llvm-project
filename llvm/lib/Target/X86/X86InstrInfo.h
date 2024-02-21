@@ -42,7 +42,8 @@ enum AsmComments {
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
+unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
+                       bool HasNDD = false);
 
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.

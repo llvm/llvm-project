@@ -2639,7 +2639,10 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     break;
   case X86::CMOV16rr:
   case X86::CMOV32rr:
-  case X86::CMOV64rr: {
+  case X86::CMOV64rr:
+  case X86::CMOV16rr_ND:
+  case X86::CMOV32rr_ND:
+  case X86::CMOV64rr_ND: {
     WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
@@ -3120,7 +3123,8 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
+        X86::isCFCMOVCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3312,16 +3316,21 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
 }
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
+unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
+                            bool HasNDD) {
   switch (RegBytes) {
   default:
     llvm_unreachable("Illegal register size!");
+#define GET_ND_IF_ENABLED(OPC) (HasNDD ? OPC##_ND : OPC)
   case 2:
-    return HasMemoryOperand ? X86::CMOV16rm : X86::CMOV16rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV16rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV16rr);
   case 4:
-    return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV32rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV32rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV32rr);
   case 8:
-    return HasMemoryOperand ? X86::CMOV64rm : X86::CMOV64rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
 }
 
@@ -4048,7 +4057,7 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
   const TargetRegisterClass &RC = *MRI.getRegClass(DstReg);
   assert(Cond.size() == 1 && "Invalid Cond array");
   unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
-                                    false /*HasMemoryOperand*/);
+                                    false /*HasMemoryOperand*/, Subtarget.hasNDD());
   BuildMI(MBB, I, DL, get(Opc), DstReg)
       .addReg(FalseReg)
       .addReg(TrueReg)

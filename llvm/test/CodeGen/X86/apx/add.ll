@@ -298,9 +298,9 @@ define i8 @addflag8rr(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: addflag8rr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addb %sil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x00,0xf7]
-; CHECK-NEXT:    movzbl %al, %ecx # encoding: [0x0f,0xb6,0xc8]
-; CHECK-NEXT:    movl $255, %eax # encoding: [0xb8,0xff,0x00,0x00,0x00]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; CHECK-NEXT:    movl $255, %ecx # encoding: [0xb9,0xff,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -311,10 +311,10 @@ entry:
 define i16 @addflag16rr(i16 noundef %a, i16 noundef %b) {
 ; CHECK-LABEL: addflag16rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addw %si, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x01,0xf7]
-; CHECK-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
+; CHECK-NEXT:    addw %si, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x01,0xf7]
+; CHECK-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0xFFFF
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -325,9 +325,9 @@ entry:
 define i32 @addflag32rr(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: addflag32rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl %esi, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x01,0xf7]
-; CHECK-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    addl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x01,0xf7]
+; CHECK-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = call i32 @llvm.uadd.sat.i32(i32 %a, i32 %b)
@@ -337,9 +337,9 @@ entry:
 define i64 @addflag64rr(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: addflag64rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq %rsi, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x01,0xf7]
-; CHECK-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovaeq %rcx, %rax # encoding: [0x48,0x0f,0x43,0xc1]
+; CHECK-NEXT:    addq %rsi, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x01,0xf7]
+; CHECK-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = call i64 @llvm.uadd.sat.i64(i64 %a, i64 %b)
@@ -350,9 +350,9 @@ define i8 @addflag8rm(i8 noundef %a, ptr %b) {
 ; CHECK-LABEL: addflag8rm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addb (%rsi), %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x02,0x3e]
-; CHECK-NEXT:    movzbl %al, %ecx # encoding: [0x0f,0xb6,0xc8]
-; CHECK-NEXT:    movl $255, %eax # encoding: [0xb8,0xff,0x00,0x00,0x00]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; CHECK-NEXT:    movl $255, %ecx # encoding: [0xb9,0xff,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -364,10 +364,10 @@ entry:
 define i16 @addflag16rm(i16 noundef %a, ptr %b) {
 ; CHECK-LABEL: addflag16rm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addw (%rsi), %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x03,0x3e]
-; CHECK-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
+; CHECK-NEXT:    addw (%rsi), %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x03,0x3e]
+; CHECK-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0xFFFF
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -379,9 +379,9 @@ entry:
 define i32 @addflag32rm(i32 noundef %a, ptr %b) {
 ; CHECK-LABEL: addflag32rm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl (%rsi), %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x03,0x3e]
-; CHECK-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    addl (%rsi), %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x03,0x3e]
+; CHECK-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i32, ptr %b
@@ -392,9 +392,9 @@ entry:
 define i64 @addflag64rm(i64 noundef %a, ptr %b) {
 ; CHECK-LABEL: addflag64rm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq (%rsi), %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x03,0x3e]
-; CHECK-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovaeq %rcx, %rax # encoding: [0x48,0x0f,0x43,0xc1]
+; CHECK-NEXT:    addq (%rsi), %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x03,0x3e]
+; CHECK-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i64, ptr %b
@@ -405,10 +405,10 @@ entry:
 define i16 @addflag16ri8(i16 noundef %a) {
 ; CHECK-LABEL: addflag16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addw $123, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xc7,0x7b]
-; CHECK-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
+; CHECK-NEXT:    addw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xc7,0x7b]
+; CHECK-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0xFFFF
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -419,9 +419,9 @@ entry:
 define i32 @addflag32ri8(i32 noundef %a) {
 ; CHECK-LABEL: addflag32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $123, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x83,0xc7,0x7b]
-; CHECK-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    addl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xc7,0x7b]
+; CHECK-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = call i32 @llvm.uadd.sat.i32(i32 %a, i32 123)
@@ -431,9 +431,9 @@ entry:
 define i64 @addflag64ri8(i64 noundef %a) {
 ; CHECK-LABEL: addflag64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $123, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x83,0xc7,0x7b]
-; CHECK-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovaeq %rcx, %rax # encoding: [0x48,0x0f,0x43,0xc1]
+; CHECK-NEXT:    addq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xc7,0x7b]
+; CHECK-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = call i64 @llvm.uadd.sat.i64(i64 %a, i64 123)
@@ -444,9 +444,9 @@ define i8 @addflag8ri(i8 noundef %a) {
 ; CHECK-LABEL: addflag8ri:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addb $123, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x80,0xc7,0x7b]
-; CHECK-NEXT:    movzbl %al, %ecx # encoding: [0x0f,0xb6,0xc8]
-; CHECK-NEXT:    movl $255, %eax # encoding: [0xb8,0xff,0x00,0x00,0x00]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; CHECK-NEXT:    movl $255, %ecx # encoding: [0xb9,0xff,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -457,11 +457,11 @@ entry:
 define i16 @addflag16ri(i16 noundef %a) {
 ; CHECK-LABEL: addflag16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addw $1234, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xc7,0xd2,0x04]
+; CHECK-NEXT:    addw $1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xc7,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
+; CHECK-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0xFFFF
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -472,10 +472,10 @@ entry:
 define i32 @addflag32ri(i32 noundef %a) {
 ; CHECK-LABEL: addflag32ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $123456, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x81,0xc7,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    addl $123456, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovael %ecx, %eax # encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = call i32 @llvm.uadd.sat.i32(i32 %a, i32 123456)
@@ -485,10 +485,10 @@ entry:
 define i64 @addflag64ri(i64 noundef %a) {
 ; CHECK-LABEL: addflag64ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq $123456, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xc7,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    addq $123456, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xc7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
-; CHECK-NEXT:    cmovaeq %rcx, %rax # encoding: [0x48,0x0f,0x43,0xc1]
+; CHECK-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %add = call i64 @llvm.uadd.sat.i64(i64 %a, i64 123456)

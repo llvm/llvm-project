@@ -1,0 +1,722 @@
+# RUN: llvm-mc -triple x86_64 -show-encoding -x86-asm-syntax=intel -output-asm-variant=1 %s | FileCheck %s
+
+# CHECK: cfcmovb	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x42,0xc2]
+         cfcmovb	r9w, ax, dx
+# CHECK: cfcmovb	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x42,0xd1]
+         cfcmovb	r10d, edx, ecx
+# CHECK: cfcmovb	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x42,0xf9]
+         cfcmovb	r11, r15, r9
+# CHECK: cfcmovb	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x42,0x54,0x80,0x7b]
+         cfcmovb	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x42,0x4c,0x80,0x7b]
+         cfcmovb	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x42,0x4c,0x80,0x7b]
+         cfcmovb	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x42,0x54,0x80,0x7b]
+         cfcmovb	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovb	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x42,0x4c,0x80,0x7b]
+         cfcmovb	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovb	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x42,0x4c,0x80,0x7b]
+         cfcmovb	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovb	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x42,0x54,0x80,0x7b]
+         cfcmovb	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x42,0x4c,0x80,0x7b]
+         cfcmovb	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x42,0x4c,0x80,0x7b]
+         cfcmovb	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovb	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x42,0xc2]
+         cfcmovb	ax, dx
+# CHECK: cfcmovb	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x42,0xd1]
+         cfcmovb	edx, ecx
+# CHECK: cfcmovb	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x42,0xf9]
+         cfcmovb	r15, r9
+# CHECK: cfcmovbe	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x46,0xc2]
+         cfcmovbe	r9w, ax, dx
+# CHECK: cfcmovbe	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x46,0xd1]
+         cfcmovbe	r10d, edx, ecx
+# CHECK: cfcmovbe	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x46,0xf9]
+         cfcmovbe	r11, r15, r9
+# CHECK: cfcmovbe	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x46,0x54,0x80,0x7b]
+         cfcmovbe	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovbe	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x46,0x4c,0x80,0x7b]
+         cfcmovbe	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovbe	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x46,0x4c,0x80,0x7b]
+         cfcmovbe	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovbe	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x46,0x54,0x80,0x7b]
+         cfcmovbe	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovbe	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x46,0x4c,0x80,0x7b]
+         cfcmovbe	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovbe	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x46,0x4c,0x80,0x7b]
+         cfcmovbe	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovbe	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x46,0x54,0x80,0x7b]
+         cfcmovbe	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovbe	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x46,0x4c,0x80,0x7b]
+         cfcmovbe	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovbe	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x46,0x4c,0x80,0x7b]
+         cfcmovbe	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovbe	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x46,0xc2]
+         cfcmovbe	ax, dx
+# CHECK: cfcmovbe	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x46,0xd1]
+         cfcmovbe	edx, ecx
+# CHECK: cfcmovbe	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x46,0xf9]
+         cfcmovbe	r15, r9
+# CHECK: cfcmovl	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x4c,0xc2]
+         cfcmovl	r9w, ax, dx
+# CHECK: cfcmovl	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x4c,0xd1]
+         cfcmovl	r10d, edx, ecx
+# CHECK: cfcmovl	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x4c,0xf9]
+         cfcmovl	r11, r15, r9
+# CHECK: cfcmovl	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x4c,0x54,0x80,0x7b]
+         cfcmovl	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovl	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x4c,0x4c,0x80,0x7b]
+         cfcmovl	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovl	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x4c,0x4c,0x80,0x7b]
+         cfcmovl	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovl	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x4c,0x54,0x80,0x7b]
+         cfcmovl	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovl	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x4c,0x4c,0x80,0x7b]
+         cfcmovl	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovl	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x4c,0x4c,0x80,0x7b]
+         cfcmovl	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovl	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x4c,0x54,0x80,0x7b]
+         cfcmovl	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovl	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x4c,0x4c,0x80,0x7b]
+         cfcmovl	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovl	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4c,0x4c,0x80,0x7b]
+         cfcmovl	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovl	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x4c,0xc2]
+         cfcmovl	ax, dx
+# CHECK: cfcmovl	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x4c,0xd1]
+         cfcmovl	edx, ecx
+# CHECK: cfcmovl	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4c,0xf9]
+         cfcmovl	r15, r9
+# CHECK: cfcmovle	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x4e,0xc2]
+         cfcmovle	r9w, ax, dx
+# CHECK: cfcmovle	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x4e,0xd1]
+         cfcmovle	r10d, edx, ecx
+# CHECK: cfcmovle	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x4e,0xf9]
+         cfcmovle	r11, r15, r9
+# CHECK: cfcmovle	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x4e,0x54,0x80,0x7b]
+         cfcmovle	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovle	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x4e,0x4c,0x80,0x7b]
+         cfcmovle	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovle	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x4e,0x4c,0x80,0x7b]
+         cfcmovle	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovle	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x4e,0x54,0x80,0x7b]
+         cfcmovle	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovle	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x4e,0x4c,0x80,0x7b]
+         cfcmovle	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovle	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x4e,0x4c,0x80,0x7b]
+         cfcmovle	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovle	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x4e,0x54,0x80,0x7b]
+         cfcmovle	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovle	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x4e,0x4c,0x80,0x7b]
+         cfcmovle	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovle	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4e,0x4c,0x80,0x7b]
+         cfcmovle	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovle	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x4e,0xc2]
+         cfcmovle	ax, dx
+# CHECK: cfcmovle	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x4e,0xd1]
+         cfcmovle	edx, ecx
+# CHECK: cfcmovle	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4e,0xf9]
+         cfcmovle	r15, r9
+# CHECK: cfcmovae	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x43,0xc2]
+         cfcmovae	r9w, ax, dx
+# CHECK: cfcmovae	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x43,0xd1]
+         cfcmovae	r10d, edx, ecx
+# CHECK: cfcmovae	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x43,0xf9]
+         cfcmovae	r11, r15, r9
+# CHECK: cfcmovae	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x43,0x54,0x80,0x7b]
+         cfcmovae	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovae	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x43,0x4c,0x80,0x7b]
+         cfcmovae	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovae	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x43,0x4c,0x80,0x7b]
+         cfcmovae	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovae	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x43,0x54,0x80,0x7b]
+         cfcmovae	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovae	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x43,0x4c,0x80,0x7b]
+         cfcmovae	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovae	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x43,0x4c,0x80,0x7b]
+         cfcmovae	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovae	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x43,0x54,0x80,0x7b]
+         cfcmovae	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovae	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x43,0x4c,0x80,0x7b]
+         cfcmovae	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovae	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x43,0x4c,0x80,0x7b]
+         cfcmovae	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovae	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x43,0xc2]
+         cfcmovae	ax, dx
+# CHECK: cfcmovae	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x43,0xd1]
+         cfcmovae	edx, ecx
+# CHECK: cfcmovae	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x43,0xf9]
+         cfcmovae	r15, r9
+# CHECK: cfcmova	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x47,0xc2]
+         cfcmova	r9w, ax, dx
+# CHECK: cfcmova	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x47,0xd1]
+         cfcmova	r10d, edx, ecx
+# CHECK: cfcmova	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x47,0xf9]
+         cfcmova	r11, r15, r9
+# CHECK: cfcmova	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x47,0x54,0x80,0x7b]
+         cfcmova	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmova	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x47,0x4c,0x80,0x7b]
+         cfcmova	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmova	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x47,0x4c,0x80,0x7b]
+         cfcmova	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmova	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x47,0x54,0x80,0x7b]
+         cfcmova	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmova	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x47,0x4c,0x80,0x7b]
+         cfcmova	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmova	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x47,0x4c,0x80,0x7b]
+         cfcmova	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmova	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x47,0x54,0x80,0x7b]
+         cfcmova	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmova	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x47,0x4c,0x80,0x7b]
+         cfcmova	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmova	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x47,0x4c,0x80,0x7b]
+         cfcmova	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmova	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x47,0xc2]
+         cfcmova	ax, dx
+# CHECK: cfcmova	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x47,0xd1]
+         cfcmova	edx, ecx
+# CHECK: cfcmova	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x47,0xf9]
+         cfcmova	r15, r9
+# CHECK: cfcmovge	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x4d,0xc2]
+         cfcmovge	r9w, ax, dx
+# CHECK: cfcmovge	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x4d,0xd1]
+         cfcmovge	r10d, edx, ecx
+# CHECK: cfcmovge	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x4d,0xf9]
+         cfcmovge	r11, r15, r9
+# CHECK: cfcmovge	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x4d,0x54,0x80,0x7b]
+         cfcmovge	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovge	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x4d,0x4c,0x80,0x7b]
+         cfcmovge	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovge	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x4d,0x4c,0x80,0x7b]
+         cfcmovge	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovge	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x4d,0x54,0x80,0x7b]
+         cfcmovge	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovge	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x4d,0x4c,0x80,0x7b]
+         cfcmovge	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovge	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x4d,0x4c,0x80,0x7b]
+         cfcmovge	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovge	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x4d,0x54,0x80,0x7b]
+         cfcmovge	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovge	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x4d,0x4c,0x80,0x7b]
+         cfcmovge	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovge	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4d,0x4c,0x80,0x7b]
+         cfcmovge	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovge	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x4d,0xc2]
+         cfcmovge	ax, dx
+# CHECK: cfcmovge	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x4d,0xd1]
+         cfcmovge	edx, ecx
+# CHECK: cfcmovge	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4d,0xf9]
+         cfcmovge	r15, r9
+# CHECK: cfcmovg	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x4f,0xc2]
+         cfcmovg	r9w, ax, dx
+# CHECK: cfcmovg	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x4f,0xd1]
+         cfcmovg	r10d, edx, ecx
+# CHECK: cfcmovg	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x4f,0xf9]
+         cfcmovg	r11, r15, r9
+# CHECK: cfcmovg	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x4f,0x54,0x80,0x7b]
+         cfcmovg	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovg	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x4f,0x4c,0x80,0x7b]
+         cfcmovg	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovg	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x4f,0x4c,0x80,0x7b]
+         cfcmovg	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovg	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x4f,0x54,0x80,0x7b]
+         cfcmovg	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovg	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x4f,0x4c,0x80,0x7b]
+         cfcmovg	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovg	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x4f,0x4c,0x80,0x7b]
+         cfcmovg	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovg	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x4f,0x54,0x80,0x7b]
+         cfcmovg	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovg	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x4f,0x4c,0x80,0x7b]
+         cfcmovg	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovg	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4f,0x4c,0x80,0x7b]
+         cfcmovg	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovg	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x4f,0xc2]
+         cfcmovg	ax, dx
+# CHECK: cfcmovg	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x4f,0xd1]
+         cfcmovg	edx, ecx
+# CHECK: cfcmovg	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4f,0xf9]
+         cfcmovg	r15, r9
+# CHECK: cfcmovno	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x41,0xc2]
+         cfcmovno	r9w, ax, dx
+# CHECK: cfcmovno	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x41,0xd1]
+         cfcmovno	r10d, edx, ecx
+# CHECK: cfcmovno	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x41,0xf9]
+         cfcmovno	r11, r15, r9
+# CHECK: cfcmovno	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x41,0x54,0x80,0x7b]
+         cfcmovno	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovno	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x41,0x4c,0x80,0x7b]
+         cfcmovno	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovno	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x41,0x4c,0x80,0x7b]
+         cfcmovno	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovno	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x41,0x54,0x80,0x7b]
+         cfcmovno	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovno	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x41,0x4c,0x80,0x7b]
+         cfcmovno	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovno	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x41,0x4c,0x80,0x7b]
+         cfcmovno	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovno	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x41,0x54,0x80,0x7b]
+         cfcmovno	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovno	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x41,0x4c,0x80,0x7b]
+         cfcmovno	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovno	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x41,0x4c,0x80,0x7b]
+         cfcmovno	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovno	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x41,0xc2]
+         cfcmovno	ax, dx
+# CHECK: cfcmovno	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x41,0xd1]
+         cfcmovno	edx, ecx
+# CHECK: cfcmovno	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x41,0xf9]
+         cfcmovno	r15, r9
+# CHECK: cfcmovnp	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x4b,0xc2]
+         cfcmovnp	r9w, ax, dx
+# CHECK: cfcmovnp	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x4b,0xd1]
+         cfcmovnp	r10d, edx, ecx
+# CHECK: cfcmovnp	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x4b,0xf9]
+         cfcmovnp	r11, r15, r9
+# CHECK: cfcmovnp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x4b,0x54,0x80,0x7b]
+         cfcmovnp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovnp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x4b,0x4c,0x80,0x7b]
+         cfcmovnp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovnp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x4b,0x4c,0x80,0x7b]
+         cfcmovnp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovnp	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x4b,0x54,0x80,0x7b]
+         cfcmovnp	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovnp	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x4b,0x4c,0x80,0x7b]
+         cfcmovnp	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovnp	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x4b,0x4c,0x80,0x7b]
+         cfcmovnp	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovnp	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x4b,0x54,0x80,0x7b]
+         cfcmovnp	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovnp	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x4b,0x4c,0x80,0x7b]
+         cfcmovnp	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovnp	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4b,0x4c,0x80,0x7b]
+         cfcmovnp	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovnp	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x4b,0xc2]
+         cfcmovnp	ax, dx
+# CHECK: cfcmovnp	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x4b,0xd1]
+         cfcmovnp	edx, ecx
+# CHECK: cfcmovnp	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4b,0xf9]
+         cfcmovnp	r15, r9
+# CHECK: cfcmovns	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x49,0xc2]
+         cfcmovns	r9w, ax, dx
+# CHECK: cfcmovns	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x49,0xd1]
+         cfcmovns	r10d, edx, ecx
+# CHECK: cfcmovns	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x49,0xf9]
+         cfcmovns	r11, r15, r9
+# CHECK: cfcmovns	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x49,0x54,0x80,0x7b]
+         cfcmovns	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovns	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x49,0x4c,0x80,0x7b]
+         cfcmovns	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovns	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x49,0x4c,0x80,0x7b]
+         cfcmovns	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovns	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x49,0x54,0x80,0x7b]
+         cfcmovns	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovns	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x49,0x4c,0x80,0x7b]
+         cfcmovns	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovns	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x49,0x4c,0x80,0x7b]
+         cfcmovns	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovns	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x49,0x54,0x80,0x7b]
+         cfcmovns	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovns	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x49,0x4c,0x80,0x7b]
+         cfcmovns	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovns	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x49,0x4c,0x80,0x7b]
+         cfcmovns	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovns	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x49,0xc2]
+         cfcmovns	ax, dx
+# CHECK: cfcmovns	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x49,0xd1]
+         cfcmovns	edx, ecx
+# CHECK: cfcmovns	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x49,0xf9]
+         cfcmovns	r15, r9
+# CHECK: cfcmovne	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x45,0xc2]
+         cfcmovne	r9w, ax, dx
+# CHECK: cfcmovne	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x45,0xd1]
+         cfcmovne	r10d, edx, ecx
+# CHECK: cfcmovne	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x45,0xf9]
+         cfcmovne	r11, r15, r9
+# CHECK: cfcmovne	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x45,0x54,0x80,0x7b]
+         cfcmovne	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovne	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x45,0x4c,0x80,0x7b]
+         cfcmovne	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovne	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x45,0x4c,0x80,0x7b]
+         cfcmovne	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovne	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x45,0x54,0x80,0x7b]
+         cfcmovne	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovne	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x45,0x4c,0x80,0x7b]
+         cfcmovne	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovne	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x45,0x4c,0x80,0x7b]
+         cfcmovne	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovne	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x45,0x54,0x80,0x7b]
+         cfcmovne	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovne	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x45,0x4c,0x80,0x7b]
+         cfcmovne	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovne	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x45,0x4c,0x80,0x7b]
+         cfcmovne	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovne	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x45,0xc2]
+         cfcmovne	ax, dx
+# CHECK: cfcmovne	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x45,0xd1]
+         cfcmovne	edx, ecx
+# CHECK: cfcmovne	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x45,0xf9]
+         cfcmovne	r15, r9
+# CHECK: cfcmovo	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x40,0xc2]
+         cfcmovo	r9w, ax, dx
+# CHECK: cfcmovo	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x40,0xd1]
+         cfcmovo	r10d, edx, ecx
+# CHECK: cfcmovo	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x40,0xf9]
+         cfcmovo	r11, r15, r9
+# CHECK: cfcmovo	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x40,0x54,0x80,0x7b]
+         cfcmovo	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovo	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x40,0x4c,0x80,0x7b]
+         cfcmovo	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovo	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x40,0x4c,0x80,0x7b]
+         cfcmovo	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovo	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x40,0x54,0x80,0x7b]
+         cfcmovo	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovo	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x40,0x4c,0x80,0x7b]
+         cfcmovo	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovo	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x40,0x4c,0x80,0x7b]
+         cfcmovo	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovo	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x40,0x54,0x80,0x7b]
+         cfcmovo	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovo	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x40,0x4c,0x80,0x7b]
+         cfcmovo	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovo	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x40,0x4c,0x80,0x7b]
+         cfcmovo	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovo	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x40,0xc2]
+         cfcmovo	ax, dx
+# CHECK: cfcmovo	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x40,0xd1]
+         cfcmovo	edx, ecx
+# CHECK: cfcmovo	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x40,0xf9]
+         cfcmovo	r15, r9
+# CHECK: cfcmovp	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x4a,0xc2]
+         cfcmovp	r9w, ax, dx
+# CHECK: cfcmovp	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x4a,0xd1]
+         cfcmovp	r10d, edx, ecx
+# CHECK: cfcmovp	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x4a,0xf9]
+         cfcmovp	r11, r15, r9
+# CHECK: cfcmovp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x4a,0x54,0x80,0x7b]
+         cfcmovp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x4a,0x4c,0x80,0x7b]
+         cfcmovp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x4a,0x4c,0x80,0x7b]
+         cfcmovp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovp	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x4a,0x54,0x80,0x7b]
+         cfcmovp	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovp	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x4a,0x4c,0x80,0x7b]
+         cfcmovp	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovp	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x4a,0x4c,0x80,0x7b]
+         cfcmovp	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovp	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x4a,0x54,0x80,0x7b]
+         cfcmovp	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovp	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x4a,0x4c,0x80,0x7b]
+         cfcmovp	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovp	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4a,0x4c,0x80,0x7b]
+         cfcmovp	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovp	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x4a,0xc2]
+         cfcmovp	ax, dx
+# CHECK: cfcmovp	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x4a,0xd1]
+         cfcmovp	edx, ecx
+# CHECK: cfcmovp	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x4a,0xf9]
+         cfcmovp	r15, r9
+# CHECK: cfcmovs	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x48,0xc2]
+         cfcmovs	r9w, ax, dx
+# CHECK: cfcmovs	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x48,0xd1]
+         cfcmovs	r10d, edx, ecx
+# CHECK: cfcmovs	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x48,0xf9]
+         cfcmovs	r11, r15, r9
+# CHECK: cfcmovs	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x48,0x54,0x80,0x7b]
+         cfcmovs	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovs	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x48,0x4c,0x80,0x7b]
+         cfcmovs	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovs	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x48,0x4c,0x80,0x7b]
+         cfcmovs	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovs	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x48,0x54,0x80,0x7b]
+         cfcmovs	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmovs	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x48,0x4c,0x80,0x7b]
+         cfcmovs	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmovs	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x48,0x4c,0x80,0x7b]
+         cfcmovs	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmovs	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x48,0x54,0x80,0x7b]
+         cfcmovs	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovs	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x48,0x4c,0x80,0x7b]
+         cfcmovs	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovs	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x48,0x4c,0x80,0x7b]
+         cfcmovs	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmovs	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x48,0xc2]
+         cfcmovs	ax, dx
+# CHECK: cfcmovs	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x48,0xd1]
+         cfcmovs	edx, ecx
+# CHECK: cfcmovs	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x48,0xf9]
+         cfcmovs	r15, r9
+# CHECK: cfcmove	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x1c,0x44,0xc2]
+         cfcmove	r9w, ax, dx
+# CHECK: cfcmove	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x1c,0x44,0xd1]
+         cfcmove	r10d, edx, ecx
+# CHECK: cfcmove	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x1c,0x44,0xf9]
+         cfcmove	r11, r15, r9
+# CHECK: cfcmove	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x1c,0x44,0x54,0x80,0x7b]
+         cfcmove	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmove	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x1c,0x44,0x4c,0x80,0x7b]
+         cfcmove	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmove	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x1c,0x44,0x4c,0x80,0x7b]
+         cfcmove	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmove	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0x44,0x54,0x80,0x7b]
+         cfcmove	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cfcmove	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0x44,0x4c,0x80,0x7b]
+         cfcmove	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cfcmove	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x0c,0x44,0x4c,0x80,0x7b]
+         cfcmove	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cfcmove	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x08,0x44,0x54,0x80,0x7b]
+         cfcmove	dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cfcmove	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7c,0x08,0x44,0x4c,0x80,0x7b]
+         cfcmove	ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmove	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x44,0x4c,0x80,0x7b]
+         cfcmove	r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cfcmove	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x44,0xc2]
+         cfcmove	ax, dx
+# CHECK: cfcmove	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x44,0xd1]
+         cfcmove	edx, ecx
+# CHECK: cfcmove	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x08,0x44,0xf9]
+         cfcmove	r15, r9
