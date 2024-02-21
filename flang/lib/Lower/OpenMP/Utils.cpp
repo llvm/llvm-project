@@ -16,6 +16,7 @@
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
+#include <flang/Lower/PFTBuilder.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
@@ -35,6 +36,11 @@ llvm::cl::opt<bool> enableDelayedPrivatization(
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+uint32_t getOpenMPVersion(mlir::ModuleOp mod) {
+  mlir::Attribute verAttr = mod->getAttr("omp.version");
+  return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+}
 
 void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
@@ -118,6 +124,27 @@ getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
           [&](const Fortran::parser::Name &name) { sym = name.symbol; }},
       ompObject.u);
   return sym;
+}
+
+Fortran::semantics::Symbol *
+getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval) {
+  return eval.visit(Fortran::common::visitors{
+      [&](const Fortran::parser::DoConstruct &doLoop) {
+        if (const auto &maybeCtrl = doLoop.GetLoopControl()) {
+          using LoopControl = Fortran::parser::LoopControl;
+          if (auto *bounds = std::get_if<LoopControl::Bounds>(&maybeCtrl->u)) {
+            static_assert(
+                std::is_same_v<decltype(bounds->name),
+                               Fortran::parser::Scalar<Fortran::parser::Name>>);
+            return bounds->name.thing.symbol;
+          }
+        }
+        return static_cast<Fortran::semantics::Symbol *>(nullptr);
+      },
+      [](auto &&) {
+        return static_cast<Fortran::semantics::Symbol *>(nullptr);
+      },
+  });
 }
 
 } // namespace omp
