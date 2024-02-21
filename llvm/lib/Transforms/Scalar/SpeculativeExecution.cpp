@@ -293,6 +293,8 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   for (const auto &I : FromBlock) {
     // Make note of any DPValues that need hoisting.
     for (DbgRecord &DR : I.getDbgValueRange()) {
+      if (isa<DPLabel>(DR))
+        continue;
       DPValue &DPV = cast<DPValue>(DR);
       if (HasNoUnhoistedInstr(DPV.location_ops()))
         DPValuesToHoist[DPV.getInstruction()].push_back(&DPV);
