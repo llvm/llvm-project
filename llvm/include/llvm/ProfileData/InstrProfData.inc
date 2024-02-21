@@ -94,19 +94,22 @@ INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
 
+/* For a virtual table object, record the name hash to associate profiled
+ * addresses with global variables, and record {starting address, size in bytes}
+ * to map the profiled virtual table (which usually have an offset from the
+ * starting address) back to a virtual table object. */
 #ifndef INSTR_PROF_VTABLE_DATA
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer)
 #else
 #define INSTR_PROF_VTABLE_DATA_DEFINED
 #endif
-INSTR_PROF_VTABLE_DATA(
-    const uint64_t, llvm::Type::getInt64Ty(Ctx), VTableNameHash,
-    ConstantInt::get(llvm::Type::getInt64Ty(Ctx),
-                     IndexedInstrProf::ComputeHash(PGOVTableName)))
-INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::PointerType::getUnqual(Ctx),
+INSTR_PROF_VTABLE_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), \
+                       VTableNameHash, ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
+                       IndexedInstrProf::ComputeHash(PGOVTableName)))
+INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::PointerType::getUnqual(Ctx), \
                        VTablePointer, VTableAddr)
-INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize,
-                       ConstantInt::get(llvm::Type::getInt32Ty(Ctx),
+INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize, \
+                       ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                                         VTableSizeVal))
 #undef INSTR_PROF_VTABLE_DATA
 /* INSTR_PROF_VTABLE_DATA end. */
@@ -204,7 +207,19 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0, "indirect call target")
 /* For memory intrinsic functions size profiling. */
 VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
-VALUE_PROF_KIND(IPVK_VTableTarget, 2, "vtable target")
+/* For virtual table address profiling, the address point of the virtual table
+ * (i.e., the address contained in objects pointing to a virtual table) are
+ * profiled. Note this may not be the address of the per C++ class virtual table
+ *  object (e.g., there might be an offset).
+ *
+ * The profiled addresses are stored in raw profile, together with the following
+ * two types of information.
+ * 1. The (starting and ending) addresses of per C++ class virtual table objects.
+ * 2. The (compressed) virtual table object names.
+ * RawInstrProfReader converts profiled virtual table addresses to virtual table
+ *  objects' MD5 hash.
+ */
+VALUE_PROF_KIND(IPVK_VTableTarget, 2, "The profiled address point of the vtable")
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
  * array created with the template can be

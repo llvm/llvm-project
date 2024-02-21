@@ -609,11 +609,11 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   uint64_t VTableNamesSectionStart = OS.tell();
 
-  // Use an empty string as compressed vtable names and get the necessary
-  // profile format change in place for version 12.
+  // Use a dummy (and uncompressed) string as compressed vtable names and get
+  // the necessary profile format change in place for version 12.
   // TODO: Store the list of vtable names in InstrProfWriter and use the
   // real compressed name.
-  std::string CompressedVTableNames;
+  std::string CompressedVTableNames = "VTableNames";
 
   uint64_t CompressedStringLen = CompressedVTableNames.length();
 
