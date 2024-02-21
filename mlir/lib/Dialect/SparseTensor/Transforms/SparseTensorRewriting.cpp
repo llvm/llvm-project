@@ -1180,7 +1180,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
-    if (!stt.hasEncoding() || stt.getCOOStart() == 0)
+    if (!stt.hasEncoding() || stt.getAoSCOOStart() == 0)
       return failure();
 
     // Implement the NewOp as follows:

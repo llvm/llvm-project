@@ -98,9 +98,8 @@ C++20 Feature Support
 
 - Implemented the `__is_layout_compatible` intrinsic to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
-  Note: `CWG1719: Layout compatibility and cv-qualification revisited  <https://cplusplus.github.io/CWG/issues/1719.html>`_
-  and `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
-  are not yet implemented.
+  Note: `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
+  is not yet implemented.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -119,6 +118,10 @@ Resolutions to C++ Defect Reports
 - Substitute template parameter pack, when it is not explicitly specified
   in the template parameters, but is deduced from a previous argument.
   (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
+
+- Type qualifications are now ignored when evaluating layout compatibility
+  of two types.
+  (`CWG1719: Layout compatibility and cv-qualification revisited <https://cplusplus.github.io/CWG/issues/1719.html>`_).
 
 C Language Changes
 ------------------
@@ -279,6 +282,8 @@ Bug Fixes to C++ Support
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter.
   Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Reject explicit object parameters on `new` and `delete` operators.
+  Fixes (`#82249 <https://github.com/llvm/llvm-project/issues/82249>` _)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
 - Clang now classifies aggregate initialization in C++17 and newer as constant
