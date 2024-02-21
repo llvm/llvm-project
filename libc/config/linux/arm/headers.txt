@@ -5,6 +5,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.float
     libc.include.inttypes
     libc.include.math
+    libc.include.stdckdint
     libc.include.stdbit
     libc.include.stdlib
     libc.include.string

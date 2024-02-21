@@ -4,6 +4,7 @@
 C23 Support
 ===========
 
+.. include:: check.rst
 .. contents:: Table of Contents
   :depth: 4
   :local:
@@ -17,7 +18,7 @@ Implementation Status
 New headers:
 
 * stdbit.h
-* stdckdint.h
+* stdckdint.h (|check|, macros are only defined with `__GNUC__` builtins)
 
 Additions:
 
