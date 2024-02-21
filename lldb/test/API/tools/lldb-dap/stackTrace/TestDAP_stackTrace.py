@@ -83,8 +83,8 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         # Verify we get all stack frames with no arguments
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
         frameCount = len(stackFrames)
-        self.assertTrue(
-            frameCount >= 20, "verify we get at least 20 frames for all frames"
+        self.assertGreaterEqual(
+            frameCount, 20, "verify we get at least 20 frames for all frames"
         )
         self.assertEqual(
             totalFrames, frameCount, "verify we get correct value for totalFrames count"

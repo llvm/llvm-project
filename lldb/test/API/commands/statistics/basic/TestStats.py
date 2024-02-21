@@ -600,7 +600,7 @@ class TestCase(TestBase):
         # Get stats and verify we had errors.
         stats = self.get_stats()
         exe_stats = self.find_module_in_metrics(exe, stats)
-        self.assertTrue(exe_stats is not None)
+        self.assertIsNotNone(exe_stats)
 
         # Make sure we have "debugInfoHadVariableErrors" variable that is set to
         # false before failing to get local variables due to missing .o file.
@@ -620,7 +620,7 @@ class TestCase(TestBase):
         # Get stats and verify we had errors.
         stats = self.get_stats()
         exe_stats = self.find_module_in_metrics(exe, stats)
-        self.assertTrue(exe_stats is not None)
+        self.assertIsNotNone(exe_stats)
 
         # Make sure we have "hadFrameVariableErrors" variable that is set to
         # true after failing to get local variables due to missing .o file.
