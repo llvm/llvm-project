@@ -271,9 +271,9 @@ void test_clearerr(FILE *F) {
 void test_fileno(FILE *F) {
   errno = 0;
   int A = fileno(F);
-  clang_analyzer_eval(F != NULL); // expected-warning{{TRUE}}
-  clang_analyzer_eval(A >= 0); // expected-warning{{TRUE}}
-  if (errno) {} // no-warning
+  clang_analyzer_eval(F != NULL);  // expected-warning{{TRUE}}
+  clang_analyzer_eval(A >= 0);     // expected-warning{{TRUE}}
+  if (errno) {}                    // no-warning
   clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
                                    // expected-warning@-1{{FALSE}}
 }
