@@ -43,16 +43,14 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg,
     if (DL.getTypeAllocSize(Ty) < 8)
       Arg = Builder.CreateFPExt(Arg, Builder.getDoubleTy());
 
-    return IsBuffered ? Arg :
-                        Builder.CreateBitCast(Arg, Int64Ty);
+    return IsBuffered ? Arg : Builder.CreateBitCast(Arg, Int64Ty);
   }
 
-  // The cast is necessary for the hostcall case 
-  // for the argument to be compatible with device lib 
+  // The cast is necessary for the hostcall case
+  // for the argument to be compatible with device lib
   // functions.
   if (isa<PointerType>(Ty)) {
-    return IsBuffered ? Arg :
-                        Builder.CreatePtrToInt(Arg, Int64Ty);
+    return IsBuffered ? Arg : Builder.CreatePtrToInt(Arg, Int64Ty);
   }
 
   llvm_unreachable("unexpected type");
@@ -181,17 +179,18 @@ static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
   auto Zero = Builder.getInt64(0);
 
   if (auto VectorTy = dyn_cast<FixedVectorType>(Arg->getType())) {
-  if (VecSize != VectorTy->getNumElements()) {
-    // A mismatch between size specified in specifier and the
-    // vector argument size. push a splat vector of zeros onto buffer
-    // eg. printf("%v4d", (1, 2))
-    Arg = ConstantDataVector::getSplat(VecSize, ConstantInt::get(Builder.getInt64Ty(), 0U));
-   }
-  }
-  else {
+    if (VecSize != VectorTy->getNumElements()) {
+      // A mismatch between size specified in specifier and the
+      // vector argument size. push a splat vector of zeros onto buffer
+      // eg. printf("%v4d", (1, 2))
+      Arg = ConstantDataVector::getSplat(
+          VecSize, ConstantInt::get(Builder.getInt64Ty(), 0U));
+    }
+  } else {
     // Format specifier is fine but arg is not a fixed vector
     // eg. printf("%v4d", 1)
-    Arg = ConstantDataVector::getSplat(VecSize, ConstantInt::get(Builder.getInt64Ty(), 0U));
+    Arg = ConstantDataVector::getSplat(
+        VecSize, ConstantInt::get(Builder.getInt64Ty(), 0U));
   }
   for (unsigned int i = 0; i < VecSize - 1; i++) {
     auto Val = Builder.CreateExtractElement(Arg, i);
@@ -200,16 +199,15 @@ static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                           Zero, Zero, Zero, Zero, Zero, false);
   }
 
-  Value *Val =
-      Builder.CreateExtractElement(Arg, VecSize - 1);
+  Value *Val = Builder.CreateExtractElement(Arg, VecSize - 1);
   return callAppendArgs(Builder, Desc, 1,
                         fitArgInto64Bits(Builder, Val, IsBuffered), Zero, Zero,
                         Zero, Zero, Zero, Zero, IsLast);
 }
 
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
-                         bool SpecIsCString, bool IsLast,
-                         bool IsBuffered, uint VecSize) {
+                         bool SpecIsCString, bool IsLast, bool IsBuffered,
+                         uint VecSize) {
   if (SpecIsCString && isa<PointerType>(Arg->getType())) {
     return appendString(Builder, Desc, Arg, IsLast);
   }
@@ -265,21 +263,21 @@ static uint getSizeFromVectorSpec(StringRef Spec) {
       VecLen = Spec[pos++] - '0';
       // vector printing supports only 2, 3, 4, 8 and 16 wide vectors
       switch (VecLen) {
-        case 1:
-          if ((Spec[pos++] - '0') == 6) {
-            VecLen = 16;
-          } else {
-            VecLen = 0;
-          }
-          break;
-        case 2:
-        case 3:
-        case 4:
-        case 8:
-          break;
-        default:
+      case 1:
+        if ((Spec[pos++] - '0') == 6) {
+          VecLen = 16;
+        } else {
           VecLen = 0;
-          break;
+        }
+        break;
+      case 2:
+      case 3:
+      case 4:
+      case 8:
+        break;
+      default:
+        VecLen = 0;
+        break;
       }
     }
   }
@@ -291,7 +289,8 @@ static uint getSizeFromVectorSpec(StringRef Spec) {
 // i.e, the "%s" specifier with optional '*' characters
 // or "%v" specifier.
 static void locateCStringsAndVectors(SparseBitVector<8> &BV,
-                                     SparseBitVector<8> &OV, StringRef Str, SmallVectorImpl<uint>& VecSizes) {
+                                     SparseBitVector<8> &OV, StringRef Str,
+                                     SmallVectorImpl<uint> &VecSizes) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
   size_t SpecPos = 0;
   // Skip the first argument, the format string.
@@ -339,7 +338,7 @@ static Value *callBufferedPrintfStart(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
     bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
     SparseBitVector<8> &OCLVectors, SmallVectorImpl<StringData> &StringContents,
-    SmallVectorImpl<uint>& VecSizes, Value *&ArgSize) {
+    SmallVectorImpl<uint> &VecSizes, Value *&ArgSize) {
   Module *M = Builder.GetInsertBlock()->getModule();
   Value *NonConstStrLen = nullptr;
   Value *LenWithNull = nullptr;
@@ -405,10 +404,10 @@ static Value *callBufferedPrintfStart(
           // We send a 64 bit zero and let runtime handle the printing.
           // eg. printf("%f", (3.12, 2.34))
           // eg. printf("%v5d" (1,2,3,4,5)) -> invalid since OpenCL spec
-          //                                   only supports vec sizes 2,3,4,8 and 16
+          //                                   only supports vec sizes 2,3,4,8
+          //                                   and 16
           AllocSize = 8;
-        }
-        else
+        } else
           AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
       }
       // We end up expanding non string arguments to 8 bytes
@@ -484,11 +483,12 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
     WhatToStore.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
 }
 
-static void callBufferedPrintfArgPush(
-    IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *PtrToStore,
-    SparseBitVector<8> &SpecIsCString, SparseBitVector<8> &OCLVectors,
-    SmallVectorImpl<StringData> &StringContents, SmallVectorImpl<uint>& VecSizes,
-    bool IsConstFmtStr) {
+static void
+callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
+                          Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
+                          SparseBitVector<8> &OCLVectors,
+                          SmallVectorImpl<StringData> &StringContents,
+                          SmallVectorImpl<uint> &VecSizes, bool IsConstFmtStr) {
   Module *M = Builder.GetInsertBlock()->getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
@@ -524,11 +524,9 @@ static void callBufferedPrintfArgPush(
         Value *VecArg = nullptr;
         auto VecIdx = 0;
         auto VectorTy = dyn_cast<FixedVectorType>(Args[i]->getType());
-        if (VectorTy &&
-           (VecSizes[VecIdx] == VectorTy->getNumElements())) {
-            VecArg = Args[i];
-        }
-        else {
+        if (VectorTy && (VecSizes[VecIdx] == VectorTy->getNumElements())) {
+          VecArg = Args[i];
+        } else {
           // mismatch between size specified in specifier and the
           // vector argument size.
           //    eg. printf("%v4d", (1, 2))
@@ -536,8 +534,8 @@ static void callBufferedPrintfArgPush(
           // Arg not a fixed vector/vector spec invalid
           //    eg. printf("%v4d", 2)
           // In either case, send a splat of zeros.
-          VecArg = ConstantDataVector::getSplat(VecSizes[VecIdx], 
-                                   ConstantInt::get(Builder.getInt64Ty(), 0U));
+          VecArg = ConstantDataVector::getSplat(
+              VecSizes[VecIdx], ConstantInt::get(Builder.getInt64Ty(), 0U));
         }
 
         for (unsigned int Num = 0; Num < VecSizes[VecIdx]; Num++) {
@@ -684,9 +682,10 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     bool IsLast = i == NumOps - 1;
     bool IsCString = SpecIsCString.test(i);
     bool IsVector = OCLVectors.test(i);
-    Desc = processArg(Builder, Desc, Args[i], IsCString, IsLast,
-                      IsBuffered, IsVector ? VecSizes[VecIdx] : 0);
-    if (IsVector) VecIdx++;
+    Desc = processArg(Builder, Desc, Args[i], IsCString, IsLast, IsBuffered,
+                      IsVector ? VecSizes[VecIdx] : 0);
+    if (IsVector)
+      VecIdx++;
   }
 
   return Builder.CreateTrunc(Desc, Builder.getInt32Ty());

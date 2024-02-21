@@ -220,8 +220,7 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   }
 
   auto PFK = CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal;
-  bool isBuffered =
-       (PFK == clang::TargetOptions::AMDGPUPrintfKind::Buffered);
+  bool isBuffered = (PFK == clang::TargetOptions::AMDGPUPrintfKind::Buffered);
 
   StringRef FmtStr;
   if (llvm::getConstantStringInfo(Args[0], FmtStr)) {
