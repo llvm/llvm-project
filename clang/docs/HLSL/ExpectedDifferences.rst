@@ -61,7 +61,8 @@ behavior between Clang and DXC. Some examples include:
 .. code-block:: c++
 
   void halfOrInt16(half H);
-  void halfOrInt16(uint16_t I);
+  void halfOrInt16(uint16_t U);
+  void halfOrInt16(int16_t I);
 
   void takesDoubles(double, double, double);
 
@@ -73,12 +74,14 @@ behavior between Clang and DXC. Some examples include:
   }
 
   export void call() {
-    halfOrInt16(U); // All: Resolves to halfOrInt16(uint16_t).
-    halfOrInt16(I); // All: Resolves to halfOrInt16(uint16_t).
+    halfOrInt16(U); // DXC: Fails with call ambiguous between int16_t and uint16_t overloads
+                    // Clang: Resolves to halfOrInt16(uint16_t).
+    halfOrInt16(I); // All: Resolves to halfOrInt16(int16_t).
     half H;
   #ifndef IGNORE_ERRORS
+    // asfloat16 is a builtin with overloads for half, int16_t, and uint16_t.
     H = asfloat16(I); // DXC: Fails to resolve overload for int.
-                      // Clang: Resolves to asfloat16(uint16_t).
+                      // Clang: Resolves to asfloat16(int16_t).
     H = asfloat16(U); // DXC: Fails to resolve overload for int.
                       // Clang: Resolves to asfloat16(uint16_t).
   #endif
@@ -88,7 +91,7 @@ behavior between Clang and DXC. Some examples include:
     takesDoubles(X, Y, Z); // Works on all compilers
   #ifndef IGNORE_ERRORS
     fma(X, Y, Z); // DXC: Fails to resolve no known conversion from float to double.
-                  // Clang: Resolces to fma(double,double,double).
+                  // Clang: Resolves to fma(double,double,double).
   #endif
     
     double D = dot(A, B); // DXC: Resolves to dot(double3, double3), fails DXIL Validation.
