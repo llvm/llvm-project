@@ -77,6 +77,9 @@ public:
     return static_cast<bool>((value & SIGN_MASK) >> SIGN_OFFSET);
   }
 
+  // This represents the effective negative exponent applied to this number
+  LIBC_INLINE constexpr int get_exponent() { return fx_rep::FRACTION_LEN; }
+
   LIBC_INLINE constexpr void set_fraction(StorageType fraction) {
     value = (value & (~FRACTION_MASK)) |
             ((fraction << FRACTION_OFFSET) & FRACTION_MASK);
