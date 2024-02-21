@@ -16,5 +16,6 @@ TEST(LlvmLibcStdcCountOnesUiTest, Zero) {
 
 TEST(LlvmLibcStdcCountOnesUiTest, Ones) {
   for (unsigned i = 0U; i != UINT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_count_ones_ui(UINT_MAX >> i), UINT_WIDTH - i);
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_count_ones_ui(UINT_MAX >> i),
+              UINT_WIDTH - i);
 }
