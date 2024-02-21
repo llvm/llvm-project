@@ -1312,7 +1312,7 @@ private:
   void storeSecondaryAllocationStackMaybe(const Options &Options, void *Ptr,
                                           uptr Size) {
     auto *RingBuffer = getRingBufferIfEnabled(Options);
-    if (!RingBuffer->Depot)
+    if (!RingBuffer)
       return;
     u32 Trace = collectStackTrace(RingBuffer->Depot);
     u32 Tid = getThreadID();
@@ -1327,7 +1327,7 @@ private:
   void storeDeallocationStackMaybe(const Options &Options, void *Ptr,
                                    u8 PrevTag, uptr Size) {
     auto *RingBuffer = getRingBufferIfEnabled(Options);
-    if (!RingBuffer->Depot)
+    if (!RingBuffer)
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
     u32 AllocationTrace = Ptr32[MemTagAllocationTraceIndex];
