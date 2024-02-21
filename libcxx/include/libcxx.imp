@@ -629,6 +629,7 @@
   { include: [ "<__ranges/empty_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/enable_borrowed_range.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/enable_view.h>", "private", "<ranges>", "public" ] },
+  { include: [ "<__ranges/enumerate_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/filter_view.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/from_range.h>", "private", "<ranges>", "public" ] },
   { include: [ "<__ranges/iota_view.h>", "private", "<ranges>", "public" ] },

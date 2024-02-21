@@ -153,9 +153,7 @@ constexpr void test_with_noncommon_range() {
   }
 
   // operator-(x, y)
-  {
-    assert((ev.end() - ev.begin()) == 4);
-  }
+  { assert((ev.end() - ev.begin()) == 4); }
 }
 
 constexpr bool test() {
