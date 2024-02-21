@@ -662,7 +662,7 @@ let hasSideEffects = false in {
                    // bf16->f32 was introduced early.
                    [hasPTX<71>, hasSM<80>],
                    // bf16->everything else needs sm90/ptx78
-                   [hasPTX<78>, hasSM<90>])>; 
+                   [hasPTX<78>, hasSM<90>])>;
     def _f32 :
       NVPTXInst<(outs RC:$dst),
                 (ins Float32Regs:$src, CvtMode:$mode),
@@ -3647,7 +3647,7 @@ def : Pat<(f16 (fpround Float32Regs:$a)),
 
 // fpround f32 -> bf16
 def : Pat<(bf16 (fpround Float32Regs:$a)),
-          (CVT_bf16_f32 Float32Regs:$a, CvtRN)>;
+          (CVT_bf16_f32 Float32Regs:$a, CvtRN)>, Requires<[hasPTX<70>, hasSM<80>]>;
 
 // fpround f64 -> f16
 def : Pat<(f16 (fpround Float64Regs:$a)),
@@ -3655,7 +3655,7 @@ def : Pat<(f16 (fpround Float64Regs:$a)),
 
 // fpround f64 -> bf16
 def : Pat<(bf16 (fpround Float64Regs:$a)),
-          (CVT_bf16_f64 Float64Regs:$a, CvtRN)>;
+          (CVT_bf16_f64 Float64Regs:$a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 // fpround f64 -> f32
 def : Pat<(f32 (fpround Float64Regs:$a)),
           (CVT_f32_f64 Float64Regs:$a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
@@ -3671,7 +3671,7 @@ def : Pat<(f32 (fpextend (f16 Int16Regs:$a))),
 def : Pat<(f32 (fpextend (bf16 Int16Regs:$a))),
           (CVT_f32_bf16 Int16Regs:$a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f32 (fpextend (bf16 Int16Regs:$a))),
-          (CVT_f32_bf16 Int16Regs:$a, CvtNONE)>;
+          (CVT_f32_bf16 Int16Regs:$a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
 
 // fpextend f16 -> f64
 def : Pat<(f64 (fpextend (f16 Int16Regs:$a))),
@@ -3679,7 +3679,7 @@ def : Pat<(f64 (fpextend (f16 Int16Regs:$a))),
 
 // fpextend bf16 -> f64
 def : Pat<(f64 (fpextend (bf16 Int16Regs:$a))),
-          (CVT_f64_bf16 Int16Regs:$a, CvtNONE)>;
+          (CVT_f64_bf16 Int16Regs:$a, CvtNONE)>, Requires<[hasPTX<78>, hasSM<90>]>;
 
 // fpextend f32 -> f64
 def : Pat<(f64 (fpextend Float32Regs:$a)),

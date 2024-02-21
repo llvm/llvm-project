@@ -10855,6 +10855,128 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   return DAG.getSelect(dl, DstVT, IsNan, ZeroInt, Select);
 }
 
+SDValue TargetLowering::expandRoundInexactToOdd(EVT ResultVT, SDValue Op,
+                                                const SDLoc &dl,
+                                                SelectionDAG &DAG) const {
+  EVT OperandVT = Op.getValueType();
+  if (OperandVT.getScalarType() == ResultVT.getScalarType())
+    return Op;
+  EVT ResultIntVT = ResultVT.changeTypeToInteger();
+  // We are rounding binary64/binary128 -> binary32 -> bfloat16. This
+  // can induce double-rounding which may alter the results. We can
+  // correct for this using a trick explained in: Boldo, Sylvie, and
+  // Guillaume Melquiond. "When double rounding is odd." 17th IMACS
+  // World Congress. 2005.
+  unsigned BitSize = OperandVT.getScalarSizeInBits();
+  EVT WideIntVT = OperandVT.changeTypeToInteger();
+  SDValue OpAsInt = DAG.getBitcast(WideIntVT, Op);
+  SDValue SignBit =
+      DAG.getNode(ISD::AND, dl, WideIntVT, OpAsInt,
+                  DAG.getConstant(APInt::getSignMask(BitSize), dl, WideIntVT));
+  SDValue AbsWide;
+  if (isOperationLegalOrCustom(ISD::FABS, OperandVT)) {
+    AbsWide = DAG.getNode(ISD::FABS, dl, OperandVT, Op);
+  } else {
+    SDValue ClearedSign = DAG.getNode(
+        ISD::AND, dl, WideIntVT, OpAsInt,
+        DAG.getConstant(APInt::getSignedMaxValue(BitSize), dl, WideIntVT));
+    AbsWide = DAG.getBitcast(OperandVT, ClearedSign);
+  }
+  SDValue AbsNarrow = DAG.getFPExtendOrRound(AbsWide, dl, ResultVT);
+  SDValue AbsNarrowAsWide = DAG.getFPExtendOrRound(AbsNarrow, dl, OperandVT);
+
+  // We can keep the narrow value as-is if narrowing was exact (no
+  // rounding error), the wide value was NaN (the narrow value is also
+  // NaN and should be preserved) or if we rounded to the odd value.
+  SDValue NarrowBits = DAG.getNode(ISD::BITCAST, dl, ResultIntVT, AbsNarrow);
+  SDValue One = DAG.getConstant(1, dl, ResultIntVT);
+  SDValue NegativeOne = DAG.getAllOnesConstant(dl, ResultIntVT);
+  SDValue And = DAG.getNode(ISD::AND, dl, ResultIntVT, NarrowBits, One);
+  EVT ResultIntVTCCVT = getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), And.getValueType());
+  SDValue Zero = DAG.getConstant(0, dl, ResultIntVT);
+  SDValue AlreadyOdd = DAG.getSetCC(dl, ResultIntVTCCVT, And, Zero, ISD::SETNE);
+
+  EVT WideSetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                       AbsWide.getValueType());
+  SDValue KeepNarrow =
+      DAG.getSetCC(dl, WideSetCCVT, AbsWide, AbsNarrowAsWide, ISD::SETUEQ);
+  KeepNarrow = DAG.getNode(ISD::OR, dl, WideSetCCVT, KeepNarrow, AlreadyOdd);
+  // We morally performed a round-down if `abs_narrow` is smaller than
+  // `abs_wide`.
+  SDValue NarrowIsRd =
+      DAG.getSetCC(dl, WideSetCCVT, AbsWide, AbsNarrowAsWide, ISD::SETOGT);
+  // If the narrow value is odd or exact, pick it.
+  // Otherwise, narrow is even and corresponds to either the rounded-up
+  // or rounded-down value. If narrow is the rounded-down value, we want
+  // the rounded-up value as it will be odd.
+  SDValue Adjust = DAG.getSelect(dl, ResultIntVT, NarrowIsRd, One, NegativeOne);
+  Adjust = DAG.getSelect(dl, ResultIntVT, KeepNarrow, Zero, Adjust);
+  int ShiftAmount = BitSize - ResultVT.getScalarSizeInBits();
+  SDValue ShiftCnst = DAG.getShiftAmountConstant(ShiftAmount, WideIntVT, dl);
+  SignBit = DAG.getNode(ISD::SRL, dl, WideIntVT, SignBit, ShiftCnst);
+  SignBit = DAG.getNode(ISD::TRUNCATE, dl, ResultIntVT, SignBit);
+  Op = DAG.getNode(ISD::OR, dl, ResultIntVT, Adjust, SignBit);
+  return DAG.getNode(ISD::BITCAST, dl, ResultVT, Op);
+}
+
+SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::FP_ROUND && "Unexpected opcode!");
+  SDValue Op = Node->getOperand(0);
+  EVT VT = Node->getValueType(0);
+  SDLoc dl(Node);
+  if (VT.getScalarType() == MVT::bf16) {
+    if (Node->getConstantOperandVal(1) == 1) {
+      return DAG.getNode(ISD::FP_TO_BF16, dl, VT, Node->getOperand(0));
+    }
+    EVT OperandVT = Op.getValueType();
+    SDValue IsNaN = DAG.getSetCC(
+        dl,
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT),
+        Op, Op, ISD::SETUO);
+
+    // We are rounding binary64/binary128 -> binary32 -> bfloat16. This
+    // can induce double-rounding which may alter the results. We can
+    // correct for this using a trick explained in: Boldo, Sylvie, and
+    // Guillaume Melquiond. "When double rounding is odd." 17th IMACS
+    // World Congress. 2005.
+    EVT F32 = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
+    EVT I32 = F32.changeTypeToInteger();
+    Op = expandRoundInexactToOdd(F32, Op, dl, DAG);
+    Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
+
+    // Extract the sign bit.
+    SDValue SignBit =
+        DAG.getNode(ISD::AND, dl, I32, Op,
+                    DAG.getConstant(APInt::getSignMask(32), dl, I32));
+    // Set the quiet bit.
+    SDValue NaN = DAG.getNode(ISD::OR, dl, I32, SignBit,
+                              DAG.getConstant(0x400000, dl, I32));
+
+    // Factor in the contribution of the low 16 bits.
+    SDValue One = DAG.getConstant(1, dl, I32);
+    SDValue Lsb = DAG.getNode(ISD::SRL, dl, I32, Op,
+                              DAG.getShiftAmountConstant(16, I32, dl));
+    Lsb = DAG.getNode(ISD::AND, dl, I32, Lsb, One);
+    SDValue RoundingBias =
+        DAG.getNode(ISD::ADD, dl, I32, DAG.getConstant(0x7fff, dl, I32), Lsb);
+    SDValue Add = DAG.getNode(ISD::ADD, dl, I32, Op, RoundingBias);
+
+    // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
+    // 0x80000000.
+    Op = DAG.getSelect(dl, I32, IsNaN, NaN, Add);
+
+    // Now that we have rounded, shift the bits into position.
+    Op = DAG.getNode(ISD::SRL, dl, I32, Op,
+                     DAG.getShiftAmountConstant(16, I32, dl));
+    Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
+    EVT I16 = I32.isVector() ? I32.changeVectorElementType(MVT::i16) : MVT::i16;
+    Op = DAG.getNode(ISD::TRUNCATE, dl, I16, Op);
+    return DAG.getNode(ISD::BITCAST, dl, VT, Op);
+  }
+  return SDValue();
+}
+
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                                            SelectionDAG &DAG) const {
   assert(Node->getOpcode() == ISD::VECTOR_SPLICE && "Unexpected opcode!");
